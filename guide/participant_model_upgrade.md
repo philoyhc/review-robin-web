@@ -214,8 +214,8 @@ Notes and open points:
   a distinct hard gate with `deadline` staying advisory.
   Leaning: reuse `deadline` as the hard close — fewer columns,
   and the lazy-close deadline machinery already exists.
-- `opens_at` overlaps **Segment 18F**'s "session opening gate."
-  The upgrade should *consume* 18F's scheduler, not build a
+- `opens_at` overlaps **Segment 18G**'s "session opening gate."
+  The upgrade should *consume* 18G's scheduler, not build a
   second one (see §8).
 - The viewing window (`results_open_at` / `results_close_at`)
   is genuinely new — nothing today gates *viewing* by time.
@@ -351,12 +351,12 @@ views shape, templates render markup, exactly as today.
 - **Hard-depends on Segment 14B** for the notification half
   (§6) — without email send, results-ready notices have no
   channel.
-- **Coordinates with Segment 18F** (scheduled events). 18F
+- **Coordinates with Segment 18G** (scheduled events). 18G
   owns the scheduler that fires timed lifecycle transitions
   (auto-archive, auto-send, the opening gate). The §3.4 windows
-  must be *driven by 18F's scheduler*, not a second timer. If
-  participant-model work lands before 18F, it ships the columns
-  inert with a manual operator toggle; 18F (or a later slice)
+  must be *driven by 18G's scheduler*, not a second timer. If
+  participant-model work lands before 18G, it ships the columns
+  inert with a manual operator toggle; 18G (or a later slice)
   then wires the automation.
 - **Naturally follows 17B** (reviewer-surface refinements) so
   the new participant surfaces inherit a settled visual
@@ -393,7 +393,7 @@ plausibly one segment (some may split or merge):
 - Magic-link affordance — extend the tokened-landing path to
   reviewees / observers; operator-selectable per session.
 - Per-instrument visibility-policy authoring.
-- Session schedule authoring + 18F integration.
+- Session schedule authoring + 18G integration.
 - Collation service — summarization + de-identification.
 - Reviewee results surface.
 - Observer surface.
@@ -426,7 +426,7 @@ plausibly one segment (some may split or merge):
   work is picked up — observers and the reviewee surface become
   live audiences §3 / §4 must then describe, and magic links
   move from "fallback" to an in-scope affordance.
-- **`guide/segment_18F_scheduled_events.md`** — owns the
+- **`guide/segment_18G_scheduled_events.md`** — owns the
   scheduler the §3.4 windows must ride on.
 - **`guide/segment_14B_email_infrastructure.md`** — the
   notification half depends on it.

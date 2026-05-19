@@ -1,10 +1,10 @@
-# Segment 13F — More DB prep (16A / 16B / 18A / 18B / 18F ride-along)
+# Segment 13F — More DB prep (16A / 16B / 18A / 18B / 18G ride-along)
 
-> **Segment 14C consolidated into Segment 18F (2026-05-18).**
+> **Segment 14C consolidated into Segment 18G (2026-05-18).**
 > PR 4's `sessions.reminder_settings` column was scoped as a
-> "14C ride-along"; reminders are now **Segment 18F Part 5**, so
-> PR 4 is an 18F ride-along. Where "14C" still appears below it
-> denotes that 18F reminders work.
+> "14C ride-along"; reminders are now **Segment 18G Part 5**, so
+> PR 4 is an 18G ride-along. Where "14C" still appears below it
+> denotes that 18G reminders work.
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
 (migrations `779b90e4b397` + `8003c2be99d8`); **PRs 6 + 7
@@ -12,7 +12,7 @@ shipped 2026-05-15** (migrations `2fec0f646bd2` +
 `e9277c43b251`) ahead of Segment 18B; **PR 3 shipped
 2026-05-17** (migration `c7d1e9f3a4b2`) with Segment 18A;
 PRs 4 + 5 remain deferred until their consumer segments
-(18F — reminders Part 5, retention Part 4) are picked up, per
+(18G — reminders Part 5, retention Part 4) are picked up, per
 the "piecemeal, front-load the
 16-series work" sequencing decision. **Only PRs 4 + 5 are
 outstanding** (`sessions.reminder_settings`,
@@ -48,7 +48,7 @@ segments are pure service / UI / template work.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
 owner UI), 18A (session tagging), 18B (per-operator default +
-per-session display timezone), 18F Part 4 (retention exception
+per-session display timezone), 18G Part 4 (retention exception
 + per-session policy).
 
 ---
@@ -86,8 +86,8 @@ session_tags                              # PR 3: ✅ shipped — 18A per-sessio
                                           #       free-form tags
                                           #       (migration c7d1e9f3a4b2)
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
-sessions.retention_exception              # PR 5: 18F Part 4 per-session opt-out (Bool, pending)
-sessions.retention_overrides              # PR 5: 18F Part 4 per-session policy (JSON, pending)
+sessions.retention_exception              # PR 5: 18G Part 4 per-session opt-out (Bool, pending)
+sessions.retention_overrides              # PR 5: 18G Part 4 per-session policy (JSON, pending)
 sessions.display_timezone                 # PR 6: ✅ shipped — 18B per-session display
                                           #       timezone (String) (migration 2fec0f646bd2)
 users.preferences                         # PR 7: ✅ shipped — per-operator preferences
@@ -142,8 +142,8 @@ needs identified for the remaining workplan:
 |---|---|---|
 | **14C** — Reminders workflow Part 1 | New `sessions.reminder_settings` JSON column (`auto_enabled` / `cadence` / `max_count` / `time_of_day` / `quiet_hours`) | Required by 14C Part 1 (per-session reminder cadence). One column, JSON-shaped (`14C` calls out "columns or JSON blob"; JSON keeps the migration footprint flat). |
 | **18A** — Session tagging | New table `session_tags` | Required by 18A Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
-| **18F Part 4** — Scheduled / policy-driven retention | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by the scheduled-retention work (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. *(Was scoped to 18C; moved to 18F Part 4 when 18C was re-scoped to operator-triggered purge only — 2026-05-17.)* |
-| **18F Part 4** — Scheduled / policy-driven retention | New `sessions.retention_overrides` JSON column | Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
+| **18G Part 4** — Scheduled / policy-driven retention | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by the scheduled-retention work (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. *(Was scoped to 18C; moved to 18G Part 4 when 18C was re-scoped to operator-triggered purge only — 2026-05-17.)* |
+| **18G Part 4** — Scheduled / policy-driven retention | New `sessions.retention_overrides` JSON column | Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
 | **18B** — Date and time settings | New `sessions.display_timezone` String column (nullable; IANA zone name) | Required by 18B PR 3 (per-session display-timezone override). One nullable string column; `NULL` means "inherit the operator default timezone". |
 | **18B** — Date and time settings | New `users.preferences` JSON column (nullable) | Required by 18B PR 2 (per-operator default timezone). A general per-operator preferences container — first key `display_timezone`, future keys for other operator-level display settings (display sizing, the typography knob). JSON over flat columns: the key set is open-ended — same reasoning as `sessions.reminder_settings`. Added 2026-05-15 after the re-sweep below. |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
@@ -216,10 +216,10 @@ audit of every scheduled session-lifecycle automation** the
 workplan wants, so the schema lands as one coherent slice instead
 of accreting a column per feature.
 
-**Consumer side consolidated in Segment 18F.** The scheduled
-automations below are owned by **Segment 18F — Scheduled events**
-(`guide/segment_18F_scheduled_events.md`) — auto-archive moved
-there out of 18A. This 13F audit is the schema half; 18F is the
+**Consumer side consolidated in Segment 18G.** The scheduled
+automations below are owned by **Segment 18G — Scheduled events**
+(`guide/segment_18G_scheduled_events.md`) — auto-archive moved
+there out of 18A. This 13F audit is the schema half; 18G is the
 service / scheduling half.
 
 **This audit is not yet locked** — the candidates below are the
@@ -231,10 +231,10 @@ is not lost.
 
 | Candidate | What it schedules | Consumer | Notes |
 |---|---|---|---|
-| **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `draft → archived` automatically. | **18F Part 1** | Reuses 18A's `archive_session`; only the trigger is new. |
-| **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | **18F Part 2** | Lets the operator stage a session ahead of an announced start. |
+| **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `draft → archived` automatically. | **18G Part 1** | Reuses 18A's `archive_session`; only the trigger is new. |
+| **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | **18G Part 2** | Lets the operator stage a session ahead of an announced start. |
 | **Reminder datetime(s)** | Scheduled reminder dispatch. | **14C** | **Partly already covered** — `sessions.reminder_settings` JSON (PR 4) carries `cadence` / `time_of_day`. The audit must reconcile: are absolute reminder datetimes a *new* slot, or do they fold into the existing JSON? |
-| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | **18F Part 3** | Implemented as a gate within `ready` — **no new enum state**. |
+| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | **18G Part 3** | Implemented as a gate within `ready` — **no new enum state**. |
 
 **The "opening" gate — a gate within `ready`, not a new enum
 state.** Today activation (`draft`/`validated` → `ready`) opens
@@ -299,7 +299,7 @@ PRs land in two waves: the **16-series wave** (PR 1 + PR 2)
 pre-positions the admin / allowlist plumbing for Segment 16A;
 the **consumer-deferred wave** (PRs 3-7) pre-positions the
 remaining tables and columns when their consumer segments
-(18A / 14C / 18F / 18B) are ready to be picked up. As of
+(18A / 14C / 18G / 18B) are ready to be picked up. As of
 2026-05-17 only PRs 4 + 5 remain — PRs 3 / 6 / 7 have shipped.
 
 ### PR 1 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
@@ -535,7 +535,7 @@ acquire meaning.
 fixture JSON blob (the actual shape lives in 14C tests). Inert
 audit: zero service / web references at PR close.
 
-### PR 5 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18F Part 4 ride-along)
+### PR 5 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18G Part 4 ride-along)
 
 **Scope.** Two nullable columns on `sessions`, landed together
 because they're tightly coupled (one is the "opt out entirely"
@@ -548,8 +548,8 @@ retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 ```
 
 `retention_exception=NULL` and `=False` both mean "no exception"
-(18F Part 4 will normalise read-path). `retention_overrides=NULL`
-means "use the deployment retention defaults" (18F Part 4's env
+(18G Part 4 will normalise read-path). `retention_overrides=NULL`
+means "use the deployment retention defaults" (18G Part 4's env
 vars).
 
 **Tests.** Migration round-trip on both dialects. Default reads
@@ -666,7 +666,7 @@ migration history.
 - **PR 4** — defer until 14C (reminders workflow) is picked
   up. Specifically Part 1 (per-session cadence settings)
   is the consumer.
-- **PR 5** — defer until 18F Part 4 (scheduled / policy-driven
+- **PR 5** — defer until 18G Part 4 (scheduled / policy-driven
   retention) is picked up. *(Was scoped to 18C; moved when 18C
   was re-scoped to operator-triggered purge only — that purge
   needed no schema.)*
@@ -691,7 +691,7 @@ A reviewer can model the whole contract in one sitting per PR.
 - **JSON shape commitments.** PR 4's `reminder_settings`,
   PR 5's `retention_overrides`, and PR 7's `users.preferences`
   are JSON; the actual key schema is locked by 14C Part 1,
-  18F Part 4, and 18B PR 2 respectively (PR 7's `preferences`
+  18G Part 4, and 18B PR 2 respectively (PR 7's `preferences`
   shape was pinned by 18B PR 2 on ship). Until then, the
   columns are inert containers. Worth a short note in each PR
   description naming where the shape will be pinned.
@@ -777,7 +777,7 @@ When PRs ship:
   the relevant per-session settings sections (each marked
   **Inert** until the owning feature segment lights it up,
   mirroring the post-13D entries).
-- Owning feature plans (14C / 16A / 16B / 18A / 18B / 18F)
+- Owning feature plans (14C / 16A / 16B / 18A / 18B / 18G)
   updated to reference "schema pre-positioned in 13F PR N"
   instead of "new column / new table". In particular 16A flips from
   Option C (env-allowlist) to Option B (persisted flag with
