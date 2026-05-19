@@ -62,10 +62,80 @@ A regression test covers the pure-re-point case (both pairs
 defuncted, an unrelated pair on the same instrument untouched).
 Suite green (1,913 passed), ruff clean.
 
-The assessment's remaining **suspected LOW** defunct-safeguard
-issue (`defunct_group_responses_for_tag_change` may over-defunct
-when the reviewer is the sole group member) is **not** in this
-segment — it needs confirmation before any fix is scoped.
+## Assessment follow-up findings
+
+### Suspected LOW (`defunct_group_responses_for_tag_change` over-defunct) — closed, not a bug
+
+The 19may assessment's third bug-hunt finding suspected
+`defunct_group_responses_for_tag_change` of over-defuncting —
+deleting group responses where the reviewee's tag change "does
+not actually move it to a different group." Investigated
+2026-05-19; **closed as not a defect.**
+
+`changed_tag_fields` only ever contains tags whose value
+genuinely changed (the caller diffs old vs new), and the
+`affected_instrument_ids` filter selects only instruments whose
+decoded boundary uses a changed tag. A group key is a tuple of
+boundary-tag values, so a changed boundary tag *always* shifts
+the tuple — there is no "collides to the same key" case on a
+single reviewee's own tags. The function deletes exactly the
+tag-changed reviewee's response copies on exactly the instruments
+whose key shifted — the minimal correct set.
+
+The one imprecision is the **docstring**, not the code: "lossless
+for the reviewer — survives on the group's other member rows"
+holds only when the old group keeps ≥1 other member; if the
+reviewee was the sole member, the answer is destroyed — but
+correctly, since that group has ceased to exist. A docstring
+tweak would make that honest; the behaviour is right.
+
+### Representative-staleness on group join — confirmed and fixed
+
+Investigating the suspected LOW surfaced a *different*, real
+defect on the **destination** side of a reviewee tag change.
+When a tag change moves a reviewee into an **already-answered**
+group, that reviewee's `(reviewer, reviewee)` assignment has no
+fanned response copy (its old copy was just — correctly —
+defuncted; the new group's answer lives on the *other* members).
+`_collapse_group_rows` (`routes_reviewer/_surface.py`) picks the
+group's representative as strictly `members[0]` — the lowest
+assignment id — with no preference for a member that holds
+response data, and the representative's response `cells` are
+inherited from that one assignment. So when the relocated
+reviewee holds the lowest assignment id in the destination group,
+that group renders with **blank inputs** — it looks unanswered —
+and the per-group completion rollup, keyed off the same
+representative, regresses to incomplete.
+
+**Confirmed 2026-05-19** by reproduction: a group instrument
+boundaried on `RevieweeTag1`; reviewer answers Team A and Team B;
+moving Carol (lowest assignment id) from Team A into the answered
+Team B makes Team B's row render blank — the reviewer's Team B
+answer (stored on Dan's row) is no longer surfaced.
+
+The answer data is **not lost** — it survives on the sibling
+members — but in the window before the next save the reviewer
+sees their answer apparently gone, and the completion rollup
+regresses. Severity **LOW–MEDIUM**: a transient display +
+completion regression, no data loss.
+
+**Fix (PR #1220).** The root cause is a violated invariant — a
+group-scoped instrument keeps *identical* answer copies on every
+assignment in a group, and every reader (`_collapse_group_rows`,
+`_state_from_assignments`, the extract) trusts that. The
+tag-change / re-point safeguards already delete the *stale* copies
+of a relocated reviewee/pair but never restored the copies for the
+*new* group. Rather than teach each reader to tolerate a violated
+invariant, the fix **restores it**: `defunct_group_responses_for_
+tag_change` / `_for_relationship_change` are renamed
+`reconcile_group_responses_for_*` and now, after deleting the
+stale rows, **re-fan** — a new `_refan_group_responses` helper
+copies each relocated assignment's new group's answer from a
+sibling member that still holds it (an assignment whose new group
+is genuinely unanswered is left empty). All read paths then work
+unchanged. A regression test reproduces the original case (Carol
+moved into an answered Team B → Team B still surfaces the answer).
+Suite green (1,914 passed), ruff clean.
 
 ## Stubs
 
