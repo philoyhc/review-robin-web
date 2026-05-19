@@ -160,10 +160,6 @@ tool. The one true functional shortfall is **email send**.
   is enforced. Documented, not implicit; the startup check does
   **not** hard-fail on `ALLOW_FAKE_AUTH=true` in a deployed
   environment (a reasonable future tightening).
-- **One open correctness defect** — see §6: the config CSV
-  round-trip is broken for group-scoped instruments. New with
-  13C; should be fixed before the Settings-CSV round-trip or
-  session-clone path is relied on for group-instrument sessions.
 - **File-size creep** (see §2) — 13C pushed 13 files past 800
   LOC; schedule a housekeeping split.
 - **Migration ordering is exercised only by the Postgres CI
@@ -177,40 +173,52 @@ tool. The one true functional shortfall is **email send**.
 
 A fresh bug hunt focused on the new 13C surface. The 17may hunt's
 three defects were all fixed on 2026-05-18 with regression tests;
-this pass found **one new HIGH defect and two suspected lower
-ones**, all in 13C code.
+this pass found **one HIGH defect and two suspected lower ones**,
+all in 13C code. **All three were investigated and resolved the
+same day (2026-05-19) — Segment 18H** (post-assessment update;
+`guide/segment_18H_post_assessment_update.md`):
 
 1. **HIGH — config CSV round-trip broken for group-scoped
-   instruments.** `session_config_io/_serialize.py:323` exports
-   the raw `group_kind` column value — which the runtime codec
-   writes as boundary codes (`r1`/`r2`/`r3`/`p1`/`p2`/`p3`) or
-   the no-boundary sentinel. But `session_config_io/_apply.py`
-   `_parse_group_kind` (line 764) accepts only `tag_1`/`tag_2`/
-   `tag_3` (`_VALID_GROUP_KINDS`, line 199). Importing any
-   exported config containing a group-scoped instrument raises
-   `_ParseError`; a hand-authored `tag_1` would be stored
-   verbatim and then silently skipped by `decode_group_kind`,
-   producing a group instrument with an empty boundary. No test
-   covers this path. Fix: serialize / parse through
-   `encode_group_kind` / `decode_group_kind`.
-2. **MEDIUM — suspected — defunct safeguard mis-targets on a
-   re-pointed relationship.** `defunct_group_responses_for_
-   relationship_tag_change` reads `relationship.reviewer_id` /
-   `reviewee_id` *after* the edit's `setattr` has applied. If an
-   operator re-points a relationship to a different pair *and*
-   changes a grouping tag in one edit, the old pair's
-   group-scoped responses are left mis-attributed. Needs closer
-   confirmation.
-3. **LOW — suspected — defunct safeguard can over-defunct.**
-   `defunct_group_responses_for_tag_change` deletes group
-   responses for all assignments on affected instruments, even
-   where the tag change does not actually move the reviewee to a
-   different group. Harmless per the "lossless" claim *unless*
-   the reviewer is the sole group member. Worth checking against
-   that claim.
+   instruments** — *fixed (PR #1216).*
+   `session_config_io/_serialize.py` exported the raw `group_kind`
+   column value (boundary codes `r1`/`r2`/`r3`/`p1`/`p2`/`p3` or
+   the no-boundary sentinel), but `_apply.py` `_parse_group_kind`
+   accepted only a `tag_1`/`tag_2`/`tag_3` vocabulary — so
+   importing any exported config with a group-scoped instrument
+   raised `_ParseError`. `_parse_group_kind` now validates and
+   canonicalises through the `encode_group_kind` /
+   `decode_group_kind` codec; a `serialize → apply` round-trip
+   regression test was added.
 
-No regressions found in the non-13C surface; the suite is green
-(1,910 passed) and ruff is clean.
+2. **MEDIUM — defunct safeguard mis-targets on a re-pointed
+   relationship** — *confirmed and fixed (PR #1218).*
+   `update_relationship` ran the edit's `setattr` before the
+   group-response defunct safeguard, which then read the
+   *post-edit* `reviewer_id` / `reviewee_id` — so re-pointing a
+   relationship under-defuncted (the old pair's group responses
+   were left mis-attributed; a pure re-point ran no defunct at
+   all). The safeguard now snapshots the pre-edit pair and
+   defuncts both the old and new pairs.
+
+3. **LOW — defunct safeguard "over-defunct"** — *investigated,
+   closed as not a bug.* `defunct_group_responses_for_tag_change`
+   defuncts exactly the minimal correct set — a changed boundary
+   tag always shifts the group key, so every instrument it touches
+   genuinely needed it. Only the docstring's "lossless" wording
+   was mildly imprecise.
+
+Investigating finding 3 surfaced a **separate, real defect**, also
+fixed (PR #1219): a reviewee tag change (or relationship re-point)
+that moved a reviewee/pair *into an already-answered group* left
+its assignment without a fanned answer copy — so when that
+copy-less assignment was the lowest-id collapse representative,
+the group rendered blank and the completion rollup regressed. The
+fix restores the fan-out invariant: the safeguards (renamed
+`reconcile_group_responses_for_*`) now **re-fan** a relocated
+assignment from its new group after deleting the stale copies.
+
+The suite is green (1,914 passed after the fixes) and ruff is
+clean. No regressions found in the non-13C surface.
 
 ## 7. Estimated size upon completion
 
@@ -249,13 +257,13 @@ fully met, the loop runs end-to-end — and 13C added a genuinely
 intricate second instrument flavour without disturbing the
 architecture.
 
-Three things stand between here and a pilot: **email transport
-(14B)**, the lone functional blocker; **standing the deployment
-up on real Azure infrastructure**; and the **one HIGH bug** found
-this pass — the group-instrument config round-trip — which is
-small and well-localised but should be fixed before the
-Settings-CSV / clone path is trusted for group-instrument
-sessions. The two suspected defunct-safeguard issues warrant
-confirmation. Beyond that, the watch item is file-size creep:
-13C inflated several services, and a housekeeping split in the
-spirit of 17A is worth scheduling.
+Two things stand between here and a pilot: **email transport
+(14B)**, the lone functional blocker, and **standing the
+deployment up on real Azure infrastructure**. The bug hunt's
+findings are all closed — the HIGH config-round-trip defect and
+the confirmed MEDIUM / new re-fan defects are fixed with
+regression tests, and the suspected LOW was investigated and
+closed as a non-bug (all under Segment 18H, 2026-05-19); there
+are **no open correctness defects**. Beyond that, the watch item
+is file-size creep: 13C inflated several services, and a
+housekeeping split in the spirit of 17A is worth scheduling.
