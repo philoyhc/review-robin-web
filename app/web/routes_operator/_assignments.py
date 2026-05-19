@@ -11,6 +11,8 @@ Source ranges in pre-refactor ``routes_operator.py``:
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -55,6 +57,7 @@ def assignments_hub(
     super_step: str | None = Query(default=None),
     super_error: str | None = Query(default=None),
     activate_confirm: str | None = Query(default=None),
+    q: str = Query(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -75,6 +78,7 @@ def assignments_hub(
             super_status, super_step, super_error
         ),
         activate_confirm=activate_confirm,
+        search=q,
     )
 
 
@@ -95,6 +99,16 @@ _ASSIGNMENT_SORT_KEYS = {
 }
 
 
+def _assignments_url(session_id: int, filter_q: str = "") -> str:
+    """The Assignments-page URL, carrying the ``q`` search term
+    when one is active so a bulk action redirects back to the
+    same filtered view."""
+    url = f"/operator/sessions/{session_id}/assignments"
+    if filter_q:
+        url += "?" + urlencode({"q": filter_q})
+    return url
+
+
 def _render_assignments_hub(
     request: Request,
     db: Session,
@@ -107,18 +121,37 @@ def _render_assignments_hub(
     validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
     activate_confirm: str | None = None,
+    search: str = "",
 ) -> HTMLResponse:
+    q = search.strip()
     assignment_count = assignments.existing_count(db, review_session.id)
-    pair_sample = (
-        assignments.list_pairs(db, review_session.id) if assignment_count else []
-    )
-    truncated_count = max(0, assignment_count - len(pair_sample))
+    if q:
+        matching_count = assignments.count_pairs(
+            db, review_session.id, search=q
+        )
+        pair_sample = (
+            assignments.list_pairs(db, review_session.id, search=q)
+            if matching_count
+            else []
+        )
+        # The column chips' enabled state is computed from an
+        # unfiltered sample so a search never flips a chip.
+        col_data_sample = assignments.list_pairs(db, review_session.id)
+    else:
+        matching_count = assignment_count
+        pair_sample = (
+            assignments.list_pairs(db, review_session.id)
+            if assignment_count
+            else []
+        )
+        col_data_sample = pair_sample
+    truncated_count = max(0, matching_count - len(pair_sample))
     # Pair-context lookup is built up-front so the cookie-backed
     # sort (Segment 13B Part 2 PR 8) can resolve ``pair_tag_*``
     # keys without a second pass through the relationships table.
     pair_context_lookup = (
         relationships_service.pair_context_lookup(db, review_session.id)
-        if pair_sample
+        if assignment_count
         else {}
     )
 
@@ -199,6 +232,9 @@ def _render_assignments_hub(
                 db, review_session.id
             ),
             "pair_sample": pair_sample,
+            "col_data_sample": col_data_sample,
+            "matching_count": matching_count,
+            "filter_q": q,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
             "issues": issues,
@@ -347,6 +383,7 @@ def assignments_instrument_self_reviews_active(
 def assignments_bulk_inactivate(
     session_id: int,
     assignment_ids: list[int] = Form(default=[]),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -363,7 +400,7 @@ def assignments_bulk_inactivate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=_assignments_url(review_session.id, filter_q),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -376,6 +413,7 @@ def assignments_bulk_inactivate(
 def assignments_bulk_activate(
     session_id: int,
     assignment_ids: list[int] = Form(default=[]),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -392,6 +430,6 @@ def assignments_bulk_activate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=_assignments_url(review_session.id, filter_q),
         status_code=status.HTTP_303_SEE_OTHER,
     )

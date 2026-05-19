@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
@@ -1066,8 +1066,31 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     )
 
 
+def _apply_pair_search(stmt, search: str):
+    """Add the reviewer / reviewee free-text filter to a pairs query
+    — case-insensitive substring match on either side's name or
+    email (Segment 13C Assignments-page search)."""
+    term = f"%{search.strip()}%"
+    return (
+        stmt.join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(
+            or_(
+                Reviewer.name.ilike(term),
+                Reviewer.email.ilike(term),
+                Reviewee.name.ilike(term),
+                Reviewee.email_or_identifier.ilike(term),
+            )
+        )
+    )
+
+
 def list_pairs(
-    db: Session, session_id: int, *, limit: int = PAIR_PREVIEW_LIMIT
+    db: Session,
+    session_id: int,
+    *,
+    limit: int = PAIR_PREVIEW_LIMIT,
+    search: str | None = None,
 ) -> list[Assignment]:
     """Return saved Assignment rows with reviewer + reviewee + instrument
     eagerly loaded.
@@ -1075,23 +1098,33 @@ def list_pairs(
     Ordered by (reviewer_id, reviewee_id, instrument_id) to match the
     FullMatrix preview shape and keep instrument rows next to each
     other within the same pair on the diagnostic Assignment-pairs
-    table.
+    table. ``search`` (when set) filters to rows whose reviewer or
+    reviewee name / email matches the term.
     """
-    stmt = (
-        session_scoped(Assignment, session_id)
-        .options(
-            joinedload(Assignment.reviewer),
-            joinedload(Assignment.reviewee),
-            joinedload(Assignment.instrument),
-        )
-        .order_by(
-            Assignment.reviewer_id,
-            Assignment.reviewee_id,
-            Assignment.instrument_id,
-        )
-        .limit(limit)
+    stmt = session_scoped(Assignment, session_id).options(
+        joinedload(Assignment.reviewer),
+        joinedload(Assignment.reviewee),
+        joinedload(Assignment.instrument),
     )
+    if search and search.strip():
+        stmt = _apply_pair_search(stmt, search)
+    stmt = stmt.order_by(
+        Assignment.reviewer_id,
+        Assignment.reviewee_id,
+        Assignment.instrument_id,
+    ).limit(limit)
     return list(db.execute(stmt).scalars())
+
+
+def count_pairs(
+    db: Session, session_id: int, *, search: str | None = None
+) -> int:
+    """Count saved Assignment rows for the session, optionally
+    filtered by the reviewer / reviewee free-text ``search``."""
+    stmt = session_scoped(Assignment.id, session_id)
+    if search and search.strip():
+        stmt = _apply_pair_search(stmt, search)
+    return len(db.execute(stmt).all())
 
 
 def delete_all_assignments(

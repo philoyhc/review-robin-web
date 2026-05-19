@@ -143,15 +143,18 @@
      State 1A (and Secondary regenerate in States 2 / 4A / 4B) on
      the Next Action card carries the affordance. #}
 
-  {% if pair_sample %}
-    {% set has_r_tag_1 = pair_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
-    {% set has_r_tag_2 = pair_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
-    {% set has_r_tag_3 = pair_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
-    {% set has_e_tag_1 = pair_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
-    {% set has_e_tag_2 = pair_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
-    {% set has_e_tag_3 = pair_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
+  {% if assignment_count %}
+    {# Has-data flags drive the "Show columns" chips; they read an
+       unfiltered sample (``col_data_sample``) so an active search
+       never flips a chip's enabled state. #}
+    {% set has_r_tag_1 = col_data_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
+    {% set has_r_tag_2 = col_data_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
+    {% set has_r_tag_3 = col_data_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
+    {% set has_e_tag_1 = col_data_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
+    {% set has_e_tag_2 = col_data_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
+    {% set has_e_tag_3 = col_data_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
     {% set ctx = namespace(p1=false, p2=false, p3=false) %}
-    {% for asgn in pair_sample %}
+    {% for asgn in col_data_sample %}
       {% set rel = pair_context_lookup.get((asgn.reviewer_id, asgn.reviewee_id)) %}
       {% if rel and rel.status == "active" %}
         {% if rel.tag_1 %}{% set ctx.p1 = true %}{% endif %}
@@ -195,12 +198,35 @@
           {% endfor %}
         </p>
       </div>
-      {# Card B — operator-actions card (right half). Slice 2:
-         row-selection-driven bulk Inactivate / Activate. The
-         Search row lands here in slice 3. #}
+      {# Card B — operator-actions card (right half): a free-text
+         search to locate a row, plus row-selection-driven bulk
+         Inactivate / Activate. #}
       {% if not is_ready %}
       <div class="card operator-actions-card">
-        <div class="operator-actions-buttons">
+        <form method="get"
+              action="/operator/sessions/{{ session.id }}/assignments"
+              class="operator-actions-filter">
+          <div class="filter-row">
+            <label class="filter-search">
+              Search:
+              <input type="text" name="q" value="{{ filter_q }}"
+                     autocomplete="off"
+                     placeholder="Reviewer or reviewee name / email">
+            </label>
+          </div>
+          <div class="filter-actions">
+            {% if matching_count != assignment_count %}
+              <span class="muted">Showing {{ matching_count }} of {{ assignment_count }}.</span>
+            {% endif %}
+            {% if filter_q %}
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/assignments">Clear</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Apply</button>
+          </div>
+        </form>
+        <div class="operator-actions-buttons"
+             style="margin-top: var(--space-3);">
           <span class="pill pill-count"
                 id="assignments-selected-count" hidden>0 selected</span>
           <button class="btn secondary" type="submit"
@@ -219,15 +245,22 @@
     </div>
     {% if not is_ready %}
     {# Hidden shell — the row-select checkboxes and the Card B
-       bulk buttons associate to it via ``form=``. #}
+       bulk buttons associate to it via ``form=``. The filter
+       term rides along so a bulk action redirects back to the
+       same filtered view. #}
     <form id="assignments-bulk-form" method="post"
-          action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"></form>
+          action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate">
+      <input type="hidden" name="filter_q" value="{{ filter_q }}">
+    </form>
     {% endif %}
     <div class="card">
       <h2>Assignments preview</h2>
+      {% if not pair_sample %}
+        <p class="muted">No assignments match the search.</p>
+      {% else %}
       {% if truncated_count %}
         <p class="form-help">
-          Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} unique pairs.
+          Showing first {{ pair_sample | length }} of {{ "{:,}".format(matching_count) }} unique pairs.
         </p>
       {% endif %}
       <table id="assignments-table"
@@ -324,6 +357,7 @@
       {% if truncated_count %}
         <p class="form-help">…and {{ truncated_count }} more not shown.</p>
       {% endif %}
+      {% endif %}{# /pair_sample #}
     </div>
     <style>
       {% for slot in ["rt1", "rt2", "rt3", "et1", "et2", "et3", "p1", "p2", "p3"] -%}
