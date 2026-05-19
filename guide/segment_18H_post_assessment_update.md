@@ -62,10 +62,67 @@ A regression test covers the pure-re-point case (both pairs
 defuncted, an unrelated pair on the same instrument untouched).
 Suite green (1,913 passed), ruff clean.
 
-The assessment's remaining **suspected LOW** defunct-safeguard
-issue (`defunct_group_responses_for_tag_change` may over-defunct
-when the reviewer is the sole group member) is **not** in this
-segment — it needs confirmation before any fix is scoped.
+## Assessment follow-up findings
+
+### Suspected LOW (`defunct_group_responses_for_tag_change` over-defunct) — closed, not a bug
+
+The 19may assessment's third bug-hunt finding suspected
+`defunct_group_responses_for_tag_change` of over-defuncting —
+deleting group responses where the reviewee's tag change "does
+not actually move it to a different group." Investigated
+2026-05-19; **closed as not a defect.**
+
+`changed_tag_fields` only ever contains tags whose value
+genuinely changed (the caller diffs old vs new), and the
+`affected_instrument_ids` filter selects only instruments whose
+decoded boundary uses a changed tag. A group key is a tuple of
+boundary-tag values, so a changed boundary tag *always* shifts
+the tuple — there is no "collides to the same key" case on a
+single reviewee's own tags. The function deletes exactly the
+tag-changed reviewee's response copies on exactly the instruments
+whose key shifted — the minimal correct set.
+
+The one imprecision is the **docstring**, not the code: "lossless
+for the reviewer — survives on the group's other member rows"
+holds only when the old group keeps ≥1 other member; if the
+reviewee was the sole member, the answer is destroyed — but
+correctly, since that group has ceased to exist. A docstring
+tweak would make that honest; the behaviour is right.
+
+### Representative-staleness on group join — confirmed, open
+
+Investigating the suspected LOW surfaced a *different*, real
+defect on the **destination** side of a reviewee tag change.
+When a tag change moves a reviewee into an **already-answered**
+group, that reviewee's `(reviewer, reviewee)` assignment has no
+fanned response copy (its old copy was just — correctly —
+defuncted; the new group's answer lives on the *other* members).
+`_collapse_group_rows` (`routes_reviewer/_surface.py`) picks the
+group's representative as strictly `members[0]` — the lowest
+assignment id — with no preference for a member that holds
+response data, and the representative's response `cells` are
+inherited from that one assignment. So when the relocated
+reviewee holds the lowest assignment id in the destination group,
+that group renders with **blank inputs** — it looks unanswered —
+and the per-group completion rollup, keyed off the same
+representative, regresses to incomplete.
+
+**Confirmed 2026-05-19** by reproduction: a group instrument
+boundaried on `RevieweeTag1`; reviewer answers Team A and Team B;
+moving Carol (lowest assignment id) from Team A into the answered
+Team B makes Team B's row render blank — the reviewer's Team B
+answer (stored on Dan's row) is no longer surfaced.
+
+The answer data is **not lost** — it survives on the sibling
+members, and the next time the reviewer saves that group the
+write fan-out re-covers the joined reviewee, so it self-heals.
+But in the window between the tag change and the next save the
+reviewer sees their answer apparently gone. Severity **LOW–
+MEDIUM**: a transient display + completion regression, no data
+loss. The fix would live in `_collapse_group_rows` (choose a
+representative that has response data) or in the tag-change path
+(re-fan onto the relocated assignment). Not yet scoped — tracked
+here as an open finding.
 
 ## Stubs
 
