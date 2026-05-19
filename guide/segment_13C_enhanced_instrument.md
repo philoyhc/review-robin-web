@@ -253,14 +253,27 @@ instruments per-reviewee — a noted follow-up.
 > Data, Manage Invitations) over-count a group response by the
 > group size until slice D lands. Accepted trade-off.
 
-**Slice D — aggregation sweep.** `responses.collapse_group_duplicates(rows)`
-keyed on `(reviewer_id, instrument_id, group_key, response_field_id)`
-+ the mandatory sweep migrating every aggregator — Manage
-Invitations Review Progress, Responses page coverage, Extract
-Data exports — see "Aggregation contract" below. Extract Data
-collapses per-member rows to one row per group and surfaces the
-composed group identity in place of per-reviewee identity
-columns.
+**Slice D — aggregation sweep.** Split in two:
+
+- **D1 — reviewer-state rollup — done (2026-05-19).**
+  `_state_from_assignments` (responses.py) collapses each
+  group-scoped instrument's member assignments to one
+  representative per `(instrument, group_key)`, so a group
+  response counts once — not once per member — in
+  `reviewer_session_state`, `reviewer_session_state_per_instrument`,
+  the reviewer dashboard pill, `monitoring.per_reviewer_progress`,
+  `summary_counts`, and the Manage Invitations Review Progress
+  column. *Note:* `monitoring.per_reviewee_coverage` (Responses
+  page) needs no change — it already counts per
+  `(reviewer, reviewee)`, which is not over-counted by the
+  fan-out.
+- **D2 — Extract Data — pending.** `serialize_responses` still
+  emits one row per member `Response`; collapse per-member rows
+  to one row per group and surface the composed group identity
+  in place of the per-reviewee identity columns.
+  `session_response_count` (the Extract Data card's row tally)
+  likewise still counts the fanned-out duplicates. The 18D
+  Part 3 instrument-flavour column rides along here.
 
 No rule-engine change — the rule emits ordinary
 `(reviewer, reviewee)` assignments; the surface partitions and
