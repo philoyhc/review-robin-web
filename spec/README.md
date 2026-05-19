@@ -35,6 +35,7 @@ detailed contracts.
 | `session_home.md` | Session Home / Control Panel — Workflow card, Extract Data card, Quick Setup card, Session Details, Danger Zone. |
 | `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships) — shared body shape, visibility-toggle pattern, per-page column orders. |
 | `instruments.md` | Locked spec for the per-session Instruments page — per-instrument card, response-fields builder, RTD card. |
+| `group_scoped_instruments.md` | Group-scoped instruments (Segment 13C) — a second instrument flavour where one reviewer answer covers a whole group of reviewees. Group-boundary tags, the write fan-out + collapse-on-read model, the single-reviewee-rows storage decision, and the reviewer-group pair count. |
 | `quick_setup_card_spec.md` | Quick Setup card on Session Home — four-slot CSV upload (Reviewers / Reviewees / Relationships / Settings) with shared confirm + cascade + lifecycle-lock semantics. |
 | `preview_hub.md` | Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
 | `validate_page.md` | Validate page (Operations row) — `ValidationRule` registry + find-and-fix surface: setup-coverage grid, severity chip strip, per-issue "Fix on X ↗" deep-links + "Why this check?" disclosure, activate-warns detour banner. |
@@ -47,6 +48,7 @@ detailed contracts.
 | File | Covers |
 |---|---|
 | `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). |
+| `sort_by_reviewee.md` | Reviewer-surface sort UX (Segment 13B) — operator default sort via Display Fields, plus the reviewer-side clickable column headers with live-only persistence. |
 
 ## Visual / UI vocabulary
 
@@ -71,16 +73,6 @@ Reading order: `visual_style_general.md` (portable design system)
 | `timezone_display.md` | Which timezone every date / time is rendered in — the workspace / operator / session layer model, the `resolve_session_timezone` order, per-surface rules (session-scoped surfaces + extracts localise; sessions lobby gets a Timezone column; the audit log stays UTC), and the canonical render format. |
 | `csv_contracts.md` | Column shapes + parsing rules for the five extracts (Reviewers / Reviewees / Relationships / Responses / Settings / audit events) and the four importers (Reviewers / Reviewees / Relationships / Settings). Round-trip stability rules, two-phase parse + apply contract for Settings, shared parsing primitives. |
 | `email_infra_options.md` | Email backend architecture — pluggable-sender scaffolding, Options A (SMTP) / B (Microsoft Graph) / C (Azure Communication Services) / D (third-party transactional), `email_outbox` schema. |
-
-## Forward-looking segment specs
-
-Specs for shipped-segment-pending features. These describe the
-target contract; the code doesn't match them yet.
-
-| File | Covers |
-|---|---|
-| `sort_by_reviewee.md` | **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override). Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
-| `group_scoped_instruments.md` | **Segment 13C** — group-scoped instruments (one shared response covers a whole group of reviewees). Plan needs revision post-15D since it originally stamped per-instrument flavour onto the now-dropped `Assignment.context` JSON column. |
 
 ---
 
