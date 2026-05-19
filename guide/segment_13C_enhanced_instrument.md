@@ -72,8 +72,8 @@ Slice C — the partition-aware reviewer surface render — shipped
 2026-05-19. Slice D — the aggregation sweep (D1 reviewer-state
 rollup + D2 Extract Data collapse) — shipped 2026-05-19, closing
 the over-count window. PR 3 (Replicate) — shipped 2026-05-19.
-The "harmonize the normal instrument card" follow-on remains.
-**Zero migrations.**
+The "harmonize the normal instrument card" follow-on — shipped
+2026-05-19. **Zero migrations.**
 
 ## Progress log
 
@@ -449,7 +449,7 @@ create-flavour buttons are always present and never contend with
 the editing-state machine. `Delete this instrument` lives in the
 Danger Zone card.
 
-## Follow-on — harmonize the normal instrument card
+## Follow-on — harmonize the normal instrument card — done (2026-05-19)
 
 The ordinary per-reviewee instrument card is reorganized to
 follow the **group-scoped card's general layout** — a

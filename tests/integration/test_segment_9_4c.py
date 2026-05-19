@@ -217,7 +217,7 @@ def test_instruments_index_renders_one_card_per_instrument(
     assert ">Instruments<" in body
     # Per-instrument card now uses 'Instrument #N' as its title; the
     # system handle is no longer surfaced in the card.
-    assert ">Instrument #1</h2>" in body
+    assert "Instrument #1" in body
     # accepting_responses pill matches backing data
     if instrument.accepting_responses:
         assert "accepting responses" in body

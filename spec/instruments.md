@@ -100,15 +100,24 @@ backgrounds (white for status; transparent / invisible-borders
 for the rest) so the per-instrument tint reads as a frame, not as
 the body of the inner content.
 
-### A. Identity + status (two half-width cards side by side)
+### A. Identity + Assignment Rule (two half-width cards side by side)
 
 Equal-height, top + bottom aligned (`.bottom-grid` with
-`align-items: stretch`).
+`align-items: stretch`). The card layout is the same for an
+ordinary per-reviewee instrument and a group-scoped one — both
+render through the shared `instrument_identity` macro; the only
+group-scoped difference is Section B's reshaped Display Fields
+table and a `Group-scoped` chip in the heading (Segment 13C
+harmonization, 2026-05-19).
 
 **Left card** — invisible borders, flex column.
 
 - Header: `Instrument #{N}` rendered in a font size larger than
-  normal card titles but smaller than the page H1.
+  normal card titles but smaller than the page H1, followed by
+  the instrument-status pills inline — `accepting responses` /
+  `not accepting responses` and `showing when closed` /
+  `not showing when closed` — and, on a group-scoped instrument,
+  a `Group-scoped` chip.
 - **Short label** (Segment 11L) — operator-typed friendly handle
   used wherever the instrument needs a short name (multi-instrument
   page tabs, reviewer-surface page anchors). In **locked** mode
@@ -123,21 +132,20 @@ Equal-height, top + bottom aligned (`.bottom-grid` with
   **edit** mode renders as a `<textarea form="dfsave-{iid}"
   name="description">` joined to the same bulk-save form as the
   Section B tables.
-- Bottom-left **Edit / Save+Cancel** button pair, mirroring the
-  pair in Section C below. The two pairs are interchangeable —
-  the operator can flip into edit mode (or commit / discard) from
-  either pair without scrolling. See "Section C — Action buttons"
-  below for the canonical wiring.
+- Bottom-left button row: **Edit / Save+Cancel** plus, on a
+  ready session, the visibility-to-reviewers buttons (open /
+  close, show-when-closed / don't-show-when-closed). The
+  separate "This Instrument's Status" sub-card was retired in
+  the Segment 13C harmonization — its status pills moved into
+  the heading and its open/close + visibility buttons moved here
+  beside `Edit`. The `saved` / `not saved` pill and the
+  deadline-closed note were retired outright.
 
-**Right card** — `This Instrument's Status`.
-
-- Instrument-specific status pills (accepting / not accepting,
-  visibility-when-closed showing / not showing,
-  deadline-closed-at if present).
-- A `saved` / `not saved` pill summarising whether the operator
-  has ever pressed Save on the field tables for this instrument.
-- Action buttons for visibility-to-reviewers (open / close,
-  show-when-closed / don't-show-when-closed).
+**Right card** — the **Assignment Rule** sub-card (Segment 15B).
+A `RuleSet` picker pinning `instruments.rule_set_id`, the
+`Number of eligible pairs found` count, and — on a group-scoped
+instrument — the secondary `(Number of reviewer-group pairs: M)`
+figure.
 
 ### B. Display Fields + Response Fields + Response Fields Help
 
@@ -233,36 +241,41 @@ empty) and the Show checkbox is disabled.
 The per-instrument card's bottom action row is a `.bottom-grid` of
 two half-width cards:
 
-- **Left card — invisible** (`border: none; background: transparent;
-  padding: 0`). Hosts the per-instrument state-machine buttons
-  (`Save` / `Cancel` / `Edit`) and the `Add new instrument` button
-  on a single right-flushed row, with the state-machine pair
-  immediately to the left of `Add new instrument`.
-- **Right card — Danger Zone**. Standard danger-zone styling: red
-  border (`#b91c1c`), white inner background (`#fff`, matching the
-  *This Instrument's Status* card), red `Danger Zone` heading, muted
-  cascade warning copy: *"Deleting this instrument cascades to its
-  display and response fields, assignments referencing it, and any
-  submitted reviewer responses. This cannot be undone."* Hosts the
-  `Delete this instrument` button, flushed right.
+A single right-flushed action row (no cards). Left-to-right at
+the right edge: the state-machine pair (`Edit`, or `Save` /
+`Cancel`), then `Add instrument`, `Add group instrument`,
+`Replicate`, and `Delete` last. The separate Danger Zone card
+was retired in the Segment 13C harmonization (2026-05-19);
+`Delete` is now a `btn destructive` at the end of the row, and
+its confirm checkbox + message sit flush-right on a line just
+below the row: *"Yes, delete {Group }Instrument #N and its
+associated assignments and reviewer responses."*
 
-Five buttons across the row, using the canonical `.btn` modifier
-classes catalogued in `spec/ui_elements.md` §6:
+`Delete` follows the **checkbox-gates-button** standard — it
+renders `disabled` and is enabled only while the confirm
+checkbox is ticked (`data-delete-confirm` / `data-delete-btn`
+pairing). It is permanently disabled, regardless of the
+checkbox, when this is the only instrument on the session, the
+session is ongoing, or another card / RTD edit is open.
+
+Buttons use the canonical `.btn` modifier classes catalogued in
+`spec/ui_elements.md` §6:
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary Outline (`btn secondary`) | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and a `saved` pill on the per-instrument status sub-card replaces the `not saved` pill. The button is replaced by `Edit`. |
+| `Save` | Primary Outline (`btn secondary`) | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and the button is replaced by `Edit`. |
 | `Cancel` | Primary Outline (`btn secondary`) | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
 | `Edit` | Primary Outline (`btn secondary`) | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
 | `Add new instrument` | Primary Outline (`btn secondary`) | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
-| `Delete this instrument` | Danger (`btn destructive`) | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. Lives in the right-hand Danger Zone card. |
+| `Replicate` | Primary Outline (`btn secondary`) | Clones this instrument's content into a new card slotted immediately after it (Segment 13C PR 3). |
+| `Delete` | Danger (`btn destructive`) | Last in the row. Deletes this instrument; gated by the confirm checkbox below the row (checkbox-gates-button standard). |
 
 The Instruments page leans on Primary Outline (`btn secondary`)
 across the per-instrument action surface so the visual difference
-between Save / Cancel / Edit / Add stays minimal — the role each
-button plays is conveyed by its label and position, not by colour.
-The `Delete this instrument` Danger button is the single
-exception, isolated inside the right-hand Danger Zone card.
+between Save / Cancel / Edit / Add / Replicate stays minimal —
+the role each button plays is conveyed by its label and
+position, not by colour. The `Delete` Danger button is the
+single exception.
 
 `Save` + `Cancel` and `Edit` are **mutually exclusive** — only
 one of the two states is shown at a time. When the card is open

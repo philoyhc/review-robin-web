@@ -380,14 +380,12 @@ def test_add_group_instrument_sets_group_kind_and_renders_stub(
     assert new.group_kind == "both"
     assert response.headers["location"].endswith(f"#instrument-{new.id}")
 
-    # The group-scoped card renders as a stub: identity + status +
-    # Danger Zone, with a "Group-scoped" chip, and no Display /
-    # Response Fields tables.
+    # The group-scoped card renders with a "Group-scoped" chip in
+    # its heading and the shared action row (Replicate, etc.).
     page = client.get(f"/operator/sessions/{session.id}/instruments")
     assert page.status_code == 200
     body = page.text
     assert "Group-scoped" in body
-    assert "This Instrument's Status" in body
     assert (
         f'action="/operator/sessions/{session.id}/instruments/add-group"'
         in body
