@@ -881,3 +881,39 @@ def test_apply_session_config_clears_responses_without_fk_error(
     # The re-import rebuilt the instrument structure; the responses
     # tied to the old structure are cleared.
     assert db.execute(select(Response)).all() == []
+
+
+def test_round_trip_preserves_group_scoped_instrument(db: Session) -> None:
+    """Regression (Segment 13C): a group-scoped instrument's
+    ``group_kind`` boundary spec survives an export → apply
+    round-trip. The serialiser emits the raw column encoding
+    (boundary codes ``r1`` / ``p2`` …, or the ``both`` sentinel);
+    the importer must accept exactly that encoding, not the
+    ``tag_N`` vocabulary it formerly assumed."""
+
+    source = _bare_session(db, code="grpsrc")
+    db.add(
+        Instrument(
+            session_id=source.id,
+            name="Group instrument",
+            order=1,
+            accepting_responses=False,
+            responses_visible_when_closed=False,
+            group_kind="r1,p2",
+        )
+    )
+    db.flush()
+
+    rows = serialize_session_config(db, source)
+    dest = _session(db, code="grpdst")
+    result = apply_session_config(db, dest, rows)
+    assert result.ok, result.errors
+    db.expire_all()
+
+    dest = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grpdst")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == dest.id)
+    ).scalar_one()
+    assert instrument.group_kind == "r1,p2"

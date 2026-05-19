@@ -872,23 +872,30 @@ def test_parse_group_kind_empty_is_none() -> None:
     assert _parse_group_kind("") is None
 
 
-def test_parse_group_kind_single_key() -> None:
-    assert _parse_group_kind("tag_2") == "tag_2"
+def test_parse_group_kind_sentinel_round_trips() -> None:
+    """The no-boundary sentinel — a group instrument with no
+    boundary tag — round-trips verbatim."""
+    assert _parse_group_kind("both") == "both"
 
 
-def test_parse_group_kind_composite_key() -> None:
-    """A composite group key is an ordered, comma-joined list of
-    distinct reviewee tag keys; whitespace is stripped."""
-
-    assert _parse_group_kind("tag_1,tag_2,tag_3") == "tag_1,tag_2,tag_3"
-    assert _parse_group_kind("tag_3, tag_1") == "tag_3,tag_1"
+def test_parse_group_kind_single_code() -> None:
+    assert _parse_group_kind("r2") == "r2"
+    assert _parse_group_kind("p1") == "p1"
 
 
-def test_parse_group_kind_rejects_unknown_key() -> None:
+def test_parse_group_kind_composite_code() -> None:
+    """A composite boundary spec is an ordered, comma-joined list of
+    distinct boundary codes; whitespace is stripped."""
+
+    assert _parse_group_kind("r1,r2,r3") == "r1,r2,r3"
+    assert _parse_group_kind("r3, p1") == "r3,p1"
+
+
+def test_parse_group_kind_rejects_unknown_code() -> None:
     with pytest.raises(_ParseError):
-        _parse_group_kind("tag_1,tag_9")
+        _parse_group_kind("r1,tag_9")
 
 
-def test_parse_group_kind_rejects_duplicate_key() -> None:
+def test_parse_group_kind_rejects_duplicate_code() -> None:
     with pytest.raises(_ParseError):
-        _parse_group_kind("tag_1,tag_1")
+        _parse_group_kind("r1,r1")
