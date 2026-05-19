@@ -1,7 +1,12 @@
-# Segment 18F — Scheduled events
+# Segment 18G — Scheduled events
 
 > **Stub created 2026-05-17.** Sketch-level scope only — detailed
 > PR breakdowns get drafted when this segment is picked up.
+>
+> **Renumbered 18F → 18G on 2026-05-19** when the new
+> **Segment 18F — Workflow optimization**
+> (`guide/segment_18F_workflow_optimization.md`) was created. The
+> scope is unchanged — only the segment number moved.
 >
 > Consolidates every **scheduled / automatic session-lifecycle
 > automation** behind the one 13F scheduled-lifecycle schema audit,
@@ -18,7 +23,7 @@
 Give the operator **time-based automation** of session lifecycle
 events: things that happen on a date/time rather than on an explicit
 click. Each one is a scheduled trigger on top of a transition service
-that already exists (or ships in its owning segment); 18F adds the
+that already exists (or ships in its owning segment); 18G adds the
 *scheduling*, not the transition.
 
 Why one segment: every item below needs a persisted date/time (or
@@ -36,7 +41,7 @@ mechanism instead of a column and a half-worker per feature.
   (2026-05-17)".
 - **The transitions already exist or are cheap.** `archive_session`
   shipped in 18A; the invitation send-path and the reminder
-  email transport (14B) exist or are cheap. 18F is mostly
+  email transport (14B) exist or are cheap. 18G is mostly
   *scheduling* glue.
 - **Shared dispatch.** A scheduled job (or the lazy
   deadline-observer pattern in `spec/lifecycle.md`) fires all of
@@ -96,7 +101,7 @@ the session `deadline`, all funnelled through
 **Goal.** A retention policy that purges aged data on a schedule —
 moved here out of **Segment 18C** when 18C was re-scoped to the
 *operator-triggered* purge only (2026-05-17). 18C owns the purge
-*mechanics*; 18F Part 4 owns the *scheduled trigger* that runs them.
+*mechanics*; 18G Part 4 owns the *scheduled trigger* that runs them.
 
 - **Per-deployment policy** — env-var config in `app/config.py`
   (`RETENTION_RESPONSE_DAYS` / `RETENTION_AUDIT_DAYS` /
@@ -182,7 +187,7 @@ in this segment.
 
 - The underlying transitions themselves (`archive_session`,
   invitation send, the 14B email transport) — those belong to
-  their owning segments; 18F only schedules them.
+  their owning segments; 18G only schedules them.
 - Email *transport* activation and backend swaps — 14B's.
   Part 5 owns the reminder *cadence* and the *scheduled
   enqueue*; 14B owns the *send*.

@@ -80,7 +80,7 @@ Rule Builder, dry-run counts, post-activation correction
 (reconciling regeneration), richer audit views, role delegation,
 admin dashboards, session cloning. Targeted reminders by
 detailed completion state and scheduled retention remain
-(14C / 18F).
+(14C / 18G).
 
 **§23 — end-to-end acceptance cycle:** the whole cycle runs
 without developer intervention except the two email-send steps,
@@ -198,7 +198,7 @@ The remaining workplan: **14A** (production hardening), **14B**
 (email infrastructure), **14C** (reminders workflow), **13C**
 (enhanced/group-scoped instruments), **17B** (reviewer-surface
 refinements — partly landed), **18E** (small enhancements),
-**18F** (scheduled events), **19/20** (spec/doc sweeps), **21**
+**18G** (scheduled events), **19/20** (spec/doc sweeps), **21**
 (peer-review / reviewee surface).
 
 Rough estimate, extrapolating from recent segment sizes

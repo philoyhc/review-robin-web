@@ -660,7 +660,7 @@ PRs #1080 → #1105), then the implementation ladder PRs A → H
 - The lobby table was reordered (Last Modified dropped) and opted
   into the shared `rrw-sortable` primitive.
 - Scheduled automation (auto-archive et al.) split out to the new
-  stub **Segment 18F — Scheduled events**; **18B is retired** as a
+  stub **Segment 18G — Scheduled events**; **18B is retired** as a
   segment number (the old 18A cloning + 18B tagging/archiving
   stubs were consolidated here 2026-05-15).
 
@@ -684,7 +684,7 @@ Audit log — sit after the Allow-delete checkbox.
   ticked is a plain archive. Ticking Rosters force-ticks
   Responses (the cascade makes it implied).
 - Re-scoped on the way in: the *scheduled* / policy-driven
-  retention half moved to **Segment 18F** Part 4. Closes the
+  retention half moved to **Segment 18G** Part 4. Closes the
   operator-facing half of the §21 #16 acceptance criterion.
 
 Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
@@ -715,7 +715,7 @@ across PRs **#1129 → #1133**:
 
 Two consumer-blocked parts handed off: **Part 3** (Responses
 `Instrument` flavour column) rides with **13C**; **Part 5**
-(retention CSV columns) with **18F Part 4**. Plan:
+(retention CSV columns) with **18G Part 4**. Plan:
 `guide/archive/segment_18D_export_and_import_update.md`.
 
 ---
@@ -790,13 +790,13 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13F (PRs 4-5), 14B,
-18E, 18F, 19, 20**. No global ordering
+18E, 18F, 18G, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13F — More DB prep (16A / 16B / 18A / 18B / 18F
+1. **13F — More DB prep (16A / 16B / 18A / 18B / 18G
    ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**,
    **PRs 6 + 7 shipped 2026-05-15**, **PR 3 shipped 2026-05-17**;
    only PRs 4 + 5 outstanding)*. Mirrors the
@@ -812,10 +812,10 @@ bottom of this file.
    String for 18B PR 3; **PR 7 (shipped)** —
    `users.preferences` JSON for 18B PR 2. The two outstanding
    PRs ride with their consumer segments: **PR 4**
-   (`sessions.reminder_settings`) with 18F Part 5 (reminders);
+   (`sessions.reminder_settings`) with 18G Part 5 (reminders);
    **PR 5**
    (`sessions.retention_exception` + `retention_overrides`)
-   with **18F Part 4** (moved from 18C when 18C was re-scoped
+   with **18G Part 4** (moved from 18C when 18C was re-scoped
    to operator-triggered purge, which needed no schema).
    The deferred Postgres type migrations stay out of 13F. **The 16-series
    schema scaffolding is complete — Segment 16A is unblocked.**
@@ -864,7 +864,22 @@ bottom of this file.
   `views.friendly_fields_with_data`.
   **Plan:** `guide/segment_18E_small_enhancements.md`.
 
-- **18F — Scheduled events** *(stub created 2026-05-17)*.
+- **18F — Workflow optimization** *(stub created 2026-05-19)*.
+  A deliberate end-to-end work-through of the operator workflow —
+  the session journey from setup through preparation, activation,
+  the review window, and close-out. **Part 1** is committed: split
+  the Workflow-card super-button into **"Prepare"** (Validate +
+  Generate) and **"Activate"**, restoring a pre-activation window
+  where assignments exist and the reviewer surface is previewable
+  but nothing is live. (The super-button collapsed Validate →
+  Generate → Activate, so today preview is impossible until the
+  session is already activated.) The rest of the segment is the
+  holistic pass — pre-positioning the lifecycle so 18G scheduling
+  and the segments-21+ participant model slot in cleanly. Leads
+  18G. **Plan:** `guide/segment_18F_workflow_optimization.md`.
+
+- **18G — Scheduled events** *(stub created 2026-05-17;
+  renumbered from 18F on 2026-05-19)*.
   Consolidates every scheduled / automatic session-lifecycle
   automation behind the one 13F scheduled-lifecycle schema audit:
   **auto-archive** (a timed `archive_session`, moved out of 18A),
@@ -874,7 +889,7 @@ bottom of this file.
   reminders** — the former Segment 14C — were consolidated in
   (2026-05-18) as Part 5. Schema-blocked on the 13F audit
   resolving to a locked column set.
-  **Plan:** `guide/segment_18F_scheduled_events.md`.
+  **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
@@ -908,8 +923,11 @@ bottom of this file.
   `email_outbox` audit-log schema landed inert in 11C Part 2
   (Migration `c4f6a8b0d2e5`); 14B Part A is the first writer.
 - **Within 14B**, Parts B-E are sequential enhancements on top
-  of Part A; Parts F-H are independent backend swaps. **18F
+  of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13F (PRs 4-5), 18E, 18F, 19, 20** are independent of the
   email + audit pipelines and can interleave at any time.
+- **18F → 18G.** 18F (workflow optimization) settles the
+  lifecycle; 18G (scheduled events) hangs time-based triggers off
+  it. Land 18F first.

@@ -82,7 +82,7 @@ site invokes it; the driver and dispatch worker are Segment 14B.
 sessions, the Rule Builder, dry-run reconcile counts,
 post-activation correction, richer audit views, role delegation,
 admin dashboards, session cloning. Targeted reminders by
-completion state and scheduled retention remain (14C / 18F).
+completion state and scheduled retention remain (14C / 18G).
 
 **§23 — end-to-end acceptance cycle:** the whole cycle runs
 without developer intervention except the two email-send steps,
@@ -191,7 +191,7 @@ and test-covered.
 The remaining workplan: **14B** (email infrastructure), **14C**
 (reminders workflow), **13C** (enhanced / group-scoped
 instruments), **17B** (reviewer-surface refinements — partly
-landed), **18E** (small enhancements), **18F** (scheduled
+landed), **18E** (small enhancements), **18G** (scheduled
 events), **19 / 20** (spec / doc sweeps), and **21**
 (peer-review / reviewee surface). Segment 14A is now closed.
 
