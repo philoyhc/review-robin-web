@@ -1386,6 +1386,248 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
+def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Editing a reviewee's group-boundary tag deletes the
+    group-scoped Response rows that point at them — the now
+    mis-attributed fan-out copies — while the other group members'
+    rows survive (Segment 13C PR 5)."""
+    from app.db.models import User
+    from app.services import reviewees as reviewees_service
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Tag Edit", "code": "grp-tagedit"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-tagedit")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"  # group by RevieweeTag1
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    by_reviewee = {
+        a.reviewee.name: a
+        for a in db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == group.id)
+            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        ).scalars()
+    }
+    ordered_ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    position = ordered_ids.index(group.id) + 1
+
+    # Reviewer answers the Team A group → fans to Carol + Eve.
+    rae_client = make_client(rae)
+    saved = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303, saved.text
+
+    def _rating(assignment: Assignment) -> str | None:
+        rows = (
+            db.execute(
+                select(Response).where(
+                    Response.assignment_id == assignment.id
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {r.response_field.field_key: r.value for r in rows}.get(
+            "rating"
+        )
+
+    assert _rating(by_reviewee["Carol"]) == "5"
+    assert _rating(by_reviewee["Eve"]) == "5"
+
+    # Operator corrects Carol's boundary tag — she moves to Team B.
+    carol = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.email_or_identifier == "carol@example.edu",
+        )
+    ).scalar_one()
+    operator_user = db.get(User, review_session.created_by_user_id)
+    reviewees_service.update_reviewee(
+        db, reviewee=carol, tag_1="Team B", user=operator_user
+    )
+
+    # Carol's group-scoped Response rows are defuncted; Eve — a
+    # retained Team A member — keeps the reviewer's answer.
+    assert _rating(by_reviewee["Carol"]) is None
+    assert _rating(by_reviewee["Eve"]) == "5"
+
+
+def test_relationship_pair_context_tag_change_defuncts_pair_responses(
+    db: Session,
+) -> None:
+    """Editing a relationship's grouping pair-context tag deletes
+    the group-scoped Response rows for exactly that (reviewer,
+    reviewee) pair (Segment 13C PR 5 — pair-context variant)."""
+    import datetime as _dt
+
+    from app.db.models import (
+        InstrumentResponseField,
+        Relationship,
+        ResponseTypeDefinition,
+        User,
+    )
+    from app.services import relationships as relationships_service
+    from app.services.instruments import (
+        ensure_default_response_type_definitions,
+    )
+
+    user = User(email="op@example.edu", display_name="Op")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="Rel Defunct",
+        code="rel-defunct",
+        created_by_user_id=user.id,
+        assignment_mode="manual",
+    )
+    db.add(review_session)
+    db.flush()
+    ensure_default_response_type_definitions(db, review_session)
+    db.flush()
+    likert = (
+        db.query(ResponseTypeDefinition)
+        .filter(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "Likert5",
+        )
+        .one()
+    )
+    # Group-scoped instrument grouped by pair-context tag 1.
+    instrument = Instrument(
+        session_id=review_session.id,
+        name="Grp",
+        order=0,
+        group_kind="p1",
+    )
+    db.add(instrument)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="rating",
+        label="Rating",
+        response_type_id=likert.id,
+        order=0,
+    )
+    db.add(field)
+    reviewer = Reviewer(
+        session_id=review_session.id, name="R", email="r@example.edu"
+    )
+    carol = Reviewee(
+        session_id=review_session.id,
+        name="Carol",
+        email_or_identifier="carol@example.edu",
+    )
+    db.add_all([reviewer, carol])
+    db.flush()
+    relationship = Relationship(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=carol.id,
+        tag_1="Cohort A",
+        status="active",
+    )
+    db.add(relationship)
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=carol.id,
+        instrument_id=instrument.id,
+        include=True,
+        created_by_mode="manual",
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="4",
+            saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.timezone.utc),
+            version=1,
+        )
+    )
+    db.commit()
+
+    def _response_count() -> int:
+        return len(
+            db.execute(
+                select(Response).where(
+                    Response.assignment_id == assignment.id
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert _response_count() == 1
+
+    # Editing the relationship's grouping pair-context tag defuncts
+    # the pair's group-scoped responses.
+    relationships_service.update_relationship(
+        db, relationship=relationship, tag_1="Cohort B", user=user
+    )
+    assert _response_count() == 0
+
+
 def test_group_instrument_surface_renders_one_row_per_group(
     db: Session,
     alice: AuthenticatedUser,

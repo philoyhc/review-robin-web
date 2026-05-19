@@ -542,13 +542,17 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 15F PR 4 — per-row reviewee authoring + bulk status
     # flips. ``app/services/reviewees.py`` is the sole emitter.
     "reviewee.created": EventSchema(_IDENTITY | {"snapshot"}),
-    "reviewee.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "reviewee.updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
     "reviewee.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "reviewee.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     # Segment 15F PR 5 — per-row relationship authoring + bulk
     # status flips. ``app/services/relationships.py`` emits.
     "relationship.created": EventSchema(_IDENTITY | {"snapshot"}),
-    "relationship.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "relationship.updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
     "relationship.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),

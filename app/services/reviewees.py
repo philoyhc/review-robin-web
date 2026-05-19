@@ -271,6 +271,20 @@ def update_reviewee(
         setattr(reviewee, field, new_value)
     db.flush()
 
+    # A grouping-tag change mis-attributes the answer copies fanned
+    # onto group-scoped Response rows that point at this reviewee;
+    # delete them so each group re-derives cleanly (Segment 13C
+    # PR 5). No-op unless a changed tag is a group boundary.
+    from app.services import responses as responses_service
+
+    defuncted = responses_service.defunct_group_responses_for_tag_change(
+        db,
+        reviewee=reviewee,
+        changed_tag_fields={
+            f for f in changes if f in ("tag_1", "tag_2", "tag_3")
+        },
+    )
+
     audit.write_event(
         db,
         event_type="reviewee.updated",
@@ -279,6 +293,9 @@ def update_reviewee(
         session=reviewee.session,
         payload=audit.changes(changes),
         refs={"reviewee_id": reviewee.id},
+        context=(
+            {"defuncted_group_responses": defuncted} if defuncted else None
+        ),
         correlation_id=correlation_id,
     )
     db.commit()

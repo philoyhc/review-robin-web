@@ -355,31 +355,37 @@ instrument, append a secondary count in parentheses:
   count on a stamp match with no engine run, and computes the
   engine result lazily once per pinned rule on a miss.
 
-### PR 5 — grouping-tag-change defunct safeguard
+### PR 5 — grouping-tag-change defunct safeguard — done (2026-05-19)
 
-*Planned 2026-05-19.* Implements the safeguard decided in
+Implements the safeguard decided in
 `spec/group_scoped_instruments.md` Open Questions. When a
-person's grouping-tag value changes, the answer copies fanned
+reviewee's grouping-tag value changes, the answer copies fanned
 onto assignments that *point at them* become mis-attributed to
 whatever group those rows re-derive into.
 
-- **Trigger.** A reviewee roster edit (CSV reimport or inline
-  edit) that changes a `tag_N` value, where `tag_N` is a
-  boundary tag of some group-scoped instrument in the session
-  (i.e. `tag_N` appears in some instrument's decoded
-  `group_kind`). The pair-context variant: a relationship's
-  grouping pair-context tag change.
-- **Action.** Defunct (delete) the `Response` rows on
-  group-scoped instruments for assignments where the
-  tag-changed person is the **reviewee** — and, for the
-  pair-context variant, only the one `(reviewer, reviewee)`
-  row. Lossless for reviewers: the answer survives redundantly
-  on the group's other member rows. Emit an audit event for the
-  defunct.
-- Hook into the existing roster-edit cascade path
-  (`csv_imports` already tracks `cascaded_assignments`).
+- **Trigger.** An **inline** reviewee edit
+  (`reviewees.update_reviewee`) that changes a `tag_N` value.
+  CSV reimport needs no safeguard — `csv_imports._save` is a
+  full delete-and-replace, so a reimport already cascade-clears
+  every assignment and response; only the in-place edit path
+  leaves stale copies.
+- **Action.** `responses.defunct_group_responses_for_tag_change`
+  deletes the `Response` rows where the tag-changed reviewee is
+  the reviewee, on the group-scoped instruments whose decoded
+  `group_kind` boundary actually uses one of the changed tags.
+  Lossless for reviewers — the answer survives redundantly on
+  the group's other member rows. The defunct count rides on the
+  triggering `reviewee.updated` audit event's `context`
+  (`defuncted_group_responses`), mirroring how roster imports
+  record `cascaded_assignments`.
+- **Pair-context variant.** `relationships.update_relationship`
+  gets the symmetric hook —
+  `responses.defunct_group_responses_for_relationship_tag_change`
+  deletes the group-scoped `Response` rows for the one
+  `(reviewer, reviewee)` pair the relationship describes, on
+  instruments whose boundary uses the changed pair-context tag.
 
-Order: PR 4 first (4a, then 4b if needed), then PR 5.
+Order: PR 4 first (4a, then 4b), then PR 5.
 
 ## Action row
 
