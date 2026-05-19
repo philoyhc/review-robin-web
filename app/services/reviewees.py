@@ -271,13 +271,15 @@ def update_reviewee(
         setattr(reviewee, field, new_value)
     db.flush()
 
-    # A grouping-tag change mis-attributes the answer copies fanned
-    # onto group-scoped Response rows that point at this reviewee;
-    # delete them so each group re-derives cleanly (Segment 13C
-    # PR 5). No-op unless a changed tag is a group boundary.
+    # A grouping-tag change moves this reviewee between groups: its
+    # mis-attributed fanned answer copies are deleted, and the
+    # assignment is re-fanned from its new group so a relocated
+    # reviewee surfaces that group's answer rather than a blank row
+    # (Segment 13C PR 5; re-fan Segment 18H). No-op unless a
+    # changed tag is a group boundary.
     from app.services import responses as responses_service
 
-    defuncted = responses_service.defunct_group_responses_for_tag_change(
+    defuncted = responses_service.reconcile_group_responses_for_tag_change(
         db,
         reviewee=reviewee,
         changed_tag_fields={

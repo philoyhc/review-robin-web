@@ -1511,6 +1511,141 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
+def test_tag_change_into_answered_group_refans_the_answer(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A reviewee moved by a boundary-tag change into an
+    already-answered group is re-fanned that group's answer — so
+    the group keeps surfacing it even when the relocated reviewee
+    (with no fanned copy) would otherwise be the collapse
+    representative (Segment 18H)."""
+    from app.db.models import User
+    from app.services import reviewees as reviewees_service
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Join", "code": "grp-join"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-join")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    by_reviewee = {
+        a.reviewee.name: a
+        for a in db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == group.id)
+            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        ).scalars()
+    }
+    # Carol (Team A) has the lower assignment id, so after she joins
+    # Team B she becomes its collapse representative.
+    assert by_reviewee["Carol"].id < by_reviewee["Dan"].id
+    ordered_ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    position = ordered_ids.index(group.id) + 1
+    rae_client = make_client(rae)
+    # Reviewer answers Team A (via Carol) and Team B (via Dan).
+    saved = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        data={
+            f"response[{by_reviewee['Carol'].id}][rating]": "5",
+            f"response[{by_reviewee['Dan'].id}][rating]": "3",
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303, saved.text
+
+    # Operator moves Carol into the already-answered Team B.
+    carol = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.email_or_identifier == "carol@example.edu",
+        )
+    ).scalar_one()
+    operator_user = db.get(User, review_session.created_by_user_id)
+    reviewees_service.update_reviewee(
+        db, reviewee=carol, tag_1="Team B", user=operator_user
+    )
+
+    # Carol's assignment is re-fanned with Team B's answer ("3"),
+    # not left blank by the defunct.
+    carol_rows = (
+        db.execute(
+            select(Response).where(
+                Response.assignment_id == by_reviewee["Carol"].id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert {
+        r.response_field.field_key: r.value for r in carol_rows
+    }.get("rating") == "3"
+
+    # The surface still surfaces Team B's answer.
+    page = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/{position}"
+    )
+    marker = f"rrw-sort-rs-{review_session.id}-{group.id}"
+    table = page.text[
+        page.text.index(marker) : page.text.index(
+            "</table>", page.text.index(marker)
+        )
+    ]
+    assert 'value="3"' in table
+
+
 def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     db: Session,
 ) -> None:

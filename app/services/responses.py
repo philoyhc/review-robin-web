@@ -472,24 +472,135 @@ def group_keys(
     )
 
 
-def defunct_group_responses_for_tag_change(
+def _refan_group_responses(
+    db: Session,
+    *,
+    session_id: int,
+    assignment_ids: set[int],
+) -> int:
+    """Restore the group fan-out invariant for assignments whose
+    group membership may have just changed (a boundary tag edit or
+    a relationship re-point relocated them).
+
+    A group-scoped instrument keeps **identical** answer copies on
+    every assignment in a group; the reviewer surface and the
+    state rollups read one representative row per group and trust
+    that invariant. When a reviewee / pair is relocated *into* an
+    already-answered group, its assignment has no fanned copy — so
+    if it becomes the representative the group reads blank. Each
+    listed assignment that has no responses but lands in a group
+    whose other members *are* answered is given a copy of that
+    group's answer (Segment 18H). Assignments that already carry
+    responses, or whose new group is genuinely unanswered, are
+    left as-is. Returns the number of ``Response`` rows written."""
+    if not assignment_ids:
+        return 0
+    targets = list(
+        db.execute(
+            select(Assignment).where(Assignment.id.in_(assignment_ids))
+        ).scalars()
+    )
+    if not targets:
+        return 0
+    group_instrument_ids = set(
+        db.execute(
+            select(Instrument.id).where(
+                Instrument.id.in_({a.instrument_id for a in targets}),
+                Instrument.group_kind.is_not(None),
+            )
+        ).scalars()
+    )
+    if not group_instrument_ids:
+        return 0
+    # Every assignment on the affected group instruments — needed
+    # to resolve a relocated assignment's new group siblings.
+    siblings = list(
+        db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id.in_(group_instrument_ids)
+            )
+        ).scalars()
+    )
+    keys = group_keys(db, assignments=siblings, session_id=session_id)
+    by_group: dict[tuple[int, int, tuple[str, ...]], list[Assignment]] = {}
+    for sib in siblings:
+        group_key = keys.get(sib.id)
+        if group_key is None:
+            continue
+        by_group.setdefault(
+            (sib.reviewer_id, sib.instrument_id, group_key), []
+        ).append(sib)
+
+    written = 0
+    for target in targets:
+        if target.instrument_id not in group_instrument_ids:
+            continue
+        group_key = keys.get(target.id)
+        if group_key is None:
+            continue
+        # Already consistent — a non-relocated assignment keeps its
+        # copy; skip it (and stay idempotent).
+        if (
+            db.execute(
+                select(Response.id).where(
+                    Response.assignment_id == target.id
+                )
+            ).first()
+            is not None
+        ):
+            continue
+        source_rows: list[Response] = []
+        for sib in by_group.get(
+            (target.reviewer_id, target.instrument_id, group_key), []
+        ):
+            if sib.id == target.id:
+                continue
+            rows = list(
+                db.execute(
+                    select(Response).where(
+                        Response.assignment_id == sib.id
+                    )
+                ).scalars()
+            )
+            if rows:
+                source_rows = rows
+                break
+        for row in source_rows:
+            db.add(
+                Response(
+                    assignment_id=target.id,
+                    response_field_id=row.response_field_id,
+                    value=row.value,
+                    saved_at=row.saved_at,
+                    submitted_at=row.submitted_at,
+                    version=row.version,
+                )
+            )
+            written += 1
+    if written:
+        db.flush()
+    return written
+
+
+def reconcile_group_responses_for_tag_change(
     db: Session,
     *,
     reviewee: Reviewee,
     changed_tag_fields: set[str],
 ) -> int:
-    """Delete the group-scoped ``Response`` rows pointing at
-    ``reviewee`` when one of their group-boundary tags changed.
+    """Reconcile group-scoped ``Response`` rows after ``reviewee``'s
+    group-boundary tags changed.
 
     A group-scoped instrument's `group_key` is derived from the
-    **reviewee's** boundary tags. When such a tag value changes,
-    the answer copies fanned onto assignments that point at this
-    reviewee become mis-attributed to whatever group those rows
-    re-derive into — so they are deleted (Segment 13C PR 5). Only
-    instruments whose decoded boundary actually uses one of the
-    changed tags are touched. This is lossless for the reviewer:
-    their group answer survives redundantly on the group's other
-    member rows. Returns the number of ``Response`` rows deleted.
+    **reviewee's** boundary tags. When such a tag value changes the
+    reviewee moves between groups: the answer copies fanned onto
+    its assignments are mis-attributed and are **deleted** (Segment
+    13C PR 5), and — so the reviewee's assignment surfaces its new
+    group's answer rather than a blank representative row — the
+    assignment is **re-fanned** from the new group (Segment 18H).
+    Only instruments whose decoded boundary actually uses a changed
+    tag are touched. Returns the number of ``Response`` rows
+    deleted (the re-fan is a side effect).
 
     ``changed_tag_fields`` is the subset of ``{"tag_1", "tag_2",
     "tag_3"}`` whose value changed on this reviewee."""
@@ -515,23 +626,32 @@ def defunct_group_responses_for_tag_change(
     if not affected_instrument_ids:
         return 0
 
-    response_ids = list(
+    target_assignment_ids = set(
         db.execute(
-            select(Response.id)
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
+            select(Assignment.id).where(
                 Assignment.reviewee_id == reviewee.id,
                 Assignment.instrument_id.in_(affected_instrument_ids),
             )
         ).scalars()
     )
-    if not response_ids:
-        return 0
-    db.execute(delete(Response).where(Response.id.in_(response_ids)))
+    response_ids = list(
+        db.execute(
+            select(Response.id).where(
+                Response.assignment_id.in_(target_assignment_ids)
+            )
+        ).scalars()
+    )
+    if response_ids:
+        db.execute(delete(Response).where(Response.id.in_(response_ids)))
+    _refan_group_responses(
+        db,
+        session_id=reviewee.session_id,
+        assignment_ids=target_assignment_ids,
+    )
     return len(response_ids)
 
 
-def defunct_group_responses_for_relationship_change(
+def reconcile_group_responses_for_relationship_change(
     db: Session,
     *,
     session_id: int,
@@ -540,7 +660,7 @@ def defunct_group_responses_for_relationship_change(
     repointed: bool,
 ) -> int:
     """Pair-context counterpart of
-    :func:`defunct_group_responses_for_tag_change`.
+    :func:`reconcile_group_responses_for_tag_change`.
 
     A ``Relationship`` row carries the pair-context tags of one
     ``(reviewer, reviewee)`` pair. Editing it shifts a group key
@@ -548,18 +668,19 @@ def defunct_group_responses_for_relationship_change(
     the row is **re-pointed** to a different pair — its tags move
     off the old pair and onto the new one. Either way the
     group-scoped ``Response`` rows fanned onto the affected
-    pair(s) are mis-attributed and are deleted so the group
-    re-derives cleanly (Segment 13C PR 5; re-point handling added
-    Segment 18H).
+    pair(s) are mis-attributed: they are **deleted** and the
+    affected assignments are **re-fanned** from their new groups
+    so each group re-derives cleanly (Segment 13C PR 5; re-point
+    handling Segment 18H).
 
     ``pairs`` is the set of ``(reviewer_id, reviewee_id)`` pairs to
-    clean — for a pure tag edit the single unchanged pair; for a
-    re-point both the old and the new pair. ``repointed`` widens
+    reconcile — for a pure tag edit the single unchanged pair; for
+    a re-point both the old and the new pair. ``repointed`` widens
     the affected-instrument set to *every* pair-context-boundaried
     group instrument, since a re-point moves all of the pair's
     pair-context tags (a pure tag edit only affects instruments
     whose boundary uses a changed tag number). Returns the number
-    of rows deleted."""
+    of rows deleted (the re-fan is a side effect)."""
     if not pairs:
         return 0
     changed_numbers = {
@@ -599,19 +720,26 @@ def defunct_group_responses_for_relationship_change(
             for reviewer_id, reviewee_id in pairs
         )
     )
-    response_ids = list(
+    target_assignment_ids = set(
         db.execute(
-            select(Response.id)
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
+            select(Assignment.id).where(
                 pair_clause,
                 Assignment.instrument_id.in_(affected_instrument_ids),
             )
         ).scalars()
     )
-    if not response_ids:
-        return 0
-    db.execute(delete(Response).where(Response.id.in_(response_ids)))
+    response_ids = list(
+        db.execute(
+            select(Response.id).where(
+                Response.assignment_id.in_(target_assignment_ids)
+            )
+        ).scalars()
+    )
+    if response_ids:
+        db.execute(delete(Response).where(Response.id.in_(response_ids)))
+    _refan_group_responses(
+        db, session_id=session_id, assignment_ids=target_assignment_ids
+    )
     return len(response_ids)
 
 

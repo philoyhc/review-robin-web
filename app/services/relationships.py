@@ -684,14 +684,15 @@ def update_relationship(
     # onto group-scoped Response rows two ways: a grouping
     # pair-context tag value changes, or the row is re-pointed to a
     # different pair (its tags move off the old pair and onto the
-    # new one). Delete the affected rows so the group re-derives
-    # cleanly (Segment 13C PR 5; re-point handling Segment 18H).
-    # No-op unless a group instrument is boundaried on pair context.
+    # new one). The affected pairs' rows are deleted and re-fanned
+    # from their new groups so each group re-derives cleanly
+    # (Segment 13C PR 5; re-point handling Segment 18H). No-op
+    # unless a group instrument is boundaried on pair context.
     from app.services import responses as responses_service
 
     repointed = "reviewer_id" in changes or "reviewee_id" in changes
     defuncted = (
-        responses_service.defunct_group_responses_for_relationship_change(
+        responses_service.reconcile_group_responses_for_relationship_change(
             db,
             session_id=session_id,
             pairs={

@@ -89,7 +89,7 @@ reviewee was the sole member, the answer is destroyed — but
 correctly, since that group has ceased to exist. A docstring
 tweak would make that honest; the behaviour is right.
 
-### Representative-staleness on group join — confirmed, open
+### Representative-staleness on group join — confirmed and fixed
 
 Investigating the suspected LOW surfaced a *different*, real
 defect on the **destination** side of a reviewee tag change.
@@ -114,15 +114,28 @@ Team B makes Team B's row render blank — the reviewer's Team B
 answer (stored on Dan's row) is no longer surfaced.
 
 The answer data is **not lost** — it survives on the sibling
-members, and the next time the reviewer saves that group the
-write fan-out re-covers the joined reviewee, so it self-heals.
-But in the window between the tag change and the next save the
-reviewer sees their answer apparently gone. Severity **LOW–
-MEDIUM**: a transient display + completion regression, no data
-loss. The fix would live in `_collapse_group_rows` (choose a
-representative that has response data) or in the tag-change path
-(re-fan onto the relocated assignment). Not yet scoped — tracked
-here as an open finding.
+members — but in the window before the next save the reviewer
+sees their answer apparently gone, and the completion rollup
+regresses. Severity **LOW–MEDIUM**: a transient display +
+completion regression, no data loss.
+
+**Fix (PR #1220).** The root cause is a violated invariant — a
+group-scoped instrument keeps *identical* answer copies on every
+assignment in a group, and every reader (`_collapse_group_rows`,
+`_state_from_assignments`, the extract) trusts that. The
+tag-change / re-point safeguards already delete the *stale* copies
+of a relocated reviewee/pair but never restored the copies for the
+*new* group. Rather than teach each reader to tolerate a violated
+invariant, the fix **restores it**: `defunct_group_responses_for_
+tag_change` / `_for_relationship_change` are renamed
+`reconcile_group_responses_for_*` and now, after deleting the
+stale rows, **re-fan** — a new `_refan_group_responses` helper
+copies each relocated assignment's new group's answer from a
+sibling member that still holds it (an assignment whose new group
+is genuinely unanswered is left empty). All read paths then work
+unchanged. A regression test reproduces the original case (Carol
+moved into an answered Team B → Team B still surfaces the answer).
+Suite green (1,914 passed), ruff clean.
 
 ## Stubs
 
