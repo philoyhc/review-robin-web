@@ -754,6 +754,28 @@ Functional spec: `spec/group_scoped_instruments.md`.
 
 ---
 
+### Segment 17B — Reviewer surface refinements — done 2026-05-19
+
+Polish + ergonomics pass on the reviewer response surface. The
+substantive work shipped 2026-05-16; the segment is closed
+2026-05-19 with the remaining polish items deferred.
+
+- **Shipped:** PR 1 (the `routes_reviewer/` package split, commit
+  `801af2f`); the action-row reorder + keyboard navigation
+  (Tab + Enter) (#1076); the visible-progress pills — session-wide
+  status + per-instrument completion (#1077). Sticky headers were
+  investigated and dropped.
+- **Deferred** to `guide/deferred_until_pilot_feedback.md` —
+  cell-level autosave, the filter-to-incomplete toggle (both
+  carved 2026-05-16), and return-to-place + the rest of the chrome
+  polish (status-card location, denser rows) (carved 2026-05-19).
+  Built only if pilot feedback asks. The AG Grid data-grid swap is
+  off the roadmap (`guide/future_possibilities.md`).
+
+Plan: `guide/segment_17B_reviewer_surface_refinements.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -767,7 +789,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13F (PRs 4-5), 14B, 17B,
+**13F (PRs 4-5), 14B,
 18E, 18F, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -818,20 +840,6 @@ bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
-
-- **17B — Reviewer surface refinements** *(partly shipped
-  2026-05-16)*. Polish + ergonomics pass on the reviewer response
-  surface. **Shipped:** PR 1 (`routes_reviewer/` package, commit
-  `801af2f`); the action-row reorder + keyboard navigation
-  (Tab + Enter) (#1076); the visible-progress pills — session-wide
-  status + per-instrument completion (#1077); sticky headers were
-  investigated and dropped. **Remaining:** return-to-place and the
-  rest of the chrome polish (status-card location, denser rows).
-  **Deferred** (to `guide/deferred_until_pilot_feedback.md`,
-  2026-05-16): cell autosave and filter-to-incomplete — built
-  only if pilot feedback asks. No JS framework; the AG Grid route
-  is off the roadmap, see `guide/future_possibilities.md`.
-  **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18E — Small enhancements** *(holding pen — open; Parts 1-3
   shipped 2026-05-18)*.
@@ -894,15 +902,6 @@ bottom of this file.
 > is `guide/participant_model_upgrade.md`, and a dedicated todo
 > file is started if and when that work begins.
 
-> The AG Grid replacement of the reviewer-surface table was
-> briefly a segment here (numbered 17 → 17A → 22) but was
-> taken off the roadmap on 2026-05-16 — a JS data-grid is
-> judged overkill. The reviewer-surface ergonomics it would
-> have delivered (autosave, sticky headers, visible progress)
-> are folded into **Segment 17B** as vanilla progressive
-> enhancement; the wholesale grid swap is recorded as an
-> aspirational item in `guide/future_possibilities.md`.
-
 ### Sequencing notes
 
 - **11C Part 2 → 14B Part A** is the email pipeline: the
@@ -912,6 +911,5 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18F
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13F (PRs 4-5), 17B,
-  18E, 18F, 19, 20** are independent of the email +
-  audit pipelines and can interleave at any time.
+- **13F (PRs 4-5), 18E, 18F, 19, 20** are independent of the
+  email + audit pipelines and can interleave at any time.

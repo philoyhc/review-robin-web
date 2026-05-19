@@ -225,3 +225,38 @@ their place hunting for the unfilled rows.
 off the per-row `is_complete` flag already in the payload.
 
 ---
+
+## 17B — Return-to-place + reviewer-surface chrome polish
+
+> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> 2026-05-19, when Segment 17B was closed: PR 1 (the
+> `routes_reviewer/` package split), the action-row reorder +
+> keyboard navigation (#1076), and the visible-progress pills
+> (#1077) shipped; sticky headers were investigated and dropped.
+> The remaining polish items are deferred rather than built
+> speculatively.
+
+**Ships.**
+
+- **Return-to-place** — after Save / Submit, the reviewer lands
+  back at the row / instrument they were working rather than the
+  top of the page.
+- The remaining chrome polish from the 17B plan — status-card
+  location and denser rows.
+
+**Why deferred.** These are ergonomic refinements whose value
+depends on how reviewers actually work a real roster; the
+visible-progress pills (#1077) already cover the most-requested
+orientation need. Tuning row density / status-card placement
+without pilot signal risks polishing a layout nobody asked to
+change.
+
+**Lift trigger.** Pilot reviewers say they lose their place after
+a Save, or that the surface feels sparse / the status card is hard
+to find on a long roster.
+
+**Wire-up.** Template + inline JS / CSS in `review_surface.html`;
+the post-Save redirect already exists — return-to-place adds a
+fragment anchor to it. No route or view-adapter change.
+
+---
