@@ -390,6 +390,103 @@ def test_picker_count_shows_number_once_a_rule_is_pinned(
     assert "0" in pill
 
 
+def test_group_pair_count_collapses_eligible_pairs_by_boundary(
+    client: TestClient, db: Session
+) -> None:
+    """A group-scoped instrument's rule card reports a secondary
+    reviewer-group pair count — distinct (reviewer, group_key) over
+    the rule's eligible pairs — alongside the raw pair count
+    (Segment 13C PR 4)."""
+    from app.db.models import Reviewee, Reviewer
+    from app.services.rules import session_library
+
+    review_session = _make_session(client, db, code="grp-count")
+    rule = _add_session_rule_set(
+        db, review_session=review_session, name="Everyone"
+    )
+    db.add(
+        Reviewer(
+            session_id=review_session.id, name="R", email="r@example.edu"
+        )
+    )
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                tag_1="Team A",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                tag_1="Team A",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@example.edu",
+                tag_1="Team B",
+            ),
+        ]
+    )
+    [instrument] = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    instrument.rule_set_id = rule.id
+    instrument.group_kind = "r1"  # group by reviewee tag 1
+    db.commit()
+
+    # Per-rule eligible pairs: 1 reviewer x 3 reviewees = 3.
+    by_rule = session_library.evaluate_session_rule_eligibility(
+        db, review_session
+    )
+    assert by_rule[rule.id] == 3
+    # Reviewer-group pairs: Team A {Carol, Eve} + Team B {Dan} = 2.
+    by_instrument = session_library.evaluate_instrument_group_pair_counts(
+        db, review_session
+    )
+    assert by_instrument == {instrument.id: 2}
+
+    # The card renders the secondary count in parentheses.
+    body = client.get(_index_url(review_session.id)).text
+    section = body.split(
+        f'id="instrument-{instrument.id}-rule-picker"', 1
+    )[1].split("Open Rule Builder", 1)[0]
+    assert "(2 reviewer-group pairs)" in section
+
+
+def test_group_pair_count_absent_for_per_reviewee_instrument(
+    client: TestClient, db: Session
+) -> None:
+    """A per-reviewee instrument (no ``group_kind``) gets no
+    reviewer-group parenthetical."""
+    review_session = _make_session(client, db, code="grp-count-none")
+    rule = _add_session_rule_set(
+        db, review_session=review_session, name="My Rule"
+    )
+    [instrument] = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    instrument.rule_set_id = rule.id
+    db.commit()
+
+    body = client.get(_index_url(review_session.id)).text
+    section = body.split(
+        f'id="instrument-{instrument.id}-rule-picker"', 1
+    )[1].split("Open Rule Builder", 1)[0]
+    assert "reviewer-group pairs" not in section
+
+
 def test_picker_renders_no_rule_sets_state(
     client: TestClient, db: Session
 ) -> None:

@@ -332,14 +332,19 @@ instrument, append a secondary count in parentheses:
   shared helper if it reads cleanly. `evaluate_session_rule_eligibility`
   already has `reviewees` + `pair_context_lookup` in scope when
   it runs the engine.
-- **Slice 4a — compute + display, no cache.** New
-  `session_library` function returning
-  `{instrument_id: group_pair_count}` for group-scoped pinned
-  instruments; runs the engine for those rules (like 18E Part 2
-  PR 1's pinned-only state). `views/_instruments.py` rule-picker
-  context gains `selected_group_pair_count: int | None` (`None`
-  for per-reviewee instruments). `instruments_index.html`
-  renders the parenthetical only when it is set.
+- **Slice 4a — compute + display, no cache — done
+  (2026-05-19).** `session_library.evaluate_instrument_group_pair_counts`
+  returns `{instrument_id: group_pair_count}` for group-scoped
+  pinned instruments — distinct `(reviewer, group_key)` over the
+  rule's `result.pairs`, the boundary resolved by the shared
+  `responses.group_key_for_pair` helper. Runs the engine for
+  those rules (like 18E Part 2 PR 1's pinned-only state; the
+  engine call is now factored into `_evaluate_rule_row`).
+  `views/_instruments.py` rule-picker context carries
+  `selected_group_pair_count: int | None`;
+  `instruments_index.html` renders `(N reviewer-group pairs)`
+  after the raw count, and the inline JS clears it while the
+  dropdown is off the pinned rule.
 - **Slice 4b — per-instrument persisted cache.** Mirrors 18E
   Part 2 PR 2. Migration adds `cached_group_pair_count` +
   `cached_group_pair_stamp` to `Instrument`; the stamp is a

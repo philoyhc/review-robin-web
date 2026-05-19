@@ -407,24 +407,46 @@ def _group_key_by_assignment(
     for assignment in assignments:
         if assignment.instrument_id not in group_instrument_ids:
             continue
-        boundary = boundary_by_instrument.get(assignment.instrument_id, [])
-        key: list[str] = []
-        for source_type, source_field in boundary:
-            if source_type == "reviewee":
-                raw = getattr(assignment.reviewee, source_field, None)
-            else:  # pair_context
-                relationship = pair_lookup.get(
-                    (assignment.reviewer_id, assignment.reviewee_id)
-                )
-                raw = None
-                if (
-                    relationship is not None
-                    and getattr(relationship, "status", None) == "active"
-                ):
-                    raw = getattr(relationship, f"tag_{source_field}", None)
-            key.append((raw or "").strip())
-        keys[assignment.id] = tuple(key)
+        keys[assignment.id] = group_key_for_pair(
+            reviewee=assignment.reviewee,
+            reviewer_id=assignment.reviewer_id,
+            reviewee_id=assignment.reviewee_id,
+            boundary=boundary_by_instrument.get(assignment.instrument_id, []),
+            pair_context_lookup=pair_lookup,
+        )
     return keys
+
+
+def group_key_for_pair(
+    *,
+    reviewee: object,
+    reviewer_id: int,
+    reviewee_id: int,
+    boundary: list[tuple[str, str]],
+    pair_context_lookup: dict[tuple[int, int], object],
+) -> tuple[str, ...]:
+    """The group key for one ``(reviewer, reviewee)`` pair under a
+    decoded group-boundary spec — the tuple of boundary tag values
+    (reviewee tags read off ``reviewee``; pair-context tags off the
+    active ``Relationship``). Shared by the assignment-keyed
+    :func:`_group_key_by_assignment` and the Instruments-page
+    reviewer-group pair count."""
+    key: list[str] = []
+    for source_type, source_field in boundary:
+        if source_type == "reviewee":
+            raw = getattr(reviewee, source_field, None)
+        else:  # pair_context
+            relationship = pair_context_lookup.get(
+                (reviewer_id, reviewee_id)
+            )
+            raw = None
+            if (
+                relationship is not None
+                and getattr(relationship, "status", None) == "active"
+            ):
+                raw = getattr(relationship, f"tag_{source_field}", None)
+        key.append((raw or "").strip())
+    return tuple(key)
 
 
 def group_keys(

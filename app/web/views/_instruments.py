@@ -263,26 +263,38 @@ class InstrumentRulePickerContext:
     ``selected_eligible_pair_count`` is ``None`` when the instrument
     has no rule pinned — the template renders "--" rather than a
     number, and the rule engine is not run for it.
+
+    ``selected_group_pair_count`` is the secondary reviewer-group
+    pair count, set only for a **group-scoped** instrument with a
+    rule pinned (``None`` for per-reviewee instruments and unpinned
+    ones — the template omits the parenthetical).
     """
 
     options: list[InstrumentRulePickerOption]
     selected_rule_set_id: int | None
     selected_eligible_pair_count: int | None
+    selected_group_pair_count: int | None
     open_rule_builder_url: str
 
 
 def _build_rule_picker_options(
     db: Session, review_session: ReviewSession
-) -> tuple[list[InstrumentRulePickerOption], dict[int, int]]:
-    """Compute the picker option list + the eligibility-count map
-    for the rules **pinned to instruments** (``rule_set_id ->
-    N pairs``), once per page load.
+) -> tuple[
+    list[InstrumentRulePickerOption],
+    dict[int, int],
+    dict[int, int],
+]:
+    """Compute the picker option list, the per-rule eligibility-count
+    map (``rule_set_id -> N pairs``), and the per-instrument
+    reviewer-group pair count (``instrument_id -> M groups``, for
+    group-scoped instruments with a rule pinned), once per page
+    load.
 
     The dropdown options carry no per-option count — the engine is
     run only for rules actually pinned to an instrument
     (:func:`session_library.evaluate_session_rule_eligibility`),
     so an unpinned rule is never evaluated. Empty rule pool →
-    ``([], {})``.
+    ``([], {}, {})``.
     """
     from app.services.rules import session_library
 
@@ -290,9 +302,14 @@ def _build_rule_picker_options(
         db, session_id=review_session.id
     )
     if not rule_sets:
-        return [], {}
+        return [], {}, {}
     eligibility_by_id = session_library.evaluate_session_rule_eligibility(
         db, review_session
+    )
+    group_count_by_instrument = (
+        session_library.evaluate_instrument_group_pair_counts(
+            db, review_session
+        )
     )
     options = [
         InstrumentRulePickerOption(
@@ -303,7 +320,7 @@ def _build_rule_picker_options(
         )
         for row in rule_sets
     ]
-    return options, eligibility_by_id
+    return options, eligibility_by_id, group_count_by_instrument
 
 
 def build_instrument_rule_picker_contexts(
@@ -316,8 +333,8 @@ def build_instrument_rule_picker_contexts(
     across cards on the page — only the selected id + Rule Builder
     deep-link vary per instrument.
     """
-    options, eligibility_by_id = _build_rule_picker_options(
-        db, review_session
+    options, eligibility_by_id, group_count_by_instrument = (
+        _build_rule_picker_options(db, review_session)
     )
     contexts: dict[int, InstrumentRulePickerContext] = {}
     for instrument in instruments:
@@ -338,6 +355,9 @@ def build_instrument_rule_picker_contexts(
             options=options,
             selected_rule_set_id=selected_id,
             selected_eligible_pair_count=selected_count,
+            selected_group_pair_count=group_count_by_instrument.get(
+                instrument.id
+            ),
             open_rule_builder_url=builder_url,
         )
     return contexts
