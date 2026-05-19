@@ -790,7 +790,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13F (PRs 4-5), 14B,
-18E, 18F, 18G, 19, 20**. No global ordering
+18E, 18F, 18G, 18H, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -894,6 +894,18 @@ bottom of this file.
   Activated-as-gate model + reviewer pre-open / closed states.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
+- **18H — Post-assessment update** *(created 2026-05-19)*.
+  A holding pen opened after the 2026-05-19 codebase assessment.
+  **Logs as shipped:** the group-scoped instrument config
+  round-trip fix (PR #1216 — `_parse_group_kind` now parses
+  through the `group_kind` codec). **Carries three stubs**, scope
+  drafted at pickup: **rule builder refinement** (an ergonomics
+  pass on the Rule Builder page), **enhanced response export**
+  (the next iteration of the Responses extract — wide-format
+  option et al.), and **metadata export** (a session-metadata /
+  manifest export distinct from the Settings CSV).
+  **Plan:** `guide/segment_18H_post_assessment_update.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
@@ -929,7 +941,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13F (PRs 4-5), 18E, 18F, 19, 20** are independent of the
+- **13F (PRs 4-5), 18E, 18F, 18H, 19, 20** are independent of the
   email + audit pipelines and can interleave at any time.
 - **18F → 18G.** 18F (workflow optimization) settles the
   lifecycle; 18G (scheduled events) hangs time-based triggers off
