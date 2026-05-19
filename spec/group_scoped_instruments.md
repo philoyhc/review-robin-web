@@ -468,25 +468,25 @@ the two without re-deriving from the schema.
   "(unset)" group, or is the row dropped? Probably an "(unset)"
   group so no reviewee silently vanishes; confirm when PR 2
   starts.
-- **Stale fan-out copies on a grouping-tag change.** *Open —
-  proposed direction.* An assignment's `group_key` is computed
-  from its **reviewee's** boundary-tag values (and, for
-  pair-context boundaries, the `(reviewer, reviewee)`
-  relationship) — never from the reviewer's own tags. So when a
-  person's grouping-tag value is corrected, the answer copies
-  fanned onto every assignment that *points at them* are now
-  mis-attributed to whatever group those rows re-derive into.
-  Proposed safeguard: on a grouping-tag change, defunct every
-  group-scoped `Response` row on assignments where that person
-  is the **reviewee** (the rows whose `group_key` depends on the
-  changed tag) — not the rows they authored, whose `group_key`
-  depends on *their* reviewees and stays valid. This is lossless
-  for the reviewer: their group answer survives redundantly on
-  the group's other member rows (the exception — a two-person
-  group with self-review off — is one where the answer should be
-  revisited anyway). A pair-context boundary-tag change is
-  narrower still: only the one relationship's row. Confirm the
-  scope before implementing.
+- **Stale fan-out copies on a grouping-tag change.** *Decided
+  2026-05-19 — implementation pending.* An assignment's
+  `group_key` is computed from its **reviewee's** boundary-tag
+  values (and, for pair-context boundaries, the
+  `(reviewer, reviewee)` relationship) — never from the
+  reviewer's own tags. So when a person's grouping-tag value is
+  corrected, the answer copies fanned onto every assignment that
+  *points at them* are now mis-attributed to whatever group
+  those rows re-derive into. Safeguard: on a grouping-tag
+  change, defunct every group-scoped `Response` row on
+  assignments where that person is the **reviewee** (the rows
+  whose `group_key` depends on the changed tag) — not the rows
+  they authored, whose `group_key` depends on *their* reviewees
+  and stays valid. This is lossless for the reviewer: their
+  group answer survives redundantly on the group's other member
+  rows (the exception — a two-person group with self-review off
+  — is one where the answer should be revisited anyway). A
+  pair-context boundary-tag change is narrower still: only the
+  one relationship's row.
 - **Eligible-pair count on a group-scoped instrument's rule
   card.** *Decided 2026-05-19 — implementation pending.*
   Because single-reviewee `(reviewer, reviewee)` assignment rows
