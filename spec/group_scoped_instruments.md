@@ -1,10 +1,10 @@
 # Enhanced instruments — group-scoped review
 
-**Status.** Partly implemented. The **operator-side editor**
-shipped in Segment 13C PR 1 (#1176-#1181) — group-scoped
-instruments can be created, authored, and rule-pinned. The
-**reviewer surface** (group block, write fan-out, aggregation)
-is still pending (13C PR 2). This file captures the full design
+**Status.** Implemented — Segment 13C shipped 2026-05-19: the
+operator-side editor, the group-boundary tags, the
+boundary-scoped reviewer write fan-out, the partition-aware
+reviewer surface (one row per group), and the aggregation sweep.
+This file captures the full design
 for a second kind of instrument — a **group-scoped instrument**
 — alongside today's per-reviewee instrument, so a reviewer
 records one rating / comment / etc. about a *group* of reviewees
@@ -62,7 +62,7 @@ rather than per-individual.
 
 This file is the source of truth for the design. The
 implementation plan lives at
-**`guide/segment_13C_enhanced_instrument.md`**; 13C also picks up
+**`guide/archive/segment_13C_enhanced_instrument.md`**; 13C also picks up
 the Replicate-instrument button on the same action-row sweep.
 
 Subsequent edits to this design go here and propagate to the
@@ -410,7 +410,7 @@ everywhere data leaves the system or rolls up. A missed collapse
 in a CSV export over-counts group responses by the group size.
 The single helper plus a unit test pinning the contract is the
 defense; reviewing every aggregator's call site is mandatory when
-the feature ships (see `guide/segment_13C_enhanced_instrument.md`
+the feature ships (see `guide/archive/segment_13C_enhanced_instrument.md`
 PR 2).
 
 ### Extraction

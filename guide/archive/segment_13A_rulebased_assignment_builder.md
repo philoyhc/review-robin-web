@@ -13,7 +13,7 @@
 >   (per-instrument flavour where one answer covers a group of
 >   reviewees) + a "Duplicate instrument" action-row button.
 >   Functional spec at `spec/group_scoped_instruments.md`; plan at
->   `guide/segment_13C_enhanced_instrument.md`.
+>   `guide/archive/segment_13C_enhanced_instrument.md`.
 >
 > The three are independent and can ship in any order. Together
 > they cover the original Segment 13 framing ("rule-based

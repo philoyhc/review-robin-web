@@ -19,7 +19,7 @@ on the same surface family:
 - **13A** — rule-based assignment generation
   (`guide/archive/segment_13A_rulebased_assignment_builder.md`).
 - **13C** — enhanced instruments (group-scoped + duplicate
-  button) (`guide/segment_13C_enhanced_instrument.md`).
+  button) (`guide/archive/segment_13C_enhanced_instrument.md`).
 
 The implementation plan for this spec lives at
 `guide/archive/segment_13B_sort_tables.md`. The three sibling
