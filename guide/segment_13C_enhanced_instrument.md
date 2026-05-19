@@ -387,6 +387,37 @@ whatever group those rows re-derive into.
 
 Order: PR 4 first (4a, then 4b), then PR 5.
 
+### Assignments-page refinement cards (planned 2026-05-19)
+
+Two titleless half-width cards below the Per-instrument status
+card, in a `.bottom-grid`, plus main-table changes — mirroring
+the Reviewers / Reviewees / Relationships Setup-page info card
+and operator-actions card.
+
+- **Slice 1 — Card A, column-visibility card (left).** Replaces
+  the inline field-selecting checkboxes
+  (`.assignment-col-toggles`). Two rows like the Setup-page info
+  card: "Fields with data:" friendly-label pills for the
+  populated tag columns, then "Show columns:" pill chips
+  (`tag-chip is-selected` / `is-disabled` for empty) toggling
+  each of the nine tag columns (rt1-3 / et1-3 / p1-3). Reuses
+  the existing `rrw-assignment-col-visibility` localStorage +
+  `col-hidden-{slot}` CSS; only the chrome changes from
+  checkboxes to chips, with the Setup pages' chip-click JS.
+- **Slice 2 — Card B bulk actions (right) + row-select column.**
+  A left-most checkbox column on the main table (+ select-all)
+  feeding a hidden bulk form; Card B carries a "{n} selected"
+  pill and Inactivate / Activate buttons. New
+  `assignments.bulk_set_assignment_include` service flips
+  `Assignment.include` on the selected rows (audit event); POST
+  routes `assignments/bulk-inactivate` + `bulk-activate`.
+- **Slice 3 — Card B search.** A single free-text "Search:"
+  input matching reviewer **or** reviewee name / email
+  (server-side), with "Showing X of M" + Clear / Apply —
+  mirroring the Setup operator-actions filter row. `?filter_q=`
+  preserved across reloads / bulk actions; the 200-row preview
+  cap stays as a perf guard, applied after the filter.
+
 ## Action row
 
 Every instrument card's action row carries this fixed button set

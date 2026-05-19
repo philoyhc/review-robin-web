@@ -508,9 +508,14 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert ">cohort-a</td>" in body
     assert ">bench-a</td>" in body
 
-    # Toggle initial state — only the slots that have data are ticked.
-    assert 'data-col-toggle="rt1"\n                       checked' in body
-    assert 'data-col-toggle="et2"\n                       checked' in body
-    assert 'data-col-toggle="p1"\n                       checked' in body
-    assert 'data-col-toggle="rt2"\n                       checked' not in body
-    assert 'data-col-toggle="p3"\n                       checked' not in body
+    # "Show columns" chip initial state — slots with data render
+    # as selected chips; empty slots render disabled.
+    def _chip_class(slot: str) -> str:
+        before = body.split(f'data-col-toggle="{slot}"', 1)[0]
+        return before.rsplit("<span", 1)[1]
+
+    assert "is-selected" in _chip_class("rt1")
+    assert "is-selected" in _chip_class("et2")
+    assert "is-selected" in _chip_class("p1")
+    assert "is-disabled" in _chip_class("rt2")
+    assert "is-disabled" in _chip_class("p3")

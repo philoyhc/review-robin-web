@@ -159,6 +159,43 @@
         {% if rel.tag_3 %}{% set ctx.p3 = true %}{% endif %}
       {% endif %}
     {% endfor %}
+    {# Card A — column-visibility card (left half of the bottom
+       grid). "Fields with data" pills + "Show columns" chips,
+       mirroring the Reviewers / Reviewees / Relationships
+       Setup-page info card. The chips drive the same
+       ``rrw-assignment-col-visibility`` localStorage the inline
+       checkboxes used to. #}
+    {% set col_slots = [
+      ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
+      ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
+      ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
+      ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
+      ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
+      ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
+      ("p1", field_label(session, "pair_context", "1"), ctx.p1),
+      ("p2", field_label(session, "pair_context", "2"), ctx.p2),
+      ("p3", field_label(session, "pair_context", "3"), ctx.p3),
+    ] %}
+    <div class="bottom-grid">
+      <div class="card">
+        <p style="margin: 0;">
+          Fields with data:
+          {% for slot, label, has_data in col_slots if has_data %}
+            <span class="pill pill-count">{{ label }}</span>
+          {% else %}
+            <span class="muted">—</span>
+          {% endfor %}
+        </p>
+        <p class="col-chip-row" style="margin: 12px 0 0 0;">
+          <span>Show columns:</span>
+          {% for slot, label, has_data in col_slots %}
+            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                  data-col-toggle="{{ slot }}"
+                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
+          {% endfor %}
+        </p>
+      </div>
+    </div>
     <div class="card">
       <h2>Assignments preview</h2>
       {% if truncated_count %}
@@ -166,45 +203,6 @@
           Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} unique pairs.
         </p>
       {% endif %}
-      <div class="assignment-col-toggles"
-           style="display: flex; justify-content: flex-end; gap: var(--space-3) var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-2);">
-        {# 15A Slice 2 — column-toggle labels resolve via
-           ``field_label(session, ...)`` so an operator who
-           renamed e.g. ``RevieweeTag1`` to "Lab section" sees
-           that name on the toggle as well as the column
-           header. #}
-        {% set toggle_groups = [
-          ("Reviewer", [
-            ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
-            ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
-            ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
-          ]),
-          ("Reviewee", [
-            ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
-            ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
-            ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
-          ]),
-          ("Relationship", [
-            ("p1", field_label(session, "pair_context", "1"), ctx.p1),
-            ("p2", field_label(session, "pair_context", "2"), ctx.p2),
-            ("p3", field_label(session, "pair_context", "3"), ctx.p3),
-          ]),
-        ] %}
-        {% for group_label, items in toggle_groups %}
-          <div style="display: flex; gap: var(--space-2); align-items: center;">
-            <span class="muted" style="font-size: 0.875em;">{{ group_label }}:</span>
-            {% for slot, label, has_data in items %}
-              <label style="font-weight: normal;">
-                <input type="checkbox"
-                       class="assignment-col-toggle"
-                       data-col-toggle="{{ slot }}"
-                       {% if has_data %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-                {{ label }}
-              </label>
-            {% endfor %}
-          </div>
-        {% endfor %}
-      </div>
       <table id="assignments-table"
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
         <thead>
@@ -297,34 +295,52 @@
       (function () {
         var STORAGE_KEY = "rrw-assignment-col-visibility";
         var table = document.getElementById("assignments-table");
-        var toggles = document.querySelectorAll(".assignment-col-toggle");
-        if (!table || !toggles.length) return;
+        var chips = document.querySelectorAll("[data-col-toggle]");
+        if (!table || !chips.length) return;
         var stored = null;
         try {
           stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
         } catch (e) {}
-        toggles.forEach(function (cb) {
-          var slot = cb.getAttribute("data-col-toggle");
-          if (cb.disabled) {
+        chips.forEach(function (chip) {
+          var slot = chip.getAttribute("data-col-toggle");
+          if (chip.classList.contains("is-disabled")) {
             apply(slot, false);
             return;
           }
+          var visible = true;
           if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
-            cb.checked = !!stored[slot];
+            visible = !!stored[slot];
           }
-          apply(slot, cb.checked);
-          cb.addEventListener("change", function () {
-            apply(slot, cb.checked);
+          setChip(chip, slot, visible);
+          bind(chip, function () {
+            setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
             persist();
           });
         });
+        function bind(el, handler) {
+          el.addEventListener("click", handler);
+          el.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handler();
+            }
+          });
+        }
+        function setChip(chip, slot, visible) {
+          chip.classList.toggle("is-selected", visible);
+          chip.setAttribute("aria-pressed", visible ? "true" : "false");
+          apply(slot, visible);
+        }
         function apply(slot, visible) {
           table.classList.toggle("col-hidden-" + slot, !visible);
         }
         function persist() {
           var state = {};
-          toggles.forEach(function (cb) {
-            state[cb.getAttribute("data-col-toggle")] = cb.checked;
+          chips.forEach(function (chip) {
+            if (!chip.classList.contains("is-disabled")) {
+              state[chip.getAttribute("data-col-toggle")] =
+                chip.getAttribute("aria-pressed") === "true";
+            }
           });
           try {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
