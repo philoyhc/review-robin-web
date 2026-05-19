@@ -390,10 +390,11 @@ the two without re-deriving from the schema.
 
 ## Open questions
 
-- **Large-group member lists.** "Alice, Bob, Carol" reads cleanly
-  for a handful of members; a 30-member list does not. A
-  "+N more" truncation with hover-to-expand is probably right —
-  lock the copy when PR 2 starts.
+- **Large-group member lists.** *Resolved (13C PR 2 slice C).*
+  The group-identity cell lists the first 10 member names then a
+  `+N more` suffix (no hover-to-expand). The limit lives in one
+  constant — `GROUP_MEMBER_NAME_LIMIT` in
+  `app/web/routes_reviewer/_surface.py`.
 - **Group-scoped reminders.** A reviewer who has not answered a
   group-scoped instrument — does the reminder say "you have an
   unanswered group rating" or enumerate the group? Probably the

@@ -67,8 +67,10 @@ shipped 2026-05-18 (#1183); it pre-dates the group-boundary
 revision and fans across the reviewer's whole universe, so it
 needs a group-key-aware follow-up (PR 2 slice B below). PR 2
 slice A — the Group-boundary editor column — shipped 2026-05-19.
-The partition-aware reviewer surface (slices B-D) and PR 3
-(Replicate) remain. **Zero migrations.**
+Slice B — the boundary-scoped write fan-out — shipped 2026-05-19.
+Slice C — the partition-aware reviewer surface render — shipped
+2026-05-19. The aggregation sweep (slice D) and PR 3 (Replicate)
+remain. **Zero migrations.**
 
 ## Progress log
 
@@ -217,20 +219,39 @@ as the no-partition sentinel. What shipped:
 
 No reviewer-visible change.
 
-**Slice B — write fan-out re-scope.** `_expand_group_upserts`
-(shipped in slice 1) fans across the reviewer's whole universe;
-re-scope it to fan only within the boundary-defined group the
-answer was submitted for. Coupled to slice C (which supplies the
-per-group input grouping).
+**Slice B — write fan-out re-scope — done (2026-05-19).**
+`_expand_group_upserts` (shipped in slice 1) fanned across the
+reviewer's whole universe; it now fans only within the
+boundary-defined group. New `_group_key_by_assignment` helper in
+`responses.py` computes each assignment's group key — the tuple
+of boundary-tag values for its `(reviewer, reviewee)` pair
+(reviewee tags off the reviewee, pair-context tags off the active
+`Relationship`) — and the fan-out / dedup are keyed on
+`(instrument, group_key, field_key)`. A group instrument with no
+boundary tag still yields one group (empty key), so the
+no-boundary case is unchanged.
 
-**Slice C — reviewer surface render.** Render a group-scoped
-instrument as a self-contained block — **one row per group**, the
-universe partitioned by the boundary tags (one row when no
-boundary tag is set). Each row carries a **group-identity
-column** composed automatically from the boundary tag values
-(comma-separated, Sort order) and, when the Name row is ticked, a
-second line listing the group's member names. One set of response
-inputs per row. The preview hub renders the same block.
+**Slice C — reviewer surface render — done (2026-05-19).** The
+reviewer surface collapses a group-scoped instrument's
+per-assignment rows into **one row per boundary-defined group**.
+`responses.group_keys` (public wrapper over the slice-B group-key
+helper) partitions a reviewer's rows; `_collapse_group_rows` in
+`_surface.py` keeps the lowest-id member as the representative
+(response inputs key off it; the slice-B fan-out spreads the
+answer) and builds a `group_identity` block — boundary tag values
+plus, when the RevieweeName Display Field is Included, the member
+names (first `GROUP_MEMBER_NAME_LIMIT` = 10, then `+N more`). The
+template branches on `is_group`: a `Group` identity column
+replaces `Reviewee` + display columns. Validation now runs on the
+raw upserts before the fan-out so a bad group answer yields one
+error, and `_compute_missing_required` reports one entry per
+group. The operator preview builder still renders group
+instruments per-reviewee — a noted follow-up.
+
+> **Over-count window now open.** Slice C ships ahead of D, so
+> operator-facing counts (monitoring coverage / progress, Extract
+> Data, Manage Invitations) over-count a group response by the
+> group size until slice D lands. Accepted trade-off.
 
 **Slice D — aggregation sweep.** `responses.collapse_group_duplicates(rows)`
 keyed on `(reviewer_id, instrument_id, group_key, response_field_id)`

@@ -320,6 +320,10 @@ def build_preview_context(
         instrument_groups.append(
             {
                 "instrument": instrument,
+                # Operator preview renders group-scoped instruments
+                # per-reviewee (un-collapsed); the surface-side group
+                # block is a Segment 13C follow-up for this builder.
+                "is_group": False,
                 "heading": heading,
                 "position": position,
                 # Operator preview always treats Page #1 as the active
