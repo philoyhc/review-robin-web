@@ -221,11 +221,10 @@ def test_operator_actions_card_renders_inert_buttons(
     ):
         assert label in body
     # The three buttons (Edit / Inactivate / Reactivate) start
-    # disabled — JS enables them on selection. Anchor on the div's
-    # ``class="..."`` so the base.html CSS rule with the same class
-    # name doesn't shadow the match.
+    # disabled — JS enables them on selection. They now sit inline
+    # in the filter-actions row, before the Search submit.
     buttons_section = body[
-        body.find('class="operator-actions-buttons"') :
+        body.find('class="filter-actions"') :
     ][:2000]
     assert buttons_section.count("disabled") >= 3
 
@@ -329,3 +328,21 @@ def test_filter_no_match_shows_empty_state_with_table_count_preserved(
     assert "No reviewers match the current filter." in body
     # The Danger Zone still renders since the total > 0.
     assert "Delete all reviewers" in body
+
+
+def test_delete_all_button_gated_by_confirm_checkbox(
+    db: Session, client: TestClient
+) -> None:
+    """The destructive "Delete all reviewers" button conforms to
+    the confirm-checkbox-gates-button standard — it ships
+    `disabled` and is paired to the confirm checkbox by the
+    `data-delete-confirm` / `data-delete-btn` attributes."""
+    review_session = _make_session(client, db, code="rev-delete-gate")
+    _seed_reviewers_via_orm(db, review_session.id, 2)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    assert 'data-delete-confirm="delete-all"' in body
+    button = body[body.find('data-delete-btn="delete-all"') :][:200]
+    assert "disabled" in button

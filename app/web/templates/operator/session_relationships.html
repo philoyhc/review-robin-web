@@ -53,12 +53,15 @@
         <input type="hidden" name="return_to" value="relationships">
         <p>
           <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
+            <input type="checkbox" name="confirm" value="true" required
+                   data-delete-confirm="revert">
             Yes, revert <strong>{{ session.name }}</strong> to draft.
           </label>
         </p>
         <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit">Revert to draft</button>
+          <button class="btn alert" type="submit"
+                  data-delete-btn="revert"
+                  disabled aria-disabled="true">Revert to draft</button>
         </p>
       </form>
     </div>
@@ -126,6 +129,12 @@
               </datalist>
             </label>
           </div>
+          {# One action row: the filter count / Clear, the
+             selection-driven action buttons, then the Search
+             submit last. Edit is JS-driven; Inactivate / Activate
+             submit the bulk form via ``form=`` + ``formaction``,
+             so they post the bulk form even though they sit inside
+             the GET filter form. #}
           <div class="filter-actions">
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
@@ -134,41 +143,33 @@
               <a class="btn secondary"
                  href="{{ relationships_base_url }}">Clear</a>
             {% endif %}
-            <button class="btn secondary" type="submit">Apply</button>
+            <span class="pill pill-count"
+                  id="relationships-selected-count" hidden>0 selected</span>
+            <button class="btn secondary" type="button"
+                    id="relationships-edit-btn"
+                    disabled aria-disabled="true">Edit</button>
+            <button class="btn secondary" type="submit"
+                    id="relationships-inactivate-btn"
+                    form="relationships-bulk-form"
+                    formaction="{{ relationships_base_url }}/bulk-inactivate"
+                    disabled aria-disabled="true">Inactivate</button>
+            <button class="btn secondary" type="submit"
+                    id="relationships-reactivate-btn"
+                    form="relationships-bulk-form"
+                    formaction="{{ relationships_base_url }}/bulk-reactivate"
+                    disabled aria-disabled="true">Activate</button>
+            {% if is_ready or edit_mode %}
+              <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+            {% elif not can_add_relationship %}
+              <a class="btn secondary disabled" aria-disabled="true"
+                 title="Add a reviewer and a reviewee first — a relationship needs both.">Add new row</a>
+            {% else %}
+              <a class="btn secondary"
+                 href="{{ relationships_base_url }}?add=1">Add new row</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Search</button>
           </div>
         </form>
-        {# Action buttons — selection-driven enable/disable. Edit is
-           JS-driven (reads the single checked row); Inactivate /
-           Activate submit the bulk form via ``formaction``. Add new
-           row is a plain link, disabled with a hint when either
-           roster is empty (a pair needs both sides). #}
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <span class="pill pill-count"
-                id="relationships-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="button"
-                  id="relationships-edit-btn"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="submit"
-                  id="relationships-inactivate-btn"
-                  form="relationships-bulk-form"
-                  formaction="{{ relationships_base_url }}/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="relationships-reactivate-btn"
-                  form="relationships-bulk-form"
-                  formaction="{{ relationships_base_url }}/bulk-reactivate"
-                  disabled aria-disabled="true">Activate</button>
-          {% if is_ready or edit_mode %}
-            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
-          {% elif not can_add_relationship %}
-            <a class="btn secondary disabled" aria-disabled="true"
-               title="Add a reviewer and a reviewee first — a relationship needs both.">Add new row</a>
-          {% else %}
-            <a class="btn secondary"
-               href="{{ relationships_base_url }}?add=1">Add new row</a>
-          {% endif %}
-        </div>
       </div>
       {# Focused Add / Edit form — same card, below a divider. #}
       {% if edit_mode %}
@@ -583,7 +584,8 @@
         {% if existing_count and existing_count > 0 %}
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
+              <input type="checkbox" name="confirm_replace" value="true" required
+                     data-delete-confirm="replace-roster">
               Yes, replace the existing
               <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>.
             </label>
@@ -591,7 +593,13 @@
         {% endif %}
 
         <div class="btn-pair" style="margin-top: 20px;">
-          <button class="btn secondary" type="submit">Upload</button>
+          {% if existing_count and existing_count > 0 %}
+            <button class="btn secondary" type="submit"
+                    data-delete-btn="replace-roster"
+                    disabled aria-disabled="true">Upload</button>
+          {% else %}
+            <button class="btn secondary" type="submit">Upload</button>
+          {% endif %}
         </div>
       </form>
     </section>
@@ -602,13 +610,16 @@
         <form method="post" action="/operator/sessions/{{ session.id }}/relationships/delete-all">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
+              <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="delete-all">
               Yes, delete the existing
               <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.
             </label>
           </p>
           <p>
-            <button class="btn destructive" type="submit">Delete all relationships</button>
+            <button class="btn destructive" type="submit"
+                    data-delete-btn="delete-all"
+                    disabled aria-disabled="true">Delete all relationships</button>
           </p>
         </form>
       </div>

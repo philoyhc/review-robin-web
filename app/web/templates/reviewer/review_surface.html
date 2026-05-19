@@ -426,13 +426,16 @@
           <input type="hidden" name="current_position" value="{{ current_position }}">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
+              <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="clear-responses">
               Yes, delete every response I have saved for this session.
               This also clears my submitted state.
             </label>
           </p>
           <div class="btn-pair">
-            <button class="btn destructive" type="submit">Clear all</button>
+            <button class="btn destructive" type="submit"
+                    data-delete-btn="clear-responses"
+                    disabled aria-disabled="true">Clear all</button>
           </div>
         </form>
       </div>
