@@ -404,6 +404,20 @@ the two without re-deriving from the schema.
   "(unset)" group, or is the row dropped? Probably an "(unset)"
   group so no reviewee silently vanishes; confirm when PR 2
   starts.
+- **Eligible-pair count on a group-scoped instrument's rule
+  card.** *Open.* The Instruments-page rule card shows "Number
+  of eligible pairs found: N", where N is
+  `len(result.pairs)` from `evaluate_session_rule_eligibility`
+  (`app/services/rules/session_library.py`) — the raw
+  `(reviewer, reviewee)` pair count, group-unaware. For a
+  group-scoped instrument this is literally accurate but
+  arguably misleading: it answers "how many reviewer-reviewee
+  pairs" not "how many groups". A group-aware count would run
+  the `group_keys` collapse over the engine result — distinct
+  `(reviewer, group_key)` — and would need to become
+  per-instrument (the current cache is per-rule, since a rule
+  can be shared across instruments). Decide whether to show a
+  group count, both, or relabel.
 
 ## Cross-references
 
