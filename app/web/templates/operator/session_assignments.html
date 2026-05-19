@@ -195,7 +195,34 @@
           {% endfor %}
         </p>
       </div>
+      {# Card B — operator-actions card (right half). Slice 2:
+         row-selection-driven bulk Inactivate / Activate. The
+         Search row lands here in slice 3. #}
+      {% if not is_ready %}
+      <div class="card operator-actions-card">
+        <div class="operator-actions-buttons">
+          <span class="pill pill-count"
+                id="assignments-selected-count" hidden>0 selected</span>
+          <button class="btn secondary" type="submit"
+                  id="assignments-inactivate-btn"
+                  form="assignments-bulk-form"
+                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="submit"
+                  id="assignments-activate-btn"
+                  form="assignments-bulk-form"
+                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
+                  disabled aria-disabled="true">Activate</button>
+        </div>
+      </div>
+      {% endif %}
     </div>
+    {% if not is_ready %}
+    {# Hidden shell — the row-select checkboxes and the Card B
+       bulk buttons associate to it via ``form=``. #}
+    <form id="assignments-bulk-form" method="post"
+          action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"></form>
+    {% endif %}
     <div class="card">
       <h2>Assignments preview</h2>
       {% if truncated_count %}
@@ -207,6 +234,12 @@
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
         <thead>
         <tr>
+          {% if not is_ready %}
+          <th class="row-select-cell">
+            <input type="checkbox" id="assignments-select-all"
+                   aria-label="Select all assignments">
+          </th>
+          {% endif %}
           <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
@@ -253,6 +286,14 @@
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
           {% set rel_active = rel and rel.status == "active" %}
           <tr data-row-instrument="{{ assignment.instrument_id }}">
+            {% if not is_ready %}
+            <td class="row-select-cell">
+              <input type="checkbox" class="assignment-select"
+                     name="assignment_ids" value="{{ assignment.id }}"
+                     form="assignments-bulk-form"
+                     aria-label="Select assignment {{ assignment.id }}">
+            </td>
+            {% endif %}
             <td data-sort-value="{{ assignment.reviewer.name }}">
               {{ assignment.reviewer.name }} &middot;
               <code>{{ assignment.reviewer.email }}</code>
@@ -348,6 +389,64 @@
         }
       })();
     </script>
+    {% if not is_ready %}
+    {# Card B selection wiring — count the ticked row checkboxes,
+       drive the "{n} selected" pill + the Inactivate / Activate
+       buttons, and mirror the header select-all. #}
+    <script>
+      (function () {
+        var inactivateBtn =
+          document.getElementById("assignments-inactivate-btn");
+        var activateBtn =
+          document.getElementById("assignments-activate-btn");
+        var countPill =
+          document.getElementById("assignments-selected-count");
+        var selectAll = document.getElementById("assignments-select-all");
+        if (!inactivateBtn || !activateBtn) return;
+        function boxes() {
+          return document.querySelectorAll(".assignment-select");
+        }
+        function setBtn(btn, disabled) {
+          btn.disabled = disabled;
+          if (disabled) {
+            btn.setAttribute("aria-disabled", "true");
+          } else {
+            btn.removeAttribute("aria-disabled");
+          }
+        }
+        function refresh() {
+          var all = boxes();
+          var n = 0;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) n++;
+          }
+          setBtn(inactivateBtn, n === 0);
+          setBtn(activateBtn, n === 0);
+          countPill.textContent = n + " selected";
+          countPill.hidden = (n === 0);
+          if (selectAll) {
+            selectAll.checked = (n > 0 && n === all.length);
+          }
+        }
+        document.addEventListener("change", function (e) {
+          var t = e.target;
+          if (!t) return;
+          if (t === selectAll) {
+            var all = boxes();
+            for (var i = 0; i < all.length; i++) {
+              all[i].checked = selectAll.checked;
+            }
+            refresh();
+          } else if (
+            t.classList && t.classList.contains("assignment-select")
+          ) {
+            refresh();
+          }
+        });
+        refresh();
+      })();
+    </script>
+    {% endif %}
   {% endif %}
 
   {# Per-instrument Self review column — set ``indeterminate`` on
