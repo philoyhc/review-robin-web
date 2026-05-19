@@ -185,6 +185,41 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
     return ""
 
 
+def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
+    """A ``ch``-unit width for a numeric response column.
+
+    Keeps a small-range numeric input (e.g. a 1-5 Rating) from
+    sprawling across a fixed-layout group-scoped instrument table.
+    Sized to the wider of the header label (plus room for the
+    ``required`` mark and the sort button) and the digit span of
+    the field's RTD min / max range. Returns ``None`` for
+    non-numeric fields — the caller skips the width hint for those.
+    """
+    if field.data_type not in ("Integer", "Decimal"):
+        return None
+    validation = field.validation or {}
+
+    def _digits(value: object) -> int:
+        if value is None:
+            return 0
+        if field.data_type == "Integer":
+            return len(str(int(value)))
+        return len(f"{float(value):g}")
+
+    digit_span = max(
+        _digits(validation.get("min")),
+        _digits(validation.get("max")),
+        1,
+    )
+    # The header must fit the label, the optional " *" required
+    # mark, and the sort button; the input must fit the widest
+    # value. The constants pad for cell padding / the sort glyph
+    # and want a visual tune.
+    header_ch = len(field.label) + (2 if field.required else 0) + 4
+    input_ch = digit_span + 3
+    return max(header_ch, input_ch)
+
+
 def _bulk_state(values: list[bool]) -> str:
     """Three-state value for a bulk toggle: ``all-on`` / ``all-off`` / ``mixed``."""
     if not values:

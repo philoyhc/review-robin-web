@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import InstrumentDisplayField, Reviewer, User
+from app.web import views
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,
@@ -31,6 +32,11 @@ _templates = Jinja2Templates(
     context_processors=[display_timezone_context_processor],
 )
 _templates.env.globals["app_version"] = settings.app_version
+# Segment 13C — per-numeric-column ``ch`` width for the
+# fixed-layout group-scoped instrument table.
+_templates.env.globals["numeric_column_ch_width"] = (
+    views.numeric_column_ch_width
+)
 # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
 # Context-aware: the filters resolve their display zone from the
 # ``display_timezone`` context key the processor above injects.

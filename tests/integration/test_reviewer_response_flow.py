@@ -1471,3 +1471,7 @@ def test_group_instrument_surface_renders_one_row_per_group(
     assert "Team A" in table and "Team B" in table
     # Team A's member-name list renders (RevieweeName Included).
     assert "Carol" in table and "Eve" in table
+    # The numeric Rating column is pinned to a ch-width keyed to its
+    # header + RTD digit span, so it doesn't sprawl across the
+    # fixed-layout group table.
+    assert 'style="width: 12ch"' in table
