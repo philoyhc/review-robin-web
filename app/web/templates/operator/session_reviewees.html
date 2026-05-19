@@ -121,6 +121,12 @@
               </datalist>
             </label>
           </div>
+          {# One action row: the filter count / Clear, the
+             selection-driven action buttons, then the Search
+             submit last. The bulk buttons submit
+             ``reviewees-bulk-form`` via ``form=`` + ``formaction``,
+             so they post the bulk form even though they sit inside
+             the GET filter form; Edit is JS-driven. #}
           <div class="filter-actions">
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
@@ -129,38 +135,30 @@
               <a class="btn secondary"
                  href="{{ reviewees_base_url }}">Clear</a>
             {% endif %}
-            <button class="btn secondary" type="submit">Apply</button>
+            <span class="pill pill-count"
+                  id="reviewees-selected-count" hidden>0 selected</span>
+            <button class="btn secondary" type="button"
+                    id="reviewees-edit-btn"
+                    disabled aria-disabled="true">Edit</button>
+            <button class="btn secondary" type="submit"
+                    id="reviewees-inactivate-btn"
+                    form="reviewees-bulk-form"
+                    formaction="{{ reviewees_base_url }}/bulk-inactivate"
+                    disabled aria-disabled="true">Inactivate</button>
+            <button class="btn secondary" type="submit"
+                    id="reviewees-reactivate-btn"
+                    form="reviewees-bulk-form"
+                    formaction="{{ reviewees_base_url }}/bulk-reactivate"
+                    disabled aria-disabled="true">Activate</button>
+            {% if is_ready or edit_mode %}
+              <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+            {% else %}
+              <a class="btn secondary"
+                 href="{{ reviewees_base_url }}?add=1">Add new row</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Search</button>
           </div>
         </form>
-        {# Action buttons — selection-driven enable/disable
-           (Segment 15F decision 3). The bulk buttons submit the
-           ``reviewees-bulk-form`` via ``formaction``; Add new row
-           is a plain link; Edit is JS-driven (reads the single
-           checked row). All disabled when the session is ongoing. #}
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <span class="pill pill-count"
-                id="reviewees-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="button"
-                  id="reviewees-edit-btn"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="submit"
-                  id="reviewees-inactivate-btn"
-                  form="reviewees-bulk-form"
-                  formaction="{{ reviewees_base_url }}/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="reviewees-reactivate-btn"
-                  form="reviewees-bulk-form"
-                  formaction="{{ reviewees_base_url }}/bulk-reactivate"
-                  disabled aria-disabled="true">Activate</button>
-          {% if is_ready or edit_mode %}
-            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
-          {% else %}
-            <a class="btn secondary"
-               href="{{ reviewees_base_url }}?add=1">Add new row</a>
-          {% endif %}
-        </div>
       </div>
       {# Focused Add / Edit form — same card, below a divider. #}
       {% if edit_mode %}

@@ -126,6 +126,12 @@
               </datalist>
             </label>
           </div>
+          {# One action row: the filter count / Clear, the
+             selection-driven action buttons, then the Search
+             submit last. Edit is JS-driven; Inactivate / Activate
+             submit the bulk form via ``form=`` + ``formaction``,
+             so they post the bulk form even though they sit inside
+             the GET filter form. #}
           <div class="filter-actions">
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
@@ -134,41 +140,33 @@
               <a class="btn secondary"
                  href="{{ relationships_base_url }}">Clear</a>
             {% endif %}
-            <button class="btn secondary" type="submit">Apply</button>
+            <span class="pill pill-count"
+                  id="relationships-selected-count" hidden>0 selected</span>
+            <button class="btn secondary" type="button"
+                    id="relationships-edit-btn"
+                    disabled aria-disabled="true">Edit</button>
+            <button class="btn secondary" type="submit"
+                    id="relationships-inactivate-btn"
+                    form="relationships-bulk-form"
+                    formaction="{{ relationships_base_url }}/bulk-inactivate"
+                    disabled aria-disabled="true">Inactivate</button>
+            <button class="btn secondary" type="submit"
+                    id="relationships-reactivate-btn"
+                    form="relationships-bulk-form"
+                    formaction="{{ relationships_base_url }}/bulk-reactivate"
+                    disabled aria-disabled="true">Activate</button>
+            {% if is_ready or edit_mode %}
+              <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+            {% elif not can_add_relationship %}
+              <a class="btn secondary disabled" aria-disabled="true"
+                 title="Add a reviewer and a reviewee first — a relationship needs both.">Add new row</a>
+            {% else %}
+              <a class="btn secondary"
+                 href="{{ relationships_base_url }}?add=1">Add new row</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Search</button>
           </div>
         </form>
-        {# Action buttons — selection-driven enable/disable. Edit is
-           JS-driven (reads the single checked row); Inactivate /
-           Activate submit the bulk form via ``formaction``. Add new
-           row is a plain link, disabled with a hint when either
-           roster is empty (a pair needs both sides). #}
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <span class="pill pill-count"
-                id="relationships-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="button"
-                  id="relationships-edit-btn"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="submit"
-                  id="relationships-inactivate-btn"
-                  form="relationships-bulk-form"
-                  formaction="{{ relationships_base_url }}/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="relationships-reactivate-btn"
-                  form="relationships-bulk-form"
-                  formaction="{{ relationships_base_url }}/bulk-reactivate"
-                  disabled aria-disabled="true">Activate</button>
-          {% if is_ready or edit_mode %}
-            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
-          {% elif not can_add_relationship %}
-            <a class="btn secondary disabled" aria-disabled="true"
-               title="Add a reviewer and a reviewee first — a relationship needs both.">Add new row</a>
-          {% else %}
-            <a class="btn secondary"
-               href="{{ relationships_base_url }}?add=1">Add new row</a>
-          {% endif %}
-        </div>
       </div>
       {# Focused Add / Edit form — same card, below a divider. #}
       {% if edit_mode %}

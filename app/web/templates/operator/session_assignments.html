@@ -224,6 +224,11 @@
                      placeholder="Name or email">
             </label>
           </div>
+          {# One action row: the filter count / Clear, the
+             selection-driven bulk buttons, then the Search submit
+             last. The bulk buttons submit ``assignments-bulk-form``
+             via ``form=`` + ``formaction``, so they post the bulk
+             form even though they sit inside the GET filter form. #}
           <div class="filter-actions">
             {% if matching_count != assignment_count %}
               <span class="muted">Showing {{ matching_count }} of {{ assignment_count }}.</span>
@@ -232,24 +237,21 @@
               <a class="btn secondary"
                  href="/operator/sessions/{{ session.id }}/assignments">Clear</a>
             {% endif %}
-            <button class="btn secondary" type="submit">Apply</button>
+            <span class="pill pill-count"
+                  id="assignments-selected-count" hidden>0 selected</span>
+            <button class="btn secondary" type="submit"
+                    id="assignments-inactivate-btn"
+                    form="assignments-bulk-form"
+                    formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
+                    disabled aria-disabled="true">Inactivate</button>
+            <button class="btn secondary" type="submit"
+                    id="assignments-activate-btn"
+                    form="assignments-bulk-form"
+                    formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
+                    disabled aria-disabled="true">Activate</button>
+            <button class="btn secondary" type="submit">Search</button>
           </div>
         </form>
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <span class="pill pill-count"
-                id="assignments-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="submit"
-                  id="assignments-inactivate-btn"
-                  form="assignments-bulk-form"
-                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="submit"
-                  id="assignments-activate-btn"
-                  form="assignments-bulk-form"
-                  formaction="/operator/sessions/{{ session.id }}/assignments/bulk-activate"
-                  disabled aria-disabled="true">Activate</button>
-        </div>
       </div>
       {% endif %}
     </div>

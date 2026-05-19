@@ -221,11 +221,10 @@ def test_operator_actions_card_renders_inert_buttons(
     ):
         assert label in body
     # The three buttons (Edit / Inactivate / Reactivate) start
-    # disabled — JS enables them on selection. Anchor on the div's
-    # ``class="..."`` so the base.html CSS rule with the same class
-    # name doesn't shadow the match.
+    # disabled — JS enables them on selection. They now sit inline
+    # in the filter-actions row, before the Search submit.
     buttons_section = body[
-        body.find('class="operator-actions-buttons"') :
+        body.find('class="filter-actions"') :
     ][:2000]
     assert buttons_section.count("disabled") >= 3
 
