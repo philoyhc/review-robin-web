@@ -69,8 +69,10 @@ needs a group-key-aware follow-up (PR 2 slice B below). PR 2
 slice A — the Group-boundary editor column — shipped 2026-05-19.
 Slice B — the boundary-scoped write fan-out — shipped 2026-05-19.
 Slice C — the partition-aware reviewer surface render — shipped
-2026-05-19. The aggregation sweep (slice D) and PR 3 (Replicate)
-remain. **Zero migrations.**
+2026-05-19. Slice D — the aggregation sweep (D1 reviewer-state
+rollup + D2 Extract Data collapse) — shipped 2026-05-19, closing
+the over-count window. PR 3 (Replicate) remains. **Zero
+migrations.**
 
 ## Progress log
 
@@ -248,12 +250,11 @@ error, and `_compute_missing_required` reports one entry per
 group. The operator preview builder still renders group
 instruments per-reviewee — a noted follow-up.
 
-> **Over-count window now open.** Slice C ships ahead of D, so
-> operator-facing counts (monitoring coverage / progress, Extract
-> Data, Manage Invitations) over-count a group response by the
-> group size until slice D lands. Accepted trade-off.
+> **Over-count window — closed (2026-05-19).** Slice C shipped
+> ahead of D; slice D (D1 + D2 below) closed the window the same
+> day.
 
-**Slice D — aggregation sweep.** Split in two:
+**Slice D — aggregation sweep — done (2026-05-19).** Split in two:
 
 - **D1 — reviewer-state rollup — done (2026-05-19).**
   `_state_from_assignments` (responses.py) collapses each
@@ -267,13 +268,18 @@ instruments per-reviewee — a noted follow-up.
   page) needs no change — it already counts per
   `(reviewer, reviewee)`, which is not over-counted by the
   fan-out.
-- **D2 — Extract Data — pending.** `serialize_responses` still
-  emits one row per member `Response`; collapse per-member rows
-  to one row per group and surface the composed group identity
-  in place of the per-reviewee identity columns.
-  `session_response_count` (the Extract Data card's row tally)
-  likewise still counts the fanned-out duplicates. The 18D
-  Part 3 instrument-flavour column rides along here.
+- **D2 — Extract Data — done (2026-05-19).** `serialize_responses`
+  collapses a group-scoped instrument's fanned-out per-member
+  `Response` rows to one row per `(reviewer, instrument,
+  group_key, field)`, with the composed group identity in
+  `RevieweeName` (the other reviewee columns empty, per the
+  operator's call) and `SelfReview=FALSE`. `session_response_count`
+  (the Extract Data card's row tally) dedups the same way. The
+  18D Part 3 instrument-flavour column rode along: an
+  `InstrumentFlavour` column (`per-reviewee` / `group-scoped`)
+  appended to the CSV — appended, not grouped with the other
+  instrument columns, so existing 20-column analyst pipelines
+  keep their indices.
 
 No rule-engine change — the rule emits ordinary
 `(reviewer, reviewee)` assignments; the surface partitions and
