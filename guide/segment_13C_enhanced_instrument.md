@@ -308,6 +308,72 @@ instrument IDs.
 
 Independent of PRs 1-2 — can land in any order relative to them.
 
+### PR 4 — reviewer-group pair count on the rule card
+
+*Planned 2026-05-19.* Resolves the "eligible-pair count" open
+question in `spec/group_scoped_instruments.md`. The Instruments
+page rule card shows "Number of eligible pairs found: N" — the
+raw `(reviewer, reviewee)` count from
+`evaluate_session_rule_eligibility`. For a **group-scoped**
+instrument, append a secondary count in parentheses:
+`Number of eligible pairs found: 240 (32 reviewer-group pairs)`.
+
+- **Count.** `M` = number of distinct `(reviewer, group_key)`
+  over the rule's eligible `result.pairs`, where `group_key` is
+  the boundary-tag tuple decoded from the instrument's
+  `group_kind`. It is **per-instrument** (boundary tags are an
+  `Instrument` setting), so it cannot live in the per-rule
+  `session_rule_sets` cache.
+- **Resolution logic.** Reuse the boundary decode
+  (`instruments.decode_group_kind`) and the per-pair tag
+  resolution from `responses._group_key_by_assignment`
+  (reviewee tags off the reviewee; pair-context tags off the
+  active relationship). Factor the per-pair resolution into a
+  shared helper if it reads cleanly. `evaluate_session_rule_eligibility`
+  already has `reviewees` + `pair_context_lookup` in scope when
+  it runs the engine.
+- **Slice 4a — compute + display, no cache.** New
+  `session_library` function returning
+  `{instrument_id: group_pair_count}` for group-scoped pinned
+  instruments; runs the engine for those rules (like 18E Part 2
+  PR 1's pinned-only state). `views/_instruments.py` rule-picker
+  context gains `selected_group_pair_count: int | None` (`None`
+  for per-reviewee instruments). `instruments_index.html`
+  renders the parenthetical only when it is set.
+- **Slice 4b — per-instrument persisted cache.** Mirrors 18E
+  Part 2 PR 2. Migration adds `cached_group_pair_count` +
+  `cached_group_pair_stamp` to `Instrument`; the stamp is a
+  content-hash of roster + rule definition + `group_kind`
+  (so a boundary-tag edit invalidates it). Warm stamp returns
+  the stored count with no engine run. Land only if 4a's
+  per-render engine cost is a concern.
+
+### PR 5 — grouping-tag-change defunct safeguard
+
+*Planned 2026-05-19.* Implements the safeguard decided in
+`spec/group_scoped_instruments.md` Open Questions. When a
+person's grouping-tag value changes, the answer copies fanned
+onto assignments that *point at them* become mis-attributed to
+whatever group those rows re-derive into.
+
+- **Trigger.** A reviewee roster edit (CSV reimport or inline
+  edit) that changes a `tag_N` value, where `tag_N` is a
+  boundary tag of some group-scoped instrument in the session
+  (i.e. `tag_N` appears in some instrument's decoded
+  `group_kind`). The pair-context variant: a relationship's
+  grouping pair-context tag change.
+- **Action.** Defunct (delete) the `Response` rows on
+  group-scoped instruments for assignments where the
+  tag-changed person is the **reviewee** — and, for the
+  pair-context variant, only the one `(reviewer, reviewee)`
+  row. Lossless for reviewers: the answer survives redundantly
+  on the group's other member rows. Emit an audit event for the
+  defunct.
+- Hook into the existing roster-edit cascade path
+  (`csv_imports` already tracks `cascaded_assignments`).
+
+Order: PR 4 first (4a, then 4b if needed), then PR 5.
+
 ## Action row
 
 Every instrument card's action row carries this fixed button set
