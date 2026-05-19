@@ -1,9 +1,10 @@
-"""Zip-all bundle — Segment 18D PR E1.
+"""Zip-all bundle — Segment 18D PR E1 / 18H Part 3.
 
-Collects the five operator-facing per-session CSVs — Reviewers,
-Reviewees, Relationships, Responses, Settings — into one in-memory
-zip archive. Backs the Extract Data card's "Zip all" tile: one
-download for porting a whole session, instead of five.
+Collects the operator-facing per-session CSVs — Reviewers,
+Reviewees, Relationships, Responses, Settings, plus the two
+bundle-only Reviewer / Reviewee stats CSVs (18H Part 3) — into one
+in-memory zip archive. Backs the Extract Data card's "Zip all"
+tile: one download for porting a whole session.
 
 The Sys-Admin-gated audit-events extract is deliberately not in
 the bundle (it lives behind the diagnostics doorway).
@@ -19,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 from app.services import responses as responses_service
 from app.services.extracts import filename, stream_csv
+from app.services.extracts.entity_stats_extract import build_entity_stats
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -52,12 +54,20 @@ def build_session_bundle(
         (r.field, r.value, r.data_type) for r in settings_rows
     )
 
+    # Bundle-only stats CSVs (18H Part 3) — roster shape plus
+    # aggregate response-activity columns; not individual downloads.
+    reviewer_stats, reviewee_stats = build_entity_stats(
+        db, review_session
+    )
+
     members: dict[str, list[tuple[str, ...]]] = {
         "reviewers": reviewers,
         "reviewees": reviewees,
         "relationships": relationships,
         "responses": responses,
         "settings": settings_csv,
+        "reviewer_stats": reviewer_stats,
+        "reviewee_stats": reviewee_stats,
     }
 
     buffer = io.BytesIO()
@@ -78,5 +88,7 @@ def build_session_bundle(
             db, review_session.id
         ),
         "settings": len(settings_rows),
+        "reviewer_stats": max(0, len(reviewer_stats) - 1),
+        "reviewee_stats": max(0, len(reviewee_stats) - 1),
     }
     return buffer.getvalue(), counts

@@ -168,6 +168,34 @@ live.
 **Row order:** `(created_at ASC, id ASC)`. **Streaming:**
 `yield_per(1000)`.
 
+### 2.6 Entity stats — `extracts/entity_stats_extract.py`
+
+Shipped 18H Part 3. Two **bundle-only** CSVs — a Reviewer stats
+file and a Reviewee stats file — added to the Zip-all bundle.
+They are deliberately **not** offered as individual downloads and
+have **no importer**: the round-trippable Reviewers / Reviewees
+CSVs keep that role, and adding stats columns to them would break
+the importer contract. The module exposes `build_entity_stats`
+(not a streaming serialiser); it returns both header-led row lists
+in one pass.
+
+Each carries the plain roster shape (§2.1 / §2.2 columns) plus
+aggregate response-activity columns, every metric reported as a
+**Draft / Submitted** pair (`submitted_at` unset vs set). Only
+responses with a non-empty value count. A group-scoped
+instrument's fanned-out answer counts once per group for the
+field / char metrics on the reviewer side; both member reviewees
+are still credited under `RevieweesReviewed*`.
+
+Reviewer stats extra columns: `RevieweesReviewedDraft/Submitted`
+(distinct reviewees with ≥1 non-empty response),
+`FieldsAnsweredDraft/Submitted`,
+`RequiredFieldsAnsweredDraft/Submitted`,
+`StringResponseCharsDraft/Submitted` (sum of `len(value)` over
+`String`-typed fields). Reviewee stats extra columns:
+`ReviewersDraft/Submitted` (distinct reviewers) plus the same
+three field / char pairs.
+
 ---
 
 ## 3. Four importers (input contracts)
@@ -348,7 +376,7 @@ shares. Public surface:
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above (`GET /export/bundle.zip`, Segment 18D PR E1) | same |
+| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above plus the two bundle-only entity-stats CSVs (`GET /export/bundle.zip`, Segment 18D PR E1 / 18H Part 3) | same |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
