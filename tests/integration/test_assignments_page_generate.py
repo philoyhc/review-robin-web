@@ -216,6 +216,32 @@ def test_bulk_inactivate_and_activate_assignments(
     assert all(_includes())
 
 
+def test_assignment_search_filters_the_preview_table(
+    client: TestClient, db: Session
+) -> None:
+    """Card B's free-text search filters the assignments preview by
+    reviewer / reviewee name or email; a non-matching term shows
+    the no-match message and keeps the term (Segment 13C slice 3)."""
+    review_session = _make_session(client, db, code="page-search")
+    _seed_pair(client, review_session.id)
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    base = f"/operator/sessions/{review_session.id}/assignments"
+
+    # A matching term (the reviewee's email) keeps the row.
+    body = client.get(base + "?q=carol").text
+    assert "carol@example.edu" in body
+    assert "No assignments match" not in body
+
+    # A non-matching term → no-match message + "Showing 0 of 1";
+    # the search box retains the term so it can be cleared.
+    body = client.get(base + "?q=nosuchterm").text
+    assert "No assignments match the search." in body
+    assert 'value="nosuchterm"' in body
+    assert "Showing 0 of 1" in body
+
+
 def test_generate_materialises_per_instrument(
     client: TestClient, db: Session
 ) -> None:
