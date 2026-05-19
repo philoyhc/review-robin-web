@@ -184,6 +184,7 @@
         inner += '<option value="MATCH"' + (kind === "MATCH" ? " selected" : "") + '>Include pairs where</option>';
         inner += '<option value="FILTER"' + (kind === "FILTER" ? " selected" : "") + '>Exclude pairs where</option>';
         inner += '</select>';
+        inner += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">';
         inner += '<select class="rule-field">';
         ['reviewer.tag1','reviewer.tag2','reviewer.tag3','reviewee.tag1','reviewee.tag2','reviewee.tag3'].forEach(function (f) {
           inner += '<option value="' + f + '">' + f + '</option>';
@@ -201,12 +202,14 @@
           inner += '<option value="' + pair[0] + '">' + pair[1] + '</option>';
         });
         inner += '</select>';
-        inner += '<input type="text" class="rule-operand" placeholder="operand" style="min-width: 160px;">';
+        inner += '<input type="text" class="rule-operand" placeholder="operand">';
+        inner += '</div>';
       } else if (kind === "QUOTA") {
         inner += '<span>Cap at</span>';
         inner += '<input type="number" class="rule-quota-min" min="0" placeholder="min" style="width: 80px;">';
         inner += '<span>to</span>';
         inner += '<input type="number" class="rule-quota-max" min="0" placeholder="max" style="width: 80px;">';
+        inner += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">';
         inner += '<select class="rule-quota-scope">';
         inner += '<option value="PER_REVIEWEE">reviewers per reviewee</option>';
         inner += '<option value="PER_REVIEWER">reviewees per reviewer</option>';
@@ -215,7 +218,8 @@
         inner += '<option value="RANDOM">chosen randomly</option>';
         inner += '<option value="ROUND_ROBIN">round-robin</option>';
         inner += '</select>';
-        inner += '<input type="number" class="rule-quota-seed" placeholder="seed" style="width: 80px;">';
+        inner += '<input type="number" class="rule-quota-seed" placeholder="seed">';
+        inner += '</div>';
       } else if (kind === "COMPOSITE") {
         inner += '<select class="rule-composite-op">';
         inner += '<option value="AND">All of:</option>';
