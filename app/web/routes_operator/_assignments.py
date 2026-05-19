@@ -58,6 +58,7 @@ def assignments_hub(
     super_error: str | None = Query(default=None),
     activate_confirm: str | None = Query(default=None),
     q: str = Query(default=""),
+    search_by: str = Query(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -79,6 +80,7 @@ def assignments_hub(
         ),
         activate_confirm=activate_confirm,
         search=q,
+        search_by=search_by,
     )
 
 
@@ -99,13 +101,23 @@ _ASSIGNMENT_SORT_KEYS = {
 }
 
 
-def _assignments_url(session_id: int, filter_q: str = "") -> str:
-    """The Assignments-page URL, carrying the ``q`` search term
-    when one is active so a bulk action redirects back to the
-    same filtered view."""
+_SEARCH_BY_VALUES = {"all", "reviewer", "reviewee"}
+
+
+def _assignments_url(
+    session_id: int, filter_q: str = "", search_by: str = "all"
+) -> str:
+    """The Assignments-page URL, carrying the active search term /
+    dimension so a bulk action redirects back to the same filtered
+    view."""
     url = f"/operator/sessions/{session_id}/assignments"
+    params: dict[str, str] = {}
     if filter_q:
-        url += "?" + urlencode({"q": filter_q})
+        params["q"] = filter_q
+    if search_by in _SEARCH_BY_VALUES and search_by != "all":
+        params["search_by"] = search_by
+    if params:
+        url += "?" + urlencode(params)
     return url
 
 
@@ -122,15 +134,20 @@ def _render_assignments_hub(
     super_failure: dict[str, str] | None = None,
     activate_confirm: str | None = None,
     search: str = "",
+    search_by: str = "all",
 ) -> HTMLResponse:
     q = search.strip()
+    if search_by not in _SEARCH_BY_VALUES:
+        search_by = "all"
     assignment_count = assignments.existing_count(db, review_session.id)
     if q:
         matching_count = assignments.count_pairs(
-            db, review_session.id, search=q
+            db, review_session.id, search=q, search_by=search_by
         )
         pair_sample = (
-            assignments.list_pairs(db, review_session.id, search=q)
+            assignments.list_pairs(
+                db, review_session.id, search=q, search_by=search_by
+            )
             if matching_count
             else []
         )
@@ -235,6 +252,7 @@ def _render_assignments_hub(
             "col_data_sample": col_data_sample,
             "matching_count": matching_count,
             "filter_q": q,
+            "filter_search_by": search_by,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
             "issues": issues,
@@ -384,6 +402,7 @@ def assignments_bulk_inactivate(
     session_id: int,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
+    filter_search_by: str = Form(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -400,7 +419,7 @@ def assignments_bulk_inactivate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_assignments_url(review_session.id, filter_q),
+        url=_assignments_url(review_session.id, filter_q, filter_search_by),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -414,6 +433,7 @@ def assignments_bulk_activate(
     session_id: int,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
+    filter_search_by: str = Form(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -430,6 +450,6 @@ def assignments_bulk_activate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_assignments_url(review_session.id, filter_q),
+        url=_assignments_url(review_session.id, filter_q, filter_search_by),
         status_code=status.HTTP_303_SEE_OTHER,
     )

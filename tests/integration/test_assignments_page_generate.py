@@ -242,6 +242,32 @@ def test_assignment_search_filters_the_preview_table(
     assert "Showing 0 of 1" in body
 
 
+def test_assignment_search_by_scopes_the_match(
+    client: TestClient, db: Session
+) -> None:
+    """The 'Search by' dropdown scopes the search to the reviewer
+    or the reviewee side only (Segment 13C)."""
+    review_session = _make_session(client, db, code="page-searchby")
+    _seed_pair(client, review_session.id)  # reviewer alice@, reviewee carol@
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+    base = f"/operator/sessions/{review_session.id}/assignments"
+
+    def _matches(query: str) -> bool:
+        return "No assignments match" not in client.get(base + query).text
+
+    # search_by=reviewer: the reviewer's name matches, the reviewee's
+    # does not.
+    assert _matches("?q=alice&search_by=reviewer")
+    assert not _matches("?q=carol&search_by=reviewer")
+    # search_by=reviewee: the reverse.
+    assert not _matches("?q=alice&search_by=reviewee")
+    assert _matches("?q=carol&search_by=reviewee")
+    # The dropdown reflects the chosen dimension.
+    body = client.get(base + "?q=alice&search_by=reviewer").text
+    assert '<option value="reviewer" selected>Reviewers</option>' in body
+
+
 def test_generate_materialises_per_instrument(
     client: TestClient, db: Session
 ) -> None:
