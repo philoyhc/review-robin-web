@@ -143,19 +143,33 @@ Suite green (1,914 passed), ruff clean.
 > when it is picked up. Listed here so the refinements are tracked
 > rather than lost.
 
-### Part 1 — Rule builder refinement
+### Part 1 — Rule builder refinement — shipped 2026-05-19
 
-Polish + ergonomics pass on the **Rule Builder page**
-(`/operator/sessions/{id}/assignments/rule-based-editor`) and the
-Rule Based card on the Assignments page. The rule-authoring
-surface has accreted across Segment 13A / 13A-1 / 15B / 15C;
-this Part is a deliberate work-through of its rough edges —
-predicate / quota editor usability, the seeded-vs-personal
-library affordances, validation feedback, and how an
-operator-authored RuleSet reads back when re-opened.
+A polish + ergonomics pass on the **Rule Builder page**
+(`/operator/sessions/{id}/assignments/rule-based-editor`),
+driven incrementally from operator feedback rather than a
+single up-front catalogue. Shipped so far:
 
-**Scope: TBD at pickup.** Catalogue the rough edges first; the
-Part list follows from that.
+- **Editor row layout (PR #1220).** The `field` / `operator` /
+  `operand` controls of MATCH / FILTER rules, and the `scope` /
+  `strategy` / `seed` controls of QUOTA rules, now sit side by
+  side in a three-column grid (one-third width each) instead of
+  stacking full-width — halving each rule row's vertical
+  footprint.
+- **Include / exclude as checkboxes (PR #1221).** The MATCH /
+  FILTER kind dropdown is replaced by a pair of mutually
+  exclusive `include` / `exclude pairs where` checkboxes after
+  the `enabled` checkbox; ticking one unticks the other, with
+  `include` ticked by default.
+
+Both the server-rendered `_rule_builder_card.html` and the
+client-side row builder / serialiser in
+`_rule_based_editor_js.html` were updated together.
+
+**Further refinements: TBD.** The remaining rough edges
+(seeded-vs-personal library affordances, validation feedback,
+RuleSet read-back) are still open and will land as further PRs
+under this Part as they are picked up.
 
 ### Part 2 — Enhanced response export
 
