@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     ResponseTypeDefinition,
@@ -221,13 +222,14 @@ def _preamble(rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
 # --------------------------------------------------------------------------- #
 
 
-def test_header_is_20_columns_in_canonical_order() -> None:
+def test_header_is_21_columns_in_canonical_order() -> None:
     """Pin the column order so a rename or reorder fails loud
     and forces analysts of the file to update their pipelines
     deliberately. ``SelfReview`` (col index 16) was added in
-    PR 4a between ``Value`` and ``SavedAt``."""
+    PR 4a between ``Value`` and ``SavedAt``; ``InstrumentFlavour``
+    (col index 20) appended in Segment 13C slice D2."""
 
-    assert len(HEADER) == 20
+    assert len(HEADER) == 21
     assert HEADER == (
         "ReviewerName",
         "ReviewerEmail",
@@ -249,6 +251,7 @@ def test_header_is_20_columns_in_canonical_order() -> None:
         "SavedAt",
         "SubmittedAt",
         "Version",
+        "InstrumentFlavour",
     )
 
 
@@ -395,6 +398,7 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
     assert body_row[17].startswith("2026-05-01T12:00:00")  # SavedAt
     assert body_row[18].startswith("2026-05-02T09:30:00")  # SubmittedAt
     assert body_row[19] == "2"  # Version
+    assert body_row[20] == "per-reviewee"  # InstrumentFlavour
 
 
 def test_null_value_emits_empty_cell_with_row_still_present(
@@ -777,3 +781,102 @@ def test_self_review_emits_FALSE_when_reviewee_id_is_not_an_email(
 
     body = _data(list(serialize_responses(db, review_session)))
     assert body[0][16] == "FALSE"
+
+
+# --------------------------------------------------------------------------- #
+# Segment 13C slice D2 — group-scoped instrument collapse
+# --------------------------------------------------------------------------- #
+
+
+def test_group_scoped_instrument_collapses_to_one_row_per_group(
+    db: Session,
+) -> None:
+    """A group-scoped instrument's fanned-out per-member Response
+    rows collapse to one row per boundary group: the composed
+    identity lands in RevieweeName, the other reviewee columns are
+    empty, and InstrumentFlavour reads ``group-scoped``."""
+    review_session = _session(db, code="grp-collapse")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="r@example.edu", name="R"
+    )
+    carol = _add_reviewee(
+        db, review_session, identifier="carol@example.edu",
+        name="Carol", tag_1="Team A",
+    )
+    eve = _add_reviewee(
+        db, review_session, identifier="eve@example.edu",
+        name="Eve", tag_1="Team A",
+    )
+    dan = _add_reviewee(
+        db, review_session, identifier="dan@example.edu",
+        name="Dan", tag_1="Team B",
+    )
+    instr = _add_instrument(db, review_session, name="Grp")
+    instr.group_kind = "r1"  # group by reviewee tag 1
+    db.flush()
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    for reviewee in (carol, eve, dan):
+        a = _add_assignment(
+            db, review_session, reviewer=reviewer,
+            reviewee=reviewee, instrument=instr,
+        )
+        # The save-time fan-out writes the same value to every
+        # member assignment of the group.
+        _add_response(db, assignment=a, field=field, value="4")
+
+    body = _data(list(serialize_responses(db, review_session)))
+    # 3 member Response rows → 2 boundary groups → 2 rows.
+    assert len(body) == 2
+    assert [r[5] for r in body] == ["Team A", "Team B"]  # RevieweeName
+    for row in body:
+        assert row[6] == ""  # RevieweeEmail blank
+        assert row[7] == row[8] == row[9] == ""  # tag columns blank
+        assert row[15] == "4"  # Value
+        assert row[16] == "FALSE"  # SelfReview
+        assert row[20] == "group-scoped"  # InstrumentFlavour
+
+
+def test_group_identity_includes_member_names_when_name_field_included(
+    db: Session,
+) -> None:
+    """When the RevieweeName Display Field is Included on a
+    group-scoped instrument, the export identity appends the full
+    (untruncated) member-name list."""
+    review_session = _session(db, code="grp-names")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="r@example.edu", name="R"
+    )
+    carol = _add_reviewee(
+        db, review_session, identifier="carol@example.edu",
+        name="Carol", tag_1="Team A",
+    )
+    eve = _add_reviewee(
+        db, review_session, identifier="eve@example.edu",
+        name="Eve", tag_1="Team A",
+    )
+    instr = _add_instrument(db, review_session, name="Grp")
+    instr.group_kind = "r1"
+    db.flush()
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instr.id,
+            label="Name",
+            source_type="reviewee",
+            source_field="name",
+            visible=True,
+            order=0,
+        )
+    )
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    for reviewee in (carol, eve):
+        a = _add_assignment(
+            db, review_session, reviewer=reviewer,
+            reviewee=reviewee, instrument=instr,
+        )
+        _add_response(db, assignment=a, field=field, value="4")
+
+    body = _data(list(serialize_responses(db, review_session)))
+    assert len(body) == 1
+    assert body[0][5] == "Team A (Carol, Eve)"

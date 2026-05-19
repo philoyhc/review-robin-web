@@ -137,9 +137,10 @@ def test_route_streams_csv_with_canonical_filename(
     header_idx = next(
         i for i, r in enumerate(rows) if r and r[0] == "ReviewerName"
     )
-    # 20 columns in the header (PR 4a added ``SelfReview``).
-    assert len(rows[header_idx]) == 20
-    assert rows[header_idx][-1] == "Version"
+    # 21 columns (PR 4a added ``SelfReview``; 13C D2 appended
+    # ``InstrumentFlavour``).
+    assert len(rows[header_idx]) == 21
+    assert rows[header_idx][-1] == "InstrumentFlavour"
     # One body row from the seeded response.
     data = rows[header_idx + 1 :]
     assert len(data) == 1
@@ -149,6 +150,7 @@ def test_route_streams_csv_with_canonical_filename(
     assert data[0][14] == "Likert5"
     assert data[0][15] == "4"
     assert data[0][16] == "FALSE"  # alex@ != carol@
+    assert data[0][20] == "per-reviewee"  # InstrumentFlavour
 
 
 def test_route_emits_audit_event_with_row_count(

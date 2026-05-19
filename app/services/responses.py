@@ -978,15 +978,49 @@ def session_pill_for_reviewer(
 
 
 def session_response_count(db: Session, session_id: int) -> int:
-    """Total number of Response rows for the session.
+    """Number of response cells for the session — the Extract Data
+    card's row tally, kept in step with ``serialize_responses``.
 
-    One row per (assignment, response_field). Backs the Extract Data
-    card's responses-row count summary.
-    """
-    return (
+    A per-reviewee instrument contributes one cell per
+    ``(assignment, response_field)``. A group-scoped instrument's
+    fanned-out per-member duplicates count **once per group** —
+    one cell per ``(reviewer, instrument, group_key,
+    response_field)`` (Segment 13C slice D2)."""
+    assignments = list(
         db.execute(
+            select(Assignment).where(Assignment.session_id == session_id)
+        ).scalars()
+    )
+    group_key_by_assignment = group_keys(
+        db, assignments=assignments, session_id=session_id
+    )
+    if not group_key_by_assignment:
+        return db.execute(
             select(func.count(Response.id))
             .join(Assignment, Response.assignment_id == Assignment.id)
             .where(Assignment.session_id == session_id)
         ).scalar_one()
-    )
+
+    assignment_index = {a.id: a for a in assignments}
+    seen: set[tuple[int, int, tuple[str, ...], int]] = set()
+    count = 0
+    for assignment_id, field_id in db.execute(
+        select(Response.assignment_id, Response.response_field_id)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == session_id)
+    ):
+        group_key = group_key_by_assignment.get(assignment_id)
+        if group_key is None:
+            count += 1
+            continue
+        assignment = assignment_index[assignment_id]
+        cell = (
+            assignment.reviewer_id,
+            assignment.instrument_id,
+            group_key,
+            field_id,
+        )
+        if cell not in seen:
+            seen.add(cell)
+            count += 1
+    return count
