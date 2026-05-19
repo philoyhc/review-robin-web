@@ -89,6 +89,21 @@ class Instrument(Base, TimestampMixin):
     via ``session_rule_sets.library_origin_id`` SET NULL — see
     13D PR 2)."""
 
+    cached_group_pair_count: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    cached_group_pair_stamp: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    """Lazy persisted cache for the reviewer-group pair count shown
+    on a group-scoped instrument's rule card (Segment 13C PR 4
+    slice 4b). ``cached_group_pair_stamp`` is a content-hash of the
+    roster + the pinned rule's definition + ``group_kind``; a
+    mismatch on read recomputes. Per-instrument (not per-rule, like
+    ``session_rule_sets.cached_eligible_pair_count``) because the
+    count depends on the instrument's boundary tags. Both NULL on a
+    per-reviewee instrument or an un-pinned one — never populated."""
+
     session: Mapped[ReviewSession] = relationship(back_populates="instruments")
     display_fields: Mapped[list[InstrumentDisplayField]] = relationship(
         back_populates="instrument",

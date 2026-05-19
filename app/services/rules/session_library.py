@@ -315,10 +315,15 @@ def evaluate_instrument_group_pair_counts(
     Unlike :func:`evaluate_session_rule_eligibility` this is
     **per-instrument** (boundary tags are an ``Instrument``
     setting, so the same rule pinned twice can yield different
-    counts) and is **not cached** — it runs the engine for each
-    distinct pinned rule on every call (Segment 13C PR 4 slice
-    4a; a per-instrument persisted cache is slice 4b). ``{}`` when
-    no group-scoped instrument has a rule pinned."""
+    counts). The count is cached on each ``instruments`` row
+    (``cached_group_pair_count`` + ``cached_group_pair_stamp``);
+    the stamp is a content-hash of the roster + the pinned rule's
+    definition + ``group_kind``, so a matching stamp returns the
+    stored count without an engine pass, and a roster / rule /
+    boundary-tag edit changes the hash and forces a recompute
+    (Segment 13C PR 4 slice 4b — mirrors the 18E Part 2 per-rule
+    cache). ``{}`` when no group-scoped instrument has a rule
+    pinned."""
     from pydantic import TypeAdapter
 
     from app.schemas.rules import Rule
@@ -353,24 +358,46 @@ def evaluate_instrument_group_pair_counts(
     pair_context_lookup = relationships_service.pair_context_lookup(
         db, review_session.id
     )
+    roster_sig = _roster_signature(reviewers, reviewees, pair_context_lookup)
+    rule_sig_by_id = {
+        rule_id: _rule_signature(row) for rule_id, row in rule_rows.items()
+    }
     rule_adapter = TypeAdapter(Rule)
 
-    results: dict[int, Any] = {}
-    for rule_id, row in rule_rows.items():
-        result = _evaluate_rule_row(
-            row,
-            reviewers=reviewers,
-            reviewees=reviewees,
-            pair_context_lookup=pair_context_lookup,
-            rule_adapter=rule_adapter,
-        )
-        if result is not None:
-            results[rule_id] = result
-
     out: dict[int, int] = {}
+    # The engine result is computed lazily, once per pinned rule —
+    # a rule shared by two group-scoped instruments runs once.
+    results: dict[int, Any] = {}
+    cache_dirty = False
     for instrument in instruments:
-        result = results.get(instrument.rule_set_id)
+        rule_id = instrument.rule_set_id
+        rule_sig = rule_sig_by_id.get(rule_id)
+        if rule_sig is None:
+            # Pinned rule not resolvable — fall back to 0, uncached.
+            out[instrument.id] = 0
+            continue
+        stamp = hashlib.sha256(
+            (
+                roster_sig + rule_sig + (instrument.group_kind or "")
+            ).encode()
+        ).hexdigest()
+        if (
+            instrument.cached_group_pair_stamp == stamp
+            and instrument.cached_group_pair_count is not None
+        ):
+            out[instrument.id] = instrument.cached_group_pair_count
+            continue
+        if rule_id not in results:
+            results[rule_id] = _evaluate_rule_row(
+                rule_rows[rule_id],
+                reviewers=reviewers,
+                reviewees=reviewees,
+                pair_context_lookup=pair_context_lookup,
+                rule_adapter=rule_adapter,
+            )
+        result = results[rule_id]
         if result is None:
+            # Malformed snapshot — fall back to 0, NOT cached.
             out[instrument.id] = 0
             continue
         boundary = instruments_service.decode_group_kind(
@@ -389,7 +416,13 @@ def evaluate_instrument_group_pair_counts(
             )
             for reviewer, reviewee in result.pairs
         }
-        out[instrument.id] = len(groups)
+        count = len(groups)
+        out[instrument.id] = count
+        instrument.cached_group_pair_count = count
+        instrument.cached_group_pair_stamp = stamp
+        cache_dirty = True
+    if cache_dirty:
+        db.commit()
     return out
 
 
