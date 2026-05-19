@@ -64,7 +64,7 @@ alembic revision --autogenerate -m "..." # after editing models — ALWAYS hand-
 uvicorn app.main:app --reload            # local dev server on http://127.0.0.1:8000
 ```
 
-`pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite that runs `alembic upgrade head` once per session via `tests/conftest.py`.
+`pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
 
 Local auth shortcut: set `ALLOW_FAKE_AUTH=true` plus `FAKE_AUTH_EMAIL`/`FAKE_AUTH_NAME` in `.env`. In deployed environments Azure Easy Auth supplies the identity headers and this flag must remain `false`.
 
@@ -82,7 +82,8 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    `_setup_reviewers.py`, `_setup_reviewees.py`,
    `_setup_relationships.py`, `_setup_invite.py`,
    `_assignments.py`, `_rule_builder.py`, `_operations.py`,
-   `_instruments.py`, `_response_types.py`, `_extracts.py`), with
+   `_workflow.py`, `_instruments.py`, `_response_types.py`,
+   `_extracts.py`, `_sys_admin.py`), with
    shared plumbing (the
    `Jinja2Templates` instance, lifecycle / edit-lock guards, Quick
    Setup cookie naming, and the cross-slice Setup-roster import /
@@ -96,7 +97,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
 
 A small but important fourth seam:
 
-- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_rule_builder.py`); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
+- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_rule_builder.py`, `_assignments.py`, `_audit_log.py`, `_sort.py`, `_workflow_card.py`); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
 
 ### Audit events
 
