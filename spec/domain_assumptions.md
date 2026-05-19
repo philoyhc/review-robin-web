@@ -6,7 +6,7 @@ banners, typography, layout primitives) was officially superseded
 2026-05-03 by `spec/visual_style_general.md` +
 `spec/visual_style_rrw.md` + `spec/ui_elements.md`; the
 superseded sections moved to `guide/archive/assumptions_ui_legacy.md`
-on 2026-05-11 once the sweep at `guide/spec_sweep_11may.md` C1
+on 2026-05-11 once the sweep at `guide/archive/spec_sweep_11may.md` C1
 landed.
 
 Today this file is the small Domain reference + a cross-reference

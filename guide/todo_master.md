@@ -67,7 +67,7 @@ PRs landed in the global chronology.
 
 Segment 11's sub-segments and their catalog items, in first-PR-number order. Each entry names the plan it ships against; per-PR detail lives there.
 
-- **Segment 11A — Tier 1–3 cleanup punch list** — done 2026-05-03 across PRs **#309, #314, #315, #319 → #324, #328, #329, #330**. v2 chrome rebuild rolled out across the session-centric pages (**#21a**, ticked off in `guide/ui_checklist.md`). Tier 3 polish items closed under this segment:
+- **Segment 11A — Tier 1–3 cleanup punch list** — done 2026-05-03 across PRs **#309, #314, #315, #319 → #324, #328, #329, #330**. v2 chrome rebuild rolled out across the session-centric pages (**#21a**, ticked off in `guide/archive/ui_checklist.md`). Tier 3 polish items closed under this segment:
   - **#9 — Refresh `get_or_create_default_instrument` docstring** (PR #309).
   - **#8 — Fix CSV email-validation drift** (PR #314); shared `_parse_email` helper.
   - **#12 — Reviewer/Reviewee CSV cross-table identity check** (PR #315); built on #8.
@@ -879,7 +879,7 @@ bottom of this file.
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
-  `guide/spec_sweep_11may.md` (Email Template editor,
+  `guide/archive/spec_sweep_11may.md` (Email Template editor,
   Permissions), plus a recurring cadence template.
   Distinct from Segment 20 which produces operator- +
   developer-facing prose in `docs/`.

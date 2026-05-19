@@ -758,7 +758,7 @@ This document (further down):
 
 ## Migration approach
 
-The pre-v2 Review Robin UI used high-contrast solid-colored buttons (saturated blue, orange, red) and other patterns this spec retired. The migration sequence (now substantially complete via the v2 sweep tracked in `guide/ui_checklist.md`):
+The pre-v2 Review Robin UI used high-contrast solid-colored buttons (saturated blue, orange, red) and other patterns this spec retired. The migration sequence (complete; the v2 sweep was tracked in `guide/archive/ui_checklist.md`, retired to archive once finished):
 
 1. **Establish the palette and component primitives** in a shared stylesheet. Define colors, spacing, type scale, and core component classes (`button-primary`, `button-secondary`, `card`, `badge`, `tab`, etc.) in one place.
 2. **Migrate the chrome first** — the two-row navigation, breadcrumbs, status strip, page header. The chrome appears on every session-scoped page, so migrating it once visually unifies the entire app.
