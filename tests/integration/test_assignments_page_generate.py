@@ -158,6 +158,64 @@ def test_status_block_reports_group_type_and_group_count(
     assert ">2</span>" in row  # Groups count
 
 
+def test_bulk_inactivate_and_activate_assignments(
+    client: TestClient, db: Session
+) -> None:
+    """The operator-actions card's bulk Inactivate / Activate
+    buttons flip the ``include`` flag on the selected assignment
+    rows (Segment 13C slice 2)."""
+    review_session = _make_session(client, db, code="page-bulk")
+    _seed_pair(client, review_session.id)
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+
+    def _includes() -> list[bool]:
+        return [
+            a.include
+            for a in db.execute(
+                select(Assignment).where(
+                    Assignment.session_id == review_session.id
+                )
+            ).scalars()
+        ]
+
+    ids = [
+        a.id
+        for a in db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id
+            )
+        ).scalars()
+    ]
+    assert ids and all(_includes())  # generated rows start included
+
+    # The page renders the row-select column + bulk buttons.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert 'id="assignments-select-all"' in body
+    assert 'id="assignments-inactivate-btn"' in body
+
+    payload = {"assignment_ids": [str(i) for i in ids]}
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/bulk-inactivate",
+        data=payload,
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.expire_all()
+    assert not any(_includes())
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/bulk-activate",
+        data=payload,
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.expire_all()
+    assert all(_includes())
+
+
 def test_generate_materialises_per_instrument(
     client: TestClient, db: Session
 ) -> None:

@@ -447,6 +447,56 @@ def set_instrument_self_reviews_active(
     return flipped
 
 
+def bulk_set_assignment_include(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    assignment_ids: list[int],
+    include: bool,
+    user: User,
+    correlation_id: str,
+) -> int:
+    """Bulk-set the ``include`` flag on the given assignments,
+    scoped to one session — the Assignments-page operator-actions
+    card's Inactivate / Activate buttons (Segment 13C).
+
+    Returns the count actually flipped (rows whose previous
+    ``include`` differed from ``include``). Audit event
+    ``assignments.bulk_include_set`` carries ``counts.flipped`` +
+    ``context.include``."""
+    if not assignment_ids:
+        return 0
+    rows = list(
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.id.in_(assignment_ids),
+            )
+        ).scalars()
+    )
+    flipped = 0
+    for assignment in rows:
+        if assignment.include != include:
+            assignment.include = include
+            flipped += 1
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="assignments.bulk_include_set",
+        summary=(
+            f"{flipped} assignment{'s' if flipped != 1 else ''} bulk-set "
+            f"to {'included' if include else 'excluded'}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(flipped=flipped),
+        context={"include": include},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return flipped
+
+
 def generate_full_matrix(
     reviewers: Iterable[Reviewer],
     reviewees: Iterable[Reviewee],

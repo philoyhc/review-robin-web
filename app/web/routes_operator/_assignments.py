@@ -337,3 +337,61 @@ def assignments_instrument_self_reviews_active(
         url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/bulk-inactivate",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def assignments_bulk_inactivate(
+    session_id: int,
+    assignment_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk-exclude the selected assignments — the Inactivate
+    button on the Assignments-page operator-actions card."""
+    _require_editable(review_session)
+    assignments.bulk_set_assignment_include(
+        db,
+        review_session=review_session,
+        assignment_ids=assignment_ids,
+        include=False,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/bulk-activate",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def assignments_bulk_activate(
+    session_id: int,
+    assignment_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk-include the selected assignments — the Activate button
+    on the Assignments-page operator-actions card."""
+    _require_editable(review_session)
+    assignments.bulk_set_assignment_include(
+        db,
+        review_session=review_session,
+        assignment_ids=assignment_ids,
+        include=True,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )

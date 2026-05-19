@@ -451,6 +451,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "assignments.instrument_self_reviews_active_set": EventSchema(
         _IDENTITY | {"counts", "context", "refs"}
     ),
+    "assignments.bulk_include_set": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
     # Segment 13A PR 5a — RuleSet library mutation events. Workspace-
     # scoped (no session identity), so the schema omits ``session_id``
     # / ``session_code`` from the allowed slot set.
