@@ -206,13 +206,23 @@
        * .rs-group is the group-scoped instrument's identity column
        * (Segment 13C). Its composed identity — boundary tag values
        * plus a member-name list — runs longer than a single reviewee
-       * name, so it's capped at a third of the table rather than 20%.
+       * name. A max-width on an auto-layout table cell is only a
+       * hint browsers routinely ignore, so the group table opts into
+       * table-layout: fixed and pins the column to a third of the
+       * table; the remaining columns auto-distribute the rest.
        */
+      table.rs-group-table { table-layout: fixed; }
+      table.rs-group-table th.rs-group,
+      table.rs-group-table td.rs-group { width: 33%; }
       th.rs-group, td.rs-group {
-        max-width: 33%;
-        min-width: 8em;
         word-wrap: break-word;
         overflow-wrap: anywhere;
+      }
+      table.rs-group-table td input,
+      table.rs-group-table td textarea,
+      table.rs-group-table td select {
+        width: 100%;
+        box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
       .muted { color: #777; }
