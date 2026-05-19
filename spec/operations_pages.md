@@ -54,7 +54,7 @@ Both pages render the same four stacked regions, in order:
 1. **Chrome** — two-row session chrome (top-nav with the active tab
    highlighted) + setup-status row.
 2. **Workflow card** — full-width, per `spec/workflow_card.md`. Same
-   ten-state cascade and seven-stage stepper as on every other
+   ten-state cascade and five-stage stepper as on every other
    session-scoped page. The stepper carries the bulk-action
    affordances (Create invites · Send invites · Send reminders) so
    the page bodies stay focused on per-row inspection + targeted

@@ -2,7 +2,7 @@
 
 The **Workflow card** is the single persistent action card at the
 top of every operator session page. It carries state-aware
-explanatory copy, a uniform seven-stage button stepper, and a
+explanatory copy, a uniform five-stage button stepper, and a
 right-column status / errors aside. The card is the canonical
 entry-point for every lifecycle-advancing action on a session —
 from generating assignments through to sending reminders.
@@ -155,7 +155,7 @@ The card uses a two-column inner grid via CSS:
 │  │ <p>State-specific body</p> │ │ State-specific status /  │ │
 │  │                            │ │ errors aside.            │ │
 │  │ <div .next-action-buttons>│ │                          │ │
-│  │   Seven stepper buttons   │ │                          │ │
+│  │   Five stepper buttons    │ │                          │ │
 │  │ </div>                    │ │                          │ │
 │  └────────────────────────────┘ └──────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
@@ -170,14 +170,14 @@ becomes a horizontal rule above the right-column content.
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
 
-## Workflow stepper — uniform 7-button row
+## Workflow stepper — uniform 5-button row
 
-Every state renders the same seven-stage bottom row, in the same
+Every state renders the same five-stage bottom row, in the same
 order — Revert to draft sits leftmost, then the forward stages in
 their workflow order:
 
 ```
-Revert to draft · Generate assignments · Validate setup · Activate session · Create invites · Send invites · Send reminders
+Revert to draft · Activate session · Create invites · Send invites · Send reminders
 ```
 
 Each slot is either **live** (Primary or Secondary, clickable) or

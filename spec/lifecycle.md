@@ -1,8 +1,8 @@
 # Session lifecycle — spec
 
 **The state machine and gating contract that govern every session
-mutation.** Three live states (`draft`, `validated`, `ready`),
-two reserved states (`expired`, `archived`), the transitions
+mutation.** Four live states (`draft`, `validated`, `ready`,
+`archived`), one reserved state (`expired`), the transitions
 between them, the route + service gates that enforce them, and
 the UI lock-card pattern that exposes them to operators.
 
@@ -41,7 +41,7 @@ draft                    validated                    ready
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
 | `expired` | Expired | Reserved (Segment 9.3+, deadline-passed terminal state). Not written by any current route. |
-| `archived` | Archived | Reserved (Segment 12+, post-export retention). Not written by any current route. |
+| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session` (`draft ⇄ archived`, Segment 18A Part 3). |
 
 The internal enum is `SessionStatus` in
 `app/services/session_lifecycle.py`. The display-label divergence
@@ -98,19 +98,28 @@ the readiness check stays meaningful.
 Call sites (every setup-mutating service in the codebase):
 
 - `app/services/sessions.py` (session metadata edit)
-- `app/services/csv_imports.py` (reviewer + reviewee imports)
+- `app/services/csv_imports.py` (reviewer + reviewee roster
+  imports)
+- `app/services/reviewers.py` (per-row reviewer CRUD + bulk
+  status flips)
+- `app/services/reviewees.py` (per-row reviewee CRUD + bulk
+  status flips)
 - `app/services/relationships.py` (pair-context import +
-  delete-all)
+  delete-all + per-row CRUD)
 - `app/services/assignments.py` (`replace_assignments` +
   `delete_all_assignments`)
-- `app/services/session_config_io.py::apply_session_config` (full
-  settings import)
+- `app/services/field_labels.py` (per-session friendly-label
+  set / clear)
+- `app/services/session_config_io/_apply.py::apply_session_config`
+  (full settings import)
 - `app/services/instruments/_instrument_crud.py`
   (instrument CRUD)
 - `app/services/instruments/_rtds.py` (RTD CRUD + cascade
   delete)
-- `app/services/instruments/_response_fields.py` (display +
-  response field CRUD + bulk save)
+- `app/services/instruments/_response_fields.py` (response
+  field CRUD + bulk save)
+- `app/services/instruments/_display_fields.py` (display
+  field CRUD)
 
 The invariant lives at the **mutation site** — a route that
 forgets to wrap its service call no longer silently breaks it.
@@ -219,8 +228,13 @@ open/close state plus a visibility-when-closed display flag.
 
 - `open_instrument(...)` / `close_instrument(...)` — operator
   flips on the Instruments page. Requires session `ready` and
-  pre-deadline. Emit `instrument.opened` /
-  `instrument.closed reason=operator` audit events.
+  pre-deadline. A group-scoped instrument (`group_kind` set) with
+  no pinned `rule_set_id` cannot be opened — `open_instrument`
+  raises `LifecycleError(code="group_instrument_no_rule")` (the
+  route surfaces a 409); the same instruments are skipped (left
+  closed) by `activate_session`'s bulk open. Emit
+  `instrument.opened` / `instrument.closed reason=operator` audit
+  events.
 - `set_responses_visible_when_closed(...)` — operator flips the
   display flag. No lifecycle gating beyond `_require_editable` /
   `_require_status_ready` on its route; **does not invalidate**
@@ -291,8 +305,8 @@ are read-mostly so they work in any state.
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
 | `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
 | `instrument.closed` | `close_instrument` or `observe_deadline` | `refs={"instrument_id": id}` + `reason=<"operator" \| "deadline">` (+ `context={"deadline": "..."} ` on the deadline path) |
-| `instrument.bulk_accepting_responses` | bulk open/close on the All Instrument Status card | `counts={"opened": N, "closed": N}` + `context={"target": "open" \| "close"}` |
-| `instrument.bulk_visibility_when_closed` | bulk visibility toggle | `counts={"showing": N, "hidden": N}` + `context={"target": "show" \| "hide"}` |
+| `instruments.bulk_accepting_responses` | bulk open/close on the All Instrument Status card | `set_changes={...}` + `context={"target": "open" \| "close"}` |
+| `instruments.bulk_visibility_when_closed` | bulk visibility toggle | `set_changes={...}` + `context={"target": "show" \| "hide"}` |
 
 See `spec/architecture.md` "Audit-event detail schema" for the
 canonical envelope contract these events follow.
@@ -318,7 +332,8 @@ canonical envelope contract these events follow.
    `DateTime(timezone=True)`). The `_aware` helper in the
    lifecycle module wraps every comparison.
 
-5. **Reserved enum values are real values.** `expired` and
-   `archived` are in the canonical enum even though no route
-   writes them today — the column is constrained at the
-   application layer, not via a DB CHECK.
+5. **Reserved enum values are real values.** `expired` is in the
+   canonical enum even though no route writes it today — the
+   column is constrained at the application layer, not via a DB
+   CHECK. (`archived` is also enum-constrained, but is now an
+   actively written state — see §1.)

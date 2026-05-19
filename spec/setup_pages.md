@@ -219,11 +219,16 @@ person, or add one row. Top-to-bottom:
    substitutes a **Search by** dropdown (Reviewer / Reviewee —
    picks which side of the pair the search box matches) since a
    relationship has no single status-vs-roster distinction worth
-   a filter. Apply submits a GET; a Clear link resets it.
-2. **Selection-driven button row** — **Edit**, **Inactivate**,
-   **Activate**, **Add new row**, plus a selected-count pill.
-   Buttons enable / disable from the checkbox selection (see
-   below). The row greys out (`is-locked`) while a row is being
+   a filter.
+2. **Single inline action row** (`filter-actions`) — the
+   "Showing N of M" hint, an optional **Clear** link, a
+   selected-count pill, the selection-driven **Edit**,
+   **Inactivate**, **Activate** and **Add new row** controls,
+   and finally the **Search** submit button last. All action
+   buttons + the pill sit inline on this one row, *before* the
+   Search submit (there is no separate next row). Buttons
+   enable / disable from the checkbox selection (see below).
+   The row greys out (`is-locked`) while a row is being
    edited / added; a focused **Save / Cancel** pair renders
    below a divider in that state.
 
