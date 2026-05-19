@@ -33,7 +33,7 @@ sweep** that:
 - Updates the `spec/README.md` taxonomy.
 
 The 2026-05-09 → 2026-05-11 sprint did one such sweep
-(`guide/spec_sweep_11may.md` — 25 files / 10,224 LOC of
+(`guide/archive/spec_sweep_11may.md` — 25 files / 10,224 LOC of
 spec touched across F1-F8 drift fixes, C1-C5 consolidation,
 S1-S5 style touch-ups, plus the three new Tier-1 specs:
 `lifecycle.md`, `csv_contracts.md`, `validate_page.md`).
@@ -45,7 +45,7 @@ recurring concern.
 ### Part 1 — Initial spec coverage gap closure
 
 **Goal.** The set of Tier-1 specs identified in
-`guide/spec_sweep_11may.md` "Done vs Remaining" that
+`guide/archive/spec_sweep_11may.md` "Done vs Remaining" that
 remain unwritten as of 2026-05-11:
 
 - **#4 Email Template editor** → `spec/email_template_editor.md`.
@@ -142,8 +142,9 @@ When parts ship:
 - `spec/README.md` taxonomy refreshed as new specs land in
   Part 1.
 - `guide/README.md` mentions the cadence convention (Part 2).
-- Existing `guide/spec_sweep_11may.md` retires to
-  `guide/archive/` once its remaining items land via Part 1.
+- `guide/archive/spec_sweep_11may.md` (the closed 2026-05-11
+  sweep proposal) is already retired to `guide/archive/`; its
+  "Done vs Remaining" list is the input for Part 1.
 
 ## Working notes
 
@@ -152,7 +153,7 @@ When parts ship:
   Lean "every codebase_assessment cadence" since the two
   rhyme — pair each codebase_assessment with a spec sweep.
 - **Tier-1 vs Tier-2 / 3 priorities.** Already established
-  in `guide/spec_sweep_11may.md` — adopt as the default
+  in `guide/archive/spec_sweep_11may.md` — adopt as the default
   tiering for future sweeps.
 - **Where to register new specs.** New `spec/<name>.md`
   files land via the segment that first locks the contract;

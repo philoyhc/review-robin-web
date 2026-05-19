@@ -879,7 +879,7 @@ bottom of this file.
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
-  `guide/spec_sweep_11may.md` (Email Template editor,
+  `guide/archive/spec_sweep_11may.md` (Email Template editor,
   Permissions), plus a recurring cadence template.
   Distinct from Segment 20 which produces operator- +
   developer-facing prose in `docs/`.

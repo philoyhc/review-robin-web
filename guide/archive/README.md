@@ -35,6 +35,7 @@ edits — they are a rough size signal, not a tracked metric.
 | `assumptions_ui_legacy.md` | 119 | The legacy UI section carved out of `spec/domain_assumptions.md`. |
 | `ui_elements_parts_2_3_restyle_history.md` | 111 | Historical UI-elements catalogue, Parts 2 + 3. |
 | `ui_checklist.md` | 197 | The v1 restructure + v2 `body.ui-v2` sweep per-page tracking checklist — both passes complete; retired to archive 2026-05-19 once the sweep stopped being a living tracker. |
+| `spec_sweep_11may.md` | 657 | The 2026-05-11 `spec/` drift + consolidation audit proposal (F1-F8 / C1-C5 / S1-S5) — all items merged, proposal closed. Its "Done vs Remaining" coverage-gap list is the input for Segment 19 Part 1. |
 
 ## Segment plans
 
