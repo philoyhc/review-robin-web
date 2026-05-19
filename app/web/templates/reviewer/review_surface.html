@@ -210,11 +210,15 @@
           <table data-rrw-sortable="rrw-sort-rs-{{ session.id }}-{{ group.instrument.id }}">
             <thead>
             <tr>
-              <th scope="col" class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
-                Reviewee<button type="button" class="rrw-sort-btn"
-                    aria-label="Sort by Reviewee"
-                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button>
-              </th>
+              {% if group.is_group %}
+                <th scope="col" class="rs-reviewee">Group</th>
+              {% else %}
+                <th scope="col" class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
+                  Reviewee<button type="button" class="rrw-sort-btn"
+                      aria-label="Sort by Reviewee"
+                      onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button>
+                </th>
+              {% endif %}
               {% for header in group.display_fields %}
                 <th scope="col"{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
                     data-sort-key="display:{{ header.field.id }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
@@ -239,11 +243,30 @@
             <tbody class="rrw-rows">
             {% for row in group.rows %}
               <tr>
-                <td class="rs-reviewee"
-                    data-sort-value="{{ row.assignment.reviewee.name }}">
-                  <strong>{{ row.assignment.reviewee.name }}</strong><br>
-                  <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
-                </td>
+                {% if group.is_group %}
+                  {# Group-scoped instrument — one row per
+                     boundary-defined group; the identity cell is
+                     composed from the boundary tag values and,
+                     when the Name field is Included, the member
+                     list (Segment 13C). #}
+                  <td class="rs-reviewee">
+                    {% if row.group_identity.tag_line %}
+                      <strong>{{ row.group_identity.tag_line }}</strong>
+                    {% endif %}
+                    {% if row.group_identity.show_members and row.group_identity.member_names %}
+                      {% if row.group_identity.tag_line %}<br>{% endif %}
+                      <span class="muted">{{ row.group_identity.member_names | join(", ") }}{% if row.group_identity.extra_count %}, +{{ row.group_identity.extra_count }} more{% endif %}</span>
+                    {% elif not row.group_identity.tag_line %}
+                      <span class="muted">{{ row.group_label }}</span>
+                    {% endif %}
+                  </td>
+                {% else %}
+                  <td class="rs-reviewee"
+                      data-sort-value="{{ row.assignment.reviewee.name }}">
+                    <strong>{{ row.assignment.reviewee.name }}</strong><br>
+                    <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
+                  </td>
+                {% endif %}
                 {% for cell in row.display_cells %}
                   <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}
                       data-sort-value="{{ cell.value or '' }}">
@@ -268,7 +291,7 @@
                     {# Each response control names its column and row
                        so a screen-reader user hears "{field} for
                        {reviewee}" rather than an unlabelled box. #}
-                    {% set cell_aria = cell.field.label ~ " for " ~ row.assignment.reviewee.name ~ (" (required)" if cell.field.required else "") %}
+                    {% set cell_aria = cell.field.label ~ " for " ~ (row.group_label if group.is_group else row.assignment.reviewee.name) ~ (" (required)" if cell.field.required else "") %}
                     {# Render is driven by the RTD's ``data_type`` —
                        any String row with max_length > 100 gets a
                        textarea, smaller String rows get a text input,

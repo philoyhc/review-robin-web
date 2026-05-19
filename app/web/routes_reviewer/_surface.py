@@ -204,6 +204,56 @@ def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrume
     return {i.id: i for i in rows}
 
 
+# A group row's identity cell lists at most this many member names
+# before collapsing the rest to a "+N more" suffix (Segment 13C).
+GROUP_MEMBER_NAME_LIMIT = 10
+
+
+def _collapse_group_rows(
+    per_assignment_rows: list[dict],
+    *,
+    group_key_by_assignment: dict[int, tuple[str, ...]],
+    name_visible: bool,
+) -> list[dict]:
+    """Collapse a group-scoped instrument's per-assignment rows into
+    one row per boundary-defined group (Segment 13C reviewer surface).
+
+    Rows are partitioned by their assignment's group key; each
+    partition yields one row carrying its lowest-id member assignment
+    as the representative — response inputs key off it and the write
+    fan-out spreads the answer to the rest. The representative row
+    gains a ``group_identity`` block (boundary tag values + member
+    names) and a ``group_label`` for aria text; its per-reviewee
+    ``display_cells`` / ``sort_values`` are cleared.
+    """
+    partitions: dict[tuple[str, ...], list[dict]] = {}
+    for row in per_assignment_rows:
+        group_key = group_key_by_assignment.get(row["assignment"].id, ())
+        partitions.setdefault(group_key, []).append(row)
+    collapsed: list[dict] = []
+    for group_key in sorted(partitions):
+        members = sorted(
+            partitions[group_key], key=lambda r: r["assignment"].id
+        )
+        representative = dict(members[0])
+        names = sorted(r["assignment"].reviewee.name for r in members)
+        shown = names[:GROUP_MEMBER_NAME_LIMIT]
+        tag_line = ", ".join(v for v in group_key if v)
+        representative["display_cells"] = []
+        representative["sort_values"] = {}
+        representative["group_identity"] = {
+            "tag_line": tag_line,
+            "member_names": shown,
+            "extra_count": len(names) - len(shown),
+            "show_members": name_visible,
+        }
+        representative["group_label"] = (
+            tag_line or ", ".join(shown) or "the group"
+        )
+        collapsed.append(representative)
+    return collapsed
+
+
 def _reviewer_row_sort_key(row: dict, display_field_id: int) -> object | None:
     """Resolve one reviewer-surface row's value for a given
     ``display_field_id`` so ``views.order_rows_by_sort_spec``
@@ -424,6 +474,31 @@ def _surface_context(
             }
         )
 
+    # Segment 13C — collapse each group-scoped instrument's
+    # per-assignment rows into one row per boundary-defined group.
+    group_keys = responses_service.group_keys(
+        db, assignments=assignments, session_id=review_session.id
+    )
+    for instrument_id, instrument in instruments.items():
+        if instrument.group_kind is None:
+            continue
+        group_rows = rows_by_instrument.get(instrument_id)
+        if not group_rows:
+            continue
+        # The group identity lists member names only when the
+        # operator left the RevieweeName Display Field Included.
+        name_visible = any(
+            df.source_type == "reviewee"
+            and df.source_field == "name"
+            and df.visible
+            for df in all_display_fields_by_instrument.get(instrument_id, [])
+        )
+        rows_by_instrument[instrument_id] = _collapse_group_rows(
+            group_rows,
+            group_key_by_assignment=group_keys,
+            name_visible=name_visible,
+        )
+
     instrument_groups = []
     flat_rows = []
     position_by_id = {
@@ -438,48 +513,54 @@ def _surface_context(
         instrument = instruments.get(instrument_id)
         if instrument is None:
             continue
+        is_group = instrument.group_kind is not None
         # Reorder rows per the operator-default sort spec
         # (Segment 13B PR 1). NULL / empty spec → no-op
         # (insertion order). Display fields no longer on the
         # instrument silently drop from the sort cascade — see
         # ``views.order_rows_by_sort_spec`` for the render-time
-        # defense.
-        # The full set — including identity-column display fields
-        # the visible-cells filter excludes — so the operator can
-        # sort by Reviewee name.
-        known_display_field_ids = {
-            df.id
-            for df in all_display_fields_by_instrument.get(instrument_id, [])
-        }
-        # Effective sort spec for this instrument (Segment 13B
-        # Part 2 PR 5):
-        #   1. Reviewer's per-browser cookie, if present + valid.
-        #   2. Operator-default ``instrument.sort_display_fields``.
-        # Both shapes are ``[{"display_field_id": int, "dir":
-        # "asc|desc"}, ...]`` once normalised. The cookie keys
-        # arrive as opaque strings (e.g. ``"reviewee.name"``,
-        # ``"display:7"``); the helper decodes them against the
-        # instrument's display-field set + the locked Reviewee
-        # identity row.
-        cookie_spec = views.decode_cookie_sort_spec_for_reviewer_surface(
-            cookies=cookies or {},
-            session_id=review_session.id,
-            instrument_id=instrument_id,
-            display_fields=all_display_fields_by_instrument.get(
-                instrument_id, []
-            ),
-        )
-        effective_spec = (
-            cookie_spec
-            if cookie_spec is not None
-            else instrument.sort_display_fields
-        )
-        group_rows = views.order_rows_by_sort_spec(
-            group_rows,
-            effective_spec,
-            key_resolver=_reviewer_row_sort_key,
-            known_display_field_ids=known_display_field_ids,
-        )
+        # defense. A group-scoped instrument skips the per-reviewee
+        # sort entirely — its rows are already collapsed to one per
+        # group and ordered by group key.
+        if not is_group:
+            # The full set — including identity-column display
+            # fields the visible-cells filter excludes — so the
+            # operator can sort by Reviewee name.
+            known_display_field_ids = {
+                df.id
+                for df in all_display_fields_by_instrument.get(
+                    instrument_id, []
+                )
+            }
+            # Effective sort spec for this instrument (Segment 13B
+            # Part 2 PR 5):
+            #   1. Reviewer's per-browser cookie, if present + valid.
+            #   2. Operator-default ``instrument.sort_display_fields``.
+            # Both shapes are ``[{"display_field_id": int, "dir":
+            # "asc|desc"}, ...]`` once normalised. The cookie keys
+            # arrive as opaque strings (e.g. ``"reviewee.name"``,
+            # ``"display:7"``); the helper decodes them against the
+            # instrument's display-field set + the locked Reviewee
+            # identity row.
+            cookie_spec = views.decode_cookie_sort_spec_for_reviewer_surface(
+                cookies=cookies or {},
+                session_id=review_session.id,
+                instrument_id=instrument_id,
+                display_fields=all_display_fields_by_instrument.get(
+                    instrument_id, []
+                ),
+            )
+            effective_spec = (
+                cookie_spec
+                if cookie_spec is not None
+                else instrument.sort_display_fields
+            )
+            group_rows = views.order_rows_by_sort_spec(
+                group_rows,
+                effective_spec,
+                key_resolver=_reviewer_row_sort_key,
+                known_display_field_ids=known_display_field_ids,
+            )
         fields = fields_by_instrument.get(instrument_id, [])
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible
@@ -489,18 +570,26 @@ def _surface_context(
             position=position_by_id[instrument_id],
             total_count=total_instrument_count,
         )
-        display_fields = display_fields_by_instrument.get(instrument_id, [])
-        display_field_headers = [
-            {
-                "field": df,
-                "label": instruments_service.display_field_label(df, session=review_session),
-                "is_profile_link": (
-                    df.source_type == "reviewee"
-                    and df.source_field == "profile_link"
-                ),
-            }
-            for df in display_fields
-        ]
+        # A group-scoped instrument renders no per-reviewee display
+        # columns — the boundary tags compose the group-identity cell
+        # instead — so its display-field header list is empty.
+        display_field_headers = (
+            []
+            if is_group
+            else [
+                {
+                    "field": df,
+                    "label": instruments_service.display_field_label(
+                        df, session=review_session
+                    ),
+                    "is_profile_link": (
+                        df.source_type == "reviewee"
+                        and df.source_field == "profile_link"
+                    ),
+                }
+                for df in display_fields_by_instrument.get(instrument_id, [])
+            ]
+        )
         constraints = []
         for f in fields:
             summary = views.constraint_summary_for_field(f)
@@ -509,6 +598,7 @@ def _surface_context(
         instrument_groups.append(
             {
                 "instrument": instrument,
+                "is_group": is_group,
                 "heading": heading,
                 "position": position_by_id[instrument_id],
                 "is_current": position_by_id[instrument_id] == current_position,

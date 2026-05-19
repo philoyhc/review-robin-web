@@ -1382,3 +1382,92 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert _rating(by_reviewee["Dan"]) == "2"
     assert _rating(by_reviewee["Carol"]) == "5"
     assert _rating(by_reviewee["Eve"]) == "5"
+
+
+def test_group_instrument_surface_renders_one_row_per_group(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer surface collapses a group-scoped instrument's
+    per-reviewee rows into one row per boundary-defined group, with a
+    composed group-identity cell (Segment 13C PR 2 slice C)."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Render", "code": "grp-rnd"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-rnd")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    ordered_ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    position = ordered_ids.index(group.id) + 1
+
+    rae_client = make_client(rae)
+    page = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/{position}"
+    )
+    assert page.status_code == 200
+
+    # Isolate the group instrument's table from the rendered surface.
+    marker = f"rrw-sort-rs-{review_session.id}-{group.id}"
+    start = page.text.index(marker)
+    table = page.text[start : page.text.index("</table>", start)]
+
+    # The table is group-scoped: a "Group" header, not "Reviewee".
+    assert ">Group</th>" in table
+    # One row per boundary group (Team A, Team B) — not one per
+    # reviewee — so two rating inputs, not three.
+    assert table.count("[rating]") == 2
+    assert "Team A" in table and "Team B" in table
+    # Team A's member-name list renders (RevieweeName Included).
+    assert "Carol" in table and "Eve" in table

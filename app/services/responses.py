@@ -195,6 +195,7 @@ def _compute_missing_required(
     assignments: list[Assignment],
     fields_by_instrument: dict[int, list[InstrumentResponseField]],
     position_by_instrument_id: dict[int, int],
+    group_key_by_assignment: dict[int, tuple[str, ...]],
 ) -> list[MissingPosition]:
     """List positions where a required field has no Response row.
 
@@ -203,9 +204,21 @@ def _compute_missing_required(
     (``submit``) so each MissingPosition entry can land with the page
     number the reviewer needs to navigate to. Iterates assignments
     session-wide (across all instruments the reviewer is assigned on).
+
+    For a group-scoped instrument the reviewer answers once per group
+    (one surface row), so only the first member assignment of each
+    ``(instrument, group_key)`` is reported — a missing field surfaces
+    once per group, not once per member.
     """
     missing: list[MissingPosition] = []
+    seen_groups: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
+        group_key = group_key_by_assignment.get(assignment.id)
+        if group_key is not None:
+            marker = (assignment.instrument_id, group_key)
+            if marker in seen_groups:
+                continue
+            seen_groups.add(marker)
         fields = fields_by_instrument.get(assignment.instrument_id, [])
         required = [f for f in fields if f.required]
         if not required:
@@ -402,6 +415,28 @@ def _group_key_by_assignment(
     return keys
 
 
+def group_keys(
+    db: Session, *, assignments: list[Assignment], session_id: int
+) -> dict[int, tuple[str, ...]]:
+    """Group key per assignment on a group-scoped instrument.
+
+    Public wrapper over :func:`_group_key_by_assignment`: resolves the
+    group-scoped instruments from ``assignments`` itself. Assignments
+    on per-reviewee instruments are absent from the result; group
+    instruments with no boundary tag map to the empty key ``()``.
+    The reviewer surface uses this to partition a reviewer's rows
+    into one group row per distinct key.
+    """
+    return _group_key_by_assignment(
+        db,
+        assignments=assignments,
+        group_instrument_ids=_group_instrument_ids(
+            db, {a.instrument_id for a in assignments}
+        ),
+        session_id=session_id,
+    )
+
+
 def _expand_group_upserts(
     upserts: list[ResponseUpsert],
     *,
@@ -482,16 +517,11 @@ def save_draft(
     group_instrument_ids = _group_instrument_ids(
         db, {a.instrument_id for a in assignments}
     )
-    upserts = _expand_group_upserts(
-        upserts,
+    group_key_by_assignment = _group_key_by_assignment(
+        db,
         assignments=assignments,
         group_instrument_ids=group_instrument_ids,
-        group_key_by_assignment=_group_key_by_assignment(
-            db,
-            assignments=assignments,
-            group_instrument_ids=group_instrument_ids,
-            session_id=review_session.id,
-        ),
+        session_id=review_session.id,
     )
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
@@ -501,11 +531,21 @@ def save_draft(
         for field in fields:
             field_index[(instrument_id, field.field_key)] = field
 
+    # Validate the raw upserts first — a group-scoped instrument's
+    # surface posts one upsert per group (keyed to a representative
+    # member), so a bad value yields one error, not one per member.
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
         field_index=field_index,
         position_by_instrument_id=_session_position_map(db, review_session.id),
+    )
+    # Then fan the valid upserts out to every member of their group.
+    valid_upserts = _expand_group_upserts(
+        valid_upserts,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
     )
 
     written = _apply_upserts(
@@ -563,16 +603,11 @@ def submit(
     group_instrument_ids = _group_instrument_ids(
         db, {a.instrument_id for a in assignments}
     )
-    upserts = _expand_group_upserts(
-        upserts,
+    group_key_by_assignment = _group_key_by_assignment(
+        db,
         assignments=assignments,
         group_instrument_ids=group_instrument_ids,
-        group_key_by_assignment=_group_key_by_assignment(
-            db,
-            assignments=assignments,
-            group_instrument_ids=group_instrument_ids,
-            session_id=review_session.id,
-        ),
+        session_id=review_session.id,
     )
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
@@ -586,11 +621,20 @@ def submit(
     # entries carry the page number the reviewer needs to navigate to.
     position_by_instrument_id = _session_position_map(db, review_session.id)
 
+    # Validate the raw upserts before fanning group answers out, so a
+    # bad value on a group-scoped instrument yields one error rather
+    # than one per member.
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
         field_index=field_index,
         position_by_instrument_id=position_by_instrument_id,
+    )
+    valid_upserts = _expand_group_upserts(
+        valid_upserts,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
     )
 
     _apply_upserts(
@@ -613,6 +657,7 @@ def submit(
         assignments=assignments,
         fields_by_instrument=fields_by_instrument,
         position_by_instrument_id=position_by_instrument_id,
+        group_key_by_assignment=group_key_by_assignment,
     )
 
     if missing:
