@@ -458,7 +458,7 @@ def test_group_pair_count_collapses_eligible_pairs_by_boundary(
     section = body.split(
         f'id="instrument-{instrument.id}-rule-picker"', 1
     )[1].split("Open Rule Builder", 1)[0]
-    assert "(2 reviewer-group pairs)" in section
+    assert "(Number of reviewer-group pairs: 2)" in section
 
 
 def test_group_pair_count_absent_for_per_reviewee_instrument(

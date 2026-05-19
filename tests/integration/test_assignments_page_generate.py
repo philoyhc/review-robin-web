@@ -73,14 +73,13 @@ def _seed_pair(client: TestClient, session_id: int) -> None:
     )
 
 
-def test_status_block_reports_pinned_rule_and_eligible_count(
+def test_status_block_reports_pinned_rule(
     client: TestClient, db: Session
 ) -> None:
     """Pinning a rule on every instrument lights up the status
-    block: rule name + eligible count from the engine pass. The
-    standalone Generate card UI it previously gated retired with
-    the Next-Action workflow-stepper refresh, but the engine pass
-    still feeds the per-instrument status block."""
+    block with the rule name. (The standalone Eligible-pairs column
+    was dropped in Segment 13C — the engine pass still feeds the
+    block's staleness check, it's just no longer a column.)"""
 
     review_session = _make_session(client, db, code="page-pin")
     _seed_pair(client, review_session.id)
@@ -89,12 +88,74 @@ def test_status_block_reports_pinned_rule_and_eligible_count(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    # Status block reports the pinned rule + eligible count from
-    # the engine pass.
-    assert "Full Matrix" in body
-    # 1 reviewer × 1 reviewee = 1 eligible pair.
     status_section = body.split('id="assignments-status-blocks"', 1)[1]
-    assert ">1</span>" in status_section
+    assert "Full Matrix" in status_section
+    # The per-reviewee instrument reports its Type.
+    assert "Individual" in status_section
+
+
+def test_status_block_reports_group_type_and_group_count(
+    client: TestClient, db: Session
+) -> None:
+    """A group-scoped instrument's status block reports Type
+    "Group" and, once generated, a Groups count — distinct
+    (reviewer, group_key) over its assignments (Segment 13C)."""
+    review_session = _make_session(client, db, code="page-group")
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"  # group by RevieweeTag1
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+
+    status_url = f"/operator/sessions/{review_session.id}/assignments"
+    # Before generation: Type "Group", Groups column shows "—".
+    section = client.get(status_url).text.split(
+        'id="assignments-status-blocks"', 1
+    )[1]
+    assert "Group" in section
+
+    generate_via_page_button(client, review_session.id)
+
+    # After generation: 2 boundary groups (Team A, Team B).
+    section = client.get(status_url).text.split(
+        'id="assignments-status-blocks"', 1
+    )[1]
+    row = section.split(f'id="status-block-{group.id}"', 1)[1].split(
+        "</tr>", 1
+    )[0]
+    assert ">2</span>" in row  # Groups count
 
 
 def test_generate_materialises_per_instrument(

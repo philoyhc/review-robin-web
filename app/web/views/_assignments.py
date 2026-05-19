@@ -24,9 +24,14 @@ from dataclasses import dataclass
 from typing import Literal
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Instrument, ReviewSession, SessionRuleSet
+from app.db.models import (
+    Assignment,
+    Instrument,
+    ReviewSession,
+    SessionRuleSet,
+)
 from app.services import session_lifecycle as lifecycle
 
 
@@ -72,9 +77,11 @@ class InstrumentStatusBlock:
 
     instrument_id: int
     instrument_label: str
+    is_group: bool
     rule_name: str | None
     eligible_count: int
     generated_count: int
+    group_count: int | None
     included_count: int
     self_review_total: int
     self_review_active_count: int
@@ -117,6 +124,7 @@ def build_assignments_page_context(
     via :func:`evaluate_session_rule_eligibility`.
     """
     from app.services import assignments as assignments_service
+    from app.services import responses as responses_service
     from app.services.rules import session_library
 
     instruments = list(
@@ -126,6 +134,41 @@ def build_assignments_page_context(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
+    # Per-instrument group count — distinct (reviewer, group_key)
+    # over a group-scoped instrument's generated assignments. Empty
+    # for a session with no group-scoped instrument.
+    group_instrument_ids = {
+        i.id for i in instruments if i.group_kind is not None
+    }
+    group_count_by_instrument: dict[int, int] = {}
+    if group_instrument_ids:
+        group_assignments = list(
+            db.execute(
+                select(Assignment)
+                .options(joinedload(Assignment.reviewee))
+                .where(
+                    Assignment.session_id == review_session.id,
+                    Assignment.instrument_id.in_(group_instrument_ids),
+                )
+            ).scalars()
+        )
+        group_key_by_assignment = responses_service.group_keys(
+            db,
+            assignments=group_assignments,
+            session_id=review_session.id,
+        )
+        groups_seen: dict[int, set[tuple[int, tuple[str, ...]]]] = {}
+        for assignment in group_assignments:
+            groups_seen.setdefault(assignment.instrument_id, set()).add(
+                (
+                    assignment.reviewer_id,
+                    group_key_by_assignment.get(assignment.id, ()),
+                )
+            )
+        group_count_by_instrument = {
+            instrument_id: len(groups)
+            for instrument_id, groups in groups_seen.items()
+        }
     rule_set_rows = {
         row.id: row
         for row in db.execute(
@@ -183,9 +226,15 @@ def build_assignments_page_context(
             InstrumentStatusBlock(
                 instrument_id=instrument.id,
                 instrument_label=instrument.short_label or instrument.name,
+                is_group=instrument.group_kind is not None,
                 rule_name=rule_name,
                 eligible_count=eligible_count,
                 generated_count=generated_count,
+                group_count=(
+                    group_count_by_instrument.get(instrument.id)
+                    if generated_count
+                    else None
+                ),
                 included_count=included_count,
                 self_review_total=sr_total,
                 self_review_active_count=sr_active,
