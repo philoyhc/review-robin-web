@@ -389,7 +389,19 @@ def _group_key_by_assignment(
         boundary_by_instrument[instrument.id] = (
             instruments_service.decode_group_kind(instrument.group_kind)
         )
-    pair_lookup = relationships_service.pair_context_lookup(db, session_id)
+    # The relationships table is only needed when some boundary tag
+    # is pair-context-sourced; a reviewee-tag-only boundary (the
+    # common case) skips the scan entirely.
+    needs_pair_lookup = any(
+        source_type == "pair_context"
+        for boundary in boundary_by_instrument.values()
+        for source_type, _ in boundary
+    )
+    pair_lookup = (
+        relationships_service.pair_context_lookup(db, session_id)
+        if needs_pair_lookup
+        else {}
+    )
 
     keys: dict[int, tuple[str, ...]] = {}
     for assignment in assignments:
@@ -829,6 +841,8 @@ def _state_from_assignments(
     db: Session,
     assignments: list[Assignment],
     fields_by_instrument: dict[int, list[InstrumentResponseField]],
+    *,
+    group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
 ) -> ReviewerSessionState:
     """Inner per-assignment-set rollup shared by
     :func:`reviewer_session_state` (whole-session aggregate) and
@@ -840,7 +854,16 @@ def _state_from_assignments(
     per member: all members of a group carry the same fanned-out
     answer, so only one representative assignment per
     ``(instrument, group_key)`` feeds the totals (Segment 13C
-    aggregation contract)."""
+    aggregation contract).
+
+    ``group_key_by_assignment`` may be supplied by a caller that
+    already computed it for a wider assignment set (e.g.
+    ``per_reviewer_progress`` over every reviewer, or the
+    per-instrument breakdown over one reviewer's whole set) — it
+    need only cover the assignments passed here. When ``None`` it
+    is computed for this set, which scans the relationships table;
+    hoisting the call out of a per-reviewer / per-instrument loop
+    avoids repeating that scan."""
     if not assignments:
         return ReviewerSessionState(
             total_assignments=0,
@@ -853,9 +876,10 @@ def _state_from_assignments(
     # Collapse each group-scoped instrument's member assignments to
     # one representative — the first by id — so a group response is
     # one unit of work, not N.
-    group_key_by_assignment = group_keys(
-        db, assignments=assignments, session_id=assignments[0].session_id
-    )
+    if group_key_by_assignment is None:
+        group_key_by_assignment = group_keys(
+            db, assignments=assignments, session_id=assignments[0].session_id
+        )
     counted: list[Assignment] = []
     seen_groups: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
@@ -921,15 +945,30 @@ def _state_from_assignments(
 
 
 def reviewer_session_state(
-    db: Session, *, reviewer: Reviewer, session_id: int
+    db: Session,
+    *,
+    reviewer: Reviewer,
+    session_id: int,
+    group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
 ) -> ReviewerSessionState:
     """Whole-session aggregate state. See
-    :class:`ReviewerSessionState` for the field shape."""
+    :class:`ReviewerSessionState` for the field shape.
+
+    ``group_key_by_assignment`` is forwarded to
+    :func:`_state_from_assignments`; a caller looping over many
+    reviewers (``per_reviewer_progress``) passes a session-wide
+    map so the relationships scan happens once, not once per
+    reviewer."""
     assignments = _reviewer_assignments(db, reviewer, session_id)
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
     )
-    return _state_from_assignments(db, assignments, fields_by_instrument)
+    return _state_from_assignments(
+        db,
+        assignments,
+        fields_by_instrument,
+        group_key_by_assignment=group_key_by_assignment,
+    )
 
 
 def reviewer_session_state_per_instrument(
@@ -957,9 +996,18 @@ def reviewer_session_state_per_instrument(
     fields_by_instrument = _instrument_fields_by_id(
         db, set(by_instrument.keys())
     )
+    # Compute group keys once over the reviewer's whole assignment
+    # set rather than re-scanning the relationships table for each
+    # instrument's slice.
+    group_key_by_assignment = group_keys(
+        db, assignments=assignments, session_id=session_id
+    )
     return {
         instrument_id: _state_from_assignments(
-            db, instr_assignments, fields_by_instrument
+            db,
+            instr_assignments,
+            fields_by_instrument,
+            group_key_by_assignment=group_key_by_assignment,
         )
         for instrument_id, instr_assignments in by_instrument.items()
     }

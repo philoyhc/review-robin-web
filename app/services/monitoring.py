@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
     Assignment,
@@ -91,10 +91,29 @@ def per_reviewer_progress(
 ) -> list[ReviewerProgress]:
     reviewers = _assigned_active_reviewers(db, review_session.id)
     invitations = _invitations_by_reviewer(db, review_session.id)
+    # Group keys are computed once for the whole session and passed
+    # to each per-reviewer rollup. Computing them inside the loop
+    # would re-scan the relationships table once per reviewer.
+    all_assignments = list(
+        db.execute(
+            select(Assignment)
+            .options(joinedload(Assignment.reviewee))
+            .where(
+                Assignment.session_id == review_session.id,
+                Assignment.include.is_(True),
+            )
+        ).scalars()
+    )
+    group_key_by_assignment = responses_service.group_keys(
+        db, assignments=all_assignments, session_id=review_session.id
+    )
     out: list[ReviewerProgress] = []
     for reviewer in reviewers:
         state = responses_service.reviewer_session_state(
-            db, reviewer=reviewer, session_id=review_session.id
+            db,
+            reviewer=reviewer,
+            session_id=review_session.id,
+            group_key_by_assignment=group_key_by_assignment,
         )
         invitation = invitations.get(reviewer.id)
         out.append(

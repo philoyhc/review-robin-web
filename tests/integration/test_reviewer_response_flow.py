@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
+from app.services import monitoring as monitoring_service
 from app.services import responses as responses_service
 from app.db.models import (
     Assignment,
@@ -1556,3 +1557,9 @@ def test_group_instrument_counts_once_per_group_in_reviewer_state(
     # The per-reviewee instrument contributes 3; the group instrument
     # collapses its 3 member assignments to 2 boundary groups → 5.
     assert state.total_assignments == 5
+
+    # per_reviewer_progress threads a session-wide group-key map into
+    # each reviewer's rollup (computed once, not once per reviewer);
+    # the collapsed count must match the direct call above.
+    progress = monitoring_service.per_reviewer_progress(db, review_session)
+    assert [p.assignment_count for p in progress] == [5]
