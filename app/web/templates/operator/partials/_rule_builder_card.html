@@ -201,11 +201,14 @@
               </label>
 
               {% if rule.kind in ("MATCH", "FILTER") %}
-                <select class="rule-kind">
-                  {% for value, label in builder.kind_options if value != "QUOTA" %}
-                    <option value="{{ value }}" {% if value == rule.kind %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" class="rule-kind-include" {% if rule.kind == 'MATCH' %}checked{% endif %}>
+                  include
+                </label>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" class="rule-kind-exclude" {% if rule.kind == 'FILTER' %}checked{% endif %}>
+                  exclude pairs where
+                </label>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
                   <select class="rule-field">
                     {% for value in builder.field_options %}

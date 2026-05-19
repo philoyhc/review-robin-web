@@ -57,8 +57,8 @@
         enabled: enabled ? !!enabled.checked : true,
       };
       if (kind === "MATCH" || kind === "FILTER") {
-        var kindSelect = row.querySelector(".rule-kind");
-        if (kindSelect) rule.kind = kindSelect.value;
+        var includeBox = row.querySelector(".rule-kind-include");
+        if (includeBox) rule.kind = includeBox.checked ? "MATCH" : "FILTER";
         rule.predicate = readPredicate(row);
       } else if (kind === "QUOTA") {
         var minVal = row.querySelector(".rule-quota-min").value;
@@ -139,6 +139,28 @@
       refreshHidden();
     });
 
+    // Mutually exclusive include/exclude checkboxes on MATCH/FILTER
+    // rows — ticking one unticks the other; one always stays ticked.
+    ruleList.addEventListener("change", function (event) {
+      var target = event.target;
+      if (
+        !target.classList ||
+        (!target.classList.contains("rule-kind-include") &&
+          !target.classList.contains("rule-kind-exclude"))
+      ) {
+        return;
+      }
+      var row = target.closest(".rule-edit-row");
+      if (!row) return;
+      var includeBox = row.querySelector(".rule-kind-include");
+      var excludeBox = row.querySelector(".rule-kind-exclude");
+      if (!includeBox || !excludeBox) return;
+      var include = target === includeBox;
+      includeBox.checked = include;
+      excludeBox.checked = !include;
+      row.dataset.kind = include ? "MATCH" : "FILTER";
+    });
+
     function removeRowAndChildren(row) {
       var parentIndent = parseInt(row.dataset.indent || "0", 10);
       var next = row.nextElementSibling;
@@ -180,10 +202,8 @@
       inner += '<span class="pill ' + (kind === "COMPOSITE" ? "pill-info" : (kind === "QUOTA" ? "pill-count" : "pill-info")) + '">' + kind + '</span>';
       inner += '<label style="font-weight: normal;"><input type="checkbox" class="rule-enabled" checked> enabled</label>';
       if (kind === "MATCH" || kind === "FILTER") {
-        inner += '<select class="rule-kind">';
-        inner += '<option value="MATCH"' + (kind === "MATCH" ? " selected" : "") + '>Include pairs where</option>';
-        inner += '<option value="FILTER"' + (kind === "FILTER" ? " selected" : "") + '>Exclude pairs where</option>';
-        inner += '</select>';
+        inner += '<label style="font-weight: normal;"><input type="checkbox" class="rule-kind-include"' + (kind === "MATCH" ? " checked" : "") + '> include</label>';
+        inner += '<label style="font-weight: normal;"><input type="checkbox" class="rule-kind-exclude"' + (kind === "FILTER" ? " checked" : "") + '> exclude pairs where</label>';
         inner += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">';
         inner += '<select class="rule-field">';
         ['reviewer.tag1','reviewer.tag2','reviewer.tag3','reviewee.tag1','reviewee.tag2','reviewee.tag3'].forEach(function (f) {
