@@ -2277,13 +2277,12 @@
       }
       body.ui-v2 .field-labels-editor form { margin: 0; }
       body.ui-v2 .field-labels-row {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
         align-items: flex-end;
       }
       body.ui-v2 .field-labels-row > label {
-        flex: 1 1 200px;
         display: flex;
         flex-direction: column;
         gap: 4px;
