@@ -1628,6 +1628,120 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     assert _response_count() == 0
 
 
+def test_group_self_review_toggle_rules_out_whole_group(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """On a group-scoped instrument the self-review toggle works on
+    groups: deactivating self-reviews rules out every assignment in
+    a group the reviewer is a member of — not just the (R, R) pair
+    — while a group the reviewer is not in is untouched (13C)."""
+    from app.db.models import User
+    from app.services import assignments as assignments_service
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp SR", "code": "grp-sr"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-sr")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    # One reviewer, R, who is also a reviewee — so R is a member of
+    # the Team X group. Team Y has no R.
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"R,r@example.edu,Team X\n"
+                b"A,a@example.edu,Team X\n"
+                b"C,c@example.edu,Team Y\n"
+                b"D,d@example.edu,Team Y\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"  # group by RevieweeTag1
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+
+    def _include_by_reviewee() -> dict[str, bool]:
+        return {
+            a.reviewee.name: a.include
+            for a in db.execute(
+                select(Assignment)
+                .where(Assignment.instrument_id == group.id)
+                .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+            ).scalars()
+        }
+
+    operator_user = db.get(User, review_session.created_by_user_id)
+
+    # Deactivate self-reviews: R's Team X group (R, A) is ruled out
+    # wholesale; the Team Y group (C, D) — which R is not in — stays.
+    assignments_service.set_instrument_self_reviews_active(
+        db,
+        review_session=review_session,
+        instrument_id=group.id,
+        user=operator_user,
+        active=False,
+        correlation_id="test-sr-off",
+    )
+    db.expire_all()
+    includes = _include_by_reviewee()
+    assert includes == {"R": False, "A": False, "C": True, "D": True}
+
+    # The breakdown counts the whole self-review group (R, A).
+    breakdown = assignments_service.self_review_breakdown_per_instrument(
+        db, review_session.id
+    )
+    assert breakdown[group.id] == (0, 2)
+
+    # Re-activating brings the whole group back.
+    assignments_service.set_instrument_self_reviews_active(
+        db,
+        review_session=review_session,
+        instrument_id=group.id,
+        user=operator_user,
+        active=True,
+        correlation_id="test-sr-on",
+    )
+    db.expire_all()
+    assert _include_by_reviewee() == {
+        "R": True,
+        "A": True,
+        "C": True,
+        "D": True,
+    }
+
+
 def test_group_instrument_surface_renders_one_row_per_group(
     db: Session,
     alice: AuthenticatedUser,

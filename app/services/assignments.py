@@ -297,20 +297,69 @@ def count_self_reviews_in_assignments(
     return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
 
 
+def _self_review_assignment_ids(
+    db: Session,
+    *,
+    session_id: int,
+    rows: list[tuple[Assignment, Reviewer, Reviewee]],
+) -> set[int]:
+    """The assignment ids that count as self-reviews.
+
+    On a **per-reviewee** instrument that is a row where
+    ``is_self_review`` — the reviewer reviewing themselves. On a
+    **group-scoped** instrument it is *every* assignment in a
+    group the reviewer is a member of: a group whose reviewer
+    appears as one of its own reviewees is a self-review group,
+    and excluding self-reviews rules the whole group out — not
+    just the ``(R, R)`` pair (Segment 13C)."""
+    from app.services.responses import group_keys
+
+    group_key_by_assignment = group_keys(
+        db,
+        assignments=[assignment for assignment, _, _ in rows],
+        session_id=session_id,
+    )
+    # (group instrument, reviewer) -> group key of the group that
+    # reviewer is a member of.
+    self_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
+    for assignment, reviewer, reviewee in rows:
+        if assignment.id in group_key_by_assignment and is_self_review(
+            reviewer, reviewee
+        ):
+            self_group_key[
+                (assignment.instrument_id, assignment.reviewer_id)
+            ] = group_key_by_assignment[assignment.id]
+    ids: set[int] = set()
+    for assignment, reviewer, reviewee in rows:
+        group_key = group_key_by_assignment.get(assignment.id)
+        if group_key is None:
+            # Per-reviewee instrument.
+            if is_self_review(reviewer, reviewee):
+                ids.add(assignment.id)
+        elif (
+            self_group_key.get(
+                (assignment.instrument_id, assignment.reviewer_id)
+            )
+            == group_key
+        ):
+            ids.add(assignment.id)
+    return ids
+
+
 def self_review_breakdown_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, tuple[int, int]]:
     """Per-instrument ``(active, deactivated)`` counts for
-    self-review rows. Drives the per-instrument **Self review**
-    column on the Assignments-page status blocks: the pill text is
-    ``active + deactivated``; the checkbox state is derived from
-    the (active, deactivated) ratio (all-active → checked;
-    all-deactivated → unchecked; mixed → ``indeterminate``).
+    self-review assignments. Drives the per-instrument **Self
+    review** column on the Assignments-page status blocks: the
+    pill text is ``active + deactivated``; the checkbox state is
+    derived from the (active, deactivated) ratio (all-active →
+    checked; all-deactivated → unchecked; mixed →
+    ``indeterminate``).
 
-    Instruments with no self-review rows are absent from the dict.
-    Replaces the session-wide ``self_review_include_breakdown`` —
-    the per-instrument variant subsumes it for the only consumer
-    that's still around (the Assignments page).
+    "Self-review assignment" is group-aware — see
+    :func:`_self_review_assignment_ids`. Instruments with none are
+    absent from the dict.
     """
     rows = db.execute(
         select(Assignment, Reviewer, Reviewee)
@@ -318,9 +367,12 @@ def self_review_breakdown_per_instrument(
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Assignment.session_id == session_id)
     ).all()
+    self_ids = _self_review_assignment_ids(
+        db, session_id=session_id, rows=rows
+    )
     out: dict[int, tuple[int, int]] = {}
-    for assignment, reviewer, reviewee in rows:
-        if not is_self_review(reviewer, reviewee):
+    for assignment, _reviewer, _reviewee in rows:
+        if assignment.id not in self_ids:
             continue
         active, deactivated = out.get(assignment.instrument_id, (0, 0))
         if assignment.include:
@@ -365,9 +417,12 @@ def set_instrument_self_reviews_active(
             Assignment.instrument_id == instrument_id,
         )
     ).all()
+    self_ids = _self_review_assignment_ids(
+        db, session_id=review_session.id, rows=rows
+    )
     flipped = 0
-    for assignment, reviewer, reviewee in rows:
-        if not is_self_review(reviewer, reviewee):
+    for assignment, _reviewer, _reviewee in rows:
+        if assignment.id not in self_ids:
             continue
         if assignment.include != active:
             assignment.include = active
@@ -534,14 +589,45 @@ def _diff_one_instrument(
         pair_context_lookup=pair_context_lookup,
     )
 
+    # On a group-scoped instrument, excluding self-reviews rules
+    # out the whole group the reviewer is a member of — not just
+    # the ``(R, R)`` pair (Segment 13C). Mark each group whose
+    # reviewer appears as one of its own reviewees.
+    pair_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
+    self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
+    if instrument.group_kind is not None:
+        from app.services import instruments as instruments_service
+        from app.services.responses import group_key_for_pair
+
+        boundary = instruments_service.decode_group_kind(
+            instrument.group_kind
+        )
+        for reviewer, reviewee in result.pairs:
+            key = group_key_for_pair(
+                reviewee=reviewee,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                boundary=boundary,
+                pair_context_lookup=pair_context_lookup,
+            )
+            pair_group_key[(reviewer.id, reviewee.id)] = key
+            if is_self_review(reviewer, reviewee):
+                self_review_groups.add((reviewer.id, key))
+
     # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
     # — the same tuple ``uq_assignment_unique`` enforces.
     new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
     for reviewer, reviewee in result.pairs:
-        if is_self_review(reviewer, reviewee):
-            pair_include = review_session.self_reviews_active
+        if instrument.group_kind is not None:
+            is_self = (
+                reviewer.id,
+                pair_group_key[(reviewer.id, reviewee.id)],
+            ) in self_review_groups
         else:
-            pair_include = True
+            is_self = is_self_review(reviewer, reviewee)
+        pair_include = (
+            review_session.self_reviews_active if is_self else True
+        )
         new_pairs[(reviewer.id, reviewee.id)] = (
             reviewer,
             reviewee,
