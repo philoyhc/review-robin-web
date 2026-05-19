@@ -31,6 +31,7 @@ edits — they are a rough size signal, not a tracked metric.
 | `rules_table.md` | 91 | Early canonical RuleSet cases table — superseded by the seed table in `spec/rule_based_assignment.md` §5.4. |
 | `unfinished_business.md` | 1669 | The retired open-items catalog. "Catalog #N" references in `todo_master.md` point here. Retired 2026-05-10 once its items shipped or were absorbed into named segments. |
 | `segment_1-10_unfinished.md` | 438 | Audit of unfinished items across Segments 1–10. |
+| `seg9stuff` | 67 | Segment 9 planning Q&A — the open-question / decision scratch notes (lifecycle enum, token path, edit-while-active) settled before the 9.1 → 9.5 split. |
 | `assumptions_ui_legacy.md` | 119 | The legacy UI section carved out of `spec/domain_assumptions.md`. |
 | `ui_elements_parts_2_3_restyle_history.md` | 111 | Historical UI-elements catalogue, Parts 2 + 3. |
 
@@ -97,8 +98,10 @@ alongside its replacement.
 | `segment_13A_rulebased_assignment_builder.md` | 1491 | Segment 13A — Advanced (RuleBased) assignment mode. |
 | `segment_13A_1_rule_based_editor_revamp.md` | 428 | Segment 13A-1 — Rule Based editor revamp. |
 | `segment_13B_sort_tables.md` | 558 | Segment 13B — sortable tables (reviewer + operator surfaces). |
+| `segment_13C_enhanced_instrument.md` | 647 | Segment 13C — enhanced instruments (group-scoped instruments + the Replicate-instrument button). |
 | `segment_13D_db_prep.md` | 531 | Segment 13D — DB prep for the library / per-session-copy split. |
 | `segment_13E_db_prep.md` | 209 | Segment 13E — DB prep for the 12C / 15D block. |
+| `segment_14A_production_hardening.md` | 588 | Segment 14A — production hardening (in-app ladder: logging, error handling, index review, permission audit, docs, deploy-workflow hardening). |
 | `segment_15_operator_polish_and_documentation.md` | 138 | Segment 15 — operator polish + documentation (umbrella). |
 | `segment_15A_friendly_labels.md` | 670 | Segment 15A — pervasive friendly labels. |
 | `segment_15B_per_instrument_assignments.md` | 783 | Segment 15B — per-instrument assignments. |
