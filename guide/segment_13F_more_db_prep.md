@@ -32,12 +32,14 @@ fresh sweep of every upcoming segment — to add PR 7
 for 18B PR 2 and future operator-level display settings;
 re-swept again 2026-05-17 to open a **pending scheduled-lifecycle
 schema audit** (auto-archive datetime, auto-send-invitations
-datetime, the session "opening" gate) — candidates captured in
+datetime, scheduled-activation datetime) — candidates captured in
 the "Scope re-sweep (2026-05-17)" section below; the resolved
 column set becomes a new 13F PR once the audit completes. The
-"opening" gate is settled as a gate within `ready` (no new
-`SessionStatus` value) — activation assumes the gate is closed
-until opened by datetime or operator action.
+scheduled "open" is settled (2026-05-19) as **scheduled
+activation** — a timed `validated → ready` flip, since Activation
+*is* the open event (Activated-as-gate; see Segment 18F Part 2).
+There is no separate gate within `ready` and no new
+`SessionStatus` value.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
@@ -234,58 +236,42 @@ is not lost.
 | **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `draft → archived` automatically. | **18G Part 1** | Reuses 18A's `archive_session`; only the trigger is new. |
 | **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | **18G Part 2** | Lets the operator stage a session ahead of an announced start. |
 | **Reminder datetime(s)** | Scheduled reminder dispatch. | **14C** | **Partly already covered** — `sessions.reminder_settings` JSON (PR 4) carries `cadence` / `time_of_day`. The audit must reconcile: are absolute reminder datetimes a *new* slot, or do they fold into the existing JSON? |
-| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | **18G Part 3** | Implemented as a gate within `ready` — **no new enum state**. |
+| **Scheduled-activation datetime** | A point at which a session flips `validated → ready` automatically. Because Activation *is* the open event, this is the synchronised open. | **18G Part 3** | A scheduled `activate_session` call — **no new enum state, no gate within `ready`**. |
 
-**The "opening" gate — a gate within `ready`, not a new enum
-state.** Today activation (`draft`/`validated` → `ready`) opens
-the session for responses immediately (`activate_session` flips
-every instrument's `accepting_responses` to `True`). A real use
-case wants the *start of reviewing* decoupled from activation:
-get every invitation out first, but have the review **begin at
-the same moment for everyone** — a synchronised open.
+**Scheduled activation, not an "opening gate" (revised
+2026-05-19).** An earlier draft of this audit planned an
+*opening gate* — a derived "open" condition *within* `ready`,
+with an `opens_at` datetime and an operator "Open now" action,
+so activation no longer implied "open." That design is
+**retired.** The settled model (Segment 18F — Workflow
+optimization, Part 2) is **Activated-as-gate**: `ready` already
+means "open for responses", the `draft → ready` Activate
+transition *is* the open, and 18G Part 3 simply lets that
+transition be **scheduled**. No `SessionStatus` value is added
+and `session_accepts_responses()` is unchanged — the ~91
+`is_ready()` call sites stay untouched, and `activate_session`
+keeps its current behaviour.
 
-**Decision — implement "open" as a gate, not a lifecycle state.**
-The session stays in `ready`; "open" is a derived condition, the
-same shape as the existing per-instrument `accepting_responses`
-flag and the session `deadline` — all of which already funnel
-through the single `session_lifecycle.session_accepts_responses()`
-chokepoint. No `SessionStatus` enum value is added, so the ~91
-`is_ready()` call sites are untouched.
-
-**The behaviour change this assumes.** Activation no longer
-implies "open." Once the gate exists, **`activate_session`
-assumes the open-gate is CLOSED** — the session goes `ready`,
-invitations are sendable, but responses are not accepted until
-the gate opens. The gate opens by **either**:
-
-- the `opens_at` datetime being reached (the scheduled path), **or**
-- an explicit **operator "Open now" action** (the manual path).
-
-`opens_at = NULL` means "no scheduled open" — the session then
-relies entirely on the manual action (and, for backward
-compatibility, the lighting-up segment decides whether a NULL
-`opens_at` on a freshly-activated session means "open
-immediately" to preserve today's one-step behaviour, or "stay
-closed until Open now"). `session_accepts_responses()` gains the
-gate check alongside its existing `is_ready` + `accepting_responses`
-+ `deadline` tests.
+The use case — get every invitation out first, then have the
+review begin at the same moment for everyone — is still served:
+18F Part 2 relaxes the invitation gate so invitations send from
+the **Prepared (`validated`)** state, and the reviewer who
+clicks early lands on a "scheduled to open at «time»" page.
 
 **Split of ownership.** 13F pre-positions only the inert
-`opens_at` datetime column (plus, if the audit finds it needed, a
-nullable `opened_at` stamp recording when the gate actually
-opened). The gate *semantics* — the `activate_session` behaviour
-change, the "Open now" operator control, the reviewer-surface
-"activated — opens at X" messaging, the `session.opened` audit
-event — are a separate feature segment's job, not 13F's.
+`activate_at` datetime column. The scheduling *semantics* — the
+scheduled trigger calling `activate_session`, the reviewer-surface
+pre-open / closed states, the relaxed invitation gate — are 18F /
+18G's job, not 13F's.
 
 **Shape decision for the audit.** The open question the audit
 must settle: individual nullable datetime columns
-(`auto_archive_at`, `invitations_send_at`, `opens_at`, …) vs a
+(`auto_archive_at`, `invitations_send_at`, `activate_at`, …) vs a
 single `sessions.schedule` JSON container (same reasoning that
 put `reminder_settings` in JSON — open-ended, render-time read,
 never queried/filtered). A JSON container keeps the migration
 footprint flat but is harder for a scheduled job to query
-efficiently ("find every session whose `opens_at` has passed");
+efficiently ("find every session whose `activate_at` has passed");
 individual datetime columns are queryable and indexable. Lean:
 **individual datetime columns**, since a scheduler *does* query
 these by value — unlike `reminder_settings`, which is read per

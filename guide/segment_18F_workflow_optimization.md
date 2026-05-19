@@ -82,10 +82,12 @@ The opening gate gates *response acceptance*, not *visibility* /
 window where reviewers definitely cannot see their cases. It also
 adds a third lifecycle concept. Option A maps the preview window
 onto a state that already exists (pre-activation) and keeps the
-invariant "nothing is live until Activate." The opening gate is
-still worth building — for decoupling invitation timing from the
-synchronised start of reviewing — but that is **18G Part 3**, a
-scheduling concern, not the fix for this preview problem.
+invariant "nothing is live until Activate." The opening gate idea
+is **retired entirely** (2026-05-19): the decoupling it aimed at —
+invitations out first, reviewing starts synchronously — is
+delivered instead by **Part 2** below (Activated-as-gate +
+invitations from the Prepared state) and **18G's scheduled
+activation**, with no separate gate within `ready`.
 
 **Sketch of the change.**
 - The Workflow-card stepper splits the collapsed forward action
@@ -120,7 +122,72 @@ scheduling concern, not the fix for this preview problem.
   generate-plus-validate step, so the "Validated" state label
   needs no defence.
 
-### Part 2+ — Holistic workflow work-through (to be catalogued)
+### Part 2 — Pre-activation invitations + reviewer pre-open / closed states
+
+**Goal.** Support the scenario: an operator sends a notification
+email to every reviewer *before* the session opens — "the review
+opens for responses at «future time»" — and a reviewer who clicks
+through lands on a page telling them the review is scheduled and to
+come back later. After the review window, a reviewer who returns
+sees a "this review is now closed" page.
+
+**The model — Activated-as-gate, no separate opening gate.** The
+`draft → ready` **Activate transition is the open event**: a
+session is *open for responses* exactly when it is `ready`. There
+is **no separate "opening" gate within `ready`** and **no new
+`SessionStatus` value** — Activation itself is the gate, and
+(in 18G) the activation can be scheduled. This is the call that
+retires the old "opening gate" idea; see 18G's Part 3, now
+"Scheduled activation".
+
+**Why the current implementation precludes the scenario.** Two
+gaps, both addressed here:
+
+1. **Invitations are `ready`-gated.** `invitations.generate` /
+   `send-all` / single-send all call `_require_ready`
+   (`app/web/routes_operator/_operations.py`), which 409s unless
+   the session is `ready`. So no notification email can go out
+   before the session is open.
+2. **No reviewer pre-open state.** Because a reviewer can't be
+   invited before `ready` today, the reviewer surface has no
+   "invited, but not open yet" rendering.
+
+The reviewer **closed** state, by contrast, *substantially exists*
+already — the surface computes per-instrument `accepting` /
+`any_accepting`, and `lifecycle.observe_deadline` lazily closes
+instruments at the deadline; the surface renders read-only when
+nothing is accepting. Part 2 mostly adds an explicit "this review
+is now closed" banner over that existing machinery.
+
+**Scope sketch.**
+- **Relax the invitation gate.** Allow `invitations.generate` /
+  `send-all` / single-send to run while the session is `validated`
+  (Prepared), not only `ready` — the small `_require_ready`
+  change. The Workflow-card "Create invites" / "Send invites"
+  stepper stages become available from the Prepared state.
+- **Reviewer pre-open surface.** When a reviewer follows an
+  invitation to a session that is `validated` (Prepared, not yet
+  activated), render a "the review is scheduled to open — come
+  back later" page instead of the response form. Routed from the
+  invitation-token landing and the `/reviewer/sessions/{id}` /
+  surface routes.
+- **Reviewer closed surface.** A clear "this review is now
+  closed" page for the post-window / `expired` period, over the
+  existing not-accepting machinery.
+- **Edit-after-invite hazard.** Sending invitations while
+  `validated` and then editing setup flips `validated → draft`
+  (`lifecycle.invalidate_if_validated`) with invitations already
+  out. Part 2 adds a confirm / warning guard so the operator
+  isn't surprised.
+
+**Schema note.** The *precise* "opens at «future time»" wording
+needs a stored open time — that is **18G's `activate_at` column**
+(scheduled activation). Part 2 builds the *states* (invites-out-
+while-Prepared, the pre-open page, the closed page); until 18G
+lands `activate_at`, the pre-open page shows a generic "not open
+yet" message rather than a specific time.
+
+### Part 3+ — Holistic workflow work-through (to be catalogued)
 
 A walk of the full operator journey, cataloguing rough edges and
 deciding fixes. Candidate areas to assess at scoping (not yet
@@ -133,9 +200,6 @@ committed parts):
 - Re-preparation after a setup edit (the reconcile path —
   `spec/reconciling_regeneration.md` — and how the card surfaces
   it).
-- Where invitation create / send sits relative to Activate, and
-  how that reads ahead of 18G's auto-send (Part 2 there) and
-  opening gate (Part 3 there).
 - Any lifecycle seams the participant-model arc (segments 21+)
   will need — recorded as pre-positioning notes, not built here.
 
@@ -144,16 +208,21 @@ committed parts):
 - **Part 1** is self-contained — no dependency beyond the
   existing Validate / Generate / Activate services and the
   Workflow card.
+- **Part 2** is self-contained at the manual level; the *scheduled*
+  activation that fills in the "opens at «time»" wording is
+  **18G's Scheduled activation** (Part 3 there) — 18F Part 2
+  builds the states, 18G adds the schedule.
 - The broader work-through coordinates with **Segment 18G**
-  (scheduled events): 18G's opening gate (Part 3) and auto-send
-  (Part 2) assume the lifecycle 18F settles. 18F should land
+  (scheduled events): 18G's scheduled activation and auto-send
+  assume the Activated-as-gate model 18F settles. 18F should land
   first; 18G consumes its result.
 
 ## Out of scope
 
-- Time-based automation of any kind — auto-archive, auto-send
-  invitations, the scheduled "opening" gate, scheduled reminders.
-  All of that is **Segment 18G**.
+- Time-based automation of any kind — auto-archive, scheduled
+  activation, auto-send invitations, scheduled reminders. All of
+  that is **Segment 18G**. 18F Part 2 builds the lifecycle states
+  those triggers fire against; it does not build the triggers.
 - The participant-model lifecycle redesign (segments 21+) —
   18F only records pre-positioning notes for it.
 
@@ -162,12 +231,18 @@ committed parts):
 When parts ship:
 
 - `spec/workflow_card.md` — the Prepare/Activate split: the
-  stepper row, the ten-state cascade, the per-state copy.
-- `spec/lifecycle.md` — clarify that assignment generation runs
-  pre-activation and the reviewer surface is previewable from
-  that point.
+  stepper row, the ten-state cascade, the per-state copy; the
+  invite stages becoming available from the Prepared state.
+- `spec/lifecycle.md` — assignment generation runs pre-activation
+  and the reviewer surface is previewable from that point;
+  invitations sendable from `validated`; Activation is the
+  "opens for responses" event (Activated-as-gate, no separate
+  opening gate).
+- `spec/reviewer-surface.md` — the new pre-open ("scheduled to
+  open") and closed ("review now closed") reviewer states.
 - `spec/operations_pages.md` / `spec/preview_hub.md` — the
-  preview becomes reachable once Prepare has run.
+  preview becomes reachable once Prepare has run; the Invitations
+  surface is usable from the Prepared state.
 - `docs/status.md` timeline entry per Part.
 - `guide/todo_master.md` updated.
 

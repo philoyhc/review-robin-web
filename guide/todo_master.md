@@ -883,12 +883,15 @@ bottom of this file.
   Consolidates every scheduled / automatic session-lifecycle
   automation behind the one 13F scheduled-lifecycle schema audit:
   **auto-archive** (a timed `archive_session`, moved out of 18A),
-  **auto-send invitations** (timed invitation dispatch), and the
-  **session "opening" gate** — a gate within `ready` so invites
-  go out first and reviewing starts synchronously. **Scheduled
+  **auto-send invitations** (timed invitation dispatch), and
+  **scheduled activation** — a timed `validated → ready` flip;
+  since Activation *is* the open event (Activated-as-gate, settled
+  in 18F Part 2), a scheduled activation is the synchronised open,
+  with no separate "opening gate". **Scheduled
   reminders** — the former Segment 14C — were consolidated in
   (2026-05-18) as Part 5. Schema-blocked on the 13F audit
-  resolving to a locked column set.
+  resolving to a locked column set; depends on 18F Part 2 for the
+  Activated-as-gate model + reviewer pre-open / closed states.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
