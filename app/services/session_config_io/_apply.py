@@ -39,6 +39,11 @@ from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
+from app.services.instruments import (
+    GROUP_KIND_SENTINEL,
+    decode_group_kind,
+    encode_group_kind,
+)
 from app.services.instruments._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
     validation_block_for_rtd,
@@ -196,7 +201,6 @@ _VALID_RTD_DATA_TYPES = frozenset(
         "List",
     }
 )
-_VALID_GROUP_KINDS = frozenset({"tag_1", "tag_2", "tag_3"})
 _VALID_DF_SOURCE_TYPES = frozenset({"reviewee", "pair_context"})
 _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 
@@ -764,22 +768,30 @@ def _parse_json(value: str, *, default: Any) -> Any:
 def _parse_group_kind(value: str) -> str | None:
     """Parse an ``instruments[].group_kind`` config value.
 
-    Empty/NULL = a per-reviewee instrument. A non-empty value is
-    an ordered, comma-joined list of distinct reviewee tag keys
-    (``tag_1`` / ``tag_2`` / ``tag_3``) — e.g. ``tag_1`` or
-    ``tag_1,tag_2,tag_3`` — composing the group key. Returns the
-    canonical (whitespace-stripped) form.
+    Empty/NULL = a per-reviewee instrument. A non-empty value is the
+    group-scoped instrument's boundary spec, in the same encoding the
+    ``Instrument.group_kind`` column uses (the value the serialiser
+    emits): either the no-boundary sentinel (``GROUP_KIND_SENTINEL``,
+    a group instrument with no boundary tag — one universe-wide
+    group), or a comma-joined list of distinct boundary codes —
+    ``r1`` / ``r2`` / ``r3`` for reviewee tags, ``p1`` / ``p2`` /
+    ``p3`` for pair-context tags. Returns the canonical column value.
     """
     if not value:
         return None
-    keys = [part.strip() for part in value.split(",")]
-    invalid = [k for k in keys if k not in _VALID_GROUP_KINDS]
-    if invalid or len(set(keys)) != len(keys):
+    value = value.strip()
+    if value == GROUP_KIND_SENTINEL:
+        return GROUP_KIND_SENTINEL
+    codes = [part.strip() for part in value.split(",")]
+    invalid = [c for c in codes if not decode_group_kind(c)]
+    if invalid or len(set(codes)) != len(codes):
         raise _ParseError(
-            f"invalid instrument group_kind {value!r}; expected a comma-"
-            f"joined list of distinct keys from {sorted(_VALID_GROUP_KINDS)}"
+            f"invalid instrument group_kind {value!r}; expected "
+            f"{GROUP_KIND_SENTINEL!r} or a comma-joined list of "
+            f"distinct boundary codes (r1/r2/r3 for reviewee tags, "
+            f"p1/p2/p3 for pair-context tags)"
         )
-    return ",".join(keys)
+    return encode_group_kind(decode_group_kind(value))
 
 
 # --------------------------------------------------------------------------- #
