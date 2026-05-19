@@ -17,11 +17,17 @@ chrome:
 
 - **Session lifecycle.** `draft → validated → ready` (Activated)
   with edit-locks, deadline tracking, response-window gates, and
-  audit events on every state transition. The sessions lobby
-  (`/operator/sessions`) carries a Danger Zone bulk-delete
-  affordance for ticked draft / validated sessions; deletion
-  cascades reviewers / reviewees / instruments / assignments /
-  invitations / email-outbox rows in one transaction.
+  audit events on every state transition; `archived` is a live
+  off-ramp (`draft ⇄ archived`, written by `archive_session` /
+  `unarchive_session`). The sessions lobby
+  (`/operator/sessions`) was rebuilt in Segment 18A as a
+  selection-aware inline row-expander: per-row rename, free-form
+  tagging (with a click-to-filter tag strip), one-click clone
+  (full-setup or config-shell), and "Purge and archive"
+  (selective hard-delete of responses / rosters / audit log via
+  `session_purge`, then archive). It also carries client-side
+  search, sortable columns, and a dedicated
+  `/operator/sessions/archived` child page.
 - **Roster management.** Reviewer / reviewee / **Relationships**
   CSV imports with cross-table identity validation. Assignments
   are **always derived** post-15D: rule-based generation only
@@ -34,18 +40,27 @@ chrome:
   (predicates / combinators / quotas / deterministic ordering); the
   engine consumes pair-context tags from the `relationships` table
   via an eager `pair_context_lookup` dict (15D PR 4). The
-  Reviewers / Reviewees / Relationships / Assignments preview
-  tables share a per-slot column-visibility pattern — right-flushed
-  checkbox row above each table, default ticked iff the column has
-  data, choice persisted per browser via `localStorage`.
-  Assignments preview carries the 12-column shape (Reviewer · R
-  Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include); the trailing
-  Status / Include cell renders as a `pill-info` / `pill-empty`
-  pill. See `spec/setup_pages.md` for the contract.
+  Reviewers / Reviewees / Relationships preview tables share a
+  per-slot column-visibility pattern — a "Show columns:" chip /
+  pill row inside the "Fields with data" card (Segment 18E
+  Part 1), each chip enabled iff the column has data, choice
+  persisted per browser via `localStorage`. The Assignments page
+  (Segment 13C) carries the same column-visibility chips plus a
+  separate operator-actions card — a "Search by" dropdown,
+  row-select checkbox column, and bulk include / exclude buttons.
+  The Assignments preview carries the 12-column shape (Reviewer ·
+  R Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include); the
+  trailing Status / Include cell renders as a `pill-info` /
+  `pill-empty` pill. See `spec/setup_pages.md` for the contract.
 - **Instruments builder.** Per-instrument card with state-machine
   Display + Response Fields tables, Response Type Definitions
   catalog (10 seeded RTDs + operator-defined ones), live-preview
-  pane, multi-instrument support.
+  pane, multi-instrument support. A second flavour —
+  **group-scoped instruments** (Segment 13C), where one reviewer
+  answer covers a whole group of reviewees — is authorable via
+  `Add group instrument`; a group instrument requires a pinned
+  rule before it can open. The **Replicate** button clones a
+  card's content into a new instrument after the source.
 - **Email template editor.** Per-template (Invitation / Reminder
   / Responses-received) override of subject + body + CC + BCC,
   with the canonical merge tags (`$reviewer_name`,
@@ -75,18 +90,19 @@ chrome:
   downloads** in a 2-column layout — left column for
   per-entity rosters (Reviewers / Reviewees / Relationships),
   right column for session-level outputs (Session settings /
-  Responses), with the inert Zip-all row in the bottom-right
-  slot. Settings + Reviewers / Reviewees / Responses landed
-  in Segment 12A-1 (2026-05-09); Relationships landed in
-  Segment 12A-3 PR 1; the legacy Manual Assignments tile
-  retired in 12A-3 PR 2 (assignments are derived post-15D —
+  Responses), plus a Zip-all row in the bottom-right slot that
+  (Segment 18D) is now a real `{code}_bundle.zip` download of
+  the whole porting set. Settings + Reviewers / Reviewees /
+  Responses landed in Segment 12A-1 (2026-05-09); Relationships
+  landed in Segment 12A-3 PR 1; the legacy Manual Assignments
+  tile retired in 12A-3 PR 2 (assignments are derived post-15D —
   output, not input — and have no place in a porting bundle).
-  The matching Settings importer ships in 12A-3 PR 3.
-  Audit-events download (Segment 12B PR 1) ships the route
-  live but **without an Extract Data tile** — per industry
-  best practice audit data sits behind an admin / diagnostics
-  doorway rather than alongside everyday data exports, so the
-  tile relocates to the Sys Admin page when Segment 16 ships.
+  The matching Settings importer landed in 12A-3 PR 3. The
+  audit-events CSV download (Segment 12B) ships its route live
+  but with no Extract Data tile — per industry best practice
+  audit data sits behind an admin / diagnostics doorway, so the
+  extract lives behind the Sys Admin gate (Segment 16C, the
+  per-session audit-log viewer, shipped).
 - **Operations pages.** Validate · **Assignments** · Previews ·
   Invitations · Responses (Assignments moved into the Operations
   row in 15D PR 6a). Validate is the find-and-fix surface
@@ -106,7 +122,10 @@ chrome:
 
 - Multi-instrument session as paginated pages within one form;
   each page is one instrument's table of (reviewee × response
-  field) cells.
+  field) cells. A group-scoped instrument (Segment 13C) renders
+  one row per boundary-defined group — a single reviewer answer
+  covers the whole group, counted once across reviewer state,
+  monitoring, and the Extract Data CSV.
 - Per-page status pills (`not_started` / `in_progress` /
   `complete` / `submitted`) plus per-row submitted timestamps.
 - Save persists the current page's dirty inputs; Submit commits
@@ -137,8 +156,9 @@ will write to (`error_message`, `from_address`, `backend`,
 `correlation_id`) landed inert with Segment 11C Part 2. The
 transport interface (`EmailTransport` Protocol +
 `SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is
-shipped and waiting to be wired up by **Segment 14-1 Part A**
-(the email send-activation segment).
+shipped and waiting to be wired up by **Segment 14B Part A**
+(the email send-activation segment; renamed from 14-1 in the
+14 → 14A / 14B / 14C split).
 
 For the latest snapshot of what's shipped vs. pending, see
 [`docs/status.md`](docs/status.md).
@@ -204,16 +224,19 @@ the full Alembic migration chain.
 Documentation is split across three folders, each with its own
 README:
 
-- **[`spec/`](spec/)** — surface specifications and design intent
-  ([`spec/README.md`](spec/README.md)). Includes `architecture.md`,
-  `domain_assumptions.md`, `operator_ui_concept.md`,
-  `session_home.md`, `sessions_overview.md`, `reviewer-surface.md`,
-  `quick_setup_card_spec.md`, `setup_pages.md`,
-  `rule_based_assignment.md`, `email_infra_options.md`.
+- **[`spec/`](spec/)** — surface specifications and design intent.
+  See [`spec/README.md`](spec/README.md) for the full, current
+  index — it covers the domain / architecture specs plus the
+  per-page and per-feature specs (Setup pages, operations pages,
+  the reviewer surface, rule-based assignment, group-scoped
+  instruments, timezone display, the settings inventory, and more).
 - **[`docs/`](docs/)** — reference material about the running
   system ([`docs/README.md`](docs/README.md)). Includes
   `status.md`, `authentication.md`, `database.md`, `imports.md`,
-  `local_setup.md`, `deployment_dev.md`.
+  `local_setup.md`, `deployment_dev.md`, plus the Segment 14A
+  operations set (`operations_runbook.md`, `troubleshooting.md`,
+  `backup_restore.md`, `known_limitations.md`,
+  `security_posture.md`).
 - **[`guide/`](guide/)** — forward-looking plans, segment
   workplans, todos ([`guide/README.md`](guide/README.md)).
   Shipped segment plans are in
