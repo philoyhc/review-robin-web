@@ -675,6 +675,22 @@ def update_relationship(
         setattr(relationship, field, new_value)
     db.flush()
 
+    # A grouping pair-context tag change mis-attributes the answer
+    # copies fanned onto this pair's group-scoped Response rows;
+    # delete them so the group re-derives cleanly (Segment 13C
+    # PR 5). No-op unless a changed tag is a group boundary.
+    from app.services import responses as responses_service
+
+    defuncted = (
+        responses_service.defunct_group_responses_for_relationship_tag_change(
+            db,
+            relationship=relationship,
+            changed_tag_fields={
+                f for f in changes if f.startswith("tag_")
+            },
+        )
+    )
+
     audit.write_event(
         db,
         event_type="relationship.updated",
@@ -683,6 +699,9 @@ def update_relationship(
         session=relationship.session,
         payload=audit.changes(changes),
         refs={"relationship_id": relationship.id},
+        context=(
+            {"defuncted_group_responses": defuncted} if defuncted else None
+        ),
         correlation_id=correlation_id,
     )
     db.commit()
