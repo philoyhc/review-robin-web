@@ -726,6 +726,34 @@ Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured 
 
 ---
 
+### Segment 13C — Enhanced instruments — done 2026-05-19
+
+Group-scoped instruments + the Replicate-instrument button,
+shipped across a PR 1-3 ladder plus follow-ons. Zero feature
+migrations — only one cache-columns migration (`c3a9f1d7b2e8`).
+
+- **PR 1** — the operator editor to author a group-scoped
+  instrument (`Add group instrument`; `Instrument.group_kind`
+  non-null flags it).
+- **PR 2** (slices A-D) — the group-boundary editor column, the
+  boundary-scoped reviewer write fan-out, the partition-aware
+  reviewer surface (one row per group), and the aggregation
+  sweep so a group response counts once, not once per member.
+- **PR 3** — the Replicate-instrument button
+  (`instruments.replicate_instrument`).
+- **PR 4 / PR 5** — the reviewer-group pair count on the
+  Instruments-page rule card (with a per-instrument cache) and
+  the grouping-tag-change defunct safeguard.
+- **Follow-ons** — the Assignments-page refinement cards
+  (column-visibility chips + an operator-actions search / bulk
+  card), the Instruments-page Danger Zone removal, and the
+  normal / group instrument-card layout harmonization.
+
+Plan archived: `guide/archive/segment_13C_enhanced_instrument.md`.
+Functional spec: `spec/group_scoped_instruments.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -739,7 +767,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 4-5), 14B, 17B,
+**13F (PRs 4-5), 14B, 17B,
 18E, 18F, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -771,25 +799,7 @@ bottom of this file.
    schema scaffolding is complete — Segment 16A is unblocked.**
    **Plan:** `guide/segment_13F_more_db_prep.md`.
 
-2. **13C — Enhanced instruments.**
-   Group-scoped instruments (per-instrument flavour where one
-   answer covers a group of reviewees) + a "Duplicate
-   instrument" action-row button. **Re-scoped 2026-05-15** —
-   sized as **3 PRs, zero migrations**: (1) operator editor to
-   author group-scoped instruments, (2) reviewer surface + write
-   fanout + group-aware aggregation sweep, (3) Duplicate
-   instrument button. Action row ends up with: Edit / Save /
-   Cancel (state-aware) + Add new instrument + Add group-scoped
-   instrument (new) + Duplicate instrument (new). The original
-   plan stamped flavour metadata onto the now-dropped
-   `Assignment.context` JSON column; an investigation confirmed
-   the group is fully **derivable** from `Instrument.group_kind`
-   (already shipped, 13D PR 6) + the reviewee's own `tag_N`, so
-   13C needs no schema change. Independent of 13A and 13B.
-   **Plan:** `guide/segment_13C_enhanced_instrument.md`.
-   **Functional spec:** `spec/group_scoped_instruments.md`.
-
-3. **14B — Email infrastructure (send activation + backends).**
+2. **14B — Email infrastructure (send activation + backends).**
    *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
    14B / 14C split.)* All email *wiring* lives here. The schema
    columns Part A writes to landed with **Segment 11C Part 2**
@@ -902,10 +912,6 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18F
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 4-5), 17B,
+- **13F (PRs 4-5), 17B,
   18E, 18F, 19, 20** are independent of the email +
-  audit pipelines and can interleave at any time. The three
-  13-family segments are also independent of each other —
-  13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
-  change for its FullMatrix-first cut, so it does not depend on
-  13A.
+  audit pipelines and can interleave at any time.
