@@ -424,6 +424,11 @@ which gets renamed once the multi-instrument-rewrite PR γ adds the
 
 ### Columns
 
+This column set applies to an ordinary per-reviewee instrument. A
+**group-scoped instrument** renders a different column set — a
+single composed `Group` column in place of Reviewee + display
+columns; see "Group-scoped instruments" below.
+
 In rendered order:
 
 1. **Reviewee** (always first, mandatory; class `.rs-reviewee`):
@@ -516,6 +521,57 @@ Keep this dict shape stable — the large-table ergonomics work
 (see "Large-table ergonomics" below) builds on the same
 payload, and it would also feed a future JS-driven grid
 unchanged should one ever be adopted.
+
+### Group-scoped instruments
+
+A **group-scoped instrument** (`Instrument.group_kind` non-null —
+Segment 13C) renders differently. Its canonical design lives in
+[`spec/group_scoped_instruments.md`](group_scoped_instruments.md);
+the reviewer-surface specifics:
+
+- **One row per group, not per reviewee.** The reviewer's
+  rule-eligible assignments for the instrument are partitioned
+  into groups — two reviewees share a group iff they share the
+  same value for every group-boundary tag (`responses.group_keys`).
+  Each group is one table row. `_collapse_group_rows` in
+  `routes_reviewer/_surface.py` does the collapse; the
+  lowest-id member assignment is the row's **representative** —
+  the response inputs key off it (`response[{rep_id}][{field}]`)
+  and the write fan-out spreads the answer to every member of the
+  group.
+- **`Group` identity column** replaces the `Reviewee` column and
+  the per-reviewee display columns. It is composed from the
+  group's boundary tag values on one line and, when the
+  `RevieweeName` Display Field is Included, the member-name list
+  on a second line — the first `GROUP_MEMBER_NAME_LIMIT` (10)
+  names, then a `+N more` suffix. No separate display-field
+  columns render.
+- **Fixed table layout.** The group table is `table-layout: fixed`
+  (`table.rs-group-table`): the `Group` column is pinned to a
+  third of the table width (`th.rs-group { width: 33% }`), and
+  the response columns auto-distribute the rest. A `max-width`
+  on an auto-layout cell is only a hint browsers ignore, hence
+  the fixed layout. Numeric response columns are pinned to a
+  `ch`-width via `views.numeric_column_ch_width(field)` — the
+  wider of the header label (plus the `required` mark + sort
+  button) and the RTD min/max digit span — so a small-range
+  input (e.g. a 1-5 Rating) does not sprawl. Their per-type
+  `rs-narrow` / `rs-textlong` hints are dropped (under fixed
+  layout `width: 1%` would collapse the column).
+- **One error / one missing entry per group.** Validation runs
+  on the raw upserts before the write fan-out, and
+  `_compute_missing_required` reports one entry per
+  `(instrument, group_key)` — a bad or missing group answer
+  surfaces once, not once per member.
+- **Operator preview** still renders group-scoped instruments
+  per-reviewee (un-collapsed) — a known follow-up;
+  `build_preview_context` sets `is_group: False`.
+
+The collapsed row carries the same dict shape plus a
+`group_identity` block (`tag_line` / `member_names` /
+`extra_count` / `show_members`) and a `group_label`; the
+instrument group dict carries `is_group: bool`, which the
+template branches on.
 
 ---
 

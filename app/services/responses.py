@@ -834,7 +834,13 @@ def _state_from_assignments(
     :func:`reviewer_session_state` (whole-session aggregate) and
     :func:`reviewer_session_state_per_instrument` (per-instrument
     breakdown). The two surfaces share field-set lookup so the
-    per-instrument path doesn't double the query count."""
+    per-instrument path doesn't double the query count.
+
+    A group-scoped instrument counts **once per group**, not once
+    per member: all members of a group carry the same fanned-out
+    answer, so only one representative assignment per
+    ``(instrument, group_key)`` feeds the totals (Segment 13C
+    aggregation contract)."""
     if not assignments:
         return ReviewerSessionState(
             total_assignments=0,
@@ -844,13 +850,30 @@ def _state_from_assignments(
             pill_state="not started",
         )
 
+    # Collapse each group-scoped instrument's member assignments to
+    # one representative — the first by id — so a group response is
+    # one unit of work, not N.
+    group_key_by_assignment = group_keys(
+        db, assignments=assignments, session_id=assignments[0].session_id
+    )
+    counted: list[Assignment] = []
+    seen_groups: set[tuple[int, tuple[str, ...]]] = set()
+    for assignment in assignments:
+        group_key = group_key_by_assignment.get(assignment.id)
+        if group_key is not None:
+            marker = (assignment.instrument_id, group_key)
+            if marker in seen_groups:
+                continue
+            seen_groups.add(marker)
+        counted.append(assignment)
+
     any_response = False
     all_required_with_submitted = True
     completed_count = 0
     missing_required_count = 0
     required_total = 0
 
-    for assignment in assignments:
+    for assignment in counted:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
         required_ids = {f.id for f in fields if f.required}
         required_total += len(required_ids)
@@ -889,7 +912,7 @@ def _state_from_assignments(
         pill_state = "in progress"
 
     return ReviewerSessionState(
-        total_assignments=len(assignments),
+        total_assignments=len(counted),
         completed_count=completed_count,
         missing_required_count=missing_required_count,
         required_total=required_total,

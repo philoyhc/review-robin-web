@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
+from app.services import responses as responses_service
 from app.db.models import (
     Assignment,
     AuditEvent,
@@ -1475,3 +1476,83 @@ def test_group_instrument_surface_renders_one_row_per_group(
     # header + RTD digit span, so it doesn't sprawl across the
     # fixed-layout group table.
     assert 'style="width: 12ch"' in table
+
+
+def test_group_instrument_counts_once_per_group_in_reviewer_state(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A group-scoped instrument counts once per boundary group in a
+    reviewer's session state — not once per member assignment
+    (Segment 13C PR 2 slice D aggregation)."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp State", "code": "grp-st"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-st")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"  # group by RevieweeTag1 → Team A, Team B
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalar_one()
+    raw_assignment_count = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.reviewer_id == reviewer.id,
+        )
+    ).scalars().all()
+    # 3 reviewees x 2 instruments (default per-reviewee + group) = 6
+    # raw assignments.
+    assert len(raw_assignment_count) == 6
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+    # The per-reviewee instrument contributes 3; the group instrument
+    # collapses its 3 member assignments to 2 boundary groups → 5.
+    assert state.total_assignments == 5
