@@ -214,9 +214,11 @@ Notes and open points:
   a distinct hard gate with `deadline` staying advisory.
   Leaning: reuse `deadline` as the hard close — fewer columns,
   and the lazy-close deadline machinery already exists.
-- `opens_at` overlaps **Segment 18G**'s "session opening gate."
-  The upgrade should *consume* 18G's scheduler, not build a
-  second one (see §8).
+- `opens_at` overlaps **Segment 18G**'s scheduled activation
+  (a timed `validated → ready` flip — Activation is the open
+  event; there is no separate "opening gate"). The upgrade
+  should *consume* 18G's scheduler, not build a second one
+  (see §8).
 - The viewing window (`results_open_at` / `results_close_at`)
   is genuinely new — nothing today gates *viewing* by time.
 
@@ -353,7 +355,7 @@ views shape, templates render markup, exactly as today.
   channel.
 - **Coordinates with Segment 18G** (scheduled events). 18G
   owns the scheduler that fires timed lifecycle transitions
-  (auto-archive, auto-send, the opening gate). The §3.4 windows
+  (auto-archive, auto-send, scheduled activation). The §3.4 windows
   must be *driven by 18G's scheduler*, not a second timer. If
   participant-model work lands before 18G, it ships the columns
   inert with a manual operator toggle; 18G (or a later slice)

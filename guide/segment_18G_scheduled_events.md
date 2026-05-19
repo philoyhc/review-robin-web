@@ -66,35 +66,44 @@ deadline + grace period); a scheduled trigger flips it
 
 ### Part 2 — Auto-send invitations
 
-**Goal.** Instead of sending every invitation immediately on
-activation, a session can carry an **invitations-send date/time**;
-a scheduled trigger dispatches them at that point. Lets an operator
-stage a session ahead of an announced start.
+**Goal.** Instead of sending every invitation immediately, a
+session can carry an **invitations-send date/time**; a scheduled
+trigger dispatches them at that point. With the Activated-as-gate
+model (Part 3 / 18F), invitations are sendable from the
+**Prepared (`validated`)** state — so an operator can schedule a
+notification email to land *ahead of* the scheduled open.
 
 - Schema: an `invitations_send_at` column (13F audit).
+- Depends on **18F Part 2** relaxing the invitation gate so
+  invitations can be sent before activation.
 
-### Part 3 — Session "opening" gate
+### Part 3 — Scheduled activation
 
-**Goal.** Decouple *activation* from the *start of reviewing* so a
-review begins at the same moment for everyone — a synchronised
-open.
+**Goal.** A session can carry an **activation date/time**; a
+scheduled trigger flips it `validated → ready` at that point.
+Because **Activation is the open event** (Activated-as-gate —
+see 18F Part 2), a scheduled activation *is* the synchronised
+open: every reviewer's window starts at the same moment.
 
-**Settled design (2026-05-17, see 13F):** "open" is a **gate
-within the `ready` state — no new `SessionStatus` value**, the
-same shape as the per-instrument `accepting_responses` flag and
-the session `deadline`, all funnelled through
-`session_lifecycle.session_accepts_responses()`.
+**Settled design (2026-05-19).** The earlier "opening gate" idea
+— a separate gate *within* `ready`, with an `opens_at` datetime
+and an "Open now" action — is **retired**. Instead the existing
+`draft → ready` Activate transition is the open, and this part
+just lets that transition be *scheduled*. No new `SessionStatus`
+value and no sub-gate within `ready`: `ready` already means
+"open for responses".
 
-- `activate_session` assumes the open-gate is **closed**: the
-  session goes `ready`, invitations are sendable, but responses
-  are not accepted until the gate opens — by **either** the
-  `opens_at` datetime being reached **or** an explicit operator
-  "Open now" action.
-- Schema: an `opens_at` datetime (13F audit), possibly an
-  `opened_at` stamp.
-- `session_accepts_responses()` gains the gate check; the
-  reviewer surface shows "activated — opens at X"; a
-  `session.opened` audit event records the open.
+- Schema: an `activate_at` datetime (13F audit) — the scheduled
+  `validated → ready` trigger; possibly reuse the existing
+  activation audit event, or add a `session.activation_scheduled`
+  event.
+- A scheduled trigger calls `session_lifecycle.activate_session`
+  at `activate_at`; an explicit operator "Activate now" stays
+  available (it already exists).
+- **Depends on 18F Part 2** for the reviewer-facing states: the
+  pre-open page ("scheduled to open at «activate_at» — come back
+  later") reads the `activate_at` this part adds. 18F Part 2
+  builds the states; this part supplies the scheduled time.
 
 ### Part 4 — Scheduled / policy-driven purge (retention)
 
@@ -174,8 +183,10 @@ in this segment.
   locked column set first — it becomes a new 13F PR. Until then
   every part here is schema-blocked.
 - **Part 1** wants 18A's `archive_session` (shipped).
-- **Part 3** is also a `spec/lifecycle.md` change (the gate
-  semantics), not just a column.
+- **Part 2 / Part 3** depend on **18F Part 2** — the
+  Activated-as-gate model, the relaxed invitation gate, and the
+  reviewer pre-open / closed states. 18F lands first; this
+  segment supplies the scheduled times those states read.
 - **Part 5 (reminders)** hard-depends on **14B Parts A / B**
   (the email transport, and the `correlation_id` strategy the
   per-reviewer dedup uses) and reuses **14B Part C**'s
@@ -198,14 +209,15 @@ When parts ship:
 
 - `docs/status.md` timeline entry per Part.
 - `guide/todo_master.md` updated.
-- `spec/lifecycle.md` — the `opens_at` gate (Part 3) as a real
-  gate within `ready`; activation's "gate starts closed" change.
+- `spec/lifecycle.md` — Part 3's `activate_at` as the scheduled
+  `validated → ready` trigger (no separate opening gate — see
+  18F Part 2 for the Activated-as-gate model).
 - `spec/settings_inventory.md` — the new scheduled-datetime
   columns, plus the Part 5 reminder-cadence settings.
 - `spec/operations_pages.md` — Manage Invitations picks up the
   Part 5c cohort buttons / Part 5d reminders card if those
   ship.
-- `spec/architecture.md` — `session.opened`, the reminder
+- `spec/architecture.md` — the scheduled-activation and reminder
   events, and any other new audit-event envelopes.
 
 ## Working notes
