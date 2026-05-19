@@ -211,7 +211,7 @@
             <thead>
             <tr>
               {% if group.is_group %}
-                <th scope="col" class="rs-reviewee">Group</th>
+                <th scope="col" class="rs-group">Group</th>
               {% else %}
                 <th scope="col" class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
                   Reviewee<button type="button" class="rrw-sort-btn"
@@ -249,7 +249,7 @@
                      composed from the boundary tag values and,
                      when the Name field is Included, the member
                      list (Segment 13C). #}
-                  <td class="rs-reviewee">
+                  <td class="rs-group">
                     {% if row.group_identity.tag_line %}
                       <strong>{{ row.group_identity.tag_line }}</strong>
                     {% endif %}
