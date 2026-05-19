@@ -142,7 +142,7 @@
      and the Segment 13C group-scoped placeholder card so both carry
      the same button set: Edit / (Save, Cancel), Add instrument,
      Add group instrument, Replicate. #}
-  {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) %}
+  {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px;">
         {% if is_editing %}
@@ -184,6 +184,19 @@
           <button class="btn secondary" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Replicate</button>
         </form>
+        {# Delete — last in the row. Posts the standalone delete
+           form (whose confirm checkbox sits below the row); the
+           checkbox-gates-the-button standard keeps it disabled
+           until the operator ticks confirm. #}
+        {% if delete_disabled %}
+          <button class="btn destructive" type="button" disabled
+                  aria-disabled="true" title="{{ delete_title }}">Delete</button>
+        {% else %}
+          <button class="btn destructive" type="submit"
+                  form="instrument-delete-{{ instrument.id }}"
+                  data-delete-btn="{{ instrument.id }}"
+                  disabled aria-disabled="true">Delete</button>
+        {% endif %}
       </div>
     </div>
   {% endmacro %}
@@ -826,7 +839,8 @@
           {{ response_field_templates(instrument, rtds) }}
         {% endif %}
 
-        {# Section E — Danger Zone (half-width, left) + action buttons. #}
+        {# Section E — action row (Delete is last in the row) + the
+           confirm checkbox flush-right below it. #}
         {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
         {% if is_ready %}
           {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
@@ -839,29 +853,18 @@
         {% endif %}
         {% set is_only_instrument = (instruments | length == 1) %}
         {% set delete_disabled = add_delete_disabled or is_only_instrument %}
-        <div class="bottom-grid" style="margin-top: 12px; align-items: start;">
-          <div class="card danger-zone">
-            <h2>Danger Zone</h2>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
-              <p>
-                <label style="font-weight: normal;">
-                  <input type="checkbox" name="confirm" value="true" required>
-                  Yes, delete <strong>Group Instrument #{{ loop.index }}</strong>. This
-                  will also delete its assignments and any submitted reviewer
-                  responses.
-                </label>
-              </p>
-              <p>
-                <button class="btn destructive" type="submit"
-                        {% if delete_disabled %}disabled title="{% if is_only_instrument %}Cannot delete the only instrument on this session.{% else %}{{ add_delete_disabled_title }}{% endif %}"{% endif %}>Delete this instrument</button>
-              </p>
-            </form>
-          </div>
-          <div class="card" style="border: none; background: transparent; padding: 0;">
-            {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
-          </div>
-        </div>
+        {% set delete_title = "Cannot delete the only instrument on this session." if is_only_instrument else add_delete_disabled_title %}
+        <form id="instrument-delete-{{ instrument.id }}" method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"></form>
+        {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
+        <p style="text-align: right; margin: -12px 0 20px 0;">
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required
+                   form="instrument-delete-{{ instrument.id }}"
+                   {% if delete_disabled %}disabled{% else %}data-delete-confirm="{{ instrument.id }}"{% endif %}>
+            Yes, delete <strong>Group Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
+          </label>
+        </p>
       {% else %}
 
       {# Section A — Identity + status. #}
@@ -1052,15 +1055,9 @@
         {{ response_field_templates(instrument, rtds) }}
       {% endif %}
 
-      {# Section E — action row. Two half-width cards sit side by side:
-         the left card is visually invisible and hosts the per-instrument
-         state-machine buttons (Save / Cancel / Edit, flushed left) plus
-         the `Add new instrument` button (flushed right). The right card
-         is a standard Danger Zone hosting `Delete this instrument`.
-         Add + Delete share the same disable gates as the per-instrument
-         Edit button (session ready, another card editing, RTD unlocked).
-         Delete additionally hides itself when this is the only
-         instrument on the session. #}
+      {# Section E — Assignment Rule sub-card, then the action row
+         (Delete is last in the row) + the confirm checkbox
+         flush-right below it. #}
       {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
       {% if is_ready %}
         {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
@@ -1073,43 +1070,24 @@
       {% else %}
         {% set add_delete_disabled_title = "" %}
       {% endif %}
-      {# Segment 15B Slice 2a — half-width Assignment Rule sub-card
-         lives to the left of Danger Zone. The picker writes
-         ``instruments.rule_set_id`` (the per-instrument pin). The
-         action-button row (Edit / Save / Cancel / Add new instrument)
-         relocates to a separate row below the two sub-cards. #}
+      {% set is_only_instrument = (instruments | length == 1) %}
+      {% set delete_disabled = add_delete_disabled or is_only_instrument %}
+      {% set delete_title = "Cannot delete the only instrument on this session." if is_only_instrument else add_delete_disabled_title %}
       {% set rule_picker = rule_picker_by_instrument_id.get(instrument.id) %}
-      <div class="bottom-grid" style="margin-top: 12px;">
+      <div style="margin-top: 12px;">
         {{ assignment_rule_card(session, instrument, rule_picker, is_editing) }}
-
-        <div class="card danger-zone">
-          <h2>Danger Zone</h2>
-          {% set is_only_instrument = (instruments | length == 1) %}
-          {% set delete_disabled = add_delete_disabled or is_only_instrument %}
-          {% if is_only_instrument %}
-            {% set delete_title = "Cannot delete the only instrument on this session." %}
-          {% else %}
-            {% set delete_title = add_delete_disabled_title %}
-          {% endif %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm" value="true" required>
-                Yes, delete <strong>Instrument #{{ loop.index }}</strong>. This will
-                also delete its display and response fields, assignments
-                referencing it, and any submitted reviewer responses.
-              </label>
-            </p>
-            <p>
-              <button class="btn destructive" type="submit"
-                      {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
-            </p>
-          </form>
-        </div>
       </div>
-
-      {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
+      <form id="instrument-delete-{{ instrument.id }}" method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"></form>
+      {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
+      <p style="text-align: right; margin: -12px 0 20px 0;">
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="confirm" value="true" required
+                 form="instrument-delete-{{ instrument.id }}"
+                 {% if delete_disabled %}disabled{% else %}data-delete-confirm="{{ instrument.id }}"{% endif %}>
+          Yes, delete <strong>Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
+        </label>
+      </p>
       {% endif %}
     </div>
   {% endfor %}
@@ -1985,6 +1963,32 @@
             groupCount.textContent = atPinned ? groupText : '';
           }
         });
+      });
+    })();
+  </script>
+  {# Confirm-checkbox gates the destructive Delete button — a
+     ``data-delete-confirm`` checkbox enables its paired
+     ``data-delete-btn`` button only while ticked. Standard
+     pairing, intended for reuse on other destructive actions. #}
+  <script>
+    (function () {
+      var boxes = document.querySelectorAll("[data-delete-confirm]");
+      boxes.forEach(function (cb) {
+        var id = cb.getAttribute("data-delete-confirm");
+        var btn = document.querySelector(
+          '[data-delete-btn="' + id + '"]'
+        );
+        if (!btn) return;
+        function sync() {
+          btn.disabled = !cb.checked;
+          if (cb.checked) {
+            btn.removeAttribute("aria-disabled");
+          } else {
+            btn.setAttribute("aria-disabled", "true");
+          }
+        }
+        cb.addEventListener("change", sync);
+        sync();
       });
     })();
   </script>
