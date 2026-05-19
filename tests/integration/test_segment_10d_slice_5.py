@@ -380,14 +380,12 @@ def test_add_group_instrument_sets_group_kind_and_renders_stub(
     assert new.group_kind == "both"
     assert response.headers["location"].endswith(f"#instrument-{new.id}")
 
-    # The group-scoped card renders as a stub: identity + status +
-    # Danger Zone, with a "Group-scoped" chip, and no Display /
-    # Response Fields tables.
+    # The group-scoped card renders with a "Group-scoped" chip in
+    # its heading and the shared action row (Replicate, etc.).
     page = client.get(f"/operator/sessions/{session.id}/instruments")
     assert page.status_code == 200
     body = page.text
     assert "Group-scoped" in body
-    assert "This Instrument's Status" in body
     assert (
         f'action="/operator/sessions/{session.id}/instruments/add-group"'
         in body
@@ -852,16 +850,14 @@ def test_delete_button_disabled_when_only_instrument(
     assert response.status_code == 200
     body = response.text
 
-    # The Danger Zone card is still present, but the Delete button
-    # carries the only-instrument tooltip and is disabled.
-    assert "Cannot delete the only instrument on this session." in body
-    # Add button is enabled in this state — make sure we're checking the
-    # right one. The disabled Delete should sit inside a button tag with
-    # both `disabled` and the only-instrument title.
+    # The Delete button now sits at the end of the action row;
+    # with only one instrument it is disabled and carries the
+    # only-instrument tooltip.
     assert (
-        'disabled title="Cannot delete the only instrument on this session."'
+        'title="Cannot delete the only instrument on this session."'
         in body
     )
+    assert 'class="btn destructive" type="button" disabled' in body
 
 
 def test_action_row_disabled_when_session_ready(

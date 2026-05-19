@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    InstrumentDisplayField,
     ResponseTypeDefinition,
 )
 from ._display_field_helpers import (
@@ -23,7 +22,6 @@ from ._display_field_helpers import (
     _instrument,
     _make_session,
     _populate_rosters,
-    _seed_pair_context_display_fields,
 )
 
 def test_state_machine_editing_param_renders_save_cancel(
@@ -82,61 +80,6 @@ def test_state_machine_locked_when_session_ready(
     assert "pointer-events: none" in body
     assert f'form="dfsave-{instrument.id}"' not in body
 
-
-def test_saved_state_pill_flips_after_save(
-    client: TestClient, db: Session
-) -> None:
-    """A fresh instrument renders the ``not saved`` pill; after the
-    operator submits a bulk save with a real display-field mutation
-    (a visibility toggle on a non-locked row), the pill flips to
-    ``saved``.
-
-    Pre-15A this test exercised a label change; Slice 2 retired the
-    per-instrument label override, so the trigger is now a
-    visibility flip on an unlocked pair_context row.
-    """
-    review_session = _make_session(client, db, code="saved-pill")
-    instrument = _instrument(db, review_session.id)
-    _seed_pair_context_display_fields(db, instrument)
-
-    fresh = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-    assert "not saved</span>" in fresh
-    assert ">saved</span>" not in fresh
-
-    pair_one = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_type == "pair_context",
-            InstrumentDisplayField.source_field == "1",
-        )
-    ).scalar_one()
-
-    # Bulk-save flips pair_one's visibility off (omitting its id
-    # from visible_ids). Real mutation → ``display_changed=True``
-    # → ``saved`` pill flips on.
-    save = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
-        data={
-            "kind": ["display"],
-            "id": [str(pair_one.id)],
-            "order": ["0"],
-            # ``label`` retired in 15A Slice 2; empty value silently
-            # dropped on display rows. Submitted for the route's
-            # parallel-arrays length check.
-            "label": [""],
-            "visible_ids": [],
-        },
-        follow_redirects=False,
-    )
-    assert save.status_code == 303
-
-    after = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-    assert ">saved</span>" in after
-    assert ">not saved</span>" not in after
 
 
 def test_state_machine_response_fields_render_inputs_in_edit_mode(

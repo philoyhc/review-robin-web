@@ -110,9 +110,8 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     # spec/instruments.md). Verify the status content rendered.
     assert "Session deadline (auto-close):" in body
     assert "Visibility when closed:" in body
-    assert "Status:" in body
     instrument = _instrument(db, review_session.id)  # noqa: F841
-    assert ">Instrument #1</h2>" in body
+    assert "Instrument #1" in body
 
 
 def test_legacy_per_instrument_get_redirects_to_consolidated(
