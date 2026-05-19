@@ -1,7 +1,7 @@
 """Integration tests for ``GET
 /operator/sessions/{id}/export/bundle.zip`` — Segment 18D PR E1.
 
-Covers the HTTP surface (content type, filename), the zip's five
+Covers the HTTP surface (content type, filename), the zip's
 members, and the ``session.bundle_extracted`` audit emission.
 """
 
@@ -46,10 +46,10 @@ def test_bundle_route_streams_zip_with_canonical_filename(
     )
 
 
-def test_bundle_contains_the_five_csv_members(
+def test_bundle_contains_the_csv_members(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="bnd-five")
+    review_session = _make_session(client, db, code="bnd-mem")
     response = client.get(
         f"/operator/sessions/{review_session.id}/export/bundle.zip"
     )
@@ -57,11 +57,13 @@ def test_bundle_contains_the_five_csv_members(
 
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     assert sorted(archive.namelist()) == [
-        "bnd-five_relationships.csv",
-        "bnd-five_responses.csv",
-        "bnd-five_reviewees.csv",
-        "bnd-five_reviewers.csv",
-        "bnd-five_settings.csv",
+        "bnd-mem_relationships.csv",
+        "bnd-mem_responses.csv",
+        "bnd-mem_reviewee_stats.csv",
+        "bnd-mem_reviewees.csv",
+        "bnd-mem_reviewer_stats.csv",
+        "bnd-mem_reviewers.csv",
+        "bnd-mem_settings.csv",
     ]
     # Each member is a non-empty, decodable CSV.
     for name in archive.namelist():
@@ -92,3 +94,5 @@ def test_bundle_route_emits_audit_event_with_per_csv_counts(
     assert counts["relationships"] == 0
     assert counts["responses"] == 0
     assert counts["settings"] > 0
+    assert counts["reviewer_stats"] == 0
+    assert counts["reviewee_stats"] == 0

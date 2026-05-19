@@ -173,20 +173,36 @@ options" is the anchor.
 **Scope: TBD at pickup.** Confirm which directions are wanted
 before drafting Parts.
 
-### Part 3 — Metadata export
+### Part 3 — Entity stats export — shipped 2026-05-19
 
-A dedicated export of session-level **metadata** — distinct from
-the Settings CSV (which round-trips *config*) and the per-entity
-roster / response extracts. Candidate contents: session identity
-and lifecycle stamps, roster and instrument counts, assignment /
-generation provenance, deadline / timezone, and an export
-manifest describing the bundle. Useful as a human-readable
-session summary and as an audit / archival companion to the zip
-bundle.
+> Redefined at pickup. The original Part 3 sketch was a
+> session-level *metadata* export; the operator instead asked for
+> per-entity **activity stats** CSVs. The metadata-export idea is
+> not currently planned.
 
-**Scope: TBD at pickup.** First open question: how it relates to
-the existing Settings CSV and the audit-events extract — confirm
-the boundary before drafting Parts.
+Two new analysis-facing CSVs — a Reviewer stats file and a
+Reviewee stats file — bundled into the Zip-all download
+(`build_session_bundle`). They are **bundle-only**: deliberately
+not offered as individual downloads and with no importer, because
+the round-trippable Reviewers / Reviewees CSVs keep that role and
+adding stats columns to them would break the importer contract.
+
+Each file is the plain roster shape plus aggregate
+response-activity columns, every metric reported as a **Draft /
+Submitted** pair (`submitted_at` unset vs set):
+
+- Reviewer stats — reviewees reviewed, fields answered, required
+  fields answered, total char count of `String`-typed responses.
+- Reviewee stats — reviewers engaged, plus the same three field /
+  char metrics.
+
+Only responses with a non-empty value count. Group-scoped
+instruments' fanned-out answers count once per group for the
+field / char metrics on the reviewer side; both member reviewees
+are still credited as reviewed. New module
+`app/services/extracts/entity_stats_extract.py` (`build_entity_stats`),
+wired into `zip_bundle.py`; contract documented in
+`spec/csv_contracts.md` §2.6.
 
 ## Doc impact
 
