@@ -151,18 +151,11 @@ def evaluate_session_rule_eligibility(
     """
     from pydantic import TypeAdapter
 
-    from app.schemas.rules import (
-        Combinator,
-        Rule,
-        RuleSetOptions,
-        RuleSetScope,
-        RuleSetSchema,
-    )
+    from app.schemas.rules import Rule
     from app.services import (
         assignments as assignments_service,
         relationships as relationships_service,
     )
-    from app.services.rules import engine
 
     pinned_ids = set(
         db.execute(
@@ -205,30 +198,14 @@ def evaluate_session_rule_eligibility(
         ):
             out[row.id] = row.cached_eligible_pair_count
             continue
-        try:
-            schema = RuleSetSchema(
-                id=row.id,
-                name=row.name,
-                description=row.description or "",
-                scope=RuleSetScope.personal,
-                combinator=Combinator(row.combinator),
-                rules=[
-                    rule_adapter.validate_python(payload)
-                    for payload in row.rules_json
-                ],
-                options=RuleSetOptions(
-                    excludeSelfReviews=row.exclude_self_reviews,
-                    seed=row.seed,
-                ),
-            )
-            result = engine.evaluate(
-                schema,
-                reviewers=reviewers,
-                reviewees=reviewees,
-                revision_seed=row.id,
-                pair_context_lookup=pair_context_lookup,
-            )
-        except Exception:
+        result = _evaluate_rule_row(
+            row,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            pair_context_lookup=pair_context_lookup,
+            rule_adapter=rule_adapter,
+        )
+        if result is None:
             # A malformed snapshot falls back to 0 and is NOT
             # cached — a transient error must not stick.
             out[row.id] = 0
@@ -271,6 +248,149 @@ def _roster_signature(
         )
     )
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _evaluate_rule_row(
+    row: SessionRuleSet,
+    *,
+    reviewers: list[Any],
+    reviewees: list[Any],
+    pair_context_lookup: dict[Any, Any],
+    rule_adapter: Any,
+) -> Any | None:
+    """Run the rule engine for one ``SessionRuleSet`` row.
+
+    Returns the ``EvaluationResult``, or ``None`` when the stored
+    snapshot is malformed — a transient error must not tear down
+    the page render. Shared by :func:`evaluate_session_rule_eligibility`
+    (per-rule pair count) and :func:`evaluate_instrument_group_pair_counts`
+    (per-instrument reviewer-group count)."""
+    from app.schemas.rules import (
+        Combinator,
+        RuleSetOptions,
+        RuleSetScope,
+        RuleSetSchema,
+    )
+    from app.services.rules import engine
+
+    try:
+        schema = RuleSetSchema(
+            id=row.id,
+            name=row.name,
+            description=row.description or "",
+            scope=RuleSetScope.personal,
+            combinator=Combinator(row.combinator),
+            rules=[
+                rule_adapter.validate_python(payload)
+                for payload in row.rules_json
+            ],
+            options=RuleSetOptions(
+                excludeSelfReviews=row.exclude_self_reviews,
+                seed=row.seed,
+            ),
+        )
+        return engine.evaluate(
+            schema,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            revision_seed=row.id,
+            pair_context_lookup=pair_context_lookup,
+        )
+    except Exception:
+        return None
+
+
+def evaluate_instrument_group_pair_counts(
+    db: Session, review_session: ReviewSession
+) -> dict[int, int]:
+    """Per-instrument reviewer-group pair count for the session's
+    group-scoped instruments that have a rule pinned.
+
+    The count is the number of distinct ``(reviewer, group_key)``
+    over the pinned rule's eligible pairs, where ``group_key`` is
+    the boundary-tag tuple decoded from the instrument's
+    ``group_kind``. Instruments with no rule pinned — and every
+    per-reviewee instrument — are absent from the result.
+
+    Unlike :func:`evaluate_session_rule_eligibility` this is
+    **per-instrument** (boundary tags are an ``Instrument``
+    setting, so the same rule pinned twice can yield different
+    counts) and is **not cached** — it runs the engine for each
+    distinct pinned rule on every call (Segment 13C PR 4 slice
+    4a; a per-instrument persisted cache is slice 4b). ``{}`` when
+    no group-scoped instrument has a rule pinned."""
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import Rule
+    from app.services import (
+        assignments as assignments_service,
+        instruments as instruments_service,
+        relationships as relationships_service,
+    )
+    from app.services.responses import group_key_for_pair
+
+    instruments = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id,
+                Instrument.group_kind.is_not(None),
+                Instrument.rule_set_id.is_not(None),
+            )
+        ).scalars()
+    )
+    if not instruments:
+        return {}
+    pinned_ids = {i.rule_set_id for i in instruments}
+    rule_rows = {
+        row.id: row
+        for row in list_visible_session_rule_sets(
+            db, session_id=review_session.id
+        )
+        if row.id in pinned_ids
+    }
+    reviewers = assignments_service.list_reviewers(db, review_session.id)
+    reviewees = assignments_service.list_reviewees(db, review_session.id)
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
+    rule_adapter = TypeAdapter(Rule)
+
+    results: dict[int, Any] = {}
+    for rule_id, row in rule_rows.items():
+        result = _evaluate_rule_row(
+            row,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            pair_context_lookup=pair_context_lookup,
+            rule_adapter=rule_adapter,
+        )
+        if result is not None:
+            results[rule_id] = result
+
+    out: dict[int, int] = {}
+    for instrument in instruments:
+        result = results.get(instrument.rule_set_id)
+        if result is None:
+            out[instrument.id] = 0
+            continue
+        boundary = instruments_service.decode_group_kind(
+            instrument.group_kind
+        )
+        groups = {
+            (
+                reviewer.id,
+                group_key_for_pair(
+                    reviewee=reviewee,
+                    reviewer_id=reviewer.id,
+                    reviewee_id=reviewee.id,
+                    boundary=boundary,
+                    pair_context_lookup=pair_context_lookup,
+                ),
+            )
+            for reviewer, reviewee in result.pairs
+        }
+        out[instrument.id] = len(groups)
+    return out
 
 
 def _rule_signature(row: SessionRuleSet) -> str:

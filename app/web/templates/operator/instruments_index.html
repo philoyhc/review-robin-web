@@ -320,6 +320,10 @@
           Number of eligible pairs found:
           <span class="pill pill-info"
                 data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}—{% endif %}</span>
+          {% if rule_picker.selected_group_pair_count is not none %}
+            <span class="muted"
+                  data-instrument-rule-picker-group-count="{{ instrument.id }}">({{ rule_picker.selected_group_pair_count }} reviewer-group pairs)</span>
+          {% endif %}
         </p>
         <p style="margin-top: 12px;">
           <a class="btn secondary"
@@ -1960,9 +1964,21 @@
         if (!pill) return;
         var pinnedValue = select.value;
         var pinnedText = pill.textContent;
+        // The secondary reviewer-group pair count (group-scoped
+        // instruments only) is server-rendered for the pinned
+        // rule; clear it while the dropdown is off the pin, same
+        // as the primary count falls back to "—".
+        var groupCount = document.querySelector(
+          'span[data-instrument-rule-picker-group-count="' +
+            instrumentId + '"]'
+        );
+        var groupText = groupCount ? groupCount.textContent : '';
         select.addEventListener('change', function () {
-          pill.textContent =
-            select.value === pinnedValue ? pinnedText : '—';
+          var atPinned = select.value === pinnedValue;
+          pill.textContent = atPinned ? pinnedText : '—';
+          if (groupCount) {
+            groupCount.textContent = atPinned ? groupText : '';
+          }
         });
       });
     })();
