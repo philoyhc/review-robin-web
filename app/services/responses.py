@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -531,34 +531,50 @@ def defunct_group_responses_for_tag_change(
     return len(response_ids)
 
 
-def defunct_group_responses_for_relationship_tag_change(
+def defunct_group_responses_for_relationship_change(
     db: Session,
     *,
-    relationship: object,
+    session_id: int,
+    pairs: set[tuple[int, int]],
     changed_tag_fields: set[str],
+    repointed: bool,
 ) -> int:
     """Pair-context counterpart of
     :func:`defunct_group_responses_for_tag_change`.
 
-    When a relationship's grouping **pair-context** tag value
-    changes, the group key of the one ``(reviewer, reviewee)``
-    pair it describes shifts — so the group-scoped ``Response``
-    rows for exactly that pair are deleted, on the instruments
-    whose decoded boundary uses the changed pair-context tag
-    (Segment 13C PR 5). Returns the number of rows deleted."""
+    A ``Relationship`` row carries the pair-context tags of one
+    ``(reviewer, reviewee)`` pair. Editing it shifts a group key
+    two ways: a grouping pair-context **tag value** changes, or
+    the row is **re-pointed** to a different pair — its tags move
+    off the old pair and onto the new one. Either way the
+    group-scoped ``Response`` rows fanned onto the affected
+    pair(s) are mis-attributed and are deleted so the group
+    re-derives cleanly (Segment 13C PR 5; re-point handling added
+    Segment 18H).
+
+    ``pairs`` is the set of ``(reviewer_id, reviewee_id)`` pairs to
+    clean — for a pure tag edit the single unchanged pair; for a
+    re-point both the old and the new pair. ``repointed`` widens
+    the affected-instrument set to *every* pair-context-boundaried
+    group instrument, since a re-point moves all of the pair's
+    pair-context tags (a pure tag edit only affects instruments
+    whose boundary uses a changed tag number). Returns the number
+    of rows deleted."""
+    if not pairs:
+        return 0
     changed_numbers = {
         field.removeprefix("tag_")
         for field in changed_tag_fields
         if field.startswith("tag_")
     }
-    if not changed_numbers:
+    if not changed_numbers and not repointed:
         return 0
     from app.services import instruments as instruments_service
 
     affected_instrument_ids: set[int] = set()
     for instrument in db.execute(
         select(Instrument).where(
-            Instrument.session_id == relationship.session_id,
+            Instrument.session_id == session_id,
             Instrument.group_kind.is_not(None),
         )
     ).scalars():
@@ -567,20 +583,28 @@ def defunct_group_responses_for_relationship_tag_change(
         )
         if any(
             source_type == "pair_context"
-            and source_field in changed_numbers
+            and (repointed or source_field in changed_numbers)
             for source_type, source_field in boundary
         ):
             affected_instrument_ids.add(instrument.id)
     if not affected_instrument_ids:
         return 0
 
+    pair_clause = or_(
+        *(
+            and_(
+                Assignment.reviewer_id == reviewer_id,
+                Assignment.reviewee_id == reviewee_id,
+            )
+            for reviewer_id, reviewee_id in pairs
+        )
+    )
     response_ids = list(
         db.execute(
             select(Response.id)
             .join(Assignment, Response.assignment_id == Assignment.id)
             .where(
-                Assignment.reviewer_id == relationship.reviewer_id,
-                Assignment.reviewee_id == relationship.reviewee_id,
+                pair_clause,
                 Assignment.instrument_id.in_(affected_instrument_ids),
             )
         ).scalars()

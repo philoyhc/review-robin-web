@@ -31,10 +31,41 @@ sentinel — matching exactly what the serialiser emits. A
 instrument was added, and the stale unit tests were corrected to
 the real code vocabulary. Suite green (1,912 passed), ruff clean.
 
-The assessment's two **suspected** lower-severity
-defunct-safeguard issues (`responses.py` /`relationships.py`) are
-**not** in this segment — they need confirmation before any fix
-is scoped.
+### Relationship re-point defunct fix — 2026-05-19
+
+The 19may assessment flagged a **suspected MEDIUM** defunct-safeguard
+defect; investigation confirmed it. `update_relationship`
+(`relationships.py`) applied the edit's `setattr` *before* calling
+the group-response defunct safeguard, and the safeguard
+(`responses.py`) read `relationship.reviewer_id` / `reviewee_id`
+— i.e. the post-edit values. So re-pointing a relationship to a
+different `(reviewer, reviewee)` pair under-defuncted two ways:
+
+- a re-point **plus** a grouping pair-context tag change defuncted
+  only the *new* pair, leaving the *old* pair's group-scoped
+  `Response` rows mis-attributed;
+- a **pure re-point** (no tag-field change) ran no defunct at all,
+  even though the relationship's pair-context tags had moved off
+  the old pair and onto the new one.
+
+Reachable in the realistic correction path (revert a `ready`
+session to `draft`, fix a relationship, re-activate — group
+responses survive the revert). Data mis-attribution, not a crash.
+
+**Fix (PR #1218).** `update_relationship` snapshots the pre-edit
+pair before `setattr`. The safeguard — renamed
+`defunct_group_responses_for_relationship_change` — now takes the
+explicit set of affected `(reviewer, reviewee)` pairs (old + new)
+and a `repointed` flag; on a re-point it widens the affected
+instrument set to every pair-context-boundaried group instrument.
+A regression test covers the pure-re-point case (both pairs
+defuncted, an unrelated pair on the same instrument untouched).
+Suite green (1,913 passed), ruff clean.
+
+The assessment's remaining **suspected LOW** defunct-safeguard
+issue (`defunct_group_responses_for_tag_change` may over-defunct
+when the reviewer is the sole group member) is **not** in this
+segment — it needs confirmation before any fix is scoped.
 
 ## Stubs
 

@@ -1628,6 +1628,155 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     assert _response_count() == 0
 
 
+def test_relationship_repoint_defuncts_both_old_and_new_pair(
+    db: Session,
+) -> None:
+    """Re-pointing a relationship to a different pair — even with no
+    tag value change — mis-attributes the group-scoped Response
+    rows of *both* the old and the new pair: the relationship's
+    pair-context tags move off the old pair and onto the new one.
+    Both pairs are defuncted; an unrelated pair on the same group
+    instrument is untouched (Segment 18H — re-point handling)."""
+    import datetime as _dt
+
+    from app.db.models import (
+        InstrumentResponseField,
+        Relationship,
+        ResponseTypeDefinition,
+        User,
+    )
+    from app.services import relationships as relationships_service
+    from app.services.instruments import (
+        ensure_default_response_type_definitions,
+    )
+
+    user = User(email="op@example.edu", display_name="Op")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="Rel Repoint",
+        code="rel-repoint",
+        created_by_user_id=user.id,
+        assignment_mode="manual",
+    )
+    db.add(review_session)
+    db.flush()
+    ensure_default_response_type_definitions(db, review_session)
+    db.flush()
+    likert = (
+        db.query(ResponseTypeDefinition)
+        .filter(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "Likert5",
+        )
+        .one()
+    )
+    # Group-scoped instrument grouped by pair-context tag 1.
+    instrument = Instrument(
+        session_id=review_session.id,
+        name="Grp",
+        order=0,
+        group_kind="p1",
+    )
+    db.add(instrument)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="rating",
+        label="Rating",
+        response_type_id=likert.id,
+        order=0,
+    )
+    db.add(field)
+    reviewer = Reviewer(
+        session_id=review_session.id, name="R", email="r@example.edu"
+    )
+    reviewer2 = Reviewer(
+        session_id=review_session.id, name="R2", email="r2@example.edu"
+    )
+    carol = Reviewee(
+        session_id=review_session.id,
+        name="Carol",
+        email_or_identifier="carol@example.edu",
+    )
+    dave = Reviewee(
+        session_id=review_session.id,
+        name="Dave",
+        email_or_identifier="dave@example.edu",
+    )
+    eve = Reviewee(
+        session_id=review_session.id,
+        name="Eve",
+        email_or_identifier="eve@example.edu",
+    )
+    db.add_all([reviewer, reviewer2, carol, dave, eve])
+    db.flush()
+    # The relationship under edit describes (R, Carol).
+    relationship = Relationship(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=carol.id,
+        tag_1="Cohort A",
+        status="active",
+    )
+    db.add(relationship)
+
+    def _assignment(reviewer_id: int, reviewee_id: int) -> Assignment:
+        a = Assignment(
+            session_id=review_session.id,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            instrument_id=instrument.id,
+            include=True,
+            created_by_mode="manual",
+        )
+        db.add(a)
+        db.flush()
+        db.add(
+            Response(
+                assignment_id=a.id,
+                response_field_id=field.id,
+                value="4",
+                saved_at=_dt.datetime(
+                    2026, 5, 9, tzinfo=_dt.timezone.utc
+                ),
+                version=1,
+            )
+        )
+        return a
+
+    a_old = _assignment(reviewer.id, carol.id)  # the old pair
+    a_new = _assignment(reviewer.id, dave.id)  # the re-point target
+    a_other = _assignment(reviewer2.id, eve.id)  # unrelated control
+    db.commit()
+
+    def _has_response(assignment: Assignment) -> bool:
+        return (
+            db.execute(
+                select(Response).where(
+                    Response.assignment_id == assignment.id
+                )
+            ).first()
+            is not None
+        )
+
+    assert _has_response(a_old)
+    assert _has_response(a_new)
+    assert _has_response(a_other)
+
+    # Re-point the relationship from (R, Carol) to (R, Dave) — a
+    # pure re-point, no tag value change.
+    relationships_service.update_relationship(
+        db, relationship=relationship, reviewee_id=dave.id, user=user
+    )
+
+    # Both the old pair and the new pair are defuncted.
+    assert not _has_response(a_old)
+    assert not _has_response(a_new)
+    # The unrelated pair on the same group instrument survives.
+    assert _has_response(a_other)
+
+
 def test_group_self_review_toggle_rules_out_whole_group(
     db: Session,
     alice: AuthenticatedUser,

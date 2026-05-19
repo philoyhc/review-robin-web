@@ -671,23 +671,37 @@ def update_relationship(
         correlation_id=correlation_id,
     )
 
+    # Snapshot the pre-edit pair before ``setattr`` applies a
+    # re-point — the old pair's group-scoped responses need
+    # defuncting too.
+    old_pair = (relationship.reviewer_id, relationship.reviewee_id)
+
     for field, (_, new_value) in changes.items():
         setattr(relationship, field, new_value)
     db.flush()
 
-    # A grouping pair-context tag change mis-attributes the answer
-    # copies fanned onto this pair's group-scoped Response rows;
-    # delete them so the group re-derives cleanly (Segment 13C
-    # PR 5). No-op unless a changed tag is a group boundary.
+    # A relationship edit mis-attributes the answer copies fanned
+    # onto group-scoped Response rows two ways: a grouping
+    # pair-context tag value changes, or the row is re-pointed to a
+    # different pair (its tags move off the old pair and onto the
+    # new one). Delete the affected rows so the group re-derives
+    # cleanly (Segment 13C PR 5; re-point handling Segment 18H).
+    # No-op unless a group instrument is boundaried on pair context.
     from app.services import responses as responses_service
 
+    repointed = "reviewer_id" in changes or "reviewee_id" in changes
     defuncted = (
-        responses_service.defunct_group_responses_for_relationship_tag_change(
+        responses_service.defunct_group_responses_for_relationship_change(
             db,
-            relationship=relationship,
+            session_id=session_id,
+            pairs={
+                old_pair,
+                (relationship.reviewer_id, relationship.reviewee_id),
+            },
             changed_tag_fields={
                 f for f in changes if f.startswith("tag_")
             },
+            repointed=repointed,
         )
     )
 
