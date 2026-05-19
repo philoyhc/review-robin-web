@@ -153,6 +153,44 @@ the instrument has no boundary tag).
   through one shared helper, `responses.collapse_group_duplicates`
   (see "Aggregation contract").
 
+### Why single-reviewee rows, not reviewer↔group rows
+
+A reviewer↔group `Assignment` row — one row pairing a reviewer
+with a *group* rather than an individual reviewee, on the
+analogy of the collapsed Extract Data output — was considered
+and **rejected** (decided 2026-05-19).
+
+A group here is not a stable, first-class entity. It is
+`(reviewer, instrument, boundary-tag-tuple)`: **per-reviewer**
+(each reviewer's rule-eligible universe, partitioned —
+reviewer A's "Team A" and reviewer B's "Team A" may differ),
+**per-instrument** (`group_kind` is an `Instrument` column, so
+two group-scoped instruments can partition the same reviewees
+differently), and **derived from mutable inputs** — the pinned
+rule's output and the reviewees' boundary-tag values.
+
+Storing a group as a row would therefore force *group-identity
+reconciliation* on every roster or rule edit: when a reviewee's
+boundary tag changes, the group partition changes, and stored
+answers must be migrated across group splits / merges / member
+moves. Keeping single-reviewee rows makes regrouping a free
+**read-time reinterpretation** — zero writes, no migration. It
+also keeps `Assignment` uniform (no polymorphic
+reviewee-or-group target), keeps every reviewee-keyed query
+working unchanged, and keeps group-ness a reversible
+per-instrument flag — toggling `group_kind` off restores a plain
+per-reviewee instrument with all its rows intact, which is the
+source of 13C's zero-migration property.
+
+The Extract Data collapse is not a counter-example: it is a
+read-only, terminal projection that never faces mutation —
+storage must. The bounded, mechanical cost of this choice — the
+write fan-out and read collapse (PR 2 slices B / C / D) — is the
+price of *derived* groups, and it is the cheaper price. The
+decision would flip only if groups became operator-curated
+stable teams (explicit rosters the operator creates and edits)
+rather than tag-derived partitions.
+
 ### Schema — no migration
 
 13C ships **zero migrations.** The group-scoped instrument is
@@ -404,6 +442,26 @@ the two without re-deriving from the schema.
   "(unset)" group, or is the row dropped? Probably an "(unset)"
   group so no reviewee silently vanishes; confirm when PR 2
   starts.
+- **Eligible-pair count on a group-scoped instrument's rule
+  card.** *Decided 2026-05-19 — implementation pending.*
+  Because single-reviewee `(reviewer, reviewee)` assignment rows
+  are generated regardless (see "Why single-reviewee rows, not
+  reviewer↔group rows"), the existing "Number of eligible pairs
+  found: N" — `len(result.pairs)` from
+  `evaluate_session_rule_eligibility`
+  (`app/services/rules/session_library.py`) — keeps its meaning
+  and **stays** for every instrument. For a **group-scoped**
+  instrument a secondary **reviewer-group pair** count is shown
+  in parentheses after it, e.g.
+  `Number of eligible pairs found: 240 (32 reviewer-group pairs)`.
+  The group figure is the count of distinct `(reviewer,
+  group_key)` over the engine's `result.pairs`, with `group_key`
+  the boundary-tag tuple. Because boundary tags are an
+  `Instrument` setting (the same rule pinned on two instruments
+  can yield different group counts), this secondary figure is
+  **instrument-aware** — derived per-instrument at render, not
+  folded into the per-rule `cached_eligible_pair_count`. The
+  parenthetical is omitted for per-reviewee instruments.
 
 ## Cross-references
 
