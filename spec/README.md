@@ -30,8 +30,8 @@ detailed contracts.
 | File | Covers |
 |---|---|
 | `operator_ui_concept.md` | Operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages), navigation principles, per-page contracts. |
-| `workflow_card.md` | Workflow card — the single persistent action card at the top of every session-scoped operator page (Session Home + Operations row). Ten-state cascade, uniform seven-stage stepper, Activate session super-button + warnings detour + failure rollback, right-column status / errors aside. |
-| `sessions_overview.md` | Sessions lobby (`/operator/sessions`) — table, Create new, Danger Zone bulk delete. |
+| `workflow_card.md` | Workflow card — the single persistent action card at the top of every session-scoped operator page (Session Home + Operations row). Ten-state cascade, uniform five-stage stepper, Activate session super-button + warnings detour + failure rollback, right-column status / errors aside. |
+| `sessions_overview.md` | Sessions lobby (`/operator/sessions`) — sortable table, tag filter + search, per-row expander (rename / tag / clone / purge-and-archive), and the archived-sessions child page (Segment 18A rebuild). |
 | `session_home.md` | Session Home / Control Panel — Workflow card, Extract Data card, Quick Setup card, Session Details, Danger Zone. |
 | `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships) — shared body shape, visibility-toggle pattern, per-page column orders. |
 | `instruments.md` | Locked spec for the per-session Instruments page — per-instrument card, response-fields builder, RTD card. |

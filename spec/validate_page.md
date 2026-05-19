@@ -176,7 +176,7 @@ orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`, and
 `check` (e.g. the duplicate-email rule sets the anchor to the
 first duplicate row's `#reviewer-row-{id}`).
 
-### 3.2 Current rules (10 registered)
+### 3.2 Current rules (16 registered)
 
 | `key` | `source` | Severity | What it catches |
 |---|---|---|---|
@@ -189,6 +189,9 @@ first duplicate row's `#reviewer-row-{id}`).
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
 | `instruments.no_rule_pinned` | instruments | warning | At least one instrument has `rule_set_id IS NULL` once the session has reviewers + reviewees (Generate would silently skip it; reviewer page empty). |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
+| `assignments.reviewer_missing` | assignments | warning | A reviewer has no assignment rows at all (pinned rule excluded them, or they joined the roster after the last Generate). |
+| `assignments.reviewer_missing_for_instrument` | assignments | warning | A reviewer is present on some instruments but missing on others — a partial review surface on a multi-instrument session. |
+| `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
 | `instruments.stale_generated` | instruments | warning | Pinned instrument's eligible-pair count diverges from its generated row count (roster / rule changed post-Generate). |

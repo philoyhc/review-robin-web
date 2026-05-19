@@ -188,7 +188,7 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 123 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-inactivate`; enabled on ≥1 selection. |
 | 124 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-reactivate`; enabled on ≥1 selection. |
 | 125 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. |
-| 126 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. |
+| 126 | Operator actions (15F) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the single inline `filter-actions` row, after the selection-driven buttons + pill. |
 | 127 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 128 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. |
 | 129 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
@@ -210,7 +210,7 @@ Source: `app/web/templates/operator/session_reviewees.html`.
 | 130 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-inactivate`; enabled on ≥1 selection. |
 | 131 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-reactivate`; enabled on ≥1 selection. |
 | 132 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. |
-| 133 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. |
+| 133 | Operator actions (15F) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. Sits last in the single inline `filter-actions` row, after the selection-driven buttons + pill. |
 | 134 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 135 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. |
 | 136 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
@@ -234,7 +234,7 @@ Reviewees Setup shape (Upload + Danger Zone + preview table).
 | 137 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection. |
 | 138 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection. |
 | 139 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. |
-| 140 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" + search GET. |
+| 140 | Operator actions (15F) | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" + search GET. Sits last in the single inline `filter-actions` row, after the selection-driven buttons + pill. |
 | 141 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 142 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. |
 | 143 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
@@ -272,8 +272,10 @@ per instrument card.
 | 53 | Section C — Action row (locked) | Edit | `<a>` | `btn secondary` | Secondary | Mirrors button #50; same state machine |
 | 54 | Section A right card | Open this Instrument / Close this instrument | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `accepting_responses` |
 | 55 | Section A right card | Show when closed / Don't show when closed | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `responses_visible_when_closed` |
-| 56 | Add new instrument footer | Add new instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add`; disabled while another card is in edit mode |
-| 57 | Section C — Danger sub-card | Delete this instrument | `<button type="submit">` | `btn destructive` | Destructive | Confirm checkbox inside the danger sub-card |
+| 56 | Section E — per-instrument action row | Add instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add` with `after={iid}`; disabled while an edit lock is active |
+| 56a | Section E — per-instrument action row | Add group instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add-group` (Segment 13C group-scoped instruments); same edit-lock gating |
+| 56b | Section E — per-instrument action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it (Segment 13C PR 3); same edit-lock gating |
+| 57 | Section E — per-instrument action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Last button in the per-instrument action row (Danger Zone sub-card retired). Ships `disabled`; a paired confirm checkbox flush-right below the row (`data-delete-confirm` / `data-delete-btn`) gates it. Disabled outright when it is the only instrument or an edit lock is active. |
 
 ### 9c — RTD card (page-bottom, "Response Type Definitions")
 
@@ -316,22 +318,28 @@ Source: `app/web/templates/operator/session_validate.html`.
 
 ## Section 11.5 — Assignments Operations (`/operator/sessions/{id}/assignments`)
 
-Source: `app/web/templates/operator/session_assignments.html` +
-the included `_rule_based_card.html` partial. Page moved from
-Setup row to Operations row in 15D PR 6a. Pair-level context
-now lives on the Relationships Setup page (Section 8); this
-page is the materialised-derivative surface where the operator
-runs the rule engine to generate the `(reviewer, reviewee,
-instrument)` assignment matrix.
+Source: `app/web/templates/operator/session_assignments.html`.
+Page moved from Setup row to Operations row in 15D PR 6a. Pair-
+level context now lives on the Relationships Setup page (Section
+8); this page is the materialised-derivative surface where the
+operator runs the rule engine to generate the `(reviewer,
+reviewee, instrument)` assignment matrix.
+
+Generation now fires from the Workflow card's stepper (rendered
+by `next_action_card.html`) — the standalone Generate / Rule
+Based Assignment card and the standalone Self-reviews toggle card
+retired. Per-instrument Self review is an inline checkbox column
+on the Per-instrument status table, and Self review / Show on
+that table are plain form checkboxes, not `.btn`-shaped controls,
+so they aren't enumerated here. The remaining `.btn`-shaped
+controls are the operator-actions search / bulk card.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 71a | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Activated-state lock; same shape as the Setup-row lock cards. |
-| 71b | Rule Based Assignment (live) | Generate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/assignments/rule-based/generate`. |
-| 71c | Rule Based Assignment (live) | Edit ruleset | `<a>` | `btn secondary` | Secondary | Opens the Rule Builder. |
-| 71d | Rule Based Assignment (placeholder branch) | Generate | `<button type="button">` | `btn secondary disabled` | Secondary (Disabled) | Inert when no live ruleset is selected. |
-| 71e | Self-reviews card | Include self-reviews / Exclude self-reviews | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `sessions.self_reviews_active` (12C-1 PR 1); right-flushed in the half-width Self-reviews card per post-15 cleanup polish. |
-| 71f | Danger Zone | Delete all assignments | `<button type="submit">` | `btn destructive` | Destructive | Posts `/assignments/delete-all`. |
+| 71g | Operator-actions card | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-inactivate`; submits the `assignments-bulk-form` from the row-select checkbox column; enabled on ≥1 selection. |
+| 71h | Operator-actions card | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-activate`; enabled on ≥1 selection. |
+| 71i | Operator-actions card | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" (All / Reviewers / Reviewees) + search GET; last in the inline `filter-actions` row. |
+| 71j | Operator-actions card | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a search term is active. |
 
 Button numbers in this section are bracketed (`71a` etc.) to
 avoid a wholesale renumber of every subsequent section. A future
@@ -628,6 +636,17 @@ Segment 15F landed the per-record-edit surface. The previously
 perma-disabled `Edit` anchors (#36 / #40 / #44) are now live
 `<button>`s in the Operator actions card, selection-driven and
 enabled on a single checked row. No remaining drift here.
+
+### 7. Confirm-checkbox-gates-button standard (resolved)
+
+App-wide standard: every destructive button (delete-all, delete-data,
+delete-session, revert, replace-upload, per-instrument delete, clear-
+responses) ships `disabled` and is enabled only while a paired confirm
+checkbox is ticked. Pairing is declarative — `data-delete-confirm="KEY"`
+on the checkbox, `data-delete-btn="KEY"` on the button — and a single
+global JS block in `app/web/templates/base.html` wires every pair. Any
+operator / reviewer page picks it up for free by tagging the checkbox +
+button. This replaced the assorted per-page inline confirm-checkbox JS.
 
 ---
 

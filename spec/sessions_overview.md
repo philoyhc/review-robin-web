@@ -2,11 +2,20 @@
 
 The operator's lobby. Lists every session the signed-in user is
 an operator on, surfaces a one-click affordance for creating a new
-session, and provides a Danger Zone card for bulk-deleting drafts.
+session, and (post Segment 18A) carries sortable columns, a tag
+filter, a search box, per-row and bulk row-expanders for
+rename / tag / clone / purge-and-archive / delete, and a sibling
+archived-sessions child page.
 
-> Status: shipped. URL: `GET /operator/sessions`. Template:
-> `app/web/templates/operator/sessions_list.html`. Bulk-delete
-> handler: `POST /operator/sessions/delete-selected`.
+> Status: shipped (Segment 18A rebuild). URL:
+> `GET /operator/sessions`. Template:
+> `app/web/templates/operator/sessions_list.html`. Archived child
+> page: `GET /operator/sessions/archived` →
+> `sessions_archived.html`. The lobby's POST handlers live in
+> `app/web/routes_operator/_lobby.py`:
+> `delete-selected` / `archive-selected` / `bulk-tags` /
+> `unarchive-selected` / `delete-archived-selected` /
+> `{id}/lobby-edit` / `{id}/clone`.
 
 ## Page identity
 
@@ -25,27 +34,27 @@ session, and provides a Danger Zone card for bulk-deleting drafts.
 
 ## Layout
 
-A two-section page, single column:
+A single-column page:
 
 ```
 ┌─ <h1>Sessions</h1>          [ Create new session ] ┐  ← header strip
 │                                                     │
-│ ┌─ sessions table card (full width) ─────────────┐  │
-│ │ Name | Code | Deadline | Created by | … | Status |  ☐  │  │
+│ ┌─ tag-filter strip + Search card + Archive link ┐  │
 │ │ …                                              │  │
 │ └────────────────────────────────────────────────┘  │
 │                                                     │
-│                       ┌─ Danger Zone (½ width) ──┐  │
-│                       │ Delete selected sessions │  │
-│                       └──────────────────────────┘  │
+│ ┌─ sessions table card (full width) ─────────────┐  │
+│ │ Name | Code | Created by | … | Status | Tags | ☐ │  │
+│ │ …  (ticking a row opens an inline expander)    │  │
+│ └────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
 
-The table and the Danger Zone card sit inside a single
-`<form method="post">` so the per-row checkboxes submit with the
-Danger Zone's destructive button. The Danger Zone is right-aligned
-at half page width (`max-width: 50%; margin-left: auto;`); the
-left half stays visually empty.
+The table sits inside a single `<form method="post">` so the
+per-row checkboxes submit with whichever expander button the
+operator clicks (each button carries its own `formaction`). The
+destructive bulk actions live in the row-expander, not a separate
+Danger Zone card.
 
 ## Header strip
 
@@ -79,25 +88,40 @@ ordered by `created_at DESC` (most recent first).
 
 ### Columns
 
+All non-checkbox columns are sortable (`rrw-sortable` header with
+a `rrw-sort-btn`); see "Sort / filter / search" below.
+
 | # | Column | Source | Display |
 |---|---|---|---|
 | 1 | **Session Name** | `session.name` | `<a href="/operator/sessions/{id}">{name}</a>` — clicking the name lands the operator on Session Home. |
 | 2 | **Session Code** | `session.code` | Inline `<code>` tag. |
-| 3 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{when}</span>` when set, `<span class="muted">No deadline</span>` otherwise. Rendered `YYYY-MM-DD HH:MM` via `format_datetime`. |
-| 4 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | `<span class="pill pill-count">{name}</span>`. |
-| 5 | **Created** | `session.created_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
-| 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
-| 7 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | `<abbr class="tz-gmt">` showing the compact GMT-offset (e.g. `GMT+8`, via `gmt_offset_label`), with the full `GMT+8 Asia/Singapore` in the `title` hover tooltip. The lobby lists many sessions, so its per-row timestamp cells render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
-| 8 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 3 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | `<span class="pill pill-count">{name}</span>`. |
+| 4 | **Created** | `session.created_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
+| 5 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{when}</span>` when set, `<span class="muted">No deadline</span>` otherwise. Rendered `YYYY-MM-DD HH:MM` via `format_datetime`. |
+| 6 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | `<abbr class="tz-gmt">` showing the compact GMT-offset (e.g. `GMT+8`, via `gmt_offset_label`), with the full `GMT+8 Asia/Singapore` in the `title` hover tooltip. The lobby lists many sessions, so its per-row timestamp cells render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
+| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 8 | **Tags** | `session_tags.tags_for_sessions` | One `pill pill-count` per tag, or a `muted` "No tags". Each row also carries a `data-tags` JSON attribute for the client-side tag filter. |
 | 9 | *select-all checkbox* | `session.id` | Bulk-action select-row checkbox. The column **header** carries a select-all checkbox (see below). |
+
+The main lobby table lists only non-archived sessions; archived
+sessions move to `/operator/sessions/archived`.
 
 The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
 ### Row affordances
 
-- **Name link** is the canonical row-click target. There is **no**
-  per-row Delete button or Access button — both were retired in
-  Segment 11D's lobby polish in favour of the bulk-delete path.
+- **Name link** is the canonical row-click target — lands the
+  operator on Session Home.
+- **Row expander.** Ticking a single row's checkbox opens an
+  inline expander row beneath it (the `single-session-expander`
+  `<template>`) carrying editable Name / Code / Deadline / Tags
+  fields plus action buttons: Save (POSTs `{id}/lobby-edit`),
+  Cancel, Duplicate / Duplicate settings only (POST `{id}/clone`),
+  Purge and archive (POST `archive-selected`), and a Delete button
+  gated behind an "Allow delete" checkbox (POST `delete-selected`).
+  Ticking two or more rows opens the `bulk-expander` instead — bulk
+  tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
+  gated bulk Delete.
 - **Select-row checkbox** carries:
   - `name="session_ids"` (array semantics — every ticked row
     submits its id)
@@ -117,33 +141,28 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
 ### Sort / filter / search
 
-Out of scope. Sessions render in `created_at DESC` order; there's
-no header-click sort, no search box, and no per-status filter.
-Operators with many sessions are expected to navigate via the URL
-bar / browser history. (Revisit if field feedback shows a
-search/filter row helps.)
+Post Segment 18A the lobby carries all three:
 
-## Danger Zone card (bulk delete)
+- **Sortable columns.** The table is `data-rrw-sortable` with a
+  per-column `rrw-sort-btn`; clicking a header sorts by that key.
+  The chosen sort persists in the `rrw-sort-lobby` cookie (shared
+  `rrw-sortable` primitive with the Setup preview tables), decoded
+  server-side by `views.decode_cookie_sort_spec` /
+  `apply_cookie_sort`. Default order is still `created_at DESC`.
+- **Tag filter.** A `sessions-tag-filter` chip strip ("Show
+  sessions tagged with:") with one `tag-chip` per tag in the
+  lobby tag vocabulary, an AND/OR mode chip, and a clear chip.
+  Client-side filtering against each row's `data-tags`.
+- **Search.** A Search card with a free-text input matching name,
+  code, or tag.
 
-Sits below the table at half page width, right-aligned. CSS:
-`max-width: 50%; margin-left: auto;`. Class: `card danger-zone`.
-DOM id: `sessions-list-danger-zone`.
+## Bulk delete (`delete-selected`)
 
-**Hidden-until-selected.** The card initially renders with `display: none`. An inline JS listener on the row checkboxes (`.sessions-list-select-row`) toggles visibility on each `change`: visible when at least one row is ticked, hidden again when the last tick is cleared. The card stays in the DOM throughout, so the destructive surface only appears once the operator has explicit selection intent.
-
-### Body
-
-- **`<h2>Danger Zone</h2>`** at the top.
-- A `form-help` paragraph explaining the destructive scope:
-  > Tick the rows above, then submit here to delete the selected
-  > sessions. Only draft sessions are eligible — anything Activated
-  > stays in place. Each delete also removes its reviewers,
-  > reviewees, instruments, assignments, invitations, and email
-  > outbox rows.
-- A confirm checkbox (`name="confirm" value="true" required`):
-  > Yes, delete the selected sessions and all their data.
-- A destructive submit button:
-  > **[ Delete selected sessions ]** (`btn destructive`, `type="submit"`).
+The destructive bulk-delete surface lives in the row-expander
+(single or bulk), not a standalone Danger Zone card. The Delete
+button is gated behind an "Allow delete" checkbox
+(`name="confirm" value="true"`) and POSTs to
+`/operator/sessions/delete-selected`.
 
 ### Submission
 
@@ -180,9 +199,9 @@ confused, layer a `?skipped=N` flash on top.)
 
 ## Behaviours
 
-- **Form submission.** Browser-native — no JS dependency. The
-  Danger Zone's submit button posts the entire form, including all
-  ticked checkboxes inside the table card.
+- **Form submission.** The expander's action buttons post the
+  enclosing form (including every ticked checkbox); each button
+  carries its own `formaction` to route to the right handler.
 - **Empty submission.** Clicking Delete with zero rows ticked sends
   an empty `session_ids` list; the handler iterates zero times and
   303s back. Acceptable as a UX no-op.
@@ -196,9 +215,6 @@ confused, layer a `?skipped=N` flash on top.)
 
 ## Out of scope
 
-- Sort / filter / search affordances on the table.
-- Per-row inline rename / edit (operators go to Session Home for
-  that).
 - Multi-operator session sharing UI (operator membership is
   currently set programmatically; there is no "Add operator"
   button on this page).
@@ -211,8 +227,20 @@ confused, layer a `?skipped=N` flash on top.)
 
 - **Route handlers** (`app/web/routes_operator/_lobby.py`):
   - `list_sessions` — GET `/operator/sessions`.
+  - `archived_sessions` — GET `/operator/sessions/archived`.
   - `sessions_delete_selected` — POST `/operator/sessions/delete-selected`.
-- **Template:** `app/web/templates/operator/sessions_list.html`.
+  - `sessions_archive_selected` — POST `/operator/sessions/archive-selected`.
+  - `sessions_bulk_tags` — POST `/operator/sessions/bulk-tags`.
+  - `sessions_unarchive_selected` — POST `/operator/sessions/unarchive-selected`.
+  - `sessions_delete_archived_selected` — POST `/operator/sessions/delete-archived-selected`.
+  - `lobby_edit_submit` — POST `/operator/sessions/{id}/lobby-edit`.
+  - `clone_session_submit` — POST `/operator/sessions/{id}/clone`.
+- **Templates:** `app/web/templates/operator/sessions_list.html`,
+  `sessions_archived.html`.
+- **Services:** `app/services/session_tags.py`,
+  `app/services/session_clone.py`, `app/services/session_purge.py`.
+- **Sort plumbing:** `views.decode_cookie_sort_spec` /
+  `apply_cookie_sort` (cookies `rrw-sort-lobby` / `rrw-sort-archived`).
 - **Service layer** (`app/services/sessions.py`):
   - `list_for_user(db, user)` — drives the table.
   - `get_for_user(db, user, session_id)` — per-id permission

@@ -15,13 +15,15 @@ Cross-references:
 
 - **`app/services/extracts/`** — five extract modules + the shared
   `__init__.py` (`stream_csv`, `filename`).
-- **`app/services/csv_imports.py`** — three roster importers
+- **`app/services/csv_imports.py`** — two roster importers
   (Reviewers, Reviewees) + the shared parsing primitives.
 - **`app/services/relationships.py`** — the Relationships
   importer.
-- **`app/services/session_config_io.py`** —
+- **`app/services/session_config_io/`** —
   `serialize_session_config` ↔ `apply_session_config` (Settings
-  round-trip).
+  round-trip). Split into `_serialize.py` (export) + `_apply.py`
+  (import) + `_rows.py`, with `__init__.py` re-exporting the
+  public surface.
 - **`spec/settings_inventory.md`** §10 — coverage table for the
   five extracts.
 - **`docs/imports.md`** — implementation-side notes on the
@@ -122,7 +124,7 @@ The file has two parts:
    response field (a field dictionary). A blank row separates the
    preamble from the table. A session with no instruments emits
    no preamble and no gap.
-2. **Data table** — the 20-column wide format below.
+2. **Data table** — the 21-column wide format below.
 
 | Block | Columns |
 |---|---|
@@ -133,6 +135,7 @@ The file has two parts:
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
 | Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Computed via `is_self_review(reviewer, reviewee)` (case-insensitive email match; `FALSE` for non-email reviewee identifiers). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
+| Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped` (Segment 13C / 18D). Appended last so the original 20-column indices stay stable for existing analyst pipelines. |
 
 An analyst joins a preamble help text to its data column via the
 shared `FieldKey`.
@@ -154,7 +157,7 @@ live.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
-| 1 | `EventType` | `event_type` | One of the 62 registered types. |
+| 1 | `EventType` | `event_type` | One of the registered types in `EVENT_SCHEMAS` (`app/services/audit.py`). |
 | 2 | `Severity` | `severity` | `info` / `warning` / `error` (from the canonical envelope). |
 | 3 | `Summary` | `summary` | Human-readable one-liner. |
 | 4 | `ActorEmail` | LEFT JOIN through `actor_user_id` → `users.email`. Empty cell ⇒ system-emitted event with no actor. |
@@ -222,7 +225,7 @@ already-loaded session rosters. Required: `ReviewerEmail`,
 then call `seed_display_fields_from_assignments` (legacy-named
 helper that reads from `relationships.tag_N` post-15D PR 6b).
 
-### 3.3 Settings — `session_config_io.py` (two-phase apply)
+### 3.3 Settings — `session_config_io/` (two-phase apply)
 
 The Settings CSV is **different in shape from the roster CSVs**:
 instead of a flat record-per-row table, it's a `(field, value,

@@ -116,12 +116,14 @@ migration concern).
 
 ### Session lifecycle (Segment 9.1)
 
-`ReviewSession.status` is the canonical lifecycle column. Active values
-in 9.1 are `draft` and `ready`; `expired` and `archived` are reserved
-in `app/services/session_lifecycle.py::SessionStatus` and not yet
+`ReviewSession.status` is the canonical lifecycle column. Live values
+are `draft`, `validated`, `ready`, and `archived` (the last written by
+`archive_session` / `unarchive_session`); `expired` is reserved in
+`app/services/session_lifecycle.py::SessionStatus` and not yet
 written by any route. The column stays a `String(32)` — the value
 set is enforced at the application layer, not via a DB CHECK
-constraint.
+constraint. See `spec/lifecycle.md` for the full state machine; this
+section is the original 9.1 write-path narrative.
 
 **Session status overrides instrument acceptance.** Activation
 (`draft → ready`) flips every instrument's `accepting_responses` to

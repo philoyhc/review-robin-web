@@ -150,8 +150,9 @@ the instrument has no boundary tag).
 - Downstream code that aggregates by reviewee — Manage
   Invitations' Review Progress column, the Responses page's
   per-reviewee coverage, the Extract Data exports — routes
-  through one shared helper, `responses.collapse_group_duplicates`
-  (see "Aggregation contract").
+  through the shared `responses.group_keys` primitive and
+  collapses each group to one representative assignment (see
+  "Aggregation contract").
 
 ### Why single-reviewee rows, not reviewer↔group rows
 
@@ -217,10 +218,16 @@ uniform correction mechanism — defunct / reassign
 `(reviewer, reviewee)` atoms — across both instrument kinds,
 where a group-entity model would need two.
 
-### Schema — no migration
+### Schema
 
-13C ships **zero migrations.** The group-scoped instrument is
-carried entirely by columns that already exist:
+The group-scoped instrument *mechanism* is carried entirely by
+columns that already exist — the model, fan-out, and reviewer
+surface need no migration. One migration did ship with 13C, but
+only as a **performance cache**, not as part of the mechanism:
+PR 4 added the per-instrument reviewer-group pair-count cache
+columns (`cached_group_pair_count` / `cached_group_pair_stamp`)
+via migration `c3a9f1d7b2e8`. See the "Eligible-pair count"
+section. The columns below carry the feature itself:
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
@@ -380,38 +387,34 @@ row remains an ordinary single-assignment `Response`.
 
 ## Aggregation contract
 
-A single helper centralizes group-aware aggregation:
+Group-aware aggregation routes through one shared primitive in
+`app/services/responses.py`: `group_keys(...)` resolves the
+`{assignment_id: group_key}` map for a set of assignments (its
+private worker is `_group_key_by_assignment`; `group_key_for_pair`
+computes a single pair's key). Every consumer that aggregates by
+reviewee or reports "completion" collapses each group-scoped
+instrument's member assignments to **one representative per
+`(instrument_id, group_key)`** — the lowest-id member — using that
+map. The rollup helper `_state_from_assignments` does exactly this
+dedup, and accepts a pre-computed `group_key_by_assignment` so the
+relationship-table scan can be hoisted out of per-reviewer loops.
+`group_key` is the boundary-tag value tuple (empty when the
+instrument has no boundary tag). Per-reviewee instruments dedup to
+nothing — every assignment is its own group. Consumers that need
+the per-member fan-out shape (e.g. a CSV export with one row per
+member) use the raw rows without the collapse.
 
-```python
-# app/services/responses.py (proposed)
-
-def collapse_group_duplicates(rows):
-    """Collapse the N group-duplicate response rows back to one.
-
-    For rows belonging to a group-scoped instrument, emit a single
-    row per group keyed on (reviewer_id, instrument_id, group_key,
-    response_field_id) with the shared value — where group_key is
-    the boundary-tag value tuple (empty when the instrument has no
-    boundary tag). Per-reviewee rows pass through unchanged.
-    Consumers that need the per-member fan-out shape (e.g. a CSV
-    export with one row per member) use the raw rows without
-    routing through this helper.
-    """
-```
-
-Every consumer that aggregates by reviewee or reports
-"completion" routes through the helper. The contract: a single
-group response counts as **one completion per group**, not N per
-member, and a group-scoped instrument with K boundary-defined
-groups counts K completions, not one.
+The contract: a single group response counts as **one completion
+per group**, not N per member, and a group-scoped instrument with
+K boundary-defined groups counts K completions, not one.
 
 **Trade-off — dedup discipline.** The collapse must be honored
 everywhere data leaves the system or rolls up. A missed collapse
 in a CSV export over-counts group responses by the group size.
-The single helper plus a unit test pinning the contract is the
-defense; reviewing every aggregator's call site is mandatory when
-the feature ships (see `guide/archive/segment_13C_enhanced_instrument.md`
-PR 2).
+The shared `group_keys` primitive plus a unit test pinning the
+contract is the defense; reviewing every aggregator's call site is
+mandatory when the feature ships (see
+`guide/archive/segment_13C_enhanced_instrument.md` PR 2).
 
 ### Extraction
 
@@ -469,7 +472,7 @@ the two without re-deriving from the schema.
   group so no reviewee silently vanishes; confirm when PR 2
   starts.
 - **Stale fan-out copies on a grouping-tag change.** *Decided
-  2026-05-19 — implementation pending.* An assignment's
+  2026-05-19 — shipped (13C PR 5).* An assignment's
   `group_key` is computed from its **reviewee's** boundary-tag
   values (and, for pair-context boundaries, the
   `(reviewer, reviewee)` relationship) — never from the
@@ -488,7 +491,7 @@ the two without re-deriving from the schema.
   pair-context boundary-tag change is narrower still: only the
   one relationship's row.
 - **Eligible-pair count on a group-scoped instrument's rule
-  card.** *Decided 2026-05-19 — implementation pending.*
+  card.** *Decided 2026-05-19 — shipped (13C PR 4).*
   Because single-reviewee `(reviewer, reviewee)` assignment rows
   are generated regardless (see "Why single-reviewee rows, not
   reviewer↔group rows"), the existing "Number of eligible pairs
@@ -498,7 +501,7 @@ the two without re-deriving from the schema.
   and **stays** for every instrument. For a **group-scoped**
   instrument a secondary **reviewer-group pair** count is shown
   in parentheses after it, e.g.
-  `Number of eligible pairs found: 240 (32 reviewer-group pairs)`.
+  `Number of eligible pairs found: 240 (Number of reviewer-group pairs: 32)`.
   The group figure is the count of distinct `(reviewer,
   group_key)` over the engine's `result.pairs`, with `group_key`
   the boundary-tag tuple. Because boundary tags are an
@@ -519,8 +522,10 @@ the two without re-deriving from the schema.
 - `app/services/instruments/_display_fields.py` — the display-
   field CRUD + the sort-spec service (`set_sort_display_fields`),
   both reused by the group-scoped editor.
-- `app/services/responses.py` — home of the proposed
-  `collapse_group_duplicates` helper.
+- `app/services/responses.py` — home of the `group_keys`
+  aggregation primitive, the write fan-out (`_expand_group_upserts`),
+  and the grouping-tag-change defunct safeguards
+  (`defunct_group_responses_for_tag_change`).
 - `spec/rule_based_assignment.md` — §7.1 (pinning a rule to an
   instrument) and §7.2 (the Rule Builder predicate editor, whose
   field selector lists reviewee tags then pair-context tags,
