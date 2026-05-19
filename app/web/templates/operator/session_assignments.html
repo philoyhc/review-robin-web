@@ -163,38 +163,36 @@
       {% endif %}
     {% endfor %}
     {# Card A — column-visibility card (left half of the bottom
-       grid). "Fields with data" pills + "Show columns" chips,
-       mirroring the Reviewers / Reviewees / Relationships
-       Setup-page info card. The chips drive the same
-       ``rrw-assignment-col-visibility`` localStorage the inline
-       checkboxes used to. #}
-    {% set col_slots = [
-      ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
-      ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
-      ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
-      ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
-      ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
-      ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
-      ("p1", field_label(session, "pair_context", "1"), ctx.p1),
-      ("p2", field_label(session, "pair_context", "2"), ctx.p2),
-      ("p3", field_label(session, "pair_context", "3"), ctx.p3),
+       grid). "Show columns" chips, grouped by source, driving the
+       same ``rrw-assignment-col-visibility`` localStorage the
+       inline checkboxes used to. #}
+    {% set col_groups = [
+      ("Show reviewers", [
+        ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
+        ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
+        ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
+      ]),
+      ("reviewees", [
+        ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
+        ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
+        ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
+      ]),
+      ("relationships", [
+        ("p1", field_label(session, "pair_context", "1"), ctx.p1),
+        ("p2", field_label(session, "pair_context", "2"), ctx.p2),
+        ("p3", field_label(session, "pair_context", "3"), ctx.p3),
+      ]),
     ] %}
     <div class="bottom-grid">
       <div class="card">
-        <p style="margin: 0;">
-          Fields with data:
-          {% for slot, label, has_data in col_slots if has_data %}
-            <span class="pill pill-count">{{ label }}</span>
-          {% else %}
-            <span class="muted">—</span>
-          {% endfor %}
-        </p>
-        <p class="col-chip-row" style="margin: 12px 0 0 0;">
-          <span>Show columns:</span>
-          {% for slot, label, has_data in col_slots %}
-            <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                  data-col-toggle="{{ slot }}"
-                  {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
+        <p class="col-chip-row" style="margin: 0;">
+          {% for group_label, items in col_groups %}
+            <span>{{ group_label }}:</span>
+            {% for slot, label, has_data in items %}
+              <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                    data-col-toggle="{{ slot }}"
+                    {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
+            {% endfor %}
           {% endfor %}
         </p>
       </div>
@@ -207,11 +205,23 @@
               action="/operator/sessions/{{ session.id }}/assignments"
               class="operator-actions-filter">
           <div class="filter-row">
+            <label class="filter-status">
+              Search by:
+              <select name="search_by">
+                {% for value, label in [
+                  ("all", "All"),
+                  ("reviewer", "Reviewers"),
+                  ("reviewee", "Reviewees"),
+                ] %}
+                  <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
             <label class="filter-search">
               Search:
               <input type="text" name="q" value="{{ filter_q }}"
                      autocomplete="off"
-                     placeholder="Reviewer or reviewee name / email">
+                     placeholder="Name or email">
             </label>
           </div>
           <div class="filter-actions">
@@ -251,6 +261,8 @@
     <form id="assignments-bulk-form" method="post"
           action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate">
       <input type="hidden" name="filter_q" value="{{ filter_q }}">
+      <input type="hidden" name="filter_search_by"
+             value="{{ filter_search_by }}">
     </form>
     {% endif %}
     <div class="card">

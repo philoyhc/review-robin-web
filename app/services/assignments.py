@@ -1066,23 +1066,28 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     )
 
 
-def _apply_pair_search(stmt, search: str):
+def _apply_pair_search(stmt, search: str, search_by: str = "all"):
     """Add the reviewer / reviewee free-text filter to a pairs query
-    — case-insensitive substring match on either side's name or
-    email (Segment 13C Assignments-page search)."""
+    — case-insensitive substring match on name or email (Segment
+    13C Assignments-page search). ``search_by`` scopes which side
+    is matched: ``reviewer`` / ``reviewee`` match only that side;
+    anything else (``all``) matches either."""
     term = f"%{search.strip()}%"
-    return (
-        stmt.join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(
-            or_(
-                Reviewer.name.ilike(term),
-                Reviewer.email.ilike(term),
-                Reviewee.name.ilike(term),
-                Reviewee.email_or_identifier.ilike(term),
-            )
-        )
+    stmt = stmt.join(
+        Reviewer, Assignment.reviewer_id == Reviewer.id
+    ).join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+    reviewer_match = or_(
+        Reviewer.name.ilike(term), Reviewer.email.ilike(term)
     )
+    reviewee_match = or_(
+        Reviewee.name.ilike(term),
+        Reviewee.email_or_identifier.ilike(term),
+    )
+    if search_by == "reviewer":
+        return stmt.where(reviewer_match)
+    if search_by == "reviewee":
+        return stmt.where(reviewee_match)
+    return stmt.where(or_(reviewer_match, reviewee_match))
 
 
 def list_pairs(
@@ -1091,6 +1096,7 @@ def list_pairs(
     *,
     limit: int = PAIR_PREVIEW_LIMIT,
     search: str | None = None,
+    search_by: str = "all",
 ) -> list[Assignment]:
     """Return saved Assignment rows with reviewer + reviewee + instrument
     eagerly loaded.
@@ -1098,8 +1104,9 @@ def list_pairs(
     Ordered by (reviewer_id, reviewee_id, instrument_id) to match the
     FullMatrix preview shape and keep instrument rows next to each
     other within the same pair on the diagnostic Assignment-pairs
-    table. ``search`` (when set) filters to rows whose reviewer or
-    reviewee name / email matches the term.
+    table. ``search`` (when set) filters to rows whose reviewer
+    and/or reviewee name / email matches the term, scoped by
+    ``search_by`` (``all`` / ``reviewer`` / ``reviewee``).
     """
     stmt = session_scoped(Assignment, session_id).options(
         joinedload(Assignment.reviewer),
@@ -1107,7 +1114,7 @@ def list_pairs(
         joinedload(Assignment.instrument),
     )
     if search and search.strip():
-        stmt = _apply_pair_search(stmt, search)
+        stmt = _apply_pair_search(stmt, search, search_by)
     stmt = stmt.order_by(
         Assignment.reviewer_id,
         Assignment.reviewee_id,
@@ -1117,13 +1124,18 @@ def list_pairs(
 
 
 def count_pairs(
-    db: Session, session_id: int, *, search: str | None = None
+    db: Session,
+    session_id: int,
+    *,
+    search: str | None = None,
+    search_by: str = "all",
 ) -> int:
     """Count saved Assignment rows for the session, optionally
-    filtered by the reviewer / reviewee free-text ``search``."""
+    filtered by the reviewer / reviewee free-text ``search``
+    (scoped by ``search_by``)."""
     stmt = session_scoped(Assignment.id, session_id)
     if search and search.strip():
-        stmt = _apply_pair_search(stmt, search)
+        stmt = _apply_pair_search(stmt, search, search_by)
     return len(db.execute(stmt).all())
 
 
