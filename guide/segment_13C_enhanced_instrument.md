@@ -451,38 +451,50 @@ Danger Zone card.
 
 ## Follow-on — harmonize the normal instrument card
 
-Once the group-scoped instrument card is fully implemented, the
-**ordinary per-reviewee instrument card is reorganized to match
-its layout** — a separate, self-contained follow-on step, landed
-after the group-card work is done (not bundled into PRs 1-3).
+The ordinary per-reviewee instrument card is reorganized to
+follow the **group-scoped card's general layout** — a
+self-contained follow-on, template-only (no schema / route /
+service change). Touches `app/web/templates/operator/instruments_index.html`.
 
-The group-scoped card's placeholder build (Segment 13C, the
-2026-05-18 slices) established a tidier card layout that the
-ordinary card should converge on:
+**Current divergence.** The page renders two card branches in the
+`{% for instrument %}` loop, split on `{% if is_group %}`:
 
-- **Status pills move into the card heading**, beside the
-  instrument number — `accepting responses` / `not accepting`
-  and `showing when closed` / `not showing when closed`.
-- **The separate "This Instrument's Status" card is retired.**
-  Its open / close and show / don't-show-when-closed buttons
-  move next to `Edit` near the title.
-- **The Assignment Rule card moves up into Section A**, taking
-  the slot the status card vacated.
-- **Section E pairs the Danger Zone (half-width, left) with the
-  action-button row (right)** in one bottom grid.
+| | Group card (`is_group`) | Normal card (`else`) |
+|---|---|---|
+| Section A | `group_instrument_identity` (status pills in the `<h2>`, open/close + visibility buttons beside Edit) **+** `assignment_rule_card`, side by side in a `.bottom-grid` | `instrument_identity_status` (identity **+** a separate "This Instrument's Status" sub-card) |
+| Rule picker | Section A | Section E (full-width, post-Danger-Zone removal) |
+| Section E | action row + delete-confirm | action row + delete-confirm |
 
-Net effect: one card layout for both instrument flavours, the
-difference being only the group-scoped card's reshaped Display
-Fields table and `Group-scoped` chip. The shared Jinja macros
-introduced during the group-card build (`instrument_action_row`,
-`assignment_rule_card`, and the identity-card macros) already
-make this convergence mostly a matter of pointing the ordinary
-card at the same macros.
+Section E already converged when the Danger Zone cards were
+defuncted (2026-05-19). The remaining work is Section A.
 
-This follow-on touches only the operator Instruments page
-template; no schema, route, or service change. Update
-`spec/instruments.md` (the per-instrument card layout, Sections
-A / C) when it lands.
+**Plan — point the normal card at the group card's Section A
+shape:**
+
+1. **Unify the identity macro.** Generalise `group_instrument_identity`
+   into one `instrument_identity` macro taking an `is_group`
+   flag — it renders the `Group-scoped` pill only when set.
+   Status pills (`accepting` / `not accepting`, `showing when
+   closed` / `not showing`) live in the `<h2>`; the open / close
+   and visibility buttons sit beside `Edit`. Retire
+   `instrument_identity_status`.
+2. **Retire the normal card's "This Instrument's Status" sub-card.**
+   Its open/close + visibility controls move into the identity
+   card (step 1). Decide where the **saved-state** indicator and
+   the **deadline-closed** note land — fold them into heading
+   pills, or drop the saved-state pill if redundant. (Open
+   detail — confirm before building.)
+3. **Move the rule picker into Section A.** The normal card's
+   Section A becomes `<div class="bottom-grid">{{ instrument_identity(...) }}{{ assignment_rule_card(...) }}</div>`,
+   matching the group card. The rule picker leaves Section E.
+4. **Section E** is then identical for both branches (action row
+   + delete-confirm) — already shared via `instrument_action_row`.
+
+**Net effect:** one card layout for both flavours; the only
+remaining `is_group` divergence is Section B's reshaped Display
+Fields table (the group editor's *Group by* column) and the
+`Group-scoped` chip. Update `spec/rule_based_assignment.md` /
+the instruments spec for the unified card when it lands.
 
 ## Schema
 
