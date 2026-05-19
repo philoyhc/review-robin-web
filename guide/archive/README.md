@@ -34,6 +34,7 @@ edits — they are a rough size signal, not a tracked metric.
 | `seg9stuff` | 67 | Segment 9 planning Q&A — the open-question / decision scratch notes (lifecycle enum, token path, edit-while-active) settled before the 9.1 → 9.5 split. |
 | `assumptions_ui_legacy.md` | 119 | The legacy UI section carved out of `spec/domain_assumptions.md`. |
 | `ui_elements_parts_2_3_restyle_history.md` | 111 | Historical UI-elements catalogue, Parts 2 + 3. |
+| `ui_checklist.md` | 197 | The v1 restructure + v2 `body.ui-v2` sweep per-page tracking checklist — both passes complete; retired to archive 2026-05-19 once the sweep stopped being a living tracker. |
 
 ## Segment plans
 
