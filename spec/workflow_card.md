@@ -161,11 +161,12 @@ The card uses a two-column inner grid via CSS:
 └──────────────────────────────────────────────────────────────┘
 ```
 
-`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)`. The left
-column carries a 1px right border that reads as a vertical
-divider between the two columns; below ~720px viewport width the
-columns collapse to a single stacked column and the divider
-becomes a horizontal rule above the right-column content.
+`grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)` — the left
+column takes 60% and the right column 40%. The left column
+carries a 1px right border that reads as a vertical divider
+between the two columns; below ~720px viewport width the columns
+collapse to a single stacked column and the divider becomes a
+horizontal rule above the right-column content.
 
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
