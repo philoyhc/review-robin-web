@@ -1653,6 +1653,15 @@
         flex: 1 1 0;
         min-width: 0;
       }
+      /* Stable card height — reserve room for up to two rows of
+         body text so the card doesn't grow / shrink as the
+         state-specific body copy varies in length, and flex-grow
+         the body div so the button rows sink to the bottom of
+         the left column regardless of body length. */
+      body.ui-v2 .card.next-action .next-action-body {
+        flex: 1 1 auto;
+        min-height: 3.5em;
+      }
       /* Two-column inner layout for the Workflow card: left column
          carries the body + the two button rows; right column
          (.next-action-status) carries lifecycle status reports,
