@@ -378,3 +378,112 @@ canonical envelope contract these events follow.
    column is constrained at the application layer, not via a DB
    CHECK. (`archived` is also enum-constrained, but is now an
    actively written state — see §1.)
+
+## 8. Scheduled lifecycle automation (Segment 18G — forthcoming)
+
+The operator-facing automation surface for time-based lifecycle
+events. Schema lands in **Segment 18G Part 0** (see
+`guide/segment_18G_scheduled_events.md` Part 0); the
+consumer services land in Parts 1 → 5. This section documents
+the persistent model + the cross-cutting rules **all** scheduled
+triggers obey, so each Part doesn't re-litigate them.
+
+### 8.1 Model — anchors + offsets
+
+Every scheduled event resolves to one **anchor datetime** plus an
+**offset** anchored on it. The operator picks anchors on a
+calendar; offsets are operator-set in a human shape ("1 day
+before End", "30 days after End") and persisted as ISO 8601
+durations.
+
+**Anchors (absolute datetimes on `sessions`):**
+
+| Anchor | Column | Owner | Status |
+|---|---|---|---|
+| **Start** (auto-activate) | `activate_at` | operator-set | **18G Part 0a** |
+| **End** (deadline) | `deadline` | operator-set | live today |
+| **Release-from** (Participants platform — reviewees can view responses) | `responses_release_at` | operator-set | **18G Part 0a** (inert; Participants-platform consumer) |
+
+Two existing system-stamped datetimes (`activated_at` and the
+in-memory archive timestamp) also serve as anchors for offsets:
+
+- `activated_at` — system-stamped on the first `→ ready`
+  transition (see §2.4). Used today only as a display value
+  ("Start" column on the reviewer lobby).
+- The **archive timestamp** (i.e. `updated_at` at the moment
+  `archive_session` runs) anchors the auto-delete-after-archive
+  offset.
+
+**Offsets (anchor-relative configs on `sessions`):**
+
+| Offset | Column | Anchor | Shape | Default | Consumer |
+|---|---|---|---|---|---|
+| Auto-send invites | `invite_offsets` | `activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
+| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 5 |
+| Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 1 |
+| Release-until | `release_until_offset` | `responses_release_at` | single ISO 8601 duration | unset | Participants platform |
+| Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 4 |
+
+The "End" anchor (`deadline`) is also the anchor for the lazy
+deadline observer (§4 — per-instrument auto-close); that's the
+one scheduled lifecycle effect already live.
+
+### 8.2 Cross-cutting rules
+
+**8.2.1 Anchor-null inertness.** An offset is **inert when its
+anchor is null**: the scheduler skips it, the editor disables the
+offset field, and any other reader treats the resolved time as
+"no scheduled fire". Examples:
+
+- `invite_offsets` set but `activate_at = NULL` → no scheduled
+  invitation dispatch (operator must click manually).
+- `archive_offset = "P30D"` but `deadline = NULL` → no scheduled
+  archive (operator must archive manually from the lobby).
+- `release_until_offset` set but `responses_release_at = NULL` →
+  no scheduled close of the response-viewing window.
+
+This is enforced at **one** call site: a `resolve_offset(session,
+anchor_field, offset_field) -> datetime | None` helper that every
+scheduler path uses. Anchor-null short-circuits to `None`;
+unset offset short-circuits to `None`; otherwise the helper adds
+the parsed ISO 8601 duration to the anchor and returns the
+resulting datetime.
+
+**8.2.2 Offset format.** ISO 8601 duration strings (`P30D`,
+`PT2H`, `-P1D`, `-PT4H`) — dialect-neutral, CSV-round-trippable,
+human-readable. Negative durations mean "before the anchor";
+positive durations mean "after". The parser accepts the standard
+designators only (`P[n]Y[n]M[n]DT[n]H[n]M[n]S` with optional
+leading `-`); fractional values and weeks (`P1W`) are rejected at
+the editor.
+
+**8.2.3 Operator-determined, not derived.** Every offset is
+operator-set. The system never silently re-anchors based on
+other fields (e.g. switching `archive_offset` from `deadline` to
+`responses_release_at` when the latter is set). If a richer
+policy is needed later, it lands as an explicit operator-facing
+control, not as derived behaviour.
+
+**8.2.4 Multiple offsets per event.** Events that fire on a
+sequence (invites, reminders) carry a JSON list; events that
+fire once (archive, release-until, auto-delete) carry a single
+ISO 8601 string. Per-list-entry dedup uses the entry's index
+(e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
+re-ordered list doesn't re-fire already-sent reminders.
+
+### 8.3 Implementation notes (forthcoming)
+
+- **Trigger mechanism** — either a periodic background worker or
+  the lazy deadline-observer pattern (§4) extended to additional
+  anchors; settled at 18G's first non-Part-0 scoping pass.
+- **Audit events** — each consumer Part defines its own emitters
+  (`session.activated`, `session.archived`, `session.invitations_sent`,
+  `session.reminder_batch_enqueued`, `session.purged`). The
+  *configuration-change* events
+  (`session.invite_schedule_updated`,
+  `session.reminder_schedule_updated`, etc.) land alongside the
+  editor surfaces that write them.
+- **Settings CSV round-trip** — every Part 0 column is exported
+  / imported in the Settings CSV as the consumer Part lights it
+  up (18D Part 5 already rides Part 4 for the retention
+  columns).
