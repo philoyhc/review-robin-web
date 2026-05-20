@@ -61,8 +61,9 @@ replaced by a dedicated `POST /workflow/prepare` route (Generate
 only). The card itself moved to a 50/50 column grid with two
 rows of buttons in the left column — Row 1 (prep): Revert ·
 Prepare · Create invites; Row 2 (run): Send invites · Activate ·
-Send reminders (Close session deferred per the scoping note
-above). The reconcile-detour saved-response confirmation
+Send reminders · Close session (last is an inert placeholder
+until the `expired` lifecycle work). The reconcile-detour
+saved-response confirmation
 migrated onto Prepare; the warnings detour on Activate is
 preserved. State cascade renumbered to 10 stable IDs (1, 2, 3,
 4, 4W, 4Err, 5, 6, 7, 8, 9); States 5 / 6 (validated +
@@ -242,14 +243,16 @@ committed parts):
 > stays on Activate (operator sees warnings in State 4W after
 > Prepare, then clicks Activate which hits the existing Validate
 > page acknowledgement). Reconcile detour migrates from Activate
-> to Prepare. Close session button deferred to a later pass
-> alongside the `expired` lifecycle status work.
+> to Prepare. Close session renders as an inert placeholder
+> button in Row 2; its behaviour ships later alongside the
+> `expired` lifecycle status work.
 
 ### Layout
 
-The card goes back to **50% / 50%** column widths
-(`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)`,
-restoring the 50/50 split that pre-dated the 15E 60/40 stepper).
+The card uses a **55% / 45%** column split
+(`grid-template-columns: minmax(0, 11fr) minmax(0, 9fr)`) — the
+left column takes a little more than half so the four-button run
+row (once Close session is live) doesn't crowd.
 The role of each column is unchanged from today's spec — the
 left column carries the body copy and the action buttons, the
 right column carries the per-state status aside (validation
@@ -261,7 +264,7 @@ width:
 
 ```
 ┌── Workflow (H2) ─────────────────────────────────────────────┐
-│ ┌─ .next-action-main (50%) ──┐ ┌─ .next-action-status (50%)┐ │
+│ ┌─ .next-action-main (55%) ──┐ ┌─ .next-action-status (45%)┐ │
 │ │ <p>State-specific body</p> │ │ State-specific status /  │ │
 │ │                            │ │ errors aside.            │ │
 │ │ ┌── prep-actions row ───┐  │ │                          │ │
@@ -277,10 +280,9 @@ width:
 └──────────────────────────────────────────────────────────────┘
 ```
 
-(Schematic only — exact CSS settles at PR time. Each button
-takes `1 / button_count` of the left column's width: row 1's
-three buttons are 33.33% of the left column; row 2's four
-buttons are 25%.)
+(Each button takes `1 / button_count` of the left column's
+width: Row 1's three buttons are 33.33% of the left column;
+Row 2's four buttons are 25%.)
 
 - **Left column — body + two action rows.** **Row 1 (prep
   phase):** Revert to draft · Prepare session · Create invites
@@ -300,12 +302,13 @@ buttons are 25%.)
   drops below the left (same convention as today), so the
   reading order is: body → prep row → run row → status aside.
 
-> **Close session — deferred.** The first 18F implementation
-> pass omits the Close-session button; Row 2 ships with three
-> buttons (Send invites · Activate · Send reminders). Close
-> session lands later, alongside the `expired` lifecycle status
-> work that makes "end the review window" a distinct lifecycle
-> step rather than an alias for Revert.
+> **Close session — placeholder.** Row 2 ships with the Close
+> session slot rendered as an inert placeholder (`<button
+> disabled aria-disabled="true">`); its behaviour lands later
+> alongside the `expired` lifecycle status work that makes "end
+> the review window" a distinct lifecycle step rather than an
+> alias for Revert. The slot stays in the grid now so the
+> eventual primary doesn't shift the layout.
 
 ### Button vocabulary
 
@@ -321,7 +324,7 @@ card column.
 | Send invites | 2 (run) | `/invitations/send-all` | sends every unsent `Invitation`. Live from Validated. |
 | Activate session | 2 (run) | `/workflow/activate` (now solo, not a super-button) | `validated → ready`, opens every instrument, emits `session.activated`. |
 | Send reminders | 2 (run) | `/invitations/remind-all` | nudges reviewers with outstanding responses. |
-| ~~Close session~~ | _(deferred)_ | _(deferred until `expired` lifecycle status lands)_ | Lands as a 4th Row-2 button later; the first 18F pass ships Row 2 with three buttons. |
+| Close session | 2 (run) | _(placeholder until `expired` lifecycle status lands)_ | Renders inert in the Row 2 slot today so the eventual primary doesn't shift the grid; the route + behaviour ship later. |
 
 ### State machine cascade (proposed)
 
@@ -353,7 +356,7 @@ new pre-activation invite states.)
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no validation errors | "Run **Prepare session** — generates the assignment pairs and validates that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft`, validation errors | "Validation didn't pass. Resolve the errors and re-run Prepare. The issue list is in the right column." |
-| **4** | `is_validated`, no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to receive responses." |
+| **4** | `is_validated`, no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses." |
 | **4W** | `is_validated`, warnings | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." |
 | **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." |
@@ -376,13 +379,14 @@ close-out paths, not the next forward step.
 | Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | — | — | — |
 | Create invites | — | — | — | **Pri** | **Pri** | Sec | Sec | **Pri** | Sec | Sec |
 
-**Row 2 (run) — Send invites · Activate · Send reminders** _(Close session deferred — lands later with the `expired` status work)_
+**Row 2 (run) — Send invites · Activate · Send reminders · Close session**
 
 | Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Send invites | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
 | Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | **Pri** | **Pri** | — | — | — |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
+| Close session | — | — | — | — | — | — | — | — | — | — |
 
 (`Create invites` is idempotent, so it remains Secondary-live
 after the first generation in case the roster gains an

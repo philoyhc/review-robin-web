@@ -1657,12 +1657,14 @@
          carries the body + the two button rows; right column
          (.next-action-status) carries lifecycle status reports,
          validation summaries, and workflow-button error messages.
-         18F Part 1 restored a 50/50 grid (down from the 15E 60/40
-         stepper). Collapses to a single stacked column at narrow
-         viewports so the buttons don't get squeezed. */
+         18F Part 1 — 55 / 45 split (the left column carries four
+         buttons per row once Close session is live, so it needs a
+         little more room than 50/50). Collapses to a single
+         stacked column at narrow viewports so the buttons don't
+         get squeezed. */
       body.ui-v2 .card.next-action .next-action-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
         gap: var(--space-4);
         flex: 1 1 auto;
       }

@@ -13,9 +13,10 @@ Segment 18F Part 1 split the previous Activate "super-button"
 **Prepare session** button (Generate + Validate) and a solo
 **Activate session** button. The reconcile-detour saved-response
 confirmation moved onto Prepare; the warnings-detour
-(`/validate?activate=1`) stays on Activate. **Close session** is
-deferred until the `expired` lifecycle status work lands; until
-then, ending a review window is by Revert in this card.
+(`/validate?activate=1`) stays on Activate. **Close session**
+renders as an inert placeholder in Row 2; its behaviour ships
+alongside the `expired` lifecycle status work. Until then,
+ending a review window is by Revert in this card.
 
 The card was originally called "Next Action" and the template /
 CSS class names still use the `next_action` prefix; the H2 title
@@ -160,7 +161,7 @@ Validate in the `validated` lifecycle and finding errors is rare
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." (pill row + per-issue list moves to the right column.) |
-| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to receive responses." |
+| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses." |
 | **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent (Part 2 only) | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." *(rendered in cascade; reachable post-18F-Part-2)* |
@@ -194,8 +195,10 @@ per-state status aside in the right column:
 └──────────────────────────────────────────────────────────────┘
 ```
 
-`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` — both
-columns at 50% (restored from the 15E 60/40 split). The left
+`grid-template-columns: minmax(0, 11fr) minmax(0, 9fr)` — the
+left column takes ~55% and the right column ~45% (the left
+column carries four buttons per row once Close session is live,
+so it gets slightly more room than a strict 50/50). The left
 column carries a 1px right border that reads as a vertical
 divider between the two columns; below ~720 px viewport width
 the columns collapse to a single stacked column and the divider
@@ -213,13 +216,14 @@ CSS lives in `app/web/templates/base.html` next to the
 The left column hosts two rows of action buttons. **Row 1 (prep
 phase)** carries the actions an operator runs before reviewers
 see anything; **Row 2 (run phase)** carries the actions during
-and after the review window. Close session is **deferred until
-the `expired` lifecycle status work lands** — Row 2 ships with
-three buttons in this first 18F pass.
+and after the review window. Close session renders as an inert
+**placeholder** in Row 2 — its behaviour ships alongside the
+`expired` lifecycle status work, but the slot stays in the grid
+so the eventual primary doesn't shift the layout.
 
 ```
 Row 1 (prep): Revert to draft · Prepare session · Create invites
-Row 2 (run):  Send invites · Activate session · Send reminders
+Row 2 (run):  Send invites · Activate session · Send reminders · Close session
 ```
 
 Each slot is either **live** (Primary or Secondary, clickable)
@@ -238,13 +242,14 @@ never promotes it to Primary.
 | Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | Sec | — | — | — |
 | Create invites | — | — | — | **Pri** | **Pri** | — | Sec | Sec | **Pri** | Sec | Sec |
 
-**Row 2 (run) — Send invites · Activate · Send reminders**
+**Row 2 (run) — Send invites · Activate · Send reminders · Close session**
 
 | Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Send invites | — | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
 | Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | — | **Pri** | **Pri** | — | — | — |
 | Send reminders | — | — | — | — | — | — | — | — | — | — | **Pri** |
+| Close session | — | — | — | — | — | — | — | — | — | — | — |
 
 (`Generate assignments` and `Validate setup` no longer render as
 their own stepper slots — they live inside the **Prepare
