@@ -51,9 +51,10 @@
         </div>
 
         {# Right column: Description on top (flex-grows to fill
-           the leftover height) so its bottom edge aligns with
-           Help contact across the grid; Start and End anchored
-           below it. #}
+           the leftover height); only Start sits below it so its
+           bottom edge aligns with Help contact in the left
+           column. End drops out of the grid entirely and lands
+           in the form's bottom row alongside the buttons. #}
         <div class="fill-col">
           <label for="description">Description</label>
           <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
@@ -69,7 +70,19 @@
             disabled
             placeholder="Placeholder — scheduled activation lands with Segment 18G"
           >
+        </div>
+      </div>
 
+      {# Bottom row mirrors the .page-grid columns above: buttons
+         on the left (under Help contact), End on the right (under
+         Start), so the page's last visible row aligns Save /
+         Cancel with the End input across the grid. #}
+      <div class="page-grid" style="margin-top: 20px; align-items: end;">
+        <div class="btn-pair">
+          <button class="btn" type="submit">Save changes</button>
+          <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
+        </div>
+        <div>
           <label for="deadline">End (optional)</label>
           <input
             type="datetime-local"
@@ -78,11 +91,6 @@
             value="{{ deadline_input_value }}"
           >
         </div>
-      </div>
-
-      <div class="btn-pair" style="margin-top: 20px;">
-        <button class="btn" type="submit">Save changes</button>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
       </div>
     </form>
   </div>
