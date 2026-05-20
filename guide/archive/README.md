@@ -108,6 +108,7 @@ alongside its replacement.
 | `segment_13C_enhanced_instrument.md` | 647 | Segment 13C — enhanced instruments (group-scoped instruments + the Replicate-instrument button). |
 | `segment_13D_db_prep.md` | 531 | Segment 13D — DB prep for the library / per-session-copy split. |
 | `segment_13E_db_prep.md` | 209 | Segment 13E — DB prep for the 12C / 15D block. |
+| `segment_13F_more_db_prep.md` | 786 | Segment 13F — DB prep for the 16A / 16B / 18A / 18B / 18G ride-along. Five of seven PRs shipped (1 / 2 / 3 / 6 / 7); the two outstanding (PR 4 `reminder_settings`, PR 5 `retention_*`) plus the pending scheduled-lifecycle schema audit were folded into **Segment 18G Part 0 — Schema pre-positioning** on 2026-05-20 and the plan retired here. |
 | `segment_14A_production_hardening.md` | 588 | Segment 14A — production hardening (in-app ladder: logging, error handling, index review, permission audit, docs, deploy-workflow hardening). |
 | `segment_15_operator_polish_and_documentation.md` | 138 | Segment 15 — operator polish + documentation (umbrella). |
 | `segment_15A_friendly_labels.md` | 670 | Segment 15A — pervasive friendly labels. |

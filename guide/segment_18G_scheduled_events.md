@@ -9,14 +9,23 @@
 > scope is unchanged — only the segment number moved.
 >
 > Consolidates every **scheduled / automatic session-lifecycle
-> automation** behind the one 13F scheduled-lifecycle schema audit,
-> rather than each consumer segment growing its own
-> column-per-feature. Auto-archive moved here out of **Segment 18A**
-> (Sessions lobby enhancements) — 18A ships only manual archiving.
+> automation** behind one schema slice (Part 0 below), rather than
+> each consumer segment growing its own column-per-feature.
+> Auto-archive moved here out of **Segment 18A** (Sessions lobby
+> enhancements) — 18A ships only manual archiving.
 > **Segment 14C (Reminders workflow) was consolidated into this
 > segment on 2026-05-18** — scheduled reminder dispatch is itself
 > a scheduled event; it lives here as Part 5 and the standalone
 > 14C plan is retired.
+>
+> **Segment 13F (More DB prep) consolidated into this segment on
+> 2026-05-20.** Five of 13F's seven PRs had shipped; the remaining
+> two (`sessions.reminder_settings`, `sessions.retention_*`) plus
+> the pending scheduled-lifecycle schema audit (`auto_archive_at`,
+> `invitations_send_at`, `activate_at`) were all 18G-relevant, so
+> they were folded in here as **Part 0 — Schema pre-positioning**
+> and the standalone 13F plan retired to
+> `guide/archive/segment_13F_more_db_prep.md`.
 
 ## Goal
 
@@ -36,9 +45,8 @@ mechanism instead of a column and a half-worker per feature.
 - **Auto-archive surfaced it.** Segment 18A Part 3 wanted a
   scheduled `closed → archived` flip; rather than pre-position a
   one-off `auto_archive_at` column, the call (2026-05-17) was to
-  run one comprehensive audit of every scheduled automation — see
-  `guide/segment_13F_more_db_prep.md`, "Scope re-sweep
-  (2026-05-17)".
+  run one comprehensive audit of every scheduled automation. The
+  audit's resolved column set is now **Part 0** below.
 - **The transitions already exist or are cheap.** `archive_session`
   shipped in 18A; the invitation send-path and the reminder
   email transport (14B) exist or are cheap. 18G is mostly
@@ -52,6 +60,88 @@ mechanism instead of a column and a half-worker per feature.
 The exact part list depends on which transition services have
 shipped at scoping time; the items below are the candidate set.
 
+### Part 0 — Schema pre-positioning (consolidated from 13F, 2026-05-20)
+
+**Goal.** Pre-position the additive, nullable, no-backfill schema
+slots that Parts 1–5 read. Mirrors the 13D / 13E / 13F
+inert-migrations pattern: every column is nullable, every
+migration round-trips on SQLite + `ci-postgres`, no service code
+reads or writes the new shape until its owning Part lights it up.
+This Part lands first inside 18G; Parts 1–5 are schema-blocked on
+it.
+
+**Origin.** Consolidated 2026-05-20 from the two outstanding 13F
+PRs (`reminder_settings`, `retention_*`) and the pending 13F
+scheduled-lifecycle schema audit (`auto_archive_at`,
+`invitations_send_at`, `activate_at`). All three items were
+already 18G-relevant, so folding them in here retires the
+schema-only segment.
+
+#### Part 0a — Scheduled-trigger datetime columns (feeds Parts 1, 2, 3)
+
+Three nullable `DateTime(timezone=True)` columns on `sessions`:
+
+```python
+# app/db/models/review_session.py
+auto_archive_at:      Mapped[datetime | None]  # → Part 1
+invitations_send_at:  Mapped[datetime | None]  # → Part 2
+activate_at:          Mapped[datetime | None]  # → Part 3
+```
+
+**Shape decision.** Individual nullable datetime columns rather
+than a single `sessions.schedule` JSON container. The scheduler
+queries these by value ("find every session whose `activate_at`
+has passed and is still `validated`") — unlike
+`reminder_settings`, which is read per session at render time.
+Individual columns are queryable and indexable; JSON is not.
+Add a B-tree index per column when it lights up (deferred to the
+owning Part — the column is inert until then).
+
+`activate_at` is the scheduled `validated → ready` trigger; per
+the 18F Part 2 Activated-as-gate model, **no new `SessionStatus`
+value and no sub-gate within `ready`** — `ready` already means
+"open for responses", and this column just lets the existing
+`draft → ready` Activate transition be scheduled.
+
+#### Part 0b — `sessions.reminder_settings` JSON (feeds Part 5)
+
+One nullable JSON column on `sessions` (was 13F PR 4):
+
+```python
+# app/db/models/review_session.py
+reminder_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+```
+
+JSON over flat columns: the cadence vocabulary (`auto_enabled` /
+`cadence` / `max_count` / `time_of_day` / `quiet_hours`) is locked
+in Part 5a. JSON keeps the migration flat — when Part 5a locks the
+shape, no new migration is needed; the JSON keys acquire meaning.
+
+#### Part 0c — `sessions.retention_exception` Boolean + `sessions.retention_overrides` JSON (feeds Part 4)
+
+Two nullable columns on `sessions` (was 13F PR 5), landed
+together because they're tightly coupled (one is the "opt out
+entirely" flag; the other is the "override the deployment
+defaults" JSON):
+
+```python
+# app/db/models/review_session.py
+retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+```
+
+`retention_exception=NULL` and `=False` both mean "no exception"
+(Part 4 normalises on read). `retention_overrides=NULL` means
+"use the deployment retention defaults" (Part 4's env vars).
+
+**Sequencing inside Part 0.** Three PRs, one per migration
+(0a / 0b / 0c), independent of each other; land in numeric order
+for tidy migration history. Round-trip tests in
+`tests/integration/test_*_schema.py` shape (mirrors 13F PR 6 / 7
+precedent). Inert audit at PR close: `grep` for the new
+identifiers across `app/services/` + `app/web/` returns zero
+hits — light-up happens in Parts 1–5.
+
 ### Part 1 — Auto-archive
 
 **Goal.** A session carries an auto-archive date/time (or
@@ -62,7 +152,7 @@ deadline + grace period); a scheduled trigger flips it
   trigger is new. Note: archiving is draft-only (18A's locked
   `draft ⇄ archived` model), so the schedule fires only on draft
   sessions; a running session must be reverted first.
-- Schema: an `auto_archive_at` column (13F audit).
+- Schema: `sessions.auto_archive_at` (Part 0a).
 
 ### Part 2 — Auto-send invitations
 
@@ -73,7 +163,7 @@ model (Part 3 / 18F), invitations are sendable from the
 **Prepared (`validated`)** state — so an operator can schedule a
 notification email to land *ahead of* the scheduled open.
 
-- Schema: an `invitations_send_at` column (13F audit).
+- Schema: `sessions.invitations_send_at` (Part 0a).
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation.
 
@@ -93,7 +183,7 @@ just lets that transition be *scheduled*. No new `SessionStatus`
 value and no sub-gate within `ready`: `ready` already means
 "open for responses".
 
-- Schema: an `activate_at` datetime (13F audit) — the scheduled
+- Schema: `sessions.activate_at` (Part 0a) — the scheduled
   `validated → ready` trigger; possibly reuse the existing
   activation audit event, or add a `session.activation_scheduled`
   event.
@@ -120,13 +210,13 @@ moved here out of **Segment 18C** when 18C was re-scoped to the
 - **Per-session override** — the `sessions.retention_exception`
   Boolean (opt a session out, e.g. legal hold) and the
   `sessions.retention_overrides` JSON column, both pre-positioned
-  by **13F PR 5**; a Settings-page editor; a
+  by **Part 0c**; a Settings-page editor; a
   `session.retention_policy_updated` emitter.
 - Reuses 18C's `session_purge` service for the actual deletes —
   this part adds only the schedule + policy resolution.
 - **Ride-along: 18D Part 5.** The Settings-CSV round-trip of the
   retention columns (`retention_exception` / `retention_overrides`)
-  — Segment 18D's Part 5 — was handed to this part: once 13F PR 5
+  — Segment 18D's Part 5 — was handed to this part: once Part 0c
   lands the columns, add the `retention.*` rows to the Settings
   CSV serialiser / importer as part of Part 4.
 
@@ -145,7 +235,7 @@ in this segment.
 - **5a — Per-session reminder cadence settings.** An
   operator-facing surface for "when reminders go out
   automatically", persisted in the `sessions.reminder_settings`
-  JSON column (pre-positioned by 13F PR 4). Keys, locked at
+  JSON column (pre-positioned by Part 0b). Keys, locked at
   scoping: auto-reminders enabled (default off); cadence — a
   small named-policy enum (`weekly` / `bi-weekly` /
   `pre-deadline-cascade`), not a general cron editor; max
@@ -179,9 +269,8 @@ in this segment.
 
 ## Hard dependencies
 
-- **The 13F scheduled-lifecycle schema audit** must resolve to a
-  locked column set first — it becomes a new 13F PR. Until then
-  every part here is schema-blocked.
+- **Part 0 (Schema pre-positioning) lands first.** Parts 1–5 are
+  schema-blocked on the columns Part 0a / 0b / 0c add.
 - **Part 1** wants 18A's `archive_session` (shipped).
 - **Part 2 / Part 3** depend on **18F Part 2** — the
   Activated-as-gate model, the relaxed invitation gate, and the
@@ -223,5 +312,6 @@ When parts ship:
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Pin order against 13F.** Pick this up only after the 13F
-  scheduled-lifecycle audit lands its column set.
+- **Ship Part 0 first.** Parts 1–5 are schema-blocked on the
+  columns Part 0a / 0b / 0c add; land Part 0 ahead of any
+  service / scheduling work.

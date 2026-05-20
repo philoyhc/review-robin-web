@@ -15,7 +15,7 @@ until Segment 18B PR 3 lights it up (per-session timezone card
 layer against ``zoneinfo.available_timezones()`` at light-up,
 not by a DB CHECK constraint.
 
-See ``guide/segment_13F_more_db_prep.md`` PR 6 for the schema
+See ``guide/archive/segment_13F_more_db_prep.md`` PR 6 for the schema
 rationale.
 
 Revision ID: 2fec0f646bd2

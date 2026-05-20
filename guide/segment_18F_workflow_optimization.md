@@ -23,8 +23,8 @@ scheduling work (18G) and the post-MVP participant model
 lifecycle.
 
 This is a workflow / UX / lifecycle segment, not a schema segment.
-Where it needs columns, it rides the 13F audit (the same audit
-18G depends on).
+Where it needs columns, it rides **18G Part 0** (the schema
+pre-positioning slice, formerly the 13F scheduled-lifecycle audit).
 
 ## Why now / why a segment
 

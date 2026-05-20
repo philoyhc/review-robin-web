@@ -767,39 +767,13 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13F (PRs 4-5), 14B,
-18F (Part 3+), 18G, 18H, 19, 20**. No global ordering
+**14B, 18F (Part 3+), 18G, 18H, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13F — More DB prep (16A / 16B / 18A / 18B / 18G
-   ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**,
-   **PRs 6 + 7 shipped 2026-05-15**, **PR 3 shipped 2026-05-17**;
-   only PRs 4 + 5 outstanding)*. Mirrors the
-   13D / 13E inert-migrations pattern for the **next** batch
-   of schema needs identified during the Segment 16 PR-ladder
-   sizing pass. Reordered 2026-05-11 so the 16-series work
-   leads: **PR 1 (shipped)** — `users.is_sys_admin` Boolean
-   + model-only `session_operators.role` value-set lock and
-   Python-default fix; **PR 2 (shipped)** — `users.is_operator`
-   Boolean for Option C strict-allowlist access; **PR 3
-   (shipped)** — the `session_tags` table for 18A tagging;
-   **PR 6 (shipped)** — `sessions.display_timezone`
-   String for 18B PR 3; **PR 7 (shipped)** —
-   `users.preferences` JSON for 18B PR 2. The two outstanding
-   PRs ride with their consumer segments: **PR 4**
-   (`sessions.reminder_settings`) with 18G Part 5 (reminders);
-   **PR 5**
-   (`sessions.retention_exception` + `retention_overrides`)
-   with **18G Part 4** (moved from 18C when 18C was re-scoped
-   to operator-triggered purge, which needed no schema).
-   The deferred Postgres type migrations stay out of 13F. **The 16-series
-   schema scaffolding is complete — Segment 16A is unblocked.**
-   **Plan:** `guide/segment_13F_more_db_prep.md`.
-
-2. **14B — Email infrastructure (send activation + backends).**
+1. **14B — Email infrastructure (send activation + backends).**
    *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
    14B / 14C split.)* All email *wiring* lives here. The schema
    columns Part A writes to landed with **Segment 11C Part 2**
@@ -861,9 +835,10 @@ bottom of this file.
   **Plan:** `guide/segment_18F_workflow_optimization.md`.
 
 - **18G — Scheduled events** *(stub created 2026-05-17;
-  renumbered from 18F on 2026-05-19)*.
+  renumbered from 18F on 2026-05-19; Segment 13F
+  consolidated in as Part 0 on 2026-05-20)*.
   Consolidates every scheduled / automatic session-lifecycle
-  automation behind the one 13F scheduled-lifecycle schema audit:
+  automation behind one schema slice (**Part 0**):
   **auto-archive** (a timed `archive_session`, moved out of 18A),
   **auto-send invitations** (timed invitation dispatch), and
   **scheduled activation** — a timed `validated → ready` flip;
@@ -871,8 +846,12 @@ bottom of this file.
   in 18F Part 2), a scheduled activation is the synchronised open,
   with no separate "opening gate". **Scheduled
   reminders** — the former Segment 14C — were consolidated in
-  (2026-05-18) as Part 5. Schema-blocked on the 13F audit
-  resolving to a locked column set; depends on 18F Part 2 for the
+  (2026-05-18) as Part 5. **Part 0 — Schema pre-positioning**
+  (the inert datetime / JSON columns Parts 1–5 read) absorbs the
+  two outstanding 13F PRs (`reminder_settings`, `retention_*`)
+  and the former 13F scheduled-lifecycle schema audit, retiring
+  the standalone 13F plan. Parts 1–5 are schema-blocked on
+  Part 0; Parts 2 / 3 also depend on 18F Part 2 for the
   Activated-as-gate model + reviewer pre-open / closed states.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
@@ -933,7 +912,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13F (PRs 4-5), 18F (Part 3+), 18H, 19, 20** are
+- **18F (Part 3+), 18H, 19, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
 - **18F → 18G.** 18F (workflow optimization) settles the
