@@ -28,10 +28,7 @@
           {# 18B PR 4 — per-session display timezone, picked before the
              deadline so the operator knows which zone the deadline is
              entered in. Searchable <datalist> over every IANA zone,
-             pre-filled with the operator's default.
-             Start / End / offset inputs are deliberately absent from
-             this card — they're being redone for the 18G anchors +
-             offsets model and will be re-added in a follow-up step. #}
+             pre-filled with the operator's default. #}
           <label for="display_timezone">Timezone</label>
           <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
             Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
@@ -46,13 +43,71 @@
               <option value="{{ tz }}"></option>
             {% endfor %}
           </datalist>
+
+          {# 18G Part 0 anchors + offsets — half-column sub-grid below
+             Timezone. End (``sessions.deadline``) is the only currently
+             wired field; Start (``scheduled_activate_at``) and the
+             two offset lists are disabled placeholders until the
+             consumer Parts wire them up. #}
+          <div class="page-grid" style="margin: 0;">
+            <div>
+              <label for="scheduled_activate_at">Start (optional)</label>
+              <input type="datetime-local" id="scheduled_activate_at"
+                     name="scheduled_activate_at" disabled
+                     placeholder="Scheduled activation — 18G Part 3">
+
+              <label for="deadline">End (optional)</label>
+              <input type="datetime-local" id="deadline" name="deadline">
+            </div>
+            <div>
+              <label for="invite_offsets">Auto-send invites (optional)</label>
+              <input type="text" id="invite_offsets" name="invite_offsets"
+                     disabled
+                     placeholder="e.g. -P1D, -PT2H — 18G Part 2">
+
+              <label for="reminder_offsets">Auto-send reminders (optional)</label>
+              <input type="text" id="reminder_offsets" name="reminder_offsets"
+                     disabled
+                     placeholder="e.g. -P2D, -PT4H — 18G Part 5">
+            </div>
+          </div>
         </div>
 
-        {# Right column: Description fills the column so its bottom
-           edge aligns with the Timezone input across the grid. #}
         <div class="fill-col">
           <label for="description">Description</label>
           <textarea id="description" name="description" maxlength="2000"></textarea>
+
+          {# 18G Part 0 — Participants-platform anchors + retention
+             offsets sub-grid. All four fields are disabled
+             placeholders today; consumer Parts wire them up.
+             ``responses_release_at`` / ``release_until_offset`` are
+             Participants-platform (segments 21+); ``archive_offset``
+             feeds 18G Part 1; ``retention_overrides.delete_after_archive``
+             feeds 18G Part 4. #}
+          <div class="page-grid" style="margin: 0;">
+            <div>
+              <label for="responses_release_at">Release responses from (optional)</label>
+              <input type="datetime-local" id="responses_release_at"
+                     name="responses_release_at" disabled
+                     placeholder="Reviewees see responses — Participants platform">
+
+              <label for="responses_release_until">Release responses until (optional)</label>
+              <input type="datetime-local" id="responses_release_until"
+                     name="responses_release_until" disabled
+                     placeholder="Reviewee viewing closes — Participants platform">
+            </div>
+            <div>
+              <label for="archive_offset">Auto-archive (optional)</label>
+              <input type="text" id="archive_offset" name="archive_offset"
+                     disabled
+                     placeholder="e.g. P30D after End — 18G Part 1">
+
+              <label for="delete_after_archive">Auto-delete (optional)</label>
+              <input type="text" id="delete_after_archive" name="delete_after_archive"
+                     disabled
+                     placeholder="e.g. P90D after archive — 18G Part 4">
+            </div>
+          </div>
         </div>
       </div>
 
