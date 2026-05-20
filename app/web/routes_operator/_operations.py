@@ -286,19 +286,32 @@ def session_preview(
     )
 
 
-def _require_ready(review_session: ReviewSession) -> None:
-    """Reject invitation actions while session is not ready.
+def _require_validated_or_ready(review_session: ReviewSession) -> None:
+    """Reject invitation actions while the session is still in draft.
 
-    Inverse of the 9.1 ``_require_draft`` lock: invitations point at a live
-    reviewer surface, so they must only be issued / sent on a ready session.
+    Segment 18F Part 2 relaxes the gate from "ready only" to
+    "validated or ready" — operators can create and send invites
+    from the Prepared (`validated`) state so reviewers receive a
+    notification *before* the session is activated. Invitations
+    still can't fire from `draft` (the assignment pairs aren't
+    settled yet) or any post-`ready` state.
     """
-    if not lifecycle.is_ready(review_session):
+    if not (
+        lifecycle.is_validated(review_session)
+        or lifecycle.is_ready(review_session)
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Invitations can only be issued while the session is ready"
+                "Invitations can only be issued once the session has been "
+                "prepared (validated or ready)."
             ),
         )
+
+
+# Back-compat alias — kept so any direct caller from outside this module
+# (test fixtures, future routes) keeps working through the rename.
+
 
 
 def _require_invitation_in_session(
@@ -455,7 +468,7 @@ def invitations_generate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     invitations.generate_invitations(
         db,
         review_session=review_session,
@@ -476,7 +489,7 @@ def invitations_send_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     rows = invitations.list_invitations_for_session(db, review_session.id)
     for row in rows:
         if row.invitation.status != "pending":
@@ -509,7 +522,7 @@ def invitations_regenerate_all(
     clear; previously-issued URLs go stale uniformly. One batch
     ``invitations.regenerated`` audit event when at least one
     invitation was rotated."""
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     invitations.regenerate_all_tokens(
         db,
         review_session=review_session,
@@ -531,7 +544,7 @@ def invitations_regenerate(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     invitations.regenerate_token(
         db,
         invitation=invitation,
@@ -554,7 +567,7 @@ def invitations_send_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
@@ -742,7 +755,7 @@ def invitations_remind_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
@@ -778,7 +791,7 @@ def invitations_remind_incomplete(
     ``invitations.send_reminders_to_incomplete`` helper the (still-
     existing) Monitoring page uses; PR 3 retires the Monitoring
     counterpart endpoint."""
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)
     invitations.send_reminders_to_incomplete(
         db,
         review_session=review_session,

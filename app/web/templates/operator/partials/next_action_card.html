@@ -65,10 +65,14 @@
 {% set _prepare_live = (is_draft and not is_setup_empty) or is_validated %}
 {% set _activate_live = is_validated %}
 {% set _activate_needs_warnings_detour = is_validated and validation_summary and validation_summary.can_activate and validation_summary.needs_acknowledge %}
-{% set _create_invites_live = is_ready %}
-{% set _create_invites_primary = is_ready and not invitations_generated %}
-{% set _send_invites_live = is_ready and invitations_generated %}
-{% set _send_invites_primary = is_ready and invitations_generated and not invitations_sent %}
+{# 18F Part 2 — invitations are now live from Validated as well as
+   Ready. The button state still discriminates Pri vs Sec by
+   whether the invites have already been created / sent. #}
+{% set _invitations_actionable = is_validated or is_ready %}
+{% set _create_invites_live = _invitations_actionable %}
+{% set _create_invites_primary = _invitations_actionable and not invitations_generated %}
+{% set _send_invites_live = _invitations_actionable and invitations_generated %}
+{% set _send_invites_primary = _invitations_actionable and invitations_generated and not invitations_sent %}
 {% set _send_reminders_live = is_ready and invitations_sent %}
 <div class="card next-action" id="next-action">
   <h2>Workflow</h2>
@@ -117,8 +121,17 @@
       <p>Run <strong>Prepare session</strong> to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate.</p>
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
-        {# State 4 / 4W / (5 / 6 — unreachable until Part 2). #}
-        <p>Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses.</p>
+        {% if invitations_sent %}
+          {# State 6 — Prepared, invites already sent. Reviewers
+             have been notified; Activate opens responses. #}
+          <p>Reviewers have been notified that the review will open. Activate the session when you're ready to receive responses.</p>
+        {% elif invitations_generated %}
+          {# State 5 — Prepared, invites drafted but not sent. #}
+          <p>Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards.</p>
+        {% else %}
+          {# State 4 / 4W — Prepared, no invites yet. #}
+          <p>Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses.</p>
+        {% endif %}
         {% if validation_summary.needs_acknowledge %}
           <p class="form-help" style="margin: 0;">
             {{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}
@@ -190,6 +203,8 @@
         {% endif %}
         <input type="hidden" name="confirm" value="true">
       </form>
+    {% endif %}
+    {% if _invitations_actionable %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/generate"
             id="next-action-generate-invites-form">
@@ -202,6 +217,8 @@
         <input type="hidden" name="return_to"
                value="{{ _next_action_return_to or 'home' }}">
       </form>
+    {% endif %}
+    {% if is_ready %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
             id="next-action-send-reminders-form">
