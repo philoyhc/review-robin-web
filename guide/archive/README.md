@@ -124,3 +124,4 @@ alongside its replacement.
 | `segment_18B_date_and_time_settings.md` | 452 | Segment 18B — date and time settings (display formatting + timezones). |
 | `segment_18C_retention_deletion.md` | 159 | Segment 18C — operator-triggered purge ("Purge and archive" expander action). |
 | `segment_18D_export_and_import_update.md` | 426 | Segment 18D — export / import update (Parts 3 / 5 ride 13C and 18F Part 4). |
+| `segment_18E_small_enhancements.md` | 157 | Segment 18E — small enhancements holding pen (Parts 1-3 shipped 2026-05-18: column-visibility chips, eligible-pair count cache, friendly-label Fields-with-data pills). Closed 2026-05-20; future small enhancements land on Segment 18H. |
