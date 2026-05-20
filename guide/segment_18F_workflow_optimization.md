@@ -216,59 +216,71 @@ committed parts):
 The card goes back to **50% / 50%** column widths
 (`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)`,
 restoring the 50/50 split that pre-dated the 15E 60/40 stepper).
-Each column hosts **one row of buttons** that fills its column's
-width — the columns split the lifecycle by phase:
+The role of each column is unchanged from today's spec — the
+left column carries the body copy and the action buttons, the
+right column carries the per-state status aside (validation
+issues, invitation counts, deadline). The buttons stay where
+they live now (left column); the only structural change vs
+today is that they form **two rows** instead of one
+five-button row, with both rows filling the left column's
+width:
 
 ```
-┌── Workflow (H2) ──────────────────────────────────────────────┐
-│ <p>State-specific body copy (spans both columns)</p>          │
-│ ┌─ .next-action-prep (50%) ──┐ ┌─ .next-action-run (50%) ───┐ │
-│ │ Per-state status note      │ │ Per-state status note      │ │
-│ │ (validation issues, etc.)  │ │ (invite counts, deadline)  │ │
-│ │                            │ │                            │ │
-│ │ ┌── prep-actions row ───┐  │ │ ┌── run-actions row ────┐  │ │
-│ │ │ Revert │ Prepare │    │  │ │ │ Send │ Activate │ Send │  │ │
-│ │ │ to     │ session │ Cr │  │ │ │ inv- │ session  │ rem- │  │ │
-│ │ │ draft  │         │ inv│  │ │ │ ites │          │ inde │  │ │
-│ │ └───────────────────────┘  │ │ │      │          │ rs   │ │ │
-│ │                            │ │ │      │          │      │ │ │
-│ │                            │ │ │      │          │ Close│ │ │
-│ │                            │ │ └──────────────────────┘  │ │
-│ └────────────────────────────┘ └────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────┘
+┌── Workflow (H2) ─────────────────────────────────────────────┐
+│ ┌─ .next-action-main (50%) ──┐ ┌─ .next-action-status (50%)┐ │
+│ │ <p>State-specific body</p> │ │ State-specific status /  │ │
+│ │                            │ │ errors aside.            │ │
+│ │ ┌── prep-actions row ───┐  │ │                          │ │
+│ │ │ Revert │ Prepare │ Cr-│  │ │                          │ │
+│ │ │ to draft│ session│ inv│  │ │                          │ │
+│ │ └────────────────────────┘  │ │                          │ │
+│ │ ┌── run-actions row ────┐   │ │                          │ │
+│ │ │ Send │ Activate│ Send│Cl│ │ │                          │ │
+│ │ │ inv- │ session │ rem-│os│ │ │                          │ │
+│ │ │ ites │         │ inde│e │ │ │                          │ │
+│ │ └─────────────────────────┘ │ │                          │ │
+│ └─────────────────────────────┘ └──────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 (Schematic only — exact CSS settles at PR time. Each button
-takes `1 / button_count` of its column's width: row 1's three
-buttons are 33.33% of the left column; row 2's four buttons are
-25% of the right column.)
+takes `1 / button_count` of the left column's width: row 1's
+three buttons are 33.33% of the left column; row 2's four
+buttons are 25%.)
 
-- **Left column — preparation phase.** Three buttons: **Revert
-  to draft · Prepare session · Create invites**. Hosts the
-  "before reviewers see anything" actions.
-- **Right column — run phase.** Four buttons: **Send invites ·
-  Activate session · Send reminders · Close session**. Hosts the
-  "reviewers are now in the loop" actions.
-- **Body copy** spans both columns at the top of the card; each
-  column may carry a small per-state note above its button row
-  (e.g. validation-issue summary on the left, sent-invitation
-  counts on the right). State-specific failure banners (the
-  super-button failure envelope) stay above the column grid.
-- Below the ~720 px responsive breakpoint the columns stack
-  (same convention as today), so the prep row sits above the
-  run row.
+- **Left column — body + two action rows.** **Row 1 (prep
+  phase):** Revert to draft · Prepare session · Create invites
+  — the "before reviewers see anything" actions. **Row 2 (run
+  phase):** Send invites · Activate session · Send reminders ·
+  Close session — the "reviewers are now in the loop" actions.
+  Both rows render in every state; per-state styling drives
+  which buttons are Primary / Secondary / inert.
+- **Right column — per-state status aside.** Unchanged role
+  from the current spec: validation issue list in error
+  states, invitation counts / deadline in run states, the
+  reconcile-detour confirmation banner when fired, the
+  super-button failure banner when fired.
+- State-specific failure banners stay above the two-column
+  grid (same convention as today).
+- Below the ~720 px responsive breakpoint the right column
+  drops below the left (same convention as today), so the
+  reading order is: body → prep row → run row → status aside.
 
 ### Button vocabulary
 
-| Button | Column | POST | Effect |
+Both rows live in the **left column** (see Layout above). "Row"
+below is the visual row within the left column — not a separate
+card column.
+
+| Button | Row | POST | Effect |
 | --- | --- | --- | --- |
-| Revert to draft | Prep | existing revert route | `ready → draft` or `validated → draft`, keeping responses. |
-| Prepare session | Prep | new `/workflow/prepare` (Generate + Validate) | replaces the 15E super-button's pre-Activate steps; lands in `validated` on clean validation, stays in `draft` on errors. |
-| Create invites | Prep | `/invitations/generate` | idempotent — creates one row per assigned active reviewer not yet invited. Live from **Validated** (per Part 2's invite-gate relaxation). |
-| Send invites | Run | `/invitations/send-all` | sends every unsent `Invitation`. Live from Validated. |
-| Activate session | Run | `/workflow/activate` (now solo, not a super-button) | `validated → ready`, opens every instrument, emits `session.activated`. |
-| Send reminders | Run | `/invitations/remind-all` | nudges reviewers with outstanding responses. |
-| **Close session** | Run | **same route as Revert to draft** | "exact same backend behaviour as Revert"; the separate label only signals the operator's intent (review window ended vs editing setup). Renders in the Run column with destructive styling. |
+| Revert to draft | 1 (prep) | existing revert route | `ready → draft` or `validated → draft`, keeping responses. |
+| Prepare session | 1 (prep) | new `/workflow/prepare` (Generate + Validate) | replaces the 15E super-button's pre-Activate steps; lands in `validated` on clean validation, stays in `draft` on errors. |
+| Create invites | 1 (prep) | `/invitations/generate` | idempotent — creates one row per assigned active reviewer not yet invited. Live from **Validated** (per Part 2's invite-gate relaxation). |
+| Send invites | 2 (run) | `/invitations/send-all` | sends every unsent `Invitation`. Live from Validated. |
+| Activate session | 2 (run) | `/workflow/activate` (now solo, not a super-button) | `validated → ready`, opens every instrument, emits `session.activated`. |
+| Send reminders | 2 (run) | `/invitations/remind-all` | nudges reviewers with outstanding responses. |
+| **Close session** | 2 (run) | **same route as Revert to draft** | "exact same backend behaviour as Revert"; the separate label only signals the operator's intent (review window ended vs editing setup). |
 
 ### State machine cascade (proposed)
 
@@ -315,7 +327,7 @@ new pre-activation invite states.)
 Revert / Close never promote to Primary — they're recovery /
 close-out paths, not the next forward step.
 
-**Left column — prep row (Revert · Prepare · Create invites)**
+**Row 1 (prep) — Revert · Prepare · Create invites**
 
 | Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -323,14 +335,14 @@ close-out paths, not the next forward step.
 | Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | — | — | — |
 | Create invites | — | — | — | **Pri** | **Pri** | Sec | Sec | **Pri** | Sec | Sec |
 
-**Right column — run row (Send invites · Activate · Send reminders · Close session)**
+**Row 2 (run) — Send invites · Activate · Send reminders · Close session**
 
 | Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Send invites | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
 | Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | **Pri** | **Pri** | — | — | — |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
-| Close session | — | — | — | — | — | — | — | Sec | Sec | **Pri** (destructive style) |
+| Close session | — | — | — | — | — | — | — | Sec | Sec | **Pri** |
 
 (`Create invites` is idempotent, so it remains Secondary-live
 after the first generation in case the roster gains an
@@ -345,19 +357,21 @@ spec.)
 - **Body-copy phrasing.** Wording above is placeholder; refine
   against the existing copy register (`spec/workflow_card.md`
   §"Per-state body copy" is the style anchor).
-- **Per-column status notes.** Decide whether the validation
-  issue list keeps its current right-aside slot or moves into
-  the left column's per-state note area; same question for the
-  invite counts (right column) and the deadline display.
+- **Status aside content.** The right column's role is
+  unchanged from today (validation issues, invite counts,
+  deadline). Decide whether the new pre-activation invite
+  states (4 / 5 / 6 with invites generated / sent) introduce
+  any new aside content, or just re-use the existing
+  "invitations created / sent" counters.
 - **Close-session styling.** Render as `.btn.destructive` like
   other destructive operator buttons, or keep Secondary with a
   destructive icon? "Close" is less drastic than "Revert" from
   the operator's mental model (the review just ended), so
   Secondary may be appropriate.
-- **State 6 → 7 jump.** Activating from State 6 (invites already
-  sent in Validated) lands in State 9 directly — the right-
-  column note should make that consequence clear before the
-  click.
+- **State 6 → 9 jump.** Activating from State 6 (invites
+  already sent in Validated) lands in State 9 directly — the
+  right-column status aside should make that consequence clear
+  before the click.
 - **Reconcile detour preservation.** The saved-response
   confirmation detour (today on the super-button) attaches to
   the new **Prepare session** button. Same mechanics, same
