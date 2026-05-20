@@ -203,6 +203,166 @@ committed parts):
 - Any lifecycle seams the participant-model arc (segments 21+)
   will need — recorded as pre-positioning notes, not built here.
 
+## Revamped Workflow card — proposed layout, states, and buttons (draft for planning)
+
+> **Status:** Draft — captured for planning so the spec rewrite
+> at PR time has a target. Final wording, exact pill copy, and
+> the warnings-detour mechanics settle at PR scoping.
+> `spec/workflow_card.md` is not edited until the implementation
+> PR lands.
+
+### Layout
+
+The card goes back to **50% / 50%** column widths
+(`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)`,
+restoring the 50/50 split that pre-dated the 15E 60/40 stepper).
+Each column hosts **one row of buttons** that fills its column's
+width — the columns split the lifecycle by phase:
+
+```
+┌── Workflow (H2) ──────────────────────────────────────────────┐
+│ <p>State-specific body copy (spans both columns)</p>          │
+│ ┌─ .next-action-prep (50%) ──┐ ┌─ .next-action-run (50%) ───┐ │
+│ │ Per-state status note      │ │ Per-state status note      │ │
+│ │ (validation issues, etc.)  │ │ (invite counts, deadline)  │ │
+│ │                            │ │                            │ │
+│ │ ┌── prep-actions row ───┐  │ │ ┌── run-actions row ────┐  │ │
+│ │ │ Revert │ Prepare │    │  │ │ │ Send │ Activate │ Send │  │ │
+│ │ │ to     │ session │ Cr │  │ │ │ inv- │ session  │ rem- │  │ │
+│ │ │ draft  │         │ inv│  │ │ │ ites │          │ inde │  │ │
+│ │ └───────────────────────┘  │ │ │      │          │ rs   │ │ │
+│ │                            │ │ │      │          │      │ │ │
+│ │                            │ │ │      │          │ Close│ │ │
+│ │                            │ │ └──────────────────────┘  │ │
+│ └────────────────────────────┘ └────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────┘
+```
+
+(Schematic only — exact CSS settles at PR time. Each button
+takes `1 / button_count` of its column's width: row 1's three
+buttons are 33.33% of the left column; row 2's four buttons are
+25% of the right column.)
+
+- **Left column — preparation phase.** Three buttons: **Revert
+  to draft · Prepare session · Create invites**. Hosts the
+  "before reviewers see anything" actions.
+- **Right column — run phase.** Four buttons: **Send invites ·
+  Activate session · Send reminders · Close session**. Hosts the
+  "reviewers are now in the loop" actions.
+- **Body copy** spans both columns at the top of the card; each
+  column may carry a small per-state note above its button row
+  (e.g. validation-issue summary on the left, sent-invitation
+  counts on the right). State-specific failure banners (the
+  super-button failure envelope) stay above the column grid.
+- Below the ~720 px responsive breakpoint the columns stack
+  (same convention as today), so the prep row sits above the
+  run row.
+
+### Button vocabulary
+
+| Button | Column | POST | Effect |
+| --- | --- | --- | --- |
+| Revert to draft | Prep | existing revert route | `ready → draft` or `validated → draft`, keeping responses. |
+| Prepare session | Prep | new `/workflow/prepare` (Generate + Validate) | replaces the 15E super-button's pre-Activate steps; lands in `validated` on clean validation, stays in `draft` on errors. |
+| Create invites | Prep | `/invitations/generate` | idempotent — creates one row per assigned active reviewer not yet invited. Live from **Validated** (per Part 2's invite-gate relaxation). |
+| Send invites | Run | `/invitations/send-all` | sends every unsent `Invitation`. Live from Validated. |
+| Activate session | Run | `/workflow/activate` (now solo, not a super-button) | `validated → ready`, opens every instrument, emits `session.activated`. |
+| Send reminders | Run | `/invitations/remind-all` | nudges reviewers with outstanding responses. |
+| **Close session** | Run | **same route as Revert to draft** | "exact same backend behaviour as Revert"; the separate label only signals the operator's intent (review window ended vs editing setup). Renders in the Run column with destructive styling. |
+
+### State machine cascade (proposed)
+
+```
+if is_setup_empty:                              → State 1
+elif is_draft:
+    if validation_summary.has_errors:           → State 3
+    else:                                       → State 2
+elif is_validated:
+    if invitations.none:
+        if has_unacknowledged_warnings:         → State 4W
+        else:                                   → State 4
+    elif invitations.generated_not_sent:        → State 5
+    else (invitations.sent):                    → State 6
+elif is_ready:
+    if invitations.none:                        → State 7
+    elif invitations.generated_not_sent:        → State 8
+    else (invitations.sent):                    → State 9
+```
+
+(Ten states, same count as the current spec but rebalanced
+around Prepare / Activate as distinct buttons and around the
+new pre-activation invite states.)
+
+### Per-state body copy (proposed)
+
+| State | Trigger | Body copy (placeholder wording — refine at PR time) |
+| --- | --- | --- |
+| **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
+| **2** | `is_draft`, no validation errors | "Run **Prepare session** — generates the assignment pairs and validates that the setup is ready for prime time. Nothing goes live until you activate." |
+| **3** | `is_draft`, validation errors | "Validation didn't pass. Resolve the errors and re-run Prepare. The issue list is in the right column." |
+| **4** | `is_validated`, no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to open responses." |
+| **4W** | `is_validated`, warnings | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
+| **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." |
+| **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." |
+| **7** | `is_ready`, no invitations | "Session is open for responses. Create invites and send them so reviewers know they can start." |
+| **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
+| **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind, and Close session when the review window ends." |
+
+### Workflow stepper — proposed button matrix
+
+`Pri` = Primary live, `Sec` = Secondary live, `—` = inert
+(rendered in Secondary style, `disabled aria-disabled="true"`).
+Revert / Close never promote to Primary — they're recovery /
+close-out paths, not the next forward step.
+
+**Left column — prep row (Revert · Prepare · Create invites)**
+
+| Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | — | — | — |
+| Create invites | — | — | — | **Pri** | **Pri** | Sec | Sec | **Pri** | Sec | Sec |
+
+**Right column — run row (Send invites · Activate · Send reminders · Close session)**
+
+| Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Send invites | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
+| Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | **Pri** | **Pri** | — | — | — |
+| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
+| Close session | — | — | — | — | — | — | — | Sec | Sec | **Pri** (destructive style) |
+
+(`Create invites` is idempotent, so it remains Secondary-live
+after the first generation in case the roster gains an
+uninvited reviewer; the matrix above pins it at Sec / Pri based
+on whether *all* currently-eligible reviewers are already
+invited. `Send invites` follows the same shape on already-sent
+invites. Both detail behaviours stay the same as the current
+spec.)
+
+### Open clarifications for PR scoping
+
+- **Body-copy phrasing.** Wording above is placeholder; refine
+  against the existing copy register (`spec/workflow_card.md`
+  §"Per-state body copy" is the style anchor).
+- **Per-column status notes.** Decide whether the validation
+  issue list keeps its current right-aside slot or moves into
+  the left column's per-state note area; same question for the
+  invite counts (right column) and the deadline display.
+- **Close-session styling.** Render as `.btn.destructive` like
+  other destructive operator buttons, or keep Secondary with a
+  destructive icon? "Close" is less drastic than "Revert" from
+  the operator's mental model (the review just ended), so
+  Secondary may be appropriate.
+- **State 6 → 7 jump.** Activating from State 6 (invites already
+  sent in Validated) lands in State 9 directly — the right-
+  column note should make that consequence clear before the
+  click.
+- **Reconcile detour preservation.** The saved-response
+  confirmation detour (today on the super-button) attaches to
+  the new **Prepare session** button. Same mechanics, same
+  banner — moved off Activate.
+
 ## Hard dependencies
 
 - **Part 1** is self-contained — no dependency beyond the
