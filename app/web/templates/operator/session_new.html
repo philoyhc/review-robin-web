@@ -13,7 +13,7 @@
           action="/operator/sessions"
           id="create-session-form"
           enctype="multipart/form-data">
-      <div class="page-grid">
+      <div class="page-grid" style="margin-bottom: 0;">
         <div>
           <label for="name">Name</label>
           <input type="text" id="name" name="name" required maxlength="255">
@@ -67,7 +67,7 @@
          on the left (under Help contact), End on the right (under
          Start), so the page's last visible row aligns Save /
          Cancel with the End input across the grid. #}
-      <div class="page-grid" style="margin-top: var(--space-4); align-items: end;">
+      <div class="page-grid" style="margin-top: 0; align-items: end;">
         <div class="btn-pair">
           <button class="btn" type="submit">Create session</button>
           <a class="btn secondary" href="/operator/sessions">Cancel</a>
