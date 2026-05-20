@@ -214,6 +214,27 @@ instruments collapse the fan-out (one row per (reviewer, group,
 field)) and post-sort by the composed group identity so a group's
 rows cluster together.
 
+### 2.8 Reviewer session summary — `extracts/responses_extract.py` (`serialize_reviewer_session_summary`)
+
+Shipped 17B Phase 2 PR B. The **per-reviewer** participation
+record downloaded from
+`GET /reviewer/sessions/{id}/summary.csv` as
+``{code}_my_responses.csv``. Gated on whole-session submission
+— a partial reviewer redirects to the dashboard. Reviewers
+get this download from the surface (and the dashboard's
+Session column once Reviewer Status is `submitted`).
+
+Same 21-column long-format header as §2.4. The file leads with
+a per-instrument preamble + field dictionary for every
+instrument the reviewer responded on — instruments they
+weren't assigned to (or that they have no `Response` rows on)
+are omitted, so the file is narrower than the unified
+Responses CSV. Group-scoped instruments collapse the same way
+(one row per (this reviewer, instrument, group, field)).
+Builds on the same `_response_row_tuple` factored out in §2.7
+so a per-cell rename flows through to every file in this
+family.
+
 ---
 
 ## 3. Four importers (input contracts)
@@ -396,6 +417,7 @@ shares. Public surface:
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
 | Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above plus the two bundle-only entity-stats CSVs and one bundle-only `instrument_{n}.csv` per instrument (`GET /export/bundle.zip`, Segment 18D PR E1 / 18H Parts 2 + 3) | same |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
+| Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /reviewer/sessions/{id}/summary.csv`, Segment 17B Phase 2 PR B) | `spec/reviewer-surface.md` "Per-session summary" |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |
