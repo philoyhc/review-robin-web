@@ -88,7 +88,7 @@ _EXPECTED_KEYS = {
     "validation_issues_by_severity",
     "setup_checklist",
     "super_failure",
-    "activate_confirm",
+    "prepare_confirm",
     "next_action_return_to",
 }
 
@@ -176,18 +176,49 @@ def test_builder_validated_just_ran_promotes_draft_to_validated(
     assert ctx["validation_summary"]["can_activate"] is True
 
 
-def test_parse_super_failure_decodes_query_param_triple() -> None:
+def test_parse_super_failure_decodes_query_params() -> None:
+    """The decoder reads the four ``super_*`` query params from a
+    failure-bound redirect and resolves the active button. Absent
+    ``super_button``, the step name implies it (generate / validate
+    → prepare; activate → activate); precondition falls back to
+    prepare."""
     assert views.parse_super_failure(None, None, None) is None
     assert (
-        views.parse_super_failure("anything-else", "step", "err") is None
+        views.parse_super_failure(
+            "anything-else", "step", "err", "prepare"
+        )
+        is None
     )
+    # No button param + unknown step → prepare fallback.
     assert views.parse_super_failure("failed", None, None) == {
+        "button": "prepare",
         "step": "unknown",
         "error": "",
     }
+    # Step name implies the button when ``super_button`` is absent
+    # (legacy URL).
     assert views.parse_super_failure(
         "failed", "validate", "Validation failed."
     ) == {
+        "button": "prepare",
         "step": "validate",
         "error": "Validation failed.",
+    }
+    assert views.parse_super_failure(
+        "failed", "activate", "Activate raised."
+    ) == {
+        "button": "activate",
+        "step": "activate",
+        "error": "Activate raised.",
+    }
+    # Explicit ``super_button`` wins (e.g. precondition on Activate).
+    assert views.parse_super_failure(
+        "failed",
+        "precondition",
+        "Session is already activated.",
+        "activate",
+    ) == {
+        "button": "activate",
+        "step": "precondition",
+        "error": "Session is already activated.",
     }

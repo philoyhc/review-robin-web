@@ -148,9 +148,11 @@ def test_workflow_card_renders_two_column_grid(
     assert 'class="next-action-status"' in body
     assert 'id="next-action-status"' in body
     # The body and stepper-buttons divs still render inside the
-    # left-column ``next-action-main`` wrapper.
+    # left-column ``next-action-main`` wrapper. 18F Part 1 wraps the
+    # buttons in two rows (``next-action-buttons-row``); the parent
+    # ``next-action-buttons`` class is still on each row's div.
     assert 'class="next-action-body"' in body
-    assert 'class="next-action-buttons"' in body
+    assert "next-action-buttons-row" in body
     # The grid wrapper sits inside the card, after the H2.
     card_open = body.find('id="next-action"')
     grid_open = body.find('class="next-action-grid"')
@@ -161,31 +163,24 @@ def test_workflow_card_renders_two_column_grid(
     assert main_open != -1 and status_open != -1 and status_open > main_open
 
 
-def test_activate_session_super_button_form_targets_workflow_route(
+def test_prepare_session_form_targets_workflow_route(
     client: TestClient, db: Session
 ) -> None:
-    """Draft session past setup-empty → Workflow card's Activate
-    session super-button form posts to /workflow/activate, not the
-    retired per-step routes (/assignments/generate or /activate).
-    Replaces the pre-PR-3 test that asserted the Validate setup link
-    pointed at /assignments?validated=1; that link retired with the
-    super-button collapse."""
-    review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-form")
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
-        follow_redirects=False,
-    )
+    """Draft session past setup-empty → Workflow card's Prepare
+    session form posts to /workflow/prepare. Per 18F Part 1 the
+    super-button split: Prepare runs Generate + Validate, Activate
+    runs Activate only."""
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-prepare-form")
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert 'id="next-action-activate-session-form"' in body
+    assert 'id="next-action-prepare-form"' in body
     assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/activate"'
+        f'action="/operator/sessions/{review_session.id}/workflow/prepare"'
         in body
     )
-    # Retired per-step links / forms must not render in the card.
+    # Retired per-step forms must not render in the card.
     assert 'id="next-action-generate-form"' not in body
-    assert 'id="next-action-activate-form"' not in body
 
 
 def test_validated_query_param_promotes_draft_to_validated_on_assignments(
@@ -467,26 +462,22 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
 def test_session_home_renders_workflow_card_with_return_to_home(
     client: TestClient, db: Session
 ) -> None:
-    """Session Home hosts the Workflow card too (PR 6 of
-    spec/workflow_card.md). The card's forms post back to
-    Session Home via ``return_to=home`` rather than to an
-    Operations-row page."""
+    """Session Home hosts the Workflow card too. The card's forms
+    post back to Session Home via ``return_to=home`` rather than to
+    an Operations-row page. Per 18F Part 1 the draft+populated state
+    shows the Prepare-session form as the primary forward action."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
-        follow_redirects=False,
-    )
     body = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
-    # Activate session super-button form carries return_to=home.
+    # Prepare session form carries return_to=home.
     import re
-    activate_form = re.search(
-        r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
+    prepare_form = re.search(
+        r'(<form[^>]*id="next-action-prepare-form"[^>]*>.*?</form>)',
         body,
         re.DOTALL,
     )
-    assert activate_form is not None
-    assert 'value="home"' in activate_form.group(1)
+    assert prepare_form is not None
+    assert 'value="home"' in prepare_form.group(1)

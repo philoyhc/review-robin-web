@@ -850,19 +850,28 @@ bottom of this file.
   improvements land there as new Parts rather than reopening 18E.
   **Plan:** `guide/archive/segment_18E_small_enhancements.md`.
 
-- **18F — Workflow optimization** *(stub created 2026-05-19)*.
-  A deliberate end-to-end work-through of the operator workflow —
-  the session journey from setup through preparation, activation,
-  the review window, and close-out. **Part 1** is committed: split
-  the Workflow-card super-button into **"Prepare"** (Validate +
-  Generate) and **"Activate"**, restoring a pre-activation window
-  where assignments exist and the reviewer surface is previewable
-  but nothing is live. (The super-button collapsed Validate →
-  Generate → Activate, so today preview is impossible until the
-  session is already activated.) The rest of the segment is the
-  holistic pass — pre-positioning the lifecycle so 18G scheduling
-  and the segments-21+ participant model slot in cleanly. Leads
-  18G. **Plan:** `guide/segment_18F_workflow_optimization.md`.
+- **18F — Workflow optimization** *(stub created 2026-05-19; Part 1
+  shipped 2026-05-20)*. A deliberate end-to-end work-through of
+  the operator workflow — the session journey from setup through
+  preparation, activation, the review window, and close-out.
+  **Part 1 (shipped 2026-05-20):** the Workflow-card super-button
+  split into **Prepare** (Generate + Validate) and **Activate**
+  (Activate only) — the reviewer surface is previewable from
+  `validated` while nothing is live, and operators get a pre-
+  activation window. The card itself moved to a 50/50 column
+  grid with two rows of buttons in the left column (prep / run),
+  the 10-state cascade was renumbered onto stable IDs, the
+  reconcile-detour saved-response confirmation migrated onto
+  Prepare, and audit events carry `context.button="prepare_session"`
+  or `"activate_session"`. Close session deferred to the
+  `expired` lifecycle work. **Part 2 (open):** pre-activation
+  invitations + reviewer pre-open / closed pages (relax the
+  `_require_ready` gate so invites can fire from Validated and
+  add the reviewer surfaces for sessions not yet open / now
+  closed). **Part 3+ (TBD):** holistic pass — pre-positioning
+  the lifecycle so 18G scheduling and the segments-21+
+  participant model slot in cleanly. Leads 18G. **Plan:**
+  `guide/segment_18F_workflow_optimization.md`.
 
 - **18G — Scheduled events** *(stub created 2026-05-17;
   renumbered from 18F on 2026-05-19)*.

@@ -54,9 +54,10 @@ def assignments_hub(
     needs_confirm: int | None = Query(default=None),
     validated: bool = Query(default=False),
     super_status: str | None = Query(default=None),
+    super_button: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
     super_error: str | None = Query(default=None),
-    activate_confirm: str | None = Query(default=None),
+    prepare_confirm: str | None = Query(default=None),
     q: str = Query(default=""),
     search_by: str = Query(default="all"),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -76,9 +77,9 @@ def assignments_hub(
         missing_confirm=needs_confirm == 1,
         validated_just_ran=validated,
         super_failure=views.parse_super_failure(
-            super_status, super_step, super_error
+            super_status, super_step, super_error, super_button
         ),
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
         search=q,
         search_by=search_by,
     )
@@ -132,7 +133,7 @@ def _render_assignments_hub(
     is_blocked: bool = False,
     validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     search: str = "",
     search_by: str = "all",
 ) -> HTMLResponse:
@@ -229,7 +230,7 @@ def _render_assignments_hub(
         return_to="assignments",
         validated_just_ran=validated_just_ran,
         super_failure=super_failure,
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
         user=user,
         correlation_id=request_correlation_id(),
     )

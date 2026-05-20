@@ -58,9 +58,10 @@ def validate_session(
     activate: int = 0,
     return_to: str | None = None,
     super_status: str | None = None,
+    super_button: str | None = None,
     super_step: str | None = None,
     super_error: str | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -103,9 +104,9 @@ def validate_session(
         review_session,
         return_to="validate",
         super_failure=views.parse_super_failure(
-            super_status, super_step, super_error
+            super_status, super_step, super_error, super_button
         ),
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
     )
     return _templates.TemplateResponse(
         request,
@@ -132,9 +133,10 @@ def previews_index(
     reviewer_email: str = "",
     email: str = "invitation",
     super_status: str | None = None,
+    super_button: str | None = None,
     super_step: str | None = None,
     super_error: str | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -204,9 +206,9 @@ def previews_index(
         review_session,
         return_to="previews",
         super_failure=views.parse_super_failure(
-            super_status, super_step, super_error
+            super_status, super_step, super_error, super_button
         ),
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
     )
     return _templates.TemplateResponse(
         request,
@@ -323,9 +325,10 @@ def invitations_index(
     status: str = "all",
     q: str = "",
     super_status: str | None = None,
+    super_button: str | None = None,
     super_step: str | None = None,
     super_error: str | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -363,9 +366,9 @@ def invitations_index(
         review_session,
         return_to="invitations",
         super_failure=views.parse_super_failure(
-            super_status, super_step, super_error
+            super_status, super_step, super_error, super_button
         ),
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
     )
     return _templates.TemplateResponse(
         request,
@@ -615,9 +618,10 @@ def session_responses(
     status: str = "all",
     q: str = "",
     super_status: str | None = None,
+    super_button: str | None = None,
     super_step: str | None = None,
     super_error: str | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -654,9 +658,9 @@ def session_responses(
         review_session,
         return_to="responses",
         super_failure=views.parse_super_failure(
-            super_status, super_step, super_error
+            super_status, super_step, super_error, super_button
         ),
-        activate_confirm=activate_confirm,
+        prepare_confirm=prepare_confirm,
     )
     return _templates.TemplateResponse(
         request,

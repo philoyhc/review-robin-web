@@ -144,10 +144,12 @@ def test_validate_page_renders_workflow_card_with_return_to_validate(
     ).text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
-    # Activate session super-button form carries return_to=validate.
+    # Prepare-session form carries return_to=validate so the post-
+    # action redirect lands back on this page (per 18F Part 1; the
+    # validate page is the host of choice in a draft session).
     import re
     form = re.search(
-        r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
+        r'(<form[^>]*id="next-action-prepare-form"[^>]*>.*?</form>)',
         body,
         re.DOTALL,
     )

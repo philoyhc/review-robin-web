@@ -2,10 +2,20 @@
 
 The **Workflow card** is the single persistent action card at the
 top of every operator session page. It carries state-aware
-explanatory copy, a uniform five-stage button stepper, and a
-right-column status / errors aside. The card is the canonical
-entry-point for every lifecycle-advancing action on a session —
-from generating assignments through to sending reminders.
+explanatory copy, **two rows of action buttons** (a prep row and a
+run row, both in the left column), and a right-column status /
+errors aside. The card is the canonical entry-point for every
+lifecycle-advancing action on a session — from preparing the
+assignment pairs through to sending reminders.
+
+Segment 18F Part 1 split the previous Activate "super-button"
+(Generate + Validate + Activate as one click) into a dedicated
+**Prepare session** button (Generate + Validate) and a solo
+**Activate session** button. The reconcile-detour saved-response
+confirmation moved onto Prepare; the warnings-detour
+(`/validate?activate=1`) stays on Activate. **Close session** is
+deferred until the `expired` lifecycle status work lands; until
+then, ending a review window is by Revert in this card.
 
 The card was originally called "Next Action" and the template /
 CSS class names still use the `next_action` prefix; the H2 title
@@ -46,7 +56,7 @@ The allowlist is `_REVERT_RETURN_TO` in
 Every page route builds the card's context with one call to
 `views.build_workflow_card_context(db, review_session, *,
 return_to, validated_just_ran=False, super_failure=None,
-activate_confirm=None, user=None, correlation_id=None)` and merges
+prepare_confirm=None, user=None, correlation_id=None)` and merges
 the returned dict into
 its template context via `**workflow_ctx`. The builder lives in
 `app/web/views/_workflow_card.py`. It returns:
@@ -58,12 +68,11 @@ its template context via `**workflow_ctx`. The builder lives in
   instrument has no assignment rule pinned (checked via
   `instruments.has_unpinned`, which also returns `True` when the
   session has zero instruments).
-- `is_pre_generate` — `True` iff session is in draft,
-  `is_setup_empty` is `False`, AND either no `Assignment` rows
-  exist yet OR the most recent revert
-  (`session.invalidated` or `session.reverted_to_draft`) is newer
-  than the most recent `assignments.generated` event
-  (`lifecycle.needs_regeneration_after_revert`).
+- `is_pre_generate` — legacy predicate; retained on the context
+  for callers that still consume it. The 18F Part 1 cascade no
+  longer branches on it (a draft+populated session lands in
+  State 2 regardless of whether Generate has run; Prepare's
+  reconcile handles both cases).
 - `invitations_generated` — `True` iff at least one `Invitation`
   row exists for the session (`invitations.has_invitations`).
 - `invitations_sent` — `True` iff at least one `Invitation` row
@@ -81,17 +90,18 @@ its template context via `**workflow_ctx`. The builder lives in
   `reviewees_ok`, `instruments_pinned_ok`) for the State 1 / 1A
   right-column checklist.
 - `super_failure` — `dict | None` decoded from the redirect's
-  `?super_status=failed&super_step=...&super_error=...` query-
-  param triple via `views.parse_super_failure`. Drives the
-  right-column failure banner.
-- `activate_confirm` — `dict | None`. Populated
-  (`responses_deleted` / `deleted_pairs` keys) when the builder is
-  called with `activate_confirm="responses"` AND a dry-run
-  reconcile (`assignments.reconcile_impact`) shows a run would
-  delete one or more responses. Drives the saved-response
+  `?super_status=failed&super_button=...&super_step=...&super_error=...`
+  query-param set via `views.parse_super_failure`. Slots:
+  `button` (`"prepare"` / `"activate"`), `step`, `error`. Drives
+  the right-column failure banner's button-specific copy.
+- `prepare_confirm` — `dict | None`. Populated
+  (`responses_deleted` / `deleted_pairs` keys) when the builder
+  is called with `prepare_confirm="responses"` AND a dry-run
+  reconcile (`assignments.reconcile_impact`) shows a Prepare run
+  would delete one or more responses. Drives the saved-response
   confirmation banner in the card body. `None` outside the
-  super-button's `?activate_confirm=responses` detour and whenever
-  a run would delete no responses.
+  Prepare-button's `?prepare_confirm=responses` detour and
+  whenever a run would delete no responses.
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -103,9 +113,14 @@ populating the rest of the context. `user` and `correlation_id`
 must be passed in for that path to fire.
 
 A companion helper `views.parse_super_failure(super_status,
-super_step, super_error)` decodes the workflow super-button's
-redirect query-param triple into the `super_failure` dict (or
-`None`).
+super_step, super_error, super_button)` decodes the workflow
+buttons' redirect failure params into the `super_failure` dict
+(or `None`). The `super_button` slot identifies which button
+failed (`"prepare"` or `"activate"`) so the card's failure
+banner copy varies accordingly; when absent on a legacy URL it
+falls back from the step name (`generate` / `validate` →
+`"prepare"`; `activate` → `"activate"`; `precondition` →
+`"prepare"`).
 
 ## State machine
 
@@ -113,102 +128,134 @@ The card has ten states. The body and right column are chosen by
 this cascade in `next_action_card.html`:
 
 ```
-if is_setup_empty:           → State 1
-elif is_pre_generate:        → State 1A
-elif is_draft:
-    if validation_summary:   → State 3
-    else:                    → State 2
+if is_setup_empty:                              → State 1
+elif is_draft and validation_summary:           → State 3
+elif is_draft:                                  → State 2
 elif is_validated:
-    if can_activate:
-        if needs_acknowledge: → State 4B
-        else:                 → State 4A
-    else:                    → State 5
+    if not validation_summary.can_activate:     → State 4Err
+    elif needs_acknowledge:                     → State 4W
+    elif invitations.none:                      → State 4
+    elif invitations.generated_not_sent:        → State 5
+    else (invitations.sent):                    → State 6
 elif is_ready:
-    if not invitations_generated: → State 6
-    elif not invitations_sent:    → State 7
-    else:                         → State 8
+    if invitations.none:                        → State 7
+    elif invitations.generated_not_sent:        → State 8
+    else (invitations.sent):                    → State 9
 ```
+
+States 5 and 6 (validated with invitations created / sent) are
+reachable only once 18F Part 2 relaxes the
+`_require_ready` invitation gate; in Part 1 they render
+correctly when reached via direct URL but the buttons can't get
+the operator there. State 4Err is defensive — `mark_validated`
+only flips `draft → validated` on a clean report, so re-running
+Validate in the `validated` lifecycle and finding errors is rare
+(it requires a setup edit that the lifecycle's
+`invalidate_if_validated` hook missed).
 
 ### Per-state body copy
 
 | State | Trigger | Body |
 | --- | --- | --- |
-| **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing." |
-| **1A** | `is_pre_generate` | "Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs)." |
-| **2** | `is_draft`, no `validation_summary` | "Run validation to surface errors and warnings before activating. Validation never mutates session data." |
-| **3** | `is_draft` + `validation_summary` | "Validation didn't pass." + "Resolve the errors and re-run validation before activating." (pill row + per-issue list moves to the right column.) |
-| **4A** | `is_validated` + `can_activate` + not `needs_acknowledge` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." |
-| **4B** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4A plus help-line: "{N} warning(s) — review on Validate before activating." |
-| **5** | `is_validated`, not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." |
-| **6** | `is_ready`, no Invitation rows yet | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." |
-| **7** | `is_ready`, Invitation rows exist, none `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to send out emails to notify the reviewers." |
-| **8** | `is_ready`, at least one Invitation with `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. You may remind reviewers if needed." |
+| **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
+| **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs and validate that the setup is ready for prime time. Nothing goes live until you activate." |
+| **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." (pill row + per-issue list moves to the right column.) |
+| **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to receive responses." |
+| **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
+| **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
+| **5** | `is_validated`, invites generated, none sent (Part 2 only) | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." *(rendered in cascade; reachable post-18F-Part-2)* |
+| **6** | `is_validated`, invites sent (Part 2 only) | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." *(rendered in cascade; reachable post-18F-Part-2)* |
+| **7** | `is_ready`, no Invitation rows yet | "Session is open for responses. Create invites and send them so reviewers know they can start." |
+| **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
+| **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
 
 ## Layout
 
-The card uses a two-column inner grid via CSS:
+The card uses a two-column inner grid via CSS, with the body copy
+and **two rows of action buttons** in the left column and the
+per-state status aside in the right column:
 
 ```
-┌── Workflow (H2) ─────────────────────────────────────────────┐
-│                                                              │
-│  ┌─ .next-action-main ────────┐ ┌─ .next-action-status ────┐ │
-│  │ <p>State-specific body</p> │ │ State-specific status /  │ │
-│  │                            │ │ errors aside.            │ │
-│  │ <div .next-action-buttons>│ │                          │ │
-│  │   Five stepper buttons    │ │                          │ │
-│  │ </div>                    │ │                          │ │
-│  └────────────────────────────┘ └──────────────────────────┘ │
+┌── Workflow (H2) ──────────────────────────────────────────────┐
+│ ┌─ .next-action-main (50%) ──┐ ┌─ .next-action-status (50%) ┐ │
+│ │ <p>State-specific body</p> │ │ State-specific status /    │ │
+│ │                            │ │ errors aside.              │ │
+│ │ ┌── prep row ───────────┐  │ │                            │ │
+│ │ │ Revert │ Prepare │ Cr │  │ │                            │ │
+│ │ │ to     │ session │ in │  │ │                            │ │
+│ │ │ draft  │         │ v  │  │ │                            │ │
+│ │ └────────────────────────┘  │ │                            │ │
+│ │ ┌── run row ────────────┐   │ │                            │ │
+│ │ │ Send │ Activate│ Send │   │ │                            │ │
+│ │ │ inv- │ session │ rem- │   │ │                            │ │
+│ │ │ ites │         │ inde │   │ │                            │ │
+│ │ └────────────────────────┘  │ │                            │ │
+│ └─────────────────────────────┘ └────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-`grid-template-columns: minmax(0, 3fr) minmax(0, 2fr)` — the left
-column takes 60% and the right column 40%. The left column
-carries a 1px right border that reads as a vertical divider
-between the two columns; below ~720px viewport width the columns
-collapse to a single stacked column and the divider becomes a
-horizontal rule above the right-column content.
+`grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)` — both
+columns at 50% (restored from the 15E 60/40 split). The left
+column carries a 1px right border that reads as a vertical
+divider between the two columns; below ~720 px viewport width
+the columns collapse to a single stacked column and the divider
+becomes a horizontal rule above the right-column content.
+
+Each button row is a `.next-action-buttons.next-action-buttons-row`
+flex container whose children stretch (`flex: 1 1 0`) so the row's
+buttons distribute evenly across the left column's width.
 
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
 
-## Workflow stepper — uniform 5-button row
+## Workflow stepper — two rows of buttons
 
-Every state renders the same five-stage bottom row, in the same
-order — Revert to draft sits leftmost, then the forward stages in
-their workflow order:
+The left column hosts two rows of action buttons. **Row 1 (prep
+phase)** carries the actions an operator runs before reviewers
+see anything; **Row 2 (run phase)** carries the actions during
+and after the review window. Close session is **deferred until
+the `expired` lifecycle status work lands** — Row 2 ships with
+three buttons in this first 18F pass.
 
 ```
-Revert to draft · Activate session · Create invites · Send invites · Send reminders
+Row 1 (prep): Revert to draft · Prepare session · Create invites
+Row 2 (run):  Send invites · Activate session · Send reminders
 ```
 
-Each slot is either **live** (Primary or Secondary, clickable) or
-**inert** (`<button disabled aria-disabled="true">`, rendered in
-the Secondary style for visual consistency).
+Each slot is either **live** (Primary or Secondary, clickable)
+or **inert** (`<button disabled aria-disabled="true">`, rendered
+in the Secondary style for visual consistency). Revert is
+rendered in Secondary style whenever it's live — the stepper
+never promotes it to Primary.
 
-The matrix below shows what each slot does per state. `Pri` =
-Primary live, `Sec` = Secondary live, `—` = inert preview / past
-stage. Revert to draft is rendered in Secondary style whenever
-it's live — the stepper never promotes it to Primary.
+`Pri` = Primary live, `Sec` = Secondary live, `—` = inert.
 
-| Slot | 1 | 1A | 2 | 3 | 4A | 4B | 5 | 6 | 7 | 8 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
-| Activate session | — | **Pri** | **Pri** | **Pri** | **Pri** | **Pri** | — | — | — | — |
-| Create invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
-| Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
-| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
+**Row 1 (prep) — Revert · Prepare · Create invites**
+
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | Sec | — | — | — |
+| Create invites | — | — | — | **Pri** | **Pri** | — | Sec | Sec | **Pri** | Sec | Sec |
+
+**Row 2 (run) — Send invites · Activate · Send reminders**
+
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Send invites | — | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
+| Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | — | **Pri** | **Pri** | — | — | — |
+| Send reminders | — | — | — | — | — | — | — | — | — | — | **Pri** |
 
 (`Generate assignments` and `Validate setup` no longer render as
-their own stepper slots — they collapse into the **Activate
-session** super-button, which runs Generate → Validate → Activate
-in sequence. The two retired slots' state-specific behaviour is
-documented in §"Activate session super-button" below.)
+their own stepper slots — they live inside the **Prepare
+session** button, which runs Generate + Validate in sequence.
+See §"Prepare session" below.)
 
-### Activate session super-button
+### Prepare session
 
-The Activate session button POSTs to a single
-`/operator/sessions/{id}/workflow/activate` route in
-`_workflow.py` that runs three lifecycle steps in sequence:
+The Prepare session button POSTs to
+`/operator/sessions/{id}/workflow/prepare` in `_workflow.py`, which
+runs two lifecycle steps in sequence:
 
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,
@@ -221,112 +268,149 @@ The Activate session button POSTs to a single
    this step when it would delete responses.
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
-   clean, `lifecycle.mark_validated(...)` flips `draft →
-   validated`. When the report has errors, the chain stops here.
-3. **Activate.** `lifecycle.activate_session(...)` flips
-   `validated → ready`, opens every instrument
-   (`accepting_responses = True`), and emits
-   `session.activated`.
+   clean and the session is still `draft`,
+   `lifecycle.mark_validated(...)` flips `draft → validated`.
+   When the report has errors, the chain stops here — assignment
+   pairs survive, the session stays in `draft`, and the
+   right-column issue list surfaces the diagnostic.
 
-The route runs Validate + Activate from any `draft` / `validated`
-starting state, and the Generate step runs on every click.
+Pre-flight: Prepare runs only while the session is editable
+(`draft` / `validated`). A `ready` session must be reverted first.
 
 #### Saved-response confirmation detour
 
 A session reverted from `ready` back to `draft` keeps its
-responses (`revert_session_to_draft` preserves them). The Generate
-step's reconcile deletes responses for any pair the rule no longer
-produces (see `spec/reconciling_regeneration.md`), so re-activating
-such a session could destroy recorded data without warning.
+responses (`revert_session_to_draft` preserves them). The
+Generate step's reconcile deletes responses for any pair the rule
+no longer produces (see `spec/reconciling_regeneration.md`), so
+re-preparing such a session could destroy recorded data without
+warning.
 
 The detour is **impact-driven**: it fires only when a run would
 actually delete a response, not whenever responses merely exist.
-When the session is editable, has responses, and the POST carried
-no `acknowledge_response_loss` field, the route dry-runs the
-reconcile via `assignments.reconcile_impact(...)`. If that impact's
-`responses_deleted` is zero, the run proceeds straight through —
-no confirmation. If it is non-zero, the route 303s back to the host
-page with `?activate_confirm=responses`.
+When the session has responses and the POST carried no
+`acknowledge_response_loss` field, the route dry-runs the
+reconcile via `assignments.reconcile_impact(...)`. If that
+impact's `responses_deleted` is zero, the run proceeds straight
+through — no confirmation. If it is non-zero, the route 303s
+back to the host page with `?prepare_confirm=responses`.
 
-The workflow card decodes that param (via the `activate_confirm`
+The workflow card decodes that param (via the `prepare_confirm`
 builder kwarg, which re-runs `reconcile_impact` to populate the
 `responses_deleted` / `deleted_pairs` counts) and renders a
 confirmation banner in the card body:
 
-- **Regenerate & activate** posts back to `/workflow/activate` with
-  `acknowledge_response_loss=true`, which skips the detour so the
-  run proceeds: the reconcile deletes the responses on the orphaned
-  pairs, keeps the rest, and Validate + Activate follow.
-- **Cancel** is a plain link back to the host page — nothing runs.
+- **Regenerate & prepare** posts back to `/workflow/prepare`
+  with `acknowledge_response_loss=true`, which skips the detour
+  so the run proceeds: the reconcile deletes the responses on
+  the orphaned pairs, keeps the rest, and Validate follows.
+- **Cancel** is a plain link back to the host page — nothing
+  runs.
 
-Like the warnings detour, the confirmation detour writes no
-`workflow_run_failed` event — the run is paused at the
-operator-choice step, not failed.
+Like the warnings detour on Activate, the confirmation detour
+writes no `workflow_run_failed` event — the run is paused at
+the operator-choice step, not failed.
+
+### Activate session
+
+The Activate session button POSTs to
+`/operator/sessions/{id}/workflow/activate`. Pre-flight requires
+`validated` (Prepare must have run first) and refuses `ready`
+(already activated).
+
+The route recomputes the readiness report so a setup edit
+between Prepare and Activate is caught before the live flip.
+When the report has non-blocking findings, the route 303s to
+the **warnings detour** at `/validate?activate=1` (preserved
+from the pre-18F super-button); the operator acknowledges
+warnings inline and the Validate page's banner re-POSTs to
+`/workflow/activate` with `acknowledge_warnings=true`. When the
+report has errors (a regression vs the Prepare report), Activate
+raises and the route 303s back with `super_status=failed`.
+
+On clean activation, `lifecycle.activate_session(...)` flips
+`validated → ready`, opens every instrument
+(`accepting_responses = True`), and emits `session.activated`.
+
+If Activate raises after `mark_validated`'s promotion (defensive
+— `activate_session` itself is the only mutator), the except
+branch calls `lifecycle.invalidate_session(...)` to roll the
+session back to `draft`, mirroring the pre-18F super-button's
+rollback behaviour.
 
 #### Warnings detour
 
-When the readiness report has non-blocking findings (warnings or
-info), the super-button does NOT fire `/activate` directly.
-Instead it 303s to
+When the Activate route's recomputed readiness report has
+non-blocking findings, the route does NOT fire `activate_session`
+directly. Instead it 303s to
 `/operator/sessions/{id}/validate?activate=1&return_to=...`. The
 Validate page renders a yellow `.banner.banner-warning` with the
 warnings inline + an "Acknowledge and activate" submit; the
-operator clicks Acknowledge, and the existing `/activate` POST
-fires from that banner with `acknowledge_warnings=true`.
+operator clicks Acknowledge, and a follow-up `/workflow/activate`
+POST fires from that banner with `acknowledge_warnings=true`.
 
-In State 4B the workflow card renders the Activate session button
-as an `<a>` to the same warnings-detour URL so operators reach the
-acknowledgement step without going through the super-button POST
-in the first place.
+In State 4W the workflow card renders the Activate session
+button as an `<a>` to the same warnings-detour URL so operators
+reach the acknowledgement step without going through the Activate
+POST in the first place.
 
 #### Failure handling
 
-Each step is wrapped in a try/except that catches
+Both routes wrap their step chain in a try/except that catches
 `lifecycle.LifecycleError`, `ValueError`, and the route's
-internal `_StepFailed` sentinel. The handling differs per step:
+internal `_StepFailed` sentinel. The redirect URL carries
+`super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`
+so the right-column failure banner adapts.
 
-- **Generate raises.** No rollback (the route didn't get past
-  step 1). The redirect target carries
-  `?super_status=failed&super_step=generate&super_error=<msg>`.
-  Card lands in State 1 or State 1A on next render.
+**Prepare failures:**
+
+- **Generate raises.** No rollback. Redirect carries
+  `super_button=prepare&super_step=generate&super_error=<msg>`.
+  Card lands in State 2 (draft, no summary) on next render.
 - **Validate finds errors.** No rollback. The fresh assignments
-  stay; the next render computes `validation_summary` with errors
-  populated and the card lands in State 3 (left-column prose,
-  right-column pill row + per-issue list). The redirect target
-  carries `?super_status=failed&super_step=validate&super_error=<msg>`
-  so the right-column failure banner sits above the issue list.
-- **Activate raises.** The session has already been promoted to
-  `validated` at this point. The except branch calls
-  `lifecycle.invalidate_session(reason="workflow_run_rollback")`,
-  which emits a `session.invalidated` audit event. That event is
-  in the `revert_events` set checked by
-  `needs_regeneration_after_revert`, so the predicate trips and
-  the card resolves to State 1A on the next render. Redirect
-  carries `?super_status=failed&super_step=activate&super_error=<msg>`.
+  stay; the next render computes `validation_summary` with
+  errors populated and the card lands in State 3 (left-column
+  prose, right-column pill row + per-issue list). Redirect
+  carries `super_button=prepare&super_step=validate`. The audit
+  event records the failure for observability.
 
-The super-button itself emits two audit events bracketing the
-run:
+**Activate failures:**
+
+- **Activate raises.** The except branch calls
+  `lifecycle.invalidate_session(reason="workflow_run_rollback")`
+  if the session was promoted to `validated`, which emits a
+  `session.invalidated` audit event (the predicate
+  `needs_regeneration_after_revert` then resolves the card to a
+  draft state on the next render). Redirect carries
+  `super_button=activate&super_step=activate`.
+
+Each route emits two audit events bracketing the run:
 
 - `session.workflow_run_started` — once per click, with
-  `context.button="activate_session"`.
+  `context.button` carrying `"prepare_session"` or
+  `"activate_session"`.
 - `session.workflow_run_failed` — emitted in the except branch
-  with `context.step` (`generate` / `validate` / `activate` /
-  `precondition`) and `context.error_message`. Successful end-to-
-  end runs are documented by the per-step events
-  (`assignments.generated` + `session.validated` +
-  `session.activated`) — no separate "succeeded" envelope.
+  with `context.button`, `context.step`, and
+  `context.error_message`. Successful runs are documented by the
+  per-step events (`assignments.generated` + `session.validated`
+  for Prepare; `session.activated` for Activate) — no separate
+  "succeeded" envelope.
 
-The warnings-detour path does NOT write a `workflow_run_failed`
-event — the run is paused at the operator-acknowledgement step,
-not failed.
+The warnings detour and the saved-response confirmation detour
+both write no `workflow_run_failed` event — the run is paused at
+the operator-choice step, not failed.
 
 Pre-flight gates:
 
-- Session is already `ready` → 303 with
-  `?super_status=failed&super_step=precondition&super_error=Session+is+already+activated.`
-- `is_setup_empty` is True → currently no defensive gate at the
-  route layer; the workflow card renders the button as inert in
-  State 1 so the form can't post.
+- **Prepare** — session not editable (already `ready`) → 303
+  with `super_button=prepare&super_step=precondition`.
+- **Activate** — session already `ready` → 303 with
+  `super_button=activate&super_step=precondition&super_error=Session+is+already+activated.`
+- **Activate** — session not yet `validated` → 303 with
+  `super_button=activate&super_step=precondition&super_error=Run+Prepare+session+before+activating.`
+- `is_setup_empty` is True → no defensive gate at the route
+  layer; the workflow card renders the Prepare button as inert
+  in State 1 so the form can't post.
 
 ### Other stepper buttons
 
@@ -347,7 +431,7 @@ Pre-flight gates:
   `invitations.send_reminders_to_incomplete` for reviewers whose
   assignments aren't complete.
 
-All three invitation forms emit on every ready state (6 / 7 / 8)
+All three invitation forms emit on every ready state (7 / 8 / 9)
 so the Secondary "re-run an earlier stage" buttons stay wired;
 only the corresponding Primary slot's live state changes. Each
 form carries a hidden `return_to=<slug>` field; the route's
@@ -358,11 +442,11 @@ route without the form's hidden field) fall back to
 `/operator/sessions/{id}/invitations`.
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`:
-  - States 4A / 4B / 5 (`is_validated`): via
+  - States 4 / 4W / 4Err / 5 / 6 (`is_validated`): via
     `next-action-revert-form`. Route dispatches to
     `lifecycle.invalidate_session(reason="operator_revert")` →
     `validated → draft`, audit `session.invalidated`.
-  - States 6 / 7 / 8 (`is_ready`): via `next-action-pause-form`
+  - States 7 / 8 / 9 (`is_ready`): via `next-action-pause-form`
     with hidden `confirm=true`. Route dispatches to
     `lifecycle.revert_session_to_draft` → `ready → draft`,
     audit `session.reverted_to_draft`. Instruments flip
@@ -376,23 +460,28 @@ id="next-action-status">` block. Per-state content:
 | State | Right column content |
 | --- | --- |
 | **1** (setup empty) | Setup-completion checklist (`Setup checklist` heading + three `<li>` rows: Reviewers, Reviewees, Instruments (all rules pinned), each with a ✓ or ✗ pill + a deep link to the relevant Operations-row page). |
-| **1A** (pre-generate) | Same checklist as State 1; in State 1A all three rows read ✓. Keeps the right column from reflowing as setup completes. |
 | **2** (draft, no summary) | Empty. |
 | **3** (validation failed) | `Validation issues` heading + pill row (error / warning / info counts) + per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
-| **4A** (validated, no warnings) | `Status` heading + "Setup validated." |
-| **4B** (validated + warnings) | "Setup validated." + a per-warning pill row + the per-issue list inline so the operator sees what they're about to acknowledge before clicking the detour. |
-| **5** (validated + errors) | `Validation issues` heading + pill row + per-issue list, same shape as State 3. |
-| **6 / 7 / 8** | Currently empty (invitation-status counters deferred to a future iteration). |
+| **4** (validated, no warnings, no invites) | `Status` heading + "Setup validated." |
+| **4W** (validated + warnings) | "Setup validated." + a per-warning pill row + the per-issue list inline so the operator sees what they're about to acknowledge before clicking the detour. |
+| **4Err** (validated + errors, defensive) | `Validation issues` heading + pill row + per-issue list, same shape as State 3. |
+| **5 / 6** (validated + invites) | Currently shares State 4's aside; specific aside copy lands with 18F Part 2. |
+| **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
-### Super-button failure banner
+### Workflow failure banner
 
 When `super_failure` is populated (i.e. the page was hit with
-`?super_status=failed&super_step=<step>&super_error=<msg>`), the
-right column also renders a `.banner.banner-error` block at the
-top of the aside. Headline: "Activate session failed at step N of
-3: <step name>." The per-state right-column content above
-continues to render below the banner; the failure banner doesn't
-suppress State 3 / 5 issue lists.
+`?super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`),
+the right column also renders a `.banner.banner-error` block at
+the top of the aside. Headline: **"Prepare session failed at the
+<step>."** or **"Activate session failed at the <step>."** —
+the button name comes from `super_failure.button`, and the step
+maps via the `_step_label_map` (`generate` → "Generate
+assignments", `validate` → "Validate setup", `activate` →
+"Activate session", `precondition` → "pre-flight check"). The
+per-state right-column content above continues to render below
+the banner; the failure banner doesn't suppress State 3 / 4Err
+issue lists.
 
 ## POST routes
 
@@ -401,13 +490,14 @@ routes:
 
 | Route | Service | Allowed prior state | Resulting state | Audit event |
 | --- | --- | --- | --- | --- |
-| `POST /operator/sessions/{id}/workflow/activate` | `assignments.replace_assignments` → `lifecycle.mark_validated` → `lifecycle.activate_session` | `draft` or `validated` (`is_editable`) | `ready` (or detour to Validate page in warnings case, or to the host page in the saved-response confirmation case) | `session.workflow_run_started` + per-step events; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/prepare` | `assignments.replace_assignments` → `lifecycle.mark_validated` (on clean Validate) | `draft` or `validated` (`is_editable`) | `validated` (or `draft` on Validate errors; detour to host page with `prepare_confirm=responses` in the saved-response case) | `session.workflow_run_started` with `context.button="prepare_session"` + per-step events; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/activate` | `lifecycle.activate_session` (re-validates first) | `validated` | `ready` (or detour to Validate page in the warnings case) | `session.workflow_run_started` with `context.button="activate_session"`; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | unchanged | `assignments.generated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready`) | `lifecycle.revert_session_to_draft` | `ready` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `ready` | unchanged | `invitations.generated` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `ready` | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `ready` (Part 2 relaxes to `validated`) | unchanged | `invitations.generated` |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `ready` (Part 2 relaxes to `validated`) | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
 
 The per-step `/assignments/generate` and `/activate` routes
@@ -429,7 +519,7 @@ page; values outside the allowlist (including `home`) 303 to
 - Right-column issue list partial:
   `app/web/templates/operator/partials/_next_action_issue_list.html`
 - Context builder: `app/web/views/_workflow_card.py`
-- Super-button route: `app/web/routes_operator/_workflow.py`
+- Prepare + Activate routes: `app/web/routes_operator/_workflow.py`
 - Per-step lifecycle routes: `app/web/routes_operator/_session_home.py`
   (`session_activate` / `session_revert_to_draft`),
   `app/web/routes_operator/_assignments.py` (`assignments_generate`)
