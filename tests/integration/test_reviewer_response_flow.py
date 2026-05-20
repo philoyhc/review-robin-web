@@ -784,8 +784,10 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     )
 
     assert response.status_code == 303
+    # 17B Phase 2 PR B — submit closes out the single-assignment
+    # session so the redirect lands on the summary page.
     assert response.headers["location"].endswith(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/reviewer/sessions/{review_session.id}/summary"
     )
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")

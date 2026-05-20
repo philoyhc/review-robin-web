@@ -322,7 +322,9 @@ def test_submit_redirect_honours_current_position_field(
     rae_client = make_client(rae)
 
     # Submit with current_position=1 (the only valid position for a
-    # single-instrument session). On success, redirect uses position 1.
+    # single-instrument session). On success, this single-assignment
+    # session is fully submitted, so 17B Phase 2 PR B redirects to
+    # the per-session summary page instead of the surface position.
     response = rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
@@ -334,7 +336,7 @@ def test_submit_redirect_honours_current_position_field(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1"
+        == f"/reviewer/sessions/{review_session.id}/summary"
     )
 
 
@@ -370,9 +372,11 @@ def test_submit_redirect_falls_back_when_current_position_missing(
         follow_redirects=False,
     )
     assert response.status_code == 303
+    # 17B Phase 2 PR B — single-assignment session ends up fully
+    # submitted on this submit and lands on the summary page.
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1"
+        == f"/reviewer/sessions/{review_session.id}/summary"
     )
 
 

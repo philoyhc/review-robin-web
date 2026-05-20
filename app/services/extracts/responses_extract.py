@@ -53,6 +53,7 @@ __all__ = [
     "HEADER",
     "serialize_responses",
     "serialize_responses_for_instrument",
+    "serialize_reviewer_session_summary",
 ]
 
 
@@ -501,3 +502,138 @@ def serialize_responses_for_instrument(
     collected.sort(key=lambda pair: pair[0])
     for _, row in collected:
         yield row
+
+
+def serialize_reviewer_session_summary(
+    db: Session,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+) -> Iterable[tuple[str, ...]]:
+    """Yield CSV rows for one reviewer's responses across one
+    session — the participation-record download backing the 17B
+    Phase 2 PR B summary page.
+
+    Same 21-column shape as :func:`serialize_responses` /
+    :func:`serialize_responses_for_instrument` so the file can sit
+    alongside an operator's bundle download with no schema drift.
+    The output structure mirrors the unified
+    :func:`serialize_responses` file: a per-instrument preamble
+    block (one ``(instrument_{n},)`` row + one
+    ``(field_key, help_text)`` row per response field) for *every*
+    session instrument the reviewer has responses on, a blank-row
+    gap, :data:`HEADER`, then the data rows scoped to this
+    reviewer. Instruments the reviewer has no responses on are
+    skipped from the preamble — operators get the cross-reviewer
+    coverage from the bundle's per-instrument files; the
+    reviewer-record file is intentionally narrower.
+
+    Group-scoped instruments collapse the same way the unified
+    file does (one row per ``(reviewer, instrument, group_key,
+    field)``).
+    """
+
+    session_zone = resolve_session_timezone(review_session)
+
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    # Which instruments the reviewer actually has responses on —
+    # so the preamble block lists only the relevant instruments,
+    # matching what the data section emits.
+    answered_instrument_ids = set(
+        db.execute(
+            select(Assignment.instrument_id)
+            .join(Response, Response.assignment_id == Assignment.id)
+            .where(
+                Assignment.session_id == review_session.id,
+                Assignment.reviewer_id == reviewer.id,
+            )
+            .distinct()
+        ).scalars()
+    )
+    instrument_label: dict[int, str] = {}
+    emitted_preamble = False
+    for n, instrument in enumerate(instruments, start=1):
+        label = f"instrument_{n}"
+        instrument_label[instrument.id] = label
+        if instrument.id not in answered_instrument_ids:
+            continue
+        emitted_preamble = True
+        yield (label,)
+        fields = sorted(
+            instrument.response_fields, key=lambda f: (f.order, f.id)
+        )
+        for field in fields:
+            yield (field.field_key, field.help_text or "")
+    if emitted_preamble:
+        yield ()
+
+    yield HEADER
+
+    if any(i.group_kind is not None for i in instruments):
+        group_key_by_assignment, group_identity = _group_export_index(
+            db, review_session
+        )
+    else:
+        group_key_by_assignment, group_identity = {}, {}
+    seen_group_cells: set[tuple[int, int, tuple[str, ...], int]] = set()
+
+    stmt = (
+        select(
+            Response,
+            Reviewer,
+            Reviewee,
+            Instrument,
+            InstrumentResponseField,
+            ResponseTypeDefinition,
+        )
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .join(Instrument, Assignment.instrument_id == Instrument.id)
+        .join(
+            InstrumentResponseField,
+            Response.response_field_id == InstrumentResponseField.id,
+        )
+        .join(
+            ResponseTypeDefinition,
+            InstrumentResponseField.response_type_id
+            == ResponseTypeDefinition.id,
+        )
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.reviewer_id == reviewer.id)
+        .order_by(
+            Instrument.order,
+            Instrument.id,
+            Reviewee.email_or_identifier,
+            InstrumentResponseField.order,
+            InstrumentResponseField.id,
+        )
+        .execution_options(yield_per=1000)
+    )
+
+    for response, the_reviewer, reviewee, instrument, field, rtd in db.execute(
+        stmt
+    ):
+        group_key = group_key_by_assignment.get(response.assignment_id)
+        if group_key is not None:
+            cell = (the_reviewer.id, instrument.id, group_key, field.id)
+            if cell in seen_group_cells:
+                continue
+            seen_group_cells.add(cell)
+        yield _response_row_tuple(
+            response,
+            the_reviewer,
+            reviewee,
+            instrument,
+            field,
+            rtd,
+            instrument_label=instrument_label.get(instrument.id, ""),
+            group_key=group_key,
+            group_identity=group_identity,
+            session_zone=session_zone,
+        )
