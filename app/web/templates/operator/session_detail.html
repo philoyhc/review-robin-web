@@ -37,6 +37,10 @@
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
             </p>
+            <p class="form-help" style="margin: 0;">Timezone</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session_timezone_label }}</span>
+            </p>
             <p class="form-help" style="margin: 0;">Help contact</p>
             <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
           </div>
@@ -51,6 +55,14 @@
             </p>
           </div>
           <div>
+            {# Start — placeholder until 18G adds scheduled
+               activation (the field that will fill this slot
+               pre-activation; ``sessions.activated_at`` already
+               carries the actual stamp once the session goes live). #}
+            <p class="form-help" style="margin: 0;">Start</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-empty">Placeholder</span>
+            </p>
             <p class="form-help" style="margin: 0;">Deadline</p>
             <p style="margin: 0 0 var(--space-3) 0;">
               {% if session.deadline %}
@@ -58,10 +70,6 @@
               {% else %}
                 <span class="pill pill-empty">Not set</span>
               {% endif %}
-            </p>
-            <p class="form-help" style="margin: 0;">Timezone</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session_timezone_label }}</span>
             </p>
           </div>
         </div>
