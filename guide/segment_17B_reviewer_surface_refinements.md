@@ -147,7 +147,7 @@ reuse the same helper.
   return-to-place / filter-to-incomplete / keyboard navigation
   as first-class requirements (its sticky-column-headers item
   carries the 17B "investigated and dropped" annotation).
-- `guide/codebase_assessment_16may.md` — §5 weakness 4 names
+- `guide/archive/codebase_assessment_16may.md` — §5 weakness 4 names
   the `routes_reviewer.py` packaging as 17B's opening step.
 - `guide/future_possibilities.md` — why the JS-grid route is
   off the roadmap.

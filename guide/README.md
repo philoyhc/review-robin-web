@@ -12,6 +12,7 @@ change (that index is maintained by hand).
 | Path | Covers |
 |---|---|
 | `segment_*.md` | Plans for the current and upcoming segments. |
+| `codebase_assessment_*.md` | Codebase-vs-functional-spec snapshots. Only the latest snapshot lives here; older snapshots retire to `archive/` once a newer one supersedes them. |
 | `todo_master.md` | Prioritized sequence — Done / Upcoming roadmap. Read this first when picking up between segments. (Tracks open items directly post-2026-05-10; the earlier `unfinished_business.md` catalog retired to `archive/` once its items shipped or got absorbed into named segments.) |
 | `future_possibilities.md` | Aspirational directions deliberately *not* on the roadmap — recorded so the design doesn't foreclose them, but not planned to ship. Distinct from `todo_master.md` (committed) and `deferred_until_pilot_feedback.md` (paused but expected). |
 | `participant_model_upgrade.md` | Standing design guidance for the post-MVP arc — Review Robin's planned evolution into a generalized participant model. Umbrella for segments 21+; their fine-grained `segment_2X_*.md` plans are written when scoped. |

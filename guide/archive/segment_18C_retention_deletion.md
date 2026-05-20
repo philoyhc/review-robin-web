@@ -40,7 +40,7 @@ of scope — see below).
 
 - **§21 #16** "Basic retention/deletion workflow" is the only
   MVP acceptance criterion not even partially satisfied in
-  `guide/codebase_assessment_11may.md`; Weakness #2 names the
+  `guide/archive/codebase_assessment_11may.md`; Weakness #2 names the
   gap. Operator-triggered purge closes the operator-facing half.
 - Segment 18A shipped the Sessions-lobby inline row expander and
   `draft ⇄ archived` archiving. "Purge and archive" composes
@@ -137,7 +137,7 @@ their own names.
 When it ships:
 
 - `docs/status.md` timeline entry; `guide/todo_master.md`.
-- `guide/codebase_assessment_11may.md` §21 #16 flips ❌ → ⚠️/✅;
+- `guide/archive/codebase_assessment_11may.md` §21 #16 flips ❌ → ⚠️/✅;
   Weakness #2 closes (operator-facing half).
 - `spec/sessions_overview.md` — the expander's "Purge and
   archive" action + the three purge checkboxes.

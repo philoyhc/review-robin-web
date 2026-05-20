@@ -60,7 +60,7 @@ Move the audit log from "CSV download + canonical envelope
 schema in `spec/architecture.md`" to an **in-app viewer** with
 filters, search, and entity drill-in. Functional spec §22
 **"Richer audit views"** is the canonical scope ask —
-`guide/codebase_assessment_11may.md` marks it ⚠️ "canonical
+`guide/archive/codebase_assessment_11may.md` marks it ⚠️ "canonical
 schema + CSV export shipped; operator-facing surface relocates
 to Segment 16 Sys Admin".
 
@@ -326,7 +326,7 @@ the prose summariser is worth the maintenance burden.**
 - **Retention / purge tooling.** Out-of-band audit retention
   policy + automated purge of audit rows older than N days
   was scoped under Segment 12B but never landed there;
-  unclaimed today. `guide/codebase_assessment_11may.md`
+  unclaimed today. `guide/archive/codebase_assessment_11may.md`
   Weakness #2 flags this as a likely Segment 14A / 16
   ride-along, but the scope hasn't been committed to either
   segment. Revisit during scoping.
