@@ -120,6 +120,7 @@ alongside its replacement.
 | `segment_16B_role_delegation.md` | 331 | Segment 16B — user role management + role delegation among operators. |
 | `segment_16C_richer_audit_views.md` | 376 | Segment 16C — richer audit views (in-app audit-log viewer). |
 | `segment_17A_housekeeping.md` | 184 | Segment 17A — housekeeping: file splits + test-suite runtime. |
+| `segment_17B_reviewer_surface_refinements.md` | 468 | Segment 17B — reviewer surface refinements. Phase 1 shipped 2026-05-16 (`routes_reviewer/` package split, action-row reorder + keyboard nav, visible-progress pills; sticky headers investigated and dropped); Phase 2 shipped 2026-05-20 (PR A: six-column lobby with two status columns + `sessions.activated_at` + the pre-ready "not opened" state; PR B: per-session participation-summary page + `{code}_my_responses.csv` download; URL rename `/reviewer/` → `/user/` considered and deferred per `participant_model_upgrade.md`). Cell autosave / filter-to-incomplete / return-to-place / chrome polish carved out to `deferred_until_pilot_feedback.md`. |
 | `segment_18A_sessions_lobby_enhancements.md` | 619 | Segment 18A — Sessions lobby enhancements (tagging, archiving, cloning, search, sort). |
 | `segment_18B_date_and_time_settings.md` | 452 | Segment 18B — date and time settings (display formatting + timezones). |
 | `segment_18C_retention_deletion.md` | 159 | Segment 18C — operator-triggered purge ("Purge and archive" expander action). |

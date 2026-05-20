@@ -819,31 +819,12 @@ bottom of this file.
 
 #### Stubs
 
-- **17B — Reviewer surface refinements** *(Phase 1 shipped
-  2026-05-16; Phase 2 shipped 2026-05-20)*. Phase 1 landed the
-  `routes_reviewer/` package split, the action-row reorder +
-  Tab/Enter keyboard navigation, and the visible-progress
-  pills; sticky headers were investigated and dropped, and cell
-  autosave / filter-to-incomplete / chrome polish +
-  return-to-place all moved to
-  `guide/deferred_until_pilot_feedback.md`. **Phase 2 (shipped
-  2026-05-20):** **PR A** (lobby expansion — Session / Start /
-  End / Timezone / Session status / Reviewer status, the new
-  `not opened` state for rostered-but-pre-ready sessions, adds
-  `sessions.activated_at` backfilled from the
-  `session.activated` audit row); **PR B** (per-session
-  participation-summary page on whole-session submission +
-  `{code}_my_responses.csv` download, reusing the 18H Part 2
-  per-instrument extract scoped to one reviewer; the submit
-  redirect graduates to the summary URL when the last
-  instrument closes out). Post-shipping refinements the same
-  day: dedicated Timezone column with the operator-lobby
-  GMT-offset chip + IANA hover, pill-formatted Start / End /
-  counter cells, informative pill colour coding (End red past
-  the deadline, Closed muted-grey, counters paired with the
-  Reviewer status colour). URL rename `/reviewer/` → `/user/`
-  considered and deferred per `participant_model_upgrade.md`.
-  **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
+- **17B — Reviewer surface refinements** *(retired 2026-05-20;
+  Phase 1 shipped 2026-05-16, Phase 2 shipped 2026-05-20, plan
+  archived)*. Both phases shipped; remaining items (cell
+  autosave, filter-to-incomplete, return-to-place, chrome
+  polish) carved out to `deferred_until_pilot_feedback.md`.
+  **Plan:** `guide/archive/segment_17B_reviewer_surface_refinements.md`.
 
 - **18E — Small enhancements** *(closed 2026-05-20; all three
   Parts shipped 2026-05-18, plan archived)*. The original small-

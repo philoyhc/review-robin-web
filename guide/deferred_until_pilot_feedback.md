@@ -160,7 +160,7 @@ into the Session Home context builder. Reuses
 
 ## 17B — Cell-level autosave (reviewer surface)
 
-> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> Carved from `guide/archive/segment_17B_reviewer_surface_refinements.md`
 > 2026-05-16. Listed there as a large-table-ergonomics item;
 > deferred rather than built speculatively.
 
@@ -200,7 +200,7 @@ already posts to.
 
 ## 17B — Filter-to-incomplete toggle (reviewer surface)
 
-> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> Carved from `guide/archive/segment_17B_reviewer_surface_refinements.md`
 > 2026-05-16.
 
 **Ships.**
@@ -228,7 +228,7 @@ off the per-row `is_complete` flag already in the payload.
 
 ## 17B — Return-to-place + reviewer-surface chrome polish
 
-> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> Carved from `guide/archive/segment_17B_reviewer_surface_refinements.md`
 > 2026-05-19, when Segment 17B was closed: PR 1 (the
 > `routes_reviewer/` package split), the action-row reorder +
 > keyboard navigation (#1076), and the visible-progress pills
