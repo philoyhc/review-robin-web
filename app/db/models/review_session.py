@@ -68,6 +68,58 @@ class ReviewSession(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
+    # Segment 18G Part 0a — anchor datetime columns. The operator
+    # sets these directly; every Part 0b offset is anchored on one
+    # of them (or on the already-live ``deadline``). See
+    # ``spec/lifecycle.md`` §8 "Scheduled lifecycle automation".
+    # Both nullable, both inert at Part 0 — no service module
+    # reads or writes these until the consumer Part lights them up.
+    #
+    # ``scheduled_activate_at`` is the **operator-set trigger** for
+    # the scheduled ``validated → ready`` transition (Part 3); the
+    # existing ``activated_at`` above is the **system-stamped
+    # record** of when activation actually fired. Two columns, one
+    # for each side of the trigger/record split.
+    scheduled_activate_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # The Participants-platform "reviewees can view responses from
+    # this point" anchor — pre-positioned inert so future
+    # participant-model work doesn't need a follow-on migration.
+    # No 18G Part reads it.
+    responses_release_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Segment 18G Part 0b — offset config columns. Anchor-relative
+    # operator-set offsets persisted as ISO 8601 duration strings
+    # (e.g. ``-P1D``, ``-PT2H``, ``P30D``). Lists for events that
+    # fire on a sequence (invites, reminders); singletons for
+    # events that fire once (archive, release-until). See
+    # ``spec/lifecycle.md`` §8 for the anchor table + the
+    # cross-cutting anchor-null inertness rule.
+    #
+    # ``String(16)`` sizes the singletons generously past the
+    # 10-day max offset (e.g. ``-PT240H`` is 7 chars). All four
+    # columns are nullable and inert at Part 0 — no service module
+    # reads or writes these until the consumer Part lights them up.
+    invite_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reminder_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    archive_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    release_until_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)
+
+    # Segment 18G Part 0c — per-session retention controls.
+    # ``retention_exception`` opts a session out of any auto-purge
+    # (e.g. legal hold); ``NULL`` and ``False`` both mean "no
+    # exception" (Part 4 normalises on read).
+    # ``retention_overrides`` overrides the deployment retention
+    # env-vars per-session, and also carries the per-session
+    # ``delete_after_archive`` offset (ISO 8601 duration anchored
+    # on the system-stamped archive timestamp). ``NULL`` means
+    # "use the deployment defaults". Both columns inert at Part 0.
+    retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    retention_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
     )
