@@ -58,6 +58,16 @@ class ReviewSession(Base, TimestampMixin):
     # by a DB CHECK constraint.
     display_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    # Stamp set when the session transitions ``draft|validated →
+    # ready`` (Segment 17B Phase 2 PR A). Used as the **Start**
+    # column on the reviewer lobby — once Segment 18G ships
+    # scheduled activation the same column will show the planned
+    # open time pre-activation and the actual stamp afterwards.
+    # ``NULL`` until the session is first activated.
+    activated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
     )

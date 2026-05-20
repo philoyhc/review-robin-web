@@ -1,6 +1,12 @@
 """Reviewer dashboard — the "My Reviews" landing page listing
 every session the signed-in user is an active reviewer on.
 
+Segment 17B Phase 2 PR A widened the table to five columns —
+Session / Start / End / Session Status / Reviewer Status —
+adding the new two-status split (the session's open state vs
+the reviewer's progress) and the Start column backed by
+``sessions.activated_at``.
+
 Carved out of the single-file ``routes_reviewer.py`` in Segment
 17B PR 1.
 """
@@ -18,6 +24,7 @@ from app.db.models import Instrument, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user
@@ -131,12 +138,38 @@ def reviewer_dashboard(
         pill = responses_service.session_pill_for_reviewer(
             db, reviewer=reviewer, session_id=review_session.id
         )
+        session_status = lifecycle.session_status_for_reviewer(
+            db, reviewer=reviewer, review_session=review_session
+        )
         session_zone = sessions_service.resolve_session_timezone(review_session)
         items.append(
             {
                 "reviewer": reviewer,
                 "session": review_session,
                 "pill": pill,
+                "session_status": session_status,
+                # The Session column links to the response surface
+                # whenever the session is at least once activated —
+                # ``open`` for the live form, ``closed`` for the
+                # read-only post-deadline view. ``not opened``
+                # renders the name as plain text. PR B will swap
+                # the live target to the summary URL when the
+                # reviewer has submitted everything.
+                "link_enabled": session_status != "not opened",
+                "start_text": (
+                    date_formatting.format_datetime(
+                        review_session.activated_at, session_zone
+                    )
+                    if review_session.activated_at
+                    else None
+                ),
+                "start_timezone_label": (
+                    date_formatting.gmt_offset_zone_label(
+                        session_zone, at=review_session.activated_at
+                    )
+                    if review_session.activated_at
+                    else None
+                ),
                 "deadline_text": date_formatting.format_datetime(
                     review_session.deadline, session_zone
                 ),
