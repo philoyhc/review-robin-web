@@ -1,0 +1,71 @@
+{# Reviewer per-session participation summary — Segment 17B
+   Phase 2 PR B. Read-only capstone page rendered when every row
+   the reviewer was assigned has been submitted. One section per
+   instrument the reviewer responded on; each section is a small
+   table of reviewees (rows) × field values (cells). #}
+{% extends "base.html" %}
+
+{% block title %}Your responses — {{ session.name }} — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2 reviewer{% endblock %}
+{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+
+{% block content %}
+  <h1>Your responses — {{ session.name }}</h1>
+
+  {% if submitted_at_text %}
+    <p class="muted">
+      Submitted on {{ submitted_at_text }} ({{ submitted_at_zone_label }}).
+    </p>
+  {% endif %}
+
+  <div class="btn-pair" style="margin: var(--space-3) 0;">
+    <a class="btn primary"
+       href="/reviewer/sessions/{{ session.id }}/summary.csv">
+      Download my responses (CSV)
+    </a>
+    <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
+  </div>
+
+  {% for section in summary.sections %}
+    <section class="card" style="margin-top: var(--space-4);">
+      <h2 style="margin-top: 0;">
+        {% if section.instrument_short_label %}
+          {{ section.instrument_short_label }} — {{ section.instrument_name }}
+        {% else %}
+          {{ section.instrument_name }}
+        {% endif %}
+      </h2>
+      {% if section.field_cols and section.rows %}
+        <table>
+          <tr>
+            <th>Reviewee</th>
+            {% for col in section.field_cols %}
+              <th>{{ col.label }}</th>
+            {% endfor %}
+          </tr>
+          {% for row in section.rows %}
+            <tr>
+              <td>{{ row.reviewee_name }}</td>
+              {% for value in row.values %}
+                <td>
+                  {% if value %}
+                    {{ value }}
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="muted">No responses on this instrument.</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="card">
+      <p class="muted">No responses on this session.</p>
+    </div>
+  {% endfor %}
+{% endblock %}

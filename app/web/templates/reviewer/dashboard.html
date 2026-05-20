@@ -22,7 +22,7 @@
           <tr>
             <td>
               {% if item.link_enabled %}
-                <a href="/reviewer/sessions/{{ item.session.id }}/1">
+                <a href="{{ item.link_target }}">
                   {{ item.session.name }}
                 </a>
               {% else %}

@@ -152,10 +152,15 @@ def reviewer_dashboard(
                 # whenever the session is at least once activated —
                 # ``open`` for the live form, ``closed`` for the
                 # read-only post-deadline view. ``not opened``
-                # renders the name as plain text. PR B will swap
-                # the live target to the summary URL when the
-                # reviewer has submitted everything.
+                # renders the name as plain text. 17B Phase 2 PR B
+                # swaps the link target to the per-session summary
+                # page when the reviewer has submitted everything.
                 "link_enabled": session_status != "not opened",
+                "link_target": (
+                    f"/reviewer/sessions/{review_session.id}/summary"
+                    if pill.state == "submitted"
+                    else f"/reviewer/sessions/{review_session.id}/1"
+                ),
                 "start_text": (
                     date_formatting.format_datetime(
                         review_session.activated_at, session_zone

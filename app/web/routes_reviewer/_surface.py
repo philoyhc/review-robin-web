@@ -688,12 +688,22 @@ def _surface_context(
     }
 
 
-def submit_redirect_url(review_session: ReviewSession, position: int) -> str:
-    """Where to send the reviewer after a successful submit — back to
-    the page they pressed Submit from. The deferred standalone-
-    confirmation page can swap the URL via this helper without touching
-    the surface route.
+def submit_redirect_url(
+    review_session: ReviewSession,
+    position: int,
+    *,
+    fully_submitted: bool = False,
+) -> str:
+    """Where to send the reviewer after a successful submit.
+
+    Returns the summary page URL (17B Phase 2 PR B) when the
+    submit closed out the whole session — i.e. every assigned
+    row now has ``submitted_at`` set — and the surface page
+    otherwise so a per-instrument submit doesn't yank the
+    reviewer off the page they pressed Submit from.
     """
+    if fully_submitted:
+        return f"/reviewer/sessions/{review_session.id}/summary"
     return f"/reviewer/sessions/{review_session.id}/{position}"
 
 
@@ -947,8 +957,18 @@ async def reviewer_submit(
             context,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
     return RedirectResponse(
-        url=submit_redirect_url(review_session, current_position),
+        url=submit_redirect_url(
+            review_session,
+            current_position,
+            fully_submitted=(
+                state.total_assignments > 0
+                and state.pill_state == "submitted"
+            ),
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.web.routes_reviewer import _dashboard, _invite, _surface
+from app.web.routes_reviewer import _dashboard, _invite, _summary, _surface
 from app.web.routes_reviewer._preview import (
     _SYNTHETIC_VALUES_BY_SOURCE,
     _make_synthetic_row,
@@ -26,6 +26,7 @@ from app.web.routes_reviewer._preview import (
 
 router = APIRouter(tags=["reviewer"])
 router.include_router(_dashboard.router)
+router.include_router(_summary.router)
 router.include_router(_surface.router)
 router.include_router(_invite.router)
 
