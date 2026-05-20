@@ -14,6 +14,7 @@ Carved out of the single-file ``routes_reviewer.py`` in Segment
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -31,6 +32,19 @@ from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
 router = APIRouter(prefix="/reviewer")
+
+
+def _to_utc(value: datetime) -> datetime:
+    """Promote a naive timestamp to UTC; pass aware values through.
+
+    SQLite drops the timezone on read, so deadlines read back as
+    naive datetimes even though they were written aware. Without
+    this normaliser the past-deadline pill colour comparison
+    raises ``TypeError`` on SQLite.
+    """
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 @dataclass(frozen=True)
@@ -174,6 +188,11 @@ def reviewer_dashboard(
                     )
                     if review_session.deadline
                     else None
+                ),
+                "deadline_is_past": (
+                    review_session.deadline is not None
+                    and _to_utc(review_session.deadline)
+                    <= datetime.now(timezone.utc)
                 ),
                 # Timezone column (Start/End render zone-less now;
                 # this carries the GMT-offset chip + IANA hover, the

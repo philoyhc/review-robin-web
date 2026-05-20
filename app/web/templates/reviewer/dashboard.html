@@ -32,14 +32,23 @@
             </td>
             <td>
               {% if item.start_text %}
-                <span class="pill pill-info">{{ item.start_text }}</span>
+                {# Start: neutral data — the session has been
+                   activated (or, post-18G, scheduled). #}
+                <span class="pill pill-count">{{ item.start_text }}</span>
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
             </td>
             <td>
               {% if item.deadline_text %}
-                <span class="pill pill-info">{{ item.deadline_text }}</span>
+                {# End: red once the deadline has passed (the
+                   session won't accept further responses),
+                   otherwise neutral data. #}
+                {% if item.deadline_is_past %}
+                  <span class="pill pill-error">{{ item.deadline_text }}</span>
+                {% else %}
+                  <span class="pill pill-count">{{ item.deadline_text }}</span>
+                {% endif %}
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
@@ -53,20 +62,28 @@
               {% if item.session_status == "open" %}
                 <span class="pill pill-success">open</span>
               {% elif item.session_status == "closed" %}
-                <span class="pill pill-empty">closed</span>
+                {# Closed: muted grey rather than amber — the
+                   window is over, not "needs attention". #}
+                <span class="pill pill-lifecycle-archived">closed</span>
               {% else %}
                 <span class="pill pill-info">not opened</span>
               {% endif %}
             </td>
             <td>
+              {# Pair the (N/M) counter's colour with the reviewer
+                 status pill so the row's progress reads at a
+                 glance: blue = nothing yet, amber = mid-flight,
+                 green = done. #}
               {% if item.pill.state == "submitted" %}
                 <span class="pill pill-success">submitted</span>
+                <span class="pill pill-success">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
               {% elif item.pill.state == "in progress" %}
                 <span class="pill pill-warning">in progress</span>
+                <span class="pill pill-warning">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
               {% else %}
                 <span class="pill pill-info">not started</span>
+                <span class="pill pill-info">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
               {% endif %}
-              <span class="pill pill-count">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
             </td>
           </tr>
           {# Segment 15B Slice 6 — per-instrument sub-rows on
@@ -90,17 +107,25 @@
               <td></td>
               <td></td>
               <td>
+                {# Per-instrument sub-row counter — same colour
+                   pairing as the per-session row above. #}
                 {% if sub.state == "submitted" %}
                   <span class="pill pill-success">submitted</span>
+                  {% if sub.total_assignments %}
+                    <span class="pill pill-success">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
+                  {% endif %}
                 {% elif sub.state == "in progress" %}
                   <span class="pill pill-warning">in progress</span>
+                  {% if sub.total_assignments %}
+                    <span class="pill pill-warning">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
+                  {% endif %}
                 {% elif sub.state == "no assignments" %}
                   <span class="pill pill-empty">no assignments</span>
                 {% else %}
                   <span class="pill pill-info">not started</span>
-                {% endif %}
-                {% if sub.total_assignments %}
-                  <span class="pill pill-count">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
+                  {% if sub.total_assignments %}
+                    <span class="pill pill-info">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
+                  {% endif %}
                 {% endif %}
               </td>
             </tr>
