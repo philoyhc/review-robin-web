@@ -400,7 +400,7 @@ durations.
 
 | Anchor | Column | Owner | Status |
 |---|---|---|---|
-| **Start** (auto-activate) | `activate_at` | operator-set | **18G Part 0a** |
+| **Start** (auto-activate) | `scheduled_activate_at` | operator-set | **18G Part 0a** |
 | **End** (deadline) | `deadline` | operator-set | live today |
 | **Release-from** (Participants platform — reviewees can view responses) | `responses_release_at` | operator-set | **18G Part 0a** (inert; Participants-platform consumer) |
 
@@ -418,7 +418,7 @@ in-memory archive timestamp) also serve as anchors for offsets:
 
 | Offset | Column | Anchor | Shape | Default | Consumer |
 |---|---|---|---|---|---|
-| Auto-send invites | `invite_offsets` | `activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
+| Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
 | Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 5 |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 1 |
 | Release-until | `release_until_offset` | `responses_release_at` | single ISO 8601 duration | unset | Participants platform |
@@ -435,7 +435,7 @@ anchor is null**: the scheduler skips it, the editor disables the
 offset field, and any other reader treats the resolved time as
 "no scheduled fire". Examples:
 
-- `invite_offsets` set but `activate_at = NULL` → no scheduled
+- `invite_offsets` set but `scheduled_activate_at = NULL` → no scheduled
   invitation dispatch (operator must click manually).
 - `archive_offset = "P30D"` but `deadline = NULL` → no scheduled
   archive (operator must archive manually from the lobby).

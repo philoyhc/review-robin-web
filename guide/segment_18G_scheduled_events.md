@@ -35,12 +35,16 @@
 > **offsets** anchored on them (auto-send invites "1 day before
 > Start", reminders "2 hours before End", auto-archive "30 days
 > after End"). Part 0a now holds **anchor** datetimes (just
-> `activate_at` + `responses_release_at`; `deadline` is already
-> live); Part 0b holds **offset** configs (`invite_offsets` /
-> `reminder_offsets` / `archive_offset` /
+> `scheduled_activate_at` + `responses_release_at`; `deadline`
+> is already live); Part 0b holds **offset** configs
+> (`invite_offsets` / `reminder_offsets` / `archive_offset` /
 > `release_until_offset`); Part 0c retention is unchanged in
 > shape (the auto-delete-after-archive offset lives as a key
-> inside `retention_overrides`). See `spec/lifecycle.md`
+> inside `retention_overrides`). The Start anchor was
+> renamed `activate_at` → `scheduled_activate_at` (the
+> existing live `activated_at` column is the system-stamped
+> record of when activation fired — one letter apart from
+> `activate_at` was too easy to typo). See `spec/lifecycle.md`
 > "Scheduled lifecycle automation" for the model + the
 > cross-cutting anchor-null inertness rule.
 
@@ -92,9 +96,10 @@ it.
 **Origin.** Consolidated 2026-05-20 from the two outstanding 13F
 PRs (`reminder_settings`, `retention_*`) and the pending 13F
 scheduled-lifecycle schema audit (`auto_archive_at`,
-`invitations_send_at`, `activate_at`). All three items were
-already 18G-relevant, so folding them in here retires the
-schema-only segment.
+`invitations_send_at`, `activate_at` — later renamed
+`scheduled_activate_at` in the anchors + offsets reshape; see
+preamble). All three items were already 18G-relevant, so folding
+them in here retires the schema-only segment.
 
 #### Part 0a — Anchor datetime columns (operator-set, absolute)
 
@@ -102,7 +107,7 @@ Two nullable `DateTime(timezone=True)` columns on `sessions`:
 
 ```python
 # app/db/models/review_session.py
-activate_at:           Mapped[datetime | None]  # Start  → Part 3
+scheduled_activate_at: Mapped[datetime | None]  # Start  → Part 3
 responses_release_at:  Mapped[datetime | None]  # Release-from (Participants platform, inert until then)
 ```
 
@@ -111,13 +116,14 @@ Every scheduled-event offset (Part 0b) is *relative to* one of
 them. Today's session already carries one anchor — `sessions.deadline`
 (End) — and Part 0a adds two more:
 
-- **`activate_at` (Start)** — the scheduled `validated → ready`
-  trigger; per the 18F Part 2 Activated-as-gate model, no new
-  `SessionStatus` value and no sub-gate within `ready` — `ready`
-  already means "open for responses". The existing `activated_at`
-  (live, system-stamped on first `→ ready`) is unchanged; one is
-  the operator-set *trigger*, the other is the system *record*
-  of when it fired.
+- **`scheduled_activate_at` (Start)** — the operator-set trigger
+  for the scheduled `validated → ready` transition (consumer
+  Part 3). Per the 18F Part 2 Activated-as-gate model, no new
+  `SessionStatus` value and no sub-gate within `ready` —
+  `ready` already means "open for responses". Distinct from the
+  existing `activated_at` (live, system-stamped on the first
+  `→ ready`): one is the operator-set *trigger*, the other is
+  the system *record* of when it fired.
 - **`responses_release_at` (Release-from)** — the
   Participants-platform "reviewees can view responses from this
   point" anchor; pre-positioned **inert** in 18G so future
@@ -126,7 +132,7 @@ them. Today's session already carries one anchor — `sessions.deadline`
 
 **Shape decision.** Individual nullable datetime columns rather
 than a single `sessions.schedule` JSON container. The scheduler
-queries these by value ("find every session whose `activate_at`
+queries these by value ("find every session whose `scheduled_activate_at`
 has passed and is still `validated`") — unlike the offset configs
 below, which are read per session at trigger time. Datetime
 columns are queryable and indexable; JSON is not. Add a B-tree
@@ -141,28 +147,36 @@ that fire on a *sequence* of offsets) and two String singletons
 
 ```python
 # app/db/models/review_session.py
-invite_offsets:        Mapped[list[str] | None]  # JSON; anchor=activate_at; → Part 2
-reminder_offsets:      Mapped[list[str] | None]  # JSON; anchor=deadline;    → Part 5
-archive_offset:        Mapped[str | None]        # ISO 8601 duration; anchor=deadline; → Part 1
-release_until_offset:  Mapped[str | None]        # ISO 8601 duration; anchor=responses_release_at (Participants platform, inert until then)
+invite_offsets:        Mapped[list[str] | None]  # JSON; anchor=scheduled_activate_at; → Part 2
+reminder_offsets:      Mapped[list[str] | None]  # JSON; anchor=deadline;               → Part 5
+archive_offset:        Mapped[str | None]        # String(16) ISO 8601 duration; anchor=deadline; → Part 1
+release_until_offset:  Mapped[str | None]        # String(16) ISO 8601 duration; anchor=responses_release_at (Participants platform, inert until then)
 ```
 
 **Anchor table.**
 
 | Offset column | Anchor | Shape | Consumer |
 |---|---|---|---|
-| `invite_offsets` | `activate_at` (Start) | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | Part 2 (auto-send invites) |
+| `invite_offsets` | `scheduled_activate_at` (Start) | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | Part 2 (auto-send invites) |
 | `reminder_offsets` | `deadline` (End) | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | Part 5 (auto-send reminders) |
-| `archive_offset` | `deadline` (End) | Single ISO 8601 duration, e.g. `"P30D"`; **default `P30D`** (give operator time to download data before the session disappears from the active lobby) | Part 1 (auto-archive) |
+| `archive_offset` | `deadline` (End) | Single ISO 8601 duration, e.g. `"P30D"`; **editor default `P30D`** (the column is nullable with no `server_default`; the editor pre-fills `P30D` to give operator time to download data before the session disappears from the active lobby) | Part 1 (auto-archive) |
 | `release_until_offset` | `responses_release_at` | Single ISO 8601 duration (Release-until is derived as Release-from + this offset) | Participants platform (inert until then) |
 
 **Shape decision.** Separate columns (not a single
 `sessions.lifecycle_offsets` JSON) so each consumer Part lights
 up its own surface independently and audits cleanly (`session.invite_schedule_updated`
 vs an over-broad `session.lifecycle_offsets_changed`). Hybrid types
-match the data shape: lists are JSON, singletons are String. ISO
-8601 duration strings are dialect-neutral (SQLite + Postgres) and
-round-trip cleanly through the Settings CSV export.
+match the data shape: lists are JSON, singletons are
+`String(16)`. ISO 8601 duration strings are dialect-neutral
+(SQLite + Postgres) and round-trip cleanly through the Settings
+CSV export.
+
+**Maximum offset.** Sized for a 10-day cap on any single offset
+— the worst-case representation `-PT240H` is 7 chars, so
+`String(16)` carries comfortable headroom while still being
+short enough for SQLite/Postgres index-friendliness later. The
+cap is enforced at the editor / validator (consumer Part), not
+by the schema.
 
 **Cross-cutting rule — anchor-null inertness.** An offset is
 **inert when its anchor is null**: the scheduler skips it, the
@@ -208,13 +222,14 @@ column needed) and (ii) it's a retention-policy lever
 operationally — the same Part 4 editor surfaces both the env-var
 overrides and this offset.
 
-**Sequencing inside Part 0.** Three PRs, one per migration
-(0a / 0b / 0c), independent of each other; land in numeric order
-for tidy migration history. Round-trip tests in
-`tests/integration/test_*_schema.py` shape (mirrors 13F PR 6 / 7
-precedent). Inert audit at PR close: `grep` for the new
-identifiers across `app/services/` + `app/web/` returns zero
-hits — light-up happens in Parts 1–5.
+**Sequencing inside Part 0.** Three migrations (0a / 0b / 0c),
+independent of each other, batched into **one PR** since every
+column lands inert — there's no incremental light-up to gate on.
+Migrations land in numeric order for tidy history. Round-trip
+tests in `tests/integration/test_*_schema.py` shape (mirrors
+13F PR 6 / 7 precedent). Inert audit at PR close: `grep` for
+the new identifiers across `app/services/` + `app/web/` returns
+zero hits — light-up happens in Parts 1–5.
 
 ### Part 1 — Auto-archive
 
@@ -237,15 +252,15 @@ hits — light-up happens in Parts 1–5.
 
 **Goal.** Instead of sending every invitation immediately, a
 session can carry a list of **invitation send offsets** anchored
-on `activate_at` (Start); a scheduled trigger dispatches them at
-each `activate_at + offset` moment. With the Activated-as-gate
+on `scheduled_activate_at` (Start); a scheduled trigger dispatches them at
+each `scheduled_activate_at + offset` moment. With the Activated-as-gate
 model (Part 3 / 18F), invitations are sendable from the
 **Prepared (`validated`)** state — so an operator can schedule
 notification emails to land *ahead of* the scheduled open
 (e.g. one day before, two hours before).
 
 - Schema: `sessions.invite_offsets` (Part 0b). Inert when
-  `activate_at` is unset per the cross-cutting anchor-null rule.
+  `scheduled_activate_at` is unset per the cross-cutting anchor-null rule.
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation.
 
@@ -265,16 +280,16 @@ just lets that transition be *scheduled*. No new `SessionStatus`
 value and no sub-gate within `ready`: `ready` already means
 "open for responses".
 
-- Schema: `sessions.activate_at` (Part 0a) — the scheduled
+- Schema: `sessions.scheduled_activate_at` (Part 0a) — the scheduled
   `validated → ready` trigger; possibly reuse the existing
   activation audit event, or add a `session.activation_scheduled`
   event.
 - A scheduled trigger calls `session_lifecycle.activate_session`
-  at `activate_at`; an explicit operator "Activate now" stays
+  at `scheduled_activate_at`; an explicit operator "Activate now" stays
   available (it already exists).
 - **Depends on 18F Part 2** for the reviewer-facing states: the
-  pre-open page ("scheduled to open at «activate_at» — come back
-  later") reads the `activate_at` this part adds. 18F Part 2
+  pre-open page ("scheduled to open at «scheduled_activate_at» — come back
+  later") reads the `scheduled_activate_at` this part adds. 18F Part 2
   builds the states; this part supplies the scheduled time.
 
 ### Part 4 — Scheduled / policy-driven purge (retention)
@@ -390,7 +405,7 @@ When parts ship:
 - `spec/lifecycle.md` — already carries the **Scheduled lifecycle
   automation** section (the anchors + offsets model + the
   cross-cutting anchor-null inertness rule). Part 3's
-  `activate_at` is the scheduled `validated → ready` trigger; no
+  `scheduled_activate_at` is the scheduled `validated → ready` trigger; no
   separate opening gate (see 18F Part 2 for the
   Activated-as-gate model).
 - `spec/settings_inventory.md` — the new scheduled-datetime
