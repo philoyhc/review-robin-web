@@ -21,61 +21,49 @@
           <label for="code">Code</label>
           <input type="text" id="code" name="code" required maxlength="64">
 
-          {# Two-column sub-grid pairing Timezone with Start and
-             Help contact with End so the left column reads as a
-             compact 2x2 block instead of a tall stack. The
-             Description textarea on the right side then
-             auto-shrinks via ``.fill-col > textarea { flex: 1 }``. #}
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-3);">
-            <div>
-              {# 18B PR 4 — per-session display timezone, picked before the
-                 deadline so the operator knows which zone the deadline is
-                 entered in. Searchable <datalist> over every IANA zone,
-                 pre-filled with the operator's default. #}
-              <label for="display_timezone">Timezone</label>
-              <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
-                Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
-                in <strong id="tz-sample-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
-              </p>
-              <input type="text" id="display_timezone" name="display_timezone"
-                     list="timezone-options" autocomplete="off" required
-                     value="{{ current_timezone }}"
-                     placeholder="Start typing — e.g. Asia/Singapore">
-              <datalist id="timezone-options">
-                {% for tz in timezone_options %}
-                  <option value="{{ tz }}"></option>
-                {% endfor %}
-              </datalist>
-            </div>
-            <div>
-              {# Start — placeholder field until Segment 18G ships
-                 scheduled activation. Same styling as End so the
-                 pair reads as a unit. #}
-              <label for="start">Start (optional)</label>
-              <p class="muted" style="margin: 4px 0 10px;">
-                Entered in <strong id="start-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
-              </p>
-              <input type="datetime-local" id="start" name="start" disabled
-                     placeholder="Placeholder — scheduled activation lands with Segment 18G">
-            </div>
-            <div>
-              <label for="help_contact">Help contact (optional)</label>
-              <input type="text" id="help_contact" name="help_contact" maxlength="320"
-                     placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
-            </div>
-            <div>
-              <label for="deadline">End (optional)</label>
-              <p class="muted" style="margin: 4px 0 10px;">
-                Entered in <strong id="deadline-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
-              </p>
-              <input type="datetime-local" id="deadline" name="deadline">
-            </div>
-          </div>
+          {# 18B PR 4 — per-session display timezone, picked before the
+             deadline so the operator knows which zone the deadline is
+             entered in. Searchable <datalist> over every IANA zone,
+             pre-filled with the operator's default. #}
+          <label for="display_timezone">Timezone</label>
+          <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
+            Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
+            in <strong id="tz-sample-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
+          </p>
+          <input type="text" id="display_timezone" name="display_timezone"
+                 list="timezone-options" autocomplete="off" required
+                 value="{{ current_timezone }}"
+                 placeholder="Start typing — e.g. Asia/Singapore">
+          <datalist id="timezone-options">
+            {% for tz in timezone_options %}
+              <option value="{{ tz }}"></option>
+            {% endfor %}
+          </datalist>
+
+          <label for="help_contact">Help contact (optional)</label>
+          <input type="text" id="help_contact" name="help_contact" maxlength="320"
+                 placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+
+          {# Start — placeholder field until Segment 18G ships
+             scheduled activation. Same styling as End so the
+             pair reads as a unit. #}
+          <label for="start">Start (optional)</label>
+          <p class="muted" style="margin: 4px 0 10px;">
+            Entered in <strong id="start-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
+          </p>
+          <input type="datetime-local" id="start" name="start" disabled
+                 placeholder="Placeholder — scheduled activation lands with Segment 18G">
+
+          <label for="deadline">End (optional)</label>
+          <p class="muted" style="margin: 4px 0 10px;">
+            Entered in <strong id="deadline-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
+          </p>
+          <input type="datetime-local" id="deadline" name="deadline">
         </div>
 
-        <div class="fill-col">
+        <div>
           <label for="description">Description</label>
-          <textarea id="description" name="description" maxlength="2000"></textarea>
+          <textarea id="description" name="description" maxlength="2000" rows="6"></textarea>
         </div>
       </div>
 
