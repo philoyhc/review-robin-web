@@ -118,7 +118,7 @@
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
         {# State 4 / 4W / (5 / 6 — unreachable until Part 2). #}
-        <p>Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to receive responses.</p>
+        <p>Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses.</p>
         {% if validation_summary.needs_acknowledge %}
           <p class="form-help" style="margin: 0;">
             {{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}
@@ -280,6 +280,13 @@
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Send reminders</button>
     {% endif %}
+
+    {# Close session — placeholder. Behaviour ships alongside the
+       `expired` lifecycle status work; inert here so Row 2's slot
+       count is stable and the eventual primary doesn't shift the
+       grid. #}
+    <button class="btn secondary" type="button"
+            disabled aria-disabled="true">Close session</button>
   </div>
     </div>
     {# Right column — per-state status aside. Unchanged role from the
