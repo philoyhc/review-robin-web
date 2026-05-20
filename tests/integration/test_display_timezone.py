@@ -159,8 +159,11 @@ def test_create_page_renders_timezone_field(
 ) -> None:
     body = client.get("/operator/sessions/new").text
     assert 'name="display_timezone"' in body
-    assert 'id="deadline-zone"' in body
-    assert "Entered in" in body
+    # The Timezone field's worked sample carries the "Entered in"
+    # zone hint; the End / Start datetime inputs lost theirs in the
+    # session-form refactor (the Timezone field above them already
+    # names the zone the wall-clock entries are read in).
+    assert 'id="tz-sample-zone"' in body
 
 
 def test_session_timezone_override_persists_and_audits(
@@ -218,7 +221,10 @@ def test_edit_page_renders_timezone_field(
     # not a standalone card (18B PR 5).
     assert 'name="display_timezone"' in body
     assert '<option value="Asia/Singapore">' in body
-    assert 'id="deadline-zone"' in body
+    # The "Entered in <zone>" hint moved off the datetime inputs in
+    # the session-form refactor; the Timezone field's worked sample
+    # is the live zone label now.
+    assert 'id="tz-sample-zone"' in body
 
 
 def test_session_detail_renders_in_override_zone(
