@@ -58,7 +58,7 @@ def build_workflow_card_context(
     return_to: str,
     validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
-    activate_confirm: str | None = None,
+    prepare_confirm: str | None = None,
     user: User | None = None,
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
@@ -78,13 +78,13 @@ def build_workflow_card_context(
     before populating the rest of the context. ``user`` and
     ``correlation_id`` are required when this path fires.
 
-    ``activate_confirm`` (the page's ``?activate_confirm=responses``
-    entry path) is the super-button's saved-response detour: when set
-    to ``"responses"``, the builder dry-runs the reconcile via
-    ``assignments.reconcile_impact`` and — if a run would delete one
-    or more responses — returns an ``activate_confirm`` dict carrying
-    ``responses_deleted`` / ``deleted_pairs`` so the card renders its
-    confirmation block.
+    ``prepare_confirm`` (the page's ``?prepare_confirm=responses``
+    entry path, 18F) is the Prepare-button's saved-response detour:
+    when set to ``"responses"``, the builder dry-runs the reconcile
+    via ``assignments.reconcile_impact`` and — if a run would delete
+    one or more responses — returns a ``prepare_confirm`` dict
+    carrying ``responses_deleted`` / ``deleted_pairs`` so the card
+    renders its confirmation block.
     """
     reviewer_count = csv_imports.existing_reviewer_count(
         db, review_session.id
@@ -149,13 +149,13 @@ def build_workflow_card_context(
         )
     )
 
-    activate_confirm_ctx: dict[str, int] | None = None
-    if activate_confirm == "responses" and lifecycle.session_has_responses(
+    prepare_confirm_ctx: dict[str, int] | None = None
+    if prepare_confirm == "responses" and lifecycle.session_has_responses(
         db, review_session
     ):
         impact = assignments.reconcile_impact(db, review_session)
         if impact.responses_deleted > 0:
-            activate_confirm_ctx = {
+            prepare_confirm_ctx = {
                 "responses_deleted": impact.responses_deleted,
                 "deleted_pairs": impact.deleted,
             }
@@ -180,7 +180,7 @@ def build_workflow_card_context(
             "instruments_pinned_ok": not has_unpinned,
         },
         "super_failure": super_failure,
-        "activate_confirm": activate_confirm_ctx,
+        "prepare_confirm": prepare_confirm_ctx,
         "next_action_return_to": return_to,
     }
 
@@ -189,14 +189,28 @@ def parse_super_failure(
     super_status: str | None,
     super_step: str | None,
     super_error: str | None,
+    super_button: str | None = None,
 ) -> dict[str, str] | None:
-    """Convert the workflow super-button's redirect query params
-    into the ``super_failure`` dict the partial expects (or ``None``
-    when the URL doesn't carry a failure signal)."""
+    """Convert a workflow button's redirect failure params into the
+    ``super_failure`` dict the partial expects (or ``None`` when
+    the URL doesn't carry a failure signal). ``super_button`` is
+    ``"prepare"`` or ``"activate"`` per 18F Part 1; when absent (a
+    legacy URL), it falls back to ``"prepare"`` for ``generate`` /
+    ``validate`` steps and ``"activate"`` for ``activate``."""
     if super_status != "failed":
         return None
+    step = super_step or "unknown"
+    button = super_button
+    if not button:
+        if step in {"generate", "validate"}:
+            button = "prepare"
+        elif step == "activate":
+            button = "activate"
+        else:
+            button = "prepare"
     return {
-        "step": super_step or "unknown",
+        "button": button,
+        "step": step,
         "error": super_error or "",
     }
 

@@ -53,7 +53,29 @@ The exact part list is drafted at scoping time. Part 1 is
 committed; the rest of the segment is the holistic work-through
 that will surface further parts.
 
-### Part 1 — Split the super-button: "Prepare" + "Activate"
+### Part 1 — Split the super-button: "Prepare" + "Activate" — shipped 2026-05-20
+
+The Workflow card revamp landed: the super-button is gone,
+replaced by a dedicated `POST /workflow/prepare` route (Generate
++ Validate) and a solo `POST /workflow/activate` route (Activate
+only). The card itself moved to a 50/50 column grid with two
+rows of buttons in the left column — Row 1 (prep): Revert ·
+Prepare · Create invites; Row 2 (run): Send invites · Activate ·
+Send reminders (Close session deferred per the scoping note
+above). The reconcile-detour saved-response confirmation
+migrated onto Prepare; the warnings detour on Activate is
+preserved. State cascade renumbered to 10 stable IDs (1, 2, 3,
+4, 4W, 4Err, 5, 6, 7, 8, 9); States 5 / 6 (validated +
+invitations) render in the cascade but stay unreachable until
+Part 2 relaxes the `_require_ready` invitation gate. Audit
+events bracket each button's run with
+`context.button="prepare_session"` or `"activate_session"`.
+Spec rewritten in `spec/workflow_card.md`; tests in
+`tests/integration/test_workflow_super_button.py` rewritten for
+the split. Suite green (1929 passed), ruff clean.
+
+The remainder of this section is the original Part 1 rationale,
+retained for context.
 
 **The problem.** The Workflow-card super-button runs Validate →
 Generate → Activate as one action. Reviewer-surface previews need
