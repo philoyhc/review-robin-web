@@ -49,7 +49,11 @@ from app.services.assignments import is_self_review
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
 
-__all__ = ["HEADER", "serialize_responses"]
+__all__ = [
+    "HEADER",
+    "serialize_responses",
+    "serialize_responses_for_instrument",
+]
 
 
 # 21-column header. Pinned in unit tests so a rename here fails
@@ -190,6 +194,70 @@ def _group_export_index(
     return key_by_assignment, identity
 
 
+def _response_row_tuple(
+    response: Response,
+    reviewer: Reviewer,
+    reviewee: Reviewee,
+    instrument: Instrument,
+    field: InstrumentResponseField,
+    rtd: ResponseTypeDefinition,
+    *,
+    instrument_label: str,
+    group_key: tuple[str, ...] | None,
+    group_identity: dict[tuple[int, tuple[str, ...]], str],
+    session_zone: object,
+) -> tuple[str, ...]:
+    """Build the 21-column data tuple for one ``Response``.
+
+    ``group_key`` is the assignment's group key on a group-scoped
+    instrument (``None`` for per-reviewee) — the caller dedupes the
+    fan-out's duplicate rows before invoking this helper.
+    """
+    if group_key is not None:
+        reviewee_name = group_identity.get(
+            (instrument.id, group_key), "(group)"
+        )
+        reviewee_email = ""
+        reviewee_tags = ("", "", "")
+        self_review = "FALSE"
+        flavour = "group-scoped"
+    else:
+        reviewee_name = reviewee.name
+        reviewee_email = reviewee.email_or_identifier
+        reviewee_tags = (
+            reviewee.tag_1 or "",
+            reviewee.tag_2 or "",
+            reviewee.tag_3 or "",
+        )
+        self_review = (
+            "TRUE" if is_self_review(reviewer, reviewee) else "FALSE"
+        )
+        flavour = "per-reviewee"
+    return (
+        reviewer.name,
+        reviewer.email,
+        reviewer.tag_1 or "",
+        reviewer.tag_2 or "",
+        reviewer.tag_3 or "",
+        reviewee_name,
+        reviewee_email,
+        reviewee_tags[0],
+        reviewee_tags[1],
+        reviewee_tags[2],
+        instrument_label,
+        instrument.short_label or "",
+        field.field_key,
+        field.label,
+        rtd.response_type,
+        response.value if response.value is not None else "",
+        self_review,
+        iso_in_zone(response.saved_at, session_zone),
+        iso_in_zone(response.submitted_at, session_zone),
+        str(response.version),
+        flavour,
+    )
+
+
 def serialize_responses(
     db: Session, review_session: ReviewSession
 ) -> Iterable[tuple[str, ...]]:
@@ -306,45 +374,130 @@ def serialize_responses(
             if cell in seen_group_cells:
                 continue
             seen_group_cells.add(cell)
-            reviewee_name = group_identity.get(
-                (instrument.id, group_key), "(group)"
-            )
-            reviewee_email = ""
-            reviewee_tags = ("", "", "")
-            self_review = "FALSE"
-            flavour = "group-scoped"
-        else:
-            reviewee_name = reviewee.name
-            reviewee_email = reviewee.email_or_identifier
-            reviewee_tags = (
-                reviewee.tag_1 or "",
-                reviewee.tag_2 or "",
-                reviewee.tag_3 or "",
-            )
-            self_review = (
-                "TRUE" if is_self_review(reviewer, reviewee) else "FALSE"
-            )
-            flavour = "per-reviewee"
-        yield (
-            reviewer.name,
-            reviewer.email,
-            reviewer.tag_1 or "",
-            reviewer.tag_2 or "",
-            reviewer.tag_3 or "",
-            reviewee_name,
-            reviewee_email,
-            reviewee_tags[0],
-            reviewee_tags[1],
-            reviewee_tags[2],
-            instrument_label.get(instrument.id, ""),
-            instrument.short_label or "",
-            field.field_key,
-            field.label,
-            rtd.response_type,
-            response.value if response.value is not None else "",
-            self_review,
-            iso_in_zone(response.saved_at, session_zone),
-            iso_in_zone(response.submitted_at, session_zone),
-            str(response.version),
-            flavour,
+        yield _response_row_tuple(
+            response,
+            reviewer,
+            reviewee,
+            instrument,
+            field,
+            rtd,
+            instrument_label=instrument_label.get(instrument.id, ""),
+            group_key=group_key,
+            group_identity=group_identity,
+            session_zone=session_zone,
         )
+
+
+def serialize_responses_for_instrument(
+    db: Session,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    *,
+    position: int,
+) -> Iterable[tuple[str, ...]]:
+    """Yield CSV rows for one instrument's responses, sorted
+    reviewee-first.
+
+    Same 21-column shape as :func:`serialize_responses`, scoped to
+    a single instrument and sorted ``(reviewee → reviewer →
+    field)`` — the reading order optimised for "show me what each
+    reviewee got." Used by the Zip-all bundle to emit one
+    per-instrument file alongside the unified Responses CSV.
+
+    ``position`` is the instrument's 1-based positional index in
+    the session (its position in the canonical
+    ``(Instrument.order, Instrument.id)`` ordering) — used to
+    render the preamble's ``instrument_{n}`` label so the
+    per-instrument file matches the unified CSV's vocabulary.
+
+    The query streams via ``yield_per`` but data rows are
+    collected and post-sorted by the composed output identity so
+    a group-scoped instrument's rows still cluster by group
+    identity (the underlying assignment's reviewee email — what
+    the SQL ``ORDER BY`` would see — is the *member's* email, not
+    the group's, so SQL-level sort can't put group rows in the
+    intuitive order).
+    """
+
+    session_zone = resolve_session_timezone(review_session)
+
+    label = f"instrument_{position}"
+    yield (label,)
+    fields = sorted(
+        instrument.response_fields, key=lambda f: (f.order, f.id)
+    )
+    for field in fields:
+        yield (field.field_key, field.help_text or "")
+    yield ()
+    yield HEADER
+
+    if instrument.group_kind is not None:
+        group_key_by_assignment, group_identity = _group_export_index(
+            db, review_session
+        )
+    else:
+        group_key_by_assignment, group_identity = {}, {}
+    seen_group_cells: set[tuple[int, int, tuple[str, ...], int]] = set()
+
+    stmt = (
+        select(
+            Response,
+            Reviewer,
+            Reviewee,
+            Instrument,
+            InstrumentResponseField,
+            ResponseTypeDefinition,
+        )
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .join(Instrument, Assignment.instrument_id == Instrument.id)
+        .join(
+            InstrumentResponseField,
+            Response.response_field_id == InstrumentResponseField.id,
+        )
+        .join(
+            ResponseTypeDefinition,
+            InstrumentResponseField.response_type_id
+            == ResponseTypeDefinition.id,
+        )
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == instrument.id)
+        .order_by(
+            Reviewer.email,
+            Reviewee.email_or_identifier,
+            InstrumentResponseField.order,
+            InstrumentResponseField.id,
+        )
+        .execution_options(yield_per=1000)
+    )
+
+    collected: list[tuple[tuple[str, str, int, int], tuple[str, ...]]] = []
+    for response, reviewer, reviewee, instr, field, rtd in db.execute(stmt):
+        group_key = group_key_by_assignment.get(response.assignment_id)
+        if group_key is not None:
+            cell = (reviewer.id, instr.id, group_key, field.id)
+            if cell in seen_group_cells:
+                continue
+            seen_group_cells.add(cell)
+        row = _response_row_tuple(
+            response,
+            reviewer,
+            reviewee,
+            instr,
+            field,
+            rtd,
+            instrument_label=label,
+            group_key=group_key,
+            group_identity=group_identity,
+            session_zone=session_zone,
+        )
+        # Sort key: composed ``RevieweeName`` (col 5) → reviewer
+        # email (col 1) → field order (carried separately to
+        # preserve the instrument's authored field order rather
+        # than alphabetising by ``FieldKey``).
+        collected.append(((row[5], row[1], field.order, field.id), row))
+
+    collected.sort(key=lambda pair: pair[0])
+    for _, row in collected:
+        yield row

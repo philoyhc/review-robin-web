@@ -1,10 +1,12 @@
-"""Zip-all bundle — Segment 18D PR E1 / 18H Part 3.
+"""Zip-all bundle — Segment 18D PR E1 / 18H Part 3 / 18H Part 2.
 
 Collects the operator-facing per-session CSVs — Reviewers,
 Reviewees, Relationships, Responses, Settings, plus the two
-bundle-only Reviewer / Reviewee stats CSVs (18H Part 3) — into one
-in-memory zip archive. Backs the Extract Data card's "Zip all"
-tile: one download for porting a whole session.
+bundle-only Reviewer / Reviewee stats CSVs (18H Part 3) and one
+``instrument_{n}`` CSV per instrument sorted reviewee-first (18H
+Part 2) — into one in-memory zip archive. Backs the Extract
+Data card's "Zip all" tile: one download for porting a whole
+session.
 
 The Sys-Admin-gated audit-events extract is deliberately not in
 the bundle (it lives behind the diagnostics doorway).
@@ -15,14 +17,18 @@ from __future__ import annotations
 import io
 import zipfile
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Instrument, ReviewSession
 from app.services import responses as responses_service
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.entity_stats_extract import build_entity_stats
 from app.services.extracts.relationships_extract import serialize_relationships
-from app.services.extracts.responses_extract import serialize_responses
+from app.services.extracts.responses_extract import (
+    serialize_responses,
+    serialize_responses_for_instrument,
+)
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.session_config_io import HEADER as SETTINGS_HEADER
@@ -70,6 +76,25 @@ def build_session_bundle(
         "reviewee_stats": reviewee_stats,
     }
 
+    # Per-instrument response files (18H Part 2) — one CSV per
+    # instrument named ``{code}_instrument_{n}.csv``, same column
+    # shape as the unified Responses CSV, sorted reviewee-first.
+    # Positional ``n`` matches the ``instrument_{n}`` label used
+    # in the unified file's preamble and ``InstrumentName`` column.
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    for position, instrument in enumerate(instruments, start=1):
+        members[f"instrument_{position}"] = list(
+            serialize_responses_for_instrument(
+                db, review_session, instrument, position=position
+            )
+        )
+
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for kind, rows in members.items():
@@ -90,5 +115,6 @@ def build_session_bundle(
         "settings": len(settings_rows),
         "reviewer_stats": max(0, len(reviewer_stats) - 1),
         "reviewee_stats": max(0, len(reviewee_stats) - 1),
+        "instrument_files": len(instruments),
     }
     return buffer.getvalue(), counts
