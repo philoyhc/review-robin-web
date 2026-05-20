@@ -382,11 +382,14 @@ canonical envelope contract these events follow.
 ## 8. Scheduled lifecycle automation (Segment 18G — forthcoming)
 
 The operator-facing automation surface for time-based lifecycle
-events. Schema lands in **Segment 18G Part 0** (see
+events. Schema landed in **Segment 18G Part 0** (shipped
+2026-05-20 — see
 `guide/segment_18G_scheduled_events.md` Part 0); the
-consumer services land in Parts 1 → 5. This section documents
-the persistent model + the cross-cutting rules **all** scheduled
-triggers obey, so each Part doesn't re-litigate them.
+consumer services land in Parts 1 → 5, ordered by workflow
+sequence (activation → invites → reminders → archive → retention).
+This section documents the persistent model + the cross-cutting
+rules **all** scheduled triggers obey, so each Part doesn't
+re-litigate them.
 
 ### 8.1 Model — anchors + offsets
 
@@ -419,10 +422,10 @@ in-memory archive timestamp) also serve as anchors for offsets:
 | Offset | Column | Anchor | Shape | Default | Consumer |
 |---|---|---|---|---|---|
 | Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
-| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 5 |
-| Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 1 |
+| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 3 |
+| Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 4 |
 | Release-until | `release_until_offset` | `responses_release_at` | single ISO 8601 duration | unset | Participants platform |
-| Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 4 |
+| Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 5 |
 
 The "End" anchor (`deadline`) is also the anchor for the lazy
 deadline observer (§4 — per-instrument auto-close); that's the
@@ -485,5 +488,5 @@ re-ordered list doesn't re-fire already-sent reminders.
   editor surfaces that write them.
 - **Settings CSV round-trip** — every Part 0 column is exported
   / imported in the Settings CSV as the consumer Part lights it
-  up (18D Part 5 already rides Part 4 for the retention
+  up (18D Part 5 already rides Part 5 for the retention
   columns).

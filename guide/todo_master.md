@@ -684,7 +684,8 @@ Audit log — sit after the Allow-delete checkbox.
   ticked is a plain archive. Ticking Rosters force-ticks
   Responses (the cascade makes it implied).
 - Re-scoped on the way in: the *scheduled* / policy-driven
-  retention half moved to **Segment 18G** Part 4. Closes the
+  retention half moved to **Segment 18G** Part 5 (was Part 4
+  pre-2026-05-20 workflow-order reshuffle). Closes the
   operator-facing half of the §21 #16 acceptance criterion.
 
 Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
@@ -715,7 +716,9 @@ across PRs **#1129 → #1133**:
 
 Two consumer-blocked parts handed off: **Part 3** (Responses
 `Instrument` flavour column) rides with **13C**; **Part 5**
-(retention CSV columns) with **18G Part 4**. Plan:
+(retention CSV columns) with **18G Part 5** (the
+scheduled-purge Part — was 18G Part 4 pre-2026-05-20
+workflow-order reshuffle). Plan:
 `guide/archive/segment_18D_export_and_import_update.md`.
 
 ---
@@ -836,23 +839,25 @@ bottom of this file.
 
 - **18G — Scheduled events** *(stub created 2026-05-17;
   renumbered from 18F on 2026-05-19; Segment 13F
-  consolidated in as Part 0 on 2026-05-20)*.
-  Consolidates every scheduled / automatic session-lifecycle
-  automation behind one schema slice (**Part 0**):
-  **auto-archive** (a timed `archive_session`, moved out of 18A),
-  **auto-send invitations** (timed invitation dispatch), and
-  **scheduled activation** — a timed `validated → ready` flip;
-  since Activation *is* the open event (Activated-as-gate, settled
-  in 18F Part 2), a scheduled activation is the synchronised open,
-  with no separate "opening gate". **Scheduled
-  reminders** — the former Segment 14C — were consolidated in
-  (2026-05-18) as Part 5. **Part 0 — Schema pre-positioning**
-  (the inert datetime / JSON columns Parts 1–5 read) absorbs the
-  two outstanding 13F PRs (`reminder_settings`, `retention_*`)
-  and the former 13F scheduled-lifecycle schema audit, retiring
-  the standalone 13F plan. Parts 1–5 are schema-blocked on
-  Part 0; Parts 2 / 3 also depend on 18F Part 2 for the
-  Activated-as-gate model + reviewer pre-open / closed states.
+  consolidated in as Part 0 on 2026-05-20; **Part 0 shipped
+  2026-05-20** — PR #1253)*. Consolidates every scheduled /
+  automatic session-lifecycle automation behind one schema
+  slice (Part 0). Parts 1–5 are now ordered by **workflow
+  sequence** — the chronological order each scheduled event
+  fires across a session's life: **Part 1 — scheduled
+  activation** (timed `validated → ready` flip; since
+  Activation *is* the open event per 18F Part 2's
+  Activated-as-gate, a scheduled activation is the synchronised
+  open with no separate "opening gate"); **Part 2 — auto-send
+  invitations** (offsets anchored on Start);
+  **Part 3 — auto-send reminders** (the former Segment 14C,
+  consolidated in 2026-05-18; offsets anchored on End);
+  **Part 4 — auto-archive** (timed `archive_session`, moved
+  out of 18A; offset anchored on End); **Part 5 — scheduled /
+  policy-driven purge** (auto-delete, anchored on archive
+  timestamp; the scheduled half of 18C). Parts 1 / 2 depend
+  on 18F Part 2; Part 1 establishes the shared dispatch
+  mechanism Parts 2–5 reuse.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **18H — Post-assessment update + small enhancements**
