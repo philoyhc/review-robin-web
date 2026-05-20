@@ -740,6 +740,48 @@ def review_surface(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     reviewer, review_session = reviewer_session
+    # Pre-open surface (18F Part 2). A reviewer with a roster row
+    # (typically via an invitation sent ahead of activation) may
+    # land here before the session is activated for responses;
+    # render a dedicated "review opens later" page instead of
+    # 403-ing or dropping them into the response form. The closed
+    # case is handled later — the existing surface template
+    # honours the per-instrument
+    # ``responses_visible_when_closed`` toggle so reviewers can
+    # still see their saved responses post-close, with the
+    # "review now closed" banner overlaid via context.
+    lifecycle.observe_deadline(
+        db, review_session, correlation_id=request_correlation_id()
+    )
+    db.refresh(review_session)
+    if not lifecycle.is_ready(review_session):
+        session_zone = sessions_service.resolve_session_timezone(
+            review_session
+        )
+        deadline_text = (
+            date_formatting.format_datetime(
+                review_session.deadline, session_zone
+            )
+            if review_session.deadline
+            else None
+        )
+        deadline_timezone_label = (
+            date_formatting.gmt_offset_zone_label(
+                session_zone, at=review_session.deadline
+            )
+            if review_session.deadline
+            else None
+        )
+        return _templates.TemplateResponse(
+            request,
+            "reviewer/pre_open.html",
+            {
+                "user": user,
+                "session": review_session,
+                "deadline_text": deadline_text,
+                "deadline_timezone_label": deadline_timezone_label,
+            },
+        )
     instrument_count = len(_instruments_for_session(db, review_session.id))
     if instrument_position < 1 or instrument_position > instrument_count:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

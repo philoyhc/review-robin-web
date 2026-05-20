@@ -1,0 +1,40 @@
+{# Reviewer pre-open page — Segment 18F Part 2. Rendered when a
+   reviewer follows an invitation to a session that has been
+   Prepared (validated) but not yet activated for responses.
+
+   The headline scenario is: an operator sends out invitations
+   from the Prepared state to give reviewers a heads-up that the
+   review will open; the reviewer clicks the link and lands here
+   instead of the response form.
+#}
+{% extends "base.html" %}
+
+{% block title %}Review opens later — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2 reviewer{% endblock %}
+{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+
+{% block content %}
+  <h1>{{ session.name }} — opens later</h1>
+
+  <div class="card">
+    <div class="banner banner-info" style="margin: 0;">
+      <p class="banner-headline">This review hasn't opened yet.</p>
+      <p>
+        The session operator has prepared the review and you're
+        on the roster, but responses aren't being accepted yet.
+        Check back closer to the response window.
+      </p>
+      {% if session.deadline %}
+        <p style="margin-top: var(--space-3);">
+          <strong>Deadline:</strong>
+          {{ deadline_text }} ({{ deadline_timezone_label }})
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="btn-pair" style="margin-top: var(--space-4);">
+    <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
+  </div>
+{% endblock %}

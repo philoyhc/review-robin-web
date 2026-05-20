@@ -139,6 +139,8 @@ def test_generate_creates_one_per_assigned_reviewer_and_is_idempotent(
 def test_generate_409_while_session_draft(
     client: TestClient, db: Session
 ) -> None:
+    """The invitation gate still rejects ``draft`` sessions (per
+    18F Part 2's relaxation: validated or ready, not draft)."""
     session = _create_session(client, db, "draft-1")
     _populate(client, db, session.id, reviewer_email="rae@example.edu")
     response = client.post(
@@ -146,6 +148,79 @@ def test_generate_409_while_session_draft(
         follow_redirects=False,
     )
     assert response.status_code == 409
+
+
+def _validated_session(
+    client: TestClient,
+    db: Session,
+    code: str,
+    reviewer_email: str = "rae@example.edu",
+) -> ReviewSession:
+    """Bring a session to ``validated`` without activating, so 18F
+    Part 2's "invitations from Prepared" path can be exercised."""
+    session = _create_session(client, db, code)
+    _populate(client, db, session.id, reviewer_email=reviewer_email)
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(session)
+    return session
+
+
+def test_generate_works_from_validated_session(
+    client: TestClient, db: Session
+) -> None:
+    """18F Part 2 — Create invites is live from Validated (the
+    Prepared state), not only from Ready."""
+    session = _validated_session(client, db, "val-gen")
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+
+def test_send_all_works_from_validated_session(
+    client: TestClient, db: Session
+) -> None:
+    """18F Part 2 — Send invites is live from Validated too, so an
+    operator can notify reviewers ahead of activation."""
+    session = _validated_session(client, db, "val-send")
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/generate",
+        follow_redirects=False,
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+
+def test_reviewer_pre_open_page_renders_for_validated_session(
+    client: TestClient,
+    db: Session,
+    make_client,
+) -> None:
+    """18F Part 2 — a reviewer with a roster row who lands on the
+    response surface URL of a not-yet-activated session sees the
+    "this review hasn't opened yet" page instead of the form or
+    a 403."""
+    session = _validated_session(client, db, "val-preopen")
+    rae = AuthenticatedUser(
+        principal_id="rae-oid",
+        email="rae@example.edu",
+        name="Rae",
+        provider="aad",
+    )
+    rae_client = make_client(rae)
+    page = rae_client.get(f"/reviewer/sessions/{session.id}/1")
+    assert page.status_code == 200
+    body = page.text
+    assert "<title>Review opens later" in body
+    assert "hasn't opened yet" in body
 
 
 def test_send_writes_outbox_and_flips_to_sent(

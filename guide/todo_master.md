@@ -850,28 +850,29 @@ bottom of this file.
   improvements land there as new Parts rather than reopening 18E.
   **Plan:** `guide/archive/segment_18E_small_enhancements.md`.
 
-- **18F — Workflow optimization** *(stub created 2026-05-19; Part 1
-  shipped 2026-05-20)*. A deliberate end-to-end work-through of
-  the operator workflow — the session journey from setup through
-  preparation, activation, the review window, and close-out.
-  **Part 1 (shipped 2026-05-20):** the Workflow-card super-button
-  split into **Prepare** (Generate + Validate) and **Activate**
-  (Activate only) — the reviewer surface is previewable from
-  `validated` while nothing is live, and operators get a pre-
-  activation window. The card itself moved to a 50/50 column
-  grid with two rows of buttons in the left column (prep / run),
-  the 10-state cascade was renumbered onto stable IDs, the
-  reconcile-detour saved-response confirmation migrated onto
-  Prepare, and audit events carry `context.button="prepare_session"`
-  or `"activate_session"`. Close session deferred to the
-  `expired` lifecycle work. **Part 2 (open):** pre-activation
-  invitations + reviewer pre-open / closed pages (relax the
-  `_require_ready` gate so invites can fire from Validated and
-  add the reviewer surfaces for sessions not yet open / now
-  closed). **Part 3+ (TBD):** holistic pass — pre-positioning
-  the lifecycle so 18G scheduling and the segments-21+
-  participant model slot in cleanly. Leads 18G. **Plan:**
-  `guide/segment_18F_workflow_optimization.md`.
+- **18F — Workflow optimization** *(stub created 2026-05-19;
+  Parts 1 + 2 shipped 2026-05-20)*. A deliberate end-to-end
+  work-through of the operator workflow — the session journey
+  from setup through preparation, activation, the review window,
+  and close-out. **Part 1 (shipped 2026-05-20):** the
+  Workflow-card super-button split into **Prepare** (Generate +
+  Validate) and **Activate** (Activate only). Card moved to a
+  55/45 column grid with two rows of buttons in the left column
+  (prep / run); 10-state cascade renumbered onto stable IDs;
+  reconcile-detour migrated onto Prepare. Close session lands
+  as a placeholder until the `expired` lifecycle work.
+  **Part 2 (shipped 2026-05-20):** invitation gate relaxed from
+  `ready` to `validated or ready`, so Create / Send invites are
+  live from the Prepared state. New reviewer pre-open page
+  (`reviewer/pre_open.html`) renders when a reviewer lands on a
+  not-yet-activated session. Workflow card's State 5 / State 6
+  branches in the cascade became reachable with their own per-
+  state body copy. Closed-page kept on the existing surface (so
+  `responses_visible_when_closed` keeps working); edit-after-
+  invite confirm guard deferred. **Part 3+ (TBD):** holistic pass
+  — pre-positioning the lifecycle so 18G scheduling and the
+  segments-21+ participant model slot in cleanly. Leads 18G.
+  **Plan:** `guide/segment_18F_workflow_optimization.md`.
 
 - **18G — Scheduled events** *(stub created 2026-05-17;
   renumbered from 18F on 2026-05-19)*.

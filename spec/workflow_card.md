@@ -144,11 +144,11 @@ elif is_ready:
     else (invitations.sent):                    → State 9
 ```
 
-States 5 and 6 (validated with invitations created / sent) are
-reachable only once 18F Part 2 relaxes the
-`_require_ready` invitation gate; in Part 1 they render
-correctly when reached via direct URL but the buttons can't get
-the operator there. State 4Err is defensive — `mark_validated`
+States 5 and 6 (validated with invitations created / sent)
+became reachable in 18F Part 2 when the
+`_require_validated_or_ready` gate was relaxed from "ready
+only" to "validated or ready". State 4Err is defensive —
+`mark_validated`
 only flips `draft → validated` on a clean report, so re-running
 Validate in the `validated` lifecycle and finding errors is rare
 (it requires a setup edit that the lifecycle's
@@ -164,8 +164,8 @@ Validate in the `validated` lifecycle and finding errors is rare
 | **4** | `is_validated` + `can_activate` + no warnings + no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites and send them ahead of Activation, or Activate to receive responses." |
 | **4W** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
-| **5** | `is_validated`, invites generated, none sent (Part 2 only) | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." *(rendered in cascade; reachable post-18F-Part-2)* |
-| **6** | `is_validated`, invites sent (Part 2 only) | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." *(rendered in cascade; reachable post-18F-Part-2)* |
+| **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
+| **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to receive responses." |
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses. Create invites and send them so reviewers know they can start." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
@@ -207,6 +207,15 @@ becomes a horizontal rule above the right-column content.
 Each button row is a `.next-action-buttons.next-action-buttons-row`
 flex container whose children stretch (`flex: 1 1 0`) so the row's
 buttons distribute evenly across the left column's width.
+
+**Stable card height.** The `.next-action-body` div flex-grows
+(`flex: 1 1 auto`) and carries `min-height: 3.5em` — enough for
+~2 rows of body text. The two action button rows sink to the
+bottom of the left column regardless of body length, and the
+card no longer grows / shrinks as the state-specific copy goes
+from one line to two. Multi-paragraph states (e.g. State 3's
+two-line body) or the prepare-confirm banner still expand the
+body beyond the min — the rule sets a floor, not a ceiling.
 
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
@@ -470,7 +479,7 @@ id="next-action-status">` block. Per-state content:
 | **4** (validated, no warnings, no invites) | `Status` heading + "Setup validated." |
 | **4W** (validated + warnings) | "Setup validated." + a per-warning pill row + the per-issue list inline so the operator sees what they're about to acknowledge before clicking the detour. |
 | **4Err** (validated + errors, defensive) | `Validation issues` heading + pill row + per-issue list, same shape as State 3. |
-| **5 / 6** (validated + invites) | Currently shares State 4's aside; specific aside copy lands with 18F Part 2. |
+| **5 / 6** (validated + invites) | Currently shares State 4's aside ("Setup validated."); invite-counter and deadline asides can land as a follow-up. |
 | **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
 ### Workflow failure banner

@@ -145,9 +145,62 @@ activation**, with no separate gate within `ready`.
   generate-plus-validate step, so the "Validated" state label
   needs no defence.
 
-### Part 2 — Pre-activation invitations + reviewer pre-open / closed states
+### Part 2 — Pre-activation invitations + reviewer pre-open / closed states — shipped 2026-05-20
 
-**Goal.** Support the scenario: an operator sends a notification
+Phase A — invitation gate + reviewer pre-open page — landed. The
+`_require_ready` route guard renamed to
+`_require_validated_or_ready` and relaxed to accept either
+state, so `POST /invitations/generate` /
+`POST /invitations/send-all` (and the per-row variants) now
+work from Validated. The Workflow card's State 5 / State 6
+branches in the cascade are now reachable and have their own
+per-state body copy:
+
+- State 5 (Validated, invites generated, none sent): *"Invitations
+  are ready to send. Send them ahead of Activation to notify
+  reviewers, or Activate now and send afterwards."*
+- State 6 (Validated, invites sent): *"Reviewers have been
+  notified that the review will open. Activate the session when
+  you're ready to receive responses."*
+
+The Create-invites and Send-invites buttons in Row 2 of the card
+became live from Validated as well as Ready (the
+`_invitations_actionable` predicate now reads `is_validated or
+is_ready`); Send-reminders stays Ready-only.
+
+A new reviewer **pre-open** page renders at
+`GET /reviewer/sessions/{id}/{position}` when the session is not
+yet `ready`. Before 18F Part 2 the surface 403-d in that state;
+now it returns the new `reviewer/pre_open.html` template (under
+the reviewer chrome), with the session name in the h1 and the
+deadline / zone shown when one is set. Reviewers who follow an
+invitation token to a Prepared session see "review opens later"
+instead of a 403 or an empty form.
+
+The reviewer **closed** state stays on the existing surface
+template — its "this session is no longer accepting responses"
+banner already covers the post-window UX (and crucially keeps
+the existing `responses_visible_when_closed` toggle working so
+reviewers can still see their saved responses after the
+deadline). A dedicated closed.html was considered and dropped on
+those grounds.
+
+Phase B — edit-after-invite confirm guard — **deferred** to a
+follow-up. The simpler mental model the operator already has is
+that editing setup reverts the session to draft via
+`invalidate_if_validated`; the State-cascade transition is
+self-evident in the Workflow card. A confirmation modal can land
+later if pilot feedback asks for one.
+
+Tests: `tests/integration/test_invitations.py` gains three new
+cases (Create invites from Validated succeeds, Send invites from
+Validated succeeds, reviewer pre-open page renders). Suite green
+(1932 passed); ruff clean.
+
+The remainder of this section is the original Part 2 rationale,
+retained for context.
+
+**Original goal.** Support the scenario: an operator sends a notification
 email to every reviewer *before* the session opens — "the review
 opens for responses at «future time»" — and a reviewer who clicks
 through lands on a page telling them the review is scheduled and to
