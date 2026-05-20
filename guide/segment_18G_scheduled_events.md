@@ -85,6 +85,11 @@ shipped at scoping time; the items below are the candidate set.
 
 ### Part 0 — Schema pre-positioning (consolidated from 13F, 2026-05-20)
 
+**Status: shipped 2026-05-20** (PR #1253). All eight columns
+landed inert on `sessions` — Parts 1–5 below now have a stable
+schema to consume. Inert audit at close-out verified zero hits
+across `app/services/` + `app/web/`.
+
 **Goal.** Pre-position the additive, nullable, no-backfill schema
 slots that Parts 1–5 read. Mirrors the 13D / 13E / 13F
 inert-migrations pattern: every column is nullable, every
@@ -107,7 +112,7 @@ Two nullable `DateTime(timezone=True)` columns on `sessions`:
 
 ```python
 # app/db/models/review_session.py
-scheduled_activate_at: Mapped[datetime | None]  # Start  → Part 3
+scheduled_activate_at: Mapped[datetime | None]  # Start  → Part 1
 responses_release_at:  Mapped[datetime | None]  # Release-from (Participants platform, inert until then)
 ```
 
@@ -118,7 +123,7 @@ them. Today's session already carries one anchor — `sessions.deadline`
 
 - **`scheduled_activate_at` (Start)** — the operator-set trigger
   for the scheduled `validated → ready` transition (consumer
-  Part 3). Per the 18F Part 2 Activated-as-gate model, no new
+  Part 1). Per the 18F Part 2 Activated-as-gate model, no new
   `SessionStatus` value and no sub-gate within `ready` —
   `ready` already means "open for responses". Distinct from the
   existing `activated_at` (live, system-stamped on the first
@@ -148,8 +153,8 @@ that fire on a *sequence* of offsets) and two String singletons
 ```python
 # app/db/models/review_session.py
 invite_offsets:        Mapped[list[str] | None]  # JSON; anchor=scheduled_activate_at; → Part 2
-reminder_offsets:      Mapped[list[str] | None]  # JSON; anchor=deadline;               → Part 5
-archive_offset:        Mapped[str | None]        # String(16) ISO 8601 duration; anchor=deadline; → Part 1
+reminder_offsets:      Mapped[list[str] | None]  # JSON; anchor=deadline;               → Part 3
+archive_offset:        Mapped[str | None]        # String(16) ISO 8601 duration; anchor=deadline; → Part 4
 release_until_offset:  Mapped[str | None]        # String(16) ISO 8601 duration; anchor=responses_release_at (Participants platform, inert until then)
 ```
 
@@ -158,8 +163,8 @@ release_until_offset:  Mapped[str | None]        # String(16) ISO 8601 duration;
 | Offset column | Anchor | Shape | Consumer |
 |---|---|---|---|
 | `invite_offsets` | `scheduled_activate_at` (Start) | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | Part 2 (auto-send invites) |
-| `reminder_offsets` | `deadline` (End) | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | Part 5 (auto-send reminders) |
-| `archive_offset` | `deadline` (End) | Single ISO 8601 duration, e.g. `"P30D"`; **editor default `P30D`** (the column is nullable with no `server_default`; the editor pre-fills `P30D` to give operator time to download data before the session disappears from the active lobby) | Part 1 (auto-archive) |
+| `reminder_offsets` | `deadline` (End) | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | Part 3 (auto-send reminders) |
+| `archive_offset` | `deadline` (End) | Single ISO 8601 duration, e.g. `"P30D"`; **editor default `P30D`** (the column is nullable with no `server_default`; the editor pre-fills `P30D` to give operator time to download data before the session disappears from the active lobby) | Part 4 (auto-archive) |
 | `release_until_offset` | `responses_release_at` | Single ISO 8601 duration (Release-until is derived as Release-from + this offset) | Participants platform (inert until then) |
 
 **Shape decision.** Separate columns (not a single
@@ -187,7 +192,7 @@ enforcement lives in a `resolve_offset(session, anchor_field,
 offset_field) -> datetime | None` helper that every scheduler
 path uses.
 
-#### Part 0c — `sessions.retention_exception` Boolean + `sessions.retention_overrides` JSON (feeds Part 4)
+#### Part 0c — `sessions.retention_exception` Boolean + `sessions.retention_overrides` JSON (feeds Part 5)
 
 Two nullable columns on `sessions` (was 13F PR 5), landed
 together because they're tightly coupled (one is the "opt out
@@ -201,8 +206,8 @@ retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 ```
 
 `retention_exception=NULL` and `=False` both mean "no exception"
-(Part 4 normalises on read). `retention_overrides=NULL` means
-"use the deployment retention defaults" (Part 4's env vars).
+(Part 5 normalises on read). `retention_overrides=NULL` means
+"use the deployment retention defaults" (Part 5's env vars).
 
 **`retention_overrides` key inventory.** Per-session overrides
 for the deployment retention env vars, plus the per-session
@@ -219,7 +224,7 @@ for the deployment retention env vars, plus the per-session
 than as a top-level column because (i) it's anchor-relative to
 the *archive* event (already system-stamped, no new anchor
 column needed) and (ii) it's a retention-policy lever
-operationally — the same Part 4 editor surfaces both the env-var
+operationally — the same Part 5 editor surfaces both the env-var
 overrides and this offset.
 
 **Sequencing inside Part 0.** Three migrations (0a / 0b / 0c),
@@ -231,46 +236,26 @@ tests in `tests/integration/test_*_schema.py` shape (mirrors
 the new identifiers across `app/services/` + `app/web/` returns
 zero hits — light-up happens in Parts 1–5.
 
-### Part 1 — Auto-archive
+> **Parts 1–5 are ordered by workflow sequence — the chronological
+> order each scheduled event fires across a session's life.**
+> Activation is the first scheduled event (the session opens),
+> then invites land just before / at activation, then reminders
+> fire as the deadline approaches, then auto-archive cleans up
+> after End, and finally auto-delete purges archived sessions.
+> Implementation dependency order roughly matches workflow order:
+> later Parts read scaffolding the earlier Parts can settle (the
+> shared dispatch mechanism, audit-event naming conventions).
 
-**Goal.** A session carries an archive *offset* (anchored on
-`deadline`, default `P30D`); a scheduled trigger flips it
-`draft → archived` via 18A's `archive_session` at
-`deadline + archive_offset`.
-
-- Reuses `session_lifecycle.archive_session` verbatim — only the
-  trigger is new. Note: archiving is draft-only (18A's locked
-  `draft ⇄ archived` model), so the schedule fires only on draft
-  sessions; a running session must be reverted first.
-- Schema: `sessions.archive_offset` (Part 0b). Inert when
-  `deadline` is unset per the cross-cutting anchor-null rule.
-- The default `P30D` (30 days post-deadline) is operator-editable;
-  it gives the operator time to download data before the session
-  disappears from the active lobby.
-
-### Part 2 — Auto-send invitations
-
-**Goal.** Instead of sending every invitation immediately, a
-session can carry a list of **invitation send offsets** anchored
-on `scheduled_activate_at` (Start); a scheduled trigger dispatches them at
-each `scheduled_activate_at + offset` moment. With the Activated-as-gate
-model (Part 3 / 18F), invitations are sendable from the
-**Prepared (`validated`)** state — so an operator can schedule
-notification emails to land *ahead of* the scheduled open
-(e.g. one day before, two hours before).
-
-- Schema: `sessions.invite_offsets` (Part 0b). Inert when
-  `scheduled_activate_at` is unset per the cross-cutting anchor-null rule.
-- Depends on **18F Part 2** relaxing the invitation gate so
-  invitations can be sent before activation.
-
-### Part 3 — Scheduled activation
+### Part 1 — Scheduled activation
 
 **Goal.** A session can carry an **activation date/time**; a
 scheduled trigger flips it `validated → ready` at that point.
 Because **Activation is the open event** (Activated-as-gate —
 see 18F Part 2), a scheduled activation *is* the synchronised
-open: every reviewer's window starts at the same moment.
+open: every reviewer's window starts at the same moment. This
+is the first scheduled event in the workflow — every downstream
+offset that anchors on Start (`invite_offsets`) reads the
+column this Part lights up.
 
 **Settled design (2026-05-19).** The earlier "opening gate" idea
 — a separate gate *within* `ready`, with an `opens_at` datetime
@@ -291,13 +276,107 @@ value and no sub-gate within `ready`: `ready` already means
   pre-open page ("scheduled to open at «scheduled_activate_at» — come back
   later") reads the `scheduled_activate_at` this part adds. 18F Part 2
   builds the states; this part supplies the scheduled time.
+- Establishes the **shared dispatch mechanism** Parts 2–5 reuse —
+  whichever pattern the segment settles on (background worker or
+  lazy observer extended to additional anchors) lands here first.
 
-### Part 4 — Scheduled / policy-driven purge (retention)
+### Part 2 — Auto-send invitations
+
+**Goal.** Instead of sending every invitation immediately, a
+session can carry a list of **invitation send offsets** anchored
+on `scheduled_activate_at` (Start); a scheduled trigger dispatches them at
+each `scheduled_activate_at + offset` moment. With the Activated-as-gate
+model (Part 1 / 18F), invitations are sendable from the
+**Prepared (`validated`)** state — so an operator can schedule
+notification emails to land *ahead of* the scheduled open
+(e.g. one day before, two hours before).
+
+- Schema: `sessions.invite_offsets` (Part 0b). Inert when
+  `scheduled_activate_at` is unset per the cross-cutting anchor-null rule.
+- Depends on **18F Part 2** relaxing the invitation gate so
+  invitations can be sent before activation, and on **Part 1**
+  surfacing `scheduled_activate_at` as a configurable operator input.
+
+### Part 3 — Auto-send reminders
+
+Scheduled, policy-driven reminder dispatch — **consolidated from
+the former Segment 14C on 2026-05-18** (that standalone plan is
+retired). Today reminders are operator-triggered: the Manage
+Invitations bulk "Send reminder to incomplete reviewers" button
+enqueues `kind="reminder"` outbox rows, and the send itself
+activates in 14B Part A. Part 3 makes dispatch scheduled and
+policy-driven. Unlike Parts 1 / 2 / 4 / 5, this Part fires a
+**sequence** of triggers per session (one per offset entry),
+not a single one — the deliberate exception in this segment.
+
+- **3a — Per-session reminder offsets.** An operator-facing
+  surface for "when reminders go out automatically", persisted in
+  the `sessions.reminder_offsets` JSON column (pre-positioned by
+  Part 0b). The list itself carries the cadence: an empty list /
+  null means auto-reminders off; entries are ISO 8601 durations
+  anchored on `deadline` (e.g. `["-P3D", "-P1D", "-PT4H"]`
+  fires three reminders at 3 days, 1 day, and 4 hours before
+  End). Ancillary controls (dispatch time-of-day in operator
+  timezone, optional quiet-hours / weekend skip) settle at
+  scoping — either as additional `sessions.*` columns or as keys
+  inside the offset entries (e.g. each entry an object instead of
+  a string). A cadence card on the Email Template editor or
+  Session Home (TBD at scoping); a `session.reminder_schedule_updated`
+  audit event (`changes` envelope).
+- **3b — Scheduled dispatch job.** A background worker scans
+  sessions with `reminder_offsets` set and enqueues
+  `kind="reminder"` rows for incomplete reviewers at each
+  resolved `deadline + offset`. Per-reviewer / per-offset dedup
+  (skip if a reminder for this `(session, reviewer, offset_index)`
+  was already enqueued — uses 14B Part B's
+  `reminder:{session_id}:{reviewer_id}:{n}` correlation_id);
+  only `ready` sessions inside their accepting-responses window;
+  respects per-instrument open/close. A `session.reminder_batch_enqueued`
+  audit event. Reuses 14B Part C's queue + worker scaffold if
+  landed; otherwise the shared dispatch mechanism Part 1
+  established.
+- **3c — Targeted reminder cohorts (post-MVP).** Beyond the
+  "incomplete" cohort, richer slicing off
+  `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) —
+  per-cohort bulk Send buttons, optional per-cohort template
+  differentiation, a `session.reminder_cohort_sent` event.
+  Confirm need before scoping.
+- **3d — Reminder analytics (post-MVP).** A small "Reminders"
+  card on Manage Invitations — reminders sent, delivery success
+  rate (reads 14B's `email.sent` / `email.send_failed`),
+  completion-after-reminder rate. No new tables; reads the
+  audit log + outbox.
+
+### Part 4 — Auto-archive
+
+**Goal.** A session carries an archive *offset* (anchored on
+`deadline`, default `P30D`); a scheduled trigger flips it
+`draft → archived` via 18A's `archive_session` at
+`deadline + archive_offset`. The first lifecycle event past
+the session's End — the operator's data-download window sits
+inside this offset.
+
+- Reuses `session_lifecycle.archive_session` verbatim — only the
+  trigger is new. Note: archiving is draft-only (18A's locked
+  `draft ⇄ archived` model), so the schedule fires only on draft
+  sessions; a running session must be reverted first (when the
+  scheduled trigger fires on a still-`ready` session, log + skip
+  until the next sweep).
+- Schema: `sessions.archive_offset` (Part 0b). Inert when
+  `deadline` is unset per the cross-cutting anchor-null rule.
+- The default `P30D` (30 days post-deadline) is operator-editable;
+  it gives the operator time to download data before the session
+  disappears from the active lobby.
+
+### Part 5 — Scheduled / policy-driven purge (auto-delete)
 
 **Goal.** A retention policy that purges aged data on a schedule —
 moved here out of **Segment 18C** when 18C was re-scoped to the
 *operator-triggered* purge only (2026-05-17). 18C owns the purge
-*mechanics*; 18G Part 4 owns the *scheduled trigger* that runs them.
+*mechanics*; 18G Part 5 owns the *scheduled trigger* that runs them.
+Last event in the workflow — fires only on already-archived
+sessions, anchored on the system-stamped archive timestamp Part 4
+produces.
 
 - **Per-deployment policy** — env-var config in `app/config.py`
   (`RETENTION_RESPONSE_DAYS` / `RETENTION_AUDIT_DAYS` /
@@ -320,72 +399,30 @@ moved here out of **Segment 18C** when 18C was re-scoped to the
   retention columns (`retention_exception` / `retention_overrides`)
   — Segment 18D's Part 5 — was handed to this part: once Part 0c
   lands the columns, add the `retention.*` rows to the Settings
-  CSV serialiser / importer as part of Part 4.
-
-### Part 5 — Reminders workflow
-
-Scheduled, policy-driven reminder dispatch — **consolidated from
-the former Segment 14C on 2026-05-18** (that standalone plan is
-retired). Today reminders are operator-triggered: the Manage
-Invitations bulk "Send reminder to incomplete reviewers" button
-enqueues `kind="reminder"` outbox rows, and the send itself
-activates in 14B Part A. Part 5 makes dispatch scheduled and
-policy-driven. Unlike Parts 1–4, this is a **recurring
-cadence**, not a fire-once trigger — the deliberate exception
-in this segment.
-
-- **5a — Per-session reminder offsets.** An operator-facing
-  surface for "when reminders go out automatically", persisted in
-  the `sessions.reminder_offsets` JSON column (pre-positioned by
-  Part 0b). The list itself carries the cadence: an empty list /
-  null means auto-reminders off; entries are ISO 8601 durations
-  anchored on `deadline` (e.g. `["-P3D", "-P1D", "-PT4H"]`
-  fires three reminders at 3 days, 1 day, and 4 hours before
-  End). Ancillary controls (dispatch time-of-day in operator
-  timezone, optional quiet-hours / weekend skip) settle at
-  scoping — either as additional `sessions.*` columns or as keys
-  inside the offset entries (e.g. each entry an object instead of
-  a string). A cadence card on the Email Template editor or
-  Session Home (TBD at scoping); a `session.reminder_schedule_updated`
-  audit event (`changes` envelope).
-- **5b — Scheduled dispatch job.** A background worker scans
-  sessions with `reminder_offsets` set and enqueues
-  `kind="reminder"` rows for incomplete reviewers at each
-  resolved `deadline + offset`. Per-reviewer / per-offset dedup
-  (skip if a reminder for this `(session, reviewer, offset_index)`
-  was already enqueued — uses 14B Part B's
-  `reminder:{session_id}:{reviewer_id}:{n}` correlation_id);
-  only `ready` sessions inside their accepting-responses window;
-  respects per-instrument open/close. A `session.reminder_batch_enqueued`
-  audit event. Reuses 14B Part C's queue + worker scaffold if
-  landed; otherwise the shared dispatch mechanism below.
-- **5c — Targeted reminder cohorts (post-MVP).** Beyond the
-  "incomplete" cohort, richer slicing off
-  `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) —
-  per-cohort bulk Send buttons, optional per-cohort template
-  differentiation, a `session.reminder_cohort_sent` event.
-  Confirm need before scoping.
-- **5d — Reminder analytics (post-MVP).** A small "Reminders"
-  card on Manage Invitations — reminders sent, delivery success
-  rate (reads 14B's `email.sent` / `email.send_failed`),
-  completion-after-reminder rate. No new tables; reads the
-  audit log + outbox.
+  CSV serialiser / importer as part of Part 5.
 
 ## Hard dependencies
 
-- **Part 0 (Schema pre-positioning) lands first.** Parts 1–5 are
-  schema-blocked on the columns Part 0a / 0b / 0c add.
-- **Part 1** wants 18A's `archive_session` (shipped).
-- **Part 2 / Part 3** depend on **18F Part 2** — the
+- **Part 0 (Schema pre-positioning) shipped 2026-05-20** —
+  Parts 1–5 read the columns it pre-positioned. No longer a
+  dependency in flight.
+- **Part 1 / Part 2** depend on **18F Part 2** — the
   Activated-as-gate model, the relaxed invitation gate, and the
   reviewer pre-open / closed states. 18F lands first; this
   segment supplies the scheduled times those states read.
-- **Part 5 (reminders)** hard-depends on **14B Parts A / B**
+- **Part 1** also establishes the **shared dispatch mechanism**
+  (scheduled worker or lazy observer extended to additional
+  anchors) Parts 2–5 reuse.
+- **Part 2** depends on Part 1 surfacing `scheduled_activate_at`
+  as a configurable operator input (otherwise the offset has no
+  anchor to resolve against).
+- **Part 3 (reminders)** hard-depends on **14B Parts A / B**
   (the email transport, and the `correlation_id` strategy the
   per-reviewer dedup uses) and reuses **14B Part C**'s
   queue / worker scaffold if available.
-- A **dispatch mechanism** — a scheduled job or the lazy
-  deadline-observer hook — shared across all parts.
+- **Part 4** wants 18A's `archive_session` (shipped).
+- **Part 5** wants 18C's `session_purge` (shipped) and reads the
+  archive timestamp Part 4 produces.
 
 ## Out of scope
 
@@ -393,7 +430,7 @@ in this segment.
   invitation send, the 14B email transport) — those belong to
   their owning segments; 18G only schedules them.
 - Email *transport* activation and backend swaps — 14B's.
-  Part 5 owns the reminder *cadence* and the *scheduled
+  Part 3 owns the reminder *cadence* and the *scheduled
   enqueue*; 14B owns the *send*.
 
 ## Doc impact
@@ -404,14 +441,14 @@ When parts ship:
 - `guide/todo_master.md` updated.
 - `spec/lifecycle.md` — already carries the **Scheduled lifecycle
   automation** section (the anchors + offsets model + the
-  cross-cutting anchor-null inertness rule). Part 3's
-  `scheduled_activate_at` is the scheduled `validated → ready` trigger; no
-  separate opening gate (see 18F Part 2 for the
+  cross-cutting anchor-null inertness rule). Part 1's
+  `scheduled_activate_at` is the scheduled `validated → ready`
+  trigger; no separate opening gate (see 18F Part 2 for the
   Activated-as-gate model).
 - `spec/settings_inventory.md` — the new scheduled-datetime
-  columns, plus the Part 5 reminder-cadence settings.
+  columns, plus the Part 3 reminder-cadence settings.
 - `spec/operations_pages.md` — Manage Invitations picks up the
-  Part 5c cohort buttons / Part 5d reminders card if those
+  Part 3c cohort buttons / Part 3d reminders card if those
   ship.
 - `spec/architecture.md` — the scheduled-activation and reminder
   events, and any other new audit-event envelopes.
@@ -419,6 +456,9 @@ When parts ship:
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Ship Part 0 first.** Parts 1–5 are schema-blocked on the
-  columns Part 0a / 0b / 0c add; land Part 0 ahead of any
-  service / scheduling work.
+- **Part 0 shipped 2026-05-20.** Parts 1–5 are unblocked on
+  schema and ready to scope; start with Part 1 (scheduled
+  activation) because it establishes the shared dispatch
+  mechanism Parts 2–5 reuse, plus surfaces
+  `scheduled_activate_at` as a configurable operator input
+  (Part 2 depends on that).
