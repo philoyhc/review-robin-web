@@ -210,6 +210,18 @@ committed parts):
 > the warnings-detour mechanics settle at PR scoping.
 > `spec/workflow_card.md` is not edited until the implementation
 > PR lands.
+>
+> **Implementation scoping (decided 2026-05-20).** Two PRs:
+> Part 1 ships the super-button split + the new 2-row card
+> layout + the 10-state cascade (States 5 / 6 render in the
+> cascade but stay unreachable until Part 2). Part 2 layers on
+> the pre-activation invitation gate + the reviewer pre-open /
+> closed pages + the edit-after-invite guard. Warnings detour
+> stays on Activate (operator sees warnings in State 4W after
+> Prepare, then clicks Activate which hits the existing Validate
+> page acknowledgement). Reconcile detour migrates from Activate
+> to Prepare. Close session button deferred to a later pass
+> alongside the `expired` lifecycle status work.
 
 ### Layout
 
@@ -266,6 +278,13 @@ buttons are 25%.)
   drops below the left (same convention as today), so the
   reading order is: body → prep row → run row → status aside.
 
+> **Close session — deferred.** The first 18F implementation
+> pass omits the Close-session button; Row 2 ships with three
+> buttons (Send invites · Activate · Send reminders). Close
+> session lands later, alongside the `expired` lifecycle status
+> work that makes "end the review window" a distinct lifecycle
+> step rather than an alias for Revert.
+
 ### Button vocabulary
 
 Both rows live in the **left column** (see Layout above). "Row"
@@ -280,7 +299,7 @@ card column.
 | Send invites | 2 (run) | `/invitations/send-all` | sends every unsent `Invitation`. Live from Validated. |
 | Activate session | 2 (run) | `/workflow/activate` (now solo, not a super-button) | `validated → ready`, opens every instrument, emits `session.activated`. |
 | Send reminders | 2 (run) | `/invitations/remind-all` | nudges reviewers with outstanding responses. |
-| **Close session** | 2 (run) | **same route as Revert to draft** | "exact same backend behaviour as Revert"; the separate label only signals the operator's intent (review window ended vs editing setup). |
+| ~~Close session~~ | _(deferred)_ | _(deferred until `expired` lifecycle status lands)_ | Lands as a 4th Row-2 button later; the first 18F pass ships Row 2 with three buttons. |
 
 ### State machine cascade (proposed)
 
@@ -318,7 +337,7 @@ new pre-activation invite states.)
 | **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." |
 | **7** | `is_ready`, no invitations | "Session is open for responses. Create invites and send them so reviewers know they can start." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
-| **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind, and Close session when the review window ends." |
+| **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." (Closing the review window is by Revert in this first pass; a dedicated Close action lands with the `expired` lifecycle work.) |
 
 ### Workflow stepper — proposed button matrix
 
@@ -335,14 +354,13 @@ close-out paths, not the next forward step.
 | Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | — | — | — |
 | Create invites | — | — | — | **Pri** | **Pri** | Sec | Sec | **Pri** | Sec | Sec |
 
-**Row 2 (run) — Send invites · Activate · Send reminders · Close session**
+**Row 2 (run) — Send invites · Activate · Send reminders** _(Close session deferred — lands later with the `expired` status work)_
 
 | Button | 1 | 2 | 3 | 4 | 4W | 5 | 6 | 7 | 8 | 9 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Send invites | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
 | Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | **Pri** | **Pri** | — | — | — |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
-| Close session | — | — | — | — | — | — | — | Sec | Sec | **Pri** |
 
 (`Create invites` is idempotent, so it remains Secondary-live
 after the first generation in case the roster gains an
@@ -363,11 +381,6 @@ spec.)
   states (4 / 5 / 6 with invites generated / sent) introduce
   any new aside content, or just re-use the existing
   "invitations created / sent" counters.
-- **Close-session styling.** Render as `.btn.destructive` like
-  other destructive operator buttons, or keep Secondary with a
-  destructive icon? "Close" is less drastic than "Revert" from
-  the operator's mental model (the review just ended), so
-  Secondary may be appropriate.
 - **State 6 → 9 jump.** Activating from State 6 (invites
   already sent in Validated) lands in State 9 directly — the
   right-column status aside should make that consequence clear
