@@ -67,16 +67,23 @@ single audit event and commit atomically.
 
 ### 2.1 `draft → validated` — `mark_validated(...)`
 
-Called by `GET /operator/sessions/{id}/validate?activate=*` and
-the validate-now path on Session Home. Idempotent (no-op when
+Called by `GET /operator/sessions/{id}/validate?activate=*`, the
+validate-now path on Session Home, and (post-18F Part 1)
+`POST /operator/sessions/{id}/workflow/prepare` — the Workflow
+card's Prepare button runs Generate + Validate and flips
+`draft → validated` on a clean report. Idempotent (no-op when
 already `validated`). Raises `LifecycleError(code="has_errors")`
 when the readiness report carries blocking errors.
 
-- Warnings are implicitly acknowledged at the moment of transition
-  (info-severity findings are advisory only — they don't trigger
-  the acknowledgment ceremony).
+- Warnings are implicitly acknowledged at the moment of
+  transition (info-severity findings are advisory only — they
+  don't trigger the acknowledgment ceremony).
 - Audit event: `session.validated` with
-  `counts={"warnings": N, "info": N}`.
+  `counts={"warnings": N, "info": N}`. The Prepare-button run
+  brackets with `session.workflow_run_started/_failed`
+  carrying `context.button="prepare_session"`; the Activate
+  run does the same with `"activate_session"` (see
+  `spec/workflow_card.md`).
 
 ### 2.2 `validated → draft` — `invalidate_session(...)`
 
@@ -136,7 +143,9 @@ isn't in `validated` to begin with).
 
 ### 2.4 `validated → ready` — `activate_session(...)`
 
-Called by `POST /operator/sessions/{id}/activate`. Flips the
+Called by `POST /operator/sessions/{id}/activate` and by
+`POST /operator/sessions/{id}/workflow/activate` (the Workflow
+card's solo Activate button, post-18F Part 1). Flips the
 session to `ready` and sets `accepting_responses=true` on every
 instrument in the same transaction. Pre-conditions:
 
@@ -209,8 +218,25 @@ session delete).
 Detail message: `"Existing reviewer responses will be discarded;
 tick 'acknowledge response loss' to proceed"`.
 
-These two gates are the only thing that stops a direct POST from
-bypassing the lifecycle. The corresponding GET pages render
+### 3.3 `_require_validated_or_ready(session)`
+
+Raises **HTTP 409 Conflict** when the session is `draft`
+(invitation actions need at least the assignment pairs to be
+settled). Every invitation route in
+`app/web/routes_operator/_operations.py` calls it —
+`POST /invitations/generate`, `send-all`, `regenerate-all`,
+per-row `regenerate` / `send` / `remind`, and the bulk
+`remind-incomplete`. 18F Part 2 relaxed this from a stricter
+"ready only" gate so an operator can notify reviewers
+**before** activation (the Prepared / pre-open scenario);
+**Send reminders** and reviewer write-path gates remain
+`ready`-only.
+
+Detail message: `"Invitations can only be issued once the
+session has been prepared (validated or ready)."`
+
+These three gates are the only thing that stops a direct POST
+from bypassing the lifecycle. The corresponding GET pages render
 read-only banners but the source of truth is the route gate.
 
 ## 4. Per-instrument lifecycle
@@ -256,11 +282,24 @@ reviewer write (save / submit / clear). Returns `True` iff:
 2. `instrument.accepting_responses` is `True`,
 3. `now() < session.deadline` (or `session.deadline is None`).
 
-This is the **only** lifecycle check the reviewer surface
-performs. If it returns `False`, the route returns 403 with a
-"session is no longer accepting responses" surface and the
-reviewer-side template renders read-only (inputs disabled, no
-Save / Submit buttons).
+POST routes (save / submit / clear) call this directly and 403
+on failure. The reviewer-surface **GET** route branches
+upstream of this check (per 18F Part 2):
+
+- If the session is not yet `ready` (draft or validated), the
+  route renders the dedicated **pre-open page**
+  (`reviewer/pre_open.html`) — "this review hasn't opened yet,
+  check back later". The reviewer reached here via roster + an
+  invitation token that was sent ahead of activation.
+- If the session is `ready` but the per-instrument predicate
+  returns `False` (deadline passed, instrument manually closed),
+  the existing surface template renders read-only with the "no
+  longer accepting responses" banner; the
+  `responses_visible_when_closed` toggle decides whether the
+  saved values render below.
+
+See `spec/reviewer-surface.md` §"Lifecycle gating" for the full
+GET-side rendering rules.
 
 ## 5. UI lock-card pattern
 
@@ -303,6 +342,8 @@ are read-mostly so they work in any state.
 | `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` (`setup_mutation`, `operator_revert`, etc.) |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
+| `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` (18F Part 1) — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
+| `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "activate" \| "precondition", "error_message": …}` |
 | `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
 | `instrument.closed` | `close_instrument` or `observe_deadline` | `refs={"instrument_id": id}` + `reason=<"operator" \| "deadline">` (+ `context={"deadline": "..."} ` on the deadline path) |
 | `instruments.bulk_accepting_responses` | bulk open/close on the All Instrument Status card | `set_changes={...}` + `context={"target": "open" \| "close"}` |

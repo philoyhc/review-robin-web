@@ -208,6 +208,15 @@ Each button row is a `.next-action-buttons.next-action-buttons-row`
 flex container whose children stretch (`flex: 1 1 0`) so the row's
 buttons distribute evenly across the left column's width.
 
+**Stable card height.** The `.next-action-body` div flex-grows
+(`flex: 1 1 auto`) and carries `min-height: 3.5em` — enough for
+~2 rows of body text. The two action button rows sink to the
+bottom of the left column regardless of body length, and the
+card no longer grows / shrinks as the state-specific copy goes
+from one line to two. Multi-paragraph states (e.g. State 3's
+two-line body) or the prepare-confirm banner still expand the
+body beyond the min — the rule sets a floor, not a ceiling.
+
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
 

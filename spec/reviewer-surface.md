@@ -616,24 +616,46 @@ three** of the following hold:
 Failing any of those three returns **HTTP 403** on Save / Submit /
 Clear POSTs.
 
-GET requests don't 403 — the page still renders so the reviewer can
-read prior state. When the gate is closed, the editing surface
-degrades to read-only:
+GET requests behave differently depending on which gate fails:
 
-- Every input renders `disabled`.
-- In both action rows: Save / Discard / Submit hide, plus the
-  vertical divider that separated them. The Page N buttons stay so
-  the reviewer can walk through their other instruments (which may
-  or may not also be closed).
-- The Danger Zone card hides (no Clear all).
-- A `.banner.banner-warning` lands inline in the overview card
-  explaining the state, e.g. "This session is no longer accepting
-  responses." Two variants depending on the operator's per-
-  instrument visibility flag:
-  - "Your previously saved values remain visible below in read-only
-    form." (operator left `responses_visible_when_closed=true`).
-  - "Your previously saved values are hidden by the operator's
-    visibility setting." (operator set `responses_visible_when_closed=false`).
+- **Session not yet `ready`** (the operator has prepared the
+  session and may have already sent out invitations, but hasn't
+  activated yet — the 18F Part 2 pre-open scenario). The route
+  short-circuits to the **pre-open page**
+  (`reviewer/pre_open.html`): session name in the h1 with an
+  "opens later" suffix, an info banner explaining the review
+  hasn't opened yet, the deadline + zone if one is set, and a
+  link back to the reviewer dashboard. No response form is
+  rendered. Applies for `draft` and `validated` lifecycle states
+  alike.
+
+- **Session `ready`, response window closed** (per-instrument
+  `accepting_responses=false`, typically because the deadline
+  passed). The page still renders so the reviewer can read prior
+  state. The editing surface degrades to read-only:
+
+  - Every input renders `disabled`.
+  - In both action rows: Save / Discard / Submit hide, plus the
+    vertical divider that separated them. The Page N buttons stay
+    so the reviewer can walk through their other instruments
+    (which may or may not also be closed).
+  - The Danger Zone card hides (no Clear all).
+  - A `.banner.banner-warning` lands inline in the overview card
+    explaining the state, e.g. "This session is no longer
+    accepting responses." Two variants depending on the
+    operator's per-instrument visibility flag:
+    - "Your previously saved values remain visible below in
+      read-only form." (operator left
+      `responses_visible_when_closed=true`).
+    - "Your previously saved values are hidden by the operator's
+      visibility setting." (operator set
+      `responses_visible_when_closed=false`).
+
+  This closed-state machinery deliberately stays on the surface
+  template (rather than redirecting to a separate "closed" page)
+  so the `responses_visible_when_closed` toggle keeps working —
+  a separate template would have to re-render the response data
+  to honour the toggle.
 
 ### Lazy deadline-close
 

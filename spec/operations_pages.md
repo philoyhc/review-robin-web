@@ -72,13 +72,19 @@ Both pages render the same four stacked regions, in order:
 
 Both pages render content across all session lifecycle states. Per
 the Workflow-card-as-Operations-chrome rollout, the previous yellow
-`.card.lock` "session must be Activated" notice retired here — the
-Workflow card's stepper makes lifecycle state explicit and the
-**Activate session** super-button is the single entry point.
-
-Per-row action buttons on the Invitations page render `disabled`
-when the session isn't `ready` (`is_ready=False`); the underlying
-service-layer gates remain the source of truth.
+`.card.lock` "session must be Activated" notice retired here —
+the Workflow card's stepper makes lifecycle state explicit. 18F
+Part 1 split the previous Activate super-button into a dedicated
+**Prepare session** button (Generate + Validate) and a solo
+**Activate session** button; 18F Part 2 then relaxed the
+invitation gate so Create / Send invites work from
+`validated`, not only `ready`. The Invitations page follows the
+same gate: per-row action buttons are live from `validated`
+onward; the underlying route-layer gate
+(`_require_validated_or_ready` in
+`app/web/routes_operator/_operations.py`) is the source of
+truth. **Send-reminders** keeps the stricter `ready`-only
+requirement.
 
 ---
 
@@ -140,7 +146,11 @@ row exists:
 - **Regenerate** — always visible when an invitation row exists.
   POSTs to `/operator/sessions/{session_id}/invitations/{id}/regenerate`.
 
-All three buttons render `disabled` when `is_ready=False`.
+**Send** and **Regenerate** are live from `validated` onward
+(18F Part 2 gate relaxation). **Send reminder** stays
+`ready`-only — reminders fire after the response window opens,
+not before. All three render `disabled` outside their allowed
+state.
 
 ### Per-row drill-in
 
