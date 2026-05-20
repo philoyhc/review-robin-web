@@ -19,6 +19,7 @@ from app.db.models import (
     AuditEvent,
     Instrument,
     Response,
+    Reviewer,
     ReviewSession,
     User,
 )
@@ -257,6 +258,13 @@ def activate_session(
 
     prev_status = review_session.status
     review_session.status = SessionStatus.ready.value
+    # First-activation stamp (17B Phase 2 PR A). Lights up the
+    # **Start** column on the reviewer lobby. Idempotent on
+    # subsequent re-activations — the column records the
+    # *first* time this session went live; later revert + re-
+    # activate cycles don't overwrite it.
+    if review_session.activated_at is None:
+        review_session.activated_at = datetime.now(timezone.utc)
     instruments = list(
         db.execute(
             select(Instrument).where(Instrument.session_id == review_session.id)
@@ -557,6 +565,47 @@ def session_accepts_responses(
         if current >= _aware(review_session.deadline):
             return False
     return True
+
+
+def session_status_for_reviewer(
+    db: Session,
+    *,
+    reviewer: Reviewer,
+    review_session: ReviewSession,
+    now: datetime | None = None,
+) -> str:
+    """The reviewer-lobby **Session Status** label for one
+    reviewer's view of one session — ``"not opened"`` /
+    ``"open"`` / ``"closed"`` (Segment 17B Phase 2 PR A).
+
+    A non-mutating peek at the session's state. Does not call
+    :func:`observe_deadline`; the deadline check flows through
+    :func:`session_accepts_responses` directly, so a past
+    deadline reads as ``closed`` even on instruments whose
+    ``accepting_responses=True`` flag hasn't been flipped yet.
+    """
+    if not is_ready(review_session):
+        return "not opened"
+    assignment_rows = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.reviewer_id == reviewer.id,
+            Assignment.include.is_(True),
+        )
+    ).scalars()
+    instrument_ids = {a.instrument_id for a in assignment_rows}
+    if not instrument_ids:
+        # Reviewer has no active assignments on this session.
+        # Treat as closed from their POV — there is nothing to
+        # open.
+        return "closed"
+    instruments = db.execute(
+        select(Instrument).where(Instrument.id.in_(instrument_ids))
+    ).scalars()
+    for instrument in instruments:
+        if session_accepts_responses(review_session, instrument, now=now):
+            return "open"
+    return "closed"
 
 
 def observe_deadline(

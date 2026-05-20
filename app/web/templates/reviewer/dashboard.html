@@ -13,21 +13,43 @@
       <table>
         <tr>
           <th>Session</th>
-          <th>Deadline</th>
-          <th>Status</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Session status</th>
+          <th>Reviewer status</th>
         </tr>
         {% for item in items %}
           <tr>
             <td>
-              <a href="/reviewer/sessions/{{ item.session.id }}/1">
+              {% if item.link_enabled %}
+                <a href="/reviewer/sessions/{{ item.session.id }}/1">
+                  {{ item.session.name }}
+                </a>
+              {% else %}
                 {{ item.session.name }}
-              </a>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.start_text %}
+                {{ item.start_text }} ({{ item.start_timezone_label }})
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
             </td>
             <td>
               {% if item.session.deadline %}
                 {{ item.deadline_text }} ({{ item.deadline_timezone_label }})
               {% else %}
                 <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.session_status == "open" %}
+                <span class="pill pill-success">open</span>
+              {% elif item.session_status == "closed" %}
+                <span class="pill pill-empty">closed</span>
+              {% else %}
+                <span class="pill pill-info">not opened</span>
               {% endif %}
             </td>
             <td>
@@ -51,10 +73,16 @@
             <tr class="dashboard-instrument-row">
               <td class="muted" style="padding-left: 24px;">
                 ↳
+                {% if item.link_enabled %}
                 <a href="/reviewer/sessions/{{ item.session.id }}/{{ sub.position }}">
                   {{ sub.label }}
                 </a>
+                {% else %}
+                  {{ sub.label }}
+                {% endif %}
               </td>
+              <td></td>
+              <td></td>
               <td></td>
               <td>
                 {% if sub.state == "submitted" %}

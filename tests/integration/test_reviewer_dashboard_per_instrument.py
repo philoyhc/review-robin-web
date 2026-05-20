@@ -221,13 +221,12 @@ def test_multi_instrument_dashboard_renders_one_sub_row_per_instrument(
     body = rae_client.get("/reviewer").text
 
     assert body.count("dashboard-instrument-row") == 2
-    # The peer-survey sub-row deep-links to position #2 on the
-    # reviewer surface (1-based, ``Instrument.order, Instrument.id``
-    # ordered).
-    assert (
-        f'/reviewer/sessions/{review_session.id}/2">\n'
-        '                  peer'
-    ) in body
+    # The peer-survey sub-row carries its label; per 17B Phase 2 PR A
+    # the deep link only renders when the parent session is at least
+    # ``open`` (this fixture force-marks ``validated`` without a
+    # clean activation so the link is absent), but the label and
+    # row markup still appear.
+    assert "peer" in body
 
 
 def test_sub_row_state_pulls_from_per_instrument_projection(
@@ -351,3 +350,103 @@ def test_sub_row_renders_no_assignments_state_when_reviewer_excluded(
     # The ``(N/M)`` muted suffix is suppressed on no-assignments
     # rows — there's no useful count to show.
     assert "(0/0)" not in sub_rows[2]
+
+
+# --------------------------------------------------------------------------- #
+# 17B Phase 2 PR A — lobby expansion + two-status columns
+# --------------------------------------------------------------------------- #
+
+
+def test_lobby_renders_five_column_header(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer lobby (post-17B-Phase-2-PRA) carries five
+    columns: Session, Start, End, Session status, Reviewer status."""
+    operator = make_client(alice)
+    review_session = _make_session_with_pair(operator, db, code="lobby-cols")
+    [instrument] = list(
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
+    )
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=instrument
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get("/reviewer").text
+    assert "<th>Session</th>" in body
+    assert "<th>Start</th>" in body
+    assert "<th>End</th>" in body
+    assert "<th>Session status</th>" in body
+    assert "<th>Reviewer status</th>" in body
+
+
+def test_lobby_pre_ready_session_renders_not_opened_unlinked(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A session the reviewer is rostered on but that hasn't been
+    activated yet renders ``not opened`` + unlinked session name +
+    blank Start cell."""
+    operator = make_client(alice)
+    review_session = _make_session_with_pair(operator, db, code="lobby-preopen")
+    [instrument] = list(
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
+    )
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=instrument
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get("/reviewer").text
+    assert ">not opened</span>" in body
+    # The Session column should not link the session name when the
+    # session isn't opened — the row carries the name as plain text.
+    assert (
+        f'<a href="/reviewer/sessions/{review_session.id}/1">'
+        not in body
+    )
+
+
+def test_lobby_ready_session_renders_open_and_start_stamp(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A fully-activated session renders ``open`` + linked session
+    name + a Start stamp (sourced from ``activated_at``)."""
+    operator = make_client(alice)
+    review_session = _make_session_with_pair(operator, db, code="lobby-open")
+    [instrument] = list(
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
+    )
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=instrument
+    )
+    # Pin a rule + activate so the session reaches ``ready``.
+    from app.db.models import SessionRuleSet
+    rule_set = (
+        db.query(SessionRuleSet)
+        .filter(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Full Matrix",
+        )
+        .first()
+    )
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    db.commit()
+    _activate(operator, review_session)
+    db.refresh(review_session)
+
+    rae_client = make_client(rae)
+    body = rae_client.get("/reviewer").text
+    assert ">open</span>" in body
+    assert (
+        f'<a href="/reviewer/sessions/{review_session.id}/1">' in body
+    )
+    # ``activated_at`` is stamped on the first activation.
+    assert review_session.activated_at is not None
