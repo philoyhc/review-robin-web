@@ -21,11 +21,28 @@
 > **Segment 13F (More DB prep) consolidated into this segment on
 > 2026-05-20.** Five of 13F's seven PRs had shipped; the remaining
 > two (`sessions.reminder_settings`, `sessions.retention_*`) plus
-> the pending scheduled-lifecycle schema audit (`auto_archive_at`,
-> `invitations_send_at`, `activate_at`) were all 18G-relevant, so
-> they were folded in here as **Part 0 — Schema pre-positioning**
-> and the standalone 13F plan retired to
+> the pending scheduled-lifecycle schema audit were all
+> 18G-relevant, so they were folded in here as **Part 0 — Schema
+> pre-positioning** and the standalone 13F plan retired to
 > `guide/archive/segment_13F_more_db_prep.md`.
+>
+> **Part 0 reshape — anchors + offsets model (2026-05-20).**
+> The initial Part 0 sketch carried three absolute datetime
+> columns (`auto_archive_at` / `invitations_send_at` /
+> `activate_at`). On operator-workflow review the schedules
+> closer to the operator's mental model are **anchors** (Start,
+> End, Release-from — what they pick on a calendar) plus
+> **offsets** anchored on them (auto-send invites "1 day before
+> Start", reminders "2 hours before End", auto-archive "30 days
+> after End"). Part 0a now holds **anchor** datetimes (just
+> `activate_at` + `responses_release_at`; `deadline` is already
+> live); Part 0b holds **offset** configs (`invite_offsets` /
+> `reminder_offsets` / `archive_offset` /
+> `release_until_offset`); Part 0c retention is unchanged in
+> shape (the auto-delete-after-archive offset lives as a key
+> inside `retention_overrides`). See `spec/lifecycle.md`
+> "Scheduled lifecycle automation" for the model + the
+> cross-cutting anchor-null inertness rule.
 
 ## Goal
 
@@ -35,10 +52,12 @@ click. Each one is a scheduled trigger on top of a transition service
 that already exists (or ships in its owning segment); 18G adds the
 *scheduling*, not the transition.
 
-Why one segment: every item below needs a persisted date/time (or
-schedule) column, and a worker / lazy-observer to fire it. Scoping
-them together means **one** 13F schema slice and **one** dispatch
-mechanism instead of a column and a half-worker per feature.
+Why one segment: every item below needs a persisted date/time
+(an **anchor**) or anchor-relative **offset**, and a worker /
+lazy-observer to fire it. Scoping them together means **one**
+schema slice (Part 0 below — anchors + offsets) and **one**
+dispatch mechanism instead of a column and a half-worker per
+feature.
 
 ## Why now / why a segment
 
@@ -77,45 +96,82 @@ scheduled-lifecycle schema audit (`auto_archive_at`,
 already 18G-relevant, so folding them in here retires the
 schema-only segment.
 
-#### Part 0a — Scheduled-trigger datetime columns (feeds Parts 1, 2, 3)
+#### Part 0a — Anchor datetime columns (operator-set, absolute)
 
-Three nullable `DateTime(timezone=True)` columns on `sessions`:
+Two nullable `DateTime(timezone=True)` columns on `sessions`:
 
 ```python
 # app/db/models/review_session.py
-auto_archive_at:      Mapped[datetime | None]  # → Part 1
-invitations_send_at:  Mapped[datetime | None]  # → Part 2
-activate_at:          Mapped[datetime | None]  # → Part 3
+activate_at:           Mapped[datetime | None]  # Start  → Part 3
+responses_release_at:  Mapped[datetime | None]  # Release-from (Participants platform, inert until then)
 ```
+
+**Anchors are the absolute datetimes the operator sets directly.**
+Every scheduled-event offset (Part 0b) is *relative to* one of
+them. Today's session already carries one anchor — `sessions.deadline`
+(End) — and Part 0a adds two more:
+
+- **`activate_at` (Start)** — the scheduled `validated → ready`
+  trigger; per the 18F Part 2 Activated-as-gate model, no new
+  `SessionStatus` value and no sub-gate within `ready` — `ready`
+  already means "open for responses". The existing `activated_at`
+  (live, system-stamped on first `→ ready`) is unchanged; one is
+  the operator-set *trigger*, the other is the system *record*
+  of when it fired.
+- **`responses_release_at` (Release-from)** — the
+  Participants-platform "reviewees can view responses from this
+  point" anchor; pre-positioned **inert** in 18G so future
+  participant-model work doesn't need a follow-on migration. No
+  18G Part reads it.
 
 **Shape decision.** Individual nullable datetime columns rather
 than a single `sessions.schedule` JSON container. The scheduler
 queries these by value ("find every session whose `activate_at`
-has passed and is still `validated`") — unlike
-`reminder_settings`, which is read per session at render time.
-Individual columns are queryable and indexable; JSON is not.
-Add a B-tree index per column when it lights up (deferred to the
-owning Part — the column is inert until then).
+has passed and is still `validated`") — unlike the offset configs
+below, which are read per session at trigger time. Datetime
+columns are queryable and indexable; JSON is not. Add a B-tree
+index per column when its owning Part lights it up (deferred
+to that Part — the column is inert until then).
 
-`activate_at` is the scheduled `validated → ready` trigger; per
-the 18F Part 2 Activated-as-gate model, **no new `SessionStatus`
-value and no sub-gate within `ready`** — `ready` already means
-"open for responses", and this column just lets the existing
-`draft → ready` Activate transition be scheduled.
+#### Part 0b — Offset config columns (operator-set, anchor-relative)
 
-#### Part 0b — `sessions.reminder_settings` JSON (feeds Part 5)
-
-One nullable JSON column on `sessions` (was 13F PR 4):
+Four nullable columns on `sessions` — two JSON lists (for events
+that fire on a *sequence* of offsets) and two String singletons
+(for events that fire once):
 
 ```python
 # app/db/models/review_session.py
-reminder_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+invite_offsets:        Mapped[list[str] | None]  # JSON; anchor=activate_at; → Part 2
+reminder_offsets:      Mapped[list[str] | None]  # JSON; anchor=deadline;    → Part 5
+archive_offset:        Mapped[str | None]        # ISO 8601 duration; anchor=deadline; → Part 1
+release_until_offset:  Mapped[str | None]        # ISO 8601 duration; anchor=responses_release_at (Participants platform, inert until then)
 ```
 
-JSON over flat columns: the cadence vocabulary (`auto_enabled` /
-`cadence` / `max_count` / `time_of_day` / `quiet_hours`) is locked
-in Part 5a. JSON keeps the migration flat — when Part 5a locks the
-shape, no new migration is needed; the JSON keys acquire meaning.
+**Anchor table.**
+
+| Offset column | Anchor | Shape | Consumer |
+|---|---|---|---|
+| `invite_offsets` | `activate_at` (Start) | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | Part 2 (auto-send invites) |
+| `reminder_offsets` | `deadline` (End) | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | Part 5 (auto-send reminders) |
+| `archive_offset` | `deadline` (End) | Single ISO 8601 duration, e.g. `"P30D"`; **default `P30D`** (give operator time to download data before the session disappears from the active lobby) | Part 1 (auto-archive) |
+| `release_until_offset` | `responses_release_at` | Single ISO 8601 duration (Release-until is derived as Release-from + this offset) | Participants platform (inert until then) |
+
+**Shape decision.** Separate columns (not a single
+`sessions.lifecycle_offsets` JSON) so each consumer Part lights
+up its own surface independently and audits cleanly (`session.invite_schedule_updated`
+vs an over-broad `session.lifecycle_offsets_changed`). Hybrid types
+match the data shape: lists are JSON, singletons are String. ISO
+8601 duration strings are dialect-neutral (SQLite + Postgres) and
+round-trip cleanly through the Settings CSV export.
+
+**Cross-cutting rule — anchor-null inertness.** An offset is
+**inert when its anchor is null**: the scheduler skips it, the
+editor disables the offset field. This is a general rule across
+every (anchor, offset) pair — documented once in
+`spec/lifecycle.md` rather than per-feature. Single-point
+enforcement lives in a `resolve_offset(session, anchor_field,
+offset_field) -> datetime | None` helper that every scheduler
+path uses.
 
 #### Part 0c — `sessions.retention_exception` Boolean + `sessions.retention_overrides` JSON (feeds Part 4)
 
@@ -134,6 +190,24 @@ retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 (Part 4 normalises on read). `retention_overrides=NULL` means
 "use the deployment retention defaults" (Part 4's env vars).
 
+**`retention_overrides` key inventory.** Per-session overrides
+for the deployment retention env vars, plus the per-session
+**auto-delete offset**:
+
+| Key | Type | Anchor | Meaning |
+|---|---|---|---|
+| `response_days` | int | n/a | overrides `RETENTION_RESPONSE_DAYS` |
+| `audit_days` | int | n/a | overrides `RETENTION_AUDIT_DAYS` |
+| `archived_days` | int | n/a | overrides `RETENTION_SESSION_ARCHIVED_DAYS` |
+| `delete_after_archive` | str (ISO 8601 duration) | session archive time | per-session auto-delete offset — fires hard-delete of an *archived* session this far past its archive timestamp |
+
+`delete_after_archive` lives inside `retention_overrides` rather
+than as a top-level column because (i) it's anchor-relative to
+the *archive* event (already system-stamped, no new anchor
+column needed) and (ii) it's a retention-policy lever
+operationally — the same Part 4 editor surfaces both the env-var
+overrides and this offset.
+
 **Sequencing inside Part 0.** Three PRs, one per migration
 (0a / 0b / 0c), independent of each other; land in numeric order
 for tidy migration history. Round-trip tests in
@@ -144,26 +218,34 @@ hits — light-up happens in Parts 1–5.
 
 ### Part 1 — Auto-archive
 
-**Goal.** A session carries an auto-archive date/time (or
-deadline + grace period); a scheduled trigger flips it
-`draft → archived` via 18A's `archive_session`.
+**Goal.** A session carries an archive *offset* (anchored on
+`deadline`, default `P30D`); a scheduled trigger flips it
+`draft → archived` via 18A's `archive_session` at
+`deadline + archive_offset`.
 
 - Reuses `session_lifecycle.archive_session` verbatim — only the
   trigger is new. Note: archiving is draft-only (18A's locked
   `draft ⇄ archived` model), so the schedule fires only on draft
   sessions; a running session must be reverted first.
-- Schema: `sessions.auto_archive_at` (Part 0a).
+- Schema: `sessions.archive_offset` (Part 0b). Inert when
+  `deadline` is unset per the cross-cutting anchor-null rule.
+- The default `P30D` (30 days post-deadline) is operator-editable;
+  it gives the operator time to download data before the session
+  disappears from the active lobby.
 
 ### Part 2 — Auto-send invitations
 
 **Goal.** Instead of sending every invitation immediately, a
-session can carry an **invitations-send date/time**; a scheduled
-trigger dispatches them at that point. With the Activated-as-gate
+session can carry a list of **invitation send offsets** anchored
+on `activate_at` (Start); a scheduled trigger dispatches them at
+each `activate_at + offset` moment. With the Activated-as-gate
 model (Part 3 / 18F), invitations are sendable from the
-**Prepared (`validated`)** state — so an operator can schedule a
-notification email to land *ahead of* the scheduled open.
+**Prepared (`validated`)** state — so an operator can schedule
+notification emails to land *ahead of* the scheduled open
+(e.g. one day before, two hours before).
 
-- Schema: `sessions.invitations_send_at` (Part 0a).
+- Schema: `sessions.invite_offsets` (Part 0b). Inert when
+  `activate_at` is unset per the cross-cutting anchor-null rule.
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation.
 
@@ -212,6 +294,11 @@ moved here out of **Segment 18C** when 18C was re-scoped to the
   `sessions.retention_overrides` JSON column, both pre-positioned
   by **Part 0c**; a Settings-page editor; a
   `session.retention_policy_updated` emitter.
+- **Per-session auto-delete offset** — `retention_overrides.delete_after_archive`
+  (ISO 8601 duration, anchored on the system-stamped archive
+  time) — when set, an archived session is hard-deleted this far
+  past its archive timestamp. Inert when the session is not
+  archived per the cross-cutting anchor-null rule.
 - Reuses 18C's `session_purge` service for the actual deletes —
   this part adds only the schedule + policy resolution.
 - **Ride-along: 18D Part 5.** The Settings-CSV round-trip of the
@@ -232,27 +319,29 @@ policy-driven. Unlike Parts 1–4, this is a **recurring
 cadence**, not a fire-once trigger — the deliberate exception
 in this segment.
 
-- **5a — Per-session reminder cadence settings.** An
-  operator-facing surface for "when reminders go out
-  automatically", persisted in the `sessions.reminder_settings`
-  JSON column (pre-positioned by Part 0b). Keys, locked at
-  scoping: auto-reminders enabled (default off); cadence — a
-  small named-policy enum (`weekly` / `bi-weekly` /
-  `pre-deadline-cascade`), not a general cron editor; max
-  reminder count per reviewer (default 3); dispatch time-of-day
-  (operator timezone); optional quiet-hours / weekend skip. A
-  cadence card on the Email Template editor or Session Home
-  (TBD at scoping); a `session.reminder_cadence_updated` audit
-  event (`changes` envelope).
+- **5a — Per-session reminder offsets.** An operator-facing
+  surface for "when reminders go out automatically", persisted in
+  the `sessions.reminder_offsets` JSON column (pre-positioned by
+  Part 0b). The list itself carries the cadence: an empty list /
+  null means auto-reminders off; entries are ISO 8601 durations
+  anchored on `deadline` (e.g. `["-P3D", "-P1D", "-PT4H"]`
+  fires three reminders at 3 days, 1 day, and 4 hours before
+  End). Ancillary controls (dispatch time-of-day in operator
+  timezone, optional quiet-hours / weekend skip) settle at
+  scoping — either as additional `sessions.*` columns or as keys
+  inside the offset entries (e.g. each entry an object instead of
+  a string). A cadence card on the Email Template editor or
+  Session Home (TBD at scoping); a `session.reminder_schedule_updated`
+  audit event (`changes` envelope).
 - **5b — Scheduled dispatch job.** A background worker scans
-  sessions with auto-reminders enabled and enqueues
-  `kind="reminder"` rows for incomplete reviewers who are due.
-  Per-reviewer dedup (skip if the last reminder enqueued less
-  than the cadence interval ago — uses 14B Part B's
+  sessions with `reminder_offsets` set and enqueues
+  `kind="reminder"` rows for incomplete reviewers at each
+  resolved `deadline + offset`. Per-reviewer / per-offset dedup
+  (skip if a reminder for this `(session, reviewer, offset_index)`
+  was already enqueued — uses 14B Part B's
   `reminder:{session_id}:{reviewer_id}:{n}` correlation_id);
-  per-reviewer cap at `max_reminder_count`; only `ready`
-  sessions inside their accepting-responses window; respects
-  per-instrument open/close. A `session.reminder_batch_enqueued`
+  only `ready` sessions inside their accepting-responses window;
+  respects per-instrument open/close. A `session.reminder_batch_enqueued`
   audit event. Reuses 14B Part C's queue + worker scaffold if
   landed; otherwise the shared dispatch mechanism below.
 - **5c — Targeted reminder cohorts (post-MVP).** Beyond the
@@ -298,9 +387,12 @@ When parts ship:
 
 - `docs/status.md` timeline entry per Part.
 - `guide/todo_master.md` updated.
-- `spec/lifecycle.md` — Part 3's `activate_at` as the scheduled
-  `validated → ready` trigger (no separate opening gate — see
-  18F Part 2 for the Activated-as-gate model).
+- `spec/lifecycle.md` — already carries the **Scheduled lifecycle
+  automation** section (the anchors + offsets model + the
+  cross-cutting anchor-null inertness rule). Part 3's
+  `activate_at` is the scheduled `validated → ready` trigger; no
+  separate opening gate (see 18F Part 2 for the
+  Activated-as-gate model).
 - `spec/settings_inventory.md` — the new scheduled-datetime
   columns, plus the Part 5 reminder-cadence settings.
 - `spec/operations_pages.md` — Manage Invitations picks up the
