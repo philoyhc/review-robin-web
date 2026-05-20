@@ -40,7 +40,17 @@
             {% endfor %}
           </datalist>
 
-          <label for="deadline">Deadline (optional)</label>
+          {# Start — placeholder field until Segment 18G ships
+             scheduled activation. Same styling as End so the
+             pair reads as a unit. #}
+          <label for="start">Start (optional)</label>
+          <p class="muted" style="margin: 4px 0 10px;">
+            Entered in <strong id="start-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
+          </p>
+          <input type="datetime-local" id="start" name="start" disabled
+                 placeholder="Placeholder — scheduled activation lands with Segment 18G">
+
+          <label for="deadline">End (optional)</label>
           <p class="muted" style="margin: 4px 0 10px;">
             Entered in <strong id="deadline-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
           </p>
