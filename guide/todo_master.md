@@ -754,28 +754,6 @@ Functional spec: `spec/group_scoped_instruments.md`.
 
 ---
 
-### Segment 17B — Reviewer surface refinements — done 2026-05-19
-
-Polish + ergonomics pass on the reviewer response surface. The
-substantive work shipped 2026-05-16; the segment is closed
-2026-05-19 with the remaining polish items deferred.
-
-- **Shipped:** PR 1 (the `routes_reviewer/` package split, commit
-  `801af2f`); the action-row reorder + keyboard navigation
-  (Tab + Enter) (#1076); the visible-progress pills — session-wide
-  status + per-instrument completion (#1077). Sticky headers were
-  investigated and dropped.
-- **Deferred** to `guide/deferred_until_pilot_feedback.md` —
-  cell-level autosave, the filter-to-incomplete toggle (both
-  carved 2026-05-16), and return-to-place + the rest of the chrome
-  polish (status-card location, denser rows) (carved 2026-05-19).
-  Built only if pilot feedback asks. The AG Grid data-grid swap is
-  off the roadmap (`guide/future_possibilities.md`).
-
-Plan: `guide/segment_17B_reviewer_surface_refinements.md`.
-
----
-
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -789,7 +767,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13F (PRs 4-5), 14B,
+**13F (PRs 4-5), 14B, 17B (Phase 2),
 18F, 18G, 18H, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -840,6 +818,27 @@ bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
+
+- **17B — Reviewer surface refinements** *(Phase 1 shipped
+  2026-05-16, closed 2026-05-19; **reopened 2026-05-20** as
+  Phase 2 with PRs A + B scoped toward the Participants model)*.
+  Phase 1 landed the `routes_reviewer/` package split, the
+  action-row reorder + Tab/Enter keyboard navigation, and the
+  visible-progress pills; sticky headers were investigated and
+  dropped, and cell autosave / filter-to-incomplete / chrome
+  polish + return-to-place all moved to
+  `guide/deferred_until_pilot_feedback.md`. **Phase 2 (open):
+  PR A** — lobby expansion to Session / Start / End / Status
+  columns with a new "not opened" state for rostered-but-pre-
+  ready sessions (adds `sessions.activated_at`; backfilled from
+  the `session.activated` audit row). **PR B** — per-session
+  participation-summary page on whole-session submission,
+  reusing the 18H Part 2 per-instrument extract for the
+  reviewer-only CSV download (`{code}_my_responses.csv`); the
+  submit redirect graduates to the summary URL when the last
+  instrument closes out. URL rename `/reviewer/` → `/user/`
+  considered and deferred per `participant_model_upgrade.md`.
+  **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18E — Small enhancements** *(closed 2026-05-20; all three
   Parts shipped 2026-05-18, plan archived)*. The original small-
@@ -938,8 +937,9 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13F (PRs 4-5), 18F, 18H, 19, 20** are independent of the
-  email + audit pipelines and can interleave at any time.
+- **13F (PRs 4-5), 17B (Phase 2), 18F, 18H, 19, 20** are
+  independent of the email + audit pipelines and can interleave
+  at any time.
 - **18F → 18G.** 18F (workflow optimization) settles the
   lifecycle; 18G (scheduled events) hangs time-based triggers off
   it. Land 18F first.

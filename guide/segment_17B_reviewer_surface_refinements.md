@@ -9,6 +9,15 @@ remaining chrome polish are still open. The reviewer-facing
 timezone-clarity item is covered incidentally by the 18B
 follow-ups (the deadline carries a zone label).
 
+**Added 2026-05-20.** Two new PRs (A + B) scoped at pickup
+generalise the reviewer landing toward the future Participants
+model (`guide/participant_model_upgrade.md`) without committing
+to a URL rename. The reviewer lobby gains Start / End / Status
+columns and a "not opened" state for sessions the reviewer is
+rostered on but that have not yet activated; a new per-session
+participation-summary page renders on whole-session completion
+with a CSV download for the reviewer's own responses.
+
 A polish + ergonomics pass on the reviewer response surface
 (`GET /reviewer/sessions/{id}/{instrument_position}`, rendered
 by `review_surface` in `app/web/routes_reviewer.py`). The
@@ -128,6 +137,143 @@ already gives the zone, and the operator cards show the CLDR
 long display name via `timezone_label` — a reviewer note would
 reuse the same helper.
 
+## Participant-model alignment
+
+The reviewer lobby already plays the same role for reviewers
+that the Sessions lobby plays for operators. Generalising it
+now — Session / Start / End / Status columns, a "not opened"
+state — gets the reviewer landing within reach of a future
+*unified* Participants landing that resolves every role across
+every session (reviewer forms to complete, reviewee results to
+read, observer collations to watch). The audience-local
+*surfaces* (`/reviewer/...`, future `/reviewee/...`,
+`/observer/...`) stay separate per
+`guide/participant_model_upgrade.md`; only the landing
+converges, and its URL is deliberately unspecified there until
+the auth refactor settles. So 17B widens the lobby's shape and
+query, but does not rename `/reviewer/` (see the decision
+callout below).
+
+### PR A — Lobby expansion + "not opened" status
+
+The reviewer dashboard (`GET /reviewer`, rendered by
+`reviewer_dashboard` in `app/web/routes_reviewer/_dashboard.py`)
+currently shows one row per session the reviewer can open
+(Session / Deadline / Status, statuses `submitted` / `in progress`
+/ `not started`). Widen the table to **Session / Start / End /
+Status** and extend coverage to sessions the reviewer is rostered
+on but that have not yet activated, rendered as a fourth status
+**`not opened`** with the session name unlinked.
+
+Concretely:
+
+- **Schema — add `sessions.activated_at: DateTime(timezone=True),
+  nullable=True`.** Set in the `draft|validated → ready`
+  lifecycle transition (`app/services/session_lifecycle.py`).
+  One Alembic migration + a backfill that resolves each
+  already-`ready` session's stamp from its earliest
+  `session.activated` audit row (the audit event already exists
+  per `EVENT_SCHEMAS`); sessions with no audit history keep
+  `NULL` and render Start as `—`. Mirrors the existing
+  `display_timezone` column placement on `ReviewSession`.
+- **Lobby query.** Today the query restricts to sessions in
+  `ready`; widen to "every session this reviewer has a roster
+  row on, regardless of lifecycle state." For pre-ready
+  sessions the dashboard view-shape carries `link_enabled=False`
+  + `status="not opened"` and the row renders the session name
+  as plain text (no anchor). Reviewers reach the lobby only
+  through Easy Auth + roster, so widening doesn't expose
+  sessions they shouldn't see.
+- **Columns.** Rename the existing **Deadline** header to
+  **End** (still backed by `session.deadline`; empty cell when
+  no deadline). New **Start** column between Session and End
+  shows `activated_at` formatted in the session zone (same
+  `date_formatting.format_datetime` helper as End); blank for
+  pre-ready rows. Order stays `(status priority, name)` so
+  active rows lead.
+- **Status vocabulary.** Extend
+  `responses_service.session_pill_for_reviewer` (or a thin
+  wrapper at the dashboard view-shape seam) with a `not opened`
+  pill that takes precedence over response-derived states when
+  `session.lifecycle_state != "ready"`. Style: muted info pill
+  to distinguish from active `not started`.
+- **Tests.** `tests/integration/test_reviewer_dashboard*.py` —
+  add a pre-ready-session case (rostered + `validated`) asserting
+  the row renders with `not opened`, unlinked, and blank Start.
+  Existing assertions update for the renamed column header.
+
+`activated_at` slides into the same Start column once Segment
+18G adds *scheduled* activation: pre-activation rows show the
+scheduled time, post-activation rows show the actual stamp. No
+re-plumbing.
+
+### PR B — Per-session participation summary + CSV
+
+A capstone summary that fires when a reviewer has submitted
+**every** instrument they were assigned on a session. One
+summary per session (not per instrument) — when the last
+instrument's submit completes, redirect the reviewer to the
+summary instead of back to the review surface. The summary
+itself stays reachable later from the dashboard row (the
+session name on a `submitted` row links here, not the surface).
+
+Concretely:
+
+- **New route — `GET /reviewer/sessions/{id}/summary`** in a
+  new `routes_reviewer/_summary.py` slice (matches the existing
+  per-concern split). Gate: every active assignment for
+  (this reviewer, this session) has all rows submitted; if not,
+  redirect to the dashboard with a flash. Reviewers reach this
+  through the new submit-time redirect *and* through the
+  dashboard once the session is in `submitted` state.
+- **Template.** One `<section>` per instrument, in the same
+  order the surface walks them. Inside each section: a small
+  per-instrument heading + the same table shape the surface
+  renders read-only (reviewee identity rows × field values),
+  reusing the existing `_surface_context` view shape rendered
+  in summary mode. No edit affordances. One **Download my
+  responses (CSV)** button at the top.
+- **Submit-flow change.** `submit_redirect_url`
+  (`routes_reviewer/_surface.py`, called from `reviewer_submit`
+  on success) currently returns the surface URL; change it to
+  return the summary URL when the submit transitions the
+  session to fully-submitted. Per-instrument submits that don't
+  close out the session keep the existing "redirect back to
+  surface" behaviour.
+- **CSV download — `GET /reviewer/sessions/{id}/summary.csv`.**
+  Filename `{code}_my_responses.csv`. Reuses the per-instrument
+  extract infrastructure from Segment 18H Part 2: a thin
+  `serialize_reviewer_session_summary(db, session, reviewer)`
+  helper loops the reviewer's instruments and yields each one's
+  preamble + header + the reviewer-filtered data rows — same
+  21-column shape as `responses.csv` so the file pastes
+  alongside an operator's bundle download with no schema drift.
+  The reviewer filter is the only new query gate; the row-tuple
+  builder factored out in 18H Part 2 (`_response_row_tuple`)
+  carries the rest unchanged.
+- **Tests.** New `tests/integration/test_reviewer_summary*.py`
+  — gate (incomplete session redirects), submit-time redirect
+  to summary, CSV download row shape + reviewer-only filter,
+  multi-instrument grouping.
+
+Screenshot-as-record is the user's intentional fallback; the
+CSV is the canonical record. PDF export is **not** in scope.
+
+### URL space — defer `/reviewer/` → `/user/`
+
+Open question at scoping: should the lobby move from
+`/reviewer` to `/user` (or similar) now, in anticipation of the
+Participants model? **Decision: defer.**
+`guide/participant_model_upgrade.md` keeps audience-local
+surfaces (`/reviewer/`, future `/reviewee/`, `/observer/`); only
+the *unified landing* converges, and its URL is deliberately
+unspecified there until the auth refactor settles. The rename
+itself is cheap, but the timing has real friction — outstanding
+invitation links and bookmarks break — and gains us nothing
+toward the participants migration. Revisit when reviewee /
+observer surfaces actually exist and the unified-landing URL is
+chosen.
+
 ## Out of scope
 
 - A JS data-grid framework (AG Grid or equivalent) — moved to
@@ -137,6 +283,16 @@ reuse the same helper.
 - Version-gated optimistic concurrency on `Response.version` —
   optional follow-on, not a 17B commitment (see the autosave
   note above).
+- Rename of the `/reviewer/` URL space (see the PR A / B
+  participant-model-alignment decision above) — deferred until
+  the unified-landing URL is chosen.
+- PDF export of the per-session summary — deferred; the CSV in
+  PR B is the canonical participation record, with browser
+  print-screen as the user's intentional fallback.
+- Scheduled *activation* time (`activate_at` planned-open) —
+  Segment 18G's scope; PR A's `activated_at` records the
+  actual transition only, and the same Start column shows the
+  scheduled time once 18G ships.
 
 ## Related context
 
@@ -151,3 +307,14 @@ reuse the same helper.
   the `routes_reviewer.py` packaging as 17B's opening step.
 - `guide/future_possibilities.md` — why the JS-grid route is
   off the roadmap.
+- `guide/participant_model_upgrade.md` — the post-MVP arc the
+  PR A lobby shape and PR B summary route generalise toward;
+  source of the "audience-local surfaces, unified landing"
+  principle behind the URL-rename deferral.
+- `guide/segment_18H_post_assessment_update.md` Part 2 — the
+  per-instrument response extract whose `_response_row_tuple`
+  helper and per-instrument serializer PR B reuses, scoped to
+  one reviewer.
+- `guide/segment_18G_scheduled_events.md` — where the
+  *scheduled* activation time lands; PR A's `activated_at`
+  column slides into the same Start column without re-plumbing.
