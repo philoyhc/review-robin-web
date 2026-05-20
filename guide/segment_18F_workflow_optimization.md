@@ -312,7 +312,7 @@ new pre-activation invite states.)
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no validation errors | "Run **Prepare session** — generates the assignment pairs and validates that the setup is ready for prime time. Nothing goes live until you activate." |
 | **3** | `is_draft`, validation errors | "Validation didn't pass. Resolve the errors and re-run Prepare. The issue list is in the right column." |
-| **4** | `is_validated`, no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to open responses." |
+| **4** | `is_validated`, no invitations | "Setup is prepared and the reviewer surface is previewable. Create invites to draft notifications, send them ahead of the open date if you like, and Activate when ready to receive responses." |
 | **4W** | `is_validated`, warnings | Same as 4 plus help-line: "{N} warning(s) — review on Validate before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of activation to notify reviewers, or activate now and send afterwards." |
 | **6** | `is_validated`, invites sent | "Reviewers have been notified that the review will open. Activate the session when you're ready to open responses." |
