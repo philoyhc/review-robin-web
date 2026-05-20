@@ -492,7 +492,7 @@ anchor). Caption logic, by state × `scheduled_activate_at`:
 | Session state | `scheduled_activate_at` | Caption |
 | --- | --- | --- |
 | `draft` | unset | (none) |
-| `draft` | set, in future | **Amber warning** — "Scheduled activation at «X» — currently inactive: re-validate the session before then or the schedule will skip." |
+| `draft` | set, in future | **Amber warning** — "Scheduled activation at «X» — currently inactive: validate the session before then or the schedule will skip." |
 | `draft` | set, in past (after a skip) | **Amber-grey skipped notice** — "Scheduled activation at «X» skipped — session was not validated." One-shot, clears on next operator interaction. |
 | `validated` | unset | (none) |
 | `validated` | set, in future | **Green calm caption** — "System will auto-activate at «X». You can also click Activate now." |

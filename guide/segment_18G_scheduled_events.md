@@ -183,14 +183,28 @@ short enough for SQLite/Postgres index-friendliness later. The
 cap is enforced at the editor / validator (consumer Part), not
 by the schema.
 
-**Cross-cutting rule — anchor-null inertness.** An offset is
-**inert when its anchor is null**: the scheduler skips it, the
-editor disables the offset field. This is a general rule across
-every (anchor, offset) pair — documented once in
-`spec/lifecycle.md` rather than per-feature. Single-point
-enforcement lives in a `resolve_offset(session, anchor_field,
-offset_field) -> datetime | None` helper that every scheduler
-path uses.
+**Cross-cutting rules.** Two related rules apply to every
+(anchor, offset) pair — documented once in `spec/lifecycle.md`
+§8.2 rather than per-feature:
+
+- **Always editable; effectiveness signalled, not gated**
+  (§8.2.1). Anchor and offset fields are always editable in
+  operator-mutable states (`draft` or `validated`). The operator
+  declares intent at any time; the UI signals not-effective
+  states; the system enforces safety at fire time. No editor
+  lock-out — including the "Start at session creation" case
+  where the schedule is declared before any validation.
+- **Anchor-null inertness** (§8.2.2). An offset is inert when
+  its anchor is null. Enforced at one call site — a
+  `resolve_offset(session, anchor_field, offset_field) ->
+  datetime | None` helper that every scheduler path uses.
+- **Event-precondition guard** (§8.2.3). Each scheduled event
+  has additional operational preconditions checked at fire time
+  (the session is `validated` for activation, invitations exist
+  for auto-send, session is `ready` for reminders, session is
+  `draft` for archive, session is `archived` for auto-delete).
+  The trigger skips + audits + clears the offset on a
+  precondition miss.
 
 #### Part 0c — `sessions.retention_exception` Boolean + `sessions.retention_overrides` JSON (feeds Part 5)
 
@@ -275,18 +289,23 @@ generation outside the operator's review window. The operator's
 Workflow card) is the explicit pre-condition for scheduling
 activation.
 
-**Editor gate.** `scheduled_activate_at` is **settable only
-while the session is `validated`**. In `draft` the editor
-disables the field with a hint ("Run Prepare first, then
-schedule activation"). This keeps the operator's intent
-explicit — they validated before scheduling.
+**Always editable; effectiveness signalled, not gated.** Per
+the cross-cutting rule in `spec/lifecycle.md` §8.2.1, the
+`scheduled_activate_at` field is **always editable** while the
+session is operator-mutable (`draft` or `validated`) — including
+at session-creation time, before any validation has happened.
+The operator declares intent on a calendar; effectiveness is
+visible (the workflow-card caption — see *Right-column signals*
+below) and enforced at fire time (the precondition guard
+below), not by locking the editor.
 
 **Persistence across invalidation.** A schedule **persists**
 across `validated → draft` flips (operator edits a roster, the
-session invalidates, the schedule remains set). The operator's
-intent ("activate at 9am Monday") is the durable artifact;
-status churn shouldn't wipe it. The Workflow card surfaces this
-state to the operator (see *Right-column signals* below).
+session invalidates, the schedule remains set). Same model
+applies whether the operator set the schedule at creation
+(never validated yet) or after a prior validation that got
+invalidated — both end up `draft` + schedule set, and the
+fire-time guard handles both the same way.
 
 **Fire-time guard.** When the trigger fires, it checks the
 session's current status:
@@ -304,7 +323,7 @@ activate_session(...)
 ```
 
 A skipped schedule is **one-shot** — `scheduled_activate_at` is
-cleared on the skip. The operator re-validates and re-schedules;
+cleared on the skip. The operator validates and re-schedules;
 this avoids a stale schedule firing days later after a
 re-validation the operator didn't expect.
 
@@ -322,7 +341,7 @@ activation per session state:
 | Session state | `scheduled_activate_at` | Right-column caption |
 |---|---|---|
 | `draft` | unset | (none — Activate button stays disabled) |
-| `draft` | set, in future | **Amber warning** — "Scheduled activation at «9am Mon Jun 1» — currently inactive: re-validate the session before then or the schedule will skip." |
+| `draft` | set, in future | **Amber warning** — "Scheduled activation at «9am Mon Jun 1» — currently inactive: validate the session before then or the schedule will skip." |
 | `draft` | set, in past (after skip) | **Amber-grey skipped notice** — "Scheduled activation at «9am Mon Jun 1» skipped — session was not validated." (rendered once after the skip; clears on next operator interaction) |
 | `validated` | unset | (none — Activate button live, no schedule caption) |
 | `validated` | set, in future | **Green calm caption** — "System will auto-activate at «9am Mon Jun 1». You can also click Activate now." |
@@ -369,6 +388,19 @@ notification emails to land *ahead of* the scheduled open
 
 - Schema: `sessions.invite_offsets` (Part 0b). Inert when
   `scheduled_activate_at` is unset per the cross-cutting anchor-null rule.
+- **Precondition (`spec/lifecycle.md` §8.2.3).** Invitations must
+  already have been **created** (the operator ran "Create
+  invitations") at fire time. Without `Invitation` rows there's
+  nothing to send. Fire-time guard: skip with
+  `reason="invitations_not_created"`, audit
+  `session.scheduled_invites_skipped`, clear the relevant
+  offset entry (per-entry one-shot via the
+  `(session_id, offset_index)` dedup key).
+- **Signal.** The Manage Invitations card surfaces "Auto-send
+  scheduled at «X», «Y» — currently inactive: create invitations
+  before then or these will skip" when invitations are not yet
+  generated. Once generated, the caption flips to a green
+  confirmation.
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation, and on **Part 1**
   surfacing `scheduled_activate_at` as a configurable operator input.
@@ -411,6 +443,16 @@ not a single one — the deliberate exception in this segment.
   audit event. Reuses 14B Part C's queue + worker scaffold if
   landed; otherwise the shared dispatch mechanism Part 1
   established.
+- **Preconditions (`spec/lifecycle.md` §8.2.3).**
+  `session.status == "ready"` + invitations exist + within the
+  accepting-responses window. Fire-time guard: skip with
+  `reason="not_ready"` or `"no_invitations"`,
+  `session.scheduled_reminder_skipped` audit event, per-entry
+  one-shot via the same `(session, reviewer, offset_index)`
+  dedup key the dispatch job uses. The Email Template editor /
+  Session Home cadence card surfaces "Auto-reminders scheduled
+  at «…» — currently inactive: activate the session before then
+  or these will skip" when the session isn't `ready` yet.
 - **3c — Targeted reminder cohorts (post-MVP).** Beyond the
   "incomplete" cohort, richer slicing off
   `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) —
@@ -433,13 +475,18 @@ the session's End — the operator's data-download window sits
 inside this offset.
 
 - Reuses `session_lifecycle.archive_session` verbatim — only the
-  trigger is new. Note: archiving is draft-only (18A's locked
-  `draft ⇄ archived` model), so the schedule fires only on draft
-  sessions; a running session must be reverted first (when the
-  scheduled trigger fires on a still-`ready` session, log + skip
-  until the next sweep).
+  trigger is new.
 - Schema: `sessions.archive_offset` (Part 0b). Inert when
   `deadline` is unset per the cross-cutting anchor-null rule.
+- **Precondition (`spec/lifecycle.md` §8.2.3).**
+  `session.status == "draft"` (18A's locked `draft ⇄ archived`
+  archive model). A running `ready` session must be reverted to
+  draft first. Fire-time guard: skip with `reason="not_draft"`,
+  `session.scheduled_archive_skipped` audit event, clear the
+  offset (one-shot). The Sessions lobby surfaces "Auto-archive
+  scheduled at «X» — currently inactive: revert the session to
+  draft before then or this will skip" when the session is
+  still `ready` at fire time.
 - The default `P30D` (30 days post-deadline) is operator-editable;
   it gives the operator time to download data before the session
   disappears from the active lobby.
@@ -467,8 +514,14 @@ produces.
 - **Per-session auto-delete offset** — `retention_overrides.delete_after_archive`
   (ISO 8601 duration, anchored on the system-stamped archive
   time) — when set, an archived session is hard-deleted this far
-  past its archive timestamp. Inert when the session is not
-  archived per the cross-cutting anchor-null rule.
+  past its archive timestamp.
+- **Precondition (`spec/lifecycle.md` §8.2.3).**
+  `session.status == "archived"`. The archive timestamp itself
+  is the anchor, so a not-yet-archived session has neither anchor
+  nor precondition. Fire-time guard: skip with
+  `reason="not_archived"`, `session.scheduled_purge_skipped`
+  audit event. The Sessions lobby archived child page surfaces
+  the active vs not-yet-effective state on each archived row.
 - Reuses 18C's `session_purge` service for the actual deletes —
   this part adds only the schedule + policy resolution.
 - **Ride-along: 18D Part 5.** The Settings-CSV round-trip of the

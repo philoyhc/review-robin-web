@@ -433,9 +433,21 @@ one scheduled lifecycle effect already live.
 
 ### 8.2 Cross-cutting rules
 
-**8.2.1 Anchor-null inertness.** An offset is **inert when its
-anchor is null**: the scheduler skips it, the editor disables the
-offset field, and any other reader treats the resolved time as
+**8.2.1 Always editable; effectiveness decided at fire time.**
+Anchor datetimes and offset configs are **always editable while
+the session is operator-mutable** (`draft` or `validated`) —
+including at session-creation time, *before* any of the
+preconditions that make the schedule actually fire are
+satisfied. The operator declares intent on a calendar; the
+system decides at fire time whether the intent is honourable.
+There is **no editor-side lock-out** for any scheduled-event
+field. The UI signals "not currently effective" (see §8.2.2);
+the system enforces safety at fire time (see §8.2.3).
+
+**8.2.2 Anchor-null inertness.** An offset is **inert when its
+anchor is null**: the scheduler skips it, the editor shows the
+field as not-effective (visual treatment only, not a hard
+lock-out), and any other reader treats the resolved time as
 "no scheduled fire". Examples:
 
 - `invite_offsets` set but `scheduled_activate_at = NULL` → no scheduled
@@ -452,7 +464,38 @@ unset offset short-circuits to `None`; otherwise the helper adds
 the parsed ISO 8601 duration to the anchor and returns the
 resulting datetime.
 
-**8.2.2 Offset format.** ISO 8601 duration strings (`P30D`,
+**8.2.3 Event-precondition guard.** Beyond the anchor, each
+scheduled event has its own operational preconditions — system
+state that must hold at fire time for the transition to be
+legal. The trigger checks the precondition first; if unmet, it
+emits a `…_skipped` audit event with `reason=<precondition>`,
+clears the relevant column / list entry (one-shot), and returns
+without retrying. Per-event preconditions:
+
+| Event | Precondition at fire time | Skip reason |
+|---|---|---|
+| Scheduled activation (Part 1) | `session.status == "validated"` | `not_validated` |
+| Auto-send invites (Part 2) | invitations already created (the operator ran "Create invitations") | `invitations_not_created` |
+| Auto-send reminders (Part 3) | `session.status == "ready"` + invitations exist + within accepting-responses window | `not_ready` / `no_invitations` |
+| Auto-archive (Part 4) | `session.status == "draft"` (18A's draft-only archive) | `not_draft` |
+| Auto-delete after archive (Part 5) | `session.status == "archived"` | `not_archived` |
+| Release-from (Participants platform) | session has been closed after at least one run (responses exist) | `no_responses_run` |
+| Release-until (Participants platform) | Release-from has already fired | `release_not_started` |
+
+The "End" anchor (`deadline`) is the trivial case: it's
+conditional on activation (`status == "ready"`) because there's
+nothing to close in a draft session — the lazy deadline observer
+(§4) already short-circuits when the session isn't `ready`.
+
+**Why this shape.** The operator's planning window is wide
+("when I create the session, I know it should activate Monday
+9am, send invites Sunday 8pm, remind Friday 2pm, and archive
+30 days later"). Letting them declare all of that at creation
+keeps intent durable across the inevitable status churn
+(invalidations, reverts, re-runs). The fire-time guard then
+makes the system safe regardless of state at trigger time.
+
+**8.2.4 Offset format.** ISO 8601 duration strings (`P30D`,
 `PT2H`, `-P1D`, `-PT4H`) — dialect-neutral, CSV-round-trippable,
 human-readable. Negative durations mean "before the anchor";
 positive durations mean "after". The parser accepts the standard
@@ -460,14 +503,14 @@ designators only (`P[n]Y[n]M[n]DT[n]H[n]M[n]S` with optional
 leading `-`); fractional values and weeks (`P1W`) are rejected at
 the editor.
 
-**8.2.3 Operator-determined, not derived.** Every offset is
+**8.2.5 Operator-determined, not derived.** Every offset is
 operator-set. The system never silently re-anchors based on
 other fields (e.g. switching `archive_offset` from `deadline` to
 `responses_release_at` when the latter is set). If a richer
 policy is needed later, it lands as an explicit operator-facing
 control, not as derived behaviour.
 
-**8.2.4 Multiple offsets per event.** Events that fire on a
+**8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
 fire once (archive, release-until, auto-delete) carry a single
 ISO 8601 string. Per-list-entry dedup uses the entry's index
