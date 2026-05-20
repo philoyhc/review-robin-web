@@ -23,11 +23,23 @@
           <label for="code">Code</label>
           <input type="text" id="code" name="code" required maxlength="64" value="{{ session.code }}">
 
+          <label for="help_contact">Help contact (optional)</label>
+          <input type="text" id="help_contact" name="help_contact"
+                 maxlength="320"
+                 value="{{ session.help_contact or '' }}"
+                 placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+
           {# 18B PR 5 — per-session display timezone, folded in from
              the former standalone card so it sits with the rest of
              the (lifecycle-gated) session details, before the
              deadline it scopes. Searchable <datalist> over every
-             IANA zone, pre-filled with the session's resolved zone. #}
+             IANA zone, pre-filled with the session's resolved zone.
+             Start / End / offset inputs are deliberately absent from
+             this card — they're being redone for the 18G anchors +
+             offsets model and will be re-added in a follow-up step.
+             The existing ``deadline`` (End anchor) value is preserved
+             via the hidden ``deadline`` input below so a save here
+             doesn't wipe it. #}
           <label for="display_timezone">Timezone</label>
           <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
             Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
@@ -42,55 +54,25 @@
               <option value="{{ tz }}"></option>
             {% endfor %}
           </datalist>
-
-          <label for="help_contact">Help contact (optional)</label>
-          <input type="text" id="help_contact" name="help_contact"
-                 maxlength="320"
-                 value="{{ session.help_contact or '' }}"
-                 placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
         </div>
 
-        {# Right column: Description on top (flex-grows to fill
-           the leftover height); only Start sits below it so its
-           bottom edge aligns with Help contact in the left
-           column. End drops out of the grid entirely and lands
-           in the form's bottom row alongside the buttons. #}
+        {# Right column: Description fills the column so its bottom
+           edge aligns with the Timezone input across the grid. #}
         <div class="fill-col">
           <label for="description">Description</label>
           <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
-
-          {# Start — placeholder field until Segment 18G ships
-             scheduled activation. Same styling as End so the
-             pair reads as a unit. #}
-          <label for="start">Start (optional)</label>
-          <input
-            type="datetime-local"
-            id="start"
-            name="start"
-            disabled
-            placeholder="Placeholder — scheduled activation lands with Segment 18G"
-          >
         </div>
       </div>
 
-      {# Bottom row mirrors the .page-grid columns above: buttons
-         on the left (under Help contact), End on the right (under
-         Start), so the page's last visible row aligns Save /
-         Cancel with the End input across the grid. #}
-      <div class="page-grid" style="margin-top: 0; align-items: end;">
-        <div class="btn-pair">
-          <button class="btn" type="submit">Save changes</button>
-          <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
-        </div>
-        <div>
-          <label for="deadline">End (optional)</label>
-          <input
-            type="datetime-local"
-            id="deadline"
-            name="deadline"
-            value="{{ deadline_input_value }}"
-          >
-        </div>
+      {# Preserve the existing End anchor (``sessions.deadline``)
+         through the round-trip while the visible End / offset
+         inputs are out for redesign. Removed when the new End +
+         offset UI lands. #}
+      <input type="hidden" name="deadline" value="{{ deadline_input_value }}">
+
+      <div class="btn-pair" style="margin-top: 20px;">
+        <button class="btn" type="submit">Save changes</button>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
       </div>
     </form>
   </div>
