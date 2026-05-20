@@ -482,6 +482,28 @@ id="next-action-status">` block. Per-state content:
 | **5 / 6** (validated + invites) | Currently shares State 4's aside ("Setup validated."); invite-counter and deadline asides can land as a follow-up. |
 | **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
+### Scheduled-activation caption (Segment 18G Part 1 — forthcoming)
+
+When **18G Part 1** ships, the right column also surfaces an
+amber / green caption describing the state of
+`sessions.scheduled_activate_at` (the operator-set Start
+anchor). Caption logic, by state × `scheduled_activate_at`:
+
+| Session state | `scheduled_activate_at` | Caption |
+| --- | --- | --- |
+| `draft` | unset | (none) |
+| `draft` | set, in future | **Amber warning** — "Scheduled activation at «X» — currently inactive: re-validate the session before then or the schedule will skip." |
+| `draft` | set, in past (after a skip) | **Amber-grey skipped notice** — "Scheduled activation at «X» skipped — session was not validated." One-shot, clears on next operator interaction. |
+| `validated` | unset | (none) |
+| `validated` | set, in future | **Green calm caption** — "System will auto-activate at «X». You can also click Activate now." |
+| `ready` | (any — moot post-activation) | (none — existing "Activated at «X»" treatment covers it) |
+
+The caption sits below the Activate button in the right column,
+above the workflow-failure banner. See
+`guide/segment_18G_scheduled_events.md` Part 1 for the
+service-side contract (editor gate, persistence across
+invalidation, fire-time skip semantics).
+
 ### Workflow failure banner
 
 When `super_failure` is populated (i.e. the page was hit with

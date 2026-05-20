@@ -265,17 +265,93 @@ just lets that transition be *scheduled*. No new `SessionStatus`
 value and no sub-gate within `ready`: `ready` already means
 "open for responses".
 
-- Schema: `sessions.scheduled_activate_at` (Part 0a) — the scheduled
-  `validated → ready` trigger; possibly reuse the existing
-  activation audit event, or add a `session.activation_scheduled`
-  event.
+**Service contract (settled 2026-05-20).** The scheduled
+trigger is a **single dead-simple call into `activate_session`**
+— no auto-Generate, no auto-Validate at fire time. Reasons:
+Validate at fire time can surface blocking errors the offline
+operator can't fix; Generate at fire time runs assignment
+generation outside the operator's review window. The operator's
+"Prepare" run (Generate + Validate, manually triggered via the
+Workflow card) is the explicit pre-condition for scheduling
+activation.
+
+**Editor gate.** `scheduled_activate_at` is **settable only
+while the session is `validated`**. In `draft` the editor
+disables the field with a hint ("Run Prepare first, then
+schedule activation"). This keeps the operator's intent
+explicit — they validated before scheduling.
+
+**Persistence across invalidation.** A schedule **persists**
+across `validated → draft` flips (operator edits a roster, the
+session invalidates, the schedule remains set). The operator's
+intent ("activate at 9am Monday") is the durable artifact;
+status churn shouldn't wipe it. The Workflow card surfaces this
+state to the operator (see *Right-column signals* below).
+
+**Fire-time guard.** When the trigger fires, it checks the
+session's current status:
+
+```python
+if not lifecycle.is_validated(session):
+    audit.write_event(
+        "session.scheduled_activation_skipped",
+        reason="not_validated",
+        ...
+    )
+    session.scheduled_activate_at = None  # one-shot
+    return
+activate_session(...)
+```
+
+A skipped schedule is **one-shot** — `scheduled_activate_at` is
+cleared on the skip. The operator re-validates and re-schedules;
+this avoids a stale schedule firing days later after a
+re-validation the operator didn't expect.
+
+**Manual Activate inside the window.** If the operator clicks
+Activate at 8:30am for a 9am scheduled session, `activate_session`
+runs immediately **and clears `scheduled_activate_at`** in the
+same transaction (a one-line side effect on the existing
+service). The 9am trigger fires on a `ready` session, sees
+`scheduled_activate_at = NULL`, and no-ops.
+
+**Right-column signals (Workflow card).** The Workflow card's
+right column (the "Activate" column) captions the scheduled
+activation per session state:
+
+| Session state | `scheduled_activate_at` | Right-column caption |
+|---|---|---|
+| `draft` | unset | (none — Activate button stays disabled) |
+| `draft` | set, in future | **Amber warning** — "Scheduled activation at «9am Mon Jun 1» — currently inactive: re-validate the session before then or the schedule will skip." |
+| `draft` | set, in past (after skip) | **Amber-grey skipped notice** — "Scheduled activation at «9am Mon Jun 1» skipped — session was not validated." (rendered once after the skip; clears on next operator interaction) |
+| `validated` | unset | (none — Activate button live, no schedule caption) |
+| `validated` | set, in future | **Green calm caption** — "System will auto-activate at «9am Mon Jun 1». You can also click Activate now." |
+| `ready` | (any — moot post-activation) | Existing "Activated at «X»" treatment; no schedule caption. |
+
+The captions integrate into `spec/workflow_card.md` "Right
+column — per state" when this Part ships; until then the spec
+flags the integration point.
+
+**Schema / audit / dependencies.**
+
+- Schema: `sessions.scheduled_activate_at` (Part 0a, shipped) —
+  the scheduled `validated → ready` trigger. Add a B-tree index
+  in this Part (the scheduler queries it by value).
+- Audit events: `session.activation_scheduled` (`changes`
+  envelope, when the operator sets / changes / clears the
+  scheduled time); `session.scheduled_activation_skipped`
+  (`reason` + `context.scheduled_at`, when fire-time guard
+  skips); the existing `session.activated` event covers both
+  manual and scheduled-trigger activations (a
+  `context.trigger="scheduled"` adds the provenance).
 - A scheduled trigger calls `session_lifecycle.activate_session`
-  at `scheduled_activate_at`; an explicit operator "Activate now" stays
-  available (it already exists).
+  at `scheduled_activate_at`; an explicit operator "Activate now"
+  stays available (it already exists).
 - **Depends on 18F Part 2** for the reviewer-facing states: the
-  pre-open page ("scheduled to open at «scheduled_activate_at» — come back
-  later") reads the `scheduled_activate_at` this part adds. 18F Part 2
-  builds the states; this part supplies the scheduled time.
+  pre-open page ("scheduled to open at «scheduled_activate_at» —
+  come back later") reads the `scheduled_activate_at` this part
+  adds. 18F Part 2 builds the states; this part supplies the
+  scheduled time.
 - Establishes the **shared dispatch mechanism** Parts 2–5 reuse —
   whichever pattern the segment settles on (background worker or
   lazy observer extended to additional anchors) lands here first.
