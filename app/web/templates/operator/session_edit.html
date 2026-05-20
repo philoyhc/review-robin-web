@@ -48,6 +48,15 @@
                  maxlength="320"
                  value="{{ session.help_contact or '' }}"
                  placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+        </div>
+
+        {# Right column: Description on top (flex-grows to fill
+           the leftover height) so its bottom edge aligns with
+           Help contact across the grid; Start and End anchored
+           below it. #}
+        <div class="fill-col">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
 
           {# Start — placeholder field until Segment 18G ships
              scheduled activation. Same styling as End so the
@@ -74,11 +83,6 @@
             name="deadline"
             value="{{ deadline_input_value }}"
           >
-        </div>
-
-        <div>
-          <label for="description">Description</label>
-          <textarea id="description" name="description" maxlength="2000" rows="6">{{ session.description or "" }}</textarea>
         </div>
       </div>
 
