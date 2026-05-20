@@ -754,40 +754,150 @@ external links.
 
 The reviewer's lobby — where they land when signing in directly
 (without an invitation token) or clicking "My Reviews" from the
-chrome on a session surface. Lists every session the signed-in user
-is an active reviewer on, with a per-session progress pill.
+chrome on a session surface. Lists every session the signed-in
+user is an active reviewer on, regardless of session lifecycle
+state (Segment 17B Phase 2 PR A widened the query so pre-ready
+sessions show up too, rendered as `not opened`).
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
-  session). Columns:
-  - **Session** — `<a>` to `/reviewer/sessions/{id}/1` (always
-    lands on Page 1; the surface itself handles which page is
-    "current").
-  - **Deadline** — the canonical `YYYY-MM-DD HH:MM` timestamp in
-    that session's own resolved zone, followed by the zone's
-    compact GMT-offset + raw IANA id in parentheses (e.g.
-    `(GMT+8 Asia/Singapore)`, via `gmt_offset_zone_label`); or
+  session). **Six columns:**
+  - **Session** — link to `/reviewer/sessions/{id}/summary` when
+    Reviewer Status is `submitted` (PR B); link to
+    `/reviewer/sessions/{id}/1` for any other state where Session
+    Status isn't `not opened`; plain text otherwise.
+  - **Start** — `sessions.activated_at` formatted in the
+    session's resolved zone, rendered as a `pill-count` chip
+    (neutral data); `<span class="muted">—</span>` when the
+    session has not yet been activated. Segment 18G's scheduled
+    activation will fill the same column with the planned open
+    time pre-activation and the actual stamp afterwards, no
+    re-plumbing.
+  - **End** — `session.deadline` formatted in the session zone,
+    rendered as a `pill-error` chip (red) once `now() >=
+    deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
-  - **Status** — pill (`not started` / `in progress` /
-    `submitted`) computed from the reviewer's `Response` rows; plus
-    a muted `(completed_rows / total_assignments)` count alongside.
-- **Empty state** — when the user has no active reviewer rows in
-  any session: a single `.card` with `.muted` text "You have no
-  pending reviews ({user.email})."
+  - **Timezone** — `pill-count` chip carrying the compact
+    GMT-offset (e.g. `GMT+8`) with the raw IANA id (e.g.
+    `Asia/Singapore`) on hover via `<abbr title="...">`,
+    mirroring the operator Sessions lobby's pattern.
+  - **Session status** — pill (`not opened` / `open` /
+    `closed`) — see vocabulary below.
+  - **Reviewer status** — pill (`not started` / `in progress` /
+    `submitted`) computed from the reviewer's `Response` rows;
+    plus a paired `(completed_rows / total_assignments)` chip
+    in the same colour so the row reads at a glance.
+- **Empty state** — when the user has no active reviewer rows
+  in any session: a single `.card` with `.muted` text "You have
+  no pending reviews ({user.email})."
 
-### Pill state machine
+### Session-status pill vocabulary
+
+Computed by
+`app/services/session_lifecycle.py::session_status_for_reviewer`
+— non-mutating; the deadline check flows through
+`session_accepts_responses` directly so a past deadline reads
+as `closed` even on instruments whose `accepting_responses`
+flag hasn't been flipped yet by `observe_deadline`.
+
+| Pill | Style | Condition |
+|---|---|---|
+| `not opened` | `pill-info` (blue, pending) | Session is `draft` or `validated` — not yet activated. Session column renders plain text (no link). |
+| `open` | `pill-success` (green) | Session is `ready` AND at least one assigned instrument is `accepting_responses` AND deadline (if set) hasn't passed. Session column links to the surface. |
+| `closed` | `pill-lifecycle-archived` (muted grey) | Session is `ready` AND no assigned instruments are accepting (deadline passed or instruments manually closed). Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
+
+When the deferred Close-session work and the `expired`
+lifecycle status ship (per `guide/segment_18F_workflow_optimization.md`),
+`closed` will also resolve from `session.status == "expired"`
+without re-plumbing.
+
+### Reviewer-status pill vocabulary
 
 Computed by `app/services/responses.py::session_pill_for_reviewer`:
 
-| Pill | `pill-success` / `pill-warning` / `pill-info` | Condition |
+| Pill | Style | Condition |
 |---|---|---|
-| `submitted` | `pill-success` | Every required field on every assignment in the session has a `Response.submitted_at` timestamp. |
-| `in progress` | `pill-warning` | At least one `Response` row exists, but the `submitted` rule doesn't hold. |
-| `not started` | `pill-info` | No `Response` rows exist for this reviewer in this session. |
+| `submitted` | `pill-success` | Every required field on every assignment in the session has a `Response.submitted_at` timestamp. The paired counter chip is also `pill-success`. |
+| `in progress` | `pill-warning` | At least one `Response` row exists, but the `submitted` rule doesn't hold. Counter chip is `pill-warning`. |
+| `not started` | `pill-info` | No `Response` rows exist for this reviewer in this session. Counter chip is `pill-info`. |
 
-The "Edit / Re-submit" affordance lives on the surface itself —
-hitting Submit once doesn't lock the form. Submitting again replays
-the same logic and re-stamps `submitted_at`.
+Reviewer Status renders independently of Session Status — even
+on a `not opened` session the reviewer sees "Reviewer Status:
+not started", which reads naturally alongside the session's
+pre-open state. The "Edit / Re-submit" affordance lives on the
+surface itself — hitting Submit once doesn't lock the form.
+Submitting again replays the same logic and re-stamps
+`submitted_at`.
+
+### Per-instrument sub-rows
+
+A multi-instrument session (N > 1) renders one stacked sub-row
+per instrument below its parent row, with the Reviewer Status
+pill scoped to that instrument and a matching counter chip
+following the same colour pairing. The deep link in each
+sub-row points at `/reviewer/sessions/{id}/{position}` so the
+reviewer can jump straight to a specific instrument. Empty for
+single-instrument sessions (the byte-identical contract from
+Segment 15B Slice 6).
+
+---
+
+## Per-session summary (`/reviewer/sessions/{id}/summary`)
+
+Segment 17B Phase 2 PR B — a read-only capstone page that
+renders once the reviewer has submitted every assigned row on
+a session. The surface's `submit_redirect_url` graduates to
+this URL when a submit closes out the last instrument; partial
+submits keep the existing "redirect back to surface"
+behaviour. The page also stays reachable later from the
+dashboard's Session column once Reviewer Status is
+`submitted`.
+
+- **Gate** — `responses.reviewer_session_state.pill_state ==
+  "submitted"`. Otherwise redirects to `/reviewer` with no
+  flash banner; the reviewer can re-submit from the surface.
+- **H1** — "Your responses — {session.name}".
+- **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
+  built from `MAX(response.submitted_at)` across the
+  reviewer's rows.
+- **Action row** — primary "Download my responses (CSV)"
+  button linking to `/reviewer/sessions/{id}/summary.csv` +
+  a secondary "Your reviewer dashboard" link.
+- **Sections** — one `.card` per instrument the reviewer
+  responded on, in `(Instrument.order, Instrument.id)` order.
+  Each section's `<h2>` shows the instrument's short label +
+  full name (when both are set); the body is a `<table>` whose
+  header is `Reviewee` + one column per response field
+  (carrying the field's operator-given label, in the
+  instrument's authored field order). Cells render the
+  response value or `<span class="muted">—</span>` when blank.
+  Group-scoped instruments collapse to one row per group with
+  the composed group identity in the Reviewee column,
+  mirroring the surface's existing collapse logic.
+- **CSV download** — `/reviewer/sessions/{id}/summary.csv`
+  emits `{code}_my_responses.csv` (filename via
+  `app.services.extracts.filename`). Same 21-column shape as
+  the unified Responses CSV (see `spec/csv_contracts.md`
+  §2.4), scoped to one reviewer; a per-instrument preamble +
+  field dictionary appears for every instrument the reviewer
+  responded on. Builds via
+  `app.services.extracts.responses_extract.serialize_reviewer_session_summary`,
+  which reuses 18H Part 2's `_response_row_tuple` so a
+  per-cell rename here flows through to every related file.
+
+### Pre-open page (`/reviewer/sessions/{id}/{position}` on a not-yet-ready session)
+
+Segment 18F Part 2 added a dedicated **pre-open** rendering
+for a reviewer who follows an invitation token (or a
+dashboard link) to a session that's been Prepared
+(`validated`) but not yet Activated. Instead of 403-ing or
+dropping the reviewer into a silently-disabled form, the
+route returns `reviewer/pre_open.html` — h1 with "{session
+name} — opens later", an info banner explaining the review
+hasn't opened yet, the deadline + zone when one is set, and a
+link back to the reviewer dashboard. See
+`spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
+for the gate semantics.
 
 ---
 

@@ -1,13 +1,27 @@
 # Segment 17B — Reviewer surface refinements
 
-**Status:** Partly shipped (2026-05-16). PR 1 (`routes_reviewer`
-packaging, commit `801af2f`), the action-row reorder, keyboard
-navigation, and the progress pills have landed (PRs #1076 / #1077).
-Cell autosave and filter-to-incomplete are deferred to
-`guide/deferred_until_pilot_feedback.md`; return-to-place and the
-remaining chrome polish are still open. The reviewer-facing
+**Status:** Phase 1 shipped 2026-05-16; **Phase 2 (PRs A + B)
+shipped 2026-05-20**, with the post-shipping pill-formatting
+refinements (separate Timezone column + more informative colour
+coding) following the same day.
+
+Phase 1 — PR 1 (`routes_reviewer` packaging, commit
+`801af2f`), the action-row reorder, keyboard navigation, and the
+progress pills (PRs #1076 / #1077). Cell autosave and
+filter-to-incomplete are deferred to
+`guide/deferred_until_pilot_feedback.md`; return-to-place and
+the remaining chrome polish are still open. The reviewer-facing
 timezone-clarity item is covered incidentally by the 18B
 follow-ups (the deadline carries a zone label).
+
+Phase 2 — PR A (lobby expansion, two status columns,
+`sessions.activated_at`) shipped via PR #1237; PR B (per-session
+participation summary + CSV download, submit-flow redirect)
+shipped via PR #1238. Post-shipping refinements: separate
+Timezone column with GMT-offset chip + IANA hover, pill-styled
+Start / End / (N/M) cells (PR #1239); more informative pill
+colour coding — End red when past deadline, Closed muted-grey,
+counter paired with Reviewer status colour (PR #1240).
 
 **Added 2026-05-20.** Two new PRs (A + B) scoped at pickup
 generalise the reviewer landing toward the future Participants
@@ -154,7 +168,21 @@ the auth refactor settles. So 17B widens the lobby's shape and
 query, but does not rename `/reviewer/` (see the decision
 callout below).
 
-### PR A — Lobby expansion + two-status columns
+### PR A — Lobby expansion + two-status columns — shipped 2026-05-20
+
+> Shipped via PR #1237. Post-shipping refinements layered on
+> the same day: separate Timezone column with the operator
+> lobby's GMT-offset pill + IANA hover, Start / End / counter
+> cells styled as pills (PR #1239); informative pill colour
+> coding — End flips to `pill-error` past the deadline, Closed
+> uses `pill-lifecycle-archived` (muted grey), and the (N/M)
+> counter colour-pairs with the Reviewer status pill
+> (PR #1240). The final lobby therefore carries **six columns**
+> (Session / Start / End / Timezone / Session status / Reviewer
+> status) rather than the five originally drafted below.
+
+The rest of this section is the as-planned scope sketch,
+retained for context.
 
 The reviewer dashboard (`GET /reviewer`, rendered by
 `reviewer_dashboard` in `app/web/routes_reviewer/_dashboard.py`)
@@ -271,7 +299,11 @@ opened".
 scheduled time, post-activation rows show the actual stamp. No
 re-plumbing.
 
-### PR B — Per-session participation summary + CSV
+### PR B — Per-session participation summary + CSV — shipped 2026-05-20
+
+> Shipped via PR #1238. Followed PR A's link wiring: the lobby's
+> Session column now points at `/reviewer/sessions/{id}/summary`
+> when Reviewer Status is `submitted`, at `.../1` otherwise.
 
 A capstone summary that fires when a reviewer has submitted
 **every** instrument they were assigned on a session. One
