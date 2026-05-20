@@ -8,7 +8,7 @@ is ``ON DELETE CASCADE`` so deleting a session drops its tags.
 Lands inert — no service module reads or writes the table until
 Segment 18A Part 2 lights it up (lobby tag-filter chips + the
 Add / Remove tag affordance). See
-``guide/segment_13F_more_db_prep.md`` PR 3 for the schema
+``guide/archive/segment_13F_more_db_prep.md`` PR 3 for the schema
 rationale.
 
 Revision ID: c7d1e9f3a4b2

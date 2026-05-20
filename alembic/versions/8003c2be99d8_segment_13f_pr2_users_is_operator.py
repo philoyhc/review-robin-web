@@ -16,7 +16,7 @@ env var, mirroring the ``SYS_ADMIN_EMAILS`` pattern from
 authoritative — removing an email from the env var does NOT
 auto-revoke; revocation goes through 16A PR 6's workspace UI.
 
-See ``guide/segment_13F_more_db_prep.md`` PR 2 for the schema
+See ``guide/archive/segment_13F_more_db_prep.md`` PR 2 for the schema
 rationale and ``guide/segment_16A_sys_admin_page.md`` PR 1 for
 the light-up.
 

@@ -16,7 +16,7 @@ set"; the consumer falls through to its in-code default
 Lands inert — no service module reads or writes the column
 until Segment 18B PR 2 lights it up.
 
-See ``guide/segment_13F_more_db_prep.md`` PR 7 for the schema
+See ``guide/archive/segment_13F_more_db_prep.md`` PR 7 for the schema
 rationale.
 
 Revision ID: e9277c43b251

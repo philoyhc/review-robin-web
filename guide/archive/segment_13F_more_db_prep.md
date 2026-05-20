@@ -1,5 +1,18 @@
 # Segment 13F — More DB prep (16A / 16B / 18A / 18B / 18G ride-along)
 
+> **Retired 2026-05-20 — folded into Segment 18G.** Five of seven
+> PRs shipped (PR 1 / 2 / 3 / 6 / 7 — see status markers below).
+> The remaining schema-only items — PR 4
+> (`sessions.reminder_settings`), PR 5
+> (`sessions.retention_exception` + `retention_overrides`), and
+> the pending scheduled-lifecycle schema audit
+> (`auto_archive_at` / `invitations_send_at` / `activate_at`) —
+> were all 18G-relevant, so they were consolidated into
+> **Segment 18G — Scheduled events** as **Part 0 — Schema
+> pre-positioning**. See
+> `guide/segment_18G_scheduled_events.md` Part 0. This plan is
+> kept for historical reference only.
+>
 > **Segment 14C consolidated into Segment 18G (2026-05-18).**
 > PR 4's `sessions.reminder_settings` column was scoped as a
 > "14C ride-along"; reminders are now **Segment 18G Part 5**, so

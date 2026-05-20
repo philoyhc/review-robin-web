@@ -11,7 +11,7 @@ dependency lands in 16A PR 2. After bootstrap, the column is
 authoritative — removing an email from the env var does NOT
 auto-demote that operator.
 
-See ``guide/segment_13F_more_db_prep.md`` PR 1 for the schema
+See ``guide/archive/segment_13F_more_db_prep.md`` PR 1 for the schema
 rationale and ``guide/segment_16A_sys_admin_page.md`` PRs 1-2
 for the light-up. Note: 13F's PR ladder was reordered 2026-05-11
 so the 16-series work landed first; this migration's filename
