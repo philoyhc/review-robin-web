@@ -196,6 +196,24 @@ Reviewer stats extra columns: `RevieweesReviewedDraft/Submitted`
 `ReviewersDraft/Submitted` (distinct reviewers) plus the same
 three field / char pairs.
 
+### 2.7 Per-instrument responses — `extracts/responses_extract.py` (`serialize_responses_for_instrument`)
+
+Shipped 18H Part 2. **Bundle-only** sibling files to the unified
+Responses CSV — one ``{code}_instrument_{n}.csv`` per instrument,
+named positionally to match the ``instrument_{n}`` vocabulary
+used in §2.4's preamble and ``InstrumentName`` column. No
+individual download tile; no importer.
+
+Same 21-column long-format header as §2.4, so an analyst can
+concatenate the per-instrument files and reconstruct the unified
+file. Each file carries a single-instrument preamble (its field
+dictionary), a blank-row gap, the header, then data rows scoped
+to that instrument. **Sort order:** ``(RevieweeName → ReviewerEmail
+→ field.order)`` — the reviewee-centric reading order. Group-scoped
+instruments collapse the fan-out (one row per (reviewer, group,
+field)) and post-sort by the composed group identity so a group's
+rows cluster together.
+
 ---
 
 ## 3. Four importers (input contracts)
@@ -376,7 +394,7 @@ shares. Public surface:
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above plus the two bundle-only entity-stats CSVs (`GET /export/bundle.zip`, Segment 18D PR E1 / 18H Part 3) | same |
+| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above plus the two bundle-only entity-stats CSVs and one bundle-only `instrument_{n}.csv` per instrument (`GET /export/bundle.zip`, Segment 18D PR E1 / 18H Parts 2 + 3) | same |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |

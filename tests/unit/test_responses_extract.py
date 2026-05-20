@@ -29,6 +29,7 @@ from app.db.models import (
 from app.services.extracts.responses_extract import (
     HEADER,
     serialize_responses,
+    serialize_responses_for_instrument,
 )
 from app.services.instruments import (
     ensure_default_response_type_definitions,
@@ -880,3 +881,152 @@ def test_group_identity_includes_member_names_when_name_field_included(
     body = _data(list(serialize_responses(db, review_session)))
     assert len(body) == 1
     assert body[0][5] == "Team A (Carol, Eve)"
+
+
+# --------------------------------------------------------------------------- #
+# serialize_responses_for_instrument — 18H Part 2
+# --------------------------------------------------------------------------- #
+
+
+def test_per_instrument_emits_only_that_instrument(db: Session) -> None:
+    """The per-instrument file is filtered to one instrument; the
+    other instrument's responses don't bleed in."""
+    review_session = _session(db, code="per-i")
+    likert = _likert(db, review_session)
+    rita = _add_reviewer(
+        db, review_session, email="rita@x.edu", name="Rita"
+    )
+    eli = _add_reviewee(
+        db, review_session, identifier="eli@x.edu", name="Eli"
+    )
+    instr_a = _add_instrument(db, review_session, name="A", order=0)
+    instr_b = _add_instrument(db, review_session, name="B", order=1)
+    f_a = _add_field(db, instr_a, field_key="qa", label="QA", rtd=likert)
+    f_b = _add_field(db, instr_b, field_key="qb", label="QB", rtd=likert)
+    asg_a = _add_assignment(
+        db, review_session, reviewer=rita, reviewee=eli, instrument=instr_a
+    )
+    asg_b = _add_assignment(
+        db, review_session, reviewer=rita, reviewee=eli, instrument=instr_b
+    )
+    _add_response(db, assignment=asg_a, field=f_a, value="3")
+    _add_response(db, assignment=asg_b, field=f_b, value="5")
+
+    rows_a = list(
+        serialize_responses_for_instrument(
+            db, review_session, instr_a, position=1
+        )
+    )
+    body_a = _data(rows_a)
+    pre_a = _preamble(rows_a)
+    # One data row, only instrument A's value.
+    assert [row[12] for row in body_a] == ["qa"]
+    assert [row[15] for row in body_a] == ["3"]
+    # Preamble names only instrument_1.
+    assert pre_a[0] == ("instrument_1",)
+    assert ("instrument_2",) not in pre_a
+
+
+def test_per_instrument_sorts_by_reviewee_then_reviewer(
+    db: Session,
+) -> None:
+    """Data rows are ordered ``(reviewee → reviewer → field)`` so
+    each reviewee's reviewers cluster consecutively."""
+    review_session = _session(db, code="per-sort")
+    likert = _likert(db, review_session)
+    ann = _add_reviewer(db, review_session, email="ann@x.edu", name="Ann")
+    bob = _add_reviewer(db, review_session, email="bob@x.edu", name="Bob")
+    xan = _add_reviewee(
+        db, review_session, identifier="xan@x.edu", name="Xan"
+    )
+    yas = _add_reviewee(
+        db, review_session, identifier="yas@x.edu", name="Yas"
+    )
+    instr = _add_instrument(db, review_session, name="Form", order=0)
+    fld = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    for reviewer in (bob, ann):
+        for reviewee in (yas, xan):
+            asg = _add_assignment(
+                db,
+                review_session,
+                reviewer=reviewer,
+                reviewee=reviewee,
+                instrument=instr,
+            )
+            _add_response(db, assignment=asg, field=fld, value="4")
+
+    rows = list(
+        serialize_responses_for_instrument(
+            db, review_session, instr, position=1
+        )
+    )
+    body = _data(rows)
+    # Sort key is (RevieweeName col 5, ReviewerEmail col 1) — Xan
+    # before Yas, and within each reviewee Ann before Bob.
+    assert [(r[5], r[1]) for r in body] == [
+        ("Xan", "ann@x.edu"),
+        ("Xan", "bob@x.edu"),
+        ("Yas", "ann@x.edu"),
+        ("Yas", "bob@x.edu"),
+    ]
+
+
+def test_per_instrument_for_group_scoped_collapses_and_sorts_by_group(
+    db: Session,
+) -> None:
+    """A group-scoped instrument's fan-out collapses to one row
+    per (reviewer, group, field); the per-instrument file sorts
+    by the composed group identity so all of a group's rows
+    cluster together."""
+    review_session = _session(db, code="per-grp")
+    likert = _likert(db, review_session)
+    rita = _add_reviewer(
+        db, review_session, email="rita@x.edu", name="Rita"
+    )
+    # Two groups by tag_1: Team A (Carol, Dan), Team B (Eve, Frank).
+    carol = _add_reviewee(
+        db, review_session, identifier="carol@x.edu", name="Carol",
+        tag_1="Team A",
+    )
+    dan = _add_reviewee(
+        db, review_session, identifier="dan@x.edu", name="Dan",
+        tag_1="Team A",
+    )
+    eve = _add_reviewee(
+        db, review_session, identifier="eve@x.edu", name="Eve",
+        tag_1="Team B",
+    )
+    frank = _add_reviewee(
+        db, review_session, identifier="frank@x.edu", name="Frank",
+        tag_1="Team B",
+    )
+    instr = Instrument(
+        session_id=review_session.id,
+        name="Form",
+        order=0,
+        group_kind="r1",
+    )
+    db.add(instr)
+    db.flush()
+    fld = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    for reviewee in (carol, dan, eve, frank):
+        asg = _add_assignment(
+            db,
+            review_session,
+            reviewer=rita,
+            reviewee=reviewee,
+            instrument=instr,
+        )
+        _add_response(db, assignment=asg, field=fld, value="4")
+
+    rows = list(
+        serialize_responses_for_instrument(
+            db, review_session, instr, position=1
+        )
+    )
+    body = _data(rows)
+    # Two collapsed rows — Team A then Team B (alpha sort on
+    # composed RevieweeName).
+    assert len(body) == 2
+    assert body[0][5] == "Team A"
+    assert body[1][5] == "Team B"

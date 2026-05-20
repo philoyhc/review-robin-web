@@ -56,7 +56,11 @@ def test_bundle_contains_the_csv_members(
     assert response.status_code == 200
 
     archive = zipfile.ZipFile(io.BytesIO(response.content))
+    # The operator-route session-create call seeds a default
+    # instrument, so the bundle picks up one ``instrument_1.csv``
+    # per-instrument file alongside the unified Responses CSV.
     assert sorted(archive.namelist()) == [
+        "bnd-mem_instrument_1.csv",
         "bnd-mem_relationships.csv",
         "bnd-mem_responses.csv",
         "bnd-mem_reviewee_stats.csv",
@@ -96,3 +100,7 @@ def test_bundle_route_emits_audit_event_with_per_csv_counts(
     assert counts["settings"] > 0
     assert counts["reviewer_stats"] == 0
     assert counts["reviewee_stats"] == 0
+    # ``instrument_files`` is the count of per-instrument response
+    # CSVs (one per instrument); the auto-seeded default instrument
+    # gives a bare session exactly one.
+    assert counts["instrument_files"] == 1

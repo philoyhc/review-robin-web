@@ -171,21 +171,38 @@ client-side row builder / serialiser in
 RuleSet read-back) are still open and will land as further PRs
 under this Part as they are picked up.
 
-### Part 2 — Enhanced response export
+### Part 2 — Enhanced response export — shipped 2026-05-20
 
-Further enhancement of the Responses extract
-(`app/services/extracts/responses_extract.py`). Segment 18D
-already restructured it for downstream analysis (a per-instrument
-preamble, a field dictionary, positional `instrument_{n}`
-naming). This Part is the next iteration — candidate directions
-to assess at scoping: a wide / pivoted layout option alongside
-the current long format, richer per-cell provenance, group-scoped
-instrument representation, and export-time filtering. The §22
-functional-spec line "long-format and wide-format export
-options" is the anchor.
+Scoped at pickup as a **per-instrument response export** instead
+of the §22 anchor's "wide / pivoted layout" direction (rejected
+on tradeoff grounds — wide is the *report* shape; long stays the
+analysis baseline). The Zip-all bundle now contains one
+``{code}_instrument_{n}.csv`` per instrument alongside the
+unified ``responses.csv``:
 
-**Scope: TBD at pickup.** Confirm which directions are wanted
-before drafting Parts.
+- Same 21-column long-format shape as `responses.csv`, so an
+  analyst can concatenate the per-instrument files and
+  reconstruct the unified file.
+- Single-instrument preamble (the instrument's field
+  dictionary); positional `instrument_{n}` naming matches the
+  unified file's vocabulary.
+- Sorted ``(RevieweeName → ReviewerEmail → field.order)`` — the
+  reviewee-centric reading order. Group-scoped instruments
+  collapse the fan-out and post-sort by composed group identity
+  so each group's rows cluster.
+
+The unified `responses.csv` stays unchanged (cross-instrument
+analyst file, reviewer-first sort). Per-cell aggregate
+alternatives ("one row per reviewee with averaged ratings") were
+considered and rejected as lossy and downstream's job.
+
+Implementation: factored a `_response_row_tuple` helper out of
+`serialize_responses`; new `serialize_responses_for_instrument`
+shares it. Wired into `zip_bundle.py`; contract documented in
+`spec/csv_contracts.md` §2.7. The bundle's
+``session.bundle_extracted`` audit `counts` envelope gains a
+single ``instrument_files`` key (the per-instrument file count)
+so the envelope doesn't balloon by roster /  instrument size.
 
 ### Part 3 — Entity stats export — shipped 2026-05-19
 
