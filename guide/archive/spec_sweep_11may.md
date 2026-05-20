@@ -406,7 +406,7 @@ of each group.
 > **S1–S5 status: ✅ Merged 2026-05-11 (PR #807, Tranche 2 single-sweep PR).**
 > S1 and S3 were both skipped at landing time — S1 because the
 > `51 → 62` drift only ever appeared in the dated
-> `guide/codebase_assessment_09may.md` snapshot (correctly
+> `guide/archive/codebase_assessment_09may.md` snapshot (correctly
 > preserved as-is); S3 because the "inert pending Segment 12A
 > PR 6" copy is overwritten by F5 (PR #800) and F6 (PR #801)
 > which both rewrite the surrounding sections.

@@ -173,7 +173,7 @@ this track is "do it before the suite crosses ~2-3 min", which
 
 ## Related context
 
-- `guide/codebase_assessment_16may.md` — §6 (file splits) and
+- `guide/archive/codebase_assessment_16may.md` — §6 (file splits) and
   §5 weakness 8 (test-suite runtime) are the source of every
   item here.
 - `guide/archive/major_refactor.md` — the May 9

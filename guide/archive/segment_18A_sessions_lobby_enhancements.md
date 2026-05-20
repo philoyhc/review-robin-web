@@ -59,7 +59,7 @@ session off an old one. Three major items:
 - **Tagging schema is pre-positioned.** The `session_tags` table
   lands inert in **Segment 13F PR 3** (additive, nullable, no
   backfill), awaiting this segment's light-up.
-- `guide/codebase_assessment_11may.md` §22 marks **Session
+- `guide/archive/codebase_assessment_11may.md` §22 marks **Session
   cloning** as ❌ not planned today; this segment gives it (and
   tagging / archiving) an owner.
 
@@ -565,7 +565,7 @@ When parts ship:
 - `spec/settings_inventory.md` — session-level tags row added,
   plus the `rrw-lobby-tag-filter` `localStorage` key in the
   browser-local UI-state primitives list.
-- `guide/codebase_assessment_11may.md` §22 rows updated.
+- `guide/archive/codebase_assessment_11may.md` §22 rows updated.
 
 ## Working notes
 

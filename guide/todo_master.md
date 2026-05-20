@@ -790,7 +790,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13F (PRs 4-5), 14B,
-18E, 18F, 18G, 18H, 19, 20**. No global ordering
+18F, 18G, 18H, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -841,28 +841,15 @@ bottom of this file.
 
 #### Stubs
 
-- **18E — Small enhancements** *(holding pen — open; Parts 1-3
-  shipped 2026-05-18)*.
-  A holding pen for small, self-contained operator-surface
-  enhancements — each one a single small PR, landed
-  independently; items accumulate as they surface. **The current
-  Parts have shipped; the segment stays open** in `guide/` so
-  future small enhancements land here as additional Parts rather
-  than spawning one-off segment stubs.
-  **Part 1 (shipped 2026-05-18):** column-visibility chips on
-  the Reviewers / Reviewees / Relationships Setup pages — a
-  `Show columns:` pill-chip row in the top card replaces the old
-  Tag1/Tag2/Tag3 checkbox strip; chips carry friendly labels and
-  toggle preview-table columns (tags + the Reviewees profile-link
-  column). Pure client-side, no schema. **Part 2 (shipped
-  2026-05-18):** eligible-pair count performance — evaluate only
-  pinned rules, plus a lazy persisted cache on
-  `session_rule_sets`. **Part 3 (shipped 2026-05-18):** the
-  "Fields with data" pills on the three Setup pages now render
-  friendly field labels (operator override → builtin default)
-  instead of raw CSV column names, via
-  `views.friendly_fields_with_data`.
-  **Plan:** `guide/segment_18E_small_enhancements.md`.
+- **18E — Small enhancements** *(closed 2026-05-20; all three
+  Parts shipped 2026-05-18, plan archived)*. The original small-
+  enhancements holding pen — Parts 1 (column-visibility pill
+  chips), 2 (eligible-pair count cache), and 3 (friendly-label
+  Fields-with-data pills) shipped together on 2026-05-18.
+  **The "small enhancements" holding-pen role now lives on
+  Segment 18H going forward** — additional small operator-surface
+  improvements land there as new Parts rather than reopening 18E.
+  **Plan:** `guide/archive/segment_18E_small_enhancements.md`.
 
 - **18F — Workflow optimization** *(stub created 2026-05-19)*.
   A deliberate end-to-end work-through of the operator workflow —
@@ -894,17 +881,27 @@ bottom of this file.
   Activated-as-gate model + reviewer pre-open / closed states.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
-- **18H — Post-assessment update** *(created 2026-05-19)*.
-  A holding pen opened after the 2026-05-19 codebase assessment.
+- **18H — Post-assessment update + small enhancements**
+  *(created 2026-05-19; Parts 1-3 shipped 2026-05-19→20)*. A
+  holding pen opened after the 2026-05-19 codebase assessment;
+  inherits the small-enhancements role from the now-closed
+  Segment 18E. Future small operator-surface improvements land
+  here as new Parts rather than spawning one-off segment stubs.
   **Logs as shipped:** the group-scoped instrument config
-  round-trip fix (PR #1216 — `_parse_group_kind` now parses
-  through the `group_kind` codec). **Carries three stubs**, scope
-  drafted at pickup: **rule builder refinement** (an ergonomics
-  pass on the Rule Builder page), **enhanced response export**
-  (the next iteration of the Responses extract — wide-format
-  option et al.), and **metadata export** (a session-metadata /
-  manifest export distinct from the Settings CSV).
-  **Plan:** `guide/segment_18H_post_assessment_update.md`.
+  round-trip fix (PR #1216) + the relationship re-point /
+  group-join representative-staleness defunct fixes (PRs #1218,
+  #1220). **Three Parts shipped:** **Part 1** — Rule Builder
+  ergonomics (3-column grid layout for MATCH / FILTER / QUOTA
+  controls; mutually exclusive include/exclude checkboxes
+  replacing the kind dropdown). Further Rule Builder refinements
+  remain open. **Part 2** — per-instrument response CSVs in the
+  Zip-all bundle (`{code}_instrument_{n}.csv`, long format
+  sorted reviewee-first; rejected the §22 wide-format
+  alternative). **Part 3** — bundle-only Reviewer / Reviewee
+  stats CSVs (roster + draft/submitted aggregates for partners,
+  fields answered, required fields, String-typed response
+  chars). **Plan:**
+  `guide/segment_18H_post_assessment_update.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
@@ -941,7 +938,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13F (PRs 4-5), 18E, 18F, 18H, 19, 20** are independent of the
+- **13F (PRs 4-5), 18F, 18H, 19, 20** are independent of the
   email + audit pipelines and can interleave at any time.
 - **18F → 18G.** 18F (workflow optimization) settles the
   lifecycle; 18G (scheduled events) hangs time-based triggers off

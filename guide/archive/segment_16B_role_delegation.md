@@ -119,7 +119,7 @@ Today's gap:
 
 The functional-spec acceptance criterion **"Role delegation
 among multiple operators"** (§22 Expanded release items) is
-the canonical scope ask — `guide/codebase_assessment_11may.md`
+the canonical scope ask — `guide/archive/codebase_assessment_11may.md`
 marks it ⚠️ "table exists; no UI".
 
 ## PR ladder
