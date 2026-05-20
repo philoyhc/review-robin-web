@@ -168,19 +168,22 @@ def reviewer_dashboard(
                     if review_session.activated_at
                     else None
                 ),
-                "start_timezone_label": (
-                    date_formatting.gmt_offset_zone_label(
-                        session_zone, at=review_session.activated_at
+                "deadline_text": (
+                    date_formatting.format_datetime(
+                        review_session.deadline, session_zone
                     )
-                    if review_session.activated_at
+                    if review_session.deadline
                     else None
                 ),
-                "deadline_text": date_formatting.format_datetime(
-                    review_session.deadline, session_zone
-                ),
-                "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
+                # Timezone column (Start/End render zone-less now;
+                # this carries the GMT-offset chip + IANA hover, the
+                # operator lobby's pattern). Mirror that template
+                # by computing the offset relative to ``deadline``
+                # when set, falling back to "now".
+                "timezone_gmt_offset": date_formatting.gmt_offset_label(
                     session_zone, at=review_session.deadline
                 ),
+                "timezone_iana": session_zone,
                 "instrument_rows": _build_dashboard_instrument_rows(
                     db, reviewer, review_session
                 ),

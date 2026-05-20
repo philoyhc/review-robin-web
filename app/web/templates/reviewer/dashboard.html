@@ -15,6 +15,7 @@
           <th>Session</th>
           <th>Start</th>
           <th>End</th>
+          <th>Timezone</th>
           <th>Session status</th>
           <th>Reviewer status</th>
         </tr>
@@ -31,17 +32,22 @@
             </td>
             <td>
               {% if item.start_text %}
-                {{ item.start_text }} ({{ item.start_timezone_label }})
+                <span class="pill pill-info">{{ item.start_text }}</span>
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
             </td>
             <td>
-              {% if item.session.deadline %}
-                {{ item.deadline_text }} ({{ item.deadline_timezone_label }})
+              {% if item.deadline_text %}
+                <span class="pill pill-info">{{ item.deadline_text }}</span>
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
+            </td>
+            <td>
+              <span class="pill pill-count">
+                <abbr class="tz-gmt" title="{{ item.timezone_gmt_offset }} {{ item.timezone_iana }}">{{ item.timezone_gmt_offset }}</abbr>
+              </span>
             </td>
             <td>
               {% if item.session_status == "open" %}
@@ -60,9 +66,7 @@
               {% else %}
                 <span class="pill pill-info">not started</span>
               {% endif %}
-              <span class="muted">
-                ({{ item.pill.completed_rows }}/{{ item.pill.total_assignments }})
-              </span>
+              <span class="pill pill-count">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
             </td>
           </tr>
           {# Segment 15B Slice 6 — per-instrument sub-rows on
@@ -84,6 +88,7 @@
               <td></td>
               <td></td>
               <td></td>
+              <td></td>
               <td>
                 {% if sub.state == "submitted" %}
                   <span class="pill pill-success">submitted</span>
@@ -95,9 +100,7 @@
                   <span class="pill pill-info">not started</span>
                 {% endif %}
                 {% if sub.total_assignments %}
-                  <span class="muted">
-                    ({{ sub.completed_rows }}/{{ sub.total_assignments }})
-                  </span>
+                  <span class="pill pill-count">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
                 {% endif %}
               </td>
             </tr>
