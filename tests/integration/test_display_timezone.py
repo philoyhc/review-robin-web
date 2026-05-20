@@ -394,8 +394,12 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
     )
     response = reviewer.get("/reviewer")
     assert response.status_code == 200
+    # Post-17B-Phase-2 refinement: the deadline and Start columns
+    # render zone-less; the Timezone column carries the GMT
+    # offset, with the raw IANA id surfaced as a hover ``title``.
     assert format_datetime(session.deadline, "Asia/Singapore") in response.text
-    assert "(GMT+8 Asia/Singapore)" in response.text
+    assert 'title="GMT+8 Asia/Singapore"' in response.text
+    assert ">GMT+8</abbr>" in response.text
 
 
 # ── Timezone-sample preview on the config cards ──────────────────────────
