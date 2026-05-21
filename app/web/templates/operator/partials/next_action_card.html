@@ -332,6 +332,32 @@
           <p>{{ scheduled_activation_caption.text }}</p>
         </div>
       {% endif %}
+      {# 18G PR 2B — Auto-send invites caption. Moved here from
+         the Invitations page so the operator's scheduled-event
+         signals all live alongside the lifecycle controls. Tones:
+         amber-grey (offsets set, no Start), amber-warning
+         (offsets + Start, invitations not yet created), green
+         (offsets + Start + invitations exist). #}
+      {% if auto_send_invites_caption %}
+        {% set _tone = auto_send_invites_caption.tone %}
+        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
+             id="next-action-auto-send-invites-caption"
+             role="status">
+          <p>{{ auto_send_invites_caption.text }}</p>
+        </div>
+      {% endif %}
+      {# 18G PR 3B — Auto-send reminders caption. Same family /
+         visual treatment as auto-send-invites. Tones: amber-grey
+         (offsets set, no End), amber-warning (offsets + End,
+         session not ``ready``), green (offsets + End, ready). #}
+      {% if auto_send_reminders_caption %}
+        {% set _tone = auto_send_reminders_caption.tone %}
+        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
+             id="next-action-auto-send-reminders-caption"
+             role="status">
+          <p>{{ auto_send_reminders_caption.text }}</p>
+        </div>
+      {% endif %}
       {% if super_failure %}
         {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
         {% set _step_label_map = {

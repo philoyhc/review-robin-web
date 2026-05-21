@@ -383,12 +383,9 @@ def invitations_index(
         ),
         prepare_confirm=prepare_confirm,
     )
-    auto_send_invites_caption = views.build_auto_send_invites_caption(
-        db, review_session
-    )
-    auto_send_reminders_caption = views.build_auto_send_reminders_caption(
-        db, review_session
-    )
+    # Auto-send invites / reminders captions are part of
+    # ``workflow_ctx`` now — the Workflow card renders them in its
+    # right-column aside.
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations.html",
@@ -411,8 +408,6 @@ def invitations_index(
             "reminders_sent_count": reminders_sent_count,
             "pending_reminders_count": pending_reminders_count,
             "completed_count": completed_count,
-            "auto_send_invites_caption": auto_send_invites_caption,
-            "auto_send_reminders_caption": auto_send_reminders_caption,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Invitations"
             ),

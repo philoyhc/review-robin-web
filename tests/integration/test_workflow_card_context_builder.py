@@ -91,6 +91,8 @@ _EXPECTED_KEYS = {
     "prepare_confirm",
     "scheduled_activation_caption",
     "manual_activate_cancellation",
+    "auto_send_invites_caption",
+    "auto_send_reminders_caption",
     "next_action_return_to",
 }
 
