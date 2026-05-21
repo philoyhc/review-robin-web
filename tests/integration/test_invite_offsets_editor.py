@@ -322,10 +322,43 @@ def test_caption_none_without_offsets(db: Session) -> None:
     assert build_auto_send_invites_caption(db, rs) is None
 
 
-def test_caption_amber_when_offsets_but_no_invitations(db: Session) -> None:
+def test_caption_amber_warning_when_draft_not_prepared(db: Session) -> None:
+    """Offsets + Start set but session still in draft → the trigger
+    skips with reason=not_prepared; the caption surfaces that as
+    amber-warning with the "Prepare session" prompt."""
     from app.db.models import User
     from app.schemas.sessions import SessionCreate
     from app.services import sessions as sessions_service
+
+    op = User(email="op-cap-not-prep@example.edu", display_name="Op")
+    db.add(op)
+    db.flush()
+    rs = sessions_service.create_session(
+        db,
+        user=op,
+        payload=SessionCreate(name="t", code="cap-not-prep", description="d"),
+    )
+    rs.scheduled_activate_at = datetime(
+        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+    )
+    rs.invite_offsets = ["-P1D"]
+    db.flush()
+    db.commit()
+
+    caption = build_auto_send_invites_caption(db, rs)
+    assert caption is not None
+    assert caption["tone"] == "amber-warning"
+    assert "Prepare session" in caption["text"]
+
+
+def test_caption_amber_when_validated_but_no_invitations(
+    db: Session,
+) -> None:
+    """Session Prepared (validated) but no invitations created →
+    amber-warning with the "create invitations" prompt."""
+    from app.db.models import User
+    from app.schemas.sessions import SessionCreate
+    from app.services import sessions as sessions_service, session_lifecycle as lifecycle
 
     op = User(email="op-cap-amber@example.edu", display_name="Op")
     db.add(op)
@@ -339,6 +372,7 @@ def test_caption_amber_when_offsets_but_no_invitations(db: Session) -> None:
         2099, 6, 1, 9, 0, tzinfo=timezone.utc
     )
     rs.invite_offsets = ["-P1D"]
+    rs.status = lifecycle.SessionStatus.validated.value
     db.flush()
     db.commit()
 
@@ -360,6 +394,7 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
     from app.schemas.sessions import SessionCreate
     from app.services import (
         invitations as invitations_service,
+        session_lifecycle as lifecycle,
         sessions as sessions_service,
     )
 
@@ -409,6 +444,7 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
         2099, 6, 1, 9, 0, tzinfo=timezone.utc
     )
     rs.invite_offsets = ["-P1D"]
+    rs.status = lifecycle.SessionStatus.validated.value
     db.flush()
     db.commit()
 
