@@ -289,6 +289,51 @@ generation outside the operator's review window. The operator's
 Workflow card) is the explicit pre-condition for scheduling
 activation.
 
+**Minimum lead time on `scheduled_activate_at`.** Two distinct
+concerns share the "1 hour" floor — the editor enforces both at
+save and they apply per scenario:
+
+- **Operational lead time** — the lazy observer (§8.3 in
+  `spec/lifecycle.md`) fires on operator GETs; large rosters
+  (1,200-reviewer pilot) need wall-clock to fan out invitations
+  + run activation. `SCHEDULED_OPERATIONAL_LEAD_HOURS` (default
+  `1`).
+- **Reviewer-coordination gap** — when invitations are
+  auto-sent, the reviewer needs notice between the invite
+  landing and the session opening. `REVIEWER_NOTICE_MIN_HOURS`
+  (default `1`).
+
+The per-scenario rules:
+
+| Scenario | Save-time rule |
+|---|---|
+| Start set, `invite_offsets` empty | `Start ≥ now + SCHEDULED_OPERATIONAL_LEAD_HOURS` |
+| Start unset, `invite_offsets` non-empty | inert per §8.2.2 anchor-null — editor renders `invite_offsets` grey with "Set Start first"; no save-time check needed |
+| Both set | Each `invite_offset` entry's resolved fire moment (`Start + offset`) must satisfy: (a) `fire ≥ now + SCHEDULED_OPERATIONAL_LEAD_HOURS`; (b) `|offset| ≥ REVIEWER_NOTICE_MIN_HOURS` (reviewer-coordination gap before Start) |
+
+(b) implies the earliest invite always fires at least
+`REVIEWER_NOTICE_MIN_HOURS` before Start. For multiple offsets,
+the same check applies per entry — the earliest (most negative)
+entry pushes Start far enough out for the operational lead; the
+latest (least negative) entry must still leave the coordination
+gap before Start.
+
+Worked example. `invite_offsets = ["-P1D", "-PT2H"]`, defaults
+1 hour for both knobs:
+
+- Earliest (−1d): fire = `Start − 1d`. Requires `Start ≥ now + 1d + 1hr`.
+- Latest (−2h): fire = `Start − 2h`. Requires `|−2h| ≥ 1hr` ✓ and `Start − 2h ≥ now + 1hr` → `Start ≥ now + 3hr` (already covered).
+
+Editor errors are explicit when a rule is violated, e.g.
+"Auto-send invite −PT30M gives only 30 minutes between invite
+and Start; minimum reviewer notice is 1 hour. Choose -PT1H or
+larger."
+
+**Concurrency, retry, and notification follow the cross-cutting
+rules in `spec/lifecycle.md` §8.3** (SELECT … FOR UPDATE +
+idempotency check; 3 retries from audit-log count; Session Home
+banner on skip/failure for MVP, email deferred).
+
 **Always editable; effectiveness signalled, not gated.** Per
 the cross-cutting rule in `spec/lifecycle.md` §8.2.1, the
 `scheduled_activate_at` field is **always editable** while the
@@ -341,7 +386,7 @@ activation per session state:
 | Session state | `scheduled_activate_at` | Right-column caption |
 |---|---|---|
 | `draft` | unset | (none — Activate button stays disabled) |
-| `draft` | set, in future | **Amber warning** — "Scheduled activation at «9am Mon Jun 1» — currently inactive: validate the session before then or the schedule will skip." |
+| `draft` | set, in future | **Amber warning** — "Scheduled activation at «9am Mon Jun 1» — currently inactive: Prepare session before then or the schedule will skip." |
 | `draft` | set, in past (after skip) | **Amber-grey skipped notice** — "Scheduled activation at «9am Mon Jun 1» skipped — session was not validated." (rendered once after the skip; clears on next operator interaction) |
 | `validated` | unset | (none — Activate button live, no schedule caption) |
 | `validated` | set, in future | **Green calm caption** — "System will auto-activate at «9am Mon Jun 1». You can also click Activate now." |
@@ -396,11 +441,26 @@ notification emails to land *ahead of* the scheduled open
   `session.scheduled_invites_skipped`, clear the relevant
   offset entry (per-entry one-shot via the
   `(session_id, offset_index)` dedup key).
-- **Signal.** The Manage Invitations card surfaces "Auto-send
-  scheduled at «X», «Y» — currently inactive: create invitations
-  before then or these will skip" when invitations are not yet
-  generated. Once generated, the caption flips to a green
-  confirmation.
+- **Signals (Manage Invitations card).**
+  - Precondition not met (invitations not generated yet) —
+    **amber warning**: "Auto-send scheduled at «earliest fire»
+    — currently inactive: create invitations before then or
+    these will skip."
+  - Precondition met (invitations generated) — **green calm
+    caption**: "Auto-send scheduled at «earliest fire», «next
+    fire», … System will dispatch automatically; you can also
+    Send all now."
+  - Editor save errors surface inline on the invite-offsets
+    field per the rules below.
+- **Save-time rules for `invite_offsets`.** Both
+  `SCHEDULED_OPERATIONAL_LEAD_HOURS` and
+  `REVIEWER_NOTICE_MIN_HOURS` (Part 1 — defaults 1 hour each)
+  apply. For each offset entry the editor checks (a) `Start +
+  offset ≥ now + SCHEDULED_OPERATIONAL_LEAD_HOURS` and (b)
+  `|offset| ≥ REVIEWER_NOTICE_MIN_HOURS`. Violations surface
+  per-entry, e.g. "Auto-send invite −PT30M gives only 30
+  minutes between invite and Start; minimum reviewer notice
+  is 1 hour. Choose -PT1H or larger."
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation, and on **Part 1**
   surfacing `scheduled_activate_at` as a configurable operator input.

@@ -517,14 +517,54 @@ ISO 8601 string. Per-list-entry dedup uses the entry's index
 (e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
 re-ordered list doesn't re-fire already-sent reminders.
 
-### 8.3 Implementation notes (forthcoming)
+### 8.3 Implementation notes
 
-- **Trigger mechanism** — either a periodic background worker or
-  the lazy deadline-observer pattern (§4) extended to additional
-  anchors; settled at 18G's first non-Part-0 scoping pass.
+- **Trigger mechanism — lazy observer.** Settled 2026-05-20.
+  Scheduled-event triggers extend the lazy deadline-observer
+  pattern (§4) rather than running a separate background worker:
+  each operator GET to a session-related page (Session Home,
+  Operations pages, Sessions lobby) runs the per-anchor sweep
+  for that session, fires anything past its scheduled time, and
+  short-circuits on no-op. No new processes / cron / queue
+  infra. Trade-off: a scheduled event "fires at the next
+  operator GET ≥ scheduled time" — which is fine for events
+  with reasonable lead time, but constrains *how close to the
+  fire moment* the operator can schedule (see the per-event
+  minimum-lead-time rule below).
+- **Past-time editor rule.** The editor **rejects** an anchor
+  or offset on **save** if the resolved fire time is in the
+  past at the moment of saving. The operator can't *set* a
+  past schedule. But a value that *became* past after saving
+  (e.g. the operator set Start for tomorrow, then invalidated
+  through the deadline) **stays put**; the fire-time
+  precondition guard handles it normally (typically firing on
+  the next operator visit if the precondition is also satisfied).
+- **Concurrency safety.** Two concurrent operator GETs racing
+  the observer could fire the same trigger twice. Each trigger
+  opens with `SELECT … FOR UPDATE` on the session row plus an
+  idempotency check (`if session.scheduled_X_at is None: return`),
+  both inside the same transaction as the column clear. The
+  second racer sees `None` after the first racer commits and
+  no-ops.
+- **Retry policy.** If a precondition passes but the underlying
+  transition raises (transient DB error, etc.), the trigger
+  emits `session.scheduled_X_retry` (audit only — no schedule
+  clear). Subsequent operator GETs re-attempt the same trigger.
+  The trigger counts `scheduled_X_retry` events for the current
+  scheduled-fire moment from the audit log; **after 3 failed
+  retries** it emits `session.scheduled_X_failed_persistent`,
+  clears the schedule, and stops. Retries are paced by operator
+  visits — no time-based throttle for MVP.
+- **Operator notification on skip / failure.** MVP: audit
+  events only, plus a **Session Home banner** on the next
+  operator visit ("Scheduled activation skipped at «X» —
+  reason: «reason»"). Email notifications via 14B are deferred
+  until pilot feedback.
 - **Audit events** — each consumer Part defines its own emitters
   (`session.activated`, `session.archived`, `session.invitations_sent`,
-  `session.reminder_batch_enqueued`, `session.purged`). The
+  `session.reminder_batch_enqueued`, `session.purged`); each
+  scheduled-trigger emit carries `context.trigger="scheduled"`
+  to distinguish from operator-initiated fires. The
   *configuration-change* events
   (`session.invite_schedule_updated`,
   `session.reminder_schedule_updated`, etc.) land alongside the
