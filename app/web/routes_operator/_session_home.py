@@ -192,6 +192,10 @@ def session_edit_form(
             "invite_offsets_input_value": ", ".join(
                 review_session.invite_offsets or []
             ),
+            # 18G PR 3B: same prefill pattern for reminder_offsets.
+            "reminder_offsets_input_value": ", ".join(
+                review_session.reminder_offsets or []
+            ),
             # 18G PR 2B: read-only Schedule timeline preview rendered
             # beneath the form when any anchor / offset is set.
             "schedule_timeline_rows": views.build_schedule_timeline(
@@ -212,6 +216,7 @@ def session_edit_submit(
     deadline: str | None = Form(default=None),
     scheduled_activate_at: str | None = Form(default=None),
     invite_offsets: str | None = Form(default=None),
+    reminder_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
@@ -281,6 +286,21 @@ def session_edit_submit(
             detail=str(exc),
         ) from exc
 
+    # 18G Part 3: optional auto-send reminder offsets, validated
+    # against the (possibly freshly-edited) deadline.
+    try:
+        parsed_reminder_offsets = (
+            scheduled_events.parse_and_validate_reminder_offsets(
+                reminder_offsets,
+                deadline=parsed_deadline,
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     correlation_id = request_correlation_id()
     sessions.set_session_display_timezone(
         db,
@@ -297,6 +317,7 @@ def session_edit_submit(
         help_contact=help_contact or None,
         scheduled_activate_at=parsed_scheduled_activate_at,
         invite_offsets=parsed_invite_offsets,
+        reminder_offsets=parsed_reminder_offsets,
     )
     sessions.update_session(
         db,

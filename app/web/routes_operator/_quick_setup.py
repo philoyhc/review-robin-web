@@ -64,6 +64,7 @@ async def create_session(
     deadline: str | None = Form(default=None),
     scheduled_activate_at: str | None = Form(default=None),
     invite_offsets: str | None = Form(default=None),
+    reminder_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
@@ -126,6 +127,22 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # 18G Part 3: optional auto-send reminder offsets, anchored on
+    # ``deadline``. Per-entry rules validate against the (possibly
+    # freshly-set) deadline.
+    try:
+        parsed_reminder_offsets = (
+            scheduled_events.parse_and_validate_reminder_offsets(
+                reminder_offsets,
+                deadline=parsed_deadline,
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     payload = SessionCreate(
         name=name,
         code=code,
@@ -135,6 +152,7 @@ async def create_session(
         help_contact=help_contact or None,
         scheduled_activate_at=parsed_scheduled_activate_at,
         invite_offsets=parsed_invite_offsets,
+        reminder_offsets=parsed_reminder_offsets,
     )
     review_session = sessions.create_session(
         db,

@@ -124,6 +124,7 @@ from ._validate import (
 # Responses incoming in PRs 6+.
 from ._workflow_card import (
     build_auto_send_invites_caption,
+    build_auto_send_reminders_caption,
     build_manual_activate_cancellation,
     build_schedule_timeline,
     build_scheduled_activation_caption,
@@ -250,6 +251,7 @@ __all__ = [
     "build_surface_preview_context",
     "build_validate_context",
     "build_auto_send_invites_caption",
+    "build_auto_send_reminders_caption",
     "build_manual_activate_cancellation",
     "build_schedule_timeline",
     "build_scheduled_activation_caption",
