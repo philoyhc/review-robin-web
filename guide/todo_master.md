@@ -839,25 +839,30 @@ bottom of this file.
 
 - **18G — Scheduled events** *(stub created 2026-05-17;
   renumbered from 18F on 2026-05-19; Segment 13F
-  consolidated in as Part 0 on 2026-05-20; **Part 0 shipped
-  2026-05-20** — PR #1253)*. Consolidates every scheduled /
+  consolidated in as Part 0 on 2026-05-20; **Parts 0 / 1 / 2
+  / 3 shipped 2026-05-20 → 2026-05-21** — PRs **#1253**,
+  **#1262 → #1269**)*. Consolidates every scheduled /
   automatic session-lifecycle automation behind one schema
-  slice (Part 0). Parts 1–5 are now ordered by **workflow
+  slice (Part 0). Parts 1–5 are ordered by **workflow
   sequence** — the chronological order each scheduled event
   fires across a session's life: **Part 1 — scheduled
-  activation** (timed `validated → ready` flip; since
-  Activation *is* the open event per 18F Part 2's
-  Activated-as-gate, a scheduled activation is the synchronised
-  open with no separate "opening gate"); **Part 2 — auto-send
-  invitations** (offsets anchored on Start);
-  **Part 3 — auto-send reminders** (the former Segment 14C,
-  consolidated in 2026-05-18; offsets anchored on End);
-  **Part 4 — auto-archive** (timed `archive_session`, moved
-  out of 18A; offset anchored on End); **Part 5 — scheduled /
-  policy-driven purge** (auto-delete, anchored on archive
-  timestamp; the scheduled half of 18C). Parts 1 / 2 depend
-  on 18F Part 2; Part 1 establishes the shared dispatch
-  mechanism Parts 2–5 reuse.
+  activation** *(shipped 2026-05-21, PRs #1262 / #1263 /
+  #1264 — observer scaffolding, trigger, Start editor +
+  Workflow card caption)*; **Part 2 — auto-send invitations**
+  *(shipped 2026-05-21, PRs #1265 / #1266 / #1267 — trigger,
+  editor + Manage Invitations caption + Schedule timeline
+  preview, Part 1 ↔ Part 2 coordination + manual-activate
+  modal)*; **Part 3 — auto-send reminders** *(shipped
+  2026-05-21, PRs #1268 / #1269 — trigger, editor + caption
+  + timeline extension)*; **Part 4 — auto-archive** (timed
+  `archive_session`, moved out of 18A; offset anchored on
+  End); **Part 5 — scheduled / policy-driven purge** (auto-
+  delete, anchored on archive timestamp; the scheduled half
+  of 18C). Part 1 established the shared lazy-observer
+  dispatch mechanism Parts 2–5 reuse. Two Part 3 post-MVP
+  items (targeted reminder cohorts, reminders analytics)
+  carved 2026-05-21 to
+  `guide/deferred_until_pilot_feedback.md`.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **18H — Post-assessment update + small enhancements**
