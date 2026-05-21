@@ -379,6 +379,13 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.scheduled_invites_fired": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
+    # Segment 18G PR 2B — dedicated edit event when the operator sets /
+    # changes / clears the ``invite_offsets`` JSON list via the Create
+    # / Edit Session forms. The general ``session.updated`` still
+    # records the change in its diff envelope; this row makes it cheap
+    # for the UI to surface "operator just changed the auto-send
+    # schedule" captions / banners.
+    "session.invite_schedule_updated": EventSchema(_IDENTITY | {"changes"}),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),

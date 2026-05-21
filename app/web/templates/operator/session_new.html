@@ -62,8 +62,7 @@
             <div>
               <label for="invite_offsets">Auto-send invites (optional)</label>
               <input type="text" id="invite_offsets" name="invite_offsets"
-                     disabled
-                     placeholder="e.g. -P1D, -PT2H — 18G Part 2">
+                     placeholder="e.g. -P1D, -PT2H">
 
               <label for="reminder_offsets">Auto-send reminders (optional)</label>
               <input type="text" id="reminder_offsets" name="reminder_offsets"
@@ -110,6 +109,8 @@
           </div>
         </div>
       </div>
+
+      {% include "operator/partials/_schedule_timeline.html" %}
 
       <div class="btn-pair" style="margin-top: 20px;">
         <button class="btn" type="submit">Create session</button>

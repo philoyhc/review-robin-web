@@ -123,6 +123,9 @@ from ._validate import (
 # card — Assignments today; Validate / Previews / Invitations /
 # Responses incoming in PRs 6+.
 from ._workflow_card import (
+    build_auto_send_invites_caption,
+    build_schedule_timeline,
+    build_scheduled_activation_caption,
     build_workflow_card_context,
     parse_super_failure,
 )
@@ -245,6 +248,9 @@ __all__ = [
     "build_setup_rows",
     "build_surface_preview_context",
     "build_validate_context",
+    "build_auto_send_invites_caption",
+    "build_schedule_timeline",
+    "build_scheduled_activation_caption",
     "build_workflow_card_context",
     "friendly_fields_with_data",
     "parse_super_failure",

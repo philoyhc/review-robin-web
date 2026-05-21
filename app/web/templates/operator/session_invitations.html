@@ -49,6 +49,18 @@
       </p>
     </div>
 
+    {# 18G PR 2B — Auto-send invites status caption. None when
+       invite_offsets isn't set on this session; amber when
+       invitations not yet generated; green when generated. #}
+    {% if auto_send_invites_caption %}
+      {% set _tone = auto_send_invites_caption.tone %}
+      <div class="card banner banner-{{ 'success' if _tone == 'green' else 'warning' }}"
+           id="auto-send-invites-caption"
+           role="status">
+        <p>{{ auto_send_invites_caption.text }}</p>
+      </div>
+    {% endif %}
+
     <div class="card filter-card">
       <form method="get"
             action="/operator/sessions/{{ session.id }}/invitations">

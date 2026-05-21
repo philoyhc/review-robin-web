@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     # ``spec/lifecycle.md`` §8.2.1 + the Part 1 plan section.
     scheduled_operational_lead_hours: int = 1
 
+    # Segment 18G Part 2 — minimum gap (hours) between an auto-send
+    # invitation's resolved fire moment and ``scheduled_activate_at``
+    # (Start). Enforced per-entry at save: every ``invite_offsets``
+    # entry must satisfy ``|offset| ≥ this floor`` so reviewers get
+    # at least this much notice between the invite landing and the
+    # session opening. Per ``spec/lifecycle.md`` §8.2.1 + the Part 2
+    # plan section.
+    reviewer_notice_min_hours: int = 1
+
     # When True, ``audit.write_event`` raises on a detail-shape violation;
     # when False (production default), it logs a warning and writes the
     # row anyway. Auditing is observability — dropping events because of
