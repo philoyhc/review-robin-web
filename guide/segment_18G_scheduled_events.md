@@ -420,6 +420,99 @@ flags the integration point.
   whichever pattern the segment settles on (background worker or
   lazy observer extended to additional anchors) lands here first.
 
+#### Part 1 PR breakdown
+
+**PR 1A — Observer scaffolding** (pure infra; no operator-visible
+behaviour).
+
+- New `app/services/scheduled_events.py` module: the lazy-observer
+  skeleton (`observe_scheduled_events(session)`), the
+  `resolve_offset(session, anchor_field, offset_field)` helper
+  (§8.2.2), and the SELECT … FOR UPDATE + idempotency guard
+  pattern (§8.3). No triggers wired yet — just the framework.
+- Hook the observer call into the session-GET path used by
+  Session Home, Operations pages, and the Sessions lobby
+  (existing `_session_home.get_session_detail` / equivalents).
+- Unit tests for `resolve_offset` (anchor-null, valid duration,
+  invalid duration), the SELECT-FOR-UPDATE concurrency guard
+  (two concurrent triggers; second no-ops), and the
+  observer-hook integration (empty session → no-op).
+- Audit-event registration in `EVENT_SCHEMAS` for the family
+  pattern (`*_skipped` / `*_retry` / `*_failed_persistent` /
+  `*_fired`).
+- No migration; no editor change; no UI change.
+
+**PR 1B — Scheduled-activation trigger** (service + index +
+audit; still no operator-visible UI).
+
+- Add `_observe_scheduled_activation(session)` to the
+  `scheduled_events` module: precondition check, retry counter
+  from audit log (`session.scheduled_activation_retry` count for
+  the current scheduled-fire moment), the
+  3-retries-then-`failed_persistent` policy, and the success
+  path that calls `lifecycle.activate_session(...)` with
+  `context.trigger="scheduled"`.
+- New audit events:
+  `session.scheduled_activation_skipped` (with
+  `reason=<not_validated|...>`),
+  `session.scheduled_activation_retry`,
+  `session.scheduled_activation_failed_persistent`.
+- `session.activated` event grows `context.trigger ∈ {operator,
+  scheduled}` (default `operator` for backwards compat).
+- Migration `xxxx_segment_18g_pr1b_scheduled_activate_at_index.py`
+  adds a B-tree index on `sessions.scheduled_activate_at` (the
+  observer queries it by value when the lazy-observer pass is
+  extended to scan-many-sessions, even though the per-session
+  observer only reads one row).
+- Tests: fire happy path (validated → ready), skip path
+  (still-draft → skipped), retry path (transition raises 3
+  times → failed_persistent), the `context.trigger` provenance,
+  the audit-log-derived retry counter.
+- Still no operator-visible UI — but operators who
+  hand-edit `scheduled_activate_at` (via a future light-up or
+  the sys-admin route) will see scheduled activations fire.
+
+**PR 1C — Start editor wiring + Workflow card signals**
+(operator UX: light up the field on the Create / Edit forms
+and the right-column captions on the Workflow card).
+
+- Editor: enable the `scheduled_activate_at` input on
+  `session_new.html` and `session_edit.html` (currently a
+  disabled placeholder per the 2026-05-21 batch). The
+  `_quick_setup.py` (Create) and `_session_home.py` (Edit)
+  routes parse the field and write it via `update_session`
+  (already iterates over a column-set list — add the column
+  there).
+- New `SCHEDULED_OPERATIONAL_LEAD_HOURS` setting in
+  `app/config.py` (default `1`). Save-time validator:
+  `if scheduled_activate_at and scheduled_activate_at - now() <
+  timedelta(hours=...)` → `HTTP 422` with the documented error
+  string ("Scheduled activation must be at least N hours in
+  the future").
+- Audit event: `session.activation_scheduled` (`changes`
+  envelope) when the operator sets / changes / clears the
+  value via the editor.
+- View / template: extend `views._workflow_card.build_workflow_card`
+  (or the equivalent right-column-aside builder) with the
+  scheduled-activation caption per the state × value table in
+  the Part 1 plan section above. Visual treatment per the
+  amber-warning / amber-grey-skipped / green-calm captions.
+- Session Home banner: when the most recent audit event is
+  `session.scheduled_activation_skipped` or
+  `session.scheduled_activation_failed_persistent`, the page
+  shows a top-of-page banner ("Scheduled activation skipped at
+  «X» — reason: «reason»"). Clears on next operator
+  interaction.
+- Tests: editor save accepts a valid future time, rejects past
+  / too-soon times; the `session.activation_scheduled` audit
+  fires on set / change / clear; the right-column caption
+  renders per session state × value; the Session Home banner
+  appears after a skip and clears.
+
+Dependencies: PR 1A → PR 1B → PR 1C in order (1B's index
+migration and audit-event registration are needed before
+1C's editor writes them).
+
 ### Part 2 — Auto-send invitations
 
 **Goal.** Instead of sending every invitation immediately, a
@@ -464,6 +557,111 @@ notification emails to land *ahead of* the scheduled open
 - Depends on **18F Part 2** relaxing the invitation gate so
   invitations can be sent before activation, and on **Part 1**
   surfacing `scheduled_activate_at` as a configurable operator input.
+
+#### Part 2 PR breakdown
+
+**PR 2A — Auto-send invitations trigger** (service + audit
+events; still no editor change beyond the disabled placeholder).
+
+- Add `_observe_scheduled_invites(session)` to
+  `scheduled_events`: resolve each `invite_offsets[i]` against
+  `scheduled_activate_at`, check the precondition (invitations
+  created — i.e. `session.invitations` is non-empty), and fire
+  on each entry whose resolved moment ≤ `now()`. Per-entry
+  dedup keyed on `(session_id, offset_index, scheduled_fire_at)`
+  from the audit log — re-ordering the list doesn't re-fire a
+  consumed entry.
+- The fire path calls the existing `send_invitations` /
+  `send_all` service (operator-triggered path today) with a
+  `context.trigger="scheduled"` marker on the resulting outbox
+  rows + audit events.
+- New audit events:
+  `session.scheduled_invites_skipped` (with `reason` +
+  `context={"offset_index": …}`),
+  `session.scheduled_invites_fired` (carrying the
+  scheduled-fire moment AND the actual-fire moment so
+  late-fires from observer lag are observable).
+- Migration: B-tree index on `sessions.invite_offsets` is **not
+  added** — JSON columns aren't usefully indexed for value
+  queries. The observer reads per-session, so no scan-many
+  index is needed.
+- Tests: happy fire path (per entry), skip on missing
+  invitations, the per-entry dedup, the late-fire scheduled-vs-
+  actual stamps, the `context.trigger` provenance, the
+  catch-up behaviour (multiple past-due entries fire in
+  chronological order on a single observer pass).
+
+**PR 2B — invite-offsets editor + Manage Invitations signals +
+timeline preview** (operator UX for Auto-send).
+
+- Editor (`session_new.html` / `session_edit.html`): enable the
+  `invite_offsets` input as a multi-entry control. Initial UX:
+  comma-separated text input parsed into a JSON list at save
+  ("`-P1D, -PT2H`"); per-entry validation surfaces the
+  documented error strings. A richer add/remove-row editor can
+  follow as 18H polish if needed.
+- New `REVIEWER_NOTICE_MIN_HOURS` setting in `app/config.py`
+  (default `1`). Save-time validator runs the per-entry rules
+  (operational lead, reviewer-notice gap) against the (possibly
+  freshly-changed) `scheduled_activate_at`.
+- Audit event: `session.invite_schedule_updated` (`changes`
+  envelope) when the operator sets / changes / clears the
+  list.
+- Manage Invitations card captions: amber when invitations not
+  yet created, green when created — per the per-entry table in
+  Part 2's plan section.
+- Schedule timeline preview: a read-only block beneath the
+  inputs on `session_new.html` / `session_edit.html` rendering
+  resolved fire moments in chronological order (the §"Editor
+  timeline preview" item in the coordination section). New
+  helper `views.build_schedule_timeline(session)` returns the
+  list of `(at, label)` rows; the template renders the block.
+- Tests: editor save round-trips a non-empty list, rejects
+  rule-violating entries per-entry, the
+  `session.invite_schedule_updated` audit fires; the Manage
+  Invitations captions render per (precondition met / not met);
+  the timeline preview renders when both fields are set and
+  sorts chronologically.
+
+**PR 2C — Cross-Part coordination + manual-activate cancellation
+modal** (the five behaviours from the Part 1 ↔ Part 2
+coordination section).
+
+- Edit-Start re-resolution: the `update_session` write path
+  (or the route layer) runs the `invite_offsets` save-time
+  rules against the new anchor on every save where
+  `scheduled_activate_at` changes. Per-entry errors surface
+  inline as today.
+- Unset-Start warning: when the operator submits a save that
+  clears `scheduled_activate_at` while `invite_offsets` is
+  non-empty, the editor surfaces an inline info caption ("Auto-
+  send invites will become inactive — no Start to anchor
+  against. They reactivate when Start is re-set.") — no hard
+  block.
+- Manual-activate confirmation modal: the existing Activate
+  button (Workflow card right column) grows a confirmation
+  modal when `invite_offsets` is non-empty (or
+  `scheduled_activate_at` is set). The modal lists pending
+  auto-sends ("Sun May 31 9:00 AM, Mon Jun 1 7:00 AM") and the
+  text "N scheduled auto-send(s) will be cancelled. Continue
+  with manual activation?" The submit path is
+  `POST /operator/sessions/{id}/workflow/activate` as today;
+  on success it clears `scheduled_activate_at` (the existing
+  Part 1 behaviour). `invite_offsets` stays in the column but
+  becomes inert (anchor-null).
+- Scheduled-activate catch-up: the observer's existing
+  ordering (fire invites before activation in the same pass)
+  is verified end-to-end in a test that sets up a 48-hour
+  window where no operator visits, then renders Session Home —
+  expects both `session.scheduled_invites_fired` and
+  `session.activated` events in chronological order.
+- Tests: each of the five coordination behaviours has a
+  dedicated test case. Modal markup is asserted via
+  `httpx.TestClient.get` against the Workflow card render.
+
+Dependencies: PR 1B + PR 1C → PR 2A; PR 2A + PR 1C → PR 2B;
+PR 2B → PR 2C. PR 2A can land before 1C if needed (no operator
+UI required), but 2B and 2C need both 1C and 2A.
 
 ### Part 1 ↔ Part 2 coordination
 
