@@ -45,16 +45,16 @@
           </datalist>
 
           {# 18G Part 0 anchors + offsets — half-column sub-grid below
-             Timezone. End (``sessions.deadline``) is the only currently
-             wired field; Start (``scheduled_activate_at``) and the
-             two offset lists are disabled placeholders until the
-             consumer Parts wire them up. #}
+             Timezone. Start (``scheduled_activate_at``, PR 1C) and
+             End (``sessions.deadline``) are live. The two offset
+             lists remain disabled placeholders until 18G Part 2
+             (auto-send invites) and Part 5 (auto-send reminders)
+             wire them up. #}
           <div class="page-grid" style="margin: 0;">
             <div>
               <label for="scheduled_activate_at">Start (optional)</label>
               <input type="datetime-local" id="scheduled_activate_at"
-                     name="scheduled_activate_at" disabled
-                     placeholder="Scheduled activation — 18G Part 3">
+                     name="scheduled_activate_at">
 
               <label for="deadline">End (optional)</label>
               <input type="datetime-local" id="deadline" name="deadline">

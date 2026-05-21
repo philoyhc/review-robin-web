@@ -25,8 +25,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
-from app.services import audit
+from app.services import audit, date_formatting
 from app.services import session_lifecycle as lifecycle
 from app.services import validation
 
@@ -410,3 +411,63 @@ def _count_recent_retries(
         if isinstance(context, dict) and context.get("scheduled_at") == scheduled_at_iso:
             count += 1
     return count
+
+
+# --------------------------------------------------------------------------- #
+# Editor-side parse + validate (PR 1C)                                        #
+# --------------------------------------------------------------------------- #
+
+
+class ScheduledActivateError(ValueError):
+    """Raised when a Start datetime fails parse / validation at save.
+
+    The route layer converts to ``HTTPException(422, detail=str(exc))``.
+    """
+
+
+def parse_and_validate_scheduled_activate_at(
+    raw: str | None,
+    *,
+    timezone_name: str,
+    now: datetime | None = None,
+    min_lead_hours: int | None = None,
+) -> datetime | None:
+    """Parse a ``datetime-local`` form value into a UTC-aware datetime
+    and enforce the operational lead-time floor (Part 1 minimum
+    lead time, defaulted to ``settings.scheduled_operational_lead_hours``).
+
+    Returns ``None`` when ``raw`` is empty (operator cleared the
+    field). Raises :class:`ScheduledActivateError` on a malformed
+    string or when the resolved fire moment is closer than the
+    floor allows.
+
+    The editor is "always editable" per ``spec/lifecycle.md`` §8.2.1 —
+    the operator can set Start whenever, including at session-create
+    time before any validation. This helper enforces only the
+    minimum-lead-time floor, not the precondition (which is checked
+    at fire time by the observer).
+    """
+    if not raw:
+        return None
+    try:
+        parsed = date_formatting.parse_local_datetime(raw, timezone_name)
+    except ValueError as exc:
+        raise ScheduledActivateError(
+            "Start must be a valid datetime"
+        ) from exc
+    # date_formatting.parse_local_datetime returns naive-UTC; re-attach
+    # the tzinfo for arithmetic against ``now`` (which is aware).
+    parsed_aware = _ensure_aware_utc(parsed)
+
+    hours = (
+        min_lead_hours
+        if min_lead_hours is not None
+        else settings.scheduled_operational_lead_hours
+    )
+    current = now or datetime.now(timezone.utc)
+    if parsed_aware - current < timedelta(hours=hours):
+        raise ScheduledActivateError(
+            f"Scheduled activation must be at least {hours} hour(s) "
+            f"in the future"
+        )
+    return parsed_aware

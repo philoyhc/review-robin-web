@@ -354,6 +354,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # count), and ``*_failed_persistent`` on the 4th failure.
     # ``session.activated``'s existing ``context`` envelope grows a
     # ``trigger`` key (``operator`` / ``scheduled``); no schema change.
+    # ``session.activation_scheduled`` fires when the operator sets /
+    # changes / clears ``scheduled_activate_at`` via the Create / Edit
+    # session forms (PR 1C).
     "session.scheduled_activation_skipped": EventSchema(
         _IDENTITY | {"reason", "context"}
     ),
@@ -363,6 +366,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.scheduled_activation_failed_persistent": EventSchema(
         _IDENTITY | {"reason", "context"}
     ),
+    "session.activation_scheduled": EventSchema(_IDENTITY | {"changes"}),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),

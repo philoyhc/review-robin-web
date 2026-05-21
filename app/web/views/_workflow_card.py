@@ -36,15 +36,19 @@ This matches the historical behaviour of the inline computation in
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import AuditEvent, ReviewSession, User
 from app.services import (
     assignments,
     csv_imports,
+    date_formatting,
     invitations,
+    sessions as sessions_service,
     validation,
 )
 from app.services import instruments as instruments_service
@@ -181,8 +185,120 @@ def build_workflow_card_context(
         },
         "super_failure": super_failure,
         "prepare_confirm": prepare_confirm_ctx,
+        "scheduled_activation_caption": build_scheduled_activation_caption(
+            db, review_session
+        ),
         "next_action_return_to": return_to,
     }
+
+
+def build_scheduled_activation_caption(
+    db: Session,
+    review_session: ReviewSession,
+) -> dict[str, str] | None:
+    """Return the Workflow card right-column caption for the scheduled
+    activation (Segment 18G Part 1), or ``None`` when there's nothing
+    to show.
+
+    Per the Part 1 plan section in
+    ``guide/segment_18G_scheduled_events.md`` (and the matching table
+    in ``spec/workflow_card.md``):
+
+    +-----------+------------------------+-----------------------------+
+    | Status    | scheduled_activate_at  | Caption                     |
+    +===========+========================+=============================+
+    | draft     | unset                  | (none)                      |
+    | draft     | future                 | amber-warning               |
+    | draft     | past (last audit       | amber-grey skipped notice   |
+    |           |   was skip / failed)   |                             |
+    | validated | unset                  | (none)                      |
+    | validated | future                 | green calm                  |
+    | ready     | (any — moot)           | (none — handled by status)  |
+    +-----------+------------------------+-----------------------------+
+
+    The "skipped" branch is read from the audit log: when there's a
+    recent ``session.scheduled_activation_skipped`` or
+    ``session.scheduled_activation_failed_persistent`` event AND no
+    operator-initiated audit has occurred since, we surface the
+    skip caption (one-shot per the Part 1 contract).
+    """
+    if lifecycle.is_ready(review_session):
+        return None
+
+    session_tz = sessions_service.resolve_session_timezone(review_session)
+
+    if review_session.scheduled_activate_at is not None:
+        when_text = date_formatting.format_datetime(
+            review_session.scheduled_activate_at, session_tz
+        )
+        if lifecycle.is_validated(review_session):
+            return {
+                "tone": "green",
+                "text": (
+                    f"System will auto-activate at {when_text}. "
+                    f"You can also click Activate now."
+                ),
+            }
+        # draft + scheduled in future → amber warning. (A past schedule
+        # without a skip audit is unusual — could be just-now-due; the
+        # caption still tells the operator to Prepare before the
+        # observer fires.)
+        return {
+            "tone": "amber-warning",
+            "text": (
+                f"Scheduled activation at {when_text} — currently "
+                f"inactive: Prepare session before then or the schedule "
+                f"will skip."
+            ),
+        }
+
+    # No schedule set. Surface a skipped / failed notice if the most
+    # recent audit row for this session is a 18G Part 1 skip/fail.
+    latest = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.session_id == review_session.id)
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if latest is None:
+        return None
+    skip_types = {
+        "session.scheduled_activation_skipped",
+        "session.scheduled_activation_failed_persistent",
+    }
+    if latest.event_type not in skip_types:
+        return None
+    detail = latest.detail or {}
+    context = detail.get("context", {}) if isinstance(detail, dict) else {}
+    scheduled_at_iso = (
+        context.get("scheduled_at") if isinstance(context, dict) else None
+    )
+    when_text = "unknown"
+    if scheduled_at_iso:
+        try:
+            parsed = datetime.fromisoformat(scheduled_at_iso)
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            when_text = date_formatting.format_datetime(parsed, session_tz)
+    reason = (
+        detail.get("reason", "unknown") if isinstance(detail, dict) else "unknown"
+    )
+    headline = (
+        "Scheduled activation"
+        if latest.event_type.endswith("skipped")
+        else "Scheduled activation gave up"
+    )
+    return {
+        "tone": "amber-grey",
+        "text": (
+            f"{headline} at {when_text} — reason: {reason}."
+        ),
+    }
+
+
 
 
 def parse_super_failure(
