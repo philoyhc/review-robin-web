@@ -63,6 +63,7 @@ async def create_session(
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
     scheduled_activate_at: str | None = Form(default=None),
+    invite_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
@@ -110,6 +111,21 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # 18G Part 2: optional auto-send invite offsets. Per-entry rules
+    # validate against the (possibly freshly-set) Start anchor.
+    try:
+        parsed_invite_offsets = (
+            scheduled_events.parse_and_validate_invite_offsets(
+                invite_offsets,
+                scheduled_activate_at=parsed_scheduled_activate_at,
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     payload = SessionCreate(
         name=name,
         code=code,
@@ -118,6 +134,7 @@ async def create_session(
         display_timezone=timezone_name,
         help_contact=help_contact or None,
         scheduled_activate_at=parsed_scheduled_activate_at,
+        invite_offsets=parsed_invite_offsets,
     )
     review_session = sessions.create_session(
         db,

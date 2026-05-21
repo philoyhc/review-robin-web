@@ -1,0 +1,34 @@
+{# 18G PR 2B — Schedule timeline preview.
+
+   Read-only block beneath the Create / Edit Session form, rendering
+   the resolved fire moments for every anchor + offset on the
+   session in chronological order. Hidden when no rows resolve
+   (e.g. a fresh session with no Start set).
+
+   Rows so far: auto-send invites (one per resolved invite_offsets
+   entry) + Session activates. Parts 3 / 4 / 5 will extend
+   ``views.build_schedule_timeline`` with their own entries.
+
+   Context key: ``schedule_timeline_rows`` — list of
+   ``{"at": "<localized date/time>", "label": "<event>"}``. #}
+{% if schedule_timeline_rows %}
+  <div class="card" style="margin-top: 20px;">
+    <h3 style="margin-top: 0;">Schedule timeline</h3>
+    <p class="muted" style="margin: 0 0 var(--space-2) 0;">
+      Resolved fire moments for the anchors + offsets above. Saved
+      values; changes here take effect after Save.
+    </p>
+    <table style="margin-top: var(--space-2);">
+      <tr>
+        <th>When</th>
+        <th>Event</th>
+      </tr>
+      {% for row in schedule_timeline_rows %}
+        <tr>
+          <td>{{ row.at }}</td>
+          <td>{{ row.label }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+{% endif %}

@@ -78,6 +78,10 @@ def new_session_form(
             "timezone_sample": date_formatting.format_datetime(
                 datetime.now(timezone.utc), current_timezone
             ),
+            # 18G PR 2B: the Create form has no existing session, so the
+            # timeline starts empty. The template renders the block
+            # only when at least one row is present.
+            "schedule_timeline_rows": [],
         },
     )
 
@@ -183,6 +187,16 @@ def session_edit_form(
                     review_session.scheduled_activate_at, session_timezone
                 )
             ),
+            # 18G PR 2B: prefill the invite_offsets input as a
+            # comma-separated string (None / empty ⇒ "").
+            "invite_offsets_input_value": ", ".join(
+                review_session.invite_offsets or []
+            ),
+            # 18G PR 2B: read-only Schedule timeline preview rendered
+            # beneath the form when any anchor / offset is set.
+            "schedule_timeline_rows": views.build_schedule_timeline(
+                review_session, session_timezone
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
@@ -197,6 +211,7 @@ def session_edit_submit(
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
     scheduled_activate_at: str | None = Form(default=None),
+    invite_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
@@ -251,6 +266,21 @@ def session_edit_submit(
             detail=str(exc),
         ) from exc
 
+    # 18G Part 2: optional auto-send invite offsets, validated against
+    # the (possibly freshly-edited) Start.
+    try:
+        parsed_invite_offsets = (
+            scheduled_events.parse_and_validate_invite_offsets(
+                invite_offsets,
+                scheduled_activate_at=parsed_scheduled_activate_at,
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     correlation_id = request_correlation_id()
     sessions.set_session_display_timezone(
         db,
@@ -266,6 +296,7 @@ def session_edit_submit(
         deadline=parsed_deadline,
         help_contact=help_contact or None,
         scheduled_activate_at=parsed_scheduled_activate_at,
+        invite_offsets=parsed_invite_offsets,
     )
     sessions.update_session(
         db,

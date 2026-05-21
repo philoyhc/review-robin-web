@@ -52,6 +52,7 @@ from app.services import (
     validation,
 )
 from app.services import instruments as instruments_service
+from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 
 
@@ -335,3 +336,115 @@ __all__ = [
     "build_workflow_card_context",
     "parse_super_failure",
 ]
+
+
+def build_schedule_timeline(
+    review_session: ReviewSession,
+    session_timezone: str,
+) -> list[dict[str, str]]:
+    """Resolve every set anchor + offset on the session into a
+    chronologically-sorted list of timeline rows for the Create /
+    Edit Schedule timeline preview block (Segment 18G PR 2B).
+
+    Each row is ``{"at": "<localized date/time>", "label": "<event>"}``.
+    Returns ``[]`` when neither ``scheduled_activate_at`` nor any
+    ``invite_offsets`` entry resolves.
+
+    Rows so far:
+
+    - Auto-send invites (one row per resolved ``invite_offsets`` entry)
+    - Session activates (``scheduled_activate_at``)
+
+    Parts 3 / 4 / 5 will extend this list with their own entries
+    (reminders, auto-archive, retention purge) so the timeline
+    gradually becomes the full session-lifecycle visualisation.
+    """
+    rows: list[tuple[datetime, str]] = []
+    anchor = review_session.scheduled_activate_at
+    if anchor is not None:
+        anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+        rows.append((anchor_aware, "Session activates (Start)"))
+        offsets = review_session.invite_offsets or []
+        if isinstance(offsets, list):
+            for entry in offsets:
+                if not isinstance(entry, str):
+                    continue
+                try:
+                    delta = scheduled_events.parse_iso_duration(entry)
+                except (ValueError, AttributeError):
+                    continue
+                rows.append(
+                    (
+                        anchor_aware + delta,
+                        f"Auto-send invites ({entry})",
+                    )
+                )
+    rows.sort(key=lambda row: row[0])
+    return [
+        {
+            "at": date_formatting.format_datetime(at, session_timezone),
+            "label": label,
+        }
+        for at, label in rows
+    ]
+
+
+def build_auto_send_invites_caption(
+    db: Session,
+    review_session: ReviewSession,
+) -> dict[str, str] | None:
+    """Return the Manage Invitations card caption for auto-send
+    invites (Segment 18G PR 2B), or ``None`` when nothing to show.
+
+    Per the Part 2 plan section:
+
+    - ``invite_offsets`` unset or ``scheduled_activate_at`` unset
+      → ``None`` (anchor-null, no auto-send).
+    - ``invite_offsets`` set + invitations not yet created → amber
+      warning ("currently inactive: create invitations before then
+      or these will skip").
+    - ``invite_offsets`` set + invitations created → green calm
+      caption ("System will dispatch automatically; you can also
+      Send all now").
+    """
+    offsets = review_session.invite_offsets or []
+    if not isinstance(offsets, list) or not offsets:
+        return None
+    if review_session.scheduled_activate_at is None:
+        return None
+
+    # Resolve the earliest fire moment for display
+    anchor = review_session.scheduled_activate_at
+    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+    fire_moments: list[datetime] = []
+    for entry in offsets:
+        if not isinstance(entry, str):
+            continue
+        try:
+            delta = scheduled_events.parse_iso_duration(entry)
+        except ValueError:
+            continue
+        fire_moments.append(anchor_aware + delta)
+    if not fire_moments:
+        return None
+
+    session_tz = sessions_service.resolve_session_timezone(review_session)
+    earliest = min(fire_moments)
+    earliest_text = date_formatting.format_datetime(earliest, session_tz)
+
+    if not invitations.has_invitations(db, review_session.id):
+        return {
+            "tone": "amber-warning",
+            "text": (
+                f"Auto-send scheduled at {earliest_text} — currently "
+                f"inactive: create invitations before then or these "
+                f"will skip."
+            ),
+        }
+    return {
+        "tone": "green",
+        "text": (
+            f"Auto-send scheduled at {earliest_text}. System will "
+            f"dispatch automatically; you can also Send all now."
+        ),
+    }

@@ -31,6 +31,10 @@ def create_session(
         # scheduled activation; route layer enforces the minimum
         # lead time on save.
         scheduled_activate_at=payload.scheduled_activate_at,
+        # 18G Part 2: optional list of auto-send invitation offsets.
+        # Route layer enforces per-entry rules (operational lead +
+        # reviewer-notice gap) at save against the current Start.
+        invite_offsets=payload.invite_offsets,
         created_by_user_id=user.id,
         # 18B PR 3 / PR 4: the per-session display timezone. The
         # Create Session form submits an explicit zone (defaulted to
@@ -196,6 +200,7 @@ def update_session(
         "deadline",
         "help_contact",
         "scheduled_activate_at",
+        "invite_offsets",
     ):
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)
@@ -218,6 +223,19 @@ def update_session(
             session=review_session,
             payload=audit.changes(
                 {"scheduled_activate_at": diffs["scheduled_activate_at"]}
+            ),
+            correlation_id=correlation_id,
+        )
+    # 18G Part 2 — same dedicated-event pattern for invite_offsets.
+    if "invite_offsets" in diffs:
+        audit.write_event(
+            db,
+            event_type="session.invite_schedule_updated",
+            summary=f"Session {review_session.code} invite schedule updated",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes(
+                {"invite_offsets": diffs["invite_offsets"]}
             ),
             correlation_id=correlation_id,
         )

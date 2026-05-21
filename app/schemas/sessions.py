@@ -26,6 +26,13 @@ class SessionCreate(BaseModel):
     # time enforced at the route layer
     # (``SCHEDULED_OPERATIONAL_LEAD_HOURS``).
     scheduled_activate_at: datetime | None = None
+    # Segment 18G Part 2 — operator-set list of invitation send
+    # offsets, each an ISO 8601 duration (e.g. ``"-P1D"``) anchored
+    # on ``scheduled_activate_at``. None / empty list ⇒ no auto-send.
+    # Per-entry rules (operational lead, reviewer-notice gap)
+    # enforced at the route layer when ``scheduled_activate_at`` is
+    # also set; inert via the §8.2.2 anchor-null rule otherwise.
+    invite_offsets: list[str] | None = None
 
 
 class SessionRead(BaseModel):

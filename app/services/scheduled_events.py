@@ -731,3 +731,83 @@ def _dispatch_pending_invitations(
         )
         sent += 1
     return sent
+
+
+def parse_and_validate_invite_offsets(
+    raw: str | None,
+    *,
+    scheduled_activate_at: datetime | None,
+    now: datetime | None = None,
+    operational_lead_hours: int | None = None,
+    notice_min_hours: int | None = None,
+) -> list[str] | None:
+    """Parse a comma-separated invite-offsets string into a clean list
+    and enforce the per-entry save-time rules.
+
+    Returns ``None`` when ``raw`` is empty (operator cleared the
+    field). When ``raw`` is set, splits on commas, strips whitespace,
+    and drops empty fragments. For each entry it then enforces:
+
+    1. Parses as an ISO 8601 duration (per §8.2.4).
+    2. When ``scheduled_activate_at`` is set:
+       - resolved fire moment (``scheduled_activate_at + offset``)
+         ≥ ``now + operational_lead_hours``
+       - ``|offset|`` ≥ ``notice_min_hours``
+       (per §8.2.1 + the Part 2 plan section's per-offset table)
+    3. When ``scheduled_activate_at`` is unset: the entry is inert
+       per §8.2.2 anchor-null, so only the parse-validity check
+       runs. The editor renders the field with a "Set Start first"
+       caption.
+
+    Raises :class:`ScheduledActivateError` with a per-entry error
+    message on the first violation. The route layer converts to
+    HTTP 422.
+    """
+    if not raw or not raw.strip():
+        return None
+    entries = [item.strip() for item in raw.split(",") if item.strip()]
+    if not entries:
+        return None
+
+    op_hours = (
+        operational_lead_hours
+        if operational_lead_hours is not None
+        else settings.scheduled_operational_lead_hours
+    )
+    notice_hours = (
+        notice_min_hours
+        if notice_min_hours is not None
+        else settings.reviewer_notice_min_hours
+    )
+    current = now or datetime.now(timezone.utc)
+
+    cleaned: list[str] = []
+    for entry in entries:
+        try:
+            delta = parse_iso_duration(entry)
+        except ValueError as exc:
+            raise ScheduledActivateError(
+                f"Auto-send invite {entry!r} isn't a valid ISO 8601 duration."
+            ) from exc
+
+        if scheduled_activate_at is not None:
+            anchor = _ensure_aware_utc(scheduled_activate_at)
+            fire_at = anchor + delta
+            if fire_at - current < timedelta(hours=op_hours):
+                raise ScheduledActivateError(
+                    f"Auto-send invite {entry} resolves to before now + "
+                    f"{op_hours} hour(s); leave more lead time."
+                )
+            if abs(delta) < timedelta(hours=notice_hours):
+                raise ScheduledActivateError(
+                    f"Auto-send invite {entry} gives less than "
+                    f"{notice_hours} hour(s) between invite and Start; "
+                    f"minimum reviewer notice is {notice_hours} hour(s)."
+                )
+            if delta >= timedelta(0):
+                raise ScheduledActivateError(
+                    f"Auto-send invite {entry} fires at or after Start; "
+                    f"use a negative duration (e.g. -PT2H)."
+                )
+        cleaned.append(entry)
+    return cleaned
