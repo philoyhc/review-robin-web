@@ -20,6 +20,12 @@ class SessionCreate(BaseModel):
     # Create Session form. None ⇒ the service falls back to the
     # creating operator's default. Segment 18B PR 4.
     display_timezone: str | None = None
+    # Segment 18G Part 1 — operator-set anchor for the scheduled
+    # ``validated → ready`` transition. None ⇒ no scheduled
+    # activation (operator must Activate manually). Minimum lead
+    # time enforced at the route layer
+    # (``SCHEDULED_OPERATIONAL_LEAD_HOURS``).
+    scheduled_activate_at: datetime | None = None
 
 
 class SessionRead(BaseModel):

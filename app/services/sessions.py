@@ -27,6 +27,10 @@ def create_session(
         description=payload.description,
         deadline=payload.deadline,
         help_contact=payload.help_contact,
+        # 18G Part 1: optional operator-set Start anchor. None ⇒ no
+        # scheduled activation; route layer enforces the minimum
+        # lead time on save.
+        scheduled_activate_at=payload.scheduled_activate_at,
         created_by_user_id=user.id,
         # 18B PR 3 / PR 4: the per-session display timezone. The
         # Create Session form submits an explicit zone (defaulted to
@@ -185,13 +189,38 @@ def update_session(
         correlation_id=correlation_id,
     )
     diffs: dict[str, list[object]] = {}
-    for field_name in ("name", "code", "description", "deadline", "help_contact"):
+    for field_name in (
+        "name",
+        "code",
+        "description",
+        "deadline",
+        "help_contact",
+        "scheduled_activate_at",
+    ):
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)
         if old != new:
             diffs[field_name] = [old, new]
             setattr(review_session, field_name, new)
     db.flush()
+
+    # 18G Part 1 — when scheduled_activate_at changes, also emit a
+    # dedicated audit event so the UI can surface "operator just
+    # scheduled / cleared an activation" without filtering generic
+    # session.updated rows. The general session.updated still records
+    # the change alongside other field edits in the same save.
+    if "scheduled_activate_at" in diffs:
+        audit.write_event(
+            db,
+            event_type="session.activation_scheduled",
+            summary=f"Session {review_session.code} scheduled-activation updated",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes(
+                {"scheduled_activate_at": diffs["scheduled_activate_at"]}
+            ),
+            correlation_id=correlation_id,
+        )
 
     audit.write_event(
         db,

@@ -37,6 +37,7 @@ from app.services import (
     date_formatting,
     operator_settings,
     relationships as relationships_service,
+    scheduled_events,
     session_config_io,
     sessions,
 )
@@ -61,6 +62,7 @@ async def create_session(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    scheduled_activate_at: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
@@ -95,6 +97,19 @@ async def create_session(
                 detail="deadline must be ISO-8601",
             ) from exc
 
+    # 18G Part 1: optional Start anchor for scheduled activation.
+    try:
+        parsed_scheduled_activate_at = (
+            scheduled_events.parse_and_validate_scheduled_activate_at(
+                scheduled_activate_at, timezone_name=timezone_name
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     payload = SessionCreate(
         name=name,
         code=code,
@@ -102,6 +117,7 @@ async def create_session(
         deadline=parsed_deadline,
         display_timezone=timezone_name,
         help_contact=help_contact or None,
+        scheduled_activate_at=parsed_scheduled_activate_at,
     )
     review_session = sessions.create_session(
         db,

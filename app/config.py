@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     # set. Generate with ``cryptography.fernet.Fernet.generate_key()``.
     smtp_encryption_key: str | None = None
 
+    # Segment 18G Part 1 — minimum lead time (hours) the operator must
+    # leave between "now" and the ``scheduled_activate_at`` they set at
+    # save. Covers operational fan-out headroom for the
+    # 1,200-reviewer pilot case + operator coordination. Per-deployment
+    # tunable so a workshop-style flow can lower it. Per
+    # ``spec/lifecycle.md`` §8.2.1 + the Part 1 plan section.
+    scheduled_operational_lead_hours: int = 1
+
     # When True, ``audit.write_event`` raises on a detail-shape violation;
     # when False (production default), it logs a warning and writes the
     # row anyway. Auditing is observability — dropping events because of

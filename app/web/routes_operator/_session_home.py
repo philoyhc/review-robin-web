@@ -171,6 +171,13 @@ def session_edit_form(
             "deadline_input_value": date_formatting.format_datetime_local(
                 review_session.deadline, session_timezone
             ),
+            # 18G PR 1C: prefill the Start input from the persisted
+            # scheduled_activate_at (None ⇒ empty string).
+            "scheduled_activate_at_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.scheduled_activate_at, session_timezone
+                )
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
@@ -184,6 +191,7 @@ def session_edit_submit(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    scheduled_activate_at: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
@@ -193,9 +201,10 @@ def session_edit_submit(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     # Editing session metadata (name / code / description / deadline /
-    # help contact / timezone) touches only scalar ``sessions`` columns
-    # — ``update_session`` never deletes assignments or responses — so
-    # this route carries no response-loss acknowledgement gate.
+    # help contact / timezone / scheduled_activate_at) touches only
+    # scalar ``sessions`` columns — ``update_session`` never deletes
+    # assignments or responses — so this route carries no
+    # response-loss acknowledgement gate.
     _require_editable(review_session)
 
     # 18B PR 5: the display timezone is a field of this form (folded
@@ -224,6 +233,19 @@ def session_edit_submit(
                 detail="deadline must be ISO-8601",
             ) from exc
 
+    # 18G Part 1: optional Start anchor for scheduled activation.
+    try:
+        parsed_scheduled_activate_at = (
+            scheduled_events.parse_and_validate_scheduled_activate_at(
+                scheduled_activate_at, timezone_name=timezone_name
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     correlation_id = request_correlation_id()
     sessions.set_session_display_timezone(
         db,
@@ -238,6 +260,7 @@ def session_edit_submit(
         description=description or None,
         deadline=parsed_deadline,
         help_contact=help_contact or None,
+        scheduled_activate_at=parsed_scheduled_activate_at,
     )
     sessions.update_session(
         db,

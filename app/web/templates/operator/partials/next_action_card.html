@@ -311,6 +311,19 @@
        only the failure-banner copy adapts to the Prepare/Activate
        split via ``super_failure.button``. #}
     <aside class="next-action-status" id="next-action-status">
+      {# 18G Part 1 — scheduled-activation caption. Per
+         spec/workflow_card.md "Scheduled-activation caption". The
+         tone classes piggyback the existing warning / success
+         banner colours; "amber-grey" uses ``banner-warning`` plus
+         a muted modifier for the post-skip notice. #}
+      {% if scheduled_activation_caption %}
+        {% set _tone = scheduled_activation_caption.tone %}
+        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
+             id="next-action-scheduled-activation-caption"
+             role="status">
+          <p>{{ scheduled_activation_caption.text }}</p>
+        </div>
+      {% endif %}
       {% if super_failure %}
         {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
         {% set _step_label_map = {

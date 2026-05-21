@@ -89,6 +89,7 @@ _EXPECTED_KEYS = {
     "setup_checklist",
     "super_failure",
     "prepare_confirm",
+    "scheduled_activation_caption",
     "next_action_return_to",
 }
 
