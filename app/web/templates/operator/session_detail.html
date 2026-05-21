@@ -37,10 +37,6 @@
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
             </p>
-            <p class="form-help" style="margin: 0;">Timezone</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session_timezone_label }}</span>
-            </p>
             <p class="form-help" style="margin: 0;">Help contact</p>
             <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
           </div>
@@ -49,33 +45,49 @@
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_at | format_datetime }}</span>
             </p>
+            <p class="form-help" style="margin: 0;">Timezone</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session_timezone_label }}</span>
+            </p>
+          </div>
+          <div>
             <p class="form-help" style="margin: 0;">Modified</p>
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.updated_at | format_datetime }}</span>
             </p>
           </div>
-          <div>
-            {# Start — placeholder until 18G adds scheduled
-               activation (the field that will fill this slot
-               pre-activation; ``sessions.activated_at`` already
-               carries the actual stamp once the session goes live). #}
-            <p class="form-help" style="margin: 0;">Start</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-empty">Placeholder</span>
-            </p>
-            <p class="form-help" style="margin: 0;">Deadline</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              {% if session.deadline %}
-                <span class="pill pill-count">{{ session.deadline | format_datetime }}</span>
-              {% else %}
-                <span class="pill pill-empty">Not set</span>
-              {% endif %}
-            </p>
-          </div>
         </div>
+
+        {# Schedule timeline — read-only inner card listing every
+           resolved anchor + offset on the session in chronological
+           order. Same builder as the Create / Edit Session forms
+           use (``views.build_schedule_timeline``). Hidden when no
+           rows resolve. #}
+        {% if schedule_timeline_rows %}
+          <div class="card" style="margin-top: var(--space-3);">
+            <h3 style="margin-top: 0;">Schedule timeline</h3>
+            <p class="muted" style="margin: 0 0 var(--space-2) 0;">
+              Resolved fire moments for the session's anchors +
+              offsets. Edit the schedule on the Edit page.
+            </p>
+            <table style="margin-top: var(--space-2);">
+              <tr>
+                <th>When</th>
+                <th>Event</th>
+              </tr>
+              {% for row in schedule_timeline_rows %}
+                <tr>
+                  <td>{{ row.at }}</td>
+                  <td>{{ row.label }}</td>
+                </tr>
+              {% endfor %}
+            </table>
+          </div>
+        {% endif %}
+
         {# Lifecycle state shown in the chrome status strip — no
            duplicate Status pill here per spec/session_home.md. #}
-        <div style="display: flex; justify-content: flex-end;">
+        <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
           {# Editing session details is lifecycle-gated to the
              editable states (draft / validated) by the route's
              ``_require_editable``; the button mirrors that gate so it
