@@ -121,6 +121,25 @@ def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
         raise AssertionError("expected ScheduledActivateError")
 
 
+def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
+    """|offset| > 10 days is rejected per the Part 0b spec
+    "Maximum offset" rule."""
+    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    try:
+        scheduled_events.parse_and_validate_reminder_offsets(
+            "-P11D", deadline=deadline
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        assert "10-day" in str(exc)
+    else:
+        raise AssertionError("expected ScheduledActivateError")
+    # Boundary: -P10D should be accepted.
+    result = scheduled_events.parse_and_validate_reminder_offsets(
+        "-P10D", deadline=deadline
+    )
+    assert result == ["-P10D"]
+
+
 def test_parser_rejects_too_close_to_now(db: Session) -> None:
     """deadline + offset before now + SCHEDULED_OPERATIONAL_LEAD_HOURS rejected."""
     deadline = datetime.now(timezone.utc) + timedelta(minutes=30)

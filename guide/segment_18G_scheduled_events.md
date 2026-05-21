@@ -180,8 +180,11 @@ CSV export.
 — the worst-case representation `-PT240H` is 7 chars, so
 `String(16)` carries comfortable headroom while still being
 short enough for SQLite/Postgres index-friendliness later. The
-cap is enforced at the editor / validator (consumer Part), not
-by the schema.
+cap is enforced at the editor / validator
+(`_OFFSET_MAX_MAGNITUDE = timedelta(days=10)` in
+`app/services/scheduled_events.py`, applied per-entry in
+`parse_and_validate_invite_offsets` and
+`parse_and_validate_reminder_offsets`), not by the schema.
 
 **Cross-cutting rules.** Two related rules apply to every
 (anchor, offset) pair — documented once in `spec/lifecycle.md`
@@ -520,9 +523,11 @@ migration and audit-event registration are needed before
 ### Part 2 — Auto-send invitations
 
 **Status: shipped 2026-05-21** (PRs #1265 / #1266 / #1267 —
-trigger, editor + Manage Invitations caption + Schedule timeline
+trigger, editor + auto-send caption + Schedule timeline
 preview, Part 1 ↔ Part 2 coordination + manual-activate
-cancellation modal).
+cancellation modal). The auto-send caption later consolidated
+into the Workflow card's right-column aside alongside the
+scheduled-activation and auto-send-reminders captions.
 
 **Goal.** Instead of sending every invitation immediately, a
 session can carry a list of **invitation send offsets** anchored
@@ -535,23 +540,32 @@ notification emails to land *ahead of* the scheduled open
 
 - Schema: `sessions.invite_offsets` (Part 0b). Inert when
   `scheduled_activate_at` is unset per the cross-cutting anchor-null rule.
-- **Precondition (`spec/lifecycle.md` §8.2.3).** Invitations must
-  already have been **created** (the operator ran "Create
-  invitations") at fire time. Without `Invitation` rows there's
-  nothing to send. Fire-time guard: skip with
-  `reason="invitations_not_created"`, audit
-  `session.scheduled_invites_skipped`, clear the relevant
-  offset entry (per-entry one-shot via the
-  `(session_id, offset_index)` dedup key).
-- **Signals (Manage Invitations card).**
-  - Precondition not met (invitations not generated yet) —
-    **amber warning**: "Auto-send scheduled at «earliest fire»
-    — currently inactive: create invitations before then or
-    these will skip."
-  - Precondition met (invitations generated) — **green calm
-    caption**: "Auto-send scheduled at «earliest fire», «next
-    fire», … System will dispatch automatically; you can also
-    Send all now."
+- **Preconditions (`spec/lifecycle.md` §8.2.3).** Two fire-time
+  guards, checked in order:
+  1. **Prepared** — `session.status ∈ {validated, ready}`. The
+     scheduled trigger matches the operator-route gate
+     `_require_validated_or_ready`; firing from `draft` would
+     send invitations for a session that won't open as
+     scheduled. Skip with `reason="not_prepared"`, audit
+     `session.scheduled_invites_skipped`, clear the offset entry.
+  2. **Invitations created** — at least one `Invitation` row
+     exists for the session. Without invitations there's nothing
+     to send. Skip with `reason="invitations_not_created"`, audit
+     `session.scheduled_invites_skipped`, clear the offset entry.
+- **Signals (Workflow card right column).** Surfaced by
+  `views.build_auto_send_invites_caption`; consolidated into the
+  Workflow card's right-column aside (see
+  `spec/workflow_card.md` "Auto-send invites signal" for the
+  full per-tone matrix). Three tones:
+  - **Amber-warning, not Prepared**: "Auto-send scheduled at
+    «earliest fire» — currently inactive: Prepare session before
+    then or these will skip."
+  - **Amber-warning, no invitations**: "Auto-send scheduled at
+    «earliest fire» — currently inactive: create invitations
+    before then or these will skip."
+  - **Green, both met**: "Auto-send scheduled at «earliest
+    fire». System will dispatch automatically; you can also Send
+    all now."
   - Editor save errors surface inline on the invite-offsets
     field per the rules below.
 - **Save-time rules for `invite_offsets`.** Both
@@ -616,9 +630,10 @@ timeline preview** (operator UX for Auto-send).
 - Audit event: `session.invite_schedule_updated` (`changes`
   envelope) when the operator sets / changes / clears the
   list.
-- Manage Invitations card captions: amber when invitations not
-  yet created, green when created — per the per-entry table in
-  Part 2's plan section.
+- Auto-send invites caption (later consolidated into the
+  Workflow card's right-column aside): amber when invitations
+  not yet created, green when created — per the signal matrix
+  in `spec/workflow_card.md` "Auto-send invites signal".
 - Schedule timeline preview: a read-only block beneath the
   inputs on `session_new.html` / `session_edit.html` rendering
   resolved fire moments in chronological order (the §"Editor
@@ -689,13 +704,14 @@ save.
 
 **2. Unsetting Start while `invite_offsets` is non-empty.** No
 hard block at save — `invite_offsets` becomes inert via the
-§8.2.2 anchor-null rule. The editor surfaces an inline warning
-beneath the invite-offsets field: "Auto-send invites will
-become inactive — no Start to anchor against. They reactivate
-when Start is re-set." Same warning in reverse when
-`scheduled_activate_at` is set but `invite_offsets` is emptied
-(no impact, just an info caption: "Auto-send schedule cleared;
-Start remains scheduled for «X»").
+§8.2.2 anchor-null rule. The Workflow card's right-column
+auto-send-invites caption surfaces this as amber-grey ("Auto-
+send invites are configured but currently inactive — no Start
+to anchor against. They reactivate when Start is re-set.").
+The earlier plan called for an additional under-field inline
+warning and a reverse "Auto-send schedule cleared; Start
+remains scheduled for «X»" caption; both were dropped — the
+consolidated right-column caption is the single signal channel.
 
 **3. Manual-activate before the scheduled time.** When the
 operator clicks Activate manually for a session with
@@ -747,9 +763,10 @@ visualisation.
 ### Part 3 — Auto-send reminders
 
 **Status: shipped 2026-05-21** (PRs #1268 / #1269 — scheduled-
-reminder trigger; `reminder_offsets` editor + Manage Invitations
-caption + Schedule timeline extension to include End and reminder
-fire moments).
+reminder trigger; `reminder_offsets` editor + auto-send caption
++ Schedule timeline extension to include End and reminder fire
+moments). The caption later consolidated into the Workflow
+card's right-column aside.
 
 Scheduled, policy-driven reminder dispatch — **consolidated from
 the former Segment 14C on 2026-05-18** (that standalone plan is
@@ -769,7 +786,7 @@ of triggers per session (one per offset entry), not a single one
   auto-reminders off. Lives in the **session editor** (Create
   Session / Edit Session Details forms) alongside `invite_offsets`
   in the Schedule sub-grid; effectiveness signalled by the
-  Manage-Invitations-page caption (see 3b below) rather than
+  Workflow-card right-column caption (see 3b below) rather than
   gated. The Email Template editor stays purely about wording;
   ancillary controls (dispatch time-of-day, quiet hours, weekend
   skip) deferred until pilot feedback asks for them. Emits
@@ -790,18 +807,37 @@ of triggers per session (one per offset entry), not a single one
   `session.scheduled_reminders_skipped`
   (`reason ∈ {not_ready, no_invitations, outside_response_window}`)
   on a precondition miss.
-- **Preconditions (`spec/lifecycle.md` §8.2.3).**
-  `session.status == "ready"` + invitations exist + `now < deadline`
-  (the **relaxed** accepting-responses window — per-instrument
-  `accepting_responses` flags intentionally not consulted; a
-  session that's temporarily all-closed mid-window can still
-  fire reminders harmlessly, since the operator can suppress
-  via `reminder_offsets`). The Manage-Invitations caption
-  surfaces "Auto-send reminders scheduled at «…» — currently
-  inactive: activate the session before then or these will
-  skip" when the session isn't `ready` yet (amber), and "Auto-
-  send reminders scheduled at «…». System will dispatch
-  automatically…" when ready (green).
+- **Preconditions (`spec/lifecycle.md` §8.2.3).** Three
+  fire-time guards, checked in order:
+  1. **Activated** — `session.status == "ready"`. Skip with
+     `reason="not_ready"`. (Ready implies Prepared, so the
+     auto-send-invites "Prepared" condition is subsumed here.)
+  2. **Invitations created** — reminders piggyback on existing
+     `Invitation` rows (each reuses the previously-issued
+     invitation URL), so the trigger needs invitations to be
+     **created**, not necessarily sent. Skip with
+     `reason="no_invitations"`.
+  3. **Inside the response window** — `now < deadline` (the
+     **relaxed** accepting-responses window — per-instrument
+     `accepting_responses` flags intentionally not consulted;
+     a session that's temporarily all-closed mid-window can
+     still fire reminders harmlessly since the operator can
+     suppress via `reminder_offsets`). Skip with
+     `reason="outside_response_window"`.
+- **Signals (Workflow card right column).** Surfaced by
+  `views.build_auto_send_reminders_caption`; co-located with the
+  auto-send-invites caption (see `spec/workflow_card.md`
+  "Auto-send reminders signal" for the full per-tone matrix).
+  Three tones:
+  - **Amber-warning, not Activated**: "Auto-send reminders
+    scheduled at «…» — currently inactive: activate the session
+    before then or these will skip."
+  - **Amber-warning, no invitations**: "Auto-send reminders
+    scheduled at «…» — currently inactive: create invitations
+    before then or these will skip."
+  - **Green, both met**: "Auto-send reminders scheduled at «…».
+    System will dispatch automatically; you can also Send
+    reminders to incomplete now."
 - **Targeted cohorts and reminders analytics** (originally 3c
   and 3d) were carved out 2026-05-21 to
   `guide/deferred_until_pilot_feedback.md` — both are post-MVP
@@ -926,10 +962,18 @@ When parts ship:
 
 ## Working notes
 
-- _(placeholder for decisions during PR scoping)_
-- **Part 0 shipped 2026-05-20.** Parts 1–5 are unblocked on
-  schema and ready to scope; start with Part 1 (scheduled
-  activation) because it establishes the shared dispatch
-  mechanism Parts 2–5 reuse, plus surfaces
-  `scheduled_activate_at` as a configurable operator input
-  (Part 2 depends on that).
+- **Parts 0 / 1 / 2 / 3 shipped 2026-05-20 → 2026-05-21.** See
+  the per-Part Status preambles for the PR refs.
+- **Parts 4 (auto-archive) / 5 (scheduled purge) outstanding.**
+  Both schema-unblocked; the shared lazy-observer dispatch and
+  audit-event family are settled.
+- **Carve-outs:** Part 3c (targeted reminder cohorts) and Part
+  3d (reminders analytics card) carved to
+  `guide/deferred_until_pilot_feedback.md` — post-MVP, lift on
+  pilot signal.
+- **Plan items dropped as superseded by the consolidated
+  right-column captions:** the under-field inline editor
+  warnings and the "Auto-send schedule cleared" info caption
+  originally listed in Part 1 ↔ Part 2 coordination item 2.
+  The Workflow card's right-column auto-send captions are the
+  single signal channel.

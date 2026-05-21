@@ -122,6 +122,26 @@ def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
         raise AssertionError("expected ScheduledActivateError")
 
 
+def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
+    """|offset| > 10 days is rejected per the Part 0b spec
+    "Maximum offset" rule. Applies whether or not the anchor is
+    set (the cap is shape-only)."""
+    start = datetime.now(timezone.utc) + timedelta(days=30)
+    try:
+        scheduled_events.parse_and_validate_invite_offsets(
+            "-P11D", scheduled_activate_at=start
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        assert "10-day" in str(exc)
+    else:
+        raise AssertionError("expected ScheduledActivateError")
+    # Boundary: -P10D should be accepted.
+    result = scheduled_events.parse_and_validate_invite_offsets(
+        "-P10D", scheduled_activate_at=start
+    )
+    assert result == ["-P10D"]
+
+
 def test_parser_rejects_too_close_to_now(db: Session) -> None:
     """Resolved fire moment before now + SCHEDULED_OPERATIONAL_LEAD_HOURS rejected."""
     # Start in 30 minutes; offset of -PT1H resolves to 30 minutes ago.

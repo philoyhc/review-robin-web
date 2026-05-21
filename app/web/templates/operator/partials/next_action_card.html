@@ -321,38 +321,24 @@
        (no banner / card chrome). #}
     <aside class="next-action-status" id="next-action-status">
       {% if is_setup_empty %}
-        {# State 1: setup checklist. #}
-        <h3 class="next-action-status-heading">Setup checklist</h3>
-        <ul class="next-action-checklist">
-          <li>
-            {% if setup_checklist.reviewers_ok %}
-              <span class="pill pill-success" aria-label="done">✓</span>
-            {% else %}
-              <span class="pill pill-empty" aria-label="not done">✗</span>
-            {% endif %}
+        {# State 1: setup checklist. Label runs inline; the three
+           checklist entries flow after the em dash. #}
+        <p class="next-action-status-line">
+          <strong>Setup checklist</strong> —
+          <span class="next-action-checklist-inline">
+            {% if setup_checklist.reviewers_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
             <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-          </li>
-          <li>
-            {% if setup_checklist.reviewees_ok %}
-              <span class="pill pill-success" aria-label="done">✓</span>
-            {% else %}
-              <span class="pill pill-empty" aria-label="not done">✗</span>
-            {% endif %}
+            {% if setup_checklist.reviewees_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
             <a href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-          </li>
-          <li>
-            {% if setup_checklist.instruments_pinned_ok %}
-              <span class="pill pill-success" aria-label="done">✓</span>
-            {% else %}
-              <span class="pill pill-empty" aria-label="not done">✗</span>
-            {% endif %}
+            {% if setup_checklist.instruments_pinned_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
             <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all rules pinned)</a>
-          </li>
-        </ul>
+          </span>
+        </p>
       {% elif is_draft and validation_summary %}
-        {# State 3: validation issues. #}
-        <h3 class="next-action-status-heading">Validation issues</h3>
-        <p>
+        {# State 3: validation issues. Label + count pills inline,
+           the per-issue list follows below. #}
+        <p class="next-action-status-line">
+          <strong>Validation issues</strong> —
           <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
           <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
           <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
@@ -360,9 +346,9 @@
         {% include "operator/partials/_next_action_issue_list.html" %}
       {% elif is_validated and validation_summary and not validation_summary.can_activate %}
         {# State 4Err defensive — validated lifecycle but a fresh
-           validate surfaces errors. #}
-        <h3 class="next-action-status-heading">Validation issues</h3>
-        <p>
+           validate surfaces errors. Same shape as State 3. #}
+        <p class="next-action-status-line">
+          <strong>Validation issues</strong> —
           <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
           <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
           <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
@@ -371,10 +357,11 @@
       {% elif is_validated and validation_summary and validation_summary.can_activate %}
         {# State 4 / 4W. 4W lists the warning details so the
            operator sees what they're about to acknowledge. #}
-        <h3 class="next-action-status-heading">Status</h3>
-        <p class="form-help" style="margin: 0;">Setup validated.</p>
+        <p class="next-action-status-line">
+          <strong>Status</strong> — Setup validated.
+        </p>
         {% if validation_summary.needs_acknowledge %}
-          <p style="margin-top: var(--space-3);">
+          <p class="next-action-status-line" style="margin-top: var(--space-2);">
             <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
             {% if validation_summary.info_count %}
               <span class="pill pill-count">{{ validation_summary.info_count }} info</span>

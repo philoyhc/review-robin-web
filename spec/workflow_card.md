@@ -483,16 +483,22 @@ line (failure / scheduled-activation / auto-send invites / auto-
 send reminders) renders below the detail; the per-signal
 condition tables in the next section say when each is non-None.
 
+Each row is a single inline paragraph — the bold label (e.g.
+**Setup checklist**, **Validation issues**, **Status**) leads,
+an em dash follows, then the content flows inline. Lists wrap as
+needed but the label stays on the same line as the first content
+item; there's no separate heading row.
+
 | State | Per-state status detail |
 | --- | --- |
-| **1** (setup empty) | **Setup checklist** — heading + a single-row list (wraps on narrow viewports) with three entries: Reviewers / Reviewees / Instruments (all rules pinned). Each carries a ✓ or ✗ pill plus a deep link to its Operations-row page. |
+| **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments (all rules pinned)) each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. |
 | **2** (draft, not yet validated) | (no detail) |
-| **3** (draft + validation errors) | **Validation issues** heading + pill row (error / warning / info counts) + per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
-| **4** (validated, no warnings, no invites) | **Status** heading + "Setup validated." |
-| **4W** (validated + warnings) | "Setup validated." + per-warning pill row + the per-issue list inline so the operator sees what they're about to acknowledge before clicking the detour. |
-| **4Err** (validated + errors, defensive) | Same shape as State 3 — Validation issues heading + pill row + per-issue list. |
-| **5** (validated + invites generated) | Same as State 4 — "Setup validated." |
-| **6** (validated + invites sent) | Same as State 4 — "Setup validated." |
+| **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by the per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
+| **4** (validated, no warnings, no invites) | **Status** — "Setup validated." |
+| **4W** (validated + warnings) | **Status** — "Setup validated." followed by a per-warning pill row + the per-issue list inline, so the operator sees what they're about to acknowledge before clicking the detour. |
+| **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + per-issue list. |
+| **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
+| **6** (validated + invites sent) | Same as State 4 — **Status** — "Setup validated." |
 | **7** (ready, no invitations yet) | (no detail) |
 | **8** (ready, invites generated) | (no detail) |
 | **9** (ready, invites sent) | (no detail) |

@@ -89,8 +89,9 @@ def test_workflow_card_right_column_renders_setup_checklist_in_state_1(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    # Right-column aside contains the checklist.
-    assert 'class="next-action-checklist"' in body
+    # Right-column aside contains the inline checklist line.
+    assert 'class="next-action-checklist-inline"' in body
+    assert "<strong>Setup checklist</strong>" in body
     # Three checklist rows with their deep-link targets.
     assert f'href="/operator/sessions/{review_session.id}/reviewers"' in body
     assert f'href="/operator/sessions/{review_session.id}/reviewees"' in body
