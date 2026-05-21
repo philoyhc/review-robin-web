@@ -100,6 +100,25 @@
         <div class="fill-col">
           <label for="description">Description</label>
           <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
+
+          {# Participants-platform anchors — pre-positioned inert
+             placeholders for segments 21+. Stay below Description
+             so the Schedule sub-grid above carries only the live
+             18G fields. #}
+          <div class="page-grid" style="margin: 0;">
+            <div>
+              <label for="responses_release_at">Release responses from (optional)</label>
+              <input type="datetime-local" id="responses_release_at"
+                     name="responses_release_at" disabled
+                     placeholder="Reviewees see responses — Participants platform">
+            </div>
+            <div>
+              <label for="responses_release_until">Release responses until (optional)</label>
+              <input type="datetime-local" id="responses_release_until"
+                     name="responses_release_until" disabled
+                     placeholder="Reviewee viewing closes — Participants platform">
+            </div>
+          </div>
         </div>
       </div>
 
