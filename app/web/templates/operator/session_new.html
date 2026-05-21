@@ -46,10 +46,8 @@
 
           {# 18G Part 0 anchors + offsets — half-column sub-grid below
              Timezone. Start (``scheduled_activate_at``) + End
-             (``sessions.deadline``) anchors in column 1; the three
-             offset families in column 2. Auto-archive (Part 4) and
-             Auto-delete (Part 5) ship as disabled placeholders
-             until their consumer Parts wire them up. #}
+             (``sessions.deadline``) anchors in column 1;
+             ``invite_offsets`` + ``reminder_offsets`` in column 2. #}
           <div class="page-grid" style="margin: 0;">
             <div>
               <label for="scheduled_activate_at">Start (optional)</label>
@@ -58,11 +56,6 @@
 
               <label for="deadline">End (optional)</label>
               <input type="datetime-local" id="deadline" name="deadline">
-
-              <label for="archive_offset">Auto-archive (optional)</label>
-              <input type="text" id="archive_offset" name="archive_offset"
-                     disabled
-                     placeholder="e.g. P30D after End — 18G Part 4">
             </div>
             <div>
               <label for="invite_offsets">Auto-send invites (optional)</label>
@@ -72,11 +65,6 @@
               <label for="reminder_offsets">Auto-send reminders (optional)</label>
               <input type="text" id="reminder_offsets" name="reminder_offsets"
                      placeholder="e.g. -P2D, -PT4H">
-
-              <label for="delete_after_archive">Auto-delete (optional)</label>
-              <input type="text" id="delete_after_archive" name="delete_after_archive"
-                     disabled
-                     placeholder="e.g. P90D after archive — 18G Part 5">
             </div>
           </div>
         </div>
@@ -85,22 +73,35 @@
           <label for="description">Description</label>
           <textarea id="description" name="description" maxlength="2000"></textarea>
 
-          {# Participants-platform anchors — pre-positioned inert
-             placeholders for segments 21+. Stay below Description
-             so the Schedule sub-grid above carries only the live
-             18G fields. #}
+          {# 18G Part 0 — Participants-platform anchors + retention
+             offsets sub-grid. All four fields are disabled
+             placeholders today; consumer Parts wire them up.
+             ``responses_release_at`` / ``release_until_offset`` are
+             Participants-platform (segments 21+); ``archive_offset``
+             feeds 18G Part 4; ``retention_overrides.delete_after_archive``
+             feeds 18G Part 5. #}
           <div class="page-grid" style="margin: 0;">
             <div>
               <label for="responses_release_at">Release responses from (optional)</label>
               <input type="datetime-local" id="responses_release_at"
                      name="responses_release_at" disabled
                      placeholder="Reviewees see responses — Participants platform">
-            </div>
-            <div>
+
               <label for="responses_release_until">Release responses until (optional)</label>
               <input type="datetime-local" id="responses_release_until"
                      name="responses_release_until" disabled
                      placeholder="Reviewee viewing closes — Participants platform">
+            </div>
+            <div>
+              <label for="archive_offset">Auto-archive (optional)</label>
+              <input type="text" id="archive_offset" name="archive_offset"
+                     disabled
+                     placeholder="e.g. P30D after End — 18G Part 4">
+
+              <label for="delete_after_archive">Auto-delete (optional)</label>
+              <input type="text" id="delete_after_archive" name="delete_after_archive"
+                     disabled
+                     placeholder="e.g. P90D after archive — 18G Part 5">
             </div>
           </div>
         </div>
