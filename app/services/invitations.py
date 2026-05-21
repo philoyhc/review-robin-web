@@ -252,9 +252,10 @@ def send_invitation(
     invitation: Invitation,
     review_session: ReviewSession,
     reviewer: Reviewer,
-    user: User,
+    user: User | None,
     build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
+    trigger: str = "operator",
 ) -> SendResult:
     """Mint a fresh token, write an outbox row, flip invitation to ``sent``.
 
@@ -265,6 +266,12 @@ def send_invitation(
     ``build_invite_url`` takes a raw token and returns the absolute invite
     URL. Routes pass ``request.url_for`` closed over the route name; a
     background worker (Segment 15 #34) passes a deployment-base-URL closure.
+
+    ``user`` is the operator who clicked Send (or ``None`` for the 18G
+    scheduled-invite trigger — the audit row's ``actor_user_id`` is
+    ``None`` in that case, matching the ``observe_deadline`` /
+    scheduled-activation convention). ``trigger`` flows into
+    ``context.trigger`` on the ``invitation.sent`` audit event.
     """
     raw_token, token_hash = _new_token()
     invitation.token_hash = token_hash
@@ -306,13 +313,14 @@ def send_invitation(
         summary=(
             f"Sent invitation #{invitation.id} to {reviewer.email}"
         ),
-        actor_user_id=user.id,
+        actor_user_id=user.id if user is not None else None,
         session=review_session,
         refs={
             "invitation_id": invitation.id,
             "reviewer_id": reviewer.id,
             "outbox_id": outbox.id,
         },
+        context={"trigger": trigger},
         correlation_id=correlation_id,
     )
     db.commit()
