@@ -61,6 +61,18 @@
       </div>
     {% endif %}
 
+    {# 18G PR 3B — Auto-send reminders status caption. None when
+       reminder_offsets isn't set; amber when the session isn't
+       ``ready`` yet (or End is unset); green when ready. #}
+    {% if auto_send_reminders_caption %}
+      {% set _tone = auto_send_reminders_caption.tone %}
+      <div class="card banner banner-{{ 'success' if _tone == 'green' else 'warning' }}"
+           id="auto-send-reminders-caption"
+           role="status">
+        <p>{{ auto_send_reminders_caption.text }}</p>
+      </div>
+    {% endif %}
+
     <div class="card filter-card">
       <form method="get"
             action="/operator/sessions/{{ session.id }}/invitations">

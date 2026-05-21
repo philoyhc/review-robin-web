@@ -33,6 +33,11 @@ class SessionCreate(BaseModel):
     # enforced at the route layer when ``scheduled_activate_at`` is
     # also set; inert via the §8.2.2 anchor-null rule otherwise.
     invite_offsets: list[str] | None = None
+    # Segment 18G Part 3 — operator-set list of reminder send
+    # offsets, anchored on ``deadline`` (End). Same shape as
+    # ``invite_offsets``. Inert via the §8.2.2 anchor-null rule
+    # when ``deadline`` is unset.
+    reminder_offsets: list[str] | None = None
 
 
 class SessionRead(BaseModel):

@@ -35,6 +35,10 @@ def create_session(
         # Route layer enforces per-entry rules (operational lead +
         # reviewer-notice gap) at save against the current Start.
         invite_offsets=payload.invite_offsets,
+        # 18G Part 3: optional list of auto-send reminder offsets,
+        # anchored on ``deadline``. Same per-entry rules apply at
+        # save time against the deadline anchor.
+        reminder_offsets=payload.reminder_offsets,
         created_by_user_id=user.id,
         # 18B PR 3 / PR 4: the per-session display timezone. The
         # Create Session form submits an explicit zone (defaulted to
@@ -201,6 +205,7 @@ def update_session(
         "help_contact",
         "scheduled_activate_at",
         "invite_offsets",
+        "reminder_offsets",
     ):
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)
@@ -236,6 +241,19 @@ def update_session(
             session=review_session,
             payload=audit.changes(
                 {"invite_offsets": diffs["invite_offsets"]}
+            ),
+            correlation_id=correlation_id,
+        )
+    # 18G Part 3 — same dedicated-event pattern for reminder_offsets.
+    if "reminder_offsets" in diffs:
+        audit.write_event(
+            db,
+            event_type="session.reminder_schedule_updated",
+            summary=f"Session {review_session.code} reminder schedule updated",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes(
+                {"reminder_offsets": diffs["reminder_offsets"]}
             ),
             correlation_id=correlation_id,
         )

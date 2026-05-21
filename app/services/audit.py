@@ -386,6 +386,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # for the UI to surface "operator just changed the auto-send
     # schedule" captions / banners.
     "session.invite_schedule_updated": EventSchema(_IDENTITY | {"changes"}),
+    # Segment 18G PR 3B — dedicated edit event for ``reminder_offsets``
+    # changes (mirrors ``session.invite_schedule_updated``).
+    "session.reminder_schedule_updated": EventSchema(_IDENTITY | {"changes"}),
     # Segment 18G Part 3 — auto-send reminders. Mirrors the Part 2
     # scheduled-invites family (per-offset fire tracking via
     # ``context.offset_index`` + ``context.scheduled_at`` + ``anchor_at``;

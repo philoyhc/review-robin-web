@@ -357,10 +357,12 @@ def build_schedule_timeline(
 
     - Auto-send invites (one row per resolved ``invite_offsets`` entry)
     - Session activates (``scheduled_activate_at``)
+    - Auto-send reminders (one row per resolved ``reminder_offsets`` entry)
+    - Session ends (``deadline``)
 
-    Parts 3 / 4 / 5 will extend this list with their own entries
-    (reminders, auto-archive, retention purge) so the timeline
-    gradually becomes the full session-lifecycle visualisation.
+    Parts 4 / 5 will extend this list with their own entries
+    (auto-archive, retention purge) so the timeline gradually becomes
+    the full session-lifecycle visualisation.
     """
     rows: list[tuple[datetime, str]] = []
     anchor = review_session.scheduled_activate_at
@@ -380,6 +382,27 @@ def build_schedule_timeline(
                     (
                         anchor_aware + delta,
                         f"Auto-send invites ({entry})",
+                    )
+                )
+    deadline = review_session.deadline
+    if deadline is not None:
+        deadline_aware = (
+            deadline if deadline.tzinfo else deadline.replace(tzinfo=timezone.utc)
+        )
+        rows.append((deadline_aware, "Session ends (End)"))
+        reminder_offsets = review_session.reminder_offsets or []
+        if isinstance(reminder_offsets, list):
+            for entry in reminder_offsets:
+                if not isinstance(entry, str):
+                    continue
+                try:
+                    delta = scheduled_events.parse_iso_duration(entry)
+                except (ValueError, AttributeError):
+                    continue
+                rows.append(
+                    (
+                        deadline_aware + delta,
+                        f"Auto-send reminders ({entry})",
                     )
                 )
     rows.sort(key=lambda row: row[0])
@@ -464,6 +487,78 @@ def build_auto_send_invites_caption(
         "text": (
             f"Auto-send scheduled at {earliest_text}. System will "
             f"dispatch automatically; you can also Send all now."
+        ),
+    }
+
+
+def build_auto_send_reminders_caption(
+    db: Session,
+    review_session: ReviewSession,
+) -> dict[str, str] | None:
+    """Return the Manage Invitations card caption for auto-send
+    reminders (Segment 18G PR 3B), or ``None`` when nothing to show.
+
+    Mirrors :func:`build_auto_send_invites_caption`:
+
+    - ``reminder_offsets`` unset → ``None`` (nothing configured).
+    - ``reminder_offsets`` set + ``deadline`` unset → amber-grey
+      "inactive: no End to anchor against" caption (§8.2.2
+      anchor-null state).
+    - ``reminder_offsets`` set + End set + session not ``ready`` →
+      amber warning ("currently inactive: activate the session
+      before then or these will skip").
+    - ``reminder_offsets`` set + End set + session ``ready`` → green
+      calm caption ("System will dispatch automatically; you can
+      also Send reminders to incomplete now").
+    """
+    offsets = review_session.reminder_offsets or []
+    if not isinstance(offsets, list) or not offsets:
+        return None
+
+    if review_session.deadline is None:
+        entry_word = "entry" if len(offsets) == 1 else "entries"
+        return {
+            "tone": "amber-grey",
+            "text": (
+                f"Auto-send reminders are configured ({len(offsets)} "
+                f"{entry_word}) but currently inactive — no End to "
+                f"anchor against. They reactivate when End is re-set."
+            ),
+        }
+
+    anchor = review_session.deadline
+    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+    fire_moments: list[datetime] = []
+    for entry in offsets:
+        if not isinstance(entry, str):
+            continue
+        try:
+            delta = scheduled_events.parse_iso_duration(entry)
+        except ValueError:
+            continue
+        fire_moments.append(anchor_aware + delta)
+    if not fire_moments:
+        return None
+
+    session_tz = sessions_service.resolve_session_timezone(review_session)
+    earliest = min(fire_moments)
+    earliest_text = date_formatting.format_datetime(earliest, session_tz)
+
+    if review_session.status != lifecycle.SessionStatus.ready.value:
+        return {
+            "tone": "amber-warning",
+            "text": (
+                f"Auto-send reminders scheduled at {earliest_text} — "
+                f"currently inactive: activate the session before then "
+                f"or these will skip."
+            ),
+        }
+    return {
+        "tone": "green",
+        "text": (
+            f"Auto-send reminders scheduled at {earliest_text}. System "
+            f"will dispatch automatically; you can also Send reminders "
+            f"to incomplete now."
         ),
     }
 

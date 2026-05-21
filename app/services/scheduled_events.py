@@ -1095,3 +1095,85 @@ def parse_and_validate_invite_offsets(
                 )
         cleaned.append(entry)
     return cleaned
+
+
+def parse_and_validate_reminder_offsets(
+    raw: str | None,
+    *,
+    deadline: datetime | None,
+    now: datetime | None = None,
+    operational_lead_hours: int | None = None,
+    notice_min_hours: int | None = None,
+) -> list[str] | None:
+    """Parse a comma-separated reminder-offsets string into a clean
+    list and enforce the per-entry save-time rules (Segment 18G PR 3B).
+
+    Same shape as :func:`parse_and_validate_invite_offsets` but
+    anchored on ``sessions.deadline`` (End) rather than
+    ``scheduled_activate_at``. Each entry must be a negative ISO 8601
+    duration — reminders fire *before* the deadline.
+
+    Returns ``None`` when ``raw`` is empty. When ``raw`` is set,
+    splits on commas, strips whitespace, drops empty fragments, and
+    for each remaining entry:
+
+    1. Parses as an ISO 8601 duration (per §8.2.4).
+    2. When ``deadline`` is set:
+       - resolved fire moment (``deadline + offset``)
+         ≥ ``now + operational_lead_hours``
+       - ``|offset|`` ≥ ``notice_min_hours``
+       - ``offset < 0`` (the entry fires before End).
+    3. When ``deadline`` is unset: parse-only validation per the
+       §8.2.2 anchor-null rule; the entry is inert at fire time.
+
+    Raises :class:`ScheduledActivateError` with a per-entry message on
+    the first violation. The route layer converts to HTTP 422.
+    """
+    if not raw or not raw.strip():
+        return None
+    entries = [item.strip() for item in raw.split(",") if item.strip()]
+    if not entries:
+        return None
+
+    op_hours = (
+        operational_lead_hours
+        if operational_lead_hours is not None
+        else settings.scheduled_operational_lead_hours
+    )
+    notice_hours = (
+        notice_min_hours
+        if notice_min_hours is not None
+        else settings.reviewer_notice_min_hours
+    )
+    current = now or datetime.now(timezone.utc)
+
+    cleaned: list[str] = []
+    for entry in entries:
+        try:
+            delta = parse_iso_duration(entry)
+        except ValueError as exc:
+            raise ScheduledActivateError(
+                f"Auto-send reminder {entry!r} isn't a valid ISO 8601 duration."
+            ) from exc
+
+        if deadline is not None:
+            anchor = _ensure_aware_utc(deadline)
+            fire_at = anchor + delta
+            if fire_at - current < timedelta(hours=op_hours):
+                raise ScheduledActivateError(
+                    f"Auto-send reminder {entry} resolves to before now + "
+                    f"{op_hours} hour(s); leave more lead time."
+                )
+            if abs(delta) < timedelta(hours=notice_hours):
+                raise ScheduledActivateError(
+                    f"Auto-send reminder {entry} gives less than "
+                    f"{notice_hours} hour(s) between reminder and End; "
+                    f"minimum reviewer notice is {notice_hours} hour(s)."
+                )
+            if delta >= timedelta(0):
+                raise ScheduledActivateError(
+                    f"Auto-send reminder {entry} fires at or after End; "
+                    f"use a negative duration (e.g. -P1D)."
+                )
+        cleaned.append(entry)
+    return cleaned
