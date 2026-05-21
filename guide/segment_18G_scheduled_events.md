@@ -289,6 +289,26 @@ generation outside the operator's review window. The operator's
 Workflow card) is the explicit pre-condition for scheduling
 activation.
 
+**Minimum lead time on `scheduled_activate_at`.** Because the
+dispatch mechanism is the lazy observer (§8.3 in
+`spec/lifecycle.md`) — events fire at the next operator GET ≥
+the scheduled time — the operator can't schedule Start for "5
+seconds from now" and expect immediate fan-out. Plus, large
+reviewer rosters (the 1,200-reviewer pilot case) need wall-clock
+time to fan out 1,200 invitations within the
+`invite_offsets` window before Start arrives. The editor
+enforces a **minimum 1-hour lead time** on
+`scheduled_activate_at` at save (configurable per deployment
+via `SCHEDULED_ACTIVATE_MIN_LEAD_HOURS`, default `1`). The
+floor covers (i) operator-coordination ("don't set Start for
+right now") and (ii) operational fan-out headroom for the
+largest expected roster.
+
+**Concurrency, retry, and notification follow the cross-cutting
+rules in `spec/lifecycle.md` §8.3** (SELECT … FOR UPDATE +
+idempotency check; 3 retries from audit-log count; Session Home
+banner on skip/failure for MVP, email deferred).
+
 **Always editable; effectiveness signalled, not gated.** Per
 the cross-cutting rule in `spec/lifecycle.md` §8.2.1, the
 `scheduled_activate_at` field is **always editable** while the
