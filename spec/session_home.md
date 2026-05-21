@@ -300,17 +300,27 @@ heading; the card title *is* the session:
   whitespace.
 - **Three-column labelled meta grid** (`.session-meta-row`) — each
   cell is a `form-help` label above its value:
-  - **Column 1:** Created by · Help contact. Created by is a
-    count pill; Help contact is plain text ("—" when null).
-  - **Column 2:** Created · Modified. Both count pills carrying
-    the canonical `YYYY-MM-DD HH:MM` timestamp in the session's
-    resolved display zone.
-  - **Column 3:** Deadline (count pill with the canonical
-    timestamp, or `pill-empty` "Not set" when null) · Timezone
-    (count pill with the session's resolved zone as a compact
-    GMT-offset + raw IANA id — e.g. "GMT+8 Asia/Singapore" — via
-    `date_formatting.gmt_offset_zone_label`; see
-    `spec/timezone_display.md`).
+  - **Column 1:** Created by · Timezone. Created by is a count
+    pill; Timezone is a count pill with the session's resolved
+    zone as a compact GMT-offset + raw IANA id (e.g. "GMT+8
+    Asia/Singapore") via `date_formatting.gmt_offset_zone_label`
+    — see `spec/timezone_display.md`.
+  - **Column 2:** Created · Help contact. Created is a count pill
+    carrying the canonical `YYYY-MM-DD HH:MM` timestamp in the
+    session's resolved display zone; Help contact is plain text
+    ("—" when null).
+  - **Column 3:** Modified (count pill with the canonical
+    timestamp in the session's resolved display zone).
+- **Schedule timeline sub-card** — sits between the meta grid and
+  the Edit button. A read-only inner `<div class="card">`
+  carrying a "Schedule timeline" `<h3>`, a one-line subtitle
+  ("Resolved fire moments for the session's anchors + offsets."),
+  and a two-column table (`When` / `Event`) listing every
+  resolved anchor + offset on the session in chronological order
+  (Start, End, auto-send invites, auto-send reminders). Built by
+  `views.build_schedule_timeline` — the same builder Create /
+  Edit Session use. Hidden when no rows resolve (e.g. a fresh
+  session with neither Start nor offsets set).
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full
   metadata editing.
@@ -333,14 +343,25 @@ heading; the card title *is* the session:
   sub-page. Keeps Home's right column read-only-feeling and
   avoids a mid-card form that competes with the action work in
   the left column.
-- The Edit sub-page also hosts the **Owners** card (Segment
-  16B PR 2) — current co-owners + an Add-owner typeahead
-  picker over the workspace operator allowlist. The card
-  doesn't render on Session Home itself: per-session
-  permission management is rare enough that surfacing it on
-  Home would steal real estate from the next-action work,
-  and the Edit sub-page is already the canonical landing
-  page for session-identity changes.
+- The Edit sub-page carries a `← Back to Session Home` link
+  above the card (mirroring the Rule Builder page's child-page
+  affordance). Inside the **Edit Session Details** card, the
+  form fields sit above a half-width inner grid carrying two
+  side-by-side cards: the **Schedule timeline** preview on the
+  left and the **Owners** card on the right. Save + Cancel
+  buttons render at the bottom of the outer card; both start
+  `disabled` and enable only when an input has changed
+  (inline dirty-tracking JS, with Cancel resetting the form
+  to its loaded values in-place). Save POST redirects back to
+  the Edit page rather than Home so the operator can verify
+  the change in place.
+- **Owners** card (Segment 16B PR 2) — current co-owners + an
+  Add-owner typeahead picker over the workspace operator
+  allowlist. Doesn't render on Session Home itself:
+  per-session permission management is rare enough that
+  surfacing it on Home would steal real estate from the
+  next-action work, and the Edit sub-page is already the
+  canonical landing page for session-identity changes.
 
 The previously-rendered duplicate `Status:` pill on this card
 was retired in PR #375; lifecycle state is shown in the chrome

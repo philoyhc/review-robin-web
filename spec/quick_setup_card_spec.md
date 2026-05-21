@@ -54,7 +54,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Single bottom Submit.** The card carries one Submit button at the bottom, on the same row as the Lock / Unlock toggle. Submit sits left, Lock / Unlock sits right; both render `btn secondary`. Clicking Submit posts every slot's input in one form to `POST /operator/sessions/{id}/quick-setup/submit-all`.
 
-**Submit-enable gate.** The Submit button starts `disabled` and enables only when at least one `<input type="file">` on any slot has a file selected. Inline JS toggles the `disabled` attribute on `change`.
+**Submit-enable gate.** The Submit button starts `disabled` and enables only when **both** (1) at least one `<input type="file">` on any slot has a file selected AND (2) the card-level confirm-replace checkbox is ticked. Inline JS toggles the `disabled` attribute on both the file inputs' `change` event and the checkbox's `change` event. The checkbox renders only on the existing-session variant; on the new-session variant the create-session button drives submission and this gate doesn't apply.
 
 **Replace semantics.** Each slot replaces the entire corresponding dataset for the session. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
 

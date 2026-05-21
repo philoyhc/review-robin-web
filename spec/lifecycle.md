@@ -475,8 +475,8 @@ without retrying. Per-event preconditions:
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
 | Scheduled activation (Part 1) | `session.status == "validated"` | `not_validated` |
-| Auto-send invites (Part 2) | invitations already created (the operator ran "Create invitations") | `invitations_not_created` |
-| Auto-send reminders (Part 3) | `session.status == "ready"` + invitations exist + within accepting-responses window | `not_ready` / `no_invitations` |
+| Auto-send invites (Part 2) | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (the operator ran "Create invitations") | `not_prepared` / `invitations_not_created` |
+| Auto-send reminders (Part 3) | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 | Auto-archive (Part 4) | `session.status == "draft"` (18A's draft-only archive) | `not_draft` |
 | Auto-delete after archive (Part 5) | `session.status == "archived"` | `not_archived` |
 | Release-from (Participants platform) | session has been closed after at least one run (responses exist) | `no_responses_run` |
