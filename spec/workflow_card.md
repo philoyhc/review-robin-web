@@ -569,14 +569,19 @@ Built by `views.build_auto_send_invites_caption` from
 #### Auto-send reminders signal
 
 Built by `views.build_auto_send_reminders_caption` from
-`sessions.reminder_offsets` + `deadline`:
+`sessions.reminder_offsets` + `deadline` + whether any
+`Invitation` rows exist. Reminders piggyback on existing
+`Invitation` rows (each reminder reuses the previously-issued
+invitation URL), so the trigger requires invitations to be
+**created**, not necessarily sent.
 
-| `reminder_offsets` | `deadline` | Session `ready`? | Signal |
-| --- | --- | --- | --- |
-| empty / null | (any) | (any) | (none) |
-| set | unset | (any) | ⓘ "Auto-send reminders are configured but currently inactive — no End to anchor against. They reactivate when End is re-set." |
-| set | set | no | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: activate the session before then or these will skip." |
-| set | set | yes | ✓ "Auto-send reminders scheduled at «X». System will dispatch automatically; you can also Send reminders to incomplete now." |
+| `reminder_offsets` | `deadline` | Session `ready`? | Invitations created? | Signal |
+| --- | --- | --- | --- | --- |
+| empty / null | (any) | (any) | (any) | (none) |
+| set | unset | (any) | (any) | ⓘ "Auto-send reminders are configured but currently inactive — no End to anchor against. They reactivate when End is re-set." |
+| set | set | no | (any) | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: activate the session before then or these will skip." |
+| set | set | yes | no | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: create invitations before then or these will skip." |
+| set | set | yes | yes | ✓ "Auto-send reminders scheduled at «X». System will dispatch automatically; you can also Send reminders to incomplete now." |
 
 ### Manual-activate cancellation modal
 

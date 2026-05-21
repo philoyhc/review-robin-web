@@ -508,22 +508,27 @@ def build_auto_send_reminders_caption(
     review_session: ReviewSession,
 ) -> dict[str, str] | None:
     """Return the Workflow-card right-column caption for auto-send
-    reminders (Segment 18G PR 3B), or ``None`` when nothing to
-    show. Consolidated into the Workflow card alongside the
-    auto-send-invites caption — see :func:`build_auto_send_invites_caption`.
+    reminders, or ``None`` when nothing to show.
 
-    Mirrors :func:`build_auto_send_invites_caption`:
+    Mirrors :func:`build_auto_send_invites_caption`. Tones:
 
     - ``reminder_offsets`` unset → ``None`` (nothing configured).
     - ``reminder_offsets`` set + ``deadline`` unset → amber-grey
       "inactive: no End to anchor against" caption (§8.2.2
       anchor-null state).
     - ``reminder_offsets`` set + End set + session not ``ready`` →
-      amber warning ("currently inactive: activate the session
-      before then or these will skip").
-    - ``reminder_offsets`` set + End set + session ``ready`` → green
-      calm caption ("System will dispatch automatically; you can
-      also Send reminders to incomplete now").
+      amber warning ("activate the session before then or these
+      will skip").
+    - ``reminder_offsets`` set + End set + session ``ready`` +
+      no invitations created → amber warning ("create
+      invitations before then or these will skip"). The trigger
+      `_observe_scheduled_reminders` skips with
+      ``reason="no_invitations"`` in this case, since reminders
+      piggyback on existing ``Invitation`` rows.
+    - ``reminder_offsets`` set + End set + session ``ready`` +
+      invitations exist → green calm caption ("System will
+      dispatch automatically; you can also Send reminders to
+      incomplete now").
     """
     offsets = review_session.reminder_offsets or []
     if not isinstance(offsets, list) or not offsets:
@@ -564,6 +569,20 @@ def build_auto_send_reminders_caption(
             "text": (
                 f"Auto-send reminders scheduled at {earliest_text} — "
                 f"currently inactive: activate the session before then "
+                f"or these will skip."
+            ),
+        }
+    # Reminders piggyback on existing Invitation rows (each reminder
+    # reuses the previously-issued invitation URL). With no
+    # invitations created, _observe_scheduled_reminders skips with
+    # reason="no_invitations" — surface that as amber here so the
+    # caption matches the trigger's behaviour.
+    if not invitations.has_invitations(db, review_session.id):
+        return {
+            "tone": "amber-warning",
+            "text": (
+                f"Auto-send reminders scheduled at {earliest_text} — "
+                f"currently inactive: create invitations before then "
                 f"or these will skip."
             ),
         }
