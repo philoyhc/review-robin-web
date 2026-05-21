@@ -465,22 +465,22 @@ The right column is a `<aside class="next-action-status"
 id="next-action-status">` block. It carries up to two layers,
 stacked top-to-bottom:
 
-1. **Signal lines** — inline icon-prefixed paragraphs (no
+1. **Per-state status detail** — a heading + content block
+   (checklist, issue list, or short status copy), keyed on the
+   workflow state.
+2. **Signal lines** — inline icon-prefixed paragraphs (no
    background, no border). Up to four lines render depending on
    the data; they're driven by `super_failure`,
    `scheduled_activation_caption`, `auto_send_invites_caption`,
    and `auto_send_reminders_caption`. The signals are largely
    state-independent — they appear in any state when their
    source caption is non-None.
-2. **Per-state status detail** — a heading + content block
-   (checklist, issue list, or short status copy), keyed on the
-   workflow state.
 
 ### Right-column content by state
 
 The cell shows the per-state status detail. Any non-None signal
 line (failure / scheduled-activation / auto-send invites / auto-
-send reminders) renders above the detail; the per-signal
+send reminders) renders below the detail; the per-signal
 condition tables in the next section say when each is non-None.
 
 | State | Per-state status detail |
@@ -505,7 +505,7 @@ counters are deferred.
 ### Signal lines
 
 All signal lines live inside a `.next-action-signals` flex column
-at the top of the aside. Each line is a
+beneath the per-state status detail. Each line is a
 `.next-action-signal.next-action-signal--<tone>` paragraph with a
 leading `.next-action-signal-icon` span. No banner background, no
 border — the icon tone carries the urgency cue:

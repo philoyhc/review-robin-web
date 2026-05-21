@@ -314,67 +314,12 @@
             disabled aria-disabled="true">Close session</button>
   </div>
     </div>
-    {# Right column — per-state status aside. Carries the
-       scheduled-event captions + workflow-failure message as
-       inline icon-prefixed signal lines (no banner / card chrome
-       — that flash-card treatment was retired 2026-05-21), then
-       the per-state Setup-checklist / Validation-issues / Status
-       detail content. #}
+    {# Right column — per-state status aside. Per-state Setup-
+       checklist / Validation-issues / Status detail renders
+       first; the scheduled-event captions + workflow-failure
+       message follow below as inline icon-prefixed signal lines
+       (no banner / card chrome). #}
     <aside class="next-action-status" id="next-action-status">
-      {# 18G consolidated signals. Each is a tone-coded
-         icon-prefixed line — ⚠ amber-warning, ⓘ amber-grey,
-         ✓ green, ✗ error. No background colour or border. #}
-      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure %}
-      {% if _has_signals %}
-        <div class="next-action-signals">
-          {% if super_failure %}
-            {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
-            {% set _step_label_map = {
-              "generate": "Generate assignments",
-              "validate": "Validate setup",
-              "activate": "Activate session",
-              "precondition": "pre-flight check",
-            } %}
-            <p class="next-action-signal next-action-signal--error banner-scroll-target"
-               id="next-action-super-failure-banner">
-              <span class="next-action-signal-icon" aria-hidden="true">✗</span>
-              <span>
-                <strong>{{ _button_label }} failed{% if super_failure.step in _step_label_map %} at the {{ _step_label_map[super_failure.step] }}{% endif %}.</strong>
-                {% if super_failure.error %}
-                  <br>{{ super_failure.error }}
-                {% endif %}
-              </span>
-            </p>
-          {% endif %}
-          {% if scheduled_activation_caption %}
-            {% set _tone = scheduled_activation_caption.tone %}
-            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
-            <p class="next-action-signal next-action-signal--{{ _tone }}"
-               id="next-action-scheduled-activation-caption">
-              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
-              <span>{{ scheduled_activation_caption.text }}</span>
-            </p>
-          {% endif %}
-          {% if auto_send_invites_caption %}
-            {% set _tone = auto_send_invites_caption.tone %}
-            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
-            <p class="next-action-signal next-action-signal--{{ _tone }}"
-               id="next-action-auto-send-invites-caption">
-              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
-              <span>{{ auto_send_invites_caption.text }}</span>
-            </p>
-          {% endif %}
-          {% if auto_send_reminders_caption %}
-            {% set _tone = auto_send_reminders_caption.tone %}
-            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
-            <p class="next-action-signal next-action-signal--{{ _tone }}"
-               id="next-action-auto-send-reminders-caption">
-              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
-              <span>{{ auto_send_reminders_caption.text }}</span>
-            </p>
-          {% endif %}
-        </div>
-      {% endif %}
       {% if is_setup_empty %}
         {# State 1: setup checklist. #}
         <h3 class="next-action-status-heading">Setup checklist</h3>
@@ -437,6 +382,63 @@
           </p>
           {% include "operator/partials/_next_action_issue_list.html" %}
         {% endif %}
+      {% endif %}
+
+      {# Signal lines: workflow-failure first, then scheduled
+         activation, then auto-send invites, then auto-send
+         reminders. Each is a tone-coded icon-prefixed line —
+         ⚠ amber-warning, ⓘ amber-grey, ✓ green, ✗ error. No
+         background colour or border. #}
+      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure %}
+      {% if _has_signals %}
+        <div class="next-action-signals">
+          {% if super_failure %}
+            {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
+            {% set _step_label_map = {
+              "generate": "Generate assignments",
+              "validate": "Validate setup",
+              "activate": "Activate session",
+              "precondition": "pre-flight check",
+            } %}
+            <p class="next-action-signal next-action-signal--error banner-scroll-target"
+               id="next-action-super-failure-banner">
+              <span class="next-action-signal-icon" aria-hidden="true">✗</span>
+              <span>
+                <strong>{{ _button_label }} failed{% if super_failure.step in _step_label_map %} at the {{ _step_label_map[super_failure.step] }}{% endif %}.</strong>
+                {% if super_failure.error %}
+                  <br>{{ super_failure.error }}
+                {% endif %}
+              </span>
+            </p>
+          {% endif %}
+          {% if scheduled_activation_caption %}
+            {% set _tone = scheduled_activation_caption.tone %}
+            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+            <p class="next-action-signal next-action-signal--{{ _tone }}"
+               id="next-action-scheduled-activation-caption">
+              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+              <span>{{ scheduled_activation_caption.text }}</span>
+            </p>
+          {% endif %}
+          {% if auto_send_invites_caption %}
+            {% set _tone = auto_send_invites_caption.tone %}
+            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+            <p class="next-action-signal next-action-signal--{{ _tone }}"
+               id="next-action-auto-send-invites-caption">
+              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+              <span>{{ auto_send_invites_caption.text }}</span>
+            </p>
+          {% endif %}
+          {% if auto_send_reminders_caption %}
+            {% set _tone = auto_send_reminders_caption.tone %}
+            {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+            <p class="next-action-signal next-action-signal--{{ _tone }}"
+               id="next-action-auto-send-reminders-caption">
+              <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+              <span>{{ auto_send_reminders_caption.text }}</span>
+            </p>
+          {% endif %}
+        </div>
       {% endif %}
     </aside>
   </div>
