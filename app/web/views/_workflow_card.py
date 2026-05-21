@@ -189,6 +189,9 @@ def build_workflow_card_context(
         "scheduled_activation_caption": build_scheduled_activation_caption(
             db, review_session
         ),
+        "manual_activate_cancellation": build_manual_activate_cancellation(
+            review_session
+        ),
         "next_action_return_to": return_to,
     }
 
@@ -394,24 +397,39 @@ def build_auto_send_invites_caption(
     review_session: ReviewSession,
 ) -> dict[str, str] | None:
     """Return the Manage Invitations card caption for auto-send
-    invites (Segment 18G PR 2B), or ``None`` when nothing to show.
+    invites (Segment 18G PR 2B + PR 2C), or ``None`` when nothing
+    to show.
 
-    Per the Part 2 plan section:
+    Per the Part 2 plan section + the Part 1↔2 coordination
+    section:
 
-    - ``invite_offsets`` unset or ``scheduled_activate_at`` unset
-      → ``None`` (anchor-null, no auto-send).
-    - ``invite_offsets`` set + invitations not yet created → amber
-      warning ("currently inactive: create invitations before then
-      or these will skip").
-    - ``invite_offsets`` set + invitations created → green calm
-      caption ("System will dispatch automatically; you can also
-      Send all now").
+    - ``invite_offsets`` unset → ``None`` (nothing configured).
+    - ``invite_offsets`` set + ``scheduled_activate_at`` unset →
+      amber-grey "inactive: no Start to anchor against" caption
+      (the §8.2.2 anchor-null state — operator just cleared Start
+      while invites were configured).
+    - ``invite_offsets`` set + Start set + invitations not yet
+      created → amber warning ("currently inactive: create
+      invitations before then or these will skip").
+    - ``invite_offsets`` set + Start set + invitations created →
+      green calm caption ("System will dispatch automatically;
+      you can also Send all now").
     """
     offsets = review_session.invite_offsets or []
     if not isinstance(offsets, list) or not offsets:
         return None
+
     if review_session.scheduled_activate_at is None:
-        return None
+        # PR 2C: offsets set + Start unset → inactive via anchor-null.
+        entry_word = "entry" if len(offsets) == 1 else "entries"
+        return {
+            "tone": "amber-grey",
+            "text": (
+                f"Auto-send invites are configured ({len(offsets)} "
+                f"{entry_word}) but currently inactive — no Start to "
+                f"anchor against. They reactivate when Start is re-set."
+            ),
+        }
 
     # Resolve the earliest fire moment for display
     anchor = review_session.scheduled_activate_at
@@ -446,5 +464,54 @@ def build_auto_send_invites_caption(
         "text": (
             f"Auto-send scheduled at {earliest_text}. System will "
             f"dispatch automatically; you can also Send all now."
+        ),
+    }
+
+
+def build_manual_activate_cancellation(
+    review_session: ReviewSession,
+) -> dict[str, object] | None:
+    """Return the manual-activate confirmation message + count for
+    the Workflow card's Activate button (Segment 18G PR 2C), or
+    ``None`` when no auto-sends would be cancelled.
+
+    Manual Activate (operator clicks Activate before the scheduled
+    fire) clears ``scheduled_activate_at`` as a side effect (per
+    PR 1B). With Start cleared, ``invite_offsets`` becomes inert
+    via the §8.2.2 anchor-null rule — any remaining auto-sends
+    that haven't fired yet are effectively cancelled. The Activate
+    button surfaces a confirmation modal so the operator can
+    acknowledge that trade-off before committing.
+
+    Returns ``None`` when:
+
+    - ``invite_offsets`` is empty / unset, or
+    - ``scheduled_activate_at`` is already unset (nothing to
+      cancel; no auto-sends would have fired anyway), or
+    - the session isn't in a state where Activate would be
+      offered (``validated``).
+
+    Note: the count reported is the **total** ``invite_offsets``
+    list length, not the future-only subset. The lazy observer has
+    already fired any past-due entries by the time the Workflow
+    card renders, so a conservative "N entries scheduled" message
+    is accurate enough for an operator-facing confirmation. The
+    audit log carries the precise per-entry fired/skipped record.
+    """
+    if not lifecycle.is_validated(review_session):
+        return None
+    if review_session.scheduled_activate_at is None:
+        return None
+    offsets = review_session.invite_offsets or []
+    if not isinstance(offsets, list) or not offsets:
+        return None
+    count = len(offsets)
+    plural = "" if count == 1 else "s"
+    return {
+        "pending_count": count,
+        "message": (
+            f"{count} scheduled auto-send invitation{plural} will be "
+            f"cancelled by activating now. Continue with manual "
+            f"activation?"
         ),
     }
