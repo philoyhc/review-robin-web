@@ -262,6 +262,10 @@ zero hits — light-up happens in Parts 1–5.
 
 ### Part 1 — Scheduled activation
 
+**Status: shipped 2026-05-21** (PRs #1262 / #1263 / #1264 —
+observer scaffolding, scheduled-activation trigger, Start editor
++ Workflow card caption).
+
 **Goal.** A session can carry an **activation date/time**; a
 scheduled trigger flips it `validated → ready` at that point.
 Because **Activation is the open event** (Activated-as-gate —
@@ -515,6 +519,11 @@ migration and audit-event registration are needed before
 
 ### Part 2 — Auto-send invitations
 
+**Status: shipped 2026-05-21** (PRs #1265 / #1266 / #1267 —
+trigger, editor + Manage Invitations caption + Schedule timeline
+preview, Part 1 ↔ Part 2 coordination + manual-activate
+cancellation modal).
+
 **Goal.** Instead of sending every invitation immediately, a
 session can carry a list of **invitation send offsets** anchored
 on `scheduled_activate_at` (Start); a scheduled trigger dispatches them at
@@ -729,69 +738,74 @@ Schedule timeline (Asia/Singapore):
 ```
 
 The operator can sanity-check the chronology before saving.
-The same primitive extends to Parts 3 / 4 / 5 entries when
-those land, so the timeline gradually becomes the full
-session-lifecycle visualisation.
+Part 3 extended it 2026-05-21 to also render `deadline` (End)
+and each resolved `reminder_offsets` entry; Parts 4 / 5 will
+add their archive + purge entries when they land, so the
+timeline gradually becomes the full session-lifecycle
+visualisation.
 
 ### Part 3 — Auto-send reminders
 
+**Status: shipped 2026-05-21** (PRs #1268 / #1269 — scheduled-
+reminder trigger; `reminder_offsets` editor + Manage Invitations
+caption + Schedule timeline extension to include End and reminder
+fire moments).
+
 Scheduled, policy-driven reminder dispatch — **consolidated from
 the former Segment 14C on 2026-05-18** (that standalone plan is
-retired). Today reminders are operator-triggered: the Manage
+retired). Pre-Part-3 reminders were operator-triggered: the Manage
 Invitations bulk "Send reminder to incomplete reviewers" button
-enqueues `kind="reminder"` outbox rows, and the send itself
-activates in 14B Part A. Part 3 makes dispatch scheduled and
-policy-driven. Unlike Parts 1 / 2 / 4 / 5, this Part fires a
-**sequence** of triggers per session (one per offset entry),
-not a single one — the deliberate exception in this segment.
+enqueues `kind="reminder"` outbox rows, and the send itself runs
+through the 14B Part A path. Part 3 layered a scheduled trigger
+on top. Unlike Parts 1 / 2 / 4 / 5, this Part fires a **sequence**
+of triggers per session (one per offset entry), not a single one
+— the deliberate exception in this segment.
 
-- **3a — Per-session reminder offsets.** An operator-facing
-  surface for "when reminders go out automatically", persisted in
-  the `sessions.reminder_offsets` JSON column (pre-positioned by
-  Part 0b). The list itself carries the cadence: an empty list /
-  null means auto-reminders off; entries are ISO 8601 durations
-  anchored on `deadline` (e.g. `["-P3D", "-P1D", "-PT4H"]`
-  fires three reminders at 3 days, 1 day, and 4 hours before
-  End). Ancillary controls (dispatch time-of-day in operator
-  timezone, optional quiet-hours / weekend skip) settle at
-  scoping — either as additional `sessions.*` columns or as keys
-  inside the offset entries (e.g. each entry an object instead of
-  a string). A cadence card on the Email Template editor or
-  Session Home (TBD at scoping); a `session.reminder_schedule_updated`
-  audit event (`changes` envelope).
-- **3b — Scheduled dispatch job.** A background worker scans
-  sessions with `reminder_offsets` set and enqueues
-  `kind="reminder"` rows for incomplete reviewers at each
-  resolved `deadline + offset`. Per-reviewer / per-offset dedup
-  (skip if a reminder for this `(session, reviewer, offset_index)`
-  was already enqueued — uses 14B Part B's
-  `reminder:{session_id}:{reviewer_id}:{n}` correlation_id);
-  only `ready` sessions inside their accepting-responses window;
-  respects per-instrument open/close. A `session.reminder_batch_enqueued`
-  audit event. Reuses 14B Part C's queue + worker scaffold if
-  landed; otherwise the shared dispatch mechanism Part 1
-  established.
+- **3a — Per-session reminder offsets.** Operator-set list of ISO
+  8601 durations on the `sessions.reminder_offsets` JSON column
+  (pre-positioned by Part 0b), anchored on `deadline`
+  (e.g. `["-P3D", "-P1D", "-PT4H"]` fires three reminders at
+  3 days, 1 day, and 4 hours before End). Empty list / null means
+  auto-reminders off. Lives in the **session editor** (Create
+  Session / Edit Session Details forms) alongside `invite_offsets`
+  in the Schedule sub-grid; effectiveness signalled by the
+  Manage-Invitations-page caption (see 3b below) rather than
+  gated. The Email Template editor stays purely about wording;
+  ancillary controls (dispatch time-of-day, quiet hours, weekend
+  skip) deferred until pilot feedback asks for them. Emits
+  `session.reminder_schedule_updated` (changes envelope).
+- **3b — Scheduled dispatch.** The lazy observer
+  (`_observe_scheduled_reminders` in
+  `app/services/scheduled_events.py`) scans each operator-visited
+  session and dispatches reminders to incomplete reviewers at
+  each resolved `deadline + offset`. Per-offset consume via the
+  audit-event dedup (mirrors Part 2); per-reviewer dedup layered
+  on top via `EmailOutbox.correlation_id ==
+  "reminder:{sid}:{rid}:{offset_index}"`, so a partial-failure
+  re-pass doesn't double-send. Reuses
+  `invitations.send_reminder` verbatim — only the trigger is new.
+  Emits `session.scheduled_reminders_fired` (`counts.sent` +
+  `context.{anchor_at, offset_index, offset, scheduled_at,
+  actual_fired_at}`) on a successful dispatch and
+  `session.scheduled_reminders_skipped`
+  (`reason ∈ {not_ready, no_invitations, outside_response_window}`)
+  on a precondition miss.
 - **Preconditions (`spec/lifecycle.md` §8.2.3).**
-  `session.status == "ready"` + invitations exist + within the
-  accepting-responses window. Fire-time guard: skip with
-  `reason="not_ready"` or `"no_invitations"`,
-  `session.scheduled_reminder_skipped` audit event, per-entry
-  one-shot via the same `(session, reviewer, offset_index)`
-  dedup key the dispatch job uses. The Email Template editor /
-  Session Home cadence card surfaces "Auto-reminders scheduled
-  at «…» — currently inactive: activate the session before then
-  or these will skip" when the session isn't `ready` yet.
-- **3c — Targeted reminder cohorts (post-MVP).** Beyond the
-  "incomplete" cohort, richer slicing off
-  `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) —
-  per-cohort bulk Send buttons, optional per-cohort template
-  differentiation, a `session.reminder_cohort_sent` event.
-  Confirm need before scoping.
-- **3d — Reminder analytics (post-MVP).** A small "Reminders"
-  card on Manage Invitations — reminders sent, delivery success
-  rate (reads 14B's `email.sent` / `email.send_failed`),
-  completion-after-reminder rate. No new tables; reads the
-  audit log + outbox.
+  `session.status == "ready"` + invitations exist + `now < deadline`
+  (the **relaxed** accepting-responses window — per-instrument
+  `accepting_responses` flags intentionally not consulted; a
+  session that's temporarily all-closed mid-window can still
+  fire reminders harmlessly, since the operator can suppress
+  via `reminder_offsets`). The Manage-Invitations caption
+  surfaces "Auto-send reminders scheduled at «…» — currently
+  inactive: activate the session before then or these will
+  skip" when the session isn't `ready` yet (amber), and "Auto-
+  send reminders scheduled at «…». System will dispatch
+  automatically…" when ready (green).
+- **Targeted cohorts and reminders analytics** (originally 3c
+  and 3d) were carved out 2026-05-21 to
+  `guide/deferred_until_pilot_feedback.md` — both are post-MVP
+  features whose value depends on pilot signal.
 
 ### Part 4 — Auto-archive
 

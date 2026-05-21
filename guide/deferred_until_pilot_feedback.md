@@ -260,3 +260,84 @@ the post-Save redirect already exists — return-to-place adds a
 fragment anchor to it. No route or view-adapter change.
 
 ---
+
+## 18G Part 3c — Targeted reminder cohorts (~150 LOC)
+
+> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21
+> on Segment 18G Part 3 close-out. Part 3a/3b (per-session
+> reminder offsets + scheduled dispatch) shipped; cohort slicing
+> is post-MVP.
+
+**Ships.**
+
+- Beyond the "incomplete" cohort, richer slicing off
+  `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) — per-
+  cohort bulk Send buttons on Manage Invitations (and the
+  Responses page), optional per-cohort template differentiation
+  via the existing `email_template_overrides` JSON.
+- A new `session.reminder_cohort_sent` audit event
+  (`set_changes` + `context.{cohort, threshold}`).
+- The scheduled trigger (`_observe_scheduled_reminders`) gains
+  a per-offset cohort selector (e.g. `["-P1D", "-PT4H@at_risk"]`)
+  — shape settles at scoping; cohort embedding in the offset
+  string keeps `reminder_offsets` schema-stable.
+
+**Why deferred.** Today the "incomplete" cohort covers everyone
+who hasn't submitted; cohort slicing only matters if operators
+want to nudge at-risk reviewees differently from no-response
+ones, or sequence reminders by escalation tone. Whether that's
+worth the editor complexity (per-cohort template, per-offset
+cohort tag) depends on what operators actually do with the
+single-cohort send when 14B Part C lands and the queue is real.
+
+**Lift trigger.** Pilot operators say they want to send a softer
+nudge to "almost done" reviewers and a firmer one to "not
+started" reviewers, or they want at-risk-only follow-ups
+post-deadline.
+
+**Wire-up.** A new cohort selector on the bulk-send and per-
+offset surfaces; cohort filter inside the dispatch loop
+(`_dispatch_scheduled_reminders` already iterates
+`monitoring.per_reviewer_progress` — would gain a cohort
+filter); new `session.reminder_cohort_sent` event registered
+in `EVENT_SCHEMAS`.
+
+---
+
+## 18G Part 3d — Reminders analytics card (~100 LOC)
+
+> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21
+> on Segment 18G Part 3 close-out. Part 3a/3b shipped; the
+> analytics surface is post-MVP.
+
+**Ships.**
+
+- A small "Reminders" info card on Manage Invitations —
+  reminders sent (operator + scheduled), delivery success rate
+  (reads 14B's `email.sent` / `email.send_failed`), completion-
+  after-reminder rate (responses submitted within N hours of a
+  reminder).
+- No new tables; reads the audit log + outbox.
+- A view-shape helper (`views.build_reminders_analytics_card`)
+  + a single template block on `session_invitations.html`.
+
+**Why deferred.** Operators today see per-row "Last reminder"
+timestamps and a "Reminders sent" pill in the existing info
+card. A dedicated analytics card is only useful if operators
+want to compare reminder cadences across sessions or tune their
+`reminder_offsets` based on response-after-reminder rates —
+pilot-feedback territory. Also reads 14B's
+`email.sent` / `email.send_failed` audit events, which only
+become meaningfully populated once 14B Part C (the real
+queue / worker) ships and dispatch isn't synchronous.
+
+**Lift trigger.** Operators ask for reminder-effectiveness
+numbers, or post-pilot tuning needs the data to justify a
+particular cadence.
+
+**Wire-up.** A view helper in `app/web/views/_workflow_card.py`
+(or a new `_invitations_analytics.py` sibling) that aggregates
+audit-event counts; the card body in the Manage Invitations
+template alongside the existing auto-send captions.
+
+---
