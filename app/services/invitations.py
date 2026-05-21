@@ -498,7 +498,7 @@ def send_reminder(
     invitation: Invitation,
     review_session: ReviewSession,
     reviewer: Reviewer,
-    user: User,
+    user: User | None,
     build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
 ) -> ReminderResult:
@@ -508,6 +508,10 @@ def send_reminder(
     ``kind='invitation'`` outbox row) when no invitation outbox row exists
     for this invitation yet — so a single click always results in a
     deliverable message.
+
+    ``user`` is ``None`` for the 18G Part 3 scheduled-reminder trigger
+    (matches ``send_invitation``'s scheduled-trigger convention); the
+    fallback ``send_invitation`` call below tolerates that.
     """
     existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
     if existing_url is None:

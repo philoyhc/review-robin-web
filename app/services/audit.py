@@ -386,6 +386,20 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # for the UI to surface "operator just changed the auto-send
     # schedule" captions / banners.
     "session.invite_schedule_updated": EventSchema(_IDENTITY | {"changes"}),
+    # Segment 18G Part 3 — auto-send reminders. Mirrors the Part 2
+    # scheduled-invites family (per-offset fire tracking via
+    # ``context.offset_index`` + ``context.scheduled_at`` + ``anchor_at``;
+    # ``_fired`` also carries ``actual_fired_at`` for observer-lag
+    # late-fires, and ``counts.sent`` for the batch size). Per-reviewer
+    # dedup within a single offset's fire is layered on top via the
+    # ``EmailOutbox.correlation_id`` row stamp (``reminder:{sid}:{rid}:{idx}``),
+    # so a partial-failure re-pass doesn't double-send.
+    "session.scheduled_reminders_skipped": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
+    "session.scheduled_reminders_fired": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
