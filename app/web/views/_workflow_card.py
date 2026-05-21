@@ -426,29 +426,28 @@ def build_auto_send_invites_caption(
     review_session: ReviewSession,
 ) -> dict[str, str] | None:
     """Return the Workflow-card right-column caption for auto-send
-    invites (Segment 18G PR 2B + PR 2C), or ``None`` when nothing
-    to show.
+    invites, or ``None`` when nothing to show.
 
-    Originally rendered on the Manage Invitations page; consolidated
-    into the Workflow card alongside the scheduled-activation +
-    auto-send-reminders captions so the operator's lifecycle
-    signals all live in one place (since the Workflow card already
-    renders on Session Home + every Operations-row page).
-
-    Per the Part 2 plan section + the Part 1↔2 coordination
-    section:
+    Tones:
 
     - ``invite_offsets`` unset → ``None`` (nothing configured).
     - ``invite_offsets`` set + ``scheduled_activate_at`` unset →
-      amber-grey "inactive: no Start to anchor against" caption
-      (the §8.2.2 anchor-null state — operator just cleared Start
-      while invites were configured).
-    - ``invite_offsets`` set + Start set + invitations not yet
-      created → amber warning ("currently inactive: create
-      invitations before then or these will skip").
-    - ``invite_offsets`` set + Start set + invitations created →
-      green calm caption ("System will dispatch automatically;
-      you can also Send all now").
+      amber-grey "inactive: no Start to anchor against" (the
+      §8.2.2 anchor-null state).
+    - ``invite_offsets`` set + Start set + session not yet
+      Prepared (``draft``) → amber warning ("Prepare session
+      before then or these will skip"). The trigger
+      ``_observe_scheduled_invites`` skips with
+      ``reason="not_prepared"`` in this case to match the
+      operator-route gate ``_require_validated_or_ready``.
+    - ``invite_offsets`` set + Start set + Prepared (``validated``
+      or ``ready``) + invitations not yet created → amber
+      warning ("create invitations before then or these will
+      skip"). The trigger skips with
+      ``reason="invitations_not_created"`` in this case.
+    - ``invite_offsets`` set + Start set + Prepared + invitations
+      created → green calm caption ("System will dispatch
+      automatically; you can also Send all now").
     """
     offsets = review_session.invite_offsets or []
     if not isinstance(offsets, list) or not offsets:
@@ -485,6 +484,15 @@ def build_auto_send_invites_caption(
     earliest = min(fire_moments)
     earliest_text = date_formatting.format_datetime(earliest, session_tz)
 
+    if lifecycle.is_draft(review_session):
+        return {
+            "tone": "amber-warning",
+            "text": (
+                f"Auto-send scheduled at {earliest_text} — currently "
+                f"inactive: Prepare session before then or these "
+                f"will skip."
+            ),
+        }
     if not invitations.has_invitations(db, review_session.id):
         return {
             "tone": "amber-warning",

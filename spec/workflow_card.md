@@ -557,23 +557,41 @@ invalidation, fire-time skip semantics).
 #### Auto-send invites signal
 
 Built by `views.build_auto_send_invites_caption` from
-`sessions.invite_offsets` + `scheduled_activate_at`:
+`sessions.invite_offsets` + `scheduled_activate_at` + session
+state + whether any `Invitation` rows exist. Two preconditions
+gate the trigger:
 
-| `invite_offsets` | `scheduled_activate_at` | Invitations created? | Signal |
-| --- | --- | --- | --- |
-| empty / null | (any) | (any) | (none) |
-| set | unset | (any) | ⓘ "Auto-send invites are configured but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
-| set | set | no | ⚠ "Auto-send scheduled at «X» — currently inactive: create invitations before then or these will skip." |
-| set | set | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
+- **Prepared** — `session.status` is `validated` or `ready`. The
+  trigger refuses to dispatch from `draft` because manual Send
+  also refuses (via the operator route's
+  `_require_validated_or_ready` gate). The skip reason is
+  `not_prepared`.
+- **Invitations created** — at least one `Invitation` row exists
+  for the session. The skip reason is `invitations_not_created`.
+
+| `invite_offsets` | `scheduled_activate_at` | Prepared? | Invitations created? | Signal |
+| --- | --- | --- | --- | --- |
+| empty / null | (any) | (any) | (any) | (none) |
+| set | unset | (any) | (any) | ⓘ "Auto-send invites are configured but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
+| set | set | no (draft) | (any) | ⚠ "Auto-send scheduled at «X» — currently inactive: Prepare session before then or these will skip." |
+| set | set | yes | no | ⚠ "Auto-send scheduled at «X» — currently inactive: create invitations before then or these will skip." |
+| set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
 
 #### Auto-send reminders signal
 
 Built by `views.build_auto_send_reminders_caption` from
-`sessions.reminder_offsets` + `deadline` + whether any
-`Invitation` rows exist. Reminders piggyback on existing
-`Invitation` rows (each reminder reuses the previously-issued
-invitation URL), so the trigger requires invitations to be
-**created**, not necessarily sent.
+`sessions.reminder_offsets` + `deadline` + session state +
+whether any `Invitation` rows exist. Two preconditions gate the
+trigger:
+
+- **Prepared + activated** — `session.status == "ready"`. This
+  subsumes the auto-send-invites "Prepared" condition; reminders
+  fire only after the session has opened.
+- **Invitations created** — reminders piggyback on existing
+  `Invitation` rows (each reminder reuses the previously-issued
+  invitation URL), so the trigger requires invitations to be
+  **created**, not necessarily sent. The skip reason is
+  `no_invitations`.
 
 | `reminder_offsets` | `deadline` | Session `ready`? | Invitations created? | Signal |
 | --- | --- | --- | --- | --- |

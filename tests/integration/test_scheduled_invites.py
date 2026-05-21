@@ -211,9 +211,37 @@ def test_no_op_when_offset_in_future(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def test_skip_when_not_prepared(db: Session) -> None:
+    """invite_offsets due but session still in draft → skip with
+    reason=not_prepared (the trigger gates on validated/ready to
+    match the operator route's `_require_validated_or_ready`)."""
+    rs = _seed_session_with_reviewers(db, "skip-not-prep")
+    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    rs.scheduled_activate_at = start  # past → entry resolves to past
+    rs.invite_offsets = ["-PT2H"]
+    db.flush()
+    db.commit()
+
+    scheduled_events.observe_scheduled_events(
+        db, rs, build_invite_url=_stub_build_url
+    )
+    skipped = _audit_rows(db, rs, "session.scheduled_invites_skipped")
+    assert len(skipped) == 1
+    assert skipped[0].detail["reason"] == "not_prepared"
+    assert skipped[0].detail["context"]["offset_index"] == 0
+
+    # Second observer pass should not re-emit (dedup keyed on entry).
+    scheduled_events.observe_scheduled_events(
+        db, rs, build_invite_url=_stub_build_url
+    )
+    assert len(_audit_rows(db, rs, "session.scheduled_invites_skipped")) == 1
+
+
 def test_skip_when_invitations_not_created(db: Session) -> None:
-    """invite_offsets due but no Invitation rows → skip + dedup entry."""
+    """invite_offsets due + session prepared (validated) but no
+    Invitation rows → skip + dedup entry."""
     rs = _seed_session_with_reviewers(db, "skip-no-inv")
+    rs.status = lifecycle.SessionStatus.validated.value
     start = datetime.now(timezone.utc) - timedelta(hours=1)
     rs.scheduled_activate_at = start  # in the past — entry resolves to past
     rs.invite_offsets = ["-PT2H"]  # 2h before start → now - 3h, due

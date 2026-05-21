@@ -649,6 +649,14 @@ def _observe_scheduled_invites(
     anchor_iso = _ensure_aware_utc(locked.scheduled_activate_at).isoformat()
     consumed = _consumed_invite_offset_indices(db, locked, anchor_iso)
 
+    # Preconditions resolve once per pass — both apply uniformly to
+    # every entry firing in this observer call. Order matters:
+    # `not_prepared` is checked first because invitations are
+    # preserved across a revert to draft, so a stale session could
+    # otherwise fire invites from `draft` even though manual Send
+    # would refuse (the operator route `_require_validated_or_ready`
+    # gates the same way).
+    is_prepared = lifecycle.is_validated(locked) or lifecycle.is_ready(locked)
     has_invitations = invitations_service.has_invitations(db, locked.id)
 
     # Fire in chronological order so the audit log reads top-to-bottom.
@@ -657,6 +665,28 @@ def _observe_scheduled_invites(
         if offset_index in consumed:
             continue
         scheduled_iso = fire_at.isoformat()
+        if not is_prepared:
+            audit.write_event(
+                db,
+                event_type="session.scheduled_invites_skipped",
+                summary=(
+                    f"Scheduled invites for {locked.code} skipped "
+                    f"({offset_str}): not_prepared"
+                ),
+                actor_user_id=None,
+                session=locked,
+                reason="not_prepared",
+                context={
+                    "anchor_at": anchor_iso,
+                    "offset_index": offset_index,
+                    "offset": offset_str,
+                    "scheduled_at": scheduled_iso,
+                },
+                correlation_id=correlation_id,
+            )
+            consumed.add(offset_index)
+            db.commit()
+            continue
         if not has_invitations:
             audit.write_event(
                 db,
