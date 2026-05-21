@@ -219,21 +219,27 @@
         if (hidden) hidden.value = toggle.checked ? "true" : "";
       });
     }
-    // Gate the bottom Submit button on file-input presence. Walks the
+    // Gate the bottom Submit button on **both** a file being picked
+    // and the confirm-replace checkbox being ticked (when it
+    // renders — only the existing-session variant carries it; the
+    // new-session variant has no Submit button of its own, so the
+    // toggle-less path isn't reachable here in practice). Walks the
     // page (not the form, since inputs use ``form="..."`` to
     // associate) for any element marked ``data-quick-setup-file``.
     if (submit) {
       var inputs = document.querySelectorAll("[data-quick-setup-file]");
       function refresh() {
-        var any = false;
+        var anyFile = false;
         inputs.forEach(function (i) {
-          if (i.files && i.files.length > 0) any = true;
+          if (i.files && i.files.length > 0) anyFile = true;
         });
-        submit.disabled = !any;
+        var confirmed = toggle ? toggle.checked : true;
+        submit.disabled = !(anyFile && confirmed);
       }
       inputs.forEach(function (i) {
         i.addEventListener("change", refresh);
       });
+      if (toggle) toggle.addEventListener("change", refresh);
       refresh();
     }
   })();
