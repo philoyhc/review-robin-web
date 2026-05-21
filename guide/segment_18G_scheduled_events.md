@@ -465,6 +465,76 @@ notification emails to land *ahead of* the scheduled open
   invitations can be sent before activation, and on **Part 1**
   surfacing `scheduled_activate_at` as a configurable operator input.
 
+### Part 1 ↔ Part 2 coordination
+
+Start and Auto-send share an anchor relationship and a tight
+chronology — `invite_offsets` is anchored on
+`scheduled_activate_at`, and the save-time rules tie the two
+fields' valid ranges together. Five coordination behaviours,
+all shipped together with Part 2:
+
+**1. Editing Start re-resolves all `invite_offsets`.** Every
+save-time rule re-runs against the new anchor. If any offset
+now violates the per-entry rules (operational lead, reviewer
+notice gap), the editor errors per-entry on save. The operator
+fixes the conflicting entries or moves Start before they can
+save.
+
+**2. Unsetting Start while `invite_offsets` is non-empty.** No
+hard block at save — `invite_offsets` becomes inert via the
+§8.2.2 anchor-null rule. The editor surfaces an inline warning
+beneath the invite-offsets field: "Auto-send invites will
+become inactive — no Start to anchor against. They reactivate
+when Start is re-set." Same warning in reverse when
+`scheduled_activate_at` is set but `invite_offsets` is emptied
+(no impact, just an info caption: "Auto-send schedule cleared;
+Start remains scheduled for «X»").
+
+**3. Manual-activate before the scheduled time.** When the
+operator clicks Activate manually for a session with
+`scheduled_activate_at` and a non-empty `invite_offsets`:
+
+- `activate_session` runs immediately and clears
+  `scheduled_activate_at` in the same transaction.
+- `invite_offsets` stays in the column but becomes inert
+  (anchor-null). Any past-due `invite_offsets` entries that
+  hadn't fired (no operator visit between their resolved fire
+  moment and now) are **not** caught up — the operator uses
+  Send all manually to dispatch invitations going forward.
+- The Activate button's confirmation modal includes, when
+  `invite_offsets` is non-empty: "N scheduled auto-send(s) will
+  be cancelled. Continue with manual activation? You can use
+  Send all to dispatch invitations after activation."
+
+**4. Scheduled-activate catches up past-due `invite_offsets`.**
+When the observer fires at the scheduled Start time and the
+session is still `validated`, the same observer pass also
+sweeps any past-due `invite_offsets` entries (in chronological
+order) before firing activation. Missed invites land alongside
+activation as a final batch — this is just the lazy-observer
+default ("fire everything overdue on each visit"), not a
+special coordination path. Reviewers may receive the invite
+later than the operator originally targeted; the
+`session.scheduled_invites_fired` audit event carries both the
+scheduled-fire moment and the actual-fire moment.
+
+**5. Editor timeline preview.** When both `scheduled_activate_at`
+and `invite_offsets` are set, the editor renders a read-only
+**Schedule timeline** block beneath the inputs, listing the
+resolved fire moments in chronological order:
+
+```
+Schedule timeline (Asia/Singapore):
+  Sun May 31  9:00 AM — Auto-send invites fire (-P1D)
+  Mon Jun  1  7:00 AM — Auto-send invites fire (-PT2H)
+  Mon Jun  1  9:00 AM — Session activates (Start)
+```
+
+The operator can sanity-check the chronology before saving.
+The same primitive extends to Parts 3 / 4 / 5 entries when
+those land, so the timeline gradually becomes the full
+session-lifecycle visualisation.
+
 ### Part 3 — Auto-send reminders
 
 Scheduled, policy-driven reminder dispatch — **consolidated from
