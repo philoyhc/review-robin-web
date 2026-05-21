@@ -382,10 +382,52 @@ def test_caption_amber_warning_when_not_ready(db: Session) -> None:
     assert "activate the session" in caption["text"]
 
 
-def test_caption_green_when_ready(db: Session) -> None:
+def test_caption_amber_warning_when_ready_but_no_invitations(
+    db: Session,
+) -> None:
+    """Reminders piggyback on Invitation rows; with none created the
+    trigger skips with reason=no_invitations — the caption should
+    surface that as amber rather than misleading green."""
     from app.db.models import User
     from app.schemas.sessions import SessionCreate
     from app.services import sessions as sessions_service
+
+    op = User(email="op-rem-cap-amber-ni@example.edu", display_name="Op")
+    db.add(op)
+    db.flush()
+    rs = sessions_service.create_session(
+        db,
+        user=op,
+        payload=SessionCreate(name="t", code="rcap-amber-ni", description="d"),
+    )
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.reminder_offsets = ["-P1D"]
+    rs.status = lifecycle.SessionStatus.ready.value
+    db.flush()
+    db.commit()
+
+    caption = build_auto_send_reminders_caption(db, rs)
+    assert caption is not None
+    assert caption["tone"] == "amber-warning"
+    assert "create invitations" in caption["text"]
+
+
+def test_caption_green_when_ready_and_invitations_exist(
+    db: Session,
+) -> None:
+    from app.db.models import (
+        Assignment,
+        Instrument,
+        Reviewee,
+        Reviewer,
+        SessionRuleSet,
+        User,
+    )
+    from app.schemas.sessions import SessionCreate
+    from app.services import (
+        invitations as invitations_service,
+        sessions as sessions_service,
+    )
 
     op = User(email="op-rem-cap-green@example.edu", display_name="Op")
     db.add(op)
@@ -395,6 +437,40 @@ def test_caption_green_when_ready(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="rcap-green", description="d"),
     )
+    reviewer = Reviewer(
+        session_id=rs.id, name="A", email="a-rcap-green@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=rs.id,
+        name="C",
+        email_or_identifier="c-rcap-green@example.edu",
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    rule_set = db.execute(
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == rs.id,
+            SessionRuleSet.name == "Full Matrix",
+        )
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalar_one()
+    instrument.rule_set_id = rule_set.id
+    db.add(
+        Assignment(
+            session_id=rs.id,
+            instrument_id=instrument.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            include=True,
+        )
+    )
+    db.flush()
+    invitations_service.generate_invitations(
+        db, review_session=rs, user=op
+    )
+
     rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
     rs.reminder_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.ready.value
