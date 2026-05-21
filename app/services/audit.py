@@ -348,6 +348,21 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 18G Part 1 — scheduled activation. The trigger emits
+    # ``*_skipped`` on a one-shot precondition miss, ``*_retry`` on
+    # a transient transition failure (up to 3 retries from audit-log
+    # count), and ``*_failed_persistent`` on the 4th failure.
+    # ``session.activated``'s existing ``context`` envelope grows a
+    # ``trigger`` key (``operator`` / ``scheduled``); no schema change.
+    "session.scheduled_activation_skipped": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
+    "session.scheduled_activation_retry": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
+    "session.scheduled_activation_failed_persistent": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),

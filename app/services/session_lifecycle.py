@@ -229,16 +229,30 @@ def activate_session(
     db: Session,
     *,
     review_session: ReviewSession,
-    user: User,
+    user: User | None,
     report: ReadinessReport,
     acknowledge_warnings: bool,
     correlation_id: str | None = None,
+    trigger: str = "operator",
 ) -> ReviewSession:
     """Flip session to ``ready`` and open every instrument.
 
     Requires the session to be in ``validated`` (T2). Raises ``LifecycleError``
     if the readiness report has errors, or if it has warnings/info and the
     operator did not pass ``acknowledge_warnings``.
+
+    ``user`` is the operator who clicked Activate; pass ``None`` when
+    the call comes from the Segment 18G scheduled-activation trigger
+    (``actor_user_id`` on the audit event matches the
+    ``observe_deadline`` convention). ``trigger`` flows into
+    ``context.trigger`` on the ``session.activated`` audit event so
+    operator-vs-scheduled provenance is visible in the log.
+
+    On success the function also **clears**
+    ``scheduled_activate_at`` in the same transaction — the Part 1
+    "manual-activate consumes the schedule" / "scheduled-trigger
+    consumes the schedule" rule. Either way, once the session is
+    ``ready`` the schedule has done its job.
     """
     if not is_validated(review_session):
         raise LifecycleError(
@@ -265,6 +279,10 @@ def activate_session(
     # activate cycles don't overwrite it.
     if review_session.activated_at is None:
         review_session.activated_at = datetime.now(timezone.utc)
+    # Consume the scheduled-activation column (Segment 18G Part 1).
+    # Whether activation fired via the scheduled trigger or via a
+    # manual click during the window, the schedule has done its job.
+    review_session.scheduled_activate_at = None
     instruments = list(
         db.execute(
             select(Instrument).where(Instrument.session_id == review_session.id)
@@ -284,7 +302,7 @@ def activate_session(
         db,
         event_type="session.activated",
         summary=f"Session {review_session.code} activated",
-        actor_user_id=user.id,
+        actor_user_id=user.id if user is not None else None,
         session=review_session,
         payload=audit.counts(
             warnings=len(report.warnings),
@@ -294,6 +312,7 @@ def activate_session(
         context={
             "prev_status": prev_status,
             "override_warnings": bool(report.has_non_blocking_findings),
+            "trigger": trigger,
         },
         correlation_id=correlation_id,
     )
@@ -306,6 +325,7 @@ def activate_session(
             "code": review_session.code,
             "instruments": len(instruments),
             "override_warnings": bool(report.has_non_blocking_findings),
+            "trigger": trigger,
             "correlation_id": correlation_id,
         },
     )

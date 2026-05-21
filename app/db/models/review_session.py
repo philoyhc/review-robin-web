@@ -81,7 +81,7 @@ class ReviewSession(Base, TimestampMixin):
     # record** of when activation actually fired. Two columns, one
     # for each side of the trigger/record split.
     scheduled_activate_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True), nullable=True, index=True
     )
     # The Participants-platform "reviewees can view responses from
     # this point" anchor — pre-positioned inert so future
