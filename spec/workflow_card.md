@@ -103,6 +103,20 @@ its template context via `**workflow_ctx`. The builder lives in
   confirmation banner in the card body. `None` outside the
   Prepare-button's `?prepare_confirm=responses` detour and
   whenever a run would delete no responses.
+- `scheduled_activation_caption` — `dict | None`. Right-column
+  caption describing the state of `sessions.scheduled_activate_at`
+  (the operator-set Start anchor), built by
+  `build_scheduled_activation_caption`. Shape: `{"tone": ..., "text": ...}`
+  with tones `"amber-warning"` / `"amber-grey-skipped"` /
+  `"green-calm"`. `None` when there's nothing to surface. Segment
+  18G Part 1. See §"Scheduled-activation caption" below.
+- `manual_activate_cancellation` — `dict | None`. Confirmation-
+  modal payload for the Activate button when a manual Activate
+  click would cancel pending auto-sends, built by
+  `build_manual_activate_cancellation`. Shape:
+  `{"text": "N scheduled auto-send(s) will be cancelled…",
+  "count": int, "pending_fires": list[str]}`. `None` when nothing
+  would be cancelled. Segment 18G PR 2C.
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -473,7 +487,7 @@ id="next-action-status">` block. Per-state content:
 
 | State | Right column content |
 | --- | --- |
-| **1** (setup empty) | Setup-completion checklist (`Setup checklist` heading + three `<li>` rows: Reviewers, Reviewees, Instruments (all rules pinned), each with a ✓ or ✗ pill + a deep link to the relevant Operations-row page). |
+| **1** (setup empty) | Setup-completion checklist (`Setup checklist` heading + three `<li>` items laid out **on one row** via `flex-direction: row` on `.next-action-checklist` — Reviewers, Reviewees, Instruments (all rules pinned), each with a ✓ or ✗ pill + a deep link to the relevant Operations-row page; wraps to additional rows on narrow viewports). |
 | **2** (draft, no summary) | Empty. |
 | **3** (validation failed) | `Validation issues` heading + pill row (error / warning / info counts) + per-issue list (rendered by `operator/partials/_next_action_issue_list.html`). |
 | **4** (validated, no warnings, no invites) | `Status` heading + "Setup validated." |
@@ -482,12 +496,14 @@ id="next-action-status">` block. Per-state content:
 | **5 / 6** (validated + invites) | Currently shares State 4's aside ("Setup validated."); invite-counter and deadline asides can land as a follow-up. |
 | **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
-### Scheduled-activation caption (Segment 18G Part 1 — forthcoming)
+### Scheduled-activation caption (Segment 18G Part 1)
 
-When **18G Part 1** ships, the right column also surfaces an
-amber / green caption describing the state of
-`sessions.scheduled_activate_at` (the operator-set Start
-anchor). Caption logic, by state × `scheduled_activate_at`:
+The right column also surfaces an amber / green caption
+describing the state of `sessions.scheduled_activate_at` (the
+operator-set Start anchor), built by
+`views.build_scheduled_activation_caption` and consumed via the
+`scheduled_activation_caption` context key. Caption logic, by
+state × `scheduled_activate_at`:
 
 | Session state | `scheduled_activate_at` | Caption |
 | --- | --- | --- |
@@ -503,6 +519,22 @@ above the workflow-failure banner. See
 `guide/segment_18G_scheduled_events.md` Part 1 for the
 service-side contract (editor gate, persistence across
 invalidation, fire-time skip semantics).
+
+### Manual-activate cancellation modal (Segment 18G PR 2C)
+
+The Activate button grows a confirmation modal when a manual
+Activate click would cancel pending auto-sends — i.e. when
+`scheduled_activate_at` is set in the future or one or more
+`invite_offsets` entries still resolve to a future fire moment.
+The `manual_activate_cancellation` context key (`None` when
+nothing would be cancelled) carries the payload: a count, a list
+of pending-fire labels, and the operator-facing prose
+("N scheduled auto-send(s) will be cancelled. Continue with
+manual activation?"). On confirm, the existing
+`/workflow/activate` POST runs and `scheduled_activate_at`
+clears in the same transaction; `invite_offsets` stays on the
+column but becomes inert via the §8.2.2 anchor-null rule (per
+`spec/lifecycle.md`).
 
 ### Workflow failure banner
 
@@ -532,8 +564,8 @@ routes:
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready`) | `lifecycle.revert_session_to_draft` | `ready` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `ready` (Part 2 relaxes to `validated`) | unchanged | `invitations.generated` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `ready` (Part 2 relaxes to `validated`) | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `validated` or `ready` (via `_require_validated_or_ready` — 18F Part 2's Activated-as-gate relaxation) | unchanged | `invitations.generated` |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
 
 The per-step `/assignments/generate` and `/activate` routes
