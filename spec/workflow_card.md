@@ -501,11 +501,11 @@ route without the form's hidden field) fall back to
 ## Right column — per state
 
 The right column is a `<aside class="next-action-status"
-id="next-action-status">` block. As of 2026-05-21 the schedule-
-event captions and the workflow-failure message are **not**
-here any more — they consolidated into the left-column body as
-icon-prefixed signal lines (see §"Left-column signals" below).
-The right column now carries only the per-state status detail:
+id="next-action-status">` block. It carries the schedule-event
++ workflow-failure signal lines at the top (see §"Right-column
+signals" below for the icon-coded treatment, which replaced the
+earlier `.banner` flash cards on 2026-05-21), then the per-state
+status detail listed below:
 
 | State | Right column content |
 | --- | --- |
@@ -518,16 +518,16 @@ The right column now carries only the per-state status detail:
 | **5 / 6** (validated + invites) | Currently shares State 4's aside ("Setup validated."); invite-counter and deadline asides can land as a follow-up. |
 | **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
-### Left-column signals (consolidated 2026-05-21)
+### Right-column signals (consolidated 2026-05-21)
 
 The four schedule-event + failure messages — scheduled
 activation, auto-send invites, auto-send reminders, workflow-
-failure — render as **inline icon-prefixed lines in the
-left-column body**, immediately below the per-state body copy.
-No background colour, no border, no card chrome: each is a
-single short line led by a tone-coded glyph so the right column
-stays a calm summary rather than a stack of coloured flash
-cards.
+failure — render as **inline icon-prefixed lines at the top of
+the right-column aside**, above the per-state Setup-checklist /
+Validation-issues content. No background colour, no border, no
+card chrome: each is a single short line led by a tone-coded
+glyph, so the column reads as one calm summary rather than a
+stack of coloured flash cards.
 
 The signals live inside a `.next-action-signals` flex column.
 Each line is a `.next-action-signal.next-action-signal--<tone>`
