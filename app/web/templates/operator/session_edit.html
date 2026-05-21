@@ -209,17 +209,14 @@
         </table>
 
         {% if owner_candidates %}
-          <h4 style="margin-bottom: var(--space-2);">Add owner</h4>
-          {# Layout mirrors the Reviewers "Operator actions" card —
-             input and submit on the same row with a flex gap; the
-             submit starts ``disabled`` until the email field has
-             content. #}
+          <h4 style="margin: var(--space-3) 0 var(--space-1) 0;">Add owner</h4>
+          {# Email input spans the full card width on row 1; submit
+             button flushed right on row 2. Submit starts ``disabled``
+             until the email field has content. #}
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/owners/add"
-                id="add-owner-form"
-                style="display: flex; flex-wrap: wrap; align-items: flex-end;
-                       gap: var(--space-3);">
-            <label style="flex: 1 1 0; min-width: 0;">
+                id="add-owner-form">
+            <label style="display: block;">
               Pick or search a workspace operator:
               <input type="email"
                      id="add-owner-email"
@@ -228,18 +225,20 @@
                      autocomplete="off"
                      required
                      placeholder="email"
-                     style="width: 100%;">
+                     style="width: 100%; box-sizing: border-box;">
             </label>
             <datalist id="owner-candidates">
               {% for candidate in owner_candidates %}
                 <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
               {% endfor %}
             </datalist>
-            <button class="btn"
-                    type="submit"
-                    id="add-owner-submit"
-                    disabled
-                    aria-disabled="true">Add owner</button>
+            <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
+              <button class="btn"
+                      type="submit"
+                      id="add-owner-submit"
+                      disabled
+                      aria-disabled="true">Add owner</button>
+            </div>
           </form>
           <script>
             (function () {
