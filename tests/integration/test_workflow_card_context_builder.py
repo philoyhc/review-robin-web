@@ -90,6 +90,7 @@ _EXPECTED_KEYS = {
     "super_failure",
     "prepare_confirm",
     "scheduled_activation_caption",
+    "manual_activate_cancellation",
     "next_action_return_to",
 }
 

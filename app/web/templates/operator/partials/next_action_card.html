@@ -177,9 +177,17 @@
       </form>
     {% endif %}
     {% if _activate_live and not _activate_needs_warnings_detour %}
+      {# 18G PR 2C — when invite_offsets is non-empty and Start is
+         scheduled, attach a confirmation message via data attribute.
+         The inline script at the bottom of the partial intercepts
+         submit and shows a browser confirm dialog so the operator
+         acknowledges that manual Activate cancels the remaining
+         auto-sends (clears scheduled_activate_at; invite_offsets
+         becomes inert via anchor-null). #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/workflow/activate"
-            id="next-action-activate-session-form">
+            id="next-action-activate-session-form"
+            {% if manual_activate_cancellation %}data-manual-activate-confirm="{{ manual_activate_cancellation.message }}"{% endif %}>
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
         {% endif %}
@@ -408,3 +416,24 @@
     </aside>
   </div>
 </div>
+
+{# 18G PR 2C — manual-activate cancellation modal. When the Activate
+   form carries the data-manual-activate-confirm attribute (i.e.
+   invite_offsets is non-empty and Start is scheduled), a browser
+   confirm() asks the operator to acknowledge that the remaining
+   auto-sends will be cancelled. Native confirm is the smallest UX
+   surface here — no new modal CSS, screen-reader-friendly out of
+   the box. #}
+<script>
+(function () {
+  var form = document.getElementById('next-action-activate-session-form');
+  if (!form) return;
+  var msg = form.getAttribute('data-manual-activate-confirm');
+  if (!msg) return;
+  form.addEventListener('submit', function (event) {
+    if (!window.confirm(msg)) {
+      event.preventDefault();
+    }
+  });
+})();
+</script>
