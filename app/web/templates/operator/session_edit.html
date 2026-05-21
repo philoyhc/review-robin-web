@@ -11,10 +11,17 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Treat Edit Session Details as a child page of Session Home —
+     mirrors the Rule Builder page's back-link affordance. #}
+  <a class="back-link"
+     href="/operator/sessions/{{ session.id }}">← Back to Session Home</a>
+
   <div class="card">
     <h2>Edit session details</h2>
 
-    <form method="post" action="/operator/sessions/{{ session.id }}/edit">
+    <form method="post"
+          id="edit-session-form"
+          action="/operator/sessions/{{ session.id }}/edit">
       <div class="page-grid" style="margin-bottom: 0;">
         <div>
           <label for="name">Name</label>
@@ -118,97 +125,168 @@
         </div>
       </div>
 
-      {% include "operator/partials/_schedule_timeline.html" %}
-
-      <div class="btn-pair" style="margin-top: 20px;">
-        <button class="btn" type="submit">Save changes</button>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
-      </div>
     </form>
+
+    {# Schedule timeline + Owners, half-width siblings inside the
+       Edit Session Details card. Owners has its own POST forms
+       (Add / Remove) — they sit after the edit-session-form closes
+       so we don't nest forms. The Save button below re-associates
+       with the edit-session-form via the `form=` attribute. #}
+    <div class="edit-half-grid" style="display: flex; gap: 16px; align-items: flex-start; margin-top: 20px;">
+      <div class="card edit-half-card" style="flex: 1 1 0; min-width: 0;">
+        {% if schedule_timeline_rows %}
+          <h3 style="margin-top: 0;">Schedule timeline</h3>
+          <p class="muted" style="margin: 0 0 var(--space-2) 0;">
+            Resolved fire moments for the anchors + offsets above.
+            Saved values; changes take effect after Save.
+          </p>
+          <table style="margin-top: var(--space-2);">
+            <tr>
+              <th>When</th>
+              <th>Event</th>
+            </tr>
+            {% for row in schedule_timeline_rows %}
+              <tr>
+                <td>{{ row.at }}</td>
+                <td>{{ row.label }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <h3 style="margin-top: 0;">Schedule timeline</h3>
+          <p class="muted" style="margin: 0;">
+            No anchors or offsets set yet — once you save a Start
+            or End plus matching offsets, the resolved fire
+            moments appear here.
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="card edit-half-card" id="owners" style="flex: 1 1 0; min-width: 0;">
+        <h3 style="margin-top: 0;">Owners</h3>
+        <p class="muted">
+          Workspace operators with full edit access on this session.
+          The session always retains at least one owner.
+        </p>
+
+        {% if owners_error %}
+          <div class="card banner-scroll-target" role="alert">
+            <p>
+              {% if owners_error == "already_owner" %}
+                That user is already an owner of this session.
+              {% elif owners_error == "not_in_workspace" %}
+                That user isn't on the workspace operator allowlist.
+                Admit them via <code>Admin → Accounts Management</code> first.
+              {% elif owners_error == "not_owner" %}
+                That user isn't an owner of this session anymore.
+              {% else %}
+                Couldn't apply that change ({{ owners_error }}).
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+
+        <table>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Joined</th>
+            <th class="col-shrink">Action</th>
+          </tr>
+          {% for owner in owners %}
+            <tr>
+              <td><code>{{ owner.email }}</code></td>
+              <td>{{ owner.display_name or "—" }}</td>
+              <td>{{ owner.role }}</td>
+              <td>{{ owner.joined_at | format_date }}</td>
+              <td class="col-shrink">
+                <form method="post"
+                      style="display:inline"
+                      action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
+                  <button class="chrome-link" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+
+        {% if owner_candidates %}
+          <h4 style="margin-bottom: var(--space-2);">Add owner</h4>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/owners/add">
+            <label>
+              Pick or search a workspace operator:
+              <input type="email"
+                     name="target_email"
+                     list="owner-candidates"
+                     autocomplete="off"
+                     required
+                     placeholder="email">
+            </label>
+            <datalist id="owner-candidates">
+              {% for candidate in owner_candidates %}
+                <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
+              {% endfor %}
+            </datalist>
+            <button class="btn" type="submit">Add owner</button>
+          </form>
+        {% else %}
+          <p class="muted">
+            No more workspace operators available to add. Admit a
+            new user via <code>Admin → Accounts Management</code>
+            first.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="btn-pair" style="margin-top: 20px;">
+      <button class="btn"
+              type="submit"
+              form="edit-session-form"
+              id="edit-save-btn"
+              disabled>Save changes</button>
+      <button class="btn secondary"
+              type="button"
+              id="edit-cancel-btn"
+              disabled>Cancel</button>
+    </div>
   </div>
 
   {% include "operator/partials/_timezone_preview.html" %}
 
-  {# Owners management — Segment 16B PR 2. Reachable from this
-     page for owners (normal route) and for sys-admins on
-     non-member sessions (relaxed gate). #}
-  <div class="card" id="owners">
-    <h2 style="margin-top: 0;">Owners</h2>
-    <p class="muted">
-      Workspace operators with full edit access on this session.
-      Add another owner from the workspace operator allowlist; the
-      session always retains at least one owner (the last
-      remaining owner can't be removed).
-    </p>
+  {# Dirty-tracking: Save + Cancel disabled until any input on
+     the form changes. Save submits; Cancel resets the form to
+     its initial values (no page nav). #}
+  <script>
+    (function () {
+      const form = document.getElementById("edit-session-form");
+      const saveBtn = document.getElementById("edit-save-btn");
+      const cancelBtn = document.getElementById("edit-cancel-btn");
+      if (!form || !saveBtn || !cancelBtn) return;
 
-    {% if owners_error %}
-      <div class="card banner-scroll-target" role="alert">
-        <p>
-          {% if owners_error == "already_owner" %}
-            That user is already an owner of this session.
-          {% elif owners_error == "not_in_workspace" %}
-            That user isn't on the workspace operator allowlist.
-            Admit them via <code>Admin → Accounts Management</code>
-            first.
-          {% elif owners_error == "not_owner" %}
-            That user isn't an owner of this session anymore.
-          {% else %}
-            Couldn't apply that change ({{ owners_error }}).
-          {% endif %}
-        </p>
-      </div>
-    {% endif %}
+      const fields = form.querySelectorAll("input[name], textarea[name], select[name]");
+      const initial = new Map();
+      fields.forEach((el) => { initial.set(el, el.value); });
 
-    <table>
-      <tr>
-        <th>Email</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Joined</th>
-        <th class="col-shrink">Action</th>
-      </tr>
-      {% for owner in owners %}
-        <tr>
-          <td><code>{{ owner.email }}</code></td>
-          <td>{{ owner.display_name or "—" }}</td>
-          <td>{{ owner.role }}</td>
-          <td>{{ owner.joined_at | format_date }}</td>
-          <td class="col-shrink">
-            <form method="post"
-                  style="display:inline"
-                  action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
-              <button class="chrome-link" type="submit">Remove</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-    </table>
-
-    {% if owner_candidates %}
-      <h3>Add owner</h3>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/owners/add">
-        <label>
-          Pick or search a workspace operator:
-          <input type="email"
-                 name="target_email"
-                 list="owner-candidates"
-                 autocomplete="off"
-                 required
-                 placeholder="email">
-        </label>
-        <datalist id="owner-candidates">
-          {% for candidate in owner_candidates %}
-            <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
-          {% endfor %}
-        </datalist>
-        <button class="btn" type="submit">Add owner</button>
-      </form>
-    {% else %}
-      <p class="muted">
-        No more workspace operators available to add. Admit a new
-        user via <code>Admin → Accounts Management</code> first.
-      </p>
-    {% endif %}
-  </div>
+      function isDirty() {
+        for (const el of fields) {
+          if (el.value !== initial.get(el)) return true;
+        }
+        return false;
+      }
+      function refresh() {
+        const dirty = isDirty();
+        saveBtn.disabled = !dirty;
+        cancelBtn.disabled = !dirty;
+      }
+      form.addEventListener("input", refresh);
+      form.addEventListener("change", refresh);
+      cancelBtn.addEventListener("click", function () {
+        fields.forEach((el) => { el.value = initial.get(el); });
+        refresh();
+      });
+    })();
+  </script>
 {% endblock %}

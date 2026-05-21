@@ -151,16 +151,66 @@ def test_session_edit_form_lives_inside_a_card(
 ) -> None:
     session = _create_session(client, db, code="rrw-edit3")
     body = client.get(f"/operator/sessions/{session.id}/edit").text
-    # Form is wrapped in a single `.card` (between the chrome and the
-    # script tag at the foot of base.html).
+    # Form is wrapped in a `.card` (Edit Session Details) and carries
+    # the `edit-session-form` id so the Save button below the half-
+    # width Schedule timeline + Owners row can re-associate via the
+    # HTML5 `form=` attribute.
     assert "<div class=\"card\">" in body
+    assert 'id="edit-session-form"' in body
+    assert f'action="/operator/sessions/{session.id}/edit"' in body
+    # Save = primary (`btn`); Cancel = secondary; both disabled until
+    # an input changes (the dirty-tracking JS clears `disabled` on
+    # first edit and re-disables on full revert / after Cancel).
+    assert 'id="edit-save-btn"' in body
+    assert 'id="edit-cancel-btn"' in body
+    assert 'form="edit-session-form"' in body
+
+
+def test_session_edit_has_back_link_to_session_home(
+    client: TestClient, db: Session
+) -> None:
+    """Edit Session is a child page of Session Home — same back-link
+    affordance as the Rule Builder page."""
+    session = _create_session(client, db, code="rrw-edit-back")
+    body = client.get(f"/operator/sessions/{session.id}/edit").text
     assert (
-        f'<form method="post" action="/operator/sessions/{session.id}/edit">'
+        f'<a class="back-link"\n     href="/operator/sessions/{session.id}">'
         in body
     )
-    # Save = Primary (default `.btn`); Cancel = Secondary.
-    assert '<button class="btn" type="submit">Save changes</button>' in body
-    assert (
-        f'<a class="btn secondary" href="/operator/sessions/{session.id}">Cancel</a>'
-        in body
+    assert "Back to Session Home" in body
+
+
+def test_session_edit_save_redirects_back_to_edit(
+    client: TestClient, db: Session
+) -> None:
+    """Save stays on the Edit page rather than jumping to Session Home."""
+    session = _create_session(client, db, code="rrw-edit-stay")
+    response = client.post(
+        f"/operator/sessions/{session.id}/edit",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "description": session.description or "",
+        },
+        follow_redirects=False,
     )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/edit"
+    )
+
+
+def test_session_edit_owners_card_is_half_width_inside_edit_card(
+    client: TestClient, db: Session
+) -> None:
+    """Owners now lives inside the Edit Session Details card as a
+    half-width sibling of the Schedule timeline (no longer its own
+    top-level card)."""
+    session = _create_session(client, db, code="rrw-edit-own")
+    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    # The half-width flex container holds both cards.
+    assert 'class="edit-half-grid"' in body
+    # Owners pane carries the original #owners anchor + the half-card class.
+    assert 'class="card edit-half-card" id="owners"' in body
+    # Schedule timeline pane is the sibling.
+    assert "Schedule timeline" in body

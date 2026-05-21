@@ -326,8 +326,11 @@ def session_edit_submit(
         payload=payload,
         correlation_id=correlation_id,
     )
+    # Stay on the Edit page after Save (per the page's child-of-
+    # Session-Home framing); the operator clicks the back-link to
+    # return to Session Home explicitly.
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=f"/operator/sessions/{review_session.id}/edit",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
