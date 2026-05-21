@@ -462,6 +462,14 @@ class ScheduledActivateError(ValueError):
     """
 
 
+# Per spec/guide/segment_18G_scheduled_events.md Part 0b, the offset
+# String(16) column is sized for a 10-day cap on any single offset.
+# Enforced here at the editor/validator level — the schema doesn't
+# itself reject longer strings (`-P9999D` would fit in 16 chars but
+# is operationally meaningless).
+_OFFSET_MAX_MAGNITUDE = timedelta(days=10)
+
+
 def parse_and_validate_scheduled_activate_at(
     raw: str | None,
     *,
@@ -1104,6 +1112,13 @@ def parse_and_validate_invite_offsets(
                 f"Auto-send invite {entry!r} isn't a valid ISO 8601 duration."
             ) from exc
 
+        if abs(delta) > _OFFSET_MAX_MAGNITUDE:
+            raise ScheduledActivateError(
+                f"Auto-send invite {entry} exceeds the 10-day "
+                f"maximum offset magnitude; choose a smaller "
+                f"duration."
+            )
+
         if scheduled_activate_at is not None:
             anchor = _ensure_aware_utc(scheduled_activate_at)
             fire_at = anchor + delta
@@ -1185,6 +1200,13 @@ def parse_and_validate_reminder_offsets(
             raise ScheduledActivateError(
                 f"Auto-send reminder {entry!r} isn't a valid ISO 8601 duration."
             ) from exc
+
+        if abs(delta) > _OFFSET_MAX_MAGNITUDE:
+            raise ScheduledActivateError(
+                f"Auto-send reminder {entry} exceeds the 10-day "
+                f"maximum offset magnitude; choose a smaller "
+                f"duration."
+            )
 
         if deadline is not None:
             anchor = _ensure_aware_utc(deadline)

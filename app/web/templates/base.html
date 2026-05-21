@@ -1726,24 +1726,25 @@
       body.ui-v2 .card.next-action .next-action-status {
         min-width: 0;
       }
-      body.ui-v2 .card.next-action .next-action-status-heading {
-        font-size: var(--font-size-base);
+      /* Per-state status line: a single paragraph carrying the
+         inline label (`<strong>X</strong> —`) plus its content.
+         The content (count pills, checklist pills + links) flows
+         after the em dash on the same line and wraps as needed.
+         Replaces the earlier `<h3>` heading on a separate row. */
+      body.ui-v2 .card.next-action .next-action-status-line {
         margin: 0 0 var(--space-2) 0;
-      }
-      body.ui-v2 .card.next-action .next-action-checklist {
-        list-style: none;
-        padding: 0;
-        margin: 0;
         display: flex;
-        flex-direction: row;
         flex-wrap: wrap;
-        column-gap: var(--space-4);
+        align-items: center;
+        column-gap: var(--space-2);
         row-gap: var(--space-2);
       }
-      body.ui-v2 .card.next-action .next-action-checklist > li {
-        display: flex;
+      body.ui-v2 .card.next-action .next-action-checklist-inline {
+        display: inline-flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: var(--space-2);
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
       }
       body.ui-v2 .card.next-action .next-action-issue-list {
         list-style: none;

@@ -180,8 +180,11 @@ CSV export.
 — the worst-case representation `-PT240H` is 7 chars, so
 `String(16)` carries comfortable headroom while still being
 short enough for SQLite/Postgres index-friendliness later. The
-cap is enforced at the editor / validator (consumer Part), not
-by the schema.
+cap is enforced at the editor / validator
+(`_OFFSET_MAX_MAGNITUDE = timedelta(days=10)` in
+`app/services/scheduled_events.py`, applied per-entry in
+`parse_and_validate_invite_offsets` and
+`parse_and_validate_reminder_offsets`), not by the schema.
 
 **Cross-cutting rules.** Two related rules apply to every
 (anchor, offset) pair — documented once in `spec/lifecycle.md`
@@ -701,13 +704,14 @@ save.
 
 **2. Unsetting Start while `invite_offsets` is non-empty.** No
 hard block at save — `invite_offsets` becomes inert via the
-§8.2.2 anchor-null rule. The editor surfaces an inline warning
-beneath the invite-offsets field: "Auto-send invites will
-become inactive — no Start to anchor against. They reactivate
-when Start is re-set." Same warning in reverse when
-`scheduled_activate_at` is set but `invite_offsets` is emptied
-(no impact, just an info caption: "Auto-send schedule cleared;
-Start remains scheduled for «X»").
+§8.2.2 anchor-null rule. The Workflow card's right-column
+auto-send-invites caption surfaces this as amber-grey ("Auto-
+send invites are configured but currently inactive — no Start
+to anchor against. They reactivate when Start is re-set.").
+The earlier plan called for an additional under-field inline
+warning and a reverse "Auto-send schedule cleared; Start
+remains scheduled for «X»" caption; both were dropped — the
+consolidated right-column caption is the single signal channel.
 
 **3. Manual-activate before the scheduled time.** When the
 operator clicks Activate manually for a session with
@@ -958,10 +962,18 @@ When parts ship:
 
 ## Working notes
 
-- _(placeholder for decisions during PR scoping)_
-- **Part 0 shipped 2026-05-20.** Parts 1–5 are unblocked on
-  schema and ready to scope; start with Part 1 (scheduled
-  activation) because it establishes the shared dispatch
-  mechanism Parts 2–5 reuse, plus surfaces
-  `scheduled_activate_at` as a configurable operator input
-  (Part 2 depends on that).
+- **Parts 0 / 1 / 2 / 3 shipped 2026-05-20 → 2026-05-21.** See
+  the per-Part Status preambles for the PR refs.
+- **Parts 4 (auto-archive) / 5 (scheduled purge) outstanding.**
+  Both schema-unblocked; the shared lazy-observer dispatch and
+  audit-event family are settled.
+- **Carve-outs:** Part 3c (targeted reminder cohorts) and Part
+  3d (reminders analytics card) carved to
+  `guide/deferred_until_pilot_feedback.md` — post-MVP, lift on
+  pilot signal.
+- **Plan items dropped as superseded by the consolidated
+  right-column captions:** the under-field inline editor
+  warnings and the "Auto-send schedule cleared" info caption
+  originally listed in Part 1 ↔ Part 2 coordination item 2.
+  The Workflow card's right-column auto-send captions are the
+  single signal channel.
