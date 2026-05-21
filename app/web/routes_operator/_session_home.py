@@ -32,6 +32,7 @@ from app.services import (
     date_formatting,
     operator_settings,
     responses,
+    scheduled_events,
     session_owners,
     sessions,
     validation,
@@ -95,6 +96,13 @@ def session_detail(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    # Lazy observer for scheduled lifecycle events (Segment 18G).
+    # No-op until PR 1B wires the first trigger; the call site lives
+    # here so the operator's primary landing page always runs the
+    # sweep before rendering.
+    scheduled_events.observe_scheduled_events(
+        db, review_session, correlation_id=request_correlation_id()
+    )
     setup_rows = views.build_setup_rows(db, review_session)
     workflow_ctx = views.build_workflow_card_context(
         db,
