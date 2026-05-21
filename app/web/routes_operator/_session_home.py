@@ -143,6 +143,10 @@ def session_detail(
             "session_timezone_label": date_formatting.gmt_offset_zone_label(
                 sessions.resolve_session_timezone(review_session)
             ),
+            "schedule_timeline_rows": views.build_schedule_timeline(
+                review_session,
+                sessions.resolve_session_timezone(review_session),
+            ),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },
