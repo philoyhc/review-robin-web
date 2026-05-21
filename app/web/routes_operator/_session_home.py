@@ -97,11 +97,16 @@ def session_detail(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     # Lazy observer for scheduled lifecycle events (Segment 18G).
-    # No-op until PR 1B wires the first trigger; the call site lives
-    # here so the operator's primary landing page always runs the
-    # sweep before rendering.
+    # Fires past-due triggers (activation PR 1B; auto-send invites
+    # PR 2A) before rendering. ``build_invite_url`` closes over the
+    # request so the invite-dispatch path can build absolute URLs.
     scheduled_events.observe_scheduled_events(
-        db, review_session, correlation_id=request_correlation_id()
+        db,
+        review_session,
+        correlation_id=request_correlation_id(),
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
     )
     setup_rows = views.build_setup_rows(db, review_session)
     workflow_ctx = views.build_workflow_card_context(

@@ -367,6 +367,18 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"reason", "context"}
     ),
     "session.activation_scheduled": EventSchema(_IDENTITY | {"changes"}),
+    # Segment 18G Part 2 — auto-send invitations. Per-entry fire
+    # tracking via ``context.offset_index`` + ``context.scheduled_at``
+    # in both events; the fired event also carries
+    # ``context.actual_fired_at`` so late-fires from observer lag are
+    # observable. ``counts.sent`` (also in *_fired*) records how many
+    # invitations were dispatched on the entry's fire.
+    "session.scheduled_invites_skipped": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
+    "session.scheduled_invites_fired": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
@@ -457,7 +469,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "invitations.generated": EventSchema(_IDENTITY | {"set_changes"}),
     "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
     "invitations.regenerated": EventSchema(_IDENTITY | {"set_changes"}),
-    "invitation.sent": EventSchema(_IDENTITY | {"refs"}),
+    "invitation.sent": EventSchema(_IDENTITY | {"refs", "context"}),
     "invitation.opened": EventSchema(_IDENTITY | {"refs"}),
     "reminders.sent": EventSchema(_IDENTITY | {"set_changes", "context"}),
     # PR 4 — responses
