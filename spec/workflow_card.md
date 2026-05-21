@@ -501,7 +501,11 @@ route without the form's hidden field) fall back to
 ## Right column — per state
 
 The right column is a `<aside class="next-action-status"
-id="next-action-status">` block. Per-state content:
+id="next-action-status">` block. As of 2026-05-21 the schedule-
+event captions and the workflow-failure message are **not**
+here any more — they consolidated into the left-column body as
+icon-prefixed signal lines (see §"Left-column signals" below).
+The right column now carries only the per-state status detail:
 
 | State | Right column content |
 | --- | --- |
@@ -514,14 +518,33 @@ id="next-action-status">` block. Per-state content:
 | **5 / 6** (validated + invites) | Currently shares State 4's aside ("Setup validated."); invite-counter and deadline asides can land as a follow-up. |
 | **7 / 8 / 9** (ready) | Currently empty (invitation-status counters deferred to a future iteration). |
 
-### Scheduled-activation caption (Segment 18G Part 1)
+### Left-column signals (consolidated 2026-05-21)
 
-The right column also surfaces an amber / green caption
-describing the state of `sessions.scheduled_activate_at` (the
-operator-set Start anchor), built by
-`views.build_scheduled_activation_caption` and consumed via the
-`scheduled_activation_caption` context key. Caption logic, by
-state × `scheduled_activate_at`:
+The four schedule-event + failure messages — scheduled
+activation, auto-send invites, auto-send reminders, workflow-
+failure — render as **inline icon-prefixed lines in the
+left-column body**, immediately below the per-state body copy.
+No background colour, no border, no card chrome: each is a
+single short line led by a tone-coded glyph so the right column
+stays a calm summary rather than a stack of coloured flash
+cards.
+
+The signals live inside a `.next-action-signals` flex column.
+Each line is a `.next-action-signal.next-action-signal--<tone>`
+paragraph with a leading `.next-action-signal-icon` span.
+
+| Tone | Icon | Used by |
+| --- | --- | --- |
+| `green` | ✓ (success colour) | Caption is effective (scheduled activation will fire; auto-sends will dispatch). |
+| `amber-warning` | ⚠ (warning colour) | Caption is configured but precondition not yet met. |
+| `amber-grey` | ⓘ (muted text colour) | Caption is configured but inert (anchor-null, or post-skip one-shot notice). |
+| `error` | ✗ (error colour) | Workflow failure — `super_failure` is populated. |
+
+#### Scheduled-activation caption (Segment 18G Part 1)
+
+Built by `views.build_scheduled_activation_caption` and consumed
+via `scheduled_activation_caption`. Caption logic, by state ×
+`scheduled_activate_at`:
 
 | Session state | `scheduled_activate_at` | Caption |
 | --- | --- | --- |
@@ -532,11 +555,49 @@ state × `scheduled_activate_at`:
 | `validated` | set, in future | **Green calm caption** — "System will auto-activate at «X». You can also click Activate now." |
 | `ready` | (any — moot post-activation) | (none — existing "Activated at «X»" treatment covers it) |
 
-The caption sits below the Activate button in the right column,
-above the workflow-failure banner. See
-`guide/segment_18G_scheduled_events.md` Part 1 for the
+See `guide/segment_18G_scheduled_events.md` Part 1 for the
 service-side contract (editor gate, persistence across
 invalidation, fire-time skip semantics).
+
+#### Auto-send captions (Segment 18G PR 2B / 3B)
+
+Two parallel captions describe the state of the operator's
+auto-send schedules:
+
+- **Auto-send invites** — keyed on `sessions.invite_offsets` +
+  `scheduled_activate_at` (Start). Surfaced by
+  `auto_send_invites_caption`.
+- **Auto-send reminders** — keyed on `sessions.reminder_offsets`
+  + `deadline` (End). Surfaced by `auto_send_reminders_caption`.
+
+Both share the same three-tone model:
+
+| Tone | Trigger (invites) | Trigger (reminders) |
+| --- | --- | --- |
+| **Amber-grey** (inactive, anchor-null) | `invite_offsets` set, `scheduled_activate_at` unset | `reminder_offsets` set, `deadline` unset |
+| **Amber-warning** (precondition not met) | Start set, invitations not yet created | End set, session not yet `ready` |
+| **Green** (effective) | Start set, invitations exist | End set, session `ready` |
+
+When the relevant `*_offsets` column is empty the caption is
+`None` and nothing renders. Both captions originally lived on
+the Manage Invitations page; they moved into the Workflow card
+on 2026-05-21 so every scheduled-event signal lives alongside
+the lifecycle controls.
+
+#### Workflow-failure signal
+
+When `super_failure` is populated (i.e. the page was hit with
+`?super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`),
+the consolidated signals block also emits an error-toned line
+at the top. Bold headline: **"Prepare session failed at the
+<step>."** or **"Activate session failed at the <step>."** —
+the button name comes from `super_failure.button`, and the step
+maps via the `_step_label_map` (`generate` → "Generate
+assignments", `validate` → "Validate setup", `activate` →
+"Activate session", `precondition` → "pre-flight check"). The
+error detail (when present) renders inline below the headline.
+The right-column State 3 / 4Err issue lists continue to render
+independently — the signal doesn't suppress them.
 
 ### Manual-activate cancellation modal (Segment 18G PR 2C)
 
@@ -553,52 +614,6 @@ manual activation?"). On confirm, the existing
 clears in the same transaction; `invite_offsets` stays on the
 column but becomes inert via the §8.2.2 anchor-null rule (per
 `spec/lifecycle.md`).
-
-### Auto-send captions (Segment 18G PR 2B / 3B; consolidated 2026-05-21)
-
-The right column also surfaces two parallel captions describing
-the state of the operator's auto-send schedules:
-
-- **Auto-send invites** — keyed on `sessions.invite_offsets` +
-  `scheduled_activate_at` (Start). Surfaced by
-  `auto_send_invites_caption`.
-- **Auto-send reminders** — keyed on `sessions.reminder_offsets`
-  + `deadline` (End). Surfaced by `auto_send_reminders_caption`.
-
-Both share the same three-tone model and the same visual
-treatment as the scheduled-activation caption:
-
-| Tone | Trigger (invites) | Trigger (reminders) |
-| --- | --- | --- |
-| **Amber-grey** (inactive, anchor-null) | `invite_offsets` set, `scheduled_activate_at` unset | `reminder_offsets` set, `deadline` unset |
-| **Amber-warning** (precondition not met) | Start set, invitations not yet created | End set, session not yet `ready` |
-| **Green** (effective) | Start set, invitations exist | End set, session `ready` |
-
-When the relevant `*_offsets` column is empty the caption is
-`None` and nothing renders.
-
-Both captions originally lived on the Manage Invitations page;
-they moved into the Workflow card on 2026-05-21 so every
-scheduled-event signal (activation, invites, reminders) lives
-alongside the lifecycle controls. They render unconditionally on
-every page the Workflow card appears on (Session Home + every
-Operations-row page), one below the other, beneath the scheduled-
-activation caption and above the workflow-failure banner.
-
-### Workflow failure banner
-
-When `super_failure` is populated (i.e. the page was hit with
-`?super_status=failed&super_button=<prepare|activate>&super_step=<step>&super_error=<msg>`),
-the right column also renders a `.banner.banner-error` block at
-the top of the aside. Headline: **"Prepare session failed at the
-<step>."** or **"Activate session failed at the <step>."** —
-the button name comes from `super_failure.button`, and the step
-maps via the `_step_label_map` (`generate` → "Generate
-assignments", `validate` → "Validate setup", `activate` →
-"Activate session", `precondition` → "pre-flight check"). The
-per-state right-column content above continues to render below
-the banner; the failure banner doesn't suppress State 3 / 4Err
-issue lists.
 
 ## POST routes
 

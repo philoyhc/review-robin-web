@@ -156,6 +156,64 @@
       {% endif %}
     {% endif %}
 
+    {# 18G consolidated signals (2026-05-21). The scheduled-event
+       captions and the workflow-failure message used to render as
+       `.banner` flash cards in the right column; they now live
+       here as plain inline lines below the per-state body copy,
+       each prefixed with a tone-coded icon (⚠ amber-warning, ⓘ
+       amber-grey, ✓ green, ✗ error). #}
+    {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure %}
+    {% if _has_signals %}
+      <div class="next-action-signals">
+        {% if super_failure %}
+          {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
+          {% set _step_label_map = {
+            "generate": "Generate assignments",
+            "validate": "Validate setup",
+            "activate": "Activate session",
+            "precondition": "pre-flight check",
+          } %}
+          <p class="next-action-signal next-action-signal--error banner-scroll-target"
+             id="next-action-super-failure-banner">
+            <span class="next-action-signal-icon" aria-hidden="true">✗</span>
+            <span>
+              <strong>{{ _button_label }} failed{% if super_failure.step in _step_label_map %} at the {{ _step_label_map[super_failure.step] }}{% endif %}.</strong>
+              {% if super_failure.error %}
+                <br>{{ super_failure.error }}
+              {% endif %}
+            </span>
+          </p>
+        {% endif %}
+        {% if scheduled_activation_caption %}
+          {% set _tone = scheduled_activation_caption.tone %}
+          {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+          <p class="next-action-signal next-action-signal--{{ _tone }}"
+             id="next-action-scheduled-activation-caption">
+            <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+            <span>{{ scheduled_activation_caption.text }}</span>
+          </p>
+        {% endif %}
+        {% if auto_send_invites_caption %}
+          {% set _tone = auto_send_invites_caption.tone %}
+          {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+          <p class="next-action-signal next-action-signal--{{ _tone }}"
+             id="next-action-auto-send-invites-caption">
+            <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+            <span>{{ auto_send_invites_caption.text }}</span>
+          </p>
+        {% endif %}
+        {% if auto_send_reminders_caption %}
+          {% set _tone = auto_send_reminders_caption.tone %}
+          {% set _icon = '✓' if _tone == 'green' else ('ⓘ' if _tone == 'amber-grey' else '⚠') %}
+          <p class="next-action-signal next-action-signal--{{ _tone }}"
+             id="next-action-auto-send-reminders-caption">
+            <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
+            <span>{{ auto_send_reminders_caption.text }}</span>
+          </p>
+        {% endif %}
+      </div>
+    {% endif %}
+
     {# Hidden form holders for the stepper-row buttons. #}
     {% if _prepare_live %}
       <form method="post"
@@ -314,68 +372,16 @@
             disabled aria-disabled="true">Close session</button>
   </div>
     </div>
-    {# Right column — per-state status aside. Unchanged role from the
-       pre-18F card (validation issues, invite counts, deadline);
-       only the failure-banner copy adapts to the Prepare/Activate
-       split via ``super_failure.button``. #}
+    {# Right column — per-state status aside. Carries the
+       Setup-checklist / Validation-issues / Status detail content.
+       The schedule-event captions (scheduled-activation,
+       auto-send invites, auto-send reminders) and the
+       workflow-failure banner used to live here as `.banner`
+       flash cards; on 2026-05-21 they moved into the left-column
+       body as inline icon-prefixed signals so the right column
+       reads as one calm summary rather than a stack of coloured
+       call-outs. #}
     <aside class="next-action-status" id="next-action-status">
-      {# 18G Part 1 — scheduled-activation caption. Per
-         spec/workflow_card.md "Scheduled-activation caption". The
-         tone classes piggyback the existing warning / success
-         banner colours; "amber-grey" uses ``banner-warning`` plus
-         a muted modifier for the post-skip notice. #}
-      {% if scheduled_activation_caption %}
-        {% set _tone = scheduled_activation_caption.tone %}
-        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
-             id="next-action-scheduled-activation-caption"
-             role="status">
-          <p>{{ scheduled_activation_caption.text }}</p>
-        </div>
-      {% endif %}
-      {# 18G PR 2B — Auto-send invites caption. Moved here from
-         the Invitations page so the operator's scheduled-event
-         signals all live alongside the lifecycle controls. Tones:
-         amber-grey (offsets set, no Start), amber-warning
-         (offsets + Start, invitations not yet created), green
-         (offsets + Start + invitations exist). #}
-      {% if auto_send_invites_caption %}
-        {% set _tone = auto_send_invites_caption.tone %}
-        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
-             id="next-action-auto-send-invites-caption"
-             role="status">
-          <p>{{ auto_send_invites_caption.text }}</p>
-        </div>
-      {% endif %}
-      {# 18G PR 3B — Auto-send reminders caption. Same family /
-         visual treatment as auto-send-invites. Tones: amber-grey
-         (offsets set, no End), amber-warning (offsets + End,
-         session not ``ready``), green (offsets + End, ready). #}
-      {% if auto_send_reminders_caption %}
-        {% set _tone = auto_send_reminders_caption.tone %}
-        <div class="banner banner-{{ 'success' if _tone == 'green' else 'warning' }}{% if _tone == 'amber-grey' %} is-muted{% endif %}"
-             id="next-action-auto-send-reminders-caption"
-             role="status">
-          <p>{{ auto_send_reminders_caption.text }}</p>
-        </div>
-      {% endif %}
-      {% if super_failure %}
-        {% set _button_label = "Prepare session" if super_failure.button == "prepare" else "Activate session" %}
-        {% set _step_label_map = {
-          "generate": "Generate assignments",
-          "validate": "Validate setup",
-          "activate": "Activate session",
-          "precondition": "pre-flight check",
-        } %}
-        <div class="banner banner-error banner-scroll-target"
-             id="next-action-super-failure-banner">
-          <p class="banner-headline">
-            {{ _button_label }} failed{% if super_failure.step in _step_label_map %} at the {{ _step_label_map[super_failure.step] }}{% endif %}.
-          </p>
-          {% if super_failure.error %}
-            <p style="margin: var(--space-2) 0 0 0;">{{ super_failure.error }}</p>
-          {% endif %}
-        </div>
-      {% endif %}
       {% if is_setup_empty %}
         {# State 1: setup checklist. #}
         <h3 class="next-action-status-heading">Setup checklist</h3>

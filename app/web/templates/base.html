@@ -1639,6 +1639,41 @@
       body.ui-v2 .card.next-action .next-action-confirm {
         padding-bottom: var(--space-2);
       }
+      /* 18G consolidated signals (2026-05-21). The scheduled-event
+         captions and the workflow-failure message render inline in
+         the left-column body, each prefixed with a tone-coded icon.
+         No background colour / border / card chrome — these read as
+         tight informational lines rather than flash-card call-outs. */
+      body.ui-v2 .card.next-action .next-action-signals {
+        margin-top: var(--space-3);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .card.next-action .next-action-signal {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-2);
+        margin: 0;
+        font-size: var(--font-size-sm, 0.9em);
+        line-height: 1.4;
+      }
+      body.ui-v2 .card.next-action .next-action-signal-icon {
+        flex: 0 0 auto;
+        font-size: 1.1em;
+        line-height: 1.2;
+      }
+      body.ui-v2 .card.next-action .next-action-signal--green
+        .next-action-signal-icon { color: var(--color-success, #16a34a); }
+      body.ui-v2 .card.next-action .next-action-signal--amber-warning
+        .next-action-signal-icon { color: var(--color-warning, #d97706); }
+      body.ui-v2 .card.next-action .next-action-signal--amber-grey
+        .next-action-signal-icon { color: var(--text-muted, #6b7280); }
+      body.ui-v2 .card.next-action .next-action-signal--error
+        .next-action-signal-icon { color: var(--color-error, #dc2626); }
+      body.ui-v2 .card.next-action .next-action-signal--amber-grey {
+        color: var(--text-muted, #6b7280);
+      }
       body.ui-v2 .card.next-action .next-action-buttons {
         display: flex;
         flex-wrap: wrap;
