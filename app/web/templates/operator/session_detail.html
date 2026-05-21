@@ -37,18 +37,18 @@
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
             </p>
-            <p class="form-help" style="margin: 0;">Help contact</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
+            <p class="form-help" style="margin: 0;">Timezone</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session_timezone_label }}</span>
+            </p>
           </div>
           <div>
             <p class="form-help" style="margin: 0;">Created</p>
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_at | format_datetime }}</span>
             </p>
-            <p class="form-help" style="margin: 0;">Timezone</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session_timezone_label }}</span>
-            </p>
+            <p class="form-help" style="margin: 0;">Help contact</p>
+            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
           </div>
           <div>
             <p class="form-help" style="margin: 0;">Modified</p>
@@ -68,7 +68,7 @@
             <h3 style="margin-top: 0;">Schedule timeline</h3>
             <p class="muted" style="margin: 0 0 var(--space-2) 0;">
               Resolved fire moments for the session's anchors +
-              offsets. Edit the schedule on the Edit page.
+              offsets.
             </p>
             <table style="margin-top: var(--space-2);">
               <tr>
