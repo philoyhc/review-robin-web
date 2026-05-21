@@ -117,6 +117,24 @@ its template context via `**workflow_ctx`. The builder lives in
   `{"text": "N scheduled auto-send(s) will be cancelled…",
   "count": int, "pending_fires": list[str]}`. `None` when nothing
   would be cancelled. Segment 18G PR 2C.
+- `auto_send_invites_caption` — `dict | None`. Right-column
+  caption describing the state of `sessions.invite_offsets` +
+  `scheduled_activate_at`, built by
+  `build_auto_send_invites_caption`. Shape:
+  `{"tone": ..., "text": ...}` with tones `"amber-grey"`
+  (offsets set, no Start anchor), `"amber-warning"` (offsets +
+  Start, no invitations yet), `"green"` (offsets + Start +
+  invitations exist). Originally rendered on the Invitations
+  page; consolidated into the Workflow card on 2026-05-21 so
+  every scheduled-event signal lives alongside the lifecycle
+  controls.
+- `auto_send_reminders_caption` — `dict | None`. Right-column
+  caption describing the state of `sessions.reminder_offsets` +
+  `deadline`, built by `build_auto_send_reminders_caption`.
+  Same shape; tones `"amber-grey"` (offsets set, no End),
+  `"amber-warning"` (offsets + End, session not yet `ready`),
+  `"green"` (offsets + End, session `ready`). Co-consolidated
+  with the invites caption above.
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -535,6 +553,37 @@ manual activation?"). On confirm, the existing
 clears in the same transaction; `invite_offsets` stays on the
 column but becomes inert via the §8.2.2 anchor-null rule (per
 `spec/lifecycle.md`).
+
+### Auto-send captions (Segment 18G PR 2B / 3B; consolidated 2026-05-21)
+
+The right column also surfaces two parallel captions describing
+the state of the operator's auto-send schedules:
+
+- **Auto-send invites** — keyed on `sessions.invite_offsets` +
+  `scheduled_activate_at` (Start). Surfaced by
+  `auto_send_invites_caption`.
+- **Auto-send reminders** — keyed on `sessions.reminder_offsets`
+  + `deadline` (End). Surfaced by `auto_send_reminders_caption`.
+
+Both share the same three-tone model and the same visual
+treatment as the scheduled-activation caption:
+
+| Tone | Trigger (invites) | Trigger (reminders) |
+| --- | --- | --- |
+| **Amber-grey** (inactive, anchor-null) | `invite_offsets` set, `scheduled_activate_at` unset | `reminder_offsets` set, `deadline` unset |
+| **Amber-warning** (precondition not met) | Start set, invitations not yet created | End set, session not yet `ready` |
+| **Green** (effective) | Start set, invitations exist | End set, session `ready` |
+
+When the relevant `*_offsets` column is empty the caption is
+`None` and nothing renders.
+
+Both captions originally lived on the Manage Invitations page;
+they moved into the Workflow card on 2026-05-21 so every
+scheduled-event signal (activation, invites, reminders) lives
+alongside the lifecycle controls. They render unconditionally on
+every page the Workflow card appears on (Session Home + every
+Operations-row page), one below the other, beneath the scheduled-
+activation caption and above the workflow-failure banner.
 
 ### Workflow failure banner
 

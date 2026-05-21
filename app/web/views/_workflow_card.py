@@ -192,6 +192,12 @@ def build_workflow_card_context(
         "manual_activate_cancellation": build_manual_activate_cancellation(
             review_session
         ),
+        "auto_send_invites_caption": build_auto_send_invites_caption(
+            db, review_session
+        ),
+        "auto_send_reminders_caption": build_auto_send_reminders_caption(
+            db, review_session
+        ),
         "next_action_return_to": return_to,
     }
 
@@ -419,9 +425,15 @@ def build_auto_send_invites_caption(
     db: Session,
     review_session: ReviewSession,
 ) -> dict[str, str] | None:
-    """Return the Manage Invitations card caption for auto-send
+    """Return the Workflow-card right-column caption for auto-send
     invites (Segment 18G PR 2B + PR 2C), or ``None`` when nothing
     to show.
+
+    Originally rendered on the Manage Invitations page; consolidated
+    into the Workflow card alongside the scheduled-activation +
+    auto-send-reminders captions so the operator's lifecycle
+    signals all live in one place (since the Workflow card already
+    renders on Session Home + every Operations-row page).
 
     Per the Part 2 plan section + the Part 1↔2 coordination
     section:
@@ -495,8 +507,10 @@ def build_auto_send_reminders_caption(
     db: Session,
     review_session: ReviewSession,
 ) -> dict[str, str] | None:
-    """Return the Manage Invitations card caption for auto-send
-    reminders (Segment 18G PR 3B), or ``None`` when nothing to show.
+    """Return the Workflow-card right-column caption for auto-send
+    reminders (Segment 18G PR 3B), or ``None`` when nothing to
+    show. Consolidated into the Workflow card alongside the
+    auto-send-invites caption — see :func:`build_auto_send_invites_caption`.
 
     Mirrors :func:`build_auto_send_invites_caption`:
 

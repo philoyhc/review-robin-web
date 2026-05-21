@@ -405,3 +405,31 @@ def test_caption_green_when_ready(db: Session) -> None:
     assert caption is not None
     assert caption["tone"] == "green"
     assert "dispatch automatically" in caption["text"]
+
+
+# --------------------------------------------------------------------------- #
+# Workflow-card right-column rendering (Manage Invitations no longer hosts)   #
+# --------------------------------------------------------------------------- #
+
+
+def test_caption_renders_on_workflow_card_not_invitations_page(
+    client: TestClient, db: Session
+) -> None:
+    """The auto-send reminders caption is now part of the Workflow
+    card's right-column aside (consolidated 2026-05-21); the
+    Invitations page no longer renders it as a standalone banner."""
+    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    _, _, session_id = _create_session(
+        client,
+        "rcap-loc",
+        deadline=_fmt_local_input(deadline),
+        reminder_offsets="-P1D",
+    )
+    rs = db.get(ReviewSession, session_id)
+    assert rs.reminder_offsets == ["-P1D"]
+
+    body = client.get(f"/operator/sessions/{session_id}/invitations").text
+    # New caption id sits inside the Workflow card right column.
+    assert 'id="next-action-auto-send-reminders-caption"' in body
+    # Old standalone caption id is gone from the Invitations page.
+    assert 'id="auto-send-reminders-caption"' not in body
