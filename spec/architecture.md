@@ -472,6 +472,14 @@ canonical "no payload" marker.
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"saved": 5, "validation_errors": 0}}` |
 | `instrument.display_fields_saved` | `set_changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "set_changes": {"added": [], "removed": [], "updated": [...]}}` |
 | `session.owner_added` | `snapshot` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"target_user_id": 42}, "snapshot": {"user_id": 42, "email": "bob@example.edu", "role": "owner"}}` |
+| `session.activation_scheduled` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"scheduled_activate_at": [null, "2026-06-01T09:00:00+00:00"]}}` |
+| `session.scheduled_activation_skipped` | `reason` + `context` | `{"session_id": 17, "session_code": "CS101", "reason": "not_validated", "context": {"scheduled_at": "2026-06-01T09:00:00+00:00", "status_at_fire": "draft"}}` |
+| `session.scheduled_activation_retry` / `_failed_persistent` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc)>", "context": {"scheduled_at": "...", "attempt": 1}}` |
+| `session.invite_schedule_updated` / `session.reminder_schedule_updated` | `changes` | `{"session_id": 17, ..., "changes": {"invite_offsets": [null, ["-P1D", "-PT2H"]]}}` |
+| `session.scheduled_invites_fired` | `counts` + `context` | `{"session_id": 17, ..., "counts": {"sent": 12}, "context": {"anchor_at": "2026-06-01T09:00:00+00:00", "offset_index": 0, "offset": "-P1D", "scheduled_at": "2026-05-31T09:00:00+00:00", "actual_fired_at": "2026-05-31T09:00:42+00:00"}}` |
+| `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
+| `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
+| `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
 
 ### Cutover
 
