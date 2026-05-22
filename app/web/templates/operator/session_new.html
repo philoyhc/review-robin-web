@@ -14,43 +14,54 @@
           id="create-session-form"
           enctype="multipart/form-data">
       <div class="page-grid" style="margin-bottom: 0;">
-        <div>
-          {# Left column — identity + Help contact. #}
-          <label for="name">Name</label>
-          <input type="text" id="name" name="name" required maxlength="255">
-
-          <label for="code">Code</label>
-          <input type="text" id="code" name="code" required maxlength="64">
+        <div style="display: flex; flex-direction: column; min-width: 0;">
+          {# Left column — Name + Code side by side, then a
+             vertically-stretched Description. The flex column +
+             ``flex: 1 1 auto`` textarea makes Description fill the
+             remaining vertical space so its bottom aligns with the
+             Release-responses inputs in the right column. #}
+          <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
+            <div>
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" required maxlength="255">
+            </div>
+            <div>
+              <label for="code">Code</label>
+              <input type="text" id="code" name="code" required maxlength="64">
+            </div>
+          </div>
 
           <label for="description">Description</label>
-          <textarea id="description" name="description" maxlength="2000"></textarea>
-
-          <label for="help_contact">Help contact (optional)</label>
-          <input type="text" id="help_contact" name="help_contact" maxlength="320"
-                 placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+          <textarea id="description" name="description" maxlength="2000"
+                    style="flex: 1 1 auto; min-height: 8em;"></textarea>
         </div>
 
-        <div class="fill-col">
-          {# Right column — Timezone (full width on top), then the
-             schedule + offset sub-grid. Live: Start / End (datetime
-             anchors) + Auto-send invites / reminders (offsets).
-             Participants-platform fields (``responses_release_at`` /
-             ``release_until_offset``) ride along as disabled
-             placeholders for segments 21+. #}
-          <label for="display_timezone">Timezone</label>
-          <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
-            Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
-            in <strong id="tz-sample-zone">{{ gmt_offset_label(current_timezone) }} {{ current_timezone }}</strong>
-          </p>
-          <input type="text" id="display_timezone" name="display_timezone"
-                 list="timezone-options" autocomplete="off" required
-                 value="{{ current_timezone }}"
-                 placeholder="Start typing — e.g. Asia/Singapore">
-          <datalist id="timezone-options">
-            {% for tz in timezone_options %}
-              <option value="{{ tz }}"></option>
-            {% endfor %}
-          </datalist>
+        <div class="fill-col" style="min-width: 0;">
+          {# Right column — Help contact + Timezone side by side
+             on top, then the schedule + offset sub-grid. Live:
+             Start / End (datetime anchors) + Auto-send invites /
+             reminders (offsets). Participants-platform fields
+             (``responses_release_at`` / ``release_until_offset``)
+             ride along as disabled placeholders for segments 21+. #}
+          <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
+            <div>
+              <label for="help_contact">Help contact (optional)</label>
+              <input type="text" id="help_contact" name="help_contact" maxlength="320"
+                     placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+            </div>
+            <div>
+              <label for="display_timezone">Timezone</label>
+              <input type="text" id="display_timezone" name="display_timezone"
+                     list="timezone-options" autocomplete="off" required
+                     value="{{ gmt_offset_zone_label(current_timezone) }}"
+                     placeholder="Search by offset (GMT+8) or name (Singapore)">
+              <datalist id="timezone-options">
+                {% for tz in timezone_options %}
+                  <option value="{{ gmt_offset_zone_label(tz) }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+          </div>
 
           <div class="page-grid" style="margin: 0;">
             <div>

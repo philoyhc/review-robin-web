@@ -226,6 +226,27 @@ def is_valid_timezone(name: str) -> bool:
     return name in _AVAILABLE_TIMEZONES
 
 
+def parse_display_timezone_input(raw: str) -> str:
+    """Accept either the raw IANA name (e.g. ``"Asia/Singapore"``) or
+    the GMT-prefixed display form
+    (e.g. ``"GMT+8 Asia/Singapore"`` / ``"GMT+5:30 Asia/Kolkata"`` /
+    ``"UTC"``). Returns the IANA name.
+
+    The Create / Edit Session timezone picker shows the prefixed
+    form in the input + datalist so the operator can search by
+    offset; the route layer parses through this helper before
+    handing the value to :func:`is_valid_timezone`.
+    """
+    parts = raw.strip().split()
+    if not parts:
+        return ""
+    # The IANA name is the last whitespace-separated token. For a
+    # single-token input (e.g. "UTC" or a raw IANA name) that's
+    # the whole input; for the GMT-prefixed form the prefix is
+    # discarded.
+    return parts[-1]
+
+
 def get_display_timezone(user: User) -> str:
     """The operator's configured default display timezone.
 

@@ -78,7 +78,7 @@ async def create_session(
     # timezone. Blank ⇒ fall back to the operator's default. The
     # deadline picker is wall-clock in this zone.
     timezone_name = (
-        display_timezone.strip()
+        operator_settings.parse_display_timezone_input(display_timezone)
         or operator_settings.get_display_timezone(user)
     )
     if not operator_settings.is_valid_timezone(timezone_name):

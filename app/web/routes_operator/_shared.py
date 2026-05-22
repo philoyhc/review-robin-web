@@ -91,6 +91,11 @@ _templates.env.globals["session_timezone"] = (
 # Compact GMT-offset label for the sessions-lobby Timezone column —
 # narrower than the raw IANA id (e.g. ``GMT+8`` for ``Asia/Singapore``).
 _templates.env.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
+# Combined form for the timezone picker datalist + initial value:
+# ``"GMT+8 Asia/Singapore"`` (or ``"UTC"`` for the zero-offset case).
+_templates.env.globals["gmt_offset_zone_label"] = (
+    date_formatting.gmt_offset_zone_label
+)
 # datetime-local input value (wall-clock in a session's zone) — used
 # by the sessions-lobby inline expander's Deadline edit box.
 _templates.env.globals["format_datetime_local"] = (

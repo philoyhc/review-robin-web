@@ -171,7 +171,10 @@ def operator_settings_save_timezone(
     """Persist the operator's default display timezone (Segment 18B
     PR 2). New sessions this operator creates inherit it; existing
     sessions keep their own per-session setting."""
-    if not operator_settings.is_valid_timezone(display_timezone):
+    timezone_name = operator_settings.parse_display_timezone_input(
+        display_timezone
+    )
+    if not operator_settings.is_valid_timezone(timezone_name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"unknown timezone {display_timezone!r}",
@@ -179,7 +182,7 @@ def operator_settings_save_timezone(
     operator_settings.set_display_timezone(
         db,
         user=user,
-        timezone_name=display_timezone,
+        timezone_name=timezone_name,
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(

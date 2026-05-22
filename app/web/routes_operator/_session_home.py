@@ -241,7 +241,7 @@ def session_edit_submit(
     # current zone unchanged. The deadline picker is wall-clock in
     # this zone.
     timezone_name = (
-        display_timezone.strip()
+        operator_settings.parse_display_timezone_input(display_timezone)
         or sessions.resolve_session_timezone(review_session)
     )
     if not operator_settings.is_valid_timezone(timezone_name):
