@@ -141,8 +141,12 @@ def test_session_detail_renders_session_layout(
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
     assert "<h2>Run Session</h2>" not in body
-    assert "Danger Zone" in body
-    assert 'id="danger-zone"' in body
+    # Danger Zone moved to the Edit Session page; Session Home no
+    # longer carries the card directly. (The literal "Danger Zone"
+    # string still appears in a CSS comment in base.html that ships
+    # inlined, so we anchor on the more-specific `id="danger-zone"`
+    # marker.)
+    assert 'id="danger-zone"' not in body
     # The standalone "Session Setup" card was retired — its five Manage
     # links live in the chrome top-nav now (see chrome partial), so the
     # body no longer needs an in-page card duplicating them.
@@ -473,13 +477,27 @@ def test_session_card_buttons_when_draft(
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"' not in body
     )
-    # Delete Data form present
+    # Delete Data / Delete Session forms moved off Home with the
+    # Danger Zone card; they live on the Edit Session page now.
     assert (
-        f'action="/operator/sessions/{review_session.id}/delete-data"' in body
+        f'action="/operator/sessions/{review_session.id}/delete-data"'
+        not in body
     )
-    # Delete Session form present (not locked)
     assert (
-        f'action="/operator/sessions/{review_session.id}/delete"' in body
+        f'action="/operator/sessions/{review_session.id}/delete"'
+        not in body
+    )
+    # And confirm they DO appear on Edit.
+    edit_body = client.get(
+        f"/operator/sessions/{review_session.id}/edit"
+    ).text
+    assert (
+        f'action="/operator/sessions/{review_session.id}/delete-data"'
+        in edit_body
+    )
+    assert (
+        f'action="/operator/sessions/{review_session.id}/delete"'
+        in edit_body
     )
 
 
@@ -587,7 +605,13 @@ def test_delete_session_visible_but_disabled_when_ready(
     )
     _activate(operator, db, review_session)
 
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    # Danger Zone moved to the Edit Session page — assert the
+    # visible-but-disabled state there. The Edit page is reachable
+    # in `ready` (sys-admin / session-operator gate), but the form
+    # is gated by ``is_ready`` to render the disabled state.
+    body = operator.get(
+        f"/operator/sessions/{review_session.id}/edit"
+    ).text
 
     # Form, button, and confirmation checkbox all rendered.
     assert (
@@ -797,21 +821,13 @@ def test_session_card_buttons_when_ready(
         f'action="/operator/sessions/{review_session.id}/revert"'
         in body
     )
-    # Delete Data form still present (allowed in ready)
+    # Danger Zone moved off Home — the Delete Data / Delete Session
+    # forms now live on the Edit Session page.
     assert (
-        f'action="/operator/sessions/{review_session.id}/delete-data"' in body
+        f'action="/operator/sessions/{review_session.id}/delete-data"'
+        not in body
     )
-    # Per PR D, the Delete Session affordance now stays VISIBLE
-    # (form + button + confirmation checkbox) but the button and
-    # checkbox are disabled while ready, with an explanatory note
-    # below. The server-side lock in the route is the source of
-    # truth (_require_editable rejects the POST); this is the
-    # visual "always show the affordance" change from
-    # spec/session_home.md.
     assert (
-        f'action="/operator/sessions/{review_session.id}/delete"' in body
+        f'action="/operator/sessions/{review_session.id}/delete"'
+        not in body
     )
-    assert "Delete session" in body
-    # Button and checkbox carry disabled attribute.
-    assert "disabled aria-disabled=\"true\"" in body
-    assert "Session deletion is locked while status is Activated" in body

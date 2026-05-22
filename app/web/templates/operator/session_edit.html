@@ -248,32 +248,95 @@
         </div>
       </div>
 
-      <div class="card edit-half-card" style="min-width: 0;">
-        {% if schedule_timeline_rows %}
-          <h3 style="margin-top: 0;">Schedule timeline</h3>
-          <p class="muted" style="margin: 0 0 var(--space-2) 0;">
-            Resolved fire moments for the session's anchors + offsets.
-          </p>
-          <table style="margin-top: var(--space-2);">
-            <tr>
-              <th>When</th>
-              <th>Event</th>
-            </tr>
-            {% for row in schedule_timeline_rows %}
+      <div style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-3);">
+        <div class="card edit-half-card">
+          {% if schedule_timeline_rows %}
+            <h3 style="margin-top: 0;">Schedule timeline</h3>
+            <p class="muted" style="margin: 0 0 var(--space-2) 0;">
+              Resolved fire moments for the session's anchors + offsets.
+            </p>
+            <table style="margin-top: var(--space-2);">
               <tr>
-                <td>{{ row.at }}</td>
-                <td>{{ row.label }}</td>
+                <th>When</th>
+                <th>Event</th>
               </tr>
-            {% endfor %}
-          </table>
-        {% else %}
-          <h3 style="margin-top: 0;">Schedule timeline</h3>
-          <p class="muted" style="margin: 0;">
-            No anchors or offsets set yet — once you save a Start
-            or End plus matching offsets, the resolved fire
-            moments appear here.
+              {% for row in schedule_timeline_rows %}
+                <tr>
+                  <td>{{ row.at }}</td>
+                  <td>{{ row.label }}</td>
+                </tr>
+              {% endfor %}
+            </table>
+          {% else %}
+            <h3 style="margin-top: 0;">Schedule timeline</h3>
+            <p class="muted" style="margin: 0;">
+              No anchors or offsets set yet — once you save a Start
+              or End plus matching offsets, the resolved fire
+              moments appear here.
+            </p>
+          {% endif %}
+        </div>
+
+        {# Danger Zone — moved here from Session Home. Destructive
+           operations live alongside the other edit affordances; the
+           Delete Session affordance stays visible-but-disabled while
+           Activated (the route's lifecycle gate is the source of
+           truth — this mirroring is visual). #}
+        <div class="card danger-zone edit-half-card" id="danger-zone">
+          <h3 style="margin-top: 0;">Danger Zone</h3>
+          <p class="form-help">
+            Delete Data wipes every reviewer response while leaving
+            session setup intact. Delete session removes the entire
+            session and is locked while session is Activated.
           </p>
-        {% endif %}
+
+          <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required
+                       data-delete-confirm="delete-data">
+                Yes, delete every reviewer response on
+                <strong>{{ session.name }}</strong>. Setup data is
+                preserved.
+              </label>
+            </p>
+            <p>
+              <button class="btn destructive" type="submit"
+                      data-delete-btn="delete-data"
+                      disabled aria-disabled="true">Delete Data</button>
+            </p>
+          </form>
+
+          <hr>
+
+          <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required
+                       data-delete-confirm="delete-session"
+                       {% if is_ready %}disabled{% endif %}>
+                Yes, delete <strong>{{ session.name }}</strong> and all
+                its data.
+              </label>
+            </p>
+            <p>
+              {% if is_ready %}
+                <button class="btn destructive" type="submit"
+                        disabled aria-disabled="true">Delete session</button>
+              {% else %}
+                <button class="btn destructive" type="submit"
+                        data-delete-btn="delete-session"
+                        disabled aria-disabled="true">Delete session</button>
+              {% endif %}
+            </p>
+            {% if is_ready %}
+              <p class="form-help" style="margin-bottom: 0;">
+                Session deletion is locked while status is Activated.
+                Pause the session first to enable deletion.
+              </p>
+            {% endif %}
+          </form>
+        </div>
       </div>
     </div>
   </div>
