@@ -10,7 +10,7 @@
 > were all 18G-relevant, so they were consolidated into
 > **Segment 18G — Scheduled events** as **Part 0 — Schema
 > pre-positioning**. See
-> `guide/segment_18G_scheduled_events.md` Part 0. This plan is
+> `guide/archive/segment_18G_scheduled_events.md` Part 0. This plan is
 > kept for historical reference only.
 >
 > **Segment 14C consolidated into Segment 18G (2026-05-18).**
@@ -233,7 +233,7 @@ of accreting a column per feature.
 
 **Consumer side consolidated in Segment 18G.** The scheduled
 automations below are owned by **Segment 18G — Scheduled events**
-(`guide/segment_18G_scheduled_events.md`) — auto-archive moved
+(`guide/archive/segment_18G_scheduled_events.md`) — auto-archive moved
 there out of 18A. This 13F audit is the schema half; 18G is the
 service / scheduling half.
 

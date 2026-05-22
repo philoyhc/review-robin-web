@@ -428,7 +428,7 @@ plausibly one segment (some may split or merge):
   work is picked up — observers and the reviewee surface become
   live audiences §3 / §4 must then describe, and magic links
   move from "fallback" to an in-scope affordance.
-- **`guide/segment_18G_scheduled_events.md`** — owns the
+- **`guide/archive/segment_18G_scheduled_events.md`** — owns the
   scheduler the §3.4 windows must ride on.
 - **`guide/segment_14B_email_infrastructure.md`** — the
   notification half depends on it.

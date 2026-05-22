@@ -556,7 +556,7 @@ anchor):
 | `validated` | set, in future | ✓ "System will auto-activate at «X». You can also click Activate now." |
 | `ready` | (any — moot post-activation) | (none — the existing "Activated at «X»" treatment covers it) |
 
-See `guide/segment_18G_scheduled_events.md` Part 1 for the
+See `guide/archive/segment_18G_scheduled_events.md` Part 1 for the
 service-side contract (editor gate, persistence across
 invalidation, fire-time skip semantics).
 

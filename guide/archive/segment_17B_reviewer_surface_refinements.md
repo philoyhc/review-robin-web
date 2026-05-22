@@ -463,6 +463,6 @@ chosen.
   per-instrument response extract whose `_response_row_tuple`
   helper and per-instrument serializer PR B reuses, scoped to
   one reviewer.
-- `guide/segment_18G_scheduled_events.md` — where the
+- `guide/archive/segment_18G_scheduled_events.md` — where the
   *scheduled* activation time lands; PR A's `activated_at`
   column slides into the same Start column without re-plumbing.

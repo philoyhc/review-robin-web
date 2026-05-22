@@ -263,7 +263,7 @@ fragment anchor to it. No route or view-adapter change.
 
 ## 18G Part 3c — Targeted reminder cohorts (~150 LOC)
 
-> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21
+> Carved from `guide/archive/segment_18G_scheduled_events.md` 2026-05-21
 > on Segment 18G Part 3 close-out. Part 3a/3b (per-session
 > reminder offsets + scheduled dispatch) shipped; cohort slicing
 > is post-MVP.
@@ -306,7 +306,7 @@ in `EVENT_SCHEMAS`.
 
 ## 18G Part 3d — Reminders analytics card (~100 LOC)
 
-> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21
+> Carved from `guide/archive/segment_18G_scheduled_events.md` 2026-05-21
 > on Segment 18G Part 3 close-out. Part 3a/3b shipped; the
 > analytics surface is post-MVP.
 
@@ -344,7 +344,7 @@ template alongside the existing auto-send captions.
 
 ## 18G Part 4 — Auto-archive (~200 LOC + migration index)
 
-> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21.
+> Carved from `guide/archive/segment_18G_scheduled_events.md` 2026-05-21.
 > The schema (`sessions.archive_offset`, Part 0b) shipped inert
 > on 2026-05-20; the scheduled trigger and editor wiring are
 > deferred. Operators have the manual Archive button on the
@@ -413,7 +413,7 @@ auto-send-invites / reminders captions); two
 
 ## 18G Part 5 — Scheduled / policy-driven purge (~300 LOC + env config)
 
-> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21.
+> Carved from `guide/archive/segment_18G_scheduled_events.md` 2026-05-21.
 > Like Part 4, the schema (`sessions.retention_exception` /
 > `sessions.retention_overrides`, Part 0c) shipped inert on
 > 2026-05-20; the scheduled trigger + policy resolution + editor

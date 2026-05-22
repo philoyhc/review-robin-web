@@ -770,7 +770,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 18F (Part 3+), 18G, 18H, 19, 20**. No global ordering
+**14B, 18H, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -813,57 +813,7 @@ bottom of this file.
   improvements land there as new Parts rather than reopening 18E.
   **Plan:** `guide/archive/segment_18E_small_enhancements.md`.
 
-- **18F — Workflow optimization** *(stub created 2026-05-19;
-  Parts 1 + 2 shipped 2026-05-20)*. A deliberate end-to-end
-  work-through of the operator workflow — the session journey
-  from setup through preparation, activation, the review window,
-  and close-out. **Part 1 (shipped 2026-05-20):** the
-  Workflow-card super-button split into **Prepare** (Generate +
-  Validate) and **Activate** (Activate only). Card moved to a
-  55/45 column grid with two rows of buttons in the left column
-  (prep / run); 10-state cascade renumbered onto stable IDs;
-  reconcile-detour migrated onto Prepare. Close session lands
-  as a placeholder until the `expired` lifecycle work.
-  **Part 2 (shipped 2026-05-20):** invitation gate relaxed from
-  `ready` to `validated or ready`, so Create / Send invites are
-  live from the Prepared state. New reviewer pre-open page
-  (`reviewer/pre_open.html`) renders when a reviewer lands on a
-  not-yet-activated session. Workflow card's State 5 / State 6
-  branches in the cascade became reachable with their own per-
-  state body copy. Closed-page kept on the existing surface (so
-  `responses_visible_when_closed` keeps working); edit-after-
-  invite confirm guard deferred. **Part 3+ (TBD):** holistic pass
-  — pre-positioning the lifecycle so 18G scheduling and the
-  segments-21+ participant model slot in cleanly. Leads 18G.
-  **Plan:** `guide/segment_18F_workflow_optimization.md`.
 
-- **18G — Scheduled events** *(stub created 2026-05-17;
-  renumbered from 18F on 2026-05-19; Segment 13F
-  consolidated in as Part 0 on 2026-05-20; **Parts 0 / 1 / 2
-  / 3 shipped 2026-05-20 → 2026-05-21** — PRs **#1253**,
-  **#1262 → #1269**)*. Consolidates every scheduled /
-  automatic session-lifecycle automation behind one schema
-  slice (Part 0). Three shipped lifecycle triggers,
-  workflow-ordered:
-  **Part 1 — scheduled activation** *(shipped 2026-05-21,
-  PRs #1262 / #1263 / #1264 — observer scaffolding, trigger,
-  Start editor + Workflow card caption)*; **Part 2 — auto-
-  send invitations** *(shipped 2026-05-21, PRs #1265 / #1266
-  / #1267 — trigger, editor + caption + Schedule timeline
-  preview, Part 1 ↔ Part 2 coordination + manual-activate
-  modal)*; **Part 3 — auto-send reminders** *(shipped
-  2026-05-21, PRs #1268 / #1269 — trigger, editor + caption
-  + timeline extension)*. Part 1 established the shared
-  lazy-observer dispatch mechanism Parts 2–3 reuse.
-  **Carve-outs to `guide/deferred_until_pilot_feedback.md`
-  (2026-05-21):** Part 3c (targeted reminder cohorts), Part
-  3d (reminders analytics card), Part 4 (auto-archive), and
-  Part 5 (scheduled / policy-driven purge) — all post-MVP;
-  manual archive (Segment 18A) and operator-triggered
-  purge (Segment 18C) already cover the per-session and
-  bulk needs for archive / delete. Part 0b/0c schema
-  columns stay in place, inert.
-  **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **18H — Post-assessment update + small enhancements**
   *(created 2026-05-19; Parts 1-3 shipped 2026-05-19→20)*. A
@@ -922,9 +872,6 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **18G
   Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **18F (Part 3+), 18H, 19, 20** are
+- **18H, 19, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
-- **18F → 18G.** 18F (workflow optimization) settles the
-  lifecycle; 18G (scheduled events) hangs time-based triggers off
-  it. Land 18F first.

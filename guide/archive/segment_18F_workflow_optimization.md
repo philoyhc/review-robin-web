@@ -5,7 +5,7 @@
 >
 > This segment number was previously **Scheduled events**; that
 > work was renumbered to **Segment 18G**
-> (`guide/segment_18G_scheduled_events.md`) so 18F could take the
+> (`guide/archive/segment_18G_scheduled_events.md`) so 18F could take the
 > workflow work. 18F leads, 18G follows.
 
 ## Goal

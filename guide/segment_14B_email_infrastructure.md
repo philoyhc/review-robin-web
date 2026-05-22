@@ -5,7 +5,7 @@
 > hardening proper lives in **14A**
 > (`guide/archive/segment_14A_production_hardening.md`); reminder
 > cadence + auto-scheduled reminders live in **Segment 18G
-> Part 3** (`guide/segment_18G_scheduled_events.md`) — the
+> Part 3** (`guide/archive/segment_18G_scheduled_events.md`) — the
 > former Segment 14C, consolidated into 18G on 2026-05-18.
 
 The home for **all email *wiring* work** absorbed from the

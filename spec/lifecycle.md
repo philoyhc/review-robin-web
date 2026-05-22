@@ -384,7 +384,7 @@ canonical envelope contract these events follow.
 The operator-facing automation surface for time-based lifecycle
 events. Schema landed in **Segment 18G Part 0** (shipped
 2026-05-20 — see
-`guide/segment_18G_scheduled_events.md` Part 0); the
+`guide/archive/segment_18G_scheduled_events.md` Part 0); the
 consumer services land in Parts 1 → 5, ordered by workflow
 sequence (activation → invites → reminders → archive → retention).
 This section documents the persistent model + the cross-cutting
