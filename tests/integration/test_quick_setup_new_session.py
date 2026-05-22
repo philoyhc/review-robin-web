@@ -180,9 +180,11 @@ def test_create_session_with_no_quick_setup_files_still_works(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "qs-newsess-bare")
     ).scalar_one()
+    # No Quick Setup uploads → redirect to the Edit page so the
+    # operator continues filling in session details.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}"
+        == f"/operator/sessions/{review_session.id}/edit"
     )
 
 

@@ -46,7 +46,10 @@ def _create_session(
     )
     session_id = 0
     if response.status_code == 303:
-        session_id = int(response.headers["location"].rsplit("/", 1)[-1])
+        # Create-session redirect targets ``.../{id}/edit``; strip
+        # the trailing ``/edit`` before parsing the id.
+        location = response.headers["location"].removesuffix("/edit")
+        session_id = int(location.rsplit("/", 1)[-1])
     return response.status_code, response, session_id
 
 

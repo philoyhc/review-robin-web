@@ -166,8 +166,10 @@ async def create_session(
     # the consolidated submit-all handler on Session Home. The session
     # was just created — no replace-confirmation is needed (there's
     # nothing to overwrite). On the first slot's failure, redirect to
-    # Home with the slot's error flag.
+    # Home with the slot's error flag (the Quick Setup card and its
+    # error markers live on Home, not the Edit page).
     home_url = f"/operator/sessions/{review_session.id}"
+    edit_url = f"/operator/sessions/{review_session.id}/edit"
 
     def quick_setup_error_redirect(
         kind: str, reason: str
@@ -239,8 +241,13 @@ async def create_session(
             return quick_setup_error_redirect("settings", reason)
         last_fragment = "#quick-setup-settings"
 
+    # Quick Setup uploads anchor at their fragment on Session Home;
+    # a bare create (no uploads) lands on the Edit page so the
+    # operator continues setting up details (the back-link there
+    # leads back to Session Home).
+    target_url = f"{home_url}{last_fragment}" if last_fragment else edit_url
     return RedirectResponse(
-        url=f"{home_url}{last_fragment}",
+        url=target_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
