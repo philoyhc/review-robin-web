@@ -68,30 +68,32 @@ Two-column body below the chrome and status strip.
 ┌── Session Details ───────┐  ┌── Quick Setup ───────────┐
 │   metadata + Edit        │  │   scaffolded bulk        │
 └──────────────────────────┘  └──────────────────────────┘
-┌── Danger Zone ───────────┐  ┌── Extract Data ──────────┐
-│   destructive cleanup    │  │   responses extract      │
-└──────────────────────────┘  └──────────────────────────┘
+                              ┌── Extract Data ──────────┐
+                              │   responses extract      │
+                              └──────────────────────────┘
 ```
 
 The Workflow card sits full-width at the top of the page-card
 region, just below the chrome (same `next_action_card.html`
 partial the Operations-row pages render). Underneath it, the
-remaining four cards lay out in two **independent flex columns**
+remaining three cards lay out in two **independent flex columns**
 (`.bottom-left` flex-column wrappers); each column flows
 independently so Extract Data sits directly below Quick Setup
-with the normal inter-card gap regardless of how tall Danger
-Zone grows in the other column.
+with the normal inter-card gap regardless of how tall Session
+Details grows in the other column.
 
 DOM source order = mobile-collapse order:
-**Workflow → Session Details → Danger Zone → Quick Setup →
-Extract Data**. Below ~800px viewport width the columns collapse
-into a single stacked column in that same order.
+**Workflow → Session Details → Quick Setup → Extract Data**.
+Below ~800px viewport width the columns collapse into a single
+stacked column in that same order.
 
-Quick Setup + Extract Data live in the right column so the
-destructive-cleanup column (Danger Zone) stays on the left and
-the bulk-setup affordances cluster on the right. Extract Data
-anchors the bottom of the right column — operators reach for it
-once responses are in, which is late in the session lifecycle.
+Session Details anchors the left column on its own; Quick Setup
+and Extract Data stack in the right column so the bulk-setup
+affordances cluster together. Extract Data anchors the bottom of
+the right column — operators reach for it once responses are in,
+which is late in the session lifecycle. The Danger Zone card
+(Delete Data + Delete Session) lives on the Edit Session Details
+page, not on Home — see §3 below.
 
 *Layout history:*
 - 2026-05-14 (PR #967): Workflow card retired from Session Home;
@@ -105,6 +107,11 @@ once responses are in, which is late in the session lifecycle.
   Session Home is no exception); 2×2 grid replaced with two
   independent flex columns so Extract Data sits directly below
   Quick Setup without row-alignment forcing.
+- 2026-05-22 (commit b490825): Danger Zone moved off Session Home
+  into the bottom-right of the Edit Session Details page
+  (`session_edit.html`) so destructive operations live alongside
+  the other edit affordances. The left column now carries Session
+  Details alone.
 
 ## Cards
 
@@ -253,14 +260,17 @@ state — `draft` (sanity-check the configured artefacts),
 inert. Excel-format export was never an MVP item. The audit-log
 tile relocates to Sys Admin in Segment 16A.
 
-### 3. Danger Zone card (left column, bottom)
+### 3. Danger Zone card — relocated to Edit Session Details
 
-Destructive cleanup actions. Visually distinct (`accent-amber-dark`
-border, H2 in the same warning brown).
+The Danger Zone card (Delete Data + Delete Session) lived on
+Session Home through 2026-05-21. On 2026-05-22 (commit b490825)
+it moved to the **Edit Session Details page**
+(`session_edit.html`), occupying the bottom-right of that page's
+edit-half-grid. The rationale: destructive operations cluster
+naturally with the other edit affordances, and Session Home is
+freed up for read-only / navigational shape.
 
-**Description copy:** "Delete Data wipes every reviewer response while leaving session setup intact. Delete session removes the entire session and is locked while session is Activated."
-
-**Contents:**
+The card's contents and behaviour are unchanged:
 
 - **Delete Data** — wipes all reviewer responses while preserving
   setup. Confirmation checkbox + Destructive button.
@@ -274,10 +284,15 @@ border, H2 in the same warning brown).
   operator always sees the affordance and the path forward (Pause
   via the Workflow card first, then delete).
 
+Description copy on the relocated card: "Delete Data wipes every
+reviewer response while leaving session setup intact. Delete
+session removes the entire session and is locked while session is
+Activated."
+
 Both actions follow the inline-confirmation pattern: the operator
 ticks the checkbox to enable the destructive submit.
 
-### 4. Session Details card (right column, top)
+### 4. Session Details card (left column)
 
 Reference metadata with an edit affordance. Read-mostly, but the
 operator does occasionally need to update session metadata
@@ -340,15 +355,18 @@ heading; the card title *is* the session:
   deletes assignments or responses, so the edit form carries no
   response-loss acknowledgement gate.
 - No inline editing on the card itself. Edit always opens the
-  sub-page. Keeps Home's right column read-only-feeling and
+  sub-page. Keeps Home's left column read-only-feeling and
   avoids a mid-card form that competes with the action work in
-  the left column.
+  the Workflow card above.
 - The Edit sub-page carries a `← Back to Session Home` link
   above the card (mirroring the Rule Builder page's child-page
   affordance). Inside the **Edit Session Details** card, the
   form fields sit above a half-width inner grid carrying two
   side-by-side cards: the **Schedule timeline** preview on the
-  left and the **Owners** card on the right. Save + Cancel
+  left and the **Owners** card on the right. The **Danger Zone**
+  card (Delete Data + Delete Session) sits in the bottom-right
+  of the Edit page's outer half-grid alongside the form — moved
+  here from Session Home on 2026-05-22 (commit b490825). Save + Cancel
   buttons render at the bottom of the outer card; both start
   `disabled` and enable only when an input has changed
   (inline dirty-tracking JS, with Cancel resetting the form
@@ -436,13 +454,19 @@ Cards that have graduated out of the placeholder pattern:
 
 ## Lifecycle behavior summary
 
-| State (enum / display) | Workflow card | Quick Setup | Extract Data | Danger Zone Delete Session |
-|---|---|---|---|---|
-| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) | Active |
-| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
-| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
-| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
-| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) | Visible-but-disabled |
+| State (enum / display) | Workflow card | Quick Setup | Extract Data |
+|---|---|---|---|
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) |
+| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (all four slots wired; default-locked) | Live (5 tiles) |
+| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (all four slots wired; default-locked) | Live (5 tiles) |
+| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (all four slots wired; default-locked) | Live (5 tiles) |
+| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) |
+
+The **Danger Zone** card (Delete Data + Delete Session) lives on
+the Edit Session Details page, not Home, as of 2026-05-22. Its
+per-state availability matches the table's missing column:
+Delete Data is active in every state, Delete Session is active in
+`draft` / `validated` and visible-but-disabled in `ready`.
 
 Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.

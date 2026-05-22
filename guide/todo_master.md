@@ -757,6 +757,49 @@ Functional spec: `spec/group_scoped_instruments.md`.
 
 ---
 
+### Segment 18E — Small enhancements — done 2026-05-18
+
+Three Parts shipped together: Part 1 (column-visibility pill chips
+on the Setup-page preview tables), Part 2 (eligible-pair count
+cache on the per-instrument rule card), Part 3 (friendly-label
+Fields-with-data pills on the Reviewers / Reviewees / Relationships
+stats info cards). Segment closed 2026-05-20; the "small
+enhancements" holding-pen role lives on **Segment 18H** from there
+forward. Plan archived:
+`guide/archive/segment_18E_small_enhancements.md`.
+
+---
+
+### Segment 18F — Workflow optimization — done 2026-05-20
+
+Created 2026-05-19, closed and archived 2026-05-22 after a
+codebase check found no additional committed Part 3+ scope.
+Parts 1 / 2 shipped 2026-05-20: the Prepare / Activate split,
+pre-activation invitations, and the reviewer pre-open state. Plan
+archived: `guide/archive/segment_18F_workflow_optimization.md`.
+
+---
+
+### Segment 18G — Scheduled events — done 2026-05-21
+
+Renumbered from 18F on 2026-05-19; closed and archived 2026-05-22
+after the remaining items were explicitly deferred. **Part 0 —
+schema pre-positioning** shipped 2026-05-20 (PR #1253; eight
+inert columns on `sessions`); **Parts 1 / 2 / 3** shipped 2026-05-21
+(PRs **#1262 → #1269**) — scheduled activation (timed `validated →
+ready`), auto-send invitations anchored on Start, and auto-send
+reminders anchored on End — each with editor wiring on
+Create / Edit Session, a Manage-Invitations effectiveness caption,
+and the cross-cutting Schedule timeline preview. **Parts 4
+(auto-archive) and 5 (scheduled / policy-driven purge)** carved
+to `guide/deferred_until_pilot_feedback.md` on 2026-05-21 — manual
+archive (18A) + operator-triggered purge (18C) cover the per-session
+and bulk needs. Post-MVP Part 3c (targeted reminder cohorts) and
+Part 3d (reminders analytics card) deferred to the same ledger.
+Plan archived: `guide/archive/segment_18G_scheduled_events.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -802,16 +845,6 @@ bottom of this file.
   autosave, filter-to-incomplete, return-to-place, chrome
   polish) carved out to `deferred_until_pilot_feedback.md`.
   **Plan:** `guide/archive/segment_17B_reviewer_surface_refinements.md`.
-
-- **18E — Small enhancements** *(closed 2026-05-20; all three
-  Parts shipped 2026-05-18, plan archived)*. The original small-
-  enhancements holding pen — Parts 1 (column-visibility pill
-  chips), 2 (eligible-pair count cache), and 3 (friendly-label
-  Fields-with-data pills) shipped together on 2026-05-18.
-  **The "small enhancements" holding-pen role now lives on
-  Segment 18H going forward** — additional small operator-surface
-  improvements land there as new Parts rather than reopening 18E.
-  **Plan:** `guide/archive/segment_18E_small_enhancements.md`.
 
 
 
