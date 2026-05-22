@@ -1,76 +1,319 @@
 # Instrument builder
 
-> **Stub created 2026-05-22.** Sketch-level scope only. Detailed
-> PR breakdowns get drafted when this work is picked up.
+> **Stub created 2026-05-22, centered as the canonical design 2026-05-22.** Sketch-level scope only.
+> Detailed PR breakdowns get drafted when this work is picked up.
 
-A second take on the per-instrument editor's UI shape, sibling
-to [`guide/instrument_chain_builder.md`](instrument_chain_builder.md).
-The underlying conceptual model is identical — the same six
-links the chain builder describes (Reviewers / Reviewee pool /
-Unit of review / Visibility / Read shape / Release timing).
-The data model, audit footprint, validation surface, and
-sequencing carry over without change.
+The per-instrument editor's UI shape and conceptual model.
+One full-width card per instrument carrying every decision the
+operator makes about that instrument:
 
-What differs is **how the operator interacts with the editor**.
-The chain builder spends the operator's *horizontal* attention
-on three (or six) side-by-side sub-cards. The instrument
-builder spends the operator's *vertical* attention on a
-top-middle-bottom stack:
+- **Who reviews** + **who they review** — one inline rule
+  editor at the top, working over the existing engine's
+  `reviewer.*` / `reviewee.*` / `pair_context.*` address spaces.
+- **Unit of review** — the per-instrument flavour (per-reviewee
+  vs grouped) and its boundary tags.
+- **The review form itself** — a **live preview** of one
+  reviewer-surface row, sitting in the centre of the editor.
+  The operator manipulates display + response fields inline on
+  the preview row.
+- **Who can see the responses** + **what shape** + **when** —
+  per-audience access policy at the bottom.
 
-- **Top row** — Links 1, 2, 3 across (the per-instrument *who*
-  decisions: who reviews, who they review, in what unit).
-- **Middle** — the instrument itself. Display fields +
-  response fields, rendered **as a live preview of one
-  reviewer-surface row**, not as a selector table.
-- **Bottom row** — Links 4, 5, 6 across (the *who-sees-what-
-  when* decisions).
+The card is **vertically organised**: three bands stacked top
+to bottom, each its own section within the same parent card
+frame. The middle band — the live preview — is the operator's
+primary working surface; the top and bottom bands bracket it
+with the rules that govern who sees what.
 
-The middle row is the key idea. Today (and in the chain
-builder doc) the operator chooses display fields and response
-fields by ticking checkboxes in selector tables — a table per
-list, one row per slot, with the *effect* of the choices
-invisible until the operator clicks Preview. The instrument
-builder inverts that: the editor *is* a sample reviewer row,
-the operator manipulates it directly, and the table-of-checkboxes
-shape disappears.
+A prior alternative ("instrument chain builder", with the
+decisions laid out horizontally as a chain of sub-cards) was
+sketched and retired 2026-05-22 in favour of this vertical
+model.
 
 ---
 
-## Why vertical
+## Goal
 
-The horizontal six-card chain has one weakness: the chain reads
-left-to-right, but the *thing the operator is configuring* — the
-instrument's review-form shape — has nowhere of its own to
-live. The chain builder folds it into the per-instrument card's
-existing Display Fields and Response Fields tables, sitting
-below the chain row. So the operator scans:
+For each instrument in a session, the operator authors a
+complete review-form contract in one screen, answering six
+questions:
 
-1. Chain row (horizontal, top).
-2. Display Fields selector table.
-3. Response Fields selector table.
-4. (No preview unless the operator opens Previews.)
+1. **Who are the reviewers?** Which subset of the session's
+   reviewer roster fills out this instrument.
+2. **Who is each reviewer reviewing?** Per-reviewer reviewee
+   pool.
+3. **What is the unit of review?** Individual reviewees, or
+   reviewees grouped by reviewee tags.
+4. **Who can see the responses?** Cohorts (operators, reviewees
+   themselves, tagged observers).
+5. **What can they see?** Raw, summarised, or anonymised reads.
+6. **When can they see them?** While review is ongoing, or only
+   after the operator releases.
 
-This is fine when the operator already knows the shape they
-want. It is poor when they don't — when authoring an instrument
-they need to *see and adjust* simultaneously, the chain builder
-makes them assemble the picture in their head from two
-tabular editors.
+Today the operator answers these in different places — some on
+the Setup pages, some on Instruments, some via the Rule Builder
+child page, some nowhere at all (Links 4-6 do not exist in the
+system yet, and Link 3 lives only as a binary group-scoped flag
++ in-Display-Fields-table boundary-tag checkboxes). The
+instrument builder collects them into one continuous editor.
 
-The instrument builder addresses this by:
+Questions 1 + 2 are answered by **one inline rule editor**, not
+two. See [§Rule authoring](#rule-authoring) below — the
+engine has always treated them as one predicate-list problem,
+and pilot use confirms that pre-built rule libraries do not
+remove the operator's need to author rules from scratch.
 
-1. Putting the **review-row preview itself** in the centre of
-   the editor, full width, as the unit of authoring.
-2. Bracketing it with the chain links above and below — Links 1
-   to 3 *prepare* the row (who, who, in what unit); Links 4 to
-   6 *gate* the row (who sees the row, in what shape, when).
-3. Letting the operator add, remove, reorder, rename, and
-   retype every cell of the preview row in place. The selector
-   tables collapse into inline cell affordances.
+---
 
-This is a closer fit to how operators think — "I'm building a
-review form, here's what one row of it will look like" — at
-the cost of a taller layout that the operator scrolls through
-top to bottom.
+## Why direct rule authoring, not a rule library
+
+Beta use surfaced a design learning: **pre-built rules are
+less useful than the original library design assumed**.
+
+The combinatorial space is large. Each session carries three
+reviewer-tag slots, three reviewee-tag slots, and three
+pair-context-tag slots — nine independent dimensions the
+operator can pivot on. A seed like "Intra-group peer review"
+covers exactly one combination (`reviewer.tag1 same_as
+reviewee.tag1`). An operator who wants to pivot on tag3, or
+tag2 + tag3, or tag1 + tag2 + tag3, gets nothing from the seed
+— they have to write the rules from scratch.
+
+The personal-library model fares similarly. A rule the
+operator saved last time covered the previous session's
+specific tag layout; the next session's layout is likely
+different enough that the saved rule needs editing anyway. And
+**session replication** (the lobby's Duplicate action) already
+handles the "reuse this setup" case at the session level —
+every instrument's rules ride along with the clone without any
+library mechanism.
+
+So the rule library is doing very little work, and the
+abstraction it imposes (the operator chooses a RuleSet, then
+edits *that*) adds an unnecessary indirection between the
+operator and the rule-authoring engine.
+
+**The instrument builder retires the rule library.** The
+Assignment-rule editor sits inline in Band 1 of the
+per-instrument card, authoring rules directly into the
+instrument's own rule list. No RuleSet pinning, no seeded
+RuleSets, no "Save to library", no "Add from library", no
+Rule Builder child page.
+
+### What gets retired
+
+- **Seeded RuleSets** that ship with every new session
+  (`Intra-group peer review`, `Cross-group peer review`,
+  `FullMatrix`, etc.). Retire the seeding code path; existing
+  seeded rows on existing sessions stay until the session is
+  deleted or unused.
+- **The personal RuleSet library**. The operator-Settings page
+  loses the "Library RuleSets" card. The auto-copy-on-session-
+  create code path retires.
+- **The "Add from library" / "Save to library" affordances**
+  on the Rule Builder. The Rule Builder child page itself
+  retires once Band 1's inline editor lands.
+- **The Available RuleSets sidebar** on the Instruments page.
+- **The `library_origin_id` provenance column** on
+  `session_rule_sets` — retire as part of the cleanup.
+
+### What stays
+
+- **The rule engine itself.** No change. Same
+  MATCH / FILTER / QUOTA kinds, same predicate vocabulary,
+  same `ALL_OF` / `ANY_OF` combinators, same evaluation order.
+- **The `session_rule_sets` table** stays as the per-
+  instrument rule-list storage. (Renaming it to
+  `instrument_rules` to drop the "set" framing is optional and
+  separable.)
+- **Session replication** carries instrument rules with the
+  clone unchanged.
+
+### Optional: starter templates as one-shot inserts
+
+A lightweight replacement for the seeds: a small **"Insert
+starter rules"** menu on Band 1's editor with three or four
+named templates (`FullMatrix`, `Intra-group peer review on
+tag1`, etc.). Picking a template **prefills the editor with
+the corresponding rule list** — no provenance link, no
+library row, no future updates. The operator edits from there
+exactly as if they had typed the rules themselves.
+
+This preserves the convenience of "I know this pattern, just
+give me the starting predicates" without re-introducing a
+library abstraction. Optional and deferred — the editor can
+ship without it and add it later if pilot demand materialises.
+
+---
+
+## The six links
+
+The six conceptual decisions an operator makes per instrument.
+Each link maps to a slot somewhere in the three vertical bands
+of the editor; the mapping is detailed in
+[§Layout](#layout) below.
+
+### Link 1 + Link 2 — Assignment rule
+
+**Question.** Which reviewers fill out this instrument, and
+who does each reviewer review?
+
+**Today.** The engine already evaluates rule predicates that
+reference both `reviewer.*` and `reviewee.*` (plus
+`pair_context.*`) address spaces, with `ALL_OF` / `ANY_OF`
+combinators across multiple MATCH / FILTER rules. The existing
+Rule Builder UI already exposes all nine tag positions on both
+the LHS field picker (`_FIELD_PICKER_VALUES` in
+`app/web/views/_rule_builder.py:96-106`) and the RHS operand
+picker. So a rule like
+`reviewer.tag2 equals "Lead" AND reviewee.tag1 same_as
+reviewer.tag1` is fully expressible today.
+
+(The spec at `spec/rule_based_assignment.md` §7.2 carries a
+stale claim that the LHS picker "omits the reviewer tags" —
+the implementation does not enforce this. Flagged for a future
+spec sweep.)
+
+**Inputs.** A rule list against the predicate vocabulary:
+
+- **Field picker (LHS)** — any of the nine tag positions.
+- **Operator picker** — `equals`, `not_equals`, `in`, `not_in`,
+  `matches`, `not_matches`, `is_empty`, `is_not_empty`,
+  `same_as`, `different_from`.
+- **Operand picker (RHS)** — literal value, list of literals,
+  or any of the nine tag positions (for cross-side
+  comparisons).
+- **Combinator** — `ALL_OF` (default) or `ANY_OF` for joining
+  multiple rules.
+- **Kind** — `MATCH` (include matching pairs) or `FILTER`
+  (exclude matching pairs).
+
+The default rule list is empty, which means **the full matrix**
+— every reviewer-reviewee pair in the session is in scope.
+Reviewers who land on no pair are simply not assigned the
+instrument; this is the natural way to scope reviewers via
+rules.
+
+**Output.** A materialised set of `(reviewer, reviewee)` pairs
+that Link 3's unit-of-review choice then groups or leaves as-is.
+
+**Audit footprint.** Existing `assignments.generated` event;
+the canonical `excluded_counts` envelope captures every rule's
+contribution.
+
+### Link 3 — Unit of review
+
+**Question.** Does the reviewer review each reviewee in their
+pool *individually* (one row per reviewee) or *grouped* (one
+row per group)?
+
+**Today.** A binary `Instrument.group_kind` flag splits
+instruments into per-reviewee and group-scoped variants;
+group-scoped instruments partition the reviewer's pool by
+operator-marked boundary tags inside the Display Fields table.
+The mode is set at instrument creation and is one-way (delete
+and recreate to switch). See
+[`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md).
+
+**Inputs.** A unit-of-review choice:
+
+- **Individual** (default) — one row per `(reviewer, reviewee)`
+  pair on the reviewer surface.
+- **Grouped** — the reviewer's pool partitions by reviewee tags
+  marked as boundary tags. One row per group; writes fan out
+  to every group member on save.
+
+When Grouped, a multi-select picks which of the three reviewee
+tag slots define group identity. Picking zero collapses the
+whole pool into one group. Pair-context tags are deliberately
+not in scope for Link 3 — group identity is a property of the
+reviewee, not of the reviewer-reviewee relationship.
+
+**Mode switching** *after* responses exist needs reconciler
+discipline (see [§Reconciling regeneration](#reconciling-regeneration)).
+
+**Audit footprint.** New emitter
+`instrument.unit_of_review_updated` carrying the mode +
+boundary-tag selection diff.
+
+### Link 4 — Visibility scope
+
+**Question.** Who is allowed to read responses on this
+instrument?
+
+**Today.** Operators only.
+
+**Inputs.** A choice of one or more visibility audiences:
+
+- **Operators only** — the today-default.
+- **Reviewees themselves** — each reviewee reads every
+  response about them.
+- **Observers** — a tag-defined cohort. Two sub-variants:
+  - **Reviewee-tag-defined** — "every active reviewer whose
+    `reviewer.tag1 == reviewee.tag1` can see responses about
+    that reviewee".
+  - **Pair-context-defined** — "every active reviewer with a
+    relationship row where `pair_context.tag2 == 'observer'`
+    can see responses about that reviewee".
+
+Each audience is opt-in; the default is "Operators only".
+Multiple audiences may be enabled.
+
+**Audit footprint.** New emitter
+`instrument.visibility_scope_updated` plus a per-read audit
+event family (`response.read_by_reviewee`,
+`response.read_by_observer`) gated on a deployment-level
+toggle.
+
+### Link 5 — Read shape
+
+**Question.** When a non-operator audience reads a response,
+what shape does the data take?
+
+**Inputs.** Three mutually-exclusive shapes per non-operator
+audience:
+
+- **Raw** — the literal value the reviewer entered.
+- **Summarised** — aggregate-only: counts, mean / median (for
+  numeric RTDs), histograms (for List / Yes_no), word counts +
+  length distributions (for String). No per-reviewer
+  attribution.
+- **Anonymised** — per-cell content surfaced but reviewer
+  identity stripped.
+
+A k-anonymity floor (default `k = 3`) suppresses any
+aggregate / anonymised cell with fewer than k contributing
+reviewers.
+
+**Audit footprint.** New emitter
+`instrument.read_shape_updated`.
+
+### Link 6 — Release timing
+
+**Question.** When does each non-operator audience start
+seeing the responses?
+
+**Inputs.** A per-audience timing choice:
+
+- **While review is ongoing** — reads open the moment the
+  audience's eligibility resolves.
+- **When released** — reads stay closed until the operator
+  flips an explicit **Release responses** action.
+
+Operators are always read-now; only the new non-operator
+audiences carry a timing choice. The Release action stamps a
+per-`(instrument, audience)` `released_at` timestamp; the
+read-path guard consults the stamp. Releases are reversible
+("Un-release") with confirmation.
+
+**Defaults.** Reviewees + Observers default to "when released"
+so the operator decides timing. Operators are implicitly
+"while ongoing" (today's contract).
+
+**Audit footprint.** New emitter
+`instrument.release_timing_updated` + emitters
+`instrument.responses_released` /
+`instrument.responses_unreleased` for every flip.
 
 ---
 
@@ -84,22 +327,27 @@ parent card frame:
 ```
 ┌─ Instrument #2 — "Peer skill assessment"  [accepting]  [showing] ────────┐
 │                                                                          │
-│  ┌── 1. Who reviews ────┐ ┌── 2. Who they review ─┐ ┌── 3. Unit ──────┐ │
-│  │  reviewer.tag2 = Lead │ │ reviewee.tag1 same_as │ │ Individual       │ │
-│  │                       │ │ reviewer.tag1         │ │                  │ │
-│  │              [Edit ▸] │ │              [Edit ▸] │ │      [Edit ▸]    │ │
-│  └───────────────────────┘ └───────────────────────┘ └──────────────────┘ │
+│  ── Band 1: Assignment + Unit ────────────────────────────────────────   │
 │                                                                          │
-│  ─────────────────── one reviewer-surface row ──────────────────────     │
+│  ┌── Assignment rule (inline editor) ─────────────────────┐ ┌── Unit ──┐│
+│  │  Include pairs where                                    │ │Individual││
+│  │    reviewer.tag2  is one of  ["Lead"]                   │ │          ││
+│  │  AND                                                    │ │ [Edit ▸] ││
+│  │    reviewee.tag1  is the same as  reviewer.tag1         │ │          ││
+│  │  ⊕ Add rule                            [Insert starter ▾]│ │          ││
+│  └─────────────────────────────────────────────────────────┘ └──────────┘│
+│                                                                          │
+│  ── Band 2: One reviewer-surface row ──────────────────────────────────  │
 │                                                                          │
 │  ┌──────────────────────────────────────────────────────────────────────┐│
 │  │ Reviewee     │ Team    │ Photo │ Skill rating │ Strengths            ││
 │  │ Jane Doe     │ Alpha   │  🧑    │     [4 ▾]    │ [textarea text…]     ││
 │  │              │         │       │              │                      ││
-│  │ ⊕ Add column                                  │                      ││
+│  │ ⊕ Add column                                                         ││
 │  └──────────────────────────────────────────────────────────────────────┘│
+│  Live preview — sample reviewee: Jane Doe ▾                              │
 │                                                                          │
-│  ─────────────────── per-audience access ───────────────────────────     │
+│  ── Band 3: Per-audience access ──────────────────────────────────────   │
 │                                                                          │
 │  ┌── 4. Visibility ─────┐ ┌── 5. Read shape ─────┐ ┌── 6. Release ─────┐│
 │  │ Operators            │ │ Operators: raw       │ │ Operators: always ││
@@ -114,37 +362,53 @@ parent card frame:
 The three bands separate visually with thin horizontal rules,
 not with card borders — the bands are sections of one card, not
 sub-cards. The instrument identity (number, name, status pills)
-sits in the card header above the top band.
+sits in the card header above Band 1.
 
-### Band 1 — Links 1, 2, 3 (top)
+### Band 1 — Assignment + Unit
 
-Three equal-width inline summary blocks. Each shows:
+Two side-by-side regions:
 
-- The link's name (`1. Who reviews`, `2. Who they review`,
-  `3. Unit`).
-- A one-line summary of the current configuration (the rules
-  that filter reviewers, the rules that pair them with
-  reviewees, the unit choice + boundary tags).
-- An **Edit** button bottom-right.
+**Left (wider): Assignment rule — inline editor.** Replaces
+both the existing Rule Builder card and the Rule Builder child
+page. Authors the rule list directly:
 
-Clicking Edit opens the link's full editor either inline below
-the band or in a child page (same options as the chain
-builder; see [`guide/instrument_chain_builder.md`](instrument_chain_builder.md)
-§UI shape).
+- A list of rules, one row per rule, each carrying kind picker
+  (Include / Exclude), field picker, operator picker, operand
+  picker, and a remove button.
+- Combinator pill above the list (`ALL_OF` / `ANY_OF`) when
+  there are two or more rules; hidden when there is just one.
+- `⊕ Add rule` button below the list to add an empty rule row.
+- `Insert starter ▾` button next to Add rule, opening a small
+  menu of named templates that prefill the editor (the
+  one-shot replacement for seeded RuleSets — see
+  [§Why direct rule authoring](#why-direct-rule-authoring-not-a-rule-library)).
+- Drag-handle on each rule row for reordering (the engine
+  evaluates rules in document order).
+- The eligible-pair count cache (from Segment 13C) renders as
+  a small caption under the editor: `2,484 reviewer-reviewee
+  pairs across 12 reviewers and 207 reviewees`.
 
-Links 1 and 2 may be presented as one combined "Assignment
-rule" summary if the implementation adopts the chain builder
-doc's recommended sub-card collapse (Link 1 + Link 2 share one
-RuleSet). In that case the top band has two summary blocks
-instead of three.
+The inline editor is **edit-in-place** — no separate child
+page, no Save/Cancel "modes" gating individual rule edits.
+Each rule row autosaves on blur (or on every keystroke, see
+open question on autosave-vs-blur). The whole editor honours
+the existing `_require_editable` lifecycle gate — disabled in
+`ready` with the standard "Revert to draft to edit" tooltip.
 
-### Band 2 — Live preview row (middle)
+**Right (narrow): Unit of review.** Inline picker:
+
+- **Individual** vs **Grouped** radio.
+- When Grouped, a multi-select of reviewee-tag slots that
+  define group identity.
+
+Editing Unit autosaves on blur and follows the same lifecycle
+gating as Band 1's rule editor.
+
+### Band 2 — Live preview row
 
 The instrument's review form, rendered as a **single sample
-row** in the same DOM shape the reviewer surface uses. The
-sample reviewee is the first active reviewee that satisfies the
-Link 1 + Link 2 rule — picked by the editor each time the row
-re-renders so the operator always sees realistic content.
+row** in the same DOM shape the reviewer surface uses. Sits
+full-width in the centre of the card.
 
 Columns left to right:
 
@@ -154,179 +418,351 @@ Columns left to right:
   reviewer-surface contract.
 - **Display field columns** — one per display field the
   operator has added. Renders the sample reviewee's value for
-  that source (tag value, pair-context tag value, photo, etc.).
-  Per-column header shows the friendly label; clicking the
-  header opens an inline editor for label / source choice /
-  visibility / sort priority / delete.
+  that source. Per-column header shows the friendly label;
+  clicking the header opens an inline editor for label /
+  source choice / visibility / sort priority / delete.
 - **Response field columns** — one per response field the
   operator has added. Renders the field's actual input control
   (`<input>`, `<textarea>`, `<select>`) bound to the field's
-  RTD. The cell shows a *placeholder* value, not a real
-  response (the editor reads "what would a reviewer see when
-  this cell is empty"). Per-column header shows the friendly
-  label, RTD type pill, required pill; clicking the header
-  opens an inline editor for label / key / RTD / required /
-  help text / delete.
-- **`⊕ Add column`** — last cell. Opens a small chooser that
-  asks "Display column or Response column?". Picking display
+  RTD. The cell shows a placeholder value, not a real
+  response. Per-column header shows the friendly label, RTD
+  type pill, required pill; clicking the header opens an
+  inline editor for label / key / RTD / required / help text /
+  delete.
+- **`⊕ Add column`** — last cell. Opens a chooser that asks
+  "Display column or Response column?". Picking display
   surfaces the seven D6 sources (filtered to those not already
   added); picking response surfaces the session's RTD catalog
   + a "New RTD" affordance.
 
-The preview row is **interactive** — the operator can:
+The preview row is **interactive**:
 
 - **Reorder columns** by dragging headers (or with ▲/▼ arrows
   on each header for keyboard / accessibility).
 - **Rename** a column inline by clicking its header label.
 - **Retype** a response column by changing its RTD picker.
-- **Toggle visibility** (display columns only) — a column
-  marked invisible greys out, retaining its slot in the row
-  for layout context but indicating it will not render to
-  reviewers.
+- **Toggle visibility** (display columns only) — invisible
+  columns grey out, retaining their slot in the row.
 - **Delete** a column with confirmation; response columns with
   saved responses trigger the existing cascade-confirm flow.
 
-The preview row is **never** a real response. The operator's
+The preview row is **never a real response**. The operator's
 inputs into response cells are ignored — they exist only to
 demonstrate the input control's shape. A small caption
-underneath the row reads: *"Live preview — reviewers see one
-row like this per reviewee in their assignment universe.
-Sample reviewee: Jane Doe."*
+underneath reads: *"Live preview — reviewers see one row like
+this per reviewee in their assignment universe. Sample
+reviewee: ▾ Jane Doe"* with a selector to switch the sample.
 
-A toggle on the band header switches the sample reviewee, so
-the operator can sanity-check the row against several roster
-members.
+When Link 3 is **Grouped**, Band 2 renders a *group row*
+instead of a reviewee row — composed group identity column on
+the left, sample group's boundary-tag values shown.
 
-### Band 3 — Links 4, 5, 6 (bottom)
+### Band 3 — Per-audience access
 
-Three equal-width inline summary blocks, mirror image of the
-top band. Each shows:
+Three side-by-side summary blocks for Links 4, 5, 6. Each
+shows the link name, a one-line summary of the current
+configuration, and an Edit button.
 
-- The link's name.
-- A one-line summary of the current per-audience
-  configuration.
-- An **Edit** button bottom-right.
-
-If the implementation adopts the chain builder doc's
-recommended three-sub-card collapse, the bottom band can
-present as **one** "Per-audience access" summary listing the
-enabled audiences with their `(read shape, release timing)`
-inline — same data, denser presentation.
+A consolidated **single-row table** is the doc's preferred
+later shape — one row per enabled audience carrying
+`audience kind | predicate? | read shape | release timing`,
+with inline editors per cell. The three-summary-blocks layout
+ships first because it's the smaller change; the table
+collapse is deferred until Link 4 + Link 5 + Link 6 are all
+lit up.
 
 ---
 
-## What changes vs the chain builder doc
+## Data model deltas
 
-The instrument builder and the chain builder are
-**alternative UI surfaces on the same data model**. Everything
-in the chain builder doc downstream of UI shape — the data
-deltas, sequencing, validation surface, audit footprint,
-cross-cutting concerns, open questions — applies identically
-here. The only behavioural delta is the band 2 live-preview
-row vs the chain builder's separate Display Fields /
-Response Fields selector tables below the chain row.
+Three schema additions — each separable and independently
+shippable. Links 1 + 2 reuse the existing per-instrument
+`session_rule_sets` rule-list storage with no schema change
+(the rule library retires from above the engine line; the
+storage table stays). Link 3 reuses (and refines) the existing
+group-scoped instrument schema.
 
-| Concern | Chain builder | Instrument builder |
-|---|---|---|
-| Horizontal vs vertical | Chain reads left to right; preview is opt-in | Three vertical bands; preview is the centrepiece |
-| Editing the form shape | Display Fields + Response Fields selector tables | Inline column-header editing on the preview row |
-| Sample data | Hidden until operator opens Previews | Visible the moment the editor opens |
-| Vertical space | ~6 rows per instrument card | ~10-12 rows per instrument card |
-| Discoverability of columns | Operator scans two tables | Operator scans one row, left to right |
-| Cell-level affordance density | Tables can fit many rows of metadata per column | Each column header is the only affordance — limits per-column controls |
+### D3 — Unit of review (Link 3)
 
-Pick the chain builder when the operator's primary mental
-model is *policy decisions over a session*. Pick the instrument
-builder when the operator's primary mental model is *I am
-designing a review form*. The two surfaces can coexist (one as
-the default, the other as an "expert view" toggle, or one per
-session-template) — but the working assumption is that one
-ships at a time, picked after pilot feedback.
+Generalises the existing `Instrument.group_kind` flag and the
+boundary-tag checkboxes that live on per-display-field rows
+today:
+
+- `unit_of_review` — enum `{individual, grouped}` on
+  `instruments`. Replaces the binary `group_kind` flag.
+- `group_boundary_tags` — JSON array of `reviewee.tagN` slot
+  names (e.g. `["tag1", "tag3"]`). Replaces the existing
+  in-Display-Fields-table boundary-tag checkboxes. The
+  Display Fields table loses its boundary-tag column once
+  this ships.
+
+### D4 — Visibility scope (Link 4)
+
+A new structured column on `instruments`:
+- `visibility_audiences` — JSON array of objects
+  `{audience_kind, predicate?}`. `audience_kind ∈
+  {operator, reviewee, observer}`. `predicate` is required for
+  `observer`.
+
+Plus a downstream read-path guard consulting this column on
+every response-row read by a non-operator.
+
+### D5 — Read shape (Link 5)
+
+A new JSON column on `instruments`:
+- `read_shapes` — JSON object keyed by audience kind, valued by
+  `{shape: raw|summarised|anonymised, k_anonymity_floor: int}`.
+
+### D6 — Release timing (Link 6)
+
+Two new structures:
+- `release_timing` — JSON object on `instruments` keyed by
+  audience kind, valued by `{mode: while_ongoing | on_release}`.
+- `instrument_releases` — new table keyed by
+  `(instrument_id, audience_kind)`, carrying `released_at` and
+  `released_by_user_id`. One row per release flip; `released_at`
+  null means "not currently released".
+
+D4 + D5 + D6 may merge into one `audience_policy` JSON column
+carrying `{audience_kind, predicate?, shape, k_anonymity_floor,
+timing}` per row, with release timestamps still in the
+separate `instrument_releases` table.
+
+### Migrations
+
+One Alembic revision per delta, adding columns inert (default
+null / preserve `group_kind` value for D3). Service layer
+writes them; route layer surfaces them; read-path guards on
+non-operator surfaces.
 
 ---
 
 ## Sequencing
 
-Identical to the chain builder's sequencing
-(`guide/instrument_chain_builder.md` §Sequencing) for Parts 0,
-2-9. Part 1 (UI shell) is the only delta:
+A sequence of independently-shippable parts:
 
 | Part | Scope | Depends on |
 |---|---|---|
-| **0 — Schema pre-positioning** | Same as chain builder Part 0. | nothing |
-| **1 — UI shell (vertical bands)** | Replace the per-instrument card with a three-band layout. Band 1 shows summary blocks for Links 1-3 (Edit buttons inert). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state — not yet collapsed into the preview row, but visually centered between the bands. Band 3 shows summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
-| **1b — Live-preview row** | Replace Band 2's tables with the live-preview row described above. Inline column-header editing for both display and response columns. Sample-reviewee selector. | Part 1 |
-| **2-9** | Same as chain builder Parts 2-9 — each link's editor lights up under the same per-link Edit button. | per chain builder |
+| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D3, D4, D5, D6). No behaviour change. | nothing |
+| **1 — UI shell (vertical bands)** | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
+| **1b — Inline Assignment rule editor** | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
+| **1c — Live-preview row** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. | Part 1 |
+| **2 — Link 3 (unit of review)** | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
+| **3 — Link 4 (visibility, operator + reviewee audiences)** | Light up the Visibility summary block in Band 3. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface. | Parts 0 + 1 |
+| **4 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the Read-shape summary block in Band 3. Aggregator service, anonymisation transformer, k-anonymity floor. | Part 3 |
+| **5 — Link 6 (release timing, operator + reviewee audiences)** | Light up the Release-timing summary block in Band 3 + per-instrument-per-audience Release / Un-release affordance. Read-path guard consults `instrument_releases`. | Part 3 |
+| **6 — Link 4 (observer audiences)** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 3 |
+| **7 — Link 5 (read shape for observer audiences)** | Per-observer-audience read shape configuration. | Parts 4 + 6 |
+| **8 — Link 6 (release timing for observer audiences)** | Per-observer-audience release timing. | Parts 5 + 6 |
+| **9 — Band 3 table collapse (optional)** | Replace the three-summary-blocks layout with the single-row-per-audience table. | Parts 5 + 6 + 7 + 8 |
 
-Splitting Part 1 / 1b decouples the vertical-bands layout
-shift from the live-preview row's authoring affordance. Part 1
-gets the operator into the new top-middle-bottom shape with no
-authoring-mechanic change; Part 1b is the deeper rewrite of
-how the operator manipulates display + response fields.
+Parts 0 + 1 must land in that order. Parts 1b and 1c are
+independent once Part 1 ships. Parts 2 / 3 are independent
+once Part 1 ships. Parts 4 / 5 / 6 / 7 / 8 cascade per the
+dependency column.
+
+---
+
+## Cross-cutting concerns
+
+### Validation surface
+
+Each link contributes new validation rules:
+
+- **Links 1 + 2** — existing rule-engine validation,
+  unchanged. Empty rule list with empty reviewer set is a
+  warning ("no reviewers in scope"), not an error.
+- **Link 3** — when **Grouped**, at least one boundary tag
+  must be selected *or* the operator opts in to "single group
+  covering the whole pool". A boundary tag with zero non-empty
+  values across the roster is a warning.
+- **Link 4** — observer-audience predicate references unknown
+  tag slots; visibility-audience set is empty (every
+  instrument must have at least Operators).
+- **Link 5** — k-anonymity floor is achievable given the
+  generated assignment count (warning, not error, since
+  rosters may grow).
+- **Link 6** — release timing references an audience that
+  Link 4 did not enable is an error.
+
+Every rule lands as a `ValidationRule` in the existing
+registry (see [`spec/validate_page.md`](../spec/validate_page.md))
+and surfaces on the Validate page with the standard "Fix on
+Instrument Builder ↗" deep-link.
+
+### Friendly labels
+
+The chain editors consume the existing friendly-label registry
+(see [`spec/setup_pages.md`](../spec/setup_pages.md) and
+[`spec/settings_inventory.md`](../spec/settings_inventory.md)
+for the 12 in-scope slots). Predicates render with operator-
+customised labels for `reviewer.tag1` etc.; raw machine names
+live only in the JSON payloads and audit events.
+
+### Group-scoped instruments
+
+Link 3 *is* the group-scoped-instrument concept, generalised:
+the existing binary `group_kind` flag and the Display-Fields-
+table boundary-tag checkboxes (see
+[`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md))
+become the Unit-of-review picker. The downstream behaviour —
+write fan-out across group members, read-time collapse to one
+row per group, aggregation semantics on monitoring and extract
+surfaces — carries forward unchanged.
+
+Band 2's live-preview row in Grouped mode renders one group
+row instead of one reviewee row; the sample group is the first
+group the boundary tags partition the universe into.
+
+Link 4's visibility model for grouped instruments: a reviewee
+in a group sees the group's response, not the per-member fan-
+out — the existing read-time collapse continues to apply.
+
+### Reconciling regeneration
+
+Editing the rule list (Links 1 + 2) or the unit of review
+(Link 3) changes either which pairs the assignment matrix
+materialises or how they collapse on the reviewer surface. The
+existing reconciler
+([`spec/reconciling_regeneration.md`](../spec/reconciling_regeneration.md))
+already handles Links 1 + 2 — pairs the new chain drops
+cascade-delete their responses; pairs the new chain keeps
+preserve theirs; the super-button dry-runs the impact and
+prompts when responses would be lost.
+
+Link 3's mode switching is a new reconciler responsibility:
+
+- **Individual → Grouped.** Per-pair responses collapse into
+  per-group responses. The reconciler picks one canonical
+  value per group (default: most-recently-saved per member);
+  members whose values are dropped lose their individual
+  response. The super-button dry-run names every reviewee
+  whose response would be merged-away.
+- **Grouped → Individual.** Per-group responses fan back out
+  to per-pair responses by duplicating the group value into
+  every member's row. No data loss.
+
+### CSV round-trip
+
+The Settings CSV ([`spec/csv_contracts.md`](../spec/csv_contracts.md))
+must round-trip the new instrument fields. Each link's
+configuration travels as rows in the Settings CSV's per-
+instrument section. The library-related rows (seeded-RuleSet
+provenance, personal-library copies) retire from the CSV
+alongside the library mechanism.
+
+### Edit-state policy
+
+When the session is `ready` (Activated), the editor splits
+along the "assignment-shape vs read-policy" axis:
+
+- **Links 1 + 2 + 3** (Band 1's Assignment rule + Unit of
+  review) edit the assignment matrix or its collapse shape;
+  the editors render disabled with "Revert to draft to edit"
+  tooltips. Editing them invalidates `validated → draft` per
+  the existing `invalidate_if_validated` discipline.
+- **Band 2 column edits** (add / rename / retype / reorder /
+  delete display + response fields) also invalidate, since
+  they change the reviewer-surface shape.
+- **Links 4 + 5 + 6** (Band 3 per-audience access) edit read-
+  time policies only; their editors stay live in `ready`.
+  Edits do not invalidate.
+
+The Release / Un-release flips on Link 6 are runtime
+operations on an activated session, not setup-time edits, and
+have their own per-instrument-per-audience confirm flow.
 
 ---
 
 ## Open questions
 
-1. **Sample reviewee picking.** Band 2's live preview needs a
-   sample reviewee. Three policies are plausible:
-   (a) the first active reviewee that satisfies the Link 1 +
-   Link 2 rule (deterministic, may be a regular reviewee the
-   operator does not want spotlighted);
+1. **Autosave vs blur-save in Band 1's rule editor.** Each
+   rule row could autosave on every keystroke (fastest
+   feedback, more requests) or on blur (one save per rule
+   edit, slight latency). Default proposal: blur. Decision
+   deferred to Part 1b.
+
+2. **Sample reviewee picking.** Band 2's live preview needs a
+   sample reviewee. Three policies:
+   (a) the first active reviewee that satisfies the rule list
+   (deterministic, may spotlight a regular reviewee);
    (b) operator-selectable from a small dropdown of eligible
-   reviewees (best discoverability, more clicks);
-   (c) a synthetic "John Sample" reviewee with placeholder
-   values for every D6 source (no real-name exposure, but
-   makes the preview feel less authentic).
-   Default proposal: (b), with (a) as fallback when the
-   operator hasn't picked. Decision deferred to Part 1b.
+   reviewees;
+   (c) synthetic "John Sample" with placeholders.
+   Default proposal: (b), with (a) as fallback when not
+   picked. Decision deferred to Part 1c.
 
-2. **Multiple sample rows.** Band 2 renders one row by default.
-   Should the editor optionally show *N* sample rows (the
-   first N reviewees in the assignment universe)? Helps the
-   operator sanity-check display-field values across reviewees
-   with different tag combinations, at the cost of vertical
-   space. Default proposal: one row + a sample-reviewee
-   selector (see Q1); multi-row mode behind a toggle.
-
-3. **Group-scoped preview.** When the instrument is Grouped
-   (Link 3), the live preview should render *one group row*
-   instead of one reviewee row — composed group identity
-   column on the left, fan-out implications visible. The
-   sample group is the first group the boundary tags
-   partition the universe into. Deferred to Part 1b.
+3. **Multiple sample rows.** Optionally show N sample rows in
+   Band 2 to sanity-check display values across tag
+   combinations? Vertical-space cost. Default proposal: one
+   row + selector; multi-row mode behind a toggle.
 
 4. **Sort defaults in the preview.** Today's per-instrument
    sort defaults are configured on the Display Fields table
-   via the tri-state sort-priority widget
+   via the tri-state widget
    (`spec/sort_by_reviewee.md`). In the live-preview model
    that surface goes away — sort priority becomes an inline
-   header-context-menu choice. Decision deferred.
+   header-context-menu choice. Decision deferred to Part 1c.
 
 5. **Discoverability of unused columns.** A selector table
-   shows every available D6 source as a checkbox row, even
-   the unchecked ones. The preview row shows only the
-   *included* columns — the operator must click `⊕ Add
-   column` to discover what else is available. Trade-off:
-   denser canvas vs. potentially missed affordances.
-   Mitigation: the `⊕ Add column` chooser lists every D6
-   source with a checkmark next to the ones already present,
-   so adding multiple in one pass is fast.
+   shows every available D6 source as a checkbox row; the
+   preview row shows only the included columns. Mitigation:
+   the `⊕ Add column` chooser lists every D6 source with a
+   checkmark next to the ones already present.
 
-6. **Coexistence with the chain builder.** If both UI shapes
-   ship, where does the operator switch between them? A
-   session-level setting? A per-instrument toggle? Or a
-   workspace-default with a per-operator override? The MVP
-   answer is "pick one and ship it"; coexistence is a
-   later decision.
+6. **Self-review row in Link 4.** When the reviewer is also
+   the reviewee, the "reviewee can see their own response"
+   audience is trivially satisfied — but the operator may
+   want to *hide* self-review entries from the reviewee's own
+   dashboard (mirrors the existing self-review-active flag).
+   Per-instrument override?
+
+7. **Summarised view for non-numeric RTDs.** Easy for
+   `Likert5` / `1-to-5int` / `100int`. Less clear for
+   `Short_text` / `Long_text` — count + length distribution +
+   (optionally) word-frequency list? Deferred to Part 4
+   design.
+
+8. **Operator vs sys-admin power over Link 4.** Should an
+   operator be allowed to enable reviewee-visible feedback
+   without sys-admin oversight? Deferred to a permissions
+   sweep alongside Part 3.
+
+9. **Scheduled release on Link 6.** A per-`(instrument,
+   audience)` `release_at` timestamp mirroring 18G auto-send
+   would let releases fire on a schedule. Deferred until
+   manual release has been exercised in a pilot.
+
+10. **Per-reviewer release granularity.** A finer-grained
+    variant would release per-reviewee (e.g. roll out
+    feedback one reviewee at a time). Operationally noisier;
+    deferred.
+
+11. **Starter-templates menu — included or not?** The
+    one-shot "Insert starter rules" menu is the lightweight
+    replacement for seeded RuleSets. The doc treats it as
+    optional. If pilot operators reach for it rarely, drop
+    it; if often, ship it. Decision deferred to Part 1b's
+    post-ship feedback.
+
+12. **Rename `session_rule_sets` → `instrument_rules`?**
+    The "RuleSet" framing carried the library abstraction
+    that retires. Renaming the storage table to match the
+    new mental model is optional and separable. Decision
+    deferred.
 
 ---
 
 ## Related specs
 
-- [`guide/instrument_chain_builder.md`](instrument_chain_builder.md) — the sibling UI shape (horizontal chain). The data model + links + audit footprint + sequencing (sans Part 1) carry over identically.
-- [`spec/instruments.md`](../spec/instruments.md) — the per-instrument card the instrument builder lives inside.
-- [`spec/reviewer-surface.md`](../spec/reviewer-surface.md) — the row shape Band 2 is mirroring; the preview row must match it cell-for-cell so the operator's mental model of "what the reviewer sees" is correct.
-- [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) — Links 1 + 2's underlying engine.
-- [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md) — Link 3's underlying behaviour and what Band 2's group-mode preview must collapse into.
-- [`spec/sort_by_reviewee.md`](../spec/sort_by_reviewee.md) — sort-priority semantics that need a new home in the inline column-header affordance.
+- [`spec/instruments.md`](../spec/instruments.md) — the per-instrument card the instrument builder replaces.
+- [`spec/reviewer-surface.md`](../spec/reviewer-surface.md) — the row shape Band 2 mirrors; the preview row must match it cell-for-cell.
+- [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) — the rule engine Band 1's editor sits inline on. **Stale claim to flag for a future spec sweep:** §7.2 "Field-selector ordering" says the LHS picker "omits the reviewer tags". The code (`app/web/views/_rule_builder.py:_FIELD_PICKER_VALUES`, lines 96-106) lists `reviewer.tag1/2/3` first. The spec describes a design intent that the implementation does not (and arguably should not) enforce. The library-related sections of this spec also need a rewrite once Part 1b ships.
+- [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md) — Link 3's underlying behaviour.
+- [`spec/sort_by_reviewee.md`](../spec/sort_by_reviewee.md) — sort-priority semantics that need a new home in Band 2's inline column-header affordance.
+- [`spec/reconciling_regeneration.md`](../spec/reconciling_regeneration.md) — pair-preservation under rule + unit-of-review edits.
+- [`spec/validate_page.md`](../spec/validate_page.md) — where instrument-builder validation issues surface.
+- [`spec/csv_contracts.md`](../spec/csv_contracts.md) — Settings round-trip implications, including the library-row retirement.
+- [`spec/settings_inventory.md`](../spec/settings_inventory.md) — friendly labels the editors consume; the operator-library settings retire once Part 1b ships.
+- [`spec/audience_and_identity_model.md`](../spec/audience_and_identity_model.md) — the audience model Links 4, 5, and 6 operationalise.
+- [`spec/lifecycle.md`](../spec/lifecycle.md) — Link 6's release-stamp lifecycle layers on top of the session lifecycle; per-instrument release flips do not move the session between states.
