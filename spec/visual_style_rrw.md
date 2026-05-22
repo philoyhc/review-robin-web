@@ -153,6 +153,19 @@ Lifecycle badge first, then the five Setup entities in canonical order (Reviewer
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 
+**Invitations state values.** The Invitations pill reads one of four labels, computed by `app.web.views.session_status_pills` from the `Invitation` and `EmailOutbox` rows for the session:
+
+| Label | Pill class | Condition |
+|---|---|---|
+| `Not created` | `pill-empty` | No `Invitation` rows exist for the session yet. |
+| `Not sent` | `pill-warning` | `Invitation` rows exist, but no reviewer has a `sent` outbox row for their invitation. |
+| `Partially sent` | `pill-warning` | At least one reviewer has a `sent` outbox row, but not every reviewer with an invitation does. |
+| `All sent` | `pill-info` | Every reviewer with an invitation has a `sent` outbox row. |
+
+The `Not created` vs `Not sent` split matters because the operator's next action differs: generate the invitation rows first vs. press Send. Collapsing both into a single "not sent" pill would hide that.
+
+**Lifecycle pill — enum vs. label.** The lifecycle badge renders through the `lifecycle_label` Jinja filter (`app.services.lifecycle_display`). All values pass through capitalised except `ready → "Activated"`. CSS class names continue to use the raw enum (`pill-lifecycle-ready`, not `pill-lifecycle-activated`). See `spec/session_home.md` "Enum vs. display label" for the rationale.
+
 ### Page header conventions
 
 Page-level identity is established by the breadcrumb and the active chrome tab in combination. Most pages do not need a redundant H1 echoing the active tab name.
