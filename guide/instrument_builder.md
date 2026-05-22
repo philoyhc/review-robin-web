@@ -65,10 +65,19 @@ remove the operator's need to author rules from scratch.
 
 ---
 
-## Why direct rule authoring, not a rule library
+## Why direct authoring, not libraries
 
-Beta use surfaced a design learning: **pre-built rules are
-less useful than the original library design assumed**.
+Beta use surfaced a design learning that applies to **two
+library mechanisms** the original design carried: the
+**RuleSet library** behind Links 1 + 2, and the **Response
+Type Definition (RTD) library** behind response field types.
+
+Both libraries are doing less work than the original
+abstraction assumed, and both retire in the instrument
+builder — though the RTD library keeps a small residue
+(List-type definitions) where the reuse argument still holds.
+
+### The rule library retires
 
 The combinatorial space is large. Each session carries three
 reviewer-tag slots, three reviewee-tag slots, and three
@@ -100,7 +109,54 @@ instrument's own rule list. No RuleSet pinning, no seeded
 RuleSets, no "Save to library", no "Add from library", no
 Rule Builder child page.
 
-### What gets retired
+### The RTD library retires for numerical + string types
+
+Response Type Definitions today carry the shape of every
+response field's input: data type (String / Integer / Decimal
+/ List) plus type-specific bounds (max_length for strings;
+min / max / step for numerics; option list for lists). They
+are session-scoped, with 10 seeded definitions per new session
+(`Long_text` / `Short_text` / `Yes_no` / `Grade` / `Likert5` /
+`100int` / `0-to-2int` / `1-to-5int` / `1-to-5half` /
+`1-to-5dec`) and an optional personal-library copy-in.
+
+The same combinatorial / reuse argument applies — but only
+partially. Splitting RTDs by data type:
+
+- **Numerical RTDs** (Integer, Decimal). A definition like
+  `1-to-5int` carries `min=1, max=5, step=1`. Trivial to
+  author inline on the response field: pick "Integer", type 1
+  in min, 5 in max. The library is doing no real work; saving
+  one as a personal RTD or seeding it on every new session
+  spends operator attention to deliver a one-second typing
+  shortcut.
+- **String RTDs** (`Long_text`, `Short_text`). Each carries a
+  `max_length` (and possibly a regex pattern in the future).
+  Trivial to author inline. Same argument.
+- **List RTDs** (`Yes_no`, `Grade`, possibly `Likert5`). These
+  carry an **option list** — `["Yes", "No"]`,
+  `["A", "B", "C", "D", "F"]`, `["Strongly disagree", …]` —
+  that has real authoring cost the first time and real reuse
+  value across instruments in the same session (a `Grade`
+  list used on every skill assessment). The library
+  abstraction earns its keep here.
+
+**The instrument builder retires the RTD library for
+numerical and string types, and keeps it (lightly) for List
+types.** Numerical + string types become inline cell-level
+decisions on each response field; the per-session catalog and
+the personal-library copy-in retire for them. List types stay
+as a per-session catalog of List definitions — multiple
+instruments in the same session may share a List RTD — but
+the personal-library copy-in retires for them too. Session
+replication carries List RTDs with the clone, same as it
+carries rules.
+
+The post-retirement catalog is small: a handful of operator-
+authored List RTDs per session, no seeds, no personal
+library.
+
+### What gets retired (combined list)
 
 - **Seeded RuleSets** that ship with every new session
   (`Intra-group peer review`, `Cross-group peer review`,
@@ -116,6 +172,20 @@ Rule Builder child page.
 - **The Available RuleSets sidebar** on the Instruments page.
 - **The `library_origin_id` provenance column** on
   `session_rule_sets` — retire as part of the cleanup.
+- **All 10 seeded RTDs** that ship with every new session.
+  Numerical + string seeds (`Long_text` / `Short_text` /
+  `100int` / `0-to-2int` / `1-to-5int` / `1-to-5half` /
+  `1-to-5dec`) retire entirely. List-shaped seeds (`Yes_no` /
+  `Grade` / `Likert5` if treated as a list) become **optional
+  starter templates** for the inline List-RTD editor (see
+  below), not auto-seeded session rows.
+- **The personal RTD library**. The operator-Settings page
+  loses the equivalent "Library RTDs" card. The
+  auto-copy-on-session-create code path retires for RTDs too.
+- **`OperatorResponseTypeDefinition`** as a separate model
+  (today's personal-library entity). Retires.
+- **The `library_origin_id`-equivalent provenance column** on
+  `response_type_definitions` — retire as part of the cleanup.
 
 ### What stays
 
@@ -126,23 +196,43 @@ Rule Builder child page.
   instrument rule-list storage. (Renaming it to
   `instrument_rules` to drop the "set" framing is optional and
   separable.)
-- **Session replication** carries instrument rules with the
-  clone unchanged.
+- **The `response_type_definitions` table** stays — but
+  **only carries List-type rows going forward**. Numerical +
+  string types are inlined onto `instrument_response_fields`
+  directly. (Renaming the table to `list_response_types` is
+  optional and separable.)
+- **Session replication** carries instrument rules + List
+  RTDs with the clone unchanged.
 
 ### Optional: starter templates as one-shot inserts
 
-A lightweight replacement for the seeds: a small **"Insert
-starter rules"** menu on Band 1's editor with three or four
-named templates (`FullMatrix`, `Intra-group peer review on
-tag1`, etc.). Picking a template **prefills the editor with
-the corresponding rule list** — no provenance link, no
-library row, no future updates. The operator edits from there
-exactly as if they had typed the rules themselves.
+A lightweight replacement for both libraries: small
+**"Insert starter ▾"** menus on the inline editors offering
+named templates that prefill the editor — no provenance link,
+no library row, no future updates. The operator edits from
+there exactly as if they had typed the values themselves.
+
+- **Band 1's Assignment-rule editor** — templates like
+  `FullMatrix`, `Intra-group peer review on tag1`,
+  `Cross-group peer review on tag2`.
+- **Band 2's response-field column editor — numerical type
+  picker** — templates like `1-to-5 integer`, `0-to-100
+  integer`, `1-to-5 half-step decimal`. Picking one fills in
+  data_type + min + max + step.
+- **Band 2's response-field column editor — String type
+  picker** — templates like `Short text (100 chars)`,
+  `Long text (2000 chars)`. Picking one fills in data_type +
+  max_length.
+- **Band 2's response-field column editor — List type picker**
+  — templates like `Yes / No`, `Grade A-F`, `Likert 5-point`.
+  Picking one creates a new List RTD in the session's catalog
+  with the standard option set; the operator can then edit
+  the options.
 
 This preserves the convenience of "I know this pattern, just
-give me the starting predicates" without re-introducing a
-library abstraction. Optional and deferred — the editor can
-ship without it and add it later if pilot demand materialises.
+give me the starting values" without re-introducing a library
+abstraction. Optional and deferred — each editor can ship
+without it and add it later if pilot demand materialises.
 
 ---
 
@@ -424,23 +514,46 @@ Columns left to right:
 - **Response field columns** — one per response field the
   operator has added. Renders the field's actual input control
   (`<input>`, `<textarea>`, `<select>`) bound to the field's
-  RTD. The cell shows a placeholder value, not a real
-  response. Per-column header shows the friendly label, RTD
-  type pill, required pill; clicking the header opens an
-  inline editor for label / key / RTD / required / help text /
+  type + bounds. The cell shows a placeholder value, not a
+  real response. Per-column header shows the friendly label,
+  type pill (`Integer 1-5`, `String 100`, `List: Grade A-F`),
+  and required pill; clicking the header opens an inline
+  editor for label / key / type / required / help text /
   delete.
+
+  **Inline type editor.** When the operator edits the column's
+  type, the editor presents a small per-data-type form:
+  - **String** — input for `max_length`. Optional
+    "Insert starter ▾" with `Short text (100)` / `Long text
+    (2000)`.
+  - **Integer** — inputs for `min` / `max` / `step`. Optional
+    "Insert starter ▾" with `1-to-5`, `0-to-100`, etc.
+  - **Decimal** — inputs for `min` / `max` / `step`. Optional
+    "Insert starter ▾" with `1-to-5 half-step`, `1-to-5
+    decimal`, etc.
+  - **List** — picker over the session's existing List RTDs
+    (none by default) plus an `Add new list` action. Picking
+    Add new list opens an inner editor for the list's name +
+    option values. The created List RTD is a session-level
+    row reusable by other instruments. Optional
+    "Insert starter ▾" with `Yes / No`, `Grade A-F`,
+    `Likert 5-point`.
 - **`⊕ Add column`** — last cell. Opens a chooser that asks
   "Display column or Response column?". Picking display
   surfaces the seven D6 sources (filtered to those not already
-  added); picking response surfaces the session's RTD catalog
-  + a "New RTD" affordance.
+  added); picking response opens the inline type editor
+  described above, starting on the operator's most-recently-
+  used data type (or String by default).
 
 The preview row is **interactive**:
 
 - **Reorder columns** by dragging headers (or with ▲/▼ arrows
   on each header for keyboard / accessibility).
 - **Rename** a column inline by clicking its header label.
-- **Retype** a response column by changing its RTD picker.
+- **Retype** a response column by re-opening the inline type
+  editor and switching data type / bounds. Changing the data
+  type of a column with saved responses triggers a confirm
+  flow naming the cascade impact.
 - **Toggle visibility** (display columns only) — invisible
   columns grey out, retaining their slot in the row.
 - **Delete** a column with confirmation; response columns with
@@ -475,12 +588,48 @@ lit up.
 
 ## Data model deltas
 
-Three schema additions — each separable and independently
+Four schema deltas — each separable and independently
 shippable. Links 1 + 2 reuse the existing per-instrument
 `session_rule_sets` rule-list storage with no schema change
 (the rule library retires from above the engine line; the
 storage table stays). Link 3 reuses (and refines) the existing
-group-scoped instrument schema.
+group-scoped instrument schema. Plus one delta for the RTD-
+library retirement on `instrument_response_fields` +
+`response_type_definitions`.
+
+### D-RTD — Response field type inlining
+
+Numerical + string response types inline onto the response
+field directly. List types stay as separate session-level
+rows referenced by FK.
+
+New / changed columns on `instrument_response_fields`:
+- `data_type` — enum `{string, integer, decimal, list}`.
+- `max_length` — int, nullable. Used when data_type == string.
+- `min`, `max`, `step` — numerics, nullable. Used when
+  data_type in `{integer, decimal}`.
+- `response_type_definition_id` — kept, becomes nullable.
+  Used **only** when data_type == list, pointing at a session-
+  level List RTD row.
+
+Changes on `response_type_definitions`:
+- The table stays but narrows to **List-type rows only**.
+  Numerical + string rows are migrated by inlining their
+  bounds onto every referencing `instrument_response_fields`
+  row and then dropped.
+- `library_origin_id` and any other personal-library
+  provenance columns retire.
+- Optional rename to `list_response_types` to drop the
+  generic RTD framing — separable.
+
+`OperatorResponseTypeDefinition` (the personal-library entity)
+retires entirely along with its table.
+
+The migration is one-way and involves data movement: the
+operator's RTD catalog and every response field's referenced
+RTD must round-trip through a backfill that copies bounds
+inline. Backfill must run before retiring the numerical +
+string seed rows. Details deferred to Part 1d sequencing.
 
 ### D3 — Unit of review (Link 3)
 
@@ -543,10 +692,11 @@ A sequence of independently-shippable parts:
 
 | Part | Scope | Depends on |
 |---|---|---|
-| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D3, D4, D5, D6). No behaviour change. | nothing |
+| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
 | **1 — UI shell (vertical bands)** | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
 | **1b — Inline Assignment rule editor** | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
-| **1c — Live-preview row** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. | Part 1 |
+| **1c — Live-preview row** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
+| **1d — RTD-library retirement** | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |
 | **2 — Link 3 (unit of review)** | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
 | **3 — Link 4 (visibility, operator + reviewee audiences)** | Light up the Visibility summary block in Band 3. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface. | Parts 0 + 1 |
 | **4 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the Read-shape summary block in Band 3. Aggregator service, anonymisation transformer, k-anonymity floor. | Part 3 |
@@ -751,11 +901,31 @@ have their own per-instrument-per-audience confirm flow.
     new mental model is optional and separable. Decision
     deferred.
 
+13. **List-RTD card placement after Part 1d.** Once the RTD
+    library narrows to List entries only, the
+    Instruments-page "Response Type Definitions card" no
+    longer needs to be a separate full-width card. Three
+    options: (a) keep it as a slim session-wide List
+    catalogue below the instrument cards, (b) fold it
+    entirely into Band 2's inline List-type editor (every
+    Add-list / Edit-list operation happens per-instrument,
+    with cross-instrument reuse implicit), (c) keep an
+    inline catalogue as a collapsible panel inside Band 2.
+    Default proposal: (b), since most operators only see one
+    List type per session and the cross-instrument sharing
+    is an edge case. Deferred to Part 1d's UI design.
+
+14. **Rename `response_type_definitions` → `list_response_types`?**
+    The "RTD" framing was the library abstraction; the
+    post-retirement table only carries List rows. Renaming
+    to match the narrowed scope is optional and separable.
+    Decision deferred.
+
 ---
 
 ## Related specs
 
-- [`spec/instruments.md`](../spec/instruments.md) — the per-instrument card the instrument builder replaces.
+- [`spec/instruments.md`](../spec/instruments.md) — the per-instrument card the instrument builder replaces. The "Response Type Definitions card" section needs a rewrite once Part 1d ships: the card narrows to List-type entries only (or is folded into Band 2's inline List picker entirely).
 - [`spec/reviewer-surface.md`](../spec/reviewer-surface.md) — the row shape Band 2 mirrors; the preview row must match it cell-for-cell.
 - [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) — the rule engine Band 1's editor sits inline on. **Stale claim to flag for a future spec sweep:** §7.2 "Field-selector ordering" says the LHS picker "omits the reviewer tags". The code (`app/web/views/_rule_builder.py:_FIELD_PICKER_VALUES`, lines 96-106) lists `reviewer.tag1/2/3` first. The spec describes a design intent that the implementation does not (and arguably should not) enforce. The library-related sections of this spec also need a rewrite once Part 1b ships.
 - [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md) — Link 3's underlying behaviour.
@@ -763,6 +933,6 @@ have their own per-instrument-per-audience confirm flow.
 - [`spec/reconciling_regeneration.md`](../spec/reconciling_regeneration.md) — pair-preservation under rule + unit-of-review edits.
 - [`spec/validate_page.md`](../spec/validate_page.md) — where instrument-builder validation issues surface.
 - [`spec/csv_contracts.md`](../spec/csv_contracts.md) — Settings round-trip implications, including the library-row retirement.
-- [`spec/settings_inventory.md`](../spec/settings_inventory.md) — friendly labels the editors consume; the operator-library settings retire once Part 1b ships.
+- [`spec/settings_inventory.md`](../spec/settings_inventory.md) — friendly labels the editors consume; the operator-library settings retire once Parts 1b (RuleSet library) and 1d (RTD library) ship.
 - [`spec/audience_and_identity_model.md`](../spec/audience_and_identity_model.md) — the audience model Links 4, 5, and 6 operationalise.
 - [`spec/lifecycle.md`](../spec/lifecycle.md) — Link 6's release-stamp lifecycle layers on top of the session lifecycle; per-instrument release flips do not move the session between states.
