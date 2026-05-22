@@ -70,12 +70,13 @@ Rendering the six as a left-to-right chain (whether as six
 sub-cards, three, or two — see [§UI shape](#ui-shape) on the
 links-vs-cards distinction) makes the dependency explicit. It
 also gives the operator a single instrument-level surface to
-inspect the *policy* an instrument is enforcing — today, Link 1
-lives in the engine but is not surfaced in the Rule Builder UI,
-Link 2 lives on the per-instrument card, Link 3 lives as a
-binary group-scoped flag plus boundary-tag checkboxes inside
-the Display Fields table, Link 4 lives only in operators'
-heads, and Links 5 and 6 have nowhere to live at all.
+inspect the *policy* an instrument is enforcing — today,
+Links 1 + 2 live together inside the existing Rule Builder
+card (already a full Link 1 + Link 2 surface; see Link 1's
+"Today" section), Link 3 lives as a binary group-scoped flag
+plus boundary-tag checkboxes inside the Display Fields table,
+Link 4 lives only in operators' heads, and Links 5 and 6 have
+nowhere to live at all.
 
 The chain is **per instrument**, not per session. Two instruments
 in the same session can carry different chains (e.g. a peer-
@@ -92,34 +93,53 @@ visibility and raw reads).
 **Question.** Which reviewers on the session's roster fill out
 this instrument?
 
-**Today.** Conceptually present in the engine, missing from the
-UI. The existing rule predicate vocabulary already speaks both
-sides — `reviewer.tag1 / tag2 / tag3` and `reviewer.email` are
-first-class reference fields, equal in standing to their
-`reviewee.*` counterparts (see
-[`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) §4.1:
-"Filter and Match rules are defined as predicates over a
-candidate pair `(r, e)`. The vocabulary uses two address
-spaces: `reviewer.*` and `reviewee.*`"). Predicates such as
-`reviewer.tag2 in ["Senior", "Lead"]` are already valid rule
-syntax and run correctly today.
+**Today.** Already fully expressible in the existing Rule
+Builder — Link 1 is not a new capability, just a clearer way
+to name a job the operator can do today.
 
-What's missing is the **UI affordance**: the Rule Builder's
-field-selector deliberately *omits the reviewer tags* from the
-field picker, anchoring every predicate on the reviewee or
-pair-context side (`spec/rule_based_assignment.md` §7.2
-"Field-selector ordering"). Reviewer-side fields are reachable
-only as *operands* via the cross-side `same_as` /
-`different_from` operators. So the operator can express
-"reviewer and reviewee share tag1" but cannot author "reviewer
-tag2 is Lead" in the current UI without hand-writing JSON.
+Three engine + UI properties together make this so:
 
-The chain builder lifts that omission by giving Link 1 its own
-sub-card whose predicate-field picker is **scoped to
-reviewer-side fields only** (mirror image of today's Rule
-Builder, which is reviewee-anchored). The engine layer needs no
-change — only a UI seam that authors `reviewer.*`-anchored
-predicates and stores them.
+1. **The predicate vocabulary speaks both sides.** The engine's
+   rule predicates reference fields in two address spaces,
+   `reviewer.*` and `reviewee.*` (plus `pair_context.*`). A
+   predicate like `reviewer.tag2 equals "Lead"` is valid rule
+   syntax and runs correctly. See
+   [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) §4.1.
+
+2. **The UI's field-picker (LHS) already includes reviewer
+   tags.** Inspecting the live picker
+   (`app/web/views/_rule_builder.py:_FIELD_PICKER_VALUES`)
+   confirms `reviewer.tag1 / tag2 / tag3` are listed alongside
+   the reviewee and pair-context tags — the operator can pick
+   any of the nine as the LHS of a predicate. The operand-side
+   (RHS) picker accepts literals or any of the nine same
+   fields. (`spec/rule_based_assignment.md` §7.2 carries a
+   stale claim that the LHS picker "omits the reviewer tags";
+   the code does not implement that constraint and the spec
+   should be flagged for cleanup.)
+
+3. **RuleSets allow conjunction.** Multiple MATCH / FILTER
+   rules combine with `ALL_OF` / `ANY_OF` combinators. So an
+   operator can chain `MATCH(reviewer.tag2 equals "Lead")` —
+   a pure Link-1 reviewer filter — with `MATCH(reviewee.tag1
+   same_as reviewer.tag1)` — a Link-2 pair-level constraint —
+   inside one RuleSet.
+
+So the existing Rule Builder is **already a Link 1 + Link 2
+construct, in both engine and UI**. An operator wanting "only
+managers (Link 1) review only their own direct reports
+(Link 2)" can author both predicates as rules in one RuleSet
+today, with no chain-builder UI involved.
+
+**What the chain builder adds.** Not new expressive power —
+just a clearer mental model. Splitting the predicate set into
+"who reviews" and "who do they review" surfaces the *intent*
+the existing Rule Builder asks the operator to encode in one
+flat rule list. Operators authoring sessions often think of
+the two scopes as separate decisions; the chain builder
+matches that mental model. (Whether the UI split is worth the
+extra surface area is captured as an open question — see
+[§Open questions](#open-questions) on sub-card boundaries.)
 
 **Proposed inputs.** A predicate over the session's reviewer
 roster, expressed in the same vocabulary the existing rule
@@ -138,28 +158,18 @@ in scope.
 **Output.** A filtered reviewer set that Link 2 then projects
 reviewees from.
 
-**Relationship to today's RuleSet.** Link 1 and Link 2 are two
-*views* on the same underlying predicate space. An operator who
-wanted to express "reviewer tag2 = Lead AND reviewee tag1 same
-as reviewer tag1" could in principle write a single RuleSet
-carrying both predicates and ignore Link 1 entirely — which is
-what the existing engine has always allowed. Link 1 exists
-because the UI works better when the two scopes are authored
-side by side (and because Link 1's predicate has the natural
-property of touching only `reviewer.*` and `pair.*` — never
-`reviewee.*` — which the chain builder can enforce on the
-sub-card's field picker).
-
 **Storage.** Two equivalent representations are possible:
 (a) a separate `reviewer_scope` JSON column on `instruments`
 (see [D1](#d1--reviewer-scope-predicate-link-1)), or
 (b) folding Link 1's predicate into the same RuleSet that
 carries Link 2's predicates as an additional rule with
-`kind=FILTER` and a `reviewer.*`-anchored predicate. (a) keeps
-the UI seam tidy (the chain builder writes one slot, the Rule
-Builder writes the other); (b) keeps the engine seam tidy
-(only one rule list ever runs). The chain builder doc adopts
-(a) as the working assumption; the trade-off is revisited in
+`kind=FILTER` and a `reviewer.*`-anchored predicate. Given that
+the engine + UI already accept exactly this conjunction,
+**(b) is now the natural default** — no new column, no new
+rule-evaluation seam, no new persistence path. (a) was the
+earlier doc's working assumption back when the spec made Link 1
+look like a net-new capability; the codebase check has flipped
+the choice. The trade-off is revisited in
 [§Open questions](#open-questions).
 
 **Audit footprint.** New emitter
@@ -179,13 +189,18 @@ The instrument pins one RuleSet (seeded or personal) whose
 MATCH / FILTER / QUOTA predicates select `(reviewer, reviewee)`
 pairs from the session's roster.
 
-Strictly speaking, **the existing Rule Builder is already a
-Link 1 + Link 2 construct at the engine layer** (see Link 1's
-"Today" note above). The chain builder splits the two visually
-into separate sub-cards because they read more clearly as
-distinct decisions, but the underlying predicate vocabulary is
-shared. Sub-cards 1 and 2 may even share a single backing
-RuleSet if storage option (b) from Link 1 is adopted.
+As noted under Link 1, **the existing Rule Builder is already a
+Link 1 + Link 2 construct in both engine and UI**: the
+LHS field picker exposes reviewer tags, the operand picker
+accepts both literals and any field, and rules conjoin via
+`ALL_OF` / `ANY_OF` combinators. An operator who wants "only
+managers review only their own direct reports" can author both
+predicates as rules in one RuleSet today. The chain builder
+splits the two scopes visually into separate sub-cards (or
+keeps them combined — see [§UI shape](#ui-shape) on the
+links-vs-cards distinction), but the underlying predicate
+vocabulary is shared, and a single backing RuleSet is the
+natural place for both to live.
 
 **Proposed inputs.** Unchanged from today. The chain builder
 embeds the existing Rule Builder card's affordances:
@@ -423,70 +438,81 @@ from links to sub-cards is a separate UI choice**, and the
 natural mapping is not always one-to-one.
 
 Some links pair so tightly with their neighbours that one
-sub-card may host two links:
+sub-card may host two or more links:
 
-- **Link 1 + Link 2** share a predicate vocabulary (both
-  speak `reviewer.*`, `reviewee.*`, and `pair.*`) and have
-  always shared one engine. A combined "Assignment rule"
-  sub-card with two sections — *Who reviews* and *Who they
-  review* — is a reasonable layout, particularly given that
-  the existing Rule Builder already takes this form
-  implicitly (see Link 1's "Today" note).
-- **Link 4 + Link 5** are both per-audience *what-they-see*
-  policies — who reads + what shape they read in. A combined
-  "Per-audience read policy" sub-card listing each audience
-  with its shape inline is reasonable.
-- **Link 4 + Link 6** are both per-audience policies that
-  attach to the same audience row — who reads + when they
-  start reading. A combined "Per-audience access" sub-card
-  would carry the audience kind, the predicate (for
-  observers), and the release timing on one row.
-- **Link 5 + Link 6** travel together on the schema side
-  (always per-audience) but address different concerns; a
-  combined sub-card would group them as "Per-audience
-  surface" but the operator's mental model may keep them
-  more legible if they read as separate sub-cards.
+- **Link 1 + Link 2 — the strongest pairing.** These share a
+  predicate vocabulary (both speak `reviewer.*`, `reviewee.*`,
+  and `pair_context.*`), already share one engine, and already
+  share one UI: the existing Rule Builder *is* a Link 1 + Link 2
+  surface (see Link 1's "Today" section). A combined "Assignment
+  rule" sub-card embedding the existing Rule Builder
+  ~unchanged — perhaps just with two visual sections labelled
+  *Who reviews* and *Who they review* to surface the
+  decomposition — is the lowest-friction layout and the doc's
+  recommended choice for sub-cards 1 + 2.
+- **Link 4 + Link 5 + Link 6 — the second-strongest pairing.**
+  All three are per-audience policies that attach to the same
+  audience row: who reads + what shape they see + when they
+  see it. A combined "Per-audience access" sub-card with one
+  row per audience — `audience kind | predicate? | read shape |
+  release timing` — collapses three sub-cards into one, at the
+  cost of slightly denser per-row information.
+- **Link 4 + Link 5** alone or **Link 4 + Link 6** alone are
+  smaller intermediate collapses if the triple feels too
+  dense.
 
-The strongest pairing is **Link 4 + Link 5 + Link 6 as one
-"Per-audience" sub-card with a row per audience** — a single
-table where each row carries `audience kind | predicate? |
-read shape | release timing`. This collapses the chain from
-six sub-cards to three or four, at the cost of slightly
-denser per-row information.
+Taking both strongest pairings, the chain naturally reads as
+**three sub-cards**, not six:
 
-The doc's **working assumption** is the six-sub-card layout
-(one per link) — explicit and easy to scan. Pilot feedback may
-push toward a collapsed layout once operators show which
-groupings they treat as one decision. The data model is
-unchanged either way; only the sub-card boundary moves.
+1. **Assignment rule** (Links 1 + 2) — the existing Rule
+   Builder, possibly re-headed.
+2. **Unit of review** (Link 3) — unit choice + boundary tags.
+3. **Per-audience access** (Links 4 + 5 + 6) — one row per
+   audience carrying audience kind, predicate, read shape,
+   release timing.
 
-### Default layout — one sub-card per link
+This is the doc's **working assumption** going forward — three
+sub-cards, not six. The six-link decomposition stays in the
+text as the conceptual model the operator is encoding; the UI
+collapses two of the three groups into single editors that
+match the way operators already think about them.
 
-Under the working assumption, the full-width frame holds six
-**sixth-width sub-cards** in a single row (a `.bottom-grid`
-extended to six equal columns), one per link. Each sub-card
-carries:
+Pilot feedback may push toward a different boundary (split the
+Per-audience triple, fold Link 3 into Assignment rule, etc.).
+The data model is unchanged either way; only the sub-card
+boundary moves.
 
-- A short title — `1. Reviewers`, `2. Reviewee pool`,
-  `3. Unit of review`, `4. Visibility`, `5. Read shape`,
-  `6. Release timing`.
-- A one-line current-state summary in body text, e.g.:
-  - `1. Reviewers: All active (no filter)`
-  - `2. Reviewee pool: Same-team peers (RuleSet "Intra-group peer")`
-  - `3. Unit of review: Individual`
-  - `4. Visibility: Operators + reviewees`
-  - `5. Read shape: Reviewees see anonymised text`
-  - `6. Release timing: Reviewees on release (not yet released)`
-- A small **Edit** button bottom-right of each sub-card.
+### Default layout — three sub-cards
+
+Under the working assumption (two strongest pairings collapsed),
+the full-width frame holds **three sub-cards** in a single row
+(a `.bottom-grid` extended to three equal columns). Each
+sub-card carries a short title, a one-line current-state
+summary, and an **Edit** button:
+
+- **Assignment rule** (Links 1 + 2) — embeds the existing
+  Rule Builder card ~unchanged, possibly with two visual
+  sections labelled *Who reviews* and *Who they review* to
+  surface the Link 1 / Link 2 decomposition. Summary:
+  `Assignment rule: Same-team peers, leads only (2 rules)`.
+- **Unit of review** (Link 3) — unit choice (Individual /
+  Grouped) + boundary tag selection. Summary:
+  `Unit of review: Individual` (or
+  `Unit of review: Grouped by reviewee.tag1 + tag3`).
+- **Per-audience access** (Links 4 + 5 + 6) — one row per
+  enabled audience carrying audience kind, predicate (for
+  observers), read shape, and release timing. Summary:
+  `Per-audience access: Operators (raw, always), Reviewees
+  (anonymised text, on release — not yet released)`.
 
 Clicking **Edit** on a sub-card opens the link's full editor —
 either inline below the chain row (preferred for visual
 continuity) or as a child page in the same chrome
-(`/operator/sessions/{id}/instruments/{iid}/chain/{link}`, where
-`{link} ∈ {reviewers, reviewee-pool, unit-of-review, visibility, read-shape, release-timing}`).
-The child-page approach mirrors the existing Rule Builder
-pattern; the inline approach is gentler on context but requires
-more careful state management.
+(`/operator/sessions/{id}/instruments/{iid}/chain/{section}`,
+where `{section} ∈ {assignment-rule, unit-of-review,
+per-audience-access}`). The child-page approach mirrors the
+existing Rule Builder pattern; the inline approach is gentler
+on context but requires more careful state management.
 
 Sub-cards render in the same per-instrument tint as their
 parent card. The Identity row (instrument number + name + short
@@ -494,6 +520,33 @@ label + status pills) moves to a thin header row above the
 sub-cards inside the same full-width card frame.
 
 ### Wireframe
+
+```
+┌─ Instrument #2 — "Peer skill assessment"  [accepting]  [showing] ─────────┐
+│                                                                           │
+│  ┌──── Assignment rule ──┐ ┌── Unit of review ──┐ ┌── Per-audience ─────┐ │
+│  │ Who reviews:          │ │ Individual         │ │ Operators   raw  ─  │ │
+│  │   reviewer.tag2=Lead  │ │                    │ │ Reviewees   anon  ⏳│ │
+│  │ Who they review:      │ │                    │ │ (Observers not set) │ │
+│  │   reviewee.tag1 same  │ │                    │ │                     │ │
+│  │   as reviewer.tag1    │ │                    │ │                     │ │
+│  │                       │ │                    │ │                     │ │
+│  │            [Edit ▸]   │ │       [Edit ▸]     │ │         [Edit ▸]    │ │
+│  └───────────────────────┘ └────────────────────┘ └─────────────────────┘ │
+│                                                                           │
+│  ↓ (Display Fields, Response Fields, etc. continue below)                 │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+The chain row is the *first* sub-card of the per-instrument
+card, above Display Fields and Response Fields.
+
+### Alternative — six sub-cards, one per link
+
+If pilot feedback shows operators prefer the six-link
+decomposition surfaced one-per-card, the doc's previous
+working assumption (six sixth-width sub-cards in a row, one
+per link) remains a valid fallback:
 
 ```
 ┌─ Instrument #2 — "Peer skill assessment"  [accepting]  [showing] ────────┐
@@ -514,13 +567,11 @@ sub-cards inside the same full-width card frame.
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-The chain row is the *first* sub-card of the per-instrument
-card, above Display Fields and Response Fields. The instrument's
-Identity row collapses into the chain-card header.
+The Identity row collapses into the chain-card header.
 
 ### State machine
 
-The six sub-cards share the per-instrument card's existing
+The chain sub-cards share the per-instrument card's existing
 **mutually-exclusive edit lock** (only one instrument can be in
 edit mode at a time, and within an instrument only one of
 Display Fields / Response Fields / Chain links can be open for
@@ -552,17 +603,26 @@ separate from the chain editor.
 
 ## Data model deltas
 
-Tracking the six-link chain requires five schema additions —
-each separable and independently shippable. Link 2 reuses the
-existing per-instrument RuleSet pin; Link 3 reuses (and refines)
-the existing group-scoped instrument schema.
+Tracking the six-link chain requires four schema additions —
+each separable and independently shippable. Links 1 and 2
+reuse the existing per-instrument RuleSet pin (both predicates
+live as rules in the same backing RuleSet); Link 3 reuses
+(and refines) the existing group-scoped instrument schema.
 
 ### D1 — Reviewer scope predicate (Link 1)
 
-A new JSON column on `instruments`:
-- `reviewer_scope` — nullable JSON. When non-null, a predicate
-  in the same shape as the existing rule predicates. When null,
-  defaults to "all active reviewers".
+**No schema change** under the doc's current working
+assumption. Link 1's predicate lives as an additional `FILTER`
+rule with a `reviewer.*`-anchored predicate inside the same
+RuleSet that carries Link 2's predicates (storage option (b)
+from Link 1's "Today" section). The existing engine already
+evaluates this exact shape correctly.
+
+A dedicated `reviewer_scope` JSON column remains an
+*alternative* (storage option (a)) — preserved here in case a
+future implementation needs a separate persistence slot, e.g.
+to cache the reviewer-only subset of rules. The chain builder
+doc does not assume this slot exists.
 
 ### D2 — Reviewee pool (Link 2)
 
@@ -642,13 +702,13 @@ sequence of independently-shippable parts:
 
 | Part | Scope | Depends on |
 |---|---|---|
-| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D1, D3, D4, D5, D6). No behaviour change. | nothing |
-| **1 — UI shell** | Replace the per-instrument card's Identity + Rule row with the six-sub-card chain layout. Sub-cards 1 / 4 / 5 / 6 are placeholder cards showing "Default" everywhere; sub-card 2 wraps the existing Rule Builder affordance unchanged; sub-card 3 reflects the current `group_kind` flag read-only. | Part 0 |
-| **2 — Link 1 (reviewer scope)** | Light up the Reviewers sub-card editor + service-layer predicate evaluation in the assignment generator. | Parts 0 + 1 |
+| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D3, D4, D5, D6 — no D1 under the working assumption). No behaviour change. | nothing |
+| **1 — UI shell** | Replace the per-instrument card's Identity + Rule row with the three-sub-card chain layout (Assignment rule / Unit of review / Per-audience access). The Assignment-rule sub-card wraps the existing Rule Builder affordance unchanged. The Unit-of-review sub-card reflects the current `group_kind` flag read-only. The Per-audience sub-card is a placeholder showing "Operators only" by default. | Part 0 |
+| **2 — Link 1 surfacing** | Re-head the existing Rule Builder card's two visual sections as *Who reviews* (Link 1) and *Who they review* (Link 2). No engine, no schema, no storage work — purely a label and ordering pass over the Rule Builder template to surface the Link 1 / Link 2 decomposition the operator is already encoding. | Parts 0 + 1 |
 | **3 — Link 3 (unit of review)** | Promote the existing `group_kind` flag + Display-Fields-table boundary-tag checkboxes into the Unit-of-review sub-card editor. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
-| **4 — Link 4 (visibility, operator + reviewee audiences)** | Light up the Visibility sub-card editor. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface (the reviewee dashboard the audience model has long anticipated). | Parts 0 + 1 |
-| **5 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the Read shape sub-card editor. Aggregator service computing summaries; anonymisation transformer; k-anonymity floor enforcement. | Part 4 |
-| **6 — Link 6 (release timing, operator + reviewee audiences)** | Light up the Release-timing sub-card editor + per-instrument-per-audience Release / Un-release affordance on the operator surface. Read-path guard consults `instrument_releases` before serving any "on_release" audience. | Part 4 |
+| **4 — Link 4 (visibility, operator + reviewee audiences)** | Light up the visibility column of the Per-audience sub-card. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface (the reviewee dashboard the audience model has long anticipated). | Parts 0 + 1 |
+| **5 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the read-shape column of the Per-audience sub-card. Aggregator service computing summaries; anonymisation transformer; k-anonymity floor enforcement. | Part 4 |
+| **6 — Link 6 (release timing, operator + reviewee audiences)** | Light up the release-timing column of the Per-audience sub-card + per-instrument-per-audience Release / Un-release affordance on the operator surface. Read-path guard consults `instrument_releases` before serving any "on_release" audience. | Part 4 |
 | **7 — Link 4 (observer audiences)** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 4 |
 | **8 — Link 5 (read shape for observer audiences)** | Per-observer-audience read shape configuration. | Parts 5 + 7 |
 | **9 — Link 6 (release timing for observer audiences)** | Per-observer-audience release timing + Release affordance for each observer audience. | Parts 6 + 7 |
@@ -768,18 +828,26 @@ must not break it.
    (a) a dedicated `reviewer_scope` JSON column on
    `instruments`, separate from the Link 2 RuleSet; or
    (b) one extra `FILTER` rule with a `reviewer.*`-anchored
-   predicate inside the Link 2 RuleSet. The doc currently
-   assumes (a). (b) is closer to today's engine layer and
-   removes one schema row; (a) keeps the UI seam tidier (one
-   sub-card writes one slot). Worth re-evaluating once the
-   chain-builder UI lands. Decision deferred to Part 2.
+   predicate inside the Link 2 RuleSet. **The doc now assumes
+   (b)** — the engine and UI already accept this exact
+   conjunction, and the recommended sub-card layout (Link 1 +
+   Link 2 collapsed into one Assignment-rule sub-card) makes
+   the single-RuleSet storage natural. (a) was the earlier
+   working assumption back when Link 1 looked like a net-new
+   capability; the codebase check has flipped the default. The
+   open question now is whether (a) buys anything worth its
+   cost — a single inert reviewer_scope column might still be
+   worth it as a *cache* of the reviewer-only subset of rules,
+   if reviewer-scope evaluation becomes a hot path. Deferred
+   until Part 2 implementation forces the choice.
 3. **Sub-card boundary.** The "links are not cards" note above
-   sketches several reasonable collapses (Link 1 + Link 2 into
-   one Assignment-rule sub-card; Link 4 + Link 5 + Link 6 into
-   one Per-audience sub-card). The working assumption is one
-   sub-card per link, but the right collapse may only become
-   clear once operators exercise the builder. Decision
-   deferred to Part 1's UI shell or to a later refactor.
+   sketches several collapses. The doc now defaults to
+   **three sub-cards**: Assignment rule (Links 1 + 2), Unit of
+   review (Link 3), Per-audience access (Links 4 + 5 + 6).
+   Pilot feedback may push toward a different boundary (split
+   Per-audience, fold Unit of review into Assignment rule,
+   etc.). Decision revisited in Part 1's UI shell or in a
+   later refactor.
 4. **Per-instrument vs per-session chain templates.** A common
    pilot pattern may be "use the same chain on every instrument
    in a session" (e.g. a 360-review session with consistent
@@ -826,7 +894,7 @@ must not break it.
 
 ## Related specs
 
-- [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) — the existing Rule Builder is, in engine terms, already a Link 1 + Link 2 construct (predicates speak both `reviewer.*` and `reviewee.*` address spaces); the chain builder lifts Link 1 out as a first-class UI affordance.
+- [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md) — the existing Rule Builder is already a Link 1 + Link 2 construct in both engine and UI (LHS field picker exposes reviewer tags, operand picker accepts all nine field positions, rules conjoin via `ALL_OF` / `ANY_OF`). The chain builder re-presents the same capability with the Link 1 / Link 2 decomposition surfaced. **Stale claim to flag for a future spec sweep:** §7.2 "Field-selector ordering" says the LHS picker "omits the reviewer tags". The code (`app/web/views/_rule_builder.py:_FIELD_PICKER_VALUES`, lines 96-106) lists `reviewer.tag1/2/3` first. The spec describes a design intent that the implementation does not (and arguably should not) enforce.
 - [`spec/instruments.md`](../spec/instruments.md) — the per-instrument card the chain builder lives inside.
 - [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md) — group-scoped behaviour the chain must respect.
 - [`spec/reconciling_regeneration.md`](../spec/reconciling_regeneration.md) — pair-preservation under chain edits.
