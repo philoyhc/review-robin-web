@@ -15,8 +15,9 @@
 > enhancements) — 18A ships only manual archiving.
 > **Segment 14C (Reminders workflow) was consolidated into this
 > segment on 2026-05-18** — scheduled reminder dispatch is itself
-> a scheduled event; it lives here as Part 5 and the standalone
-> 14C plan is retired.
+> a scheduled event; it lives here as Part 3 (renumbered from
+> Part 5 in the 2026-05-20 chronological re-ordering) and the
+> standalone 14C plan is retired.
 >
 > **Segment 13F (More DB prep) consolidated into this segment on
 > 2026-05-20.** Five of 13F's seven PRs had shipped; the remaining
@@ -253,12 +254,14 @@ tests in `tests/integration/test_*_schema.py` shape (mirrors
 the new identifiers across `app/services/` + `app/web/` returns
 zero hits — light-up happens in Parts 1–5.
 
-> **Parts 1–5 are ordered by workflow sequence — the chronological
+> **Parts 1–3 are ordered by workflow sequence — the chronological
 > order each scheduled event fires across a session's life.**
 > Activation is the first scheduled event (the session opens),
 > then invites land just before / at activation, then reminders
-> fire as the deadline approaches, then auto-archive cleans up
-> after End, and finally auto-delete purges archived sessions.
+> fire as the deadline approaches. Auto-archive (would-have-been
+> Part 4) and scheduled purge (would-have-been Part 5) carved
+> out to `guide/deferred_until_pilot_feedback.md` 2026-05-21 —
+> manual + bulk operator paths cover the immediate need.
 > Implementation dependency order roughly matches workflow order:
 > later Parts read scaffolding the earlier Parts can settle (the
 > shared dispatch mechanism, audit-event naming conventions).
@@ -843,83 +846,38 @@ of triggers per session (one per offset entry), not a single one
   `guide/deferred_until_pilot_feedback.md` — both are post-MVP
   features whose value depends on pilot signal.
 
-### Part 4 — Auto-archive
+### Parts 4 / 5 — Auto-archive and scheduled purge (deferred)
 
-**Goal.** A session carries an archive *offset* (anchored on
-`deadline`, default `P30D`); a scheduled trigger flips it
-`draft → archived` via 18A's `archive_session` at
-`deadline + archive_offset`. The first lifecycle event past
-the session's End — the operator's data-download window sits
-inside this offset.
+**Carved out 2026-05-21** to
+`guide/deferred_until_pilot_feedback.md`. Both schema slices
+(`sessions.archive_offset` from Part 0b;
+`sessions.retention_exception` / `sessions.retention_overrides`
+from Part 0c) shipped inert on 2026-05-20 and stay parked.
 
-- Reuses `session_lifecycle.archive_session` verbatim — only the
-  trigger is new.
-- Schema: `sessions.archive_offset` (Part 0b). Inert when
-  `deadline` is unset per the cross-cutting anchor-null rule.
-- **Precondition (`spec/lifecycle.md` §8.2.3).**
-  `session.status == "draft"` (18A's locked `draft ⇄ archived`
-  archive model). A running `ready` session must be reverted to
-  draft first. Fire-time guard: skip with `reason="not_draft"`,
-  `session.scheduled_archive_skipped` audit event, clear the
-  offset (one-shot). The Sessions lobby surfaces "Auto-archive
-  scheduled at «X» — currently inactive: revert the session to
-  draft before then or this will skip" when the session is
-  still `ready` at fire time.
-- The default `P30D` (30 days post-deadline) is operator-editable;
-  it gives the operator time to download data before the session
-  disappears from the active lobby.
-
-### Part 5 — Scheduled / policy-driven purge (auto-delete)
-
-**Goal.** A retention policy that purges aged data on a schedule —
-moved here out of **Segment 18C** when 18C was re-scoped to the
-*operator-triggered* purge only (2026-05-17). 18C owns the purge
-*mechanics*; 18G Part 5 owns the *scheduled trigger* that runs them.
-Last event in the workflow — fires only on already-archived
-sessions, anchored on the system-stamped archive timestamp Part 4
-produces.
-
-- **Per-deployment policy** — env-var config in `app/config.py`
-  (`RETENTION_RESPONSE_DAYS` / `RETENTION_AUDIT_DAYS` /
-  `RETENTION_SESSION_ARCHIVED_DAYS`; unset = no auto-purge), a
-  scheduled worker, and a `retention.policy_run` audit event with
-  a `counts` envelope.
-- **Per-session override** — the `sessions.retention_exception`
-  Boolean (opt a session out, e.g. legal hold) and the
-  `sessions.retention_overrides` JSON column, both pre-positioned
-  by **Part 0c**; a Settings-page editor; a
-  `session.retention_policy_updated` emitter.
-- **Per-session auto-delete offset** — `retention_overrides.delete_after_archive`
-  (ISO 8601 duration, anchored on the system-stamped archive
-  time) — when set, an archived session is hard-deleted this far
-  past its archive timestamp.
-- **Precondition (`spec/lifecycle.md` §8.2.3).**
-  `session.status == "archived"`. The archive timestamp itself
-  is the anchor, so a not-yet-archived session has neither anchor
-  nor precondition. Fire-time guard: skip with
-  `reason="not_archived"`, `session.scheduled_purge_skipped`
-  audit event. The Sessions lobby archived child page surfaces
-  the active vs not-yet-effective state on each archived row.
-- Reuses 18C's `session_purge` service for the actual deletes —
-  this part adds only the schedule + policy resolution.
-- **Ride-along: 18D Part 5.** The Settings-CSV round-trip of the
-  retention columns (`retention_exception` / `retention_overrides`)
-  — Segment 18D's Part 5 — was handed to this part: once Part 0c
-  lands the columns, add the `retention.*` rows to the Settings
-  CSV serialiser / importer as part of Part 5.
+The pragmatic call: manual archive + the operator-triggered
+purge ("Purge and archive" on the Sessions-lobby row expander,
+shipped in Segments 18A and 18C) already cover the per-session
++ bulk needs from the Sessions lobby and the
+`/operator/sessions/archived` child page. A scheduled / policy-
+driven variant is operationally nice-to-have rather than
+essential, and Part 5's per-deployment retention policy is a
+real ops burden (cron schedule, monitoring) that's better
+scoped against pilot data on regulatory / storage drivers. See
+the deferred ledger for the lift triggers + wire-up sketch.
 
 ## Hard dependencies
 
 - **Part 0 (Schema pre-positioning) shipped 2026-05-20** —
-  Parts 1–5 read the columns it pre-positioned. No longer a
-  dependency in flight.
+  Parts 1–3 read the columns it pre-positioned (the inert
+  Part 0b/0c columns the deferred Part 4 / Part 5 would
+  consume stay in place). No longer a dependency in flight.
 - **Part 1 / Part 2** depend on **18F Part 2** — the
   Activated-as-gate model, the relaxed invitation gate, and the
   reviewer pre-open / closed states. 18F lands first; this
   segment supplies the scheduled times those states read.
 - **Part 1** also establishes the **shared dispatch mechanism**
   (scheduled worker or lazy observer extended to additional
-  anchors) Parts 2–5 reuse.
+  anchors) Parts 2–3 reuse.
 - **Part 2** depends on Part 1 surfacing `scheduled_activate_at`
   as a configurable operator input (otherwise the offset has no
   anchor to resolve against).
@@ -927,9 +885,6 @@ produces.
   (the email transport, and the `correlation_id` strategy the
   per-reviewer dedup uses) and reuses **14B Part C**'s
   queue / worker scaffold if available.
-- **Part 4** wants 18A's `archive_session` (shipped).
-- **Part 5** wants 18C's `session_purge` (shipped) and reads the
-  archive timestamp Part 4 produces.
 
 ## Out of scope
 
@@ -954,9 +909,6 @@ When parts ship:
   Activated-as-gate model).
 - `spec/settings_inventory.md` — the new scheduled-datetime
   columns, plus the Part 3 reminder-cadence settings.
-- `spec/operations_pages.md` — Manage Invitations picks up the
-  Part 3c cohort buttons / Part 3d reminders card if those
-  ship.
 - `spec/architecture.md` — the scheduled-activation and reminder
   events, and any other new audit-event envelopes.
 
@@ -964,13 +916,21 @@ When parts ship:
 
 - **Parts 0 / 1 / 2 / 3 shipped 2026-05-20 → 2026-05-21.** See
   the per-Part Status preambles for the PR refs.
-- **Parts 4 (auto-archive) / 5 (scheduled purge) outstanding.**
-  Both schema-unblocked; the shared lazy-observer dispatch and
-  audit-event family are settled.
-- **Carve-outs:** Part 3c (targeted reminder cohorts) and Part
-  3d (reminders analytics card) carved to
-  `guide/deferred_until_pilot_feedback.md` — post-MVP, lift on
-  pilot signal.
+- **Carve-outs to `guide/deferred_until_pilot_feedback.md`:**
+  - Part 3c (targeted reminder cohorts) and Part 3d
+    (reminders analytics card) — both post-MVP, carved
+    2026-05-21.
+  - Part 4 (auto-archive) and Part 5 (scheduled / policy-
+    driven purge) — both carved 2026-05-21. Manual archive
+    + 18C's operator-triggered purge cover the per-session
+    and bulk needs from the Sessions lobby and
+    `/operator/sessions/archived` child page; a scheduled
+    variant adds editor + observer complexity for marginal
+    operational gain. Part 0b/0c schema columns stay in
+    place — they're inert until the deferred Parts are
+    lifted (e.g. `sessions.archive_offset`,
+    `sessions.retention_exception`,
+    `sessions.retention_overrides`).
 - **Plan items dropped as superseded by the consolidated
   right-column captions:** the under-field inline editor
   warnings and the "Auto-send schedule cleared" info caption

@@ -843,26 +843,26 @@ bottom of this file.
   / 3 shipped 2026-05-20 → 2026-05-21** — PRs **#1253**,
   **#1262 → #1269**)*. Consolidates every scheduled /
   automatic session-lifecycle automation behind one schema
-  slice (Part 0). Parts 1–5 are ordered by **workflow
-  sequence** — the chronological order each scheduled event
-  fires across a session's life: **Part 1 — scheduled
-  activation** *(shipped 2026-05-21, PRs #1262 / #1263 /
-  #1264 — observer scaffolding, trigger, Start editor +
-  Workflow card caption)*; **Part 2 — auto-send invitations**
-  *(shipped 2026-05-21, PRs #1265 / #1266 / #1267 — trigger,
-  editor + Manage Invitations caption + Schedule timeline
+  slice (Part 0). Three shipped lifecycle triggers,
+  workflow-ordered:
+  **Part 1 — scheduled activation** *(shipped 2026-05-21,
+  PRs #1262 / #1263 / #1264 — observer scaffolding, trigger,
+  Start editor + Workflow card caption)*; **Part 2 — auto-
+  send invitations** *(shipped 2026-05-21, PRs #1265 / #1266
+  / #1267 — trigger, editor + caption + Schedule timeline
   preview, Part 1 ↔ Part 2 coordination + manual-activate
   modal)*; **Part 3 — auto-send reminders** *(shipped
   2026-05-21, PRs #1268 / #1269 — trigger, editor + caption
-  + timeline extension)*; **Part 4 — auto-archive** (timed
-  `archive_session`, moved out of 18A; offset anchored on
-  End); **Part 5 — scheduled / policy-driven purge** (auto-
-  delete, anchored on archive timestamp; the scheduled half
-  of 18C). Part 1 established the shared lazy-observer
-  dispatch mechanism Parts 2–5 reuse. Two Part 3 post-MVP
-  items (targeted reminder cohorts, reminders analytics)
-  carved 2026-05-21 to
-  `guide/deferred_until_pilot_feedback.md`.
+  + timeline extension)*. Part 1 established the shared
+  lazy-observer dispatch mechanism Parts 2–3 reuse.
+  **Carve-outs to `guide/deferred_until_pilot_feedback.md`
+  (2026-05-21):** Part 3c (targeted reminder cohorts), Part
+  3d (reminders analytics card), Part 4 (auto-archive), and
+  Part 5 (scheduled / policy-driven purge) — all post-MVP;
+  manual archive (Segment 18A) and operator-triggered
+  purge (Segment 18C) already cover the per-session and
+  bulk needs for archive / delete. Part 0b/0c schema
+  columns stay in place, inert.
   **Plan:** `guide/segment_18G_scheduled_events.md`.
 
 - **18H — Post-assessment update + small enhancements**

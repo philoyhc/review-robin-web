@@ -341,3 +341,147 @@ audit-event counts; the card body in the Manage Invitations
 template alongside the existing auto-send captions.
 
 ---
+
+## 18G Part 4 — Auto-archive (~200 LOC + migration index)
+
+> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21.
+> The schema (`sessions.archive_offset`, Part 0b) shipped inert
+> on 2026-05-20; the scheduled trigger and editor wiring are
+> deferred. Operators have the manual Archive button on the
+> Sessions-lobby row expander (Segment 18A), and the lobby
+> already supports bulk archive across multiple selected
+> sessions, so the scheduled variant is operationally
+> nice-to-have rather than essential.
+
+**Ships.**
+
+- New `_observe_scheduled_archive(session)` in
+  `app/services/scheduled_events.py` modelled on
+  `_observe_scheduled_activation` — anchored on `deadline`,
+  fires `archive_session` (18A's shipped service) at
+  `deadline + archive_offset`. Per-session one-shot dedup via
+  audit-event check.
+- Precondition guard: `session.status == "draft"` (18A's locked
+  `draft ⇄ archived` archive model). A running `ready` session
+  must be reverted first. Skip with `reason="not_draft"`, audit
+  `session.scheduled_archive_skipped`, clear the offset.
+- Two new audit events registered in `EVENT_SCHEMAS`:
+  `session.scheduled_archive_fired` (`refs.archive_event_id` +
+  `context.{anchor_at, offset, scheduled_at, actual_fired_at}`)
+  and `session.scheduled_archive_skipped`
+  (`reason` + `context.{anchor_at, offset, scheduled_at}`).
+- `archive_offset` editor input on Create / Edit Session enabled
+  (currently a disabled placeholder). New parser
+  `parse_and_validate_archive_offset` in `scheduled_events.py`
+  mirroring `parse_and_validate_invite_offsets` but accepting
+  positive durations (fires AFTER deadline). The 10-day cap
+  doesn't apply — the default is `P30D`; relax to e.g. 365 days
+  or no cap.
+- Workflow card / Sessions lobby caption: amber when the session
+  is `ready` (must revert first), green calm when `draft` and
+  the resolved fire moment is upcoming.
+
+**Why deferred.** Two pragmatic reasons:
+
+1. Manual archiving from the Sessions-lobby row expander
+   (Segment 18A) already handles single-session archiving in
+   one click, and the lobby's bulk-expander handles many
+   sessions at once. Operators routinely sweep the lobby and
+   bulk-archive after data download. A scheduled variant adds
+   editor complexity (`archive_offset` save-time validation +
+   the new caption) and observer wiring for a marginal time
+   saving.
+2. Auto-archive needs the session to be in `draft` — but the
+   typical post-deadline session is in `ready` (or has been
+   manually closed). Without a paired auto-revert-on-deadline
+   trigger, the auto-archive trigger would skip more often
+   than not. Scoping that pair properly is itself a design
+   question best answered with pilot data.
+
+**Lift trigger.** Pilot operators say either (a) lobby-driven
+bulk archiving is too slow / too easy to forget after a busy
+review window, or (b) they want a "fire-and-forget" schedule on
+sessions they know they won't touch again post-deadline.
+
+**Wire-up.** `_observe_scheduled_archive` in
+`scheduled_events.py`; `parse_and_validate_archive_offset`
+helper; editor enable + per-tone caption (mirrors the
+auto-send-invites / reminders captions); two
+`EVENT_SCHEMAS` registrations.
+
+---
+
+## 18G Part 5 — Scheduled / policy-driven purge (~300 LOC + env config)
+
+> Carved from `guide/segment_18G_scheduled_events.md` 2026-05-21.
+> Like Part 4, the schema (`sessions.retention_exception` /
+> `sessions.retention_overrides`, Part 0c) shipped inert on
+> 2026-05-20; the scheduled trigger + policy resolution + editor
+> are deferred. The operator-triggered selective purge shipped
+> in Segment 18C (the "Purge and archive" expander action) and
+> covers the immediate "I want to clear this session's data
+> now" need; the scheduled / policy-driven half stays parked.
+
+**Ships.**
+
+- **Per-deployment policy** — three env vars in `app/config.py`
+  (`RETENTION_RESPONSE_DAYS` / `RETENTION_AUDIT_DAYS` /
+  `RETENTION_SESSION_ARCHIVED_DAYS`; unset = no auto-purge), a
+  scheduled worker / cron, and a `retention.policy_run` audit
+  event with a `counts` envelope.
+- **Per-session override** — Settings-page editor for the
+  `sessions.retention_exception` Boolean (opt a session out;
+  e.g. legal hold) and the `sessions.retention_overrides` JSON
+  (`response_days` / `audit_days` / `archived_days` /
+  `delete_after_archive` keys). A
+  `session.retention_policy_updated` emitter.
+- **Per-session auto-delete offset** —
+  `retention_overrides.delete_after_archive` (ISO 8601
+  duration, anchored on the system-stamped archive time).
+  When set, an archived session is hard-deleted this far past
+  its archive timestamp. Editor surfaces this on Edit Session
+  (currently the disabled `delete_after_archive` placeholder).
+- **Trigger** — new `_observe_scheduled_purge(session)` in
+  `scheduled_events.py`. Precondition: `session.status ==
+  "archived"`. Skip with `reason="not_archived"`, audit
+  `session.scheduled_purge_skipped`. Reuses 18C's
+  `session_purge` service for the actual deletes.
+- **Ride-along: 18D Part 5.** The Settings-CSV round-trip of
+  the retention columns (`retention_exception` /
+  `retention_overrides`) — Segment 18D's Part 5 — was handed
+  to this part. Adds the `retention.*` rows to the Settings CSV
+  serialiser / importer as part of Part 5.
+
+**Why deferred.** Three pragmatic reasons:
+
+1. The operator-triggered Purge action on the Sessions-lobby
+   row expander (Segment 18C) already gives operators
+   per-session control. The bulk-expander handles many
+   sessions at once. A deployment-wide auto-purge worker is a
+   real operations burden (cron schedule, monitoring, dry-run
+   surface) for what is currently a "occasionally tidy up"
+   need.
+2. Retention policy is fundamentally a deployment concern.
+   Until a pilot deployment surfaces real policy needs
+   (compliance, storage, GDPR), defaults like "purge responses
+   after 90 days" are speculation.
+3. Auto-delete after archive is operationally similar to
+   manual delete from the `/operator/sessions/archived` lobby
+   — already shipped as a bulk action.
+
+**Lift trigger.** A pilot deployment cites a retention-policy
+requirement (regulatory or storage-driven) that needs to be
+enforced automatically, or operators on a long-running
+deployment report that the archived lobby grows unmanageably
+without a periodic sweep.
+
+**Wire-up.** `_observe_scheduled_purge` in
+`scheduled_events.py`; three env vars in `app/config.py` +
+a startup validation; Settings-page editor + JSON
+read/write helper for `retention_overrides`; one
+`retention.policy_run` event and one
+`session.scheduled_purge_skipped` event registered in
+`EVENT_SCHEMAS`. The 18D Part 5 Settings-CSV ride-along
+(added alongside).
+
+---
