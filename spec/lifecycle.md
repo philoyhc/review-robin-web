@@ -423,9 +423,9 @@ in-memory archive timestamp) also serve as anchors for offsets:
 |---|---|---|---|---|---|
 | Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
 | Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 3 |
-| Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 4 |
+| Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 4 (deferred — see `guide/deferred_until_pilot_feedback.md`) |
 | Release-until | `release_until_offset` | `responses_release_at` | single ISO 8601 duration | unset | Participants platform |
-| Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 5 |
+| Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 5 (deferred — see `guide/deferred_until_pilot_feedback.md`) |
 
 The "End" anchor (`deadline`) is also the anchor for the lazy
 deadline observer (§4 — per-instrument auto-close); that's the
