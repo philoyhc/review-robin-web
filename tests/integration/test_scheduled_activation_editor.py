@@ -35,7 +35,10 @@ def _create_session(
         "/operator/sessions", data=data, follow_redirects=False
     )
     assert response.status_code == 303, response.text
-    return int(response.headers["location"].rsplit("/", 1)[-1])
+    # Create-session redirect targets ``.../{id}/edit``; strip the
+    # trailing ``/edit`` before parsing the id.
+    location = response.headers["location"].removesuffix("/edit")
+    return int(location.rsplit("/", 1)[-1])
 
 
 def _fmt_local_input(dt: datetime) -> str:

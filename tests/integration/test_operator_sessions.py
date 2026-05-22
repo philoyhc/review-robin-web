@@ -17,7 +17,12 @@ from app.db.models import (
 from app.services import session_tags
 
 
-def test_create_redirects_to_detail(client: TestClient, db: Session) -> None:
+def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
+    """A bare Create (no Quick Setup uploads) lands on the Edit
+    page — the operator's natural next step is to fill in the
+    rest of the details. The back-link there returns to Session
+    Home. A Create with Quick Setup uploads anchors back to the
+    relevant card on Home (separate test path)."""
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring Reviews", "code": "spring-2026"},
@@ -28,7 +33,10 @@ def test_create_redirects_to_detail(client: TestClient, db: Session) -> None:
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "spring-2026")
     ).scalar_one()
-    assert response.headers["location"] == f"/operator/sessions/{review_session.id}"
+    assert (
+        response.headers["location"]
+        == f"/operator/sessions/{review_session.id}/edit"
+    )
 
 
 def test_create_inserts_session_operator_row(client: TestClient, db: Session) -> None:

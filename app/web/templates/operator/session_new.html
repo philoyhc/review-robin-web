@@ -98,11 +98,43 @@
       {% include "operator/partials/_schedule_timeline.html" %}
 
       <div class="btn-pair" style="margin-top: 20px;">
-        <button class="btn" type="submit">Create session</button>
+        <button class="btn"
+                type="submit"
+                id="create-session-submit"
+                disabled
+                aria-disabled="true">Create session</button>
         <a class="btn secondary" href="/operator/sessions">Cancel</a>
       </div>
     </form>
   </div>
+
+  {# Disable the Create session button until both Name and Code
+     have non-empty trimmed values. The browser's own
+     ``required`` attribute on those inputs catches empty submits
+     too, but disabling the button is the clearer affordance. #}
+  <script>
+    (function () {
+      var nameInput = document.getElementById("name");
+      var codeInput = document.getElementById("code");
+      var btn = document.getElementById("create-session-submit");
+      if (!nameInput || !codeInput || !btn) return;
+      function refresh() {
+        var ready = nameInput.value.trim().length > 0
+                 && codeInput.value.trim().length > 0;
+        btn.disabled = !ready;
+        if (ready) {
+          btn.removeAttribute("aria-disabled");
+        } else {
+          btn.setAttribute("aria-disabled", "true");
+        }
+      }
+      ["input", "change"].forEach(function (ev) {
+        nameInput.addEventListener(ev, refresh);
+        codeInput.addEventListener(ev, refresh);
+      });
+      refresh();
+    })();
+  </script>
 
   {# Quick setup (optional) — half-width card on the bottom-left.
      Always unlocked (no Lock / Unlock button) and counts are
