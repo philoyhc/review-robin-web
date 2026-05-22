@@ -1,17 +1,21 @@
 # All buttons — operator surface audit
 
 Snapshot of every interactive button (and button-styled anchor)
-across the operator-facing templates. Last refreshed 2026-05-15
-after Segment 15F (Enhanced Setup pages): the Reviewers /
-Reviewees / Relationships Setup pages gained an Operator actions
-card — a search / status filter strip and a selection-driven
-Edit · Inactivate · Activate · Add-new-row button row, plus an
-inline Save / Cancel pair in Edit / Add mode. The prior
-"refreshed 2026-05-12" pass covered the post-15A sys-admin
-polish (PRs #895 → #899): the Accounts Management page flipped
-to a per-row checkbox + bulk toolbar, and the per-session Audit
-log filter strip's button row was right-aligned with the Apply
-button flipped to Secondary.
+across the operator-facing templates. Last refreshed 2026-05-22
+after the post-18F/18G UI-polish pass: **Danger Zone moved off
+Session Home to Edit Session Details** (commit b490825 — the
+Delete Data + Delete session buttons now live on `session_edit.html`,
+bottom-right of the edit half-grid); **Create Session gates submit
+on Name + Code** with both Create and Sessions-lobby Clone redirecting
+to Edit Session on success (commit 9cfb70e); and the chrome strip's
+single **Invitations** pill was split into four lifecycle states —
+`Not created` / `Not sent` / `Partially sent` / `All sent`
+(commit 49f1875). The prior "refreshed 2026-05-15" pass covered
+Segment 15F (Enhanced Setup pages): the Reviewers / Reviewees /
+Relationships Setup pages gained an Operator actions card — a
+search / status filter strip and a selection-driven Edit ·
+Inactivate · Activate · Add-new-row button row, plus an inline
+Save / Cancel pair in Edit / Add mode.
 
 Use it to:
 
@@ -106,12 +110,17 @@ Source: `app/web/templates/operator/session_new.html`.
 
 ## Section 4 — Edit session (`/operator/sessions/{id}/edit`)
 
-Source: `app/web/templates/operator/session_edit.html`.
+Source: `app/web/templates/operator/session_edit.html`. As of
+2026-05-22 (commit b490825) the page splits as a `.bottom-grid`:
+the edit form on the left, the Danger Zone card on the
+bottom-right.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 16 | Form card | Save changes | `<button type="submit">` | `btn` | Primary | |
 | 17 | Form card | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
+| 17a | Danger Zone (bottom-right) | Delete Data | `<button type="submit">` | `btn destructive` | Destructive | Posts `/delete-data`. Moved from Session Home 2026-05-22 (commit b490825). |
+| 17b | Danger Zone (bottom-right) | Delete session | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete`; disabled while session is `ready`. Moved from Session Home 2026-05-22 (commit b490825). |
 
 ---
 
@@ -137,20 +146,19 @@ State-conditional surface; one or two buttons render at a time.
 | 26 | Next Action (activated, §1) | Monitor responses | `<a>` | `btn secondary` | Secondary | |
 | 27 | Next Action (activated, §2) | Pause Session | `<button type="submit">` | `btn` | Primary | Posts `/revert`; sits below an `<hr class="next-action-divider">` |
 
-### 5b — Danger Zone (left column, bottom)
+### 5b — Danger Zone — relocated
+
+The Danger Zone card (former buttons #28 / #29) moved off Session
+Home to the bottom-right of Edit Session Details on 2026-05-22
+(commit b490825). See §4 entries 17a / 17b above.
+
+### 5c — Session Details card (left column)
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 28 | Danger Zone | Delete Data | `<button type="submit">` | `btn destructive` | Destructive | Posts `/delete-data` |
-| 29 | Danger Zone | Delete session | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete`; disabled while session is `ready` |
+| 30 | Session Details | Edit | `<a>` | `btn secondary` | Secondary | Bottom-right of the card; opens `session_edit.html`. Inert (`aria-disabled`) while session is `ready`. |
 
-### 5c — Session Details card (right column, top)
-
-| # | Card | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 30 | Session Details | Edit | `<a>` | `btn secondary` | Secondary | Bottom-right; opens `session_edit.html` |
-
-### 5d — Quick Setup card (right column, bottom; partial)
+### 5d — Quick Setup card (right column, top; partial)
 
 Source: `partials/_quick_setup_card.html`. Also rendered inert on
 `session_new.html` as a preview.
@@ -160,7 +168,7 @@ Source: `partials/_quick_setup_card.html`. Also rendered inert on
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
 | 32 | Quick Setup footer | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/quick-setup/lock` |
 
-### 5e — Extract Data card (left column, middle; partial)
+### 5e — Extract Data card (right column, bottom; partial)
 
 Source: `partials/_extract_data_card.html`. Five live tiles
 (Reviewers / Settings / Reviewees / Responses / Relationships)

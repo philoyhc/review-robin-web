@@ -53,7 +53,8 @@ Cards are either **half-width** or **full-width**:
 
 - **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
   - Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair, with the Upload card (left) + Danger Zone (right) pair below it.
-  - Session Home: Next Action / Quick Setup / Extract Data stack inside a `.bottom-left` on the left; Session Details + Danger Zone stack inside a `.bottom-left` on the right.
+  - Session Home: Next Action card on top full-width, then a `.bottom-grid` with Session Details on the left and Quick Setup + Extract Data stacked inside a `.bottom-left` on the right. (Danger Zone moved to the Edit Session Details page on 2026-05-22 — see `spec/session_home.md` §3 and `spec/operator_button_audit.md` §4.)
+  - Edit Session Details: the edit form (left) + Danger Zone card (right) sit in an outer `.bottom-grid`.
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
   - Wide tables (Reviewers / Reviewees / Relationships / Invitations / Responses data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
