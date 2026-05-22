@@ -159,11 +159,11 @@ def test_create_page_renders_timezone_field(
 ) -> None:
     body = client.get("/operator/sessions/new").text
     assert 'name="display_timezone"' in body
-    # The Timezone field's worked sample carries the "Entered in"
-    # zone hint; the End / Start datetime inputs lost theirs in the
-    # session-form refactor (the Timezone field above them already
-    # names the zone the wall-clock entries are read in).
-    assert 'id="tz-sample-zone"' in body
+    # The datalist options carry the GMT-prefixed form so the
+    # operator can search by offset (e.g. "GMT+8") or by raw IANA
+    # name. The standalone sample-time line is gone — its purpose
+    # (showing the offset) now lives in the datalist itself.
+    assert "GMT+8 Asia/Singapore" in body
 
 
 def test_session_timezone_override_persists_and_audits(
@@ -218,13 +218,10 @@ def test_edit_page_renders_timezone_field(
     session = _create_session(client, db, code="tz-card")
     body = client.get(f"/operator/sessions/{session.id}/edit").text
     # The timezone is a field of the Edit Session Details form now,
-    # not a standalone card (18B PR 5).
+    # not a standalone card (18B PR 5). Datalist options carry the
+    # GMT-prefixed form so the operator can search by offset.
     assert 'name="display_timezone"' in body
-    assert '<option value="Asia/Singapore">' in body
-    # The "Entered in <zone>" hint moved off the datetime inputs in
-    # the session-form refactor; the Timezone field's worked sample
-    # is the live zone label now.
-    assert 'id="tz-sample-zone"' in body
+    assert '<option value="GMT+8 Asia/Singapore">' in body
 
 
 def test_session_detail_renders_in_override_zone(
@@ -424,13 +421,22 @@ def test_settings_card_renders_timezone_sample(
     assert 'timeZoneName: "shortOffset"' in body
 
 
-def test_edit_card_renders_timezone_sample(
+def test_edit_card_includes_timezone_preview_script(
     client: TestClient, db: Session
 ) -> None:
+    """The `_timezone_preview.html` partial still ships on the Edit
+    page — the deadline-zone re-render is the one progressive
+    enhancement it drives — even though the worked-sample line
+    above the picker was retired in favour of the GMT-prefixed
+    datalist. The Operator Settings page is now the canonical home
+    for the live worked-sample readout."""
     session = _create_session(client, db, code="tz-sample")
     body = client.get(f"/operator/sessions/{session.id}/edit").text
-    assert 'id="tz-sample"' in body
-    assert 'id="tz-sample-zone"' in body
-    assert "Sample (right now):" in body
-    assert "var showToken = false;" in body
+    # Sample line / IDs are gone from the Edit page; the partial's
+    # JS now tolerates missing `tz-sample` / `tz-sample-zone`
+    # spans and just drives the deadline re-render.
+    assert 'id="tz-sample"' not in body
+    # The script still loads (shared partial), and its IANA-from-
+    # value parser is present.
+    assert "ianaFromValue" in body
     assert 'timeZoneName: "shortOffset"' in body

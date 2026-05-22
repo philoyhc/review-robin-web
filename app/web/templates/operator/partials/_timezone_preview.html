@@ -1,13 +1,16 @@
 {# Live timezone preview + deadline re-render — progressive
-   enhancement, shared by the Create Session and Edit Session
-   Details forms (Segment 18B PR 5). Requires a `display_timezone`
-   input plus `tz-sample` / `tz-sample-zone` spans; the `deadline`
-   input and `deadline-zone` span are optional. As the operator
-   picks a zone it updates the worked sample, the zone label
-   (GMT-offset + raw IANA id) and the "Entered in" deadline hint,
-   and re-renders the deadline input so its wall-clock tracks the
-   picked zone — the instant stays fixed, only the display moves.
-   The no-JS fallback is the server-rendered sample + zone label. #}
+   enhancement, shared by the Create Session / Edit Session
+   Details forms (Segment 18B PR 5) and the Operator Settings
+   page. Requires a `display_timezone` input; the `tz-sample`
+   / `tz-sample-zone` spans (still rendered on Operator
+   Settings; dropped from the session forms when the timezone
+   picker grew the GMT-prefixed datalist) and the `deadline`
+   input / `deadline-zone` span are optional. As the operator
+   picks a zone it updates the worked sample + zone label
+   where present, and re-renders the deadline input so its
+   wall-clock tracks the picked zone — the instant stays
+   fixed, only the display moves. The no-JS fallback is the
+   server-rendered sample + zone label. #}
 <script>
   (function () {
     var input = document.getElementById("display_timezone");
@@ -15,9 +18,20 @@
     var zoneLabel = document.getElementById("tz-sample-zone");
     var deadline = document.getElementById("deadline");
     var deadlineZone = document.getElementById("deadline-zone");
-    if (!input || !sample || !zoneLabel) return;
+    if (!input) return;
     var showToken = {{ show_zone_token | tojson }};
-    var prevZone = input.value.trim() || "UTC";
+    // The session-form timezone picker shows the GMT-prefixed
+    // form (e.g. "GMT+8 Asia/Singapore"); the Operator Settings
+    // picker still uses the raw IANA name. Both round-trip
+    // through the same script — extract the IANA portion as the
+    // last whitespace-separated token.
+    function ianaFromValue(value) {
+      var trimmed = (value || "").trim();
+      if (!trimmed) return "UTC";
+      var parts = trimmed.split(/\s+/);
+      return parts[parts.length - 1];
+    }
+    var prevZone = ianaFromValue(input.value);
 
     function partsInZone(instant, zone) {
       var p = {};
@@ -77,7 +91,7 @@
         + "T" + p.hour + ":" + p.minute;
     }
     function update() {
-      var zone = input.value.trim() || "UTC";
+      var zone = ianaFromValue(input.value);
       var text = sampleText(zone);
       if (text === null) return;  // invalid zone mid-type — keep prevZone
       if (deadline && deadline.value && zone !== prevZone) {
@@ -85,9 +99,9 @@
         if (inst !== null) deadline.value = wallClock(inst, zone);
       }
       prevZone = zone;
-      sample.textContent = text;
+      if (sample) sample.textContent = text;
       var name = zoneText(zone);
-      zoneLabel.textContent = name;
+      if (zoneLabel) zoneLabel.textContent = name;
       if (deadlineZone) deadlineZone.textContent = name;
     }
     input.addEventListener("input", update);
