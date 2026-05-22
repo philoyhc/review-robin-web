@@ -45,8 +45,18 @@
     {% endif %}
     &middot;
     Invitations:
-    {# Placeholder — real wiring lands later. States: not sent / sent. #}
-    <span class="pill pill-empty">not sent</span>
+    {# Four states distinguish "no Invitation rows yet" from
+       "rows exist but no outbox emails sent yet". See
+       ``app.web.views.session_status_pills``. #}
+    {% if status_pills.invitations_state == "not_created" %}
+      <span class="pill pill-empty">Not created</span>
+    {% elif status_pills.invitations_state == "not_sent" %}
+      <span class="pill pill-warning">Not sent</span>
+    {% elif status_pills.invitations_state == "partial_sent" %}
+      <span class="pill pill-warning">Partially sent</span>
+    {% else %}
+      <span class="pill pill-info">All sent</span>
+    {% endif %}
     &middot;
     Responses:
     {# Placeholder — real wiring lands later.

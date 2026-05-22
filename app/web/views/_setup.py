@@ -22,8 +22,9 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
+from app.db.models import EmailOutbox, Instrument, Invitation, ReviewSession
 from app.services import assignments, csv_imports, field_labels
+from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
 
 
@@ -107,6 +108,56 @@ class SessionStatusPills:
     assignment_count: int
     instrument_count: int
     email_invites_set_up: bool
+    invitations_state: str
+    """One of ``"not_created"`` / ``"not_sent"`` / ``"partial_sent"`` /
+    ``"all_sent"``. Distinguishes the two flavours of pre-send (no
+    ``Invitation`` rows at all vs. rows generated but no outbox email
+    delivered yet) so the chrome status strip can read them apart."""
+
+
+_INVITATION_STATES: tuple[str, ...] = (
+    "not_created",
+    "not_sent",
+    "partial_sent",
+    "all_sent",
+)
+
+
+def _invitations_state(db: Session, session_id: int) -> str:
+    """Compute the chrome-strip ``invitations`` pill state.
+
+    ``not_created`` — zero ``Invitation`` rows for the session.
+    ``not_sent`` — invitations exist; no reviewer has a ``sent``
+      outbox row for their invitation yet.
+    ``partial_sent`` — at least one but not every reviewer has a
+      ``sent`` outbox row.
+    ``all_sent`` — every reviewer with an invitation has a ``sent``
+      outbox row.
+    """
+    invitation_reviewer_ids: set[int] = set(
+        db.execute(
+            select(Invitation.reviewer_id).where(
+                Invitation.session_id == session_id
+            )
+        ).scalars()
+    )
+    if not invitation_reviewer_ids:
+        return "not_created"
+    sent_reviewer_ids: set[int] = set(
+        db.execute(
+            select(EmailOutbox.reviewer_id).where(
+                EmailOutbox.session_id == session_id,
+                EmailOutbox.kind == invitations_service.INVITATION_KIND,
+                EmailOutbox.status == "sent",
+                EmailOutbox.reviewer_id.is_not(None),
+            )
+        ).scalars()
+    )
+    if not sent_reviewer_ids:
+        return "not_sent"
+    if sent_reviewer_ids >= invitation_reviewer_ids:
+        return "all_sent"
+    return "partial_sent"
 
 
 def session_status_pills(
@@ -129,6 +180,7 @@ def session_status_pills(
         # session is "set up" yet. When the editor ships, swap this
         # for a real check (e.g. a non-empty email template row).
         email_invites_set_up=False,
+        invitations_state=_invitations_state(db, sid),
     )
 
 

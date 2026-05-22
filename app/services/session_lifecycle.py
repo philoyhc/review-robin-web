@@ -36,10 +36,22 @@ class SessionStatus(str, Enum):
     9.5A adds ``validated`` between ``draft`` and ``ready``. ``expired`` and
     ``archived`` are reserved for later segments — recognised here so the
     string column is constrained at the application layer.
+
+    **Enum vs. display label.** Operators see ``ready`` rendered as
+    ``"Activated"`` everywhere in the UI — the enum reads as "ready
+    to be activated" but the visible label communicates "currently
+    running". The mapping lives in ``app.services.lifecycle_display``
+    (Jinja filter ``lifecycle_label``); other values pass through with
+    their first letter capitalised. Anything machine-facing (URL
+    slugs, query params, API responses, log lines, DB values, CSS
+    class names like ``pill-lifecycle-ready``) continues to use the
+    raw enum strings. See ``spec/session_home.md`` for the rationale.
     """
 
     draft = "draft"
     validated = "validated"
+    # Display label is "Activated" — see class docstring and
+    # ``app.services.lifecycle_display``.
     ready = "ready"
     expired = "expired"  # reserved (Segment 9.3+)
     archived = "archived"  # reserved (Segment 12+)
