@@ -171,6 +171,7 @@ def session_edit_form(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
+            "is_ready": lifecycle.is_ready(review_session),
             "owners": session_owners.list_owners(db, review_session),
             "owner_candidates": session_owners.workspace_operator_candidates(
                 db, review_session

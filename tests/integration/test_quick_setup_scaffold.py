@@ -313,16 +313,15 @@ def test_quick_setup_card_lives_in_right_column_above_extract_data(
        Workflow                  (full-width, top)
        ┌───────────────────┐  ┌───────────────────┐
        │  Session Details  │  │  Quick Setup      │
-       │  Danger Zone      │  │  Extract Data     │
+       │                   │  │  Extract Data     │
        └───────────────────┘  └───────────────────┘
 
-    Two independent flex columns; cards in each column stack in
-    DOM order with the normal inter-card gap. Quick Setup +
-    Extract Data live in the right column so Extract Data sits
-    directly below Quick Setup with no row-alignment forcing.
+    Danger Zone moved to the Edit Session page; the remaining
+    layout is two independent flex columns, with Quick Setup +
+    Extract Data stacked in the right column.
 
     Mobile collapse order follows source: Workflow → Session
-    Details → Danger Zone → Quick Setup → Extract Data.
+    Details → Quick Setup → Extract Data.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
@@ -332,7 +331,6 @@ def test_quick_setup_card_lives_in_right_column_above_extract_data(
     # The Session Details card's H2 is the session name; its
     # code span is the stable anchor.
     session_details_pos = body.find('class="session-detail-code')
-    danger_zone_pos = body.find('id="danger-zone"')
     quick_setup_pos = body.find('id="quick-setup"')
     extract_data_pos = body.find('id="extract-data"')
 
@@ -340,16 +338,16 @@ def test_quick_setup_card_lives_in_right_column_above_extract_data(
     assert -1 not in (
         workflow_pos,
         session_details_pos,
-        danger_zone_pos,
         quick_setup_pos,
         extract_data_pos,
     )
+    # Danger Zone is no longer on Home — it moved to Edit.
+    assert body.find('id="danger-zone"') == -1
 
     # Source order = mobile DOM collapse order.
     assert (
         workflow_pos
         < session_details_pos
-        < danger_zone_pos
         < quick_setup_pos
         < extract_data_pos
     )

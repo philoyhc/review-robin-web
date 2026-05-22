@@ -195,13 +195,19 @@ def test_back_links_are_removed_from_nested_operator_pages(
     )
 
 
-def test_session_detail_has_danger_zone_anchor(
+def test_edit_session_has_danger_zone_anchor(
     client: TestClient, db: Session
 ) -> None:
+    """Danger Zone moved to the Edit Session Details page (bottom-
+    right of the Edit half-grid). Session Home no longer carries
+    it directly; the operator opens Edit to reach destructive
+    operations."""
     review_session = _create_session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}")
-    body = response.text
+    body = client.get(f"/operator/sessions/{review_session.id}/edit").text
     assert 'id="danger-zone"' in body
+    # And confirm it's gone from Session Home.
+    home_body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert 'id="danger-zone"' not in home_body
 
 
 def test_chrome_user_card_hidden_when_user_unset(client: TestClient) -> None:
