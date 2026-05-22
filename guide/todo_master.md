@@ -869,9 +869,8 @@ bottom of this file.
   `email_outbox` audit-log schema landed inert in 11C Part 2
   (Migration `c4f6a8b0d2e5`); 14B Part A is the first writer.
 - **Within 14B**, Parts B-E are sequential enhancements on top
-  of Part A; Parts F-H are independent backend swaps. **18G
-  Part 5 (reminders)** layers on top of 14B Parts A / B / C and
-  ships on its own pace.
+  of Part A; Parts F-H are independent backend swaps. **18G Part 3 (reminders)** shipped 2026-05-21 and layered on
+  top of 14B Parts A / B / C.
 - **18H, 19, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
