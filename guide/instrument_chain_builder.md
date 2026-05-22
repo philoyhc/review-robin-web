@@ -4,21 +4,22 @@
 > PR breakdowns get drafted when this work is picked up.
 
 A forward-looking UI + data design for a **unified
-"instrument chain" builder** that exposes the five key decisions
+"instrument chain" builder** that exposes the six key decisions
 about an instrument — who reviews, who the reviewer's reviewee
 pool is, the unit of review (individual vs group), who can see
-the responses, and what they can see — as one card per link in
-a chain. Replaces today's "Identity + Assignment Rule" half-card
-pair on the per-instrument card with a five-link layout.
+the responses, what they can see, and when they can see them —
+as one card per link in a chain. Replaces today's "Identity +
+Assignment Rule" half-card pair on the per-instrument card with
+a six-link layout.
 
 This is a generalisation of the existing per-instrument
 [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md)
 contract: the rule engine currently solves only Link 2 (the
 reviewee pool), and the group-scoped instrument flag from
 [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md)
-solves only Link 3 (the unit of review). Links 1, 4, and 5 are
-net-new conceptual slots; each layers a different policy on top
-of an instrument.
+solves only Link 3 (the unit of review). Links 1, 4, 5, and 6
+are net-new conceptual slots; each layers a different policy on
+top of an instrument.
 
 ---
 
@@ -38,14 +39,16 @@ complete **review chain** in one screen — answering, in turn:
    partitions the pool into groups by reviewee tags and reviews
    one row per group.
 4. **Who can see the responses?** Which cohorts (operators only,
-   reviewees themselves, tagged observers) can read responses
-   once they are saved.
+   reviewees themselves, tagged observers) can read responses.
 5. **What can they see?** Whether the responses are surfaced as
    raw values, summarised aggregates, or anonymised cells.
+6. **When can the eligible viewers see the responses?** Whether
+   reads are open while review is ongoing, or only after the
+   operator explicitly releases them.
 
-Today the operator answers these five questions in different
+Today the operator answers these six questions in different
 places (some on the Setup pages, some on Instruments, some
-nowhere — Links 4 and 5 do not exist in the system yet, and
+nowhere — Links 4, 5, and 6 do not exist in the system yet, and
 Link 3 lives only as a binary group-scoped flag + an in-table
 boundary-tag selector). The chain builder collects them into
 one continuous editor.
@@ -60,16 +63,17 @@ the unit of review (individual vs group) only makes sense once
 the pool is known; visibility only makes sense once the
 response set exists; the read-shape (raw / summary /
 anonymised) only makes sense once the visibility audience
-exists.
+exists; release timing only makes sense once there is a
+visibility audience with a read shape to gate.
 
-Rendering the five as a left-to-right chain of equal-width cards
+Rendering the six as a left-to-right chain of equal-width cards
 makes the dependency explicit. It also gives the operator a
 single instrument-level surface to inspect the *policy* an
 instrument is enforcing — today, Link 2 lives on the per-
 instrument card, Link 3 lives as a binary group-scoped flag
 plus boundary-tag checkboxes inside the Display Fields table,
-Link 4 lives only in operators' heads, and Link 5 has nowhere
-to live at all.
+Link 4 lives only in operators' heads, and Links 5 and 6 have
+nowhere to live at all.
 
 The chain is **per instrument**, not per session. Two instruments
 in the same session can carry different chains (e.g. a peer-
@@ -201,8 +205,9 @@ boundary-tag selection diff.
 
 ### Link 4 — Visibility scope
 
-**Question.** Once a response is saved on this instrument, who
-is allowed to read it?
+**Question.** Who is allowed to read responses on this
+instrument? (The *who* — not yet *when*; release timing is
+Link 6.)
 
 **Today.** Operators only. The reviewer who wrote the response
 can see their own work on the review surface; nobody else (not
@@ -217,7 +222,7 @@ audiences, each independently configurable:
   session can read every response.
 - **Reviewees themselves** — each reviewee gets a read view of
   every response *about them*. (Cross-reviewer aggregation
-  happens in Link 4.)
+  happens in Link 5.)
 - **Observers** — a tag-defined cohort of session members who
   read responses about a specific reviewee. Two sub-variants:
   - **Reviewee-tag-defined observers** — "every active reviewer
@@ -236,12 +241,6 @@ simultaneously (operators + reviewees + tagged observers).
 **Output.** A response-row read filter that gates every
 response-surfacing route (extract endpoints, future per-reviewee
 dashboard, future observer dashboard).
-
-**Open question — temporality.** Is visibility unlocked at
-submission, at session close, or immediately on save? Default
-proposal: **visibility unlocks at session close** (the
-`accepting_responses=false` state). Per-instrument override
-slot.
 
 **Audit footprint.** New emitter
 `instrument.visibility_scope_updated` plus a per-read audit
@@ -286,6 +285,72 @@ per instrument). Below threshold, the cell renders a
 `instrument.read_shape_updated` with the per-audience
 configuration diff.
 
+### Link 6 — Release timing
+
+**Question.** When does each non-operator audience (Link 4)
+actually start seeing the responses?
+
+**Today.** N/A — operators read raw responses through CSV
+extracts at any time, and no other audience has a read path.
+
+**Proposed inputs.** A per-audience timing choice:
+
+- **While review is ongoing** — reads are open the moment the
+  audience's eligibility resolves; responses appear as they
+  are saved (and update live as reviewers edit). Suitable for
+  formative-feedback patterns where the reviewee can react
+  mid-cycle.
+- **When released** — reads stay closed until the operator
+  flips an explicit **Release responses** action on the
+  instrument. Suitable for summative patterns where reviewers
+  must not see each other's work-in-progress and the reviewee
+  must not see partial drafts.
+
+Per-audience: an operator might let *operators* read at any
+time (always-on, default) while *reviewees* see responses only
+once released, and *observers* see them only on a separate
+release. Each audience independently picks its timing.
+
+**The operators-only audience is always read-now.** Operators
+have always read responses live via CSV extract; Link 6 does
+not constrain them. Only the new non-operator audiences carry
+a timing choice.
+
+**The Release action.** When an instrument has any audience
+configured as "when released", a new affordance lights up on
+the operator surface — a per-instrument **Release responses**
+button (one per audience that is gated). Pressing it stamps a
+per-`(instrument, audience)` release timestamp; the read-path
+guard consults the stamp before serving any response to that
+audience.
+
+**Default proposal.** Reviewees default to "when released" so
+the operator is the one who decides timing; Observers default
+to "when released" for the same reason. Operators are
+implicitly "while review is ongoing" (today's contract).
+
+**Re-closing.** Once released, a release can be revoked
+("Un-release") by the operator with confirmation; the
+audience loses read access again until re-released. The
+release-stamp pattern is reversible, idempotent on multiple
+releases, and audit-logged on every flip.
+
+**Composition with session lifecycle.** Release timing layers
+*on top of* the session's `accepting_responses` window — it
+does not interact with it. A "while review is ongoing"
+audience reads from the moment the session is `ready`; a
+"when released" audience reads from the moment the operator
+flips Release, regardless of whether the session is still
+`ready` or has moved past the deadline. (The natural pattern
+is to release after the deadline, but the chain does not
+enforce that ordering.)
+
+**Audit footprint.** New emitter
+`instrument.release_timing_updated` for the config diff. New
+emitters `instrument.responses_released` and
+`instrument.responses_unreleased` (per audience) for every
+flip of the release stamp.
+
 ---
 
 ## UI shape
@@ -294,25 +359,27 @@ One **full-width card** per instrument carrying the chain
 builder, replacing the current "Identity + Assignment Rule"
 two-half-card row at the top of the per-instrument card.
 
-Inside the full-width frame, five **fifth-width sub-cards** sit
-in a single row (a `.bottom-grid` extended to five equal
+Inside the full-width frame, six **sixth-width sub-cards** sit
+in a single row (a `.bottom-grid` extended to six equal
 columns), one per link. Each sub-card carries:
 
 - A short title — `1. Reviewers`, `2. Reviewee pool`,
-  `3. Unit of review`, `4. Visibility`, `5. Read shape`.
+  `3. Unit of review`, `4. Visibility`, `5. Read shape`,
+  `6. Release timing`.
 - A one-line current-state summary in body text, e.g.:
   - `1. Reviewers: All active (no filter)`
   - `2. Reviewee pool: Same-team peers (RuleSet "Intra-group peer")`
   - `3. Unit of review: Individual`
   - `4. Visibility: Operators + reviewees`
   - `5. Read shape: Reviewees see anonymised text`
+  - `6. Release timing: Reviewees on release (not yet released)`
 - A small **Edit** button bottom-right of each sub-card.
 
 Clicking **Edit** on a sub-card opens the link's full editor —
 either inline below the chain row (preferred for visual
 continuity) or as a child page in the same chrome
 (`/operator/sessions/{id}/instruments/{iid}/chain/{link}`, where
-`{link} ∈ {reviewers, reviewee-pool, unit-of-review, visibility, read-shape}`).
+`{link} ∈ {reviewers, reviewee-pool, unit-of-review, visibility, read-shape, release-timing}`).
 The child-page approach mirrors the existing Rule Builder
 pattern; the inline approach is gentler on context but requires
 more careful state management.
@@ -325,22 +392,22 @@ sub-cards inside the same full-width card frame.
 ### Wireframe
 
 ```
-┌─ Instrument #2 — "Peer skill assessment"  [accepting]  [showing] ──┐
-│                                                                    │
-│  ┌── 1. ──┐ ┌── 2. ──┐ ┌── 3. ──┐ ┌── 4. ──┐ ┌── 5. ──┐         │
-│  │Review- │ │Reviewee│ │ Unit   │ │Visibil-│ │Read    │         │
-│  │ers     │ │ pool   │ │ of     │ │ity     │ │shape   │         │
-│  │        │ │        │ │ review │ │        │ │        │         │
-│  │All     │ │Same-   │ │Indivi- │ │Operat- │ │Reviewe-│         │
-│  │active  │ │team    │ │dual    │ │ors +   │ │es:     │         │
-│  │        │ │peers   │ │        │ │reviewee│ │anonym- │         │
-│  │        │ │        │ │        │ │them-   │ │ised    │         │
-│  │        │ │        │ │        │ │selves  │ │text    │         │
-│  │[Edit ▸]│ │[Edit ▸]│ │[Edit ▸]│ │[Edit ▸]│ │[Edit ▸]│         │
-│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘         │
-│                                                                    │
-│  ↓ (Display Fields, Response Fields, etc. continue below)          │
-└────────────────────────────────────────────────────────────────────┘
+┌─ Instrument #2 — "Peer skill assessment"  [accepting]  [showing] ────────┐
+│                                                                          │
+│  ┌── 1. ─┐ ┌── 2. ─┐ ┌── 3. ─┐ ┌── 4. ─┐ ┌── 5. ─┐ ┌── 6. ─┐          │
+│  │Review-│ │Review-│ │ Unit  │ │Visib- │ │Read   │ │Release│          │
+│  │ers    │ │ee pool│ │ of    │ │ility  │ │shape  │ │timing │          │
+│  │       │ │       │ │review │ │       │ │       │ │       │          │
+│  │All    │ │Same-  │ │Indiv- │ │Operat-│ │Review-│ │Review-│          │
+│  │active │ │team   │ │idual  │ │ors +  │ │ees:   │ │ees: on│          │
+│  │       │ │peers  │ │       │ │review-│ │anonym-│ │release│          │
+│  │       │ │       │ │       │ │ees    │ │ised   │ │(not   │          │
+│  │       │ │       │ │       │ │       │ │text   │ │yet)   │          │
+│  │[Edit▸]│ │[Edit▸]│ │[Edit▸]│ │[Edit▸]│ │[Edit▸]│ │[Edit▸]│          │
+│  └───────┘ └───────┘ └───────┘ └───────┘ └───────┘ └───────┘          │
+│                                                                          │
+│  ↓ (Display Fields, Response Fields, etc. continue below)                │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 The chain row is the *first* sub-card of the per-instrument
@@ -349,29 +416,39 @@ Identity row collapses into the chain-card header.
 
 ### State machine
 
-The four sub-cards share the per-instrument card's existing
+The six sub-cards share the per-instrument card's existing
 **mutually-exclusive edit lock** (only one instrument can be in
 edit mode at a time, and within an instrument only one of
 Display Fields / Response Fields / Chain links can be open for
 editing). Save / Cancel commit to the chain link being edited
 without rebuilding the rest of the instrument.
 
-When the session is `ready` (Activated), every Edit button on
-the chain row is disabled, with the standard "Revert to draft
-to edit" tooltip. Visibility (Link 4) and Read shape (Link 5)
-edits do **not** invalidate the session back to `draft` — they
-affect downstream reads, not the assignment matrix. Reviewer
-scope (Link 1), Reviewee pool (Link 2), and Unit of review
-(Link 3) edits **do** invalidate (they change which pairs the
-assignment matrix materialises or how it collapses on the
-reviewer surface). This split honours the existing
-`invalidate_if_validated` discipline.
+When the session is `ready` (Activated), the chain row splits
+along the "assignment-shape vs. read-policy" axis:
+
+- **Links 1, 2, 3** (Reviewer scope, Reviewee pool, Unit of
+  review) edit the assignment matrix or its collapse shape on
+  the reviewer surface; their Edit buttons render disabled with
+  the standard "Revert to draft to edit" tooltip. Editing them
+  invalidates `validated → draft` per the existing
+  `invalidate_if_validated` discipline.
+- **Links 4, 5, 6** (Visibility, Read shape, Release timing)
+  edit read-time policies only; their Edit buttons **stay live
+  in `ready`**. Edits do not invalidate the session. This is
+  the natural pattern — an operator may need to add an
+  observer audience or flip a release stamp mid-cycle without
+  pausing the reviewer surface.
+
+The Release responses / Un-release flips on Link 6 are runtime
+operations on an activated session, not setup-time edits, and
+have their own per-instrument-per-audience confirm flow
+separate from the chain editor.
 
 ---
 
 ## Data model deltas
 
-Tracking the five-link chain requires four schema additions —
+Tracking the six-link chain requires five schema additions —
 each separable and independently shippable. Link 2 reuses the
 existing per-instrument RuleSet pin; Link 3 reuses (and refines)
 the existing group-scoped instrument schema.
@@ -411,10 +488,9 @@ below.
 
 A new structured column on `instruments`:
 - `visibility_audiences` — JSON array of objects, each carrying
-  `{audience_kind, predicate?, unlock_at}`. `audience_kind ∈
+  `{audience_kind, predicate?}`. `audience_kind ∈
   {operator, reviewee, observer}`. `predicate` is required for
-  `observer`. `unlock_at ∈ {save, submit, session_close,
-  deadline}`.
+  `observer`.
 
 Plus a downstream read-path guard that consults this column on
 every response-row read by a non-operator.
@@ -425,9 +501,25 @@ A new JSON column on `instruments`:
 - `read_shapes` — JSON object keyed by audience kind, valued by
   `{shape: raw|summarised|anonymised, k_anonymity_floor: int}`.
 
-Or alternatively, merge D4 and D5 into one column carrying
-`audience + shape + unlock_at` per row. The unified shape is
-preferable because the three policies always travel together.
+### D6 — Release timing (Link 6)
+
+Two new structures:
+- `release_timing` — JSON object on `instruments` keyed by
+  audience kind, valued by `{mode: while_ongoing | on_release}`.
+  Operators are implicitly `while_ongoing` and need no row.
+- `instrument_releases` — new table keyed by
+  `(instrument_id, audience_kind)`, carrying `released_at` and
+  `released_by_user_id`. One row per release flip; rows persist
+  through un-release (the read-path guard treats `released_at`
+  IS NULL as "not currently released").
+
+Alternative shape: merge D4 + D5 + D6 into one
+`audience_policy` JSON column carrying
+`{audience_kind, predicate?, shape, k_anonymity_floor, timing}`
+per row, with the release timestamps still living on the
+separate `instrument_releases` table because they are write-
+heavy state, not config. The merged shape is preferable for the
+three config policies because they always travel together.
 
 ### Migrations
 
@@ -446,18 +538,21 @@ sequence of independently-shippable parts:
 
 | Part | Scope | Depends on |
 |---|---|---|
-| **0 — Schema pre-positioning** | Inert columns on `instruments` (D1, D3, D4, D5). No behaviour change. | nothing |
-| **1 — UI shell** | Replace the per-instrument card's Identity + Rule row with the five-sub-card chain layout. Sub-cards 1 / 4 / 5 are placeholder cards showing "Default" everywhere; sub-card 2 wraps the existing Rule Builder affordance unchanged; sub-card 3 reflects the current `group_kind` flag read-only. | Part 0 |
+| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D1, D3, D4, D5, D6). No behaviour change. | nothing |
+| **1 — UI shell** | Replace the per-instrument card's Identity + Rule row with the six-sub-card chain layout. Sub-cards 1 / 4 / 5 / 6 are placeholder cards showing "Default" everywhere; sub-card 2 wraps the existing Rule Builder affordance unchanged; sub-card 3 reflects the current `group_kind` flag read-only. | Part 0 |
 | **2 — Link 1 (reviewer scope)** | Light up the Reviewers sub-card editor + service-layer predicate evaluation in the assignment generator. | Parts 0 + 1 |
 | **3 — Link 3 (unit of review)** | Promote the existing `group_kind` flag + Display-Fields-table boundary-tag checkboxes into the Unit-of-review sub-card editor. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
 | **4 — Link 4 (visibility, operator + reviewee audiences)** | Light up the Visibility sub-card editor. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface (the reviewee dashboard the audience model has long anticipated). | Parts 0 + 1 |
 | **5 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the Read shape sub-card editor. Aggregator service computing summaries; anonymisation transformer; k-anonymity floor enforcement. | Part 4 |
-| **6 — Link 4 (observer audiences)** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 4 |
-| **7 — Link 5 (read shape for observer audiences)** | Per-observer-audience read shape configuration. | Parts 5 + 6 |
+| **6 — Link 6 (release timing, operator + reviewee audiences)** | Light up the Release-timing sub-card editor + per-instrument-per-audience Release / Un-release affordance on the operator surface. Read-path guard consults `instrument_releases` before serving any "on_release" audience. | Part 4 |
+| **7 — Link 4 (observer audiences)** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 4 |
+| **8 — Link 5 (read shape for observer audiences)** | Per-observer-audience read shape configuration. | Parts 5 + 7 |
+| **9 — Link 6 (release timing for observer audiences)** | Per-observer-audience release timing + Release affordance for each observer audience. | Parts 6 + 7 |
 
 Parts 0 + 1 must land in that order. After Part 1, parts 2 / 3
 / 4 are independent and can interleave. Parts 5 / 6 / 7 depend
-on their respective earlier parts as noted.
+on Part 4. Parts 8 / 9 depend on their respective earlier
+parts as noted.
 
 ---
 
@@ -483,6 +578,9 @@ Each link in the chain contributes new validation rules:
 - **Link 5** — k-anonymity floor is achievable given the
   generated assignment count (warning, not error, since rosters
   may grow later).
+- **Link 6** — release timing references an audience that
+  Link 4 did not enable is an error. Timing alone is a no-op
+  without a paired visibility audience.
 
 Every rule lands as a `ValidationRule` in the existing registry
 (see [`spec/validate_page.md`](../spec/validate_page.md)) and
@@ -545,7 +643,7 @@ Link 3's mode switching is a new reconciler responsibility:
 ### CSV round-trip
 
 The Settings CSV ([`spec/csv_contracts.md`](../spec/csv_contracts.md))
-must learn to round-trip the four-link chain. Each link's
+must learn to round-trip the six-link chain. Each link's
 predicate / configuration travels as one or more rows in the
 Settings CSV's per-instrument section. The CSV is the
 historical baseline for round-trip stability — the new columns
@@ -588,6 +686,20 @@ must not break it.
    asked once per group, others once per reviewee. The
    group-scoped instrument spec deferred this as out of scope;
    it remains out of scope here. Lift trigger: pilot demand.
+7. **Scheduled release on Link 6.** The current proposal makes
+   release a manual operator action — the operator decides
+   when. A natural extension is a per-`(instrument, audience)`
+   `release_at` timestamp so the release fires on a schedule
+   (mirrors the auto-send-invitations / auto-send-reminders
+   pattern from 18G). Deferred until manual release has been
+   exercised in a pilot. Lift trigger: operator demand.
+8. **Per-reviewer release granularity.** A release is currently
+   per-`(instrument, audience)` — every reviewee in the
+   audience sees the same release flip. A finer-grained
+   variant would release per-reviewee (e.g. release one
+   reviewee's responses today, another's tomorrow during a
+   rolling feedback distribution). Operationally noisier;
+   deferred. Lift trigger: pilot demand.
 
 ---
 
@@ -600,5 +712,6 @@ must not break it.
 - [`spec/validate_page.md`](../spec/validate_page.md) — where chain-builder validation issues surface.
 - [`spec/csv_contracts.md`](../spec/csv_contracts.md) — Settings round-trip implications.
 - [`spec/settings_inventory.md`](../spec/settings_inventory.md) — friendly labels the editors consume.
-- [`spec/audience_and_identity_model.md`](../spec/audience_and_identity_model.md) — the audience model Link 3 + 4 are operationalising.
+- [`spec/audience_and_identity_model.md`](../spec/audience_and_identity_model.md) — the audience model Links 4, 5, and 6 are operationalising.
+- [`spec/lifecycle.md`](../spec/lifecycle.md) — Link 6's release-stamp lifecycle layers on top of the session lifecycle; per-instrument release flips do not move the session between states.
 - [`spec/rrw_functional_spec.md`](../spec/rrw_functional_spec.md) — once this work ships, the functional spec §5 (Core concepts) and §10 (Reviewer experience) acquire new responsibilities; until then, the functional contract reads as today (operators only).
