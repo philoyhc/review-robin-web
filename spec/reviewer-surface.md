@@ -807,7 +807,7 @@ flag hasn't been flipped yet by `observe_deadline`.
 | `closed` | `pill-lifecycle-archived` (muted grey) | Session is `ready` AND no assigned instruments are accepting (deadline passed or instruments manually closed). Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
 
 When the deferred Close-session work and the `expired`
-lifecycle status ship (per `guide/segment_18F_workflow_optimization.md`),
+lifecycle status ship (per `guide/archive/segment_18F_workflow_optimization.md`),
 `closed` will also resolve from `session.status == "expired"`
 without re-plumbing.
 

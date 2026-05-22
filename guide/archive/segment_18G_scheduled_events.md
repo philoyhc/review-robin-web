@@ -5,7 +5,7 @@
 >
 > **Renumbered 18F → 18G on 2026-05-19** when the new
 > **Segment 18F — Workflow optimization**
-> (`guide/segment_18F_workflow_optimization.md`) was created. The
+> (`guide/archive/segment_18F_workflow_optimization.md`) was created. The
 > scope is unchanged — only the segment number moved.
 >
 > Consolidates every **scheduled / automatic session-lifecycle
