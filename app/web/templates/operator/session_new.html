@@ -15,20 +15,28 @@
           enctype="multipart/form-data">
       <div class="page-grid" style="margin-bottom: 0;">
         <div>
+          {# Left column — identity + Help contact. #}
           <label for="name">Name</label>
           <input type="text" id="name" name="name" required maxlength="255">
 
           <label for="code">Code</label>
           <input type="text" id="code" name="code" required maxlength="64">
 
+          <label for="description">Description</label>
+          <textarea id="description" name="description" maxlength="2000"></textarea>
+
           <label for="help_contact">Help contact (optional)</label>
           <input type="text" id="help_contact" name="help_contact" maxlength="320"
                  placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+        </div>
 
-          {# 18B PR 4 — per-session display timezone, picked before the
-             deadline so the operator knows which zone the deadline is
-             entered in. Searchable <datalist> over every IANA zone,
-             pre-filled with the operator's default. #}
+        <div class="fill-col">
+          {# Right column — Timezone (full width on top), then the
+             schedule + offset sub-grid. Live: Start / End (datetime
+             anchors) + Auto-send invites / reminders (offsets).
+             Participants-platform fields (``responses_release_at`` /
+             ``release_until_offset``) ride along as disabled
+             placeholders for segments 21+. #}
           <label for="display_timezone">Timezone</label>
           <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
             Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
@@ -44,10 +52,6 @@
             {% endfor %}
           </datalist>
 
-          {# 18G Part 0 anchors + offsets — half-column sub-grid below
-             Timezone. Start (``scheduled_activate_at``) + End
-             (``sessions.deadline``) anchors in column 1;
-             ``invite_offsets`` + ``reminder_offsets`` in column 2. #}
           <div class="page-grid" style="margin: 0;">
             <div>
               <label for="scheduled_activate_at">Start (optional)</label>
@@ -56,6 +60,11 @@
 
               <label for="deadline">End (optional)</label>
               <input type="datetime-local" id="deadline" name="deadline">
+
+              <label for="responses_release_at">Release responses from (optional)</label>
+              <input type="datetime-local" id="responses_release_at"
+                     name="responses_release_at" disabled
+                     placeholder="Reviewees see responses — Participants platform">
             </div>
             <div>
               <label for="invite_offsets">Auto-send invites (optional)</label>
@@ -65,43 +74,11 @@
               <label for="reminder_offsets">Auto-send reminders (optional)</label>
               <input type="text" id="reminder_offsets" name="reminder_offsets"
                      placeholder="e.g. -P2D, -PT4H">
-            </div>
-          </div>
-        </div>
 
-        <div class="fill-col">
-          <label for="description">Description</label>
-          <textarea id="description" name="description" maxlength="2000"></textarea>
-
-          {# 18G Part 0 — Participants-platform anchors + retention
-             offsets sub-grid. All four fields are disabled
-             placeholders today; consumer Parts wire them up.
-             ``responses_release_at`` / ``release_until_offset`` are
-             Participants-platform (segments 21+); ``archive_offset``
-             feeds 18G Part 4; ``retention_overrides.delete_after_archive``
-             feeds 18G Part 5. #}
-          <div class="page-grid" style="margin: 0;">
-            <div>
-              <label for="responses_release_at">Release responses from (optional)</label>
-              <input type="datetime-local" id="responses_release_at"
-                     name="responses_release_at" disabled
-                     placeholder="Reviewees see responses — Participants platform">
-
-              <label for="responses_release_until">Release responses until (optional)</label>
-              <input type="datetime-local" id="responses_release_until"
-                     name="responses_release_until" disabled
+              <label for="release_until_offset">Release responses until (optional)</label>
+              <input type="text" id="release_until_offset"
+                     name="release_until_offset" disabled
                      placeholder="Reviewee viewing closes — Participants platform">
-            </div>
-            <div>
-              <label for="archive_offset">Auto-archive (optional)</label>
-              <input type="text" id="archive_offset" name="archive_offset"
-                     disabled
-                     placeholder="e.g. P30D after End — 18G Part 4">
-
-              <label for="delete_after_archive">Auto-delete (optional)</label>
-              <input type="text" id="delete_after_archive" name="delete_after_archive"
-                     disabled
-                     placeholder="e.g. P90D after archive — 18G Part 5">
             </div>
           </div>
         </div>
