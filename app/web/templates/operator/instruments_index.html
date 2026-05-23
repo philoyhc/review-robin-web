@@ -726,37 +726,52 @@
            1/6) with vertical rules between. Placeholders for
            now; see guide/instrument_builder.md §Band 1. #}
         <div style="display: grid; grid-template-columns: 2fr 3fr 1fr; gap: 0;">
-          <div style="padding: 0 16px 0 0;">
-            <h3 style="margin: 0 0 12px 0;">Reviewers</h3>
-            {# Placeholder Link 1 rule list. Two-column layout:
-               left 20% holds the per-list "+" (add rule) and
-               combinator (+AND / +OR) buttons, vertically
-               centered; right 80% holds a stack of rule cells.
-               Each rule cell is two rows — row 1: tag dropdown
-               (40% of cell) + IS / IS NOT toggle; row 2: value
-               editbox + X (remove rule). Toggles flip text on
-               click; + clones the first rule cell; X removes the
-               cell (keeping at least one). All placeholder —
-               nothing wired to persistence. #}
+          <div data-pilot-link1 style="padding: 0 16px 0 0;">
+            <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+              Reviewers
+              {# Mode-toggle pill: "All" (no filter, builder greyed
+                 out + inactive) vs "Filter using rules" (builder
+                 active). Default is All. #}
+              <button type="button" class="pill pill-info"
+                      style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
+                      data-pilot-rule-mode="all"
+                      onclick="pilotToggleRuleMode(this)"
+                      title="Click to toggle (placeholder)">All</button>
+            </h3>
+            {# Placeholder Link 1 rule list. Three-column flex
+               layout: left 20% holds the "+" (add rule) and
+               AND/OR (toggle combinator) buttons side by side;
+               a thick vertical line separates left from right;
+               right takes the remaining width with a stack of
+               rule cells. Each rule cell is two rows — row 1:
+               tag dropdown (50% of cell) + IS / IS NOT toggle;
+               row 2: value editbox + X (remove rule). The first
+               cell's X is disabled (can't delete the first).
+               Toggles flip text on click; + clones the first
+               rule cell; X removes the cell (keeping at least
+               one). All placeholder — nothing wired to
+               persistence. #}
             <div data-pilot-reviewers-rules
-                 style="display: grid; grid-template-columns: 20% 1fr; gap: 8px; align-items: stretch;">
-              <div style="display: flex; flex-direction: column;
-                          align-items: stretch; justify-content: center; gap: 8px;">
+                 style="display: flex; align-items: stretch; gap: 8px;
+                        opacity: 0.5; pointer-events: none;">
+              <div style="flex: 0 0 20%; display: flex;
+                          align-items: center; justify-content: center; gap: 4px;">
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
                         onclick="pilotAddRule(this)"
                         title="Add rule (placeholder)">+</button>
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
-                        onclick="this.textContent = this.textContent.trim() === '+AND' ? '+OR' : '+AND';"
-                        title="Toggle combinator (placeholder)">+AND</button>
+                        onclick="this.textContent = this.textContent.trim() === 'AND' ? 'OR' : 'AND';"
+                        title="Toggle combinator (placeholder)">AND</button>
               </div>
+              <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
               <div data-pilot-rule-cells
-                   style="display: flex; flex-direction: column; gap: 12px;">
+                   style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
                 <div data-pilot-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 40%; min-width: 0; padding: 4px;">
+                    <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
                       <option>reviewer.tag1</option>
                       <option>reviewer.tag2</option>
                       <option>reviewer.tag3</option>
@@ -775,7 +790,8 @@
                     <button type="button" class="btn destructive"
                             style="padding: 4px 8px; flex-shrink: 0;"
                             onclick="pilotRemoveRule(this)"
-                            title="Remove rule (placeholder)">X</button>
+                            disabled aria-disabled="true"
+                            title="Cannot remove the first rule (placeholder)">X</button>
                   </div>
                 </div>
               </div>
@@ -789,6 +805,12 @@
                 clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
                 clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
                 clone.querySelectorAll('button[title^="Toggle operator"]').forEach(function (b) { b.textContent = 'IS'; });
+                // New cell's X is active (only the first cell's X stays disabled).
+                clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
+                  b.disabled = false;
+                  b.removeAttribute('aria-disabled');
+                  b.setAttribute('title', 'Remove rule (placeholder)');
+                });
                 container.appendChild(clone);
               };
               window.pilotRemoveRule = window.pilotRemoveRule || function (btn) {
@@ -796,6 +818,21 @@
                 var container = cell.parentElement;
                 if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
                   cell.remove();
+                }
+              };
+              window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
+                var wrap = btn.closest('[data-pilot-link1]');
+                var builder = wrap.querySelector('[data-pilot-reviewers-rules]');
+                if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
+                  btn.setAttribute('data-pilot-rule-mode', 'filter');
+                  btn.textContent = 'Filter using rules';
+                  builder.style.opacity = '1';
+                  builder.style.pointerEvents = 'auto';
+                } else {
+                  btn.setAttribute('data-pilot-rule-mode', 'all');
+                  btn.textContent = 'All';
+                  builder.style.opacity = '0.5';
+                  builder.style.pointerEvents = 'none';
                 }
               };
             </script>
