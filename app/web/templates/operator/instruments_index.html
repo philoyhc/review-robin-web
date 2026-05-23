@@ -731,7 +731,7 @@
            (reviewer.tag* vs reviewee.tag*). All shared markup +
            inline window.pilot* helpers — nothing wired to
            persistence. #}
-        {% macro pilot_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None) %}
+        {% macro pilot_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
           {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
           {% set _is_active = tag_options | length > 0 %}
           {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
@@ -752,6 +752,7 @@
                              cursor: {{ 'pointer' if _is_active else 'not-allowed' }};
                              opacity: {{ '1' if _is_active else '0.5' }};"
                       data-pilot-rule-mode="all"
+                      data-pilot-mode-on-label="{{ on_label }}"
                       {% if _is_active %}onclick="pilotToggleRuleMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
                       title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</button>
             </h3>
@@ -826,12 +827,14 @@
         {% set _link3_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;">
           <div style="padding: 0 16px 0 0;">
-            {{ pilot_rule_list("Pool of reviewers", _link1_tags) }}
+            {{ pilot_rule_list("Pool of reviewers", _link1_tags,
+                on_label="Filter using reviewer and relationship tags") }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             {{ pilot_rule_list("Pool of those reviewed", _link2_tags,
                 operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
-                operand_tag_options=_link2_operand) }}
+                operand_tag_options=_link2_operand,
+                on_label="Filter using reviewee and relationship tags") }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <div data-pilot-link-wrapper>
@@ -847,6 +850,7 @@
                                cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};
                                opacity: {{ '1' if _link3_active else '0.5' }};"
                         data-pilot-unit-mode="individual"
+                        data-pilot-mode-on-label="Group using reviewee and relationship tags"
                         {% if _link3_active %}onclick="pilotToggleUnitMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
                         title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</button>
               </h3>
@@ -954,9 +958,10 @@
           window.pilotToggleUnitMode = window.pilotToggleUnitMode || function (btn) {
             var wrap = btn.closest('[data-pilot-link-wrapper]');
             var builder = wrap.querySelector('[data-pilot-unit-builder]');
+            var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Group';
             if (btn.getAttribute('data-pilot-unit-mode') === 'individual') {
               btn.setAttribute('data-pilot-unit-mode', 'group');
-              btn.textContent = 'Group';
+              btn.textContent = onLabel;
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
@@ -1014,9 +1019,10 @@
           window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
             var wrap = btn.closest('[data-pilot-link-wrapper]');
             var builder = wrap.querySelector('[data-pilot-rule-builder]');
+            var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Filter using rules';
             if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
               btn.setAttribute('data-pilot-rule-mode', 'filter');
-              btn.textContent = 'Filter using rules';
+              btn.textContent = onLabel;
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
