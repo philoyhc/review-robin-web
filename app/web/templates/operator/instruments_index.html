@@ -733,17 +733,27 @@
            persistence. #}
         {% macro pilot_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None) %}
           {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
+          {% set _is_active = tag_options | length > 0 %}
+          {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
+             when there are no operand-side tags to compare against,
+             so the operator can't land on an empty operand picker. #}
+          {% if operand_tag_options is not none and operand_tag_options | length == 0 %}
+            {% set _ops = _ops | reject('in', ['IS THE SAME AS', 'IS DIFFERENT FROM']) | list %}
+          {% endif %}
           <div data-pilot-link-wrapper>
             <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
               {{ title }}
               {# Mode-toggle pill: "All" (no filter, builder greyed
                  out + inactive) vs "Filter using rules" (builder
-                 active). Default is All. #}
+                 active). Default is All. Disabled (and stuck on
+                 All) when no usable tags exist for this link. #}
               <button type="button" class="pill pill-info"
-                      style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
+                      style="border: none; font: inherit; font-size: 0.7em;
+                             cursor: {{ 'pointer' if _is_active else 'not-allowed' }};
+                             opacity: {{ '1' if _is_active else '0.5' }};"
                       data-pilot-rule-mode="all"
-                      onclick="pilotToggleRuleMode(this)"
-                      title="Click to toggle (placeholder)">All</button>
+                      {% if _is_active %}onclick="pilotToggleRuleMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
+                      title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</button>
             </h3>
             <div data-pilot-rule-builder
                  style="display: flex; align-items: stretch; gap: 8px;
@@ -766,8 +776,8 @@
                      style="display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                      {% for opt in tag_options %}
-                        <option>{{ opt }}</option>
+                      {% for key, label in tag_options %}
+                        <option value="{{ key }}">{{ label }}</option>
                       {% endfor %}
                     </select>
                     <button type="button" class="btn secondary"
@@ -785,8 +795,8 @@
                          visibility. #}
                       <select data-pilot-operand-tag
                               style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
-                        {% for opt in operand_tag_options %}
-                          <option>{{ opt }}</option>
+                        {% for key, label in operand_tag_options %}
+                          <option value="{{ key }}">{{ label }}</option>
                         {% endfor %}
                       </select>
                     {% endif %}
@@ -804,31 +814,41 @@
           </div>
         {% endmacro %}
 
+        {# Per-link tag option lists. Each ``pilot_tags[ns]`` is a
+           list of ``(canonical_key, friendly_label)`` tuples for
+           slots that have at least one populated row in the
+           session — built by ``views._instruments._pilot_usable_tags``.
+           Empty lists drive the column's pill into the disabled /
+           inactive state. #}
+        {% set _link1_tags = pilot_tags.reviewer + pilot_tags.pair_context %}
+        {% set _link2_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
+        {% set _link2_operand = pilot_tags.reviewer + pilot_tags.pair_context %}
+        {% set _link3_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;">
           <div style="padding: 0 16px 0 0;">
-            {{ pilot_rule_list("Pool of reviewers",
-                ["reviewer.tag1", "reviewer.tag2", "reviewer.tag3",
-                 "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"]) }}
+            {{ pilot_rule_list("Pool of reviewers", _link1_tags) }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            {{ pilot_rule_list("Pool of those reviewed",
-                ["reviewee.tag1", "reviewee.tag2", "reviewee.tag3",
-                 "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"],
+            {{ pilot_rule_list("Pool of those reviewed", _link2_tags,
                 operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
-                operand_tag_options=["reviewer.tag1", "reviewer.tag2", "reviewer.tag3",
-                                     "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"]) }}
+                operand_tag_options=_link2_operand) }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <div data-pilot-link-wrapper>
+              {% set _link3_active = _link3_tags | length > 0 %}
               <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
                 Unit of review
                 {# Mode-toggle pill: "Individual" (builder greyed out
-                   + inactive — default) vs "Group" (builder active). #}
+                   + inactive — default) vs "Group" (builder active).
+                   Disabled (and stuck on Individual) when no usable
+                   reviewee / pair_context tags exist for the session. #}
                 <button type="button" class="pill pill-info"
-                        style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
+                        style="border: none; font: inherit; font-size: 0.7em;
+                               cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};
+                               opacity: {{ '1' if _link3_active else '0.5' }};"
                         data-pilot-unit-mode="individual"
-                        onclick="pilotToggleUnitMode(this)"
-                        title="Click to toggle (placeholder)">Individual</button>
+                        {% if _link3_active %}onclick="pilotToggleUnitMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
+                        title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</button>
               </h3>
               {# Placeholder Link 3 group-boundary picker. Left 45%
                  carries the "+" (add boundary tag) and an inactive
@@ -859,12 +879,9 @@
                   <div data-pilot-unit-cell
                        style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;">
-                      <option>reviewee.tag1</option>
-                      <option>reviewee.tag2</option>
-                      <option>reviewee.tag3</option>
-                      <option>pair_context.tag1</option>
-                      <option>pair_context.tag2</option>
-                      <option>pair_context.tag3</option>
+                      {% for key, label in _link3_tags %}
+                        <option value="{{ key }}">{{ label }}</option>
+                      {% endfor %}
                     </select>
                     <button type="button" class="btn destructive" data-pilot-cell-action
                             style="padding: 4px 8px; flex-shrink: 0;"
