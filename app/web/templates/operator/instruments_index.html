@@ -1539,11 +1539,26 @@
                   bounds[input.getAttribute('data-new-model-rf-bound')] = input.value;
                 }
               });
+              // Insert the visual `||` divider between display
+              // pills and response pills if it isn't already there.
+              // The divider is hidden when no response pills exist
+              // and reappears the moment the first one lands.
+              var divider = pillsRow.querySelector('[data-new-model-band2-pills-divider]');
+              if (!divider) {
+                divider = document.createElement('span');
+                divider.className = 'new-model-band2-pills-divider';
+                divider.setAttribute('data-new-model-band2-pills-divider', '');
+                divider.setAttribute('aria-hidden', 'true');
+                divider.textContent = '||';
+                pillsRow.appendChild(divider);
+              }
               // Build the pill: selectable (start unselected) and
               // marked as sourceType="response" so the preview
               // builder knows to render it after the display columns.
-              // Not drag-reorderable for now to keep response pills
-              // grouped after display pills in stable insertion order.
+              // Reorderable so the operator can drag within the
+              // response group; the dragover handler rejects
+              // cross-region drops so a response pill can't swap
+              // into the display group.
               var pill = document.createElement('span');
               pill.className = 'pill tag-chip';
               pill.setAttribute('role', 'button');
@@ -1557,10 +1572,15 @@
               pill.setAttribute('data-value', '');
               pill.setAttribute('data-selectable-in-group', 'true');
               pill.setAttribute('data-response-key', key);
-              pill.setAttribute('data-reorderable', 'false');
+              pill.setAttribute('data-reorderable', 'true');
+              pill.setAttribute('draggable', 'true');
+              pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');
+              pill.setAttribute('ondragend', 'newModelBand2DragEnd(event)');
+              pill.setAttribute('ondragover', 'newModelBand2DragOver(event)');
+              pill.setAttribute('ondrop', 'newModelBand2Drop(event)');
               pill.setAttribute('onclick', 'newModelToggleBand2Pill(this)');
-              pill.setAttribute('title', 'Click to include ' + fieldName + ' in the preview row');
-              pill.textContent = fieldName;
+              pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
+              pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + esc(fieldName);
               pillsRow.appendChild(pill);
               // Build the half-width card with field name + data
               // type, bounds, and a flush-right X button that
@@ -1609,7 +1629,17 @@
                 if (pill) { pill.remove(); }
               }
               cardEl.remove();
-              if (band2) { rebuildPreview(band2); }
+              if (band2) {
+                // Drop the `||` divider once the last response pill
+                // is gone, so the operator doesn't see a lone
+                // divider trailing the display pills.
+                var remaining = band2.querySelector('[data-new-model-band2-pill][data-source-type="response"]');
+                if (!remaining) {
+                  var divider = band2.querySelector('[data-new-model-band2-pills-divider]');
+                  if (divider) { divider.remove(); }
+                }
+                rebuildPreview(band2);
+              }
             };
             // ---- Drag-and-drop pill reorder ---------------------
             // Pills carrying ``data-reorderable="true"`` (every
@@ -1642,6 +1672,12 @@
               document.querySelectorAll('.new-model-band2-pill-drop-before')
                 .forEach(function (el) { el.classList.remove('new-model-band2-pill-drop-before'); });
             };
+            // Pill region (display vs response) — used to keep a
+            // drag pinned to its own group so a response pill can't
+            // jump into the display section (or vice versa).
+            function pillRegion(pill) {
+              return pill.getAttribute('data-source-type') === 'response' ? 'response' : 'display';
+            }
             window.newModelBand2DragOver = function (event) {
               var target = event.target.closest('[data-new-model-band2-pill]');
               if (!target || target.getAttribute('data-reorderable') !== 'true') { return; }
@@ -1650,6 +1686,10 @@
               if (target.closest('[data-new-model-band2]') !== dragSource.closest('[data-new-model-band2]')) {
                 return;
               }
+              // Region guard: response pills only swap with other
+              // response pills; display pills only swap with display
+              // pills. The `||` divider stays put between the two.
+              if (pillRegion(target) !== pillRegion(dragSource)) { return; }
               event.preventDefault();
               if (event.dataTransfer) { event.dataTransfer.dropEffect = 'move'; }
               // Reset previous indicators, then mark this one.
@@ -1660,6 +1700,12 @@
             window.newModelBand2Drop = function (event) {
               var target = event.target.closest('[data-new-model-band2-pill]');
               if (!target || !dragSource || target === dragSource) { return; }
+              // Enforce the region guard at drop too — the dragover
+              // handler skips preventDefault for cross-region targets
+              // so the browser usually rejects the drop, but be
+              // defensive here so a stray drop can't smuggle a pill
+              // across the divider.
+              if (pillRegion(target) !== pillRegion(dragSource)) { return; }
               event.preventDefault();
               target.classList.remove('new-model-band2-pill-drop-before');
               // Insert the dragged pill immediately before the drop
@@ -1667,10 +1713,30 @@
               // expect "drop on X" to mean "insert before X" — same
               // contract reviewer-surface sort uses elsewhere.
               target.parentNode.insertBefore(dragSource, target);
-              var card = target.closest('[data-new-model-band2]');
-              if (card) {
-                saveBand2DisplayFieldOrder(card);
-                rebuildPreview(card);
+              // Keep the paired response card in lockstep with its
+              // pill so the cards grid mirrors the pill order.
+              if (pillRegion(dragSource) === 'response') {
+                var srcKey = dragSource.getAttribute('data-response-key');
+                var tgtKey = target.getAttribute('data-response-key');
+                var card = dragSource.closest('[data-new-model-band2]');
+                var grid = card && card.querySelector('[data-new-model-band2-response-cards]');
+                if (grid && srcKey && tgtKey) {
+                  var srcCard = grid.querySelector('[data-new-model-response-card][data-response-key="' + srcKey + '"]');
+                  var tgtCard = grid.querySelector('[data-new-model-response-card][data-response-key="' + tgtKey + '"]');
+                  if (srcCard && tgtCard) {
+                    grid.insertBefore(srcCard, tgtCard);
+                  }
+                }
+              }
+              var band2Card = target.closest('[data-new-model-band2]');
+              if (band2Card) {
+                // Response-pill reorder is client-side only — no
+                // persistent ``display_field.order`` to write — so
+                // skip the POST when the drag source is a response.
+                if (pillRegion(dragSource) === 'display') {
+                  saveBand2DisplayFieldOrder(band2Card);
+                }
+                rebuildPreview(band2Card);
               }
             };
             // POST the current order of reorderable pill display
