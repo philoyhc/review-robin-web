@@ -200,11 +200,19 @@
                   data-delete-btn="{{ instrument.id }}"
                   disabled aria-disabled="true">Delete</button>
         {% endif %}
-        {# Pilot — concept-test affordance for the new Instrument
-           Builder vertical-bands card. Spawns a placeholder pilot
-           card below; see guide/instrument_builder.md. #}
-        <a class="btn primary-outline"
-           href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Pilot</a>
+        {# +Pilot — concept-test affordance for the Instrument
+           Builder vertical-bands card. Spawns a real pilot
+           instrument immediately after this one (same pattern as
+           Add instrument / Add group instrument); the template
+           renders pilot rows with the bands placeholder layout.
+           See guide/instrument_builder.md. #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/add-pilot"
+              style="display: inline; margin: 0;">
+          <input type="hidden" name="after" value="{{ instrument.id }}">
+          <button class="btn primary-outline" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+Pilot</button>
+        </form>
       </div>
     </div>
   {% endmacro %}
@@ -268,6 +276,7 @@
                 display: flex; flex-direction: column;">
       <h2 style="margin-top: 0; font-size: 1.5rem;">
         Instrument #{{ index }}
+        {% if instrument.is_pilot %}<span class="pill pill-info">Pilot</span>{% endif %}
         {% if is_group %}<span class="pill pill-info">Group-scoped</span>{% endif %}
         {% if instrument.accepting_responses %}
           <span class="pill pill-count">accepting responses</span>
@@ -605,7 +614,62 @@
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
-      {% if is_group %}
+      {% if instrument.is_pilot %}
+        {# Pilot card — concept-test layout for the Instrument
+           Builder (guide/instrument_builder.md). Identity at the
+           top (status pills, description, edit/save/cancel,
+           show-when-closed); horizontal rules separating Band 1 /
+           Band 2 / Band 3 placeholders; standard action row +
+           delete-confirm checkbox at the bottom. Bands stay
+           placeholder until the builder lands per-band. #}
+        {% if is_editing %}
+          {# Bulk-save form for the identity-card short_label +
+             description (joins via form= on the inputs). No
+             Display / Response Fields rows on a pilot card yet. #}
+          <form id="dfsave-{{ instrument.id }}" method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
+        {% endif %}
+        {{ instrument_identity(session, instrument, loop.index, is_editing, is_ready, is_some_rtd_unlocked, false) }}
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+        <h3 style="margin: 0;">Band 1</h3>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+        <h3 style="margin: 0;">Band 2</h3>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+        <h3 style="margin: 0;">Band 3</h3>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+
+        {# Section E — action row + delete-confirm checkbox. #}
+        {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
+        {% if is_ready %}
+          {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
+        {% elif is_some_instrument_editing and not is_editing %}
+          {% set add_delete_disabled_title = "Save or cancel the open instrument edit first." %}
+        {% elif is_editing %}
+          {% set add_delete_disabled_title = "Save or cancel this instrument's edits first." %}
+        {% elif is_some_rtd_unlocked %}
+          {% set add_delete_disabled_title = "Save or cancel the Response Type Definitions edit first." %}
+        {% else %}
+          {% set add_delete_disabled_title = "" %}
+        {% endif %}
+        {% set is_only_instrument = (instruments | length == 1) %}
+        {% set delete_disabled = add_delete_disabled or is_only_instrument %}
+        {% set delete_title = "Cannot delete the only instrument on this session." if is_only_instrument else add_delete_disabled_title %}
+        <form id="instrument-delete-{{ instrument.id }}" method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"></form>
+        {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
+        <p style="text-align: right; margin: -12px 0 20px 0;">
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required
+                   form="instrument-delete-{{ instrument.id }}"
+                   {% if delete_disabled %}disabled{% else %}data-delete-confirm="{{ instrument.id }}"{% endif %}>
+            Yes, delete <strong>Pilot Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
+          </label>
+        </p>
+      {% elif is_group %}
         {# Segment 13C group-scoped instrument card. Section A holds
            the identity card (status pills in the heading, open/close
            + visibility buttons beside Edit) and the Assignment Rule
@@ -993,105 +1057,6 @@
       {% endif %}
     </div>
   {% endfor %}
-
-  {# Pilot Instrument card — placeholder for the Instrument Builder
-     concept (guide/instrument_builder.md). Spawned by the Pilot
-     button on any existing instrument's action row; appears only
-     when ?pilot=1 is in the URL. Edit / Save / Cancel toggle via
-     a second query param (?pilot_edit=1). Nothing here is wired
-     to persistence — this is a layout sketch to test the
-     vertical-bands shape against the live page. #}
-  {% if request.query_params.get('pilot') %}
-    {% set pilot_editing = request.query_params.get('pilot_edit') %}
-    <div id="pilot-card" class="card">
-      {# Header: identity, status pills, description, edit /
-         save+cancel, and visibility-when-closed buttons — same
-         shape as the existing per-instrument identity card's
-         top-left corner. #}
-      <div class="card instrument-edit"
-           style="border-color: transparent; background: transparent; padding: 0;
-                  display: flex; flex-direction: column;">
-        <h2 style="margin-top: 0; font-size: 1.5rem;">
-          Instrument #Pilot
-          <span class="pill pill-info">Pilot</span>
-          <span class="pill pill-count">accepting responses</span>
-          <span class="pill pill-count">showing when closed</span>
-        </h2>
-        {% if pilot_editing %}
-          <input type="text" maxlength="32"
-                 placeholder="(optional short label, e.g. Skills)"
-                 value=""
-                 style="width: 100%; margin-bottom: 8px;">
-          <textarea placeholder="(no description)"
-                    style="width: 100%;"></textarea>
-        {% else %}
-          <p class="description-text">(placeholder description — the Pilot instrument is a layout sketch for the Instrument Builder concept.)</p>
-        {% endif %}
-        <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
-          {% if pilot_editing %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Save</a>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Cancel</a>
-          {% else %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1&amp;pilot_edit=1#pilot-card">Edit</a>
-          {% endif %}
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Don't show when closed</a>
-        </div>
-      </div>
-
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-      <h3 style="margin: 0;">Band 1</h3>
-
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-      <h3 style="margin: 0;">Band 2</h3>
-
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-      <h3 style="margin: 0;">Band 3</h3>
-
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-
-      {# Bottom action row — mirrors the existing
-         instrument_action_row macro: Edit (or Save/Cancel),
-         Add instrument, Add group instrument, Replicate,
-         Delete, Pilot. Buttons are inert placeholders. #}
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-        <div style="display: flex; gap: 8px;">
-          {% if pilot_editing %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Save</a>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Cancel</a>
-          {% else %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?pilot=1&amp;pilot_edit=1#pilot-card">Edit</a>
-          {% endif %}
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn secondary" type="button" disabled
-                  aria-disabled="true" title="Placeholder — not wired.">Add instrument</button>
-          <button class="btn secondary" type="button" disabled
-                  aria-disabled="true" title="Placeholder — not wired.">Add group instrument</button>
-          <button class="btn secondary" type="button" disabled
-                  aria-disabled="true" title="Placeholder — not wired.">Replicate</button>
-          <button class="btn destructive" type="button"
-                  data-delete-btn="pilot"
-                  disabled aria-disabled="true">Delete</button>
-          <a class="btn primary-outline"
-             href="/operator/sessions/{{ session.id }}/instruments?pilot=1#pilot-card">Pilot</a>
-        </div>
-      </div>
-      <p style="text-align: right; margin: -12px 0 20px 0;">
-        <label style="font-weight: normal;">
-          <input type="checkbox" value="true"
-                 data-delete-confirm="pilot">
-          Yes, delete <strong>Pilot Instrument</strong> and its associated assignments and reviewer responses.
-        </label>
-      </p>
-    </div>
-  {% endif %}
 
   {# Response Type Definitions card. Slice 4a shipped read-only;
      Slice 4b adds operator-add / -edit / -delete on operator-defined

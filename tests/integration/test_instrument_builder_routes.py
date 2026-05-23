@@ -557,3 +557,57 @@ def test_replicate_instrument_clones_content(
     ).scalar_one()
     assert event.detail["refs"]["source_instrument_id"] == source_id
     assert event.detail["refs"]["instrument_id"] == copy.id
+
+
+def test_add_pilot_creates_instrument_with_is_pilot_flag(
+    client: TestClient, db: Session
+) -> None:
+    """The +Pilot button posts to /instruments/add-pilot, which
+    creates a real instrument with ``is_pilot=True`` slotted
+    immediately after the source. Concept-test affordance for the
+    Instrument Builder vertical-bands card."""
+    review_session = _make_session(client, db, code="add-pilot")
+    source = _instrument(db, review_session.id)
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-pilot",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    pilot = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    assert pilot.is_pilot is True
+    assert pilot.order == source.order + 1
+    db.refresh(source)
+    assert source.is_pilot is False
+
+    # Pilot card renders with the bands placeholder and the
+    # Pilot status pill on the identity card.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "Band 1" in body
+    assert "Band 2" in body
+    assert "Band 3" in body
+    assert ">Pilot<" in body  # status pill on the pilot card
+
+    # Delete on the pilot card uses the standard delete route
+    # (no special pilot-only path) and works end-to-end.
+    pilot_id = pilot.id
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{pilot_id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert (
+        db.execute(select(Instrument).where(Instrument.id == pilot_id))
+        .scalar_one_or_none()
+        is None
+    )

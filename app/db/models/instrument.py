@@ -89,6 +89,15 @@ class Instrument(Base, TimestampMixin):
     via ``session_rule_sets.library_origin_id`` SET NULL — see
     13D PR 2)."""
 
+    is_pilot: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="0"
+    )
+    """Concept-test marker for the Instrument Builder vertical-bands
+    card (``guide/instrument_builder.md``). Pilot instruments are
+    ordinary instruments at the model / service / route level — the
+    template renders them with the bands placeholder layout instead
+    of the standard Display / Response Fields tables."""
+
     cached_group_pair_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )
