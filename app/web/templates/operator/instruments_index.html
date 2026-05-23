@@ -747,14 +747,11 @@
                  out + inactive) vs "Filter using rules" (builder
                  active). Default is All. Disabled (and stuck on
                  All) when no usable tags exist for this link. #}
-              <button type="button"
-                      class="pill pill-info tag-chip{% if not _is_active %} is-disabled{% endif %}"
-                      style="border: none; font: inherit; font-size: 0.7em;
-                             cursor: {{ 'pointer' if _is_active else 'not-allowed' }};"
-                      data-pilot-rule-mode="all"
-                      data-pilot-mode-on-label="{{ on_label }}"
-                      {% if _is_active %}onclick="pilotToggleRuleMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
-                      title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</button>
+              <span class="pill {% if _is_active %}pill-count{% else %}pill-empty{% endif %} tag-chip{% if not _is_active %} is-disabled{% endif %}"
+                    data-pilot-rule-mode="all"
+                    data-pilot-mode-on-label="{{ on_label }}"
+                    {% if _is_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
+                    title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</span>
             </h3>
             <div data-pilot-rule-builder
                  style="display: flex; align-items: stretch; gap: 8px;
@@ -845,14 +842,11 @@
                    + inactive — default) vs "Group" (builder active).
                    Disabled (and stuck on Individual) when no usable
                    reviewee / pair_context tags exist for the session. #}
-                <button type="button"
-                        class="pill pill-info tag-chip{% if not _link3_active %} is-disabled{% endif %}"
-                        style="border: none; font: inherit; font-size: 0.7em;
-                               cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};"
-                        data-pilot-unit-mode="individual"
-                        data-pilot-mode-on-label="Group using reviewee attributes"
-                        {% if _link3_active %}onclick="pilotToggleUnitMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
-                        title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</button>
+                <span class="pill {% if _link3_active %}pill-count{% else %}pill-empty{% endif %} tag-chip{% if not _link3_active %} is-disabled{% endif %}"
+                      data-pilot-unit-mode="individual"
+                      data-pilot-mode-on-label="Group using reviewee attributes"
+                      {% if _link3_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
+                      title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</span>
               </h3>
               {# Placeholder Link 3 group-boundary picker. Left 45%
                  carries the "+" (add boundary tag) and an inactive
@@ -961,12 +955,14 @@
             var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Group';
             if (btn.getAttribute('data-pilot-unit-mode') === 'individual') {
               btn.setAttribute('data-pilot-unit-mode', 'group');
+              btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
               btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-unit-mode', 'individual');
+              btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'Individual';
               btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
@@ -1024,12 +1020,14 @@
             var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Filter using rules';
             if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
               btn.setAttribute('data-pilot-rule-mode', 'filter');
+              btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
               btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-rule-mode', 'all');
+              btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'All';
               btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
@@ -1057,25 +1055,23 @@
            empty. All placeholder; see
            guide/instrument_builder.md §Band 3. #}
         {% macro pilot_static_pill(label) %}
-          <button type="button" class="pill pill-info tag-chip is-selected"
-                  style="border: none; font: inherit; font-size: 0.7em; cursor: default;"
-                  tabindex="-1"
-                  title="Fixed (placeholder)">{{ label }}</button>
+          <span class="pill pill-count tag-chip is-selected"
+                title="Fixed (placeholder)">{{ label }}</span>
         {% endmacro %}
         {% macro pilot_audience_chip(label, selected=false) %}
-          <button type="button"
-                  class="pill pill-info tag-chip{% if selected %} is-selected{% endif %}"
-                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
-                  data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
-                  onclick="pilotToggleAudience(this)"
-                  title="Click to toggle audience (placeholder)">{{ label }}</button>
+          <span class="pill pill-count tag-chip{% if selected %} is-selected{% endif %}"
+                role="button" tabindex="0"
+                aria-pressed="{{ 'true' if selected else 'false' }}"
+                data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
+                onclick="pilotToggleAudience(this)"
+                title="Click to toggle audience (placeholder)">{{ label }}</span>
         {% endmacro %}
         {% macro pilot_cycle_button(cycle, current) %}
-          <button type="button" class="pill pill-info tag-chip is-selected"
-                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
-                  data-pilot-cycle="{{ cycle | join('|') }}"
-                  onclick="pilotCycleButton(this)"
-                  title="Click to cycle (placeholder)">{{ current }}</button>
+          <span class="pill pill-count tag-chip is-selected"
+                role="button" tabindex="0"
+                data-pilot-cycle="{{ cycle | join('|') }}"
+                onclick="pilotCycleButton(this)"
+                title="Click to cycle (placeholder)">{{ current }}</span>
         {% endmacro %}
         <div data-pilot-band3
              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
@@ -1154,6 +1150,7 @@
           window.pilotToggleAudience = window.pilotToggleAudience || function (btn) {
             var selected = btn.getAttribute('data-pilot-chip-selected') !== 'true';
             btn.setAttribute('data-pilot-chip-selected', selected ? 'true' : 'false');
+            btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
             if (selected) btn.classList.add('is-selected');
             else btn.classList.remove('is-selected');
             var row = btn.closest('[data-pilot-audience]');
