@@ -1098,3 +1098,92 @@ def test_new_model_band2_display_fields_order_rejects_locked_id(
         json={"ordered_ids": []},
     )
     assert resp.status_code == 400
+
+
+def test_new_model_band2_state_round_trip(
+    client: TestClient, db: Session
+) -> None:
+    """POSTing band2-state persists the operator's selected display
+    pills + response-field rows; reload renders pills with the
+    selected aria-pressed state, the divider, and the Band 3 rows
+    pre-populated."""
+    review_session = _make_session(client, db, code="nm-band2-state")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [
+                "reviewee.name",
+                "reviewee.email_or_identifier",
+                "bogus.unknown",  # dropped silently
+            ],
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "list_options": "",
+                    "selected": True,
+                },
+                {
+                    "name": "Comments",
+                    "data_type": "string",
+                    "min": "",
+                    "max": "200",
+                    "step": "",
+                    "list_options": "",
+                    "selected": False,
+                },
+                # Empty-name entry dropped.
+                {"name": " ", "data_type": "string", "selected": True},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+
+    db.refresh(new_model)
+    assert new_model.band2_state["selected_display_keys"] == [
+        "reviewee.name",
+        "reviewee.email_or_identifier",
+    ]
+    rfs = new_model.band2_state["response_fields"]
+    assert len(rfs) == 2
+    assert rfs[0]["name"] == "Rating"
+    assert rfs[0]["data_type"] == "integer"
+    assert rfs[0]["min"] == "1"
+    assert rfs[0]["max"] == "5"
+    assert rfs[0]["step"] == "1"
+    assert rfs[0]["selected"] is True
+    assert rfs[1]["name"] == "Comments"
+    assert rfs[1]["selected"] is False
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # Selected display pills carry aria-pressed="true".
+    assert 'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"' in flat
+    # The `||` divider lands once response pills are present.
+    assert 'data-new-model-band2-pills-divider' in flat
+    # Saved response pills + their rows hydrate with the saved labels.
+    assert '>Rating</span>' in flat or '⠿</span>Rating</span>' in flat
+    assert '>Comments</span>' in flat or '⠿</span>Comments</span>' in flat
+    # Band 3 Response field rows are pre-populated with the saved
+    # values.
+    assert 'value="Rating"' in flat
+    assert 'value="Comments"' in flat

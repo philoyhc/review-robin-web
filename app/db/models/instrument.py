@@ -112,6 +112,21 @@ class Instrument(Base, TimestampMixin):
     the widths take hold; an entirely NULL ``column_widths`` keeps
     today's auto-layout behaviour unchanged."""
 
+    band2_state: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    """Operator's Band 2 + Response Fields choices on the new-model
+    instrument card. Shape:
+    ``{"selected_display_keys": ["reviewee.name", ...],
+      "response_fields": [{name, data_type, min, max, step,
+      list_options, selected}, ...]}``.
+
+    Pure UX surface — the response_fields don't (yet) wire into
+    ``instrument_response_fields`` / ``response_type_definitions``,
+    so the reviewer surface still doesn't render input controls
+    for new-model instruments. That integration is a separate
+    slice. See ``guide/instrument_builder.md``."""
+
     cached_group_pair_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )

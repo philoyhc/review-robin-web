@@ -24,6 +24,8 @@ PR-3 strip (~485 LOC).
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -866,6 +868,114 @@ def set_column_widths(
         session=instrument.session,
         payload=audit.changes(
             {"column_widths": [old_value, new_value]}
+        ),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
+_BAND2_ALLOWED_DISPLAY_KEYS: frozenset[str] = frozenset(
+    {
+        "reviewee.name",
+        "reviewee.email_or_identifier",
+        "reviewee.profile_link",
+        "reviewee.tag_1",
+        "reviewee.tag_2",
+        "reviewee.tag_3",
+        "pair_context.tag_1",
+        "pair_context.tag_2",
+        "pair_context.tag_3",
+    }
+)
+_BAND2_ALLOWED_DATA_TYPES: frozenset[str] = frozenset(
+    {"string", "integer", "decimal", "list"}
+)
+_BAND2_RF_BOUND_KEYS: tuple[str, ...] = (
+    "min",
+    "max",
+    "step",
+    "list_options",
+)
+
+
+def set_band2_state(
+    db: Session,
+    *,
+    instrument: Instrument,
+    state: dict[str, Any],
+    actor: User,
+) -> Instrument:
+    """Persist the operator's Band 2 selections + response-field
+    definitions on a new-model instrument card.
+
+    ``state`` is the JSON blob described in the
+    ``e7c2b4d9a3f1_add_instruments_band2_state`` migration docstring:
+
+    - ``selected_display_keys``: list of canonical pill identifiers
+      (``"reviewee.name"`` etc.) the operator has toggled into the
+      preview row. Unknown keys are dropped silently.
+    - ``response_fields``: ordered list of dicts describing each
+      response-field row the operator has committed (via the ✓
+      button). Each dict carries ``name`` (str, required, ≤255
+      chars), ``data_type`` (one of ``string`` / ``integer`` /
+      ``decimal`` / ``list``), ``min`` / ``max`` / ``step`` /
+      ``list_options`` (str, optional), and ``selected`` (bool).
+
+    Passing ``None`` (or a payload that reduces to empty
+    selections + zero response_fields) clears ``band2_state``
+    back to NULL — the new-model card falls back to its default
+    "nothing selected, no response fields" shape.
+
+    No-op saves (the merged payload matches what's already
+    persisted) skip the audit + lifecycle side effects.
+    """
+    sanitised: dict[str, Any] = {}
+    raw_keys = state.get("selected_display_keys") if isinstance(state, dict) else None
+    if isinstance(raw_keys, list):
+        sanitised_keys: list[str] = []
+        for raw in raw_keys:
+            k = str(raw).strip()
+            if k in _BAND2_ALLOWED_DISPLAY_KEYS and k not in sanitised_keys:
+                sanitised_keys.append(k)
+        if sanitised_keys:
+            sanitised["selected_display_keys"] = sanitised_keys
+    raw_rfs = state.get("response_fields") if isinstance(state, dict) else None
+    if isinstance(raw_rfs, list):
+        sanitised_rfs: list[dict[str, Any]] = []
+        for raw in raw_rfs:
+            if not isinstance(raw, dict):
+                continue
+            name = str(raw.get("name") or "").strip()[:255]
+            if not name:
+                continue
+            data_type = str(raw.get("data_type") or "string").strip().lower()
+            if data_type not in _BAND2_ALLOWED_DATA_TYPES:
+                data_type = "string"
+            rf: dict[str, Any] = {"name": name, "data_type": data_type}
+            for bound_key in _BAND2_RF_BOUND_KEYS:
+                value = raw.get(bound_key)
+                rf[bound_key] = str(value).strip()[:255] if value is not None else ""
+            rf["selected"] = bool(raw.get("selected"))
+            sanitised_rfs.append(rf)
+        if sanitised_rfs:
+            sanitised["response_fields"] = sanitised_rfs
+    new_value: dict[str, Any] | None = sanitised or None
+    if (instrument.band2_state or None) == new_value:
+        return instrument
+    old_value = instrument.band2_state
+    instrument.band2_state = new_value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.band2_state_updated",
+        summary=(
+            f"Updated new-model band2 state on instrument "
+            f"{_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes(
+            {"band2_state": [old_value, new_value]}
         ),
         refs={"instrument_id": instrument.id},
     )

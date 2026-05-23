@@ -466,6 +466,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.column_widths_updated": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),
+    "instrument.band2_state_updated": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
     "instrument.field_added": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),
