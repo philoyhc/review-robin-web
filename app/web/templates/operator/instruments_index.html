@@ -1203,15 +1203,10 @@
                 <span class="muted">—</span>
               {% endfor %}
             </div>
-            {# Response-field cards — each `+` click in Band 3
-               creates a half-width card here and a paired pill
-               above. Two-column grid; cards flow left-to-right /
-               top-to-bottom. The X button on a card removes both
-               the card and its paired pill. #}
-            <div data-new-model-band2-response-cards
-                 data-new-model-response-counter="0"
-                 style="margin-top: 12px; display: grid;
-                        grid-template-columns: 1fr 1fr; gap: 8px;"></div>
+            {# Response field details now live as editable rows
+               inside Band 3's "Response fields" section — the
+               operator views + edits each field there rather than
+               in a separate card above the preview. #}
             <div data-new-model-band2-preview
                  style="margin-top: 16px;"></div>
           </div>
@@ -1538,149 +1533,10 @@
               refreshPillStates(card);
               rebuildPreview(card);
             };
-            // ---- Add response field (Band 3 → Band 2) ------------
-            // The `+` button in Band 3's "Add response field" row
-            // reads the form values, then creates a paired pill (in
-            // Band 2's pill row) and card (in the response-cards
-            // grid above the preview table). Each pair shares a
-            // unique data-response-key so the card's X button can
-            // remove both. Pure UX for now — nothing persists; the
-            // operator's pills disappear on reload.
-            window.newModelAddResponseField = window.newModelAddResponseField || function (btn) {
-              var band3RfRow = btn.closest('[data-new-model-response-fields]');
-              if (!band3RfRow) { return; }
-              var nameInput = band3RfRow.querySelector('[data-new-model-rf-name]');
-              var typeSelect = band3RfRow.querySelector('[data-new-model-rf-data-type]');
-              var fieldName = (nameInput && nameInput.value || '').trim();
-              if (!fieldName) {
-                if (nameInput) { nameInput.focus(); }
-                return;
-              }
-              var dataType = typeSelect ? typeSelect.value : 'string';
-              // Find the Band 2 card on the same per-instrument
-              // wrapper so we know where to add the pill + card.
-              var instrumentCard = btn.closest('[id^="instrument-"]');
-              var band2 = instrumentCard
-                ? instrumentCard.querySelector('[data-new-model-band2]')
-                : null;
-              if (!band2) { return; }
-              var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
-              var cardsGrid = band2.querySelector('[data-new-model-band2-response-cards]');
-              if (!pillsRow || !cardsGrid) { return; }
-              // Bump the response counter for a unique key.
-              var counter = parseInt(cardsGrid.getAttribute('data-new-model-response-counter') || '0', 10) + 1;
-              cardsGrid.setAttribute('data-new-model-response-counter', counter);
-              var key = 'response_' + counter;
-              // Bound values for the card body (only for visual
-              // context — they aren't fed into the preview cells).
-              var bounds = {};
-              band3RfRow.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
-                if (input.style.display !== 'none' && input.value) {
-                  bounds[input.getAttribute('data-new-model-rf-bound')] = input.value;
-                }
-              });
-              // Insert the visual `||` divider between display
-              // pills and response pills if it isn't already there.
-              // The divider is hidden when no response pills exist
-              // and reappears the moment the first one lands.
-              var divider = pillsRow.querySelector('[data-new-model-band2-pills-divider]');
-              if (!divider) {
-                divider = document.createElement('span');
-                divider.className = 'new-model-band2-pills-divider';
-                divider.setAttribute('data-new-model-band2-pills-divider', '');
-                divider.setAttribute('aria-hidden', 'true');
-                divider.textContent = '||';
-                pillsRow.appendChild(divider);
-              }
-              // Build the pill: selectable (start unselected) and
-              // marked as sourceType="response" so the preview
-              // builder knows to render it after the display columns.
-              // Reorderable so the operator can drag within the
-              // response group; the dragover handler rejects
-              // cross-region drops so a response pill can't swap
-              // into the display group.
-              var pill = document.createElement('span');
-              pill.className = 'pill tag-chip';
-              pill.setAttribute('role', 'button');
-              pill.setAttribute('tabindex', '0');
-              pill.setAttribute('aria-pressed', 'false');
-              pill.setAttribute('data-new-model-band2-pill', '');
-              pill.setAttribute('data-key', key);
-              pill.setAttribute('data-label', fieldName);
-              pill.setAttribute('data-source-type', 'response');
-              pill.setAttribute('data-source-field', fieldName);
-              pill.setAttribute('data-value', '');
-              pill.setAttribute('data-selectable-in-group', 'true');
-              pill.setAttribute('data-response-key', key);
-              pill.setAttribute('data-reorderable', 'true');
-              pill.setAttribute('draggable', 'true');
-              pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');
-              pill.setAttribute('ondragend', 'newModelBand2DragEnd(event)');
-              pill.setAttribute('ondragover', 'newModelBand2DragOver(event)');
-              pill.setAttribute('ondrop', 'newModelBand2Drop(event)');
-              pill.setAttribute('onclick', 'newModelToggleBand2Pill(this)');
-              pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
-              pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + esc(fieldName);
-              pillsRow.appendChild(pill);
-              // Build the half-width card with field name + data
-              // type, bounds, and a flush-right X button that
-              // removes the paired pill + card.
-              var cardEl = document.createElement('div');
-              cardEl.className = 'card';
-              cardEl.setAttribute('data-new-model-response-card', '');
-              cardEl.setAttribute('data-response-key', key);
-              cardEl.style.margin = '0';
-              cardEl.style.padding = '12px';
-              var boundsParts = [];
-              if (bounds.min) { boundsParts.push('min ' + bounds.min); }
-              if (bounds.max) { boundsParts.push('max ' + bounds.max); }
-              if (bounds.step) { boundsParts.push('step ' + bounds.step); }
-              if (bounds.list) { boundsParts.push('list ' + bounds.list); }
-              cardEl.innerHTML =
-                '<div style="display: flex; align-items: flex-start; gap: 8px;">'
-                + '<div style="flex: 1 1 auto; min-width: 0;">'
-                + '<strong>' + esc(fieldName) + '</strong>'
-                + '<div class="muted" style="font-size: 0.85em; margin-top: 4px;">'
-                + esc(dataType)
-                + (boundsParts.length ? ' — ' + esc(boundsParts.join(', ')) : '')
-                + '</div>'
-                + '</div>'
-                + '<button type="button" class="btn secondary"'
-                + ' style="flex: 0 0 auto; padding: 2px 8px;"'
-                + ' onclick="newModelRemoveResponseField(this)"'
-                + ' title="Remove this response field">X</button>'
-                + '</div>';
-              cardsGrid.appendChild(cardEl);
-              // Reset the Band 3 inputs so the operator can type
-              // the next response field straight away.
-              if (nameInput) { nameInput.value = ''; }
-              band3RfRow.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
-                input.value = '';
-              });
-              if (nameInput) { nameInput.focus(); }
-            };
-            window.newModelRemoveResponseField = window.newModelRemoveResponseField || function (btn) {
-              var cardEl = btn.closest('[data-new-model-response-card]');
-              if (!cardEl) { return; }
-              var key = cardEl.getAttribute('data-response-key');
-              var band2 = cardEl.closest('[data-new-model-band2]');
-              if (band2 && key) {
-                var pill = band2.querySelector('[data-response-key="' + key + '"][data-new-model-band2-pill]');
-                if (pill) { pill.remove(); }
-              }
-              cardEl.remove();
-              if (band2) {
-                // Drop the `||` divider once the last response pill
-                // is gone, so the operator doesn't see a lone
-                // divider trailing the display pills.
-                var remaining = band2.querySelector('[data-new-model-band2-pill][data-source-type="response"]');
-                if (!remaining) {
-                  var divider = band2.querySelector('[data-new-model-band2-pills-divider]');
-                  if (divider) { divider.remove(); }
-                }
-                rebuildPreview(band2);
-              }
-            };
+            // Response field row management lives further down in
+            // the script — see newModelRfAddRow / newModelRfSaveRow
+            // / newModelRfDeleteRow. Skip directly to the
+            // drag-and-drop pill reorder section.
             // ---- Drag-and-drop pill reorder ---------------------
             // Pills carrying ``data-reorderable="true"`` (every
             // non-locked display field) are HTML5-draggable. On
@@ -1753,21 +1609,6 @@
               // expect "drop on X" to mean "insert before X" — same
               // contract reviewer-surface sort uses elsewhere.
               target.parentNode.insertBefore(dragSource, target);
-              // Keep the paired response card in lockstep with its
-              // pill so the cards grid mirrors the pill order.
-              if (pillRegion(dragSource) === 'response') {
-                var srcKey = dragSource.getAttribute('data-response-key');
-                var tgtKey = target.getAttribute('data-response-key');
-                var card = dragSource.closest('[data-new-model-band2]');
-                var grid = card && card.querySelector('[data-new-model-band2-response-cards]');
-                if (grid && srcKey && tgtKey) {
-                  var srcCard = grid.querySelector('[data-new-model-response-card][data-response-key="' + srcKey + '"]');
-                  var tgtCard = grid.querySelector('[data-new-model-response-card][data-response-key="' + tgtKey + '"]');
-                  if (srcCard && tgtCard) {
-                    grid.insertBefore(srcCard, tgtCard);
-                  }
-                }
-              }
               var band2Card = target.closest('[data-new-model-band2]');
               if (band2Card) {
                 // Response-pill reorder is client-side only — no
@@ -1913,66 +1754,79 @@
             </table>
           </div>
           <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0 0 12px 0;">Add response field</h3>
-            {# Inline response-field editor row. The visible bounds
-               inputs (Min / Max / Step / List) swap based on the
-               data-type pick:
-                 String   → Min, Max
-                 Integer  → Min, Max
-                 Decimal  → Min, Max, Step
-                 List     → List
-               Placeholder for now — nothing wired to persistence
-               yet; the "+" button doesn't add additional rows. #}
-            <div data-new-model-response-fields
-                 style="display: flex; flex-wrap: nowrap; gap: 8px;
-                        align-items: center; width: 100%;">
-              <input type="text"
-                     data-new-model-rf-name
-                     placeholder="Response field"
-                     style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
-              <select data-new-model-rf-data-type
-                      onchange="newModelRfSyncBounds(this)"
-                      style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
-                <option value="string">String</option>
-                <option value="integer">Integer</option>
-                <option value="decimal">Decimal</option>
-                <option value="list">List</option>
-              </select>
-              {# The remaining 60% holds the conditional bound inputs
-                 + the "+" button. The bounds wrapper is a 3-column
-                 CSS grid so Min / Max / Step each occupy a fixed
-                 1/3 slot regardless of how many are visible — that
-                 keeps String's Min + Max the same pixel width as
-                 Decimal's Min + Max (the missing Step slot stays
-                 empty rather than letting the others stretch).
-                 List spans the whole row when it's the chosen data
-                 type. #}
-              <div data-new-model-rf-bounds-wrap
-                   style="flex: 1 1 auto; min-width: 0;
-                          display: grid;
-                          grid-template-columns: 1fr 1fr 1fr;
-                          gap: 8px; align-items: center;">
+            <h3 style="margin: 0 0 12px 0;">Response fields</h3>
+            {# One inline editor row per response field. Each row is
+               independently editable + commitable: the ✓ button
+               saves the row's values into a paired pill on Band 2
+               (creating the pill on first save, updating its label
+               on subsequent saves); the X button drops the row and
+               its pill. The `+` button below the rows spawns a new
+               empty row. Pure UX — nothing persists across reload. #}
+            <div data-new-model-rf-rows
+                 data-new-model-rf-row-counter="1">
+              {# Render one starter row template so the operator
+                 can start typing immediately. Subsequent rows are
+                 cloned from the first row's DOM via JS. #}
+              <div data-new-model-rf-row
+                   data-row-key="rf_1"
+                   style="display: flex; flex-wrap: nowrap; gap: 8px;
+                          align-items: center; width: 100%;
+                          margin-bottom: 8px;">
                 <input type="text"
-                       data-new-model-rf-bound="min"
-                       placeholder="Min"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
-                <input type="text"
-                       data-new-model-rf-bound="max"
-                       placeholder="Max"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
-                <input type="text"
-                       data-new-model-rf-bound="step"
-                       placeholder="Step"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
-                <input type="text"
-                       data-new-model-rf-bound="list"
-                       placeholder="List (comma-separated)"
-                       style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                       data-new-model-rf-name
+                       placeholder="Response field"
+                       style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                <select data-new-model-rf-data-type
+                        onchange="newModelRfSyncBounds(this)"
+                        style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                  <option value="string">String</option>
+                  <option value="integer">Integer</option>
+                  <option value="decimal">Decimal</option>
+                  <option value="list">List</option>
+                </select>
+                {# Bounds wrapper is a 3-column grid so Min / Max
+                   / Step each pin to a fixed 1/3 slot regardless
+                   of how many are visible — String's Min + Max
+                   stay the same pixel width as Decimal's. List
+                   spans the row when picked. #}
+                <div data-new-model-rf-bounds-wrap
+                     style="flex: 1 1 auto; min-width: 0;
+                            display: grid;
+                            grid-template-columns: 1fr 1fr 1fr;
+                            gap: 8px; align-items: center;">
+                  <input type="text"
+                         data-new-model-rf-bound="min"
+                         placeholder="Min"
+                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                  <input type="text"
+                         data-new-model-rf-bound="max"
+                         placeholder="Max"
+                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                  <input type="text"
+                         data-new-model-rf-bound="step"
+                         placeholder="Step"
+                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                  <input type="text"
+                         data-new-model-rf-bound="list"
+                         placeholder="List (comma-separated)"
+                         style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                </div>
+                <button type="button" class="btn secondary"
+                        style="flex: 0 0 auto; padding: 4px 10px;"
+                        onclick="newModelRfSaveRow(this)"
+                        title="Save this response field to the pills + preview">✓</button>
+                <button type="button" class="btn secondary"
+                        style="flex: 0 0 auto; padding: 4px 10px;"
+                        onclick="newModelRfDeleteRow(this)"
+                        title="Delete this row (and its paired pill, if saved)">X</button>
               </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end;
+                        margin-top: 4px;">
               <button type="button" class="btn secondary"
-                      style="flex: 0 0 auto; padding: 4px 10px;"
-                      onclick="newModelAddResponseField(this)"
-                      title="Add response field">+</button>
+                      style="padding: 4px 10px;"
+                      onclick="newModelRfAddRow(this)"
+                      title="Add another response field row">+</button>
             </div>
           </div>
         </div>
@@ -1991,7 +1845,7 @@
               decimal: ['min', 'max', 'step'],
               list:    ['list'],
             }[dataType] || [];
-            var row = select.closest('[data-new-model-response-fields]');
+            var row = select.closest('[data-new-model-rf-row]');
             if (!row) { return; }
             row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
               var key = input.getAttribute('data-new-model-rf-bound');
@@ -2003,6 +1857,146 @@
           document.querySelectorAll('[data-new-model-rf-data-type]').forEach(function (sel) {
             window.newModelRfSyncBounds(sel);
           });
+          // ---- Add response field rows (Band 3) ----------------
+          // The "+" below the rows clones the first row's DOM,
+          // resets every input + the data-row-key, and appends.
+          window.newModelRfAddRow = window.newModelRfAddRow || function (btn) {
+            var rows = btn.closest('div').previousElementSibling;
+            // The button sits in a flex-end wrapper directly after
+            // the rows container — walk to the actual rows container.
+            if (!rows || !rows.matches('[data-new-model-rf-rows]')) {
+              var card = btn.closest('div');
+              rows = (card && card.previousElementSibling) || null;
+              if (!rows || !rows.matches('[data-new-model-rf-rows]')) {
+                rows = (btn.closest('[id^="instrument-"]') || document)
+                  .querySelector('[data-new-model-rf-rows]');
+              }
+            }
+            if (!rows) { return; }
+            var first = rows.querySelector('[data-new-model-rf-row]');
+            if (!first) { return; }
+            var counter = parseInt(rows.getAttribute('data-new-model-rf-row-counter') || '1', 10) + 1;
+            rows.setAttribute('data-new-model-rf-row-counter', counter);
+            var clone = first.cloneNode(true);
+            clone.setAttribute('data-row-key', 'rf_' + counter);
+            // Reset every input + the data-type select to defaults.
+            clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+            clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+            rows.appendChild(clone);
+            // Re-sync bound visibility on the new row's select
+            // (its default is "string" → Min + Max).
+            var sel = clone.querySelector('[data-new-model-rf-data-type]');
+            if (sel) { window.newModelRfSyncBounds(sel); }
+            var nameInput = clone.querySelector('[data-new-model-rf-name]');
+            if (nameInput) { nameInput.focus(); }
+          };
+          // ✓ on a row: read values, create-or-update the paired
+          // pill in Band 2 keyed by this row's data-row-key. The
+          // row itself stays editable — the operator can keep
+          // tweaking and click ✓ again to push updates through.
+          window.newModelRfSaveRow = window.newModelRfSaveRow || function (btn) {
+            var row = btn.closest('[data-new-model-rf-row]');
+            if (!row) { return; }
+            var rowKey = row.getAttribute('data-row-key');
+            var nameInput = row.querySelector('[data-new-model-rf-name]');
+            var fieldName = (nameInput && nameInput.value || '').trim();
+            if (!fieldName) {
+              if (nameInput) { nameInput.focus(); }
+              return;
+            }
+            var instrumentCard = btn.closest('[id^="instrument-"]');
+            var band2 = instrumentCard
+              ? instrumentCard.querySelector('[data-new-model-band2]')
+              : null;
+            if (!band2) { return; }
+            var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
+            if (!pillsRow) { return; }
+            // If the pill already exists (saved before, now being
+            // updated), just refresh its label / data-source-field;
+            // otherwise create a new pill after the `||` divider.
+            var pill = pillsRow.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
+            if (pill) {
+              pill.setAttribute('data-label', fieldName);
+              pill.setAttribute('data-source-field', fieldName);
+              pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
+              pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + fieldName
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            } else {
+              // Drop the `||` divider in if it isn't already there.
+              var divider = pillsRow.querySelector('[data-new-model-band2-pills-divider]');
+              if (!divider) {
+                divider = document.createElement('span');
+                divider.className = 'new-model-band2-pills-divider';
+                divider.setAttribute('data-new-model-band2-pills-divider', '');
+                divider.setAttribute('aria-hidden', 'true');
+                divider.textContent = '||';
+                pillsRow.appendChild(divider);
+              }
+              pill = document.createElement('span');
+              pill.className = 'pill tag-chip';
+              pill.setAttribute('role', 'button');
+              pill.setAttribute('tabindex', '0');
+              pill.setAttribute('aria-pressed', 'false');
+              pill.setAttribute('data-new-model-band2-pill', '');
+              pill.setAttribute('data-key', rowKey);
+              pill.setAttribute('data-label', fieldName);
+              pill.setAttribute('data-source-type', 'response');
+              pill.setAttribute('data-source-field', fieldName);
+              pill.setAttribute('data-value', '');
+              pill.setAttribute('data-selectable-in-group', 'true');
+              pill.setAttribute('data-row-key', rowKey);
+              pill.setAttribute('data-response-key', rowKey);
+              pill.setAttribute('data-reorderable', 'true');
+              pill.setAttribute('draggable', 'true');
+              pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');
+              pill.setAttribute('ondragend', 'newModelBand2DragEnd(event)');
+              pill.setAttribute('ondragover', 'newModelBand2DragOver(event)');
+              pill.setAttribute('ondrop', 'newModelBand2Drop(event)');
+              pill.setAttribute('onclick', 'newModelToggleBand2Pill(this)');
+              pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
+              pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + fieldName
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              pillsRow.appendChild(pill);
+            }
+            // If the pill was already selected (lit up in the
+            // preview row), rebuild the preview so the new label
+            // surfaces immediately as the column header.
+            if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+          };
+          // X on a row: remove the row + its paired pill if saved.
+          // If this was the only row, leave one empty row in its
+          // place so the operator still has a surface to type into.
+          window.newModelRfDeleteRow = window.newModelRfDeleteRow || function (btn) {
+            var row = btn.closest('[data-new-model-rf-row]');
+            if (!row) { return; }
+            var rowKey = row.getAttribute('data-row-key');
+            var rows = row.parentElement;
+            var instrumentCard = btn.closest('[id^="instrument-"]');
+            var band2 = instrumentCard
+              ? instrumentCard.querySelector('[data-new-model-band2]')
+              : null;
+            if (band2 && rowKey) {
+              var pill = band2.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
+              if (pill) { pill.remove(); }
+              // Drop the `||` divider if no response pills remain.
+              var remaining = band2.querySelector('[data-new-model-band2-pill][data-source-type="response"]');
+              if (!remaining) {
+                var divider = band2.querySelector('[data-new-model-band2-pills-divider]');
+                if (divider) { divider.remove(); }
+              }
+              if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+            }
+            // If this was the last row, leave a clean empty row in
+            // place so the operator has a surface to type into.
+            if (rows && rows.querySelectorAll('[data-new-model-rf-row]').length <= 1) {
+              row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+              row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+              var sel = row.querySelector('[data-new-model-rf-data-type]');
+              if (sel) { window.newModelRfSyncBounds(sel); }
+            } else {
+              row.remove();
+            }
+          };
           window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
             var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
             btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
