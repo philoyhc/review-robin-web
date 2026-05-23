@@ -14,9 +14,12 @@ persistence — most of those are deferred. When a behaviour below
 reads as placeholder ("Inactive button", "Clicking does nothing"),
 the slice that wires it lands those pieces later.
 
-> **Status.** The pilot card top section and Band 1 are
-> functionally laid out. Band 2 and Band 3 are not yet specified.
-> See `guide/instrument_builder.md` for the parts plan.
+> **Status.** The pilot card top section, Band 1, and Band 3
+> Visibility table are functionally laid out. Band 2 is not yet
+> specified. None of the bands are wired to persistence — every
+> interaction lives in inline `window.pilot*` helpers that
+> manipulate the DOM only. See `guide/instrument_builder.md` for
+> the parts plan.
 
 ## Page placement
 
@@ -52,8 +55,10 @@ cards. Inside, vertically stacked:
    columns. Layout in "Band 1" below.
 3. **Band 2** — not yet specified. Currently a horizontal rule
    followed by a placeholder `Band 2` heading.
-4. **Band 3** — not yet specified. Currently a horizontal rule
-   followed by a placeholder `Band 3` heading.
+4. **Band 3 — Visibility** — two equal-width columns. Left holds
+   the Visibility audience-policy table; the right column is
+   reserved for a future detail surface (currently empty).
+   Layout in "Band 3" below.
 5. **Action row + delete-confirm checkbox** — identical to the
    ordinary per-instrument card's bottom row. Carries the
    `+Pilot` button as the rightmost action.
@@ -104,6 +109,39 @@ When **editing**, the right column is the transparent wrapper
 holding a `<textarea>` (`min-height: 8em`) for the description,
 matching the existing instrument-card edit shape.
 
+## Chip vocabulary
+
+Bands 1 and 3 share a single chip vocabulary modelled on the
+Reviewers / Reviewees / Relationships Setup-page **Show
+columns** chips:
+
+- **Toggle chip — on (or static "always on")** — `pill
+  pill-count tag-chip is-selected` → solid `--accent-blue`
+  background + white text (high contrast).
+- **Toggle chip — off** — `pill pill-count tag-chip` (without
+  `is-selected`) → light-blue background, default-coloured text.
+- **Cycle chip** (e.g. the operator toggle, What / When pickers)
+  — always `is-selected`; the chip's text is the current value.
+- **Disabled chip** (e.g. mode pill when no usable tags) —
+  `pill pill-empty tag-chip is-disabled` plus `aria-disabled="true"`
+  → amber background + struck-through.
+- **Static chip** (the fixed Band 3 Operator + Reviewers cells)
+  — same `is-selected` look but rendered as a plain `<span>` with
+  no `role="button"` (not focusable, doesn't respond to clicks).
+
+Clickable chips are `<span class="pill … tag-chip" role="button"
+tabindex="0" aria-pressed="…">` so they match the existing
+Setup-page pattern byte-for-byte. The toggle helpers
+(`pilotToggleAudience` / `pilotToggleRuleMode` /
+`pilotToggleUnitMode`) flip `aria-pressed` alongside the
+`is-selected` class.
+
+Mode-toggle pills (the All / Filter… and Individual / Group…
+pills next to each Band-1 column heading) carry `is-selected`
+in **both** states — the off state isn't "unselected", it's
+just "All" or "Individual" as the current choice. The chip text
+flips on click; the `is-selected` class stays.
+
 ## Band 1
 
 A CSS grid (`display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -122,11 +160,16 @@ parameterised:
 Each column has a heading with a mode-toggle pill, then a
 two-portion builder body.
 
+The whole Band-1 grid is gated by the instrument's edit mode —
+see "Edit-mode gating" below.
+
 ### Mode-toggle pill (next to heading)
 
-A `pill pill-info` styled as a button, sized at `font-size:
-0.7em`. Toggles between the column's **off** state (default;
-builder greyed out + inert) and **on** state (builder active).
+Toggles between the column's **off** state (default; builder
+greyed out + inert) and **on** state (builder active). Uses the
+"Cycle chip" treatment from the chip vocabulary — always
+`is-selected` so the operator can read the current mode at full
+contrast in either state.
 
 | Link | Off label | On label |
 |---|---|---|
@@ -134,12 +177,13 @@ builder greyed out + inert) and **on** state (builder active).
 | Pool of those reviewed | `All` | `Filter using reviewee attributes` |
 | Unit of review | `Individual` | `Group using reviewee attributes` |
 
-Clicking the pill flips the label and applies `opacity: 1; pointer-events: auto;` (or `opacity: 0.5; pointer-events: none;`)
+Clicking the pill flips the label and applies `opacity: 1;
+pointer-events: auto;` (or `opacity: 0.5; pointer-events: none;`)
 to the builder element directly below the heading.
 
 **Disabled state.** When the column has zero **usable tags** in
-the session (see "Usable tags" below), the pill renders with
-`opacity: 0.5; cursor: not-allowed` and `disabled aria-disabled="true"`,
+the session (see "Usable tags" below), the pill renders with the
+"Disabled chip" treatment (`pill-empty tag-chip is-disabled`),
 stuck in the off state. Tooltip: `No usable tags for this link`.
 The builder underneath stays greyed out and inert.
 
@@ -164,7 +208,7 @@ on state restores `opacity: 1; pointer-events: auto;`.
 These two columns share the rule-list shape. Implemented as a
 shared `pilot_rule_list` Jinja macro.
 
-**Left portion** (fixed at 20% of column width). Centered both
+**Left portion** (fixed at `flex: 0 0 20%`). Centered both
 horizontally and vertically. Two `btn secondary` buttons on the
 same row, separated by 4px gap:
 
@@ -198,8 +242,8 @@ never be removed.
 
 A separate builder shape with its own structure.
 
-**Left portion** (fixed at 40% of column width). Two `btn
-secondary` buttons inline, centered:
+**Left portion** (fixed at `flex: 0 0 30%`). Two `btn secondary`
+buttons inline, centered:
 
 - `+` — adds a new boundary-tag cell to the right portion.
 - `THE SAME` — always rendered disabled. Acts as a
@@ -210,8 +254,8 @@ secondary` buttons inline, centered:
 8px gap. Each cell is a single row (`display: flex;
 align-items: center; gap: 4px`):
 
-- Tag picker `<select>` (2/3 of cell width) listing Link 3's
-  usable tags.
+- Tag picker `<select>` at `flex: 0 0 57.14%` (4/7 of the
+  right portion) listing Link 3's usable tags.
 - Trailing action button.
 
 The trailing action button is **position-aware**:
@@ -226,10 +270,52 @@ Adding a cell flips the previous last cell's `X` to `AND` and
 gives the new cell the active `X`. Removing the last cell
 restores the previous cell's `X`.
 
+## Band 3
+
+A CSS grid (`display: grid; grid-template-columns: 1fr 1fr;
+gap: 16px; align-items: start;`) with two equal-width columns.
+
+- **Left column** — a `Visibility` table laying out the
+  audience-policy choices (who can read responses, what they
+  read, when they read them).
+- **Right column** — reserved for a future detail surface;
+  currently empty.
+
+The whole Band-3 grid is gated by the instrument's edit mode —
+see "Edit-mode gating" below.
+
+### Visibility table
+
+A `<table>` with `table-layout: fixed; width: 100%` and three
+column widths fixed at 30% / 35% / 35%. Headers spell out the
+prompts:
+
+- **Who can view the responses** (30%)
+- **What can they see the responses** (35%)
+- **When can they see the responses** (35%)
+
+One row per audience, in order:
+
+| Audience | Who cell | What cell | When cell |
+|---|---|---|---|
+| Operator | Static chip `Operator`. | Static chip `Raw responses`. | Static chip `Always`. |
+| Reviewers | Static chip `Reviewers`. | Static chip `Raw responses`. | Static chip `While session ongoing`. |
+| Reviewees | Toggle chip `Reviewees` (default unselected). | Cycle chip stepping `Raw responses` → `Summarized responses` → `Anonymized responses` (default `Anonymized responses`). | Cycle chip stepping `While review ongoing` → `After release` (default `After release`). |
+| Observers | Toggle chip `Observers` (default unselected). | Same cycle + default as Reviewees. | Same cycle + default as Reviewees. |
+
+When a toggleable audience (Reviewees or Observers) is in the
+off state, the row's What and When cells render at `opacity: 0.4;
+pointer-events: none;` so their cycle chips can't be flipped
+until the audience is re-enabled. Clicking the audience chip
+toggles its `is-selected` class + `aria-pressed` and flips the
+greyed state on the row's What / When cells; the helper finds
+row-mates by the `data-pilot-audience="<key>"` attribute on each
+`<tr>`.
+
 ## Usable tags
 
-Each column's dropdowns are populated from the **usable** tag
-slots for the session — the slots that have at least one
+Each Band-1 column's dropdowns are populated from the **usable**
+tag slots for the session — the slots that have at least one
 non-empty value in the relevant population:
 
 | Namespace | Slot | Source rows |
@@ -263,15 +349,46 @@ when no override exists. The `<option value="...">` attribute
 carries the canonical machine key (`reviewer.tag1` etc.) so
 downstream wiring can read the rule predicate without lookup.
 
-This means renaming a tag on the Reviewers / Reviewees /
-Relationships Setup pages immediately surfaces in the pilot
-card's dropdowns.
+Labels are namespace-prefixed so the operator can tell which
+side of a relationship a tag belongs to when a dropdown mixes
+namespaces (notably Pool of those reviewed's
+`IS THE SAME AS` / `IS DIFFERENT FROM` operand picker):
+
+| Namespace | Prefix |
+|---|---|
+| `reviewer` | `R-` |
+| `reviewee` | `E-` |
+| `pair_context` | (none — already inherently relationship-level) |
+
+E.g. a reviewer slot renamed to `Department` renders as
+`R-Department` in every Band-1 dropdown.
+
+Friendly labels read fresh on every page render. After saving a
+rename on the Reviewers / Reviewees / Relationships Setup page,
+reload the Instruments page (the pilot card is server-rendered,
+not live).
 
 ## Cross-cutting behaviour
 
+### Edit-mode gating
+
+The Band-1 three-column grid and the Band-3 two-column grid both
+carry the `inert aria-hidden="true"` attributes and an
+`opacity: 0.75` overlay whenever `is_editing` is false — i.e.
+whenever the operator hasn't clicked the pilot card's `Edit`
+button. `inert` blocks all pointer / keyboard interaction even
+on inner elements that re-enable `pointer-events: auto` for
+their own sub-state; the partial fade is just a soft visual cue
+that the bands are read-only. In edit mode, the fade and `inert`
+both lift and the bands become live.
+
+The intrinsic sub-state fades (a Band-1 builder body in `All`
+mode, a Band-3 audience row that's off) are independent and
+still apply while editing.
+
 ### Inactive / greyed-out states
 
-A column is **inactive** when it has no usable tags. Its
+A Band-1 column is **inactive** when it has no usable tags. Its
 mode-toggle pill is disabled and locked in the off state; the
 builder body below stays at `opacity: 0.5; pointer-events: none;`.
 The operator cannot engage filtering / grouping for a link
@@ -291,14 +408,14 @@ that has no data to filter / group on.
 
 ### Wiring
 
-Nothing on Band 1 is wired to persistence yet. The placeholder
-add / remove / toggle behaviour lives in three inline
-`window.pilot*` helpers (`pilotAddRule` / `pilotRemoveRule` /
-`pilotCycleOperator` / `pilotToggleRuleMode` / `pilotAddUnitCell`
-/ `pilotRemoveUnitCell` / `pilotRefreshUnitButtons` /
-`pilotToggleUnitMode`) defined once on the page; clicks
-manipulate the DOM but no request is sent. The full wiring plan
-sits in `guide/instrument_builder.md`.
+Nothing on Bands 1 or 3 is wired to persistence yet. The
+placeholder behaviour lives in inline `window.pilot*` helpers
+(`pilotAddRule` / `pilotRemoveRule` / `pilotCycleOperator` /
+`pilotToggleRuleMode` / `pilotAddUnitCell` / `pilotRemoveUnitCell` /
+`pilotRefreshUnitButtons` / `pilotToggleUnitMode` /
+`pilotToggleAudience` / `pilotCycleButton`) defined once on the
+page; clicks manipulate the DOM but no request is sent. The full
+wiring plan sits in `guide/instrument_builder.md`.
 
 ## Related specs
 
@@ -315,3 +432,5 @@ sits in `guide/instrument_builder.md`.
   will eventually persist into.
 - `spec/group_scoped_instruments.md` — the underlying behaviour
   Link 3 (Unit of review) drives.
+- `spec/audience_and_identity_model.md` — the audience model
+  Band 3 (Visibility) will eventually operationalise.
