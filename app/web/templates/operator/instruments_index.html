@@ -1203,6 +1203,15 @@
                 <span class="muted">—</span>
               {% endfor %}
             </div>
+            {# Response-field cards — each `+` click in Band 3
+               creates a half-width card here and a paired pill
+               above. Two-column grid; cards flow left-to-right /
+               top-to-bottom. The X button on a card removes both
+               the card and its paired pill. #}
+            <div data-new-model-band2-response-cards
+                 data-new-model-response-counter="0"
+                 style="margin-top: 12px; display: grid;
+                        grid-template-columns: 1fr 1fr; gap: 8px;"></div>
             <div data-new-model-band2-preview
                  style="margin-top: 16px;"></div>
           </div>
@@ -1299,24 +1308,37 @@
               if (selected.length === 0) { return ''; }
               var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
               var email = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'email_or_identifier'; });
-              var others = selected.filter(function (s) { return !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier')); });
+              // Split the remaining selected pills into display
+              // columns (reviewee / pair_context tags + profile_link)
+              // and response columns. The reviewer surface always
+              // renders response columns AFTER display columns, so
+              // we do the same here.
+              var displays = selected.filter(function (s) {
+                return s.sourceType !== 'response'
+                  && !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier'));
+              });
+              var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
               var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
               var html = '<table style="table-layout: fixed;">';
               html += '<colgroup>';
               if (name || email) {
                 html += '<col data-col-key="identity" style="' + colStyle(identityW) + '">';
               }
-              others.forEach(function (o) {
+              displays.forEach(function (o) {
                 html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + colStyle(o.width) + '">';
               });
+              responses.forEach(function () { html += '<col>'; });
               html += '</colgroup><thead><tr>';
               if (name || email) {
                 html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + resizeHandle('identity') + '</th>';
               }
-              others.forEach(function (o) {
+              displays.forEach(function (o) {
                 var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
                 var cls = isProfile ? ' class="rs-narrow"' : '';
                 html += '<th scope="col"' + cls + ' style="position: relative;">' + esc(o.label) + resizeHandle('df_' + o.displayFieldId) + '</th>';
+              });
+              responses.forEach(function (r) {
+                html += '<th scope="col">' + esc(r.label) + '</th>';
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               if (name || email) {
@@ -1326,7 +1348,7 @@
                 if (email) { html += '<code>' + esc(email.value || '—') + '</code>'; }
                 html += '</td>';
               }
-              others.forEach(function (o) {
+              displays.forEach(function (o) {
                 var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
                 var v = o.value || '';
                 var cell;
@@ -1337,6 +1359,9 @@
                 }
                 html += '<td' + (isProfile ? ' class="rs-narrow"' : '') + '>' + cell + '</td>';
               });
+              // Response cells are empty in the preview — no real
+              // reviewer has typed an answer yet.
+              responses.forEach(function () { html += '<td>—</td>'; });
               html += '</tr></tbody></table>';
               return html;
             }
@@ -1344,13 +1369,18 @@
               if (selected.length === 0) { return ''; }
               var nameSelected = selected.some(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
               var tagPills = selected.filter(function (s) { return s.sourceType === 'reviewee' && /^tag_/.test(s.sourceField); });
+              var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
               var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
               var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
               var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
               var html = '<table class="rs-group-table">';
-              html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '"></colgroup>';
-              html += '<thead><tr>';
+              html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
+              responses.forEach(function () { html += '<col>'; });
+              html += '</colgroup><thead><tr>';
               html += '<th scope="col" class="rs-group" style="position: relative;">Group' + resizeHandle('identity') + '</th>';
+              responses.forEach(function (r) {
+                html += '<th scope="col">' + esc(r.label) + '</th>';
+              });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               html += '<td class="rs-group">';
               if (tagPills.length > 0) {
@@ -1363,7 +1393,9 @@
                 if (extra > 0) { names += ', +' + extra + ' more'; }
                 html += '<span class="muted">' + names + '</span>';
               }
-              html += '</td></tr></tbody></table>';
+              html += '</td>';
+              responses.forEach(function () { html += '<td>—</td>'; });
+              html += '</tr></tbody></table>';
               return html;
             }
             // Live column-resize drag: track mouse delta against the
@@ -1465,6 +1497,119 @@
               if (!card) { return; }
               refreshPillStates(card);
               rebuildPreview(card);
+            };
+            // ---- Add response field (Band 3 → Band 2) ------------
+            // The `+` button in Band 3's "Add response field" row
+            // reads the form values, then creates a paired pill (in
+            // Band 2's pill row) and card (in the response-cards
+            // grid above the preview table). Each pair shares a
+            // unique data-response-key so the card's X button can
+            // remove both. Pure UX for now — nothing persists; the
+            // operator's pills disappear on reload.
+            window.newModelAddResponseField = window.newModelAddResponseField || function (btn) {
+              var band3RfRow = btn.closest('[data-new-model-response-fields]');
+              if (!band3RfRow) { return; }
+              var nameInput = band3RfRow.querySelector('[data-new-model-rf-name]');
+              var typeSelect = band3RfRow.querySelector('[data-new-model-rf-data-type]');
+              var fieldName = (nameInput && nameInput.value || '').trim();
+              if (!fieldName) {
+                if (nameInput) { nameInput.focus(); }
+                return;
+              }
+              var dataType = typeSelect ? typeSelect.value : 'string';
+              // Find the Band 2 card on the same per-instrument
+              // wrapper so we know where to add the pill + card.
+              var instrumentCard = btn.closest('[id^="instrument-"]');
+              var band2 = instrumentCard
+                ? instrumentCard.querySelector('[data-new-model-band2]')
+                : null;
+              if (!band2) { return; }
+              var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
+              var cardsGrid = band2.querySelector('[data-new-model-band2-response-cards]');
+              if (!pillsRow || !cardsGrid) { return; }
+              // Bump the response counter for a unique key.
+              var counter = parseInt(cardsGrid.getAttribute('data-new-model-response-counter') || '0', 10) + 1;
+              cardsGrid.setAttribute('data-new-model-response-counter', counter);
+              var key = 'response_' + counter;
+              // Bound values for the card body (only for visual
+              // context — they aren't fed into the preview cells).
+              var bounds = {};
+              band3RfRow.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+                if (input.style.display !== 'none' && input.value) {
+                  bounds[input.getAttribute('data-new-model-rf-bound')] = input.value;
+                }
+              });
+              // Build the pill: selectable (start unselected) and
+              // marked as sourceType="response" so the preview
+              // builder knows to render it after the display columns.
+              // Not drag-reorderable for now to keep response pills
+              // grouped after display pills in stable insertion order.
+              var pill = document.createElement('span');
+              pill.className = 'pill tag-chip';
+              pill.setAttribute('role', 'button');
+              pill.setAttribute('tabindex', '0');
+              pill.setAttribute('aria-pressed', 'false');
+              pill.setAttribute('data-new-model-band2-pill', '');
+              pill.setAttribute('data-key', key);
+              pill.setAttribute('data-label', fieldName);
+              pill.setAttribute('data-source-type', 'response');
+              pill.setAttribute('data-source-field', fieldName);
+              pill.setAttribute('data-value', '');
+              pill.setAttribute('data-selectable-in-group', 'true');
+              pill.setAttribute('data-response-key', key);
+              pill.setAttribute('data-reorderable', 'false');
+              pill.setAttribute('onclick', 'newModelToggleBand2Pill(this)');
+              pill.setAttribute('title', 'Click to include ' + fieldName + ' in the preview row');
+              pill.textContent = fieldName;
+              pillsRow.appendChild(pill);
+              // Build the half-width card with field name + data
+              // type, bounds, and a flush-right X button that
+              // removes the paired pill + card.
+              var cardEl = document.createElement('div');
+              cardEl.className = 'card';
+              cardEl.setAttribute('data-new-model-response-card', '');
+              cardEl.setAttribute('data-response-key', key);
+              cardEl.style.margin = '0';
+              cardEl.style.padding = '12px';
+              var boundsParts = [];
+              if (bounds.min) { boundsParts.push('min ' + bounds.min); }
+              if (bounds.max) { boundsParts.push('max ' + bounds.max); }
+              if (bounds.step) { boundsParts.push('step ' + bounds.step); }
+              if (bounds.list) { boundsParts.push('list ' + bounds.list); }
+              cardEl.innerHTML =
+                '<div style="display: flex; align-items: flex-start; gap: 8px;">'
+                + '<div style="flex: 1 1 auto; min-width: 0;">'
+                + '<strong>' + esc(fieldName) + '</strong>'
+                + '<div class="muted" style="font-size: 0.85em; margin-top: 4px;">'
+                + esc(dataType)
+                + (boundsParts.length ? ' — ' + esc(boundsParts.join(', ')) : '')
+                + '</div>'
+                + '</div>'
+                + '<button type="button" class="btn secondary"'
+                + ' style="flex: 0 0 auto; padding: 2px 8px;"'
+                + ' onclick="newModelRemoveResponseField(this)"'
+                + ' title="Remove this response field">X</button>'
+                + '</div>';
+              cardsGrid.appendChild(cardEl);
+              // Reset the Band 3 inputs so the operator can type
+              // the next response field straight away.
+              if (nameInput) { nameInput.value = ''; }
+              band3RfRow.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+                input.value = '';
+              });
+              if (nameInput) { nameInput.focus(); }
+            };
+            window.newModelRemoveResponseField = window.newModelRemoveResponseField || function (btn) {
+              var cardEl = btn.closest('[data-new-model-response-card]');
+              if (!cardEl) { return; }
+              var key = cardEl.getAttribute('data-response-key');
+              var band2 = cardEl.closest('[data-new-model-band2]');
+              if (band2 && key) {
+                var pill = band2.querySelector('[data-response-key="' + key + '"][data-new-model-band2-pill]');
+                if (pill) { pill.remove(); }
+              }
+              cardEl.remove();
+              if (band2) { rebuildPreview(band2); }
             };
             // ---- Drag-and-drop pill reorder ---------------------
             // Pills carrying ``data-reorderable="true"`` (every
@@ -1662,7 +1807,7 @@
             </table>
           </div>
           <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0 0 12px 0;">Response Fields</h3>
+            <h3 style="margin: 0 0 12px 0;">Add response field</h3>
             {# Inline response-field editor row. The visible bounds
                inputs (Min / Max / Step / List) swap based on the
                data-type pick:
@@ -1720,7 +1865,8 @@
               </div>
               <button type="button" class="btn secondary"
                       style="flex: 0 0 auto; padding: 4px 10px;"
-                      title="Add response field (placeholder)">+</button>
+                      onclick="newModelAddResponseField(this)"
+                      title="Add response field">+</button>
             </div>
           </div>
         </div>
