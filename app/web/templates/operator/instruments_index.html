@@ -1073,11 +1073,16 @@
             }
             // Band 2's preview depends on the unit-of-review mode —
             // refresh its pill enabled-state and rebuild the preview
-            // row to reflect the flip. The Band 2 element lives on
-            // the same per-instrument wrapper (id="instrument-{N}").
+            // row to reflect the flip. Mirror the new mode onto each
+            // Band 2 wrapper's ``data-new-model-band2-unit-mode``
+            // attr so the preview JS picks up the change without
+            // having to consult the (edit-mode-only) Link 3 input.
+            var newMode = btn.getAttribute('data-new-model-unit-mode') === 'group'
+              ? 'grouped' : 'individual';
             var instrumentCard = btn.closest('[id^="instrument-"]');
             if (instrumentCard && window.newModelRefreshBand2) {
               instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
+                b2.setAttribute('data-new-model-band2-unit-mode', newMode);
                 window.newModelRefreshBand2(b2);
               });
             }
@@ -1159,12 +1164,22 @@
            with bold comma-joined tag values on top and up to
            GROUP_MEMBER_NAME_LIMIT (=10) member names below. #}
         {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_names": [], "sample_extra_count": 0, "identity_width_px": none}) %}
+        {# Mirror the saved unit-of-review onto Band 2's wrapper so
+           the preview-builder JS can read it in both edit and view
+           modes. The Link 3 hidden ``link3_mode`` input only renders
+           in edit mode (it's a form field), so view-mode JS used to
+           fall back to "individual" by default — and the preview
+           rendered individual rows even when the instrument was
+           saved as grouped. Reading from the wrapper data-attr
+           sidesteps that. #}
+        {% set _saved_unit_mode = "grouped" if instrument.group_kind is not none else "individual" %}
         <div data-new-model-band2
              data-new-model-band2-instrument-id="{{ instrument.id }}"
              data-new-model-band2-session-id="{{ session.id }}"
              data-new-model-band2-sample-names="{{ _band2.sample_names | join('|') }}"
              data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
-             data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}">
+             data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}"
+             data-new-model-band2-unit-mode="{{ _saved_unit_mode }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
           {# Gate pill clicks / drag-resize / drag-reorder behind the
              per-instrument Edit state — same pattern as Bands 1 + 3.
@@ -1249,15 +1264,16 @@
         <script>
           (function () {
             if (window.newModelToggleBand2Pill) { return; }
-            // Read the current Link 3 unit-of-review for a card,
-            // looking at the dedicated hidden input that
-            // newModelToggleUnitMode keeps in sync. The input lives
-            // up in Band 1, not inside Band 2, so we walk up to the
-            // per-instrument outer wrapper (id="instrument-{N}").
+            // Read the current Link 3 unit-of-review for a card.
+            // Source of truth is the band2 wrapper's
+            // ``data-new-model-band2-unit-mode`` data-attr — server
+            // renders it from ``instrument.group_kind`` in both edit
+            // and view modes. In edit mode the Link 3 toggle JS
+            // keeps this attr in sync alongside the
+            // ``link3_mode`` hidden form input.
             function unitMode(card) {
-              var wrap = card.closest('[id^="instrument-"]') || document;
-              var input = wrap.querySelector('[data-new-model-link3-mode-input]');
-              return input && input.value === 'grouped' ? 'grouped' : 'individual';
+              return card.getAttribute('data-new-model-band2-unit-mode') === 'grouped'
+                ? 'grouped' : 'individual';
             }
             // Refresh each pill's enabled/disabled appearance based
             // on the current unit-of-review mode. Disabled pills
