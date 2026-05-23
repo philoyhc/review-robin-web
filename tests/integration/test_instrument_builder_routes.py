@@ -1264,6 +1264,19 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     # Bob, sorted alphabetically), NOT Carol.
     assert 'data-new-model-band2-sample-names="Alice|Bob"' in flat
     assert "Carol" not in body.split('data-new-model-band2-sample-names="')[1].split('"')[0]
+    # Roster payload rides on the band2 wrapper so the preview JS
+    # can re-partition on the fly when the operator picks a new
+    # boundary tag client-side (before saving). Uses a single-quoted
+    # attribute since tojson doesn't escape `"` and the JSON contains
+    # them around every string.
+    assert "data-new-model-band2-roster='" in body
+    roster_json = body.split("data-new-model-band2-roster='")[1].split("'>")[0]
+    assert '"name": "Alice"' in roster_json
+    assert "Carol" in roster_json
+    # The Link 3 boundary <select> has an onchange handler that
+    # triggers a preview rebuild — live Link 3 movement updates the
+    # preview without needing to save.
+    assert "newModelLink3BoundaryChanged" in body
 
     # Flip to individual: sample-names goes back to all reviewees.
     client.post(
