@@ -4,16 +4,16 @@
 > Detailed PR breakdowns get drafted when this work is picked up.
 
 > **Shipped-state snapshot (2026-05-23).** A concept-test
-> "Pilot" instrument flavour gated by a new
-> `Instrument.is_pilot` flag (`app/db/models/instrument.py:92-99`)
+> "New model" instrument flavour gated by a new
+> `Instrument.is_new_model` flag (`app/db/models/instrument.py:92-99`)
 > renders the three-band layout (Identity + Band 1 + Band 2 +
 > Band 3) on the Instruments page
 > (`app/web/templates/operator/instruments_index.html:617+`).
 > See `spec/instrument_builder.md` for what's on the page today.
 >
 > Concretely shipped:
-> - The full-width `is_pilot` card with the three-band frame, a
->   `+Pilot` action button, and the cross-flavour Edit / Save /
+> - The full-width `is_new_model` card with the three-band frame, a
+>   `+New model` action button, and the cross-flavour Edit / Save /
 >   Cancel / Delete / Replicate / Open / Close action row.
 > - **Band 1 layout** — three equal-width columns (Pool of
 >   reviewers / Pool of those reviewed / Unit of review) with
@@ -46,7 +46,7 @@
 >   inline type editor, no per-audience access controls wired,
 >   no reconciler work for Link 3 mode switching.**
 >
-> The shipped Pilot card is a UI-shell concept test (a partial
+> The shipped New-model card is a UI-shell concept test (a partial
 > Part 1) — every wired behaviour from the parts plan below is
 > still ahead.
 
@@ -740,7 +740,7 @@ A sequence of independently-shippable parts:
 | Part | Status | Scope | Depends on |
 |---|---|---|---|
 | **0 — Schema pre-positioning** | **Not started** | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
-| **1 — UI shell (vertical bands)** | **Partial (concept-test only)** — shipped behind a new `is_pilot` flag as a parallel instrument flavour, not yet replacing the standard per-instrument card. Identity section + Band 1 layout + Band 3 Visibility-table layout are in place as placeholders; Band 2 is a heading-only stub. Nothing in Bands 1 or 3 persists; no Unit-of-review picker reading `group_kind` yet. | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
+| **1 — UI shell (vertical bands)** | **Partial (concept-test only)** — shipped behind a new `is_new_model` flag as a parallel instrument flavour, not yet replacing the standard per-instrument card. Identity section + Band 1 layout + Band 3 Visibility-table layout are in place as placeholders; Band 2 is a heading-only stub. Nothing in Bands 1 or 3 persists; no Unit-of-review picker reading `group_kind` yet. | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
 | **1b — Inline Assignment rule editor** | **Not started** — Rule Builder child page, seeded RuleSets, personal library, Save-to / Add-from library affordances, and `library_origin_id` are all still in place. | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
 | **1c — Live-preview row** | **Not started** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
 | **1d — RTD-library retirement** | **Not started** — `OperatorResponseTypeDefinition` model, 10 seeded RTDs per session, and the Library RTDs operator-Settings card are all still in place. | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |

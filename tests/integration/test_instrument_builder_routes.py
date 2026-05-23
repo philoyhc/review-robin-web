@@ -559,35 +559,35 @@ def test_replicate_instrument_clones_content(
     assert event.detail["refs"]["instrument_id"] == copy.id
 
 
-def test_add_pilot_creates_instrument_with_is_pilot_flag(
+def test_add_new_model_creates_instrument_with_is_new_model_flag(
     client: TestClient, db: Session
 ) -> None:
-    """The +Pilot button posts to /instruments/add-pilot, which
-    creates a real instrument with ``is_pilot=True`` slotted
+    """The +New model button posts to /instruments/add-new-model, which
+    creates a real instrument with ``is_new_model=True`` slotted
     immediately after the source. Concept-test affordance for the
     Instrument Builder vertical-bands card."""
-    review_session = _make_session(client, db, code="add-pilot")
+    review_session = _make_session(client, db, code="add-new-model")
     source = _instrument(db, review_session.id)
 
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-pilot",
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
         data={"after": str(source.id)},
         follow_redirects=False,
     )
     assert resp.status_code == 303
 
-    pilot = db.execute(
+    new_model = db.execute(
         select(Instrument)
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != source.id)
     ).scalar_one()
-    assert pilot.is_pilot is True
-    assert pilot.order == source.order + 1
+    assert new_model.is_new_model is True
+    assert new_model.order == source.order + 1
     db.refresh(source)
-    assert source.is_pilot is False
+    assert source.is_new_model is False
 
-    # Pilot card renders with the bands placeholder and the
-    # Pilot status pill on the identity card.
+    # New-model card renders with the bands placeholder and the
+    # New model status pill on the identity card.
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
@@ -596,20 +596,20 @@ def test_add_pilot_creates_instrument_with_is_pilot_flag(
     assert "Unit of review" in body  # Band 1 Link 3 column
     assert "Band 2" in body
     assert "Visibility" in body  # Band 3 left-column table title
-    assert ">Pilot<" in body  # status pill on the pilot card
+    assert ">New model<" in body  # status pill on the new-model card
 
-    # Delete on the pilot card uses the standard delete route
-    # (no special pilot-only path) and works end-to-end.
-    pilot_id = pilot.id
+    # Delete on the new-model card uses the standard delete route
+    # (no special new-model-only path) and works end-to-end.
+    new_model_id = new_model.id
     resp = client.post(
         f"/operator/sessions/{review_session.id}"
-        f"/instruments/{pilot_id}/delete",
+        f"/instruments/{new_model_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
     assert (
-        db.execute(select(Instrument).where(Instrument.id == pilot_id))
+        db.execute(select(Instrument).where(Instrument.id == new_model_id))
         .scalar_one_or_none()
         is None
     )

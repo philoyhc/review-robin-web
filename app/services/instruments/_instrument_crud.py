@@ -158,7 +158,7 @@ def create_instrument(
     after_instrument_id: int | None = None,
     actor: User,
     group_kind: str | None = None,
-    is_pilot: bool = False,
+    is_new_model: bool = False,
 ) -> Instrument:
     """Create a new instrument seeded with default response and display
     fields. If ``after_instrument_id`` is given, slot the new instrument
@@ -205,7 +205,7 @@ def create_instrument(
         accepting_responses=False,
         responses_visible_when_closed=False,
         group_kind=group_kind,
-        is_pilot=is_pilot,
+        is_new_model=is_new_model,
     )
     db.add(instrument)
     db.flush()
@@ -331,7 +331,7 @@ def replicate_instrument(
         accepting_responses=False,
         responses_visible_when_closed=False,
         group_kind=source.group_kind,
-        is_pilot=source.is_pilot,
+        is_new_model=source.is_new_model,
         sort_display_fields=(
             [dict(entry) for entry in source.sort_display_fields]
             if source.sort_display_fields

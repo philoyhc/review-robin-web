@@ -2,7 +2,7 @@
 
 Surface specification for the **Instrument Builder** concept-test
 card, surfaced on the operator Instruments page
-(`/operator/sessions/{id}/instruments`) as the **Pilot
+(`/operator/sessions/{id}/instruments`) as the **New-model
 instrument** flavour. The design intent — vertical-bands layout
 collecting every per-instrument decision in one screen — is
 sketched in `guide/instrument_builder.md`; this file documents
@@ -14,7 +14,7 @@ persistence — most of those are deferred. When a behaviour below
 reads as placeholder ("Inactive button", "Clicking does nothing"),
 the slice that wires it lands those pieces later.
 
-> **Status.** The pilot card top section and Band 1 are
+> **Status.** The new-model card top section and Band 1 are
 > functionally laid out. Band 2 and Band 3 are not yet specified.
 > See `guide/instrument_builder.md` for the parts plan.
 
@@ -23,22 +23,22 @@ the slice that wires it lands those pieces later.
 The Instruments page renders one full-width per-instrument card
 per instrument in `Instrument.order` (see
 `spec/instruments.md`). Each card's action row carries a
-**`+Pilot`** button that creates a new instrument flagged
-`is_pilot=True` and slotted immediately after the source — same
-pattern as Add instrument / Add group instrument. Pilot
+**`+New model`** button that creates a new instrument flagged
+`is_new_model=True` and slotted immediately after the source — same
+pattern as Add instrument / Add group instrument. New-model
 instruments render with the vertical-bands layout described
 below instead of the standard Display / Response Fields tables;
 the rest of the per-instrument actions (Edit / Save / Cancel /
 Delete / Replicate / Open / Close / Show when closed) work
 identically across all three flavours.
 
-The `+Pilot` button uses the `btn primary-outline` canonical
+The `+New model` button uses the `btn primary-outline` canonical
 style and sits to the right of the Delete button on the action
 row.
 
 ## Card layout
 
-One full-width `.card` per pilot instrument, painted with the
+One full-width `.card` per new-model instrument, painted with the
 same cycling lightened palette tint as ordinary instrument
 cards. Inside, vertically stacked:
 
@@ -56,7 +56,7 @@ cards. Inside, vertically stacked:
    followed by a placeholder `Band 3` heading.
 5. **Action row + delete-confirm checkbox** — identical to the
    ordinary per-instrument card's bottom row. Carries the
-   `+Pilot` button as the rightmost action.
+   `+New model` button as the rightmost action.
 
 The four horizontal rules use 1px `var(--border-muted, #cbd5e1)`
 and 20px vertical margins.
@@ -77,7 +77,7 @@ column's outer dimensions. Internally laid out as
 `display: flex; flex-direction: column`:
 
 - **Heading** (`<h2>` at `font-size: 1.5rem`) — `Instrument
-  #{N}` followed by status pills, in order: `Pilot`
+  #{N}` followed by status pills, in order: `New model`
   (`pill-info`), accepting / not accepting (`pill-count` /
   `pill-empty`), showing / not showing when closed (`pill-count`
   / `pill-empty`).
@@ -162,7 +162,7 @@ on state restores `opacity: 1; pointer-events: auto;`.
 #### Pool of reviewers (Link 1) and Pool of those reviewed (Link 2)
 
 These two columns share the rule-list shape. Implemented as a
-shared `pilot_rule_list` Jinja macro.
+shared `new_model_rule_list` Jinja macro.
 
 **Left portion** (fixed at 20% of column width). Centered both
 horizontally and vertically. Two `btn secondary` buttons on the
@@ -239,7 +239,7 @@ non-empty value in the relevant population:
 | `pair_context.tag1-3` | Relationship tag columns | Relationships with `status == "active"`. |
 
 The lookup is centralised in
-`views._instruments._pilot_usable_tags`. A slot only becomes
+`views._instruments._new_model_usable_tags`. A slot only becomes
 "usable" when at least one row in its source population carries
 a non-empty value for it. Dropdowns omit any slot that isn't
 usable; if a column's combined dropdown set is empty, its
@@ -264,7 +264,7 @@ carries the canonical machine key (`reviewer.tag1` etc.) so
 downstream wiring can read the rule predicate without lookup.
 
 This means renaming a tag on the Reviewers / Reviewees /
-Relationships Setup pages immediately surfaces in the pilot
+Relationships Setup pages immediately surfaces in the new-model
 card's dropdowns.
 
 ## Cross-cutting behaviour
@@ -293,10 +293,10 @@ that has no data to filter / group on.
 
 Nothing on Band 1 is wired to persistence yet. The placeholder
 add / remove / toggle behaviour lives in three inline
-`window.pilot*` helpers (`pilotAddRule` / `pilotRemoveRule` /
-`pilotCycleOperator` / `pilotToggleRuleMode` / `pilotAddUnitCell`
-/ `pilotRemoveUnitCell` / `pilotRefreshUnitButtons` /
-`pilotToggleUnitMode`) defined once on the page; clicks
+`window.newModel*` helpers (`newModelAddRule` / `newModelRemoveRule` /
+`newModelCycleOperator` / `newModelToggleRuleMode` / `newModelAddUnitCell`
+/ `newModelRemoveUnitCell` / `newModelRefreshUnitButtons` /
+`newModelToggleUnitMode`) defined once on the page; clicks
 manipulate the DOM but no request is sent. The full wiring plan
 sits in `guide/instrument_builder.md`.
 
@@ -305,7 +305,7 @@ sits in `guide/instrument_builder.md`.
 - `guide/instrument_builder.md` — design plan + parts roadmap
   for the full builder. The "what comes next" doc this spec
   hangs from.
-- `spec/instruments.md` — the per-instrument card the pilot card
+- `spec/instruments.md` — the per-instrument card the new-model card
   lives alongside (and will eventually replace).
 - `spec/setup_pages.md` — Reviewers / Reviewees / Relationships
   Setup pages where friendly labels are authored.

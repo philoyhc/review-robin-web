@@ -972,18 +972,18 @@ def instruments_add_group(
     )
 
 
-@router.post("/sessions/{session_id}/instruments/add-pilot")
-def instruments_add_pilot(
+@router.post("/sessions/{session_id}/instruments/add-new-model")
+def instruments_add_new_model(
     after: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Create a pilot instrument — concept-test card for the
+    """Create a new-model instrument — concept-test card for the
     Instrument Builder (``guide/instrument_builder.md``). Behaves
     exactly like ``instruments_add`` at the service layer; the
     template renders the new row with the bands placeholder layout
-    via the ``is_pilot`` flag.
+    via the ``is_new_model`` flag.
     """
     _require_instrument_editable(review_session)
     instrument = instruments_service.create_instrument(
@@ -991,7 +991,7 @@ def instruments_add_pilot(
         review_session=review_session,
         after_instrument_id=after,
         actor=user,
-        is_pilot=True,
+        is_new_model=True,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
