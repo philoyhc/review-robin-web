@@ -207,7 +207,33 @@
           </p>
         {% endif %}
         <div class="table-scroll">
-          <table{% if group.is_group %} class="rs-group-table"{% endif %} data-rrw-sortable="rrw-sort-rs-{{ session.id }}-{{ group.instrument.id }}">
+          {# When the operator has set any per-column widths in Band 2
+             of the new-model instrument card, the table opts into
+             table-layout: fixed so the widths take hold
+             deterministically. ``has_custom_widths`` only flips True
+             when at least one width is persisted; otherwise we keep
+             today's auto-layout behaviour (Individual mode) or the
+             rs-group-table's existing fixed-layout (Group mode). #}
+          <table{% if group.is_group %} class="rs-group-table"{% endif %}{% if group.has_custom_widths and not group.is_group %} style="table-layout: fixed;"{% endif %} data-rrw-sortable="rrw-sort-rs-{{ session.id }}-{{ group.instrument.id }}">
+            {% if group.has_custom_widths %}
+              {# Emit a <col> for every column in the table so
+                 table-layout: fixed has a complete column map. Cols
+                 without an explicit width auto-distribute the
+                 remaining horizontal space — same behaviour the
+                 rs-group-table already relies on for its non-identity
+                 columns. #}
+              <colgroup>
+                <col{% if group.identity_width_px %} style="width: {{ group.identity_width_px }}px"{% endif %}>
+                {% for header in group.display_fields %}
+                  <col{% if header.width_px %} style="width: {{ header.width_px }}px"{% endif %}>
+                {% endfor %}
+                {% set first_row_cg = group.rows[0] %}
+                {% for cell in first_row_cg.cells %}
+                  <col>
+                {% endfor %}
+                {% if group.show_status_col %}<col>{% endif %}
+              </colgroup>
+            {% endif %}
             <thead>
             <tr>
               {% if group.is_group %}

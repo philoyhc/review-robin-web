@@ -451,12 +451,18 @@ def _new_model_band2_state(
                 "selectable_in_group": _is_selectable_in_group(
                     f.source_type, f.source_field
                 ),
+                "display_field_id": f.id,
+                "width_px": (instrument.column_widths or {}).get(
+                    f"df_{f.id}"
+                ),
             }
         )
+    identity_width_px = (instrument.column_widths or {}).get("identity")
     return {
         "fields": fields,
         "sample_names": sample_names,
         "sample_extra_count": sample_extra_count,
+        "identity_width_px": identity_width_px,
     }
 
 

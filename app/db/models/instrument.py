@@ -98,6 +98,20 @@ class Instrument(Base, TimestampMixin):
     template renders them with the bands placeholder layout instead
     of the standard Display / Response Fields tables."""
 
+    column_widths: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    """Per-column pixel widths the operator set by drag-resizing the
+    Band 2 preview table on a new-model instrument. Shape:
+    ``{"identity": 200, "df_<id>": 150, ...}`` — ``identity`` is the
+    always-rendered Reviewee / Group identity column;
+    ``df_<display_field_id>`` is each operator-chosen display field.
+    Values are positive integer pixels. Missing keys mean "use the
+    auto-sized default". When at least one entry is present, the
+    reviewer-surface table renders with ``table-layout: fixed`` so
+    the widths take hold; an entirely NULL ``column_widths`` keeps
+    today's auto-layout behaviour unchanged."""
+
     cached_group_pair_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True
     )

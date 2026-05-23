@@ -803,6 +803,75 @@ def set_unit_of_review(
     return instrument
 
 
+_COLUMN_WIDTH_MIN_PX = 40
+_COLUMN_WIDTH_MAX_PX = 1200
+
+
+def set_column_widths(
+    db: Session,
+    *,
+    instrument: Instrument,
+    widths: dict[str, int],
+    actor: User,
+) -> Instrument:
+    """Persist the per-column pixel widths the operator set by
+    drag-resizing the new-model card's Band 2 preview table.
+
+    ``widths`` is a dict keyed by ``"identity"`` and
+    ``"df_<display_field_id>"`` strings, valued by positive integer
+    pixels. Unknown keys are dropped; values are clamped to
+    ``[_COLUMN_WIDTH_MIN_PX, _COLUMN_WIDTH_MAX_PX]``. Passing an
+    empty dict clears all custom widths back to NULL — the
+    reviewer surface falls back to its default auto-sized layout.
+
+    No-op saves (the merged widths are byte-equal to the stored
+    value) skip the audit + lifecycle side effects.
+    """
+    valid_field_ids = {f.id for f in instrument.display_fields}
+    sanitised: dict[str, int] = {}
+    for raw_key, raw_value in (widths or {}).items():
+        key = str(raw_key).strip()
+        if key != "identity" and not key.startswith("df_"):
+            continue
+        if key.startswith("df_"):
+            try:
+                field_id = int(key[len("df_"):])
+            except (TypeError, ValueError):
+                continue
+            if field_id not in valid_field_ids:
+                continue
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value < _COLUMN_WIDTH_MIN_PX:
+            value = _COLUMN_WIDTH_MIN_PX
+        elif value > _COLUMN_WIDTH_MAX_PX:
+            value = _COLUMN_WIDTH_MAX_PX
+        sanitised[key] = value
+    new_value: dict[str, int] | None = sanitised or None
+    if (instrument.column_widths or None) == new_value:
+        return instrument
+    old_value = instrument.column_widths
+    instrument.column_widths = new_value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.column_widths_updated",
+        summary=(
+            f"Updated reviewer-surface column widths on instrument "
+            f"{_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes(
+            {"column_widths": [old_value, new_value]}
+        ),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
 def bulk_set_accepting(
     db: Session,
     *,

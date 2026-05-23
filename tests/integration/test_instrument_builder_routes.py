@@ -899,3 +899,102 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     # spans, not on the JS selector matching them).
     assert "data-key=" not in flat
     assert 'data-new-model-band2-sample-names=""' in flat
+
+
+def test_new_model_band2_column_widths_round_trip(
+    client: TestClient, db: Session
+) -> None:
+    """POSTing column widths to /column-widths persists them on
+    instruments.column_widths; reload propagates them onto the pill
+    + card data attributes that drive the Band 2 preview's column
+    sizing."""
+    review_session = _make_session(client, db, code="nm-widths")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    # The tag_1 display field is lazy-seeded on the first index
+    # render — visit the page so the field exists by the time we
+    # look it up.
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+    db.refresh(new_model)
+    tag_field = next(
+        df
+        for df in new_model.display_fields
+        if df.source_type == "reviewee" and df.source_field == "tag_1"
+    )
+
+    # POST widths: identity at 220px, tag_1 column at 180px.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/column-widths",
+        json={
+            "widths": {
+                "identity": 220,
+                f"df_{tag_field.id}": 180,
+                "unknown_key": 999,  # dropped silently
+                "df_99999": 555,  # dropped — not a real field id
+            }
+        },
+    )
+    assert resp.status_code == 200
+
+    db.refresh(new_model)
+    assert new_model.column_widths == {
+        "identity": 220,
+        f"df_{tag_field.id}": 180,
+    }
+
+    # Reload the index — widths surface as data attrs the JS reads.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    assert 'data-new-model-band2-identity-width="220"' in flat
+    assert f'data-display-field-id="{tag_field.id}" data-width="180"' in flat
+
+
+def test_new_model_band2_column_widths_clamps_and_clears(
+    client: TestClient, db: Session
+) -> None:
+    """Out-of-range widths clamp to [40, 1200]; an empty widths dict
+    clears the column_widths column back to NULL."""
+    review_session = _make_session(client, db, code="nm-clamp")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Below-min and above-max get clamped.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/column-widths",
+        json={"widths": {"identity": 10, "df_unused": 9999}},
+    )
+    db.refresh(new_model)
+    assert new_model.column_widths == {"identity": 40}
+
+    # Empty dict clears.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/column-widths",
+        json={"widths": {}},
+    )
+    db.refresh(new_model)
+    assert new_model.column_widths is None
