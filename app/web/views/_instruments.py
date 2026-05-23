@@ -455,6 +455,9 @@ def _new_model_band2_state(
                 "width_px": (instrument.column_widths or {}).get(
                     f"df_{f.id}"
                 ),
+                "reorderable": not instruments_service.is_locked_display_source(
+                    f.source_type, f.source_field
+                ),
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")

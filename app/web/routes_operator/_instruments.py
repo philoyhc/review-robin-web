@@ -1292,6 +1292,61 @@ async def instrument_column_widths(
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
 
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/display-fields/order"
+)
+async def instrument_display_fields_order(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Persist a bulk reorder of the non-locked display fields, driven
+    by drag-and-drop on the new-model card's Band 2 pill row. Accepts
+    JSON ``{"ordered_ids": [int, ...]}`` listing every non-locked
+    display field id on the instrument in the new order; locked
+    fields (RevieweeName, RevieweeEmail) keep their pinned positions.
+    """
+    instrument, _ = bundle
+    _require_instrument_editable(instrument.session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="display-fields/order body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="display-fields/order body must be a JSON object",
+        )
+    raw_ids = body.get("ordered_ids")
+    if not isinstance(raw_ids, list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="display-fields/order.ordered_ids must be a list of integers",
+        )
+    try:
+        ordered_ids = [int(v) for v in raw_ids]
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="display-fields/order.ordered_ids must be a list of integers",
+        ) from exc
+    try:
+        instruments_service.reorder_display_fields(
+            db, instrument=instrument, ordered_ids=ordered_ids, actor=user
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    db.commit()
+    return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
 def instrument_visibility(
     visible_when_closed: str | None = Form(default=None),

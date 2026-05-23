@@ -1181,8 +1181,16 @@
                     data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
+                    data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                    {% if field.reorderable %}
+                    draggable="true"
+                    ondragstart="newModelBand2DragStart(event)"
+                    ondragend="newModelBand2DragEnd(event)"
+                    ondragover="newModelBand2DragOver(event)"
+                    ondrop="newModelBand2Drop(event)"
+                    {% endif %}
                     onclick="newModelToggleBand2Pill(this)"
-                    title="Click to include {{ field.label }} in the preview row">{{ field.label }}</span>
+                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{{ field.label }}</span>
             {% else %}
               <span class="muted">—</span>
             {% endfor %}
@@ -1449,6 +1457,90 @@
               refreshPillStates(card);
               rebuildPreview(card);
             };
+            // ---- Drag-and-drop pill reorder ---------------------
+            // Pills carrying ``data-reorderable="true"`` (every
+            // non-locked display field) are HTML5-draggable. On
+            // drop, we move the DOM node, recompute the ordered list
+            // of unlocked-pill display_field_ids, then POST to the
+            // display-fields/order route. The locked Name + Email
+            // pills sit at the front and are never draggable.
+            var dragSource = null;
+            window.newModelBand2DragStart = function (event) {
+              var pill = event.target.closest('[data-new-model-band2-pill]');
+              if (!pill || pill.getAttribute('data-reorderable') !== 'true') {
+                event.preventDefault();
+                return;
+              }
+              dragSource = pill;
+              pill.classList.add('new-model-band2-pill-dragging');
+              if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                // Required by Firefox to actually start a drag.
+                event.dataTransfer.setData('text/plain', pill.getAttribute('data-key') || '');
+              }
+            };
+            window.newModelBand2DragEnd = function (event) {
+              if (dragSource) {
+                dragSource.classList.remove('new-model-band2-pill-dragging');
+              }
+              dragSource = null;
+              // Clear all drop-indicator highlights on dragend.
+              document.querySelectorAll('.new-model-band2-pill-drop-before')
+                .forEach(function (el) { el.classList.remove('new-model-band2-pill-drop-before'); });
+            };
+            window.newModelBand2DragOver = function (event) {
+              var target = event.target.closest('[data-new-model-band2-pill]');
+              if (!target || target.getAttribute('data-reorderable') !== 'true') { return; }
+              if (!dragSource || target === dragSource) { return; }
+              // Only allow dropping within the same Band 2 card.
+              if (target.closest('[data-new-model-band2]') !== dragSource.closest('[data-new-model-band2]')) {
+                return;
+              }
+              event.preventDefault();
+              if (event.dataTransfer) { event.dataTransfer.dropEffect = 'move'; }
+              // Reset previous indicators, then mark this one.
+              target.parentNode.querySelectorAll('.new-model-band2-pill-drop-before')
+                .forEach(function (el) { el.classList.remove('new-model-band2-pill-drop-before'); });
+              target.classList.add('new-model-band2-pill-drop-before');
+            };
+            window.newModelBand2Drop = function (event) {
+              var target = event.target.closest('[data-new-model-band2-pill]');
+              if (!target || !dragSource || target === dragSource) { return; }
+              event.preventDefault();
+              target.classList.remove('new-model-band2-pill-drop-before');
+              // Insert the dragged pill immediately before the drop
+              // target. Operators dragging right-to-left intuitively
+              // expect "drop on X" to mean "insert before X" — same
+              // contract reviewer-surface sort uses elsewhere.
+              target.parentNode.insertBefore(dragSource, target);
+              var card = target.closest('[data-new-model-band2]');
+              if (card) {
+                saveBand2DisplayFieldOrder(card);
+                rebuildPreview(card);
+              }
+            };
+            // POST the current order of reorderable pill display
+            // field ids to the display-fields/order route. Locked
+            // pills (Name, Email) are excluded — the server already
+            // pins them at orders 0 and 1.
+            function saveBand2DisplayFieldOrder(card) {
+              var sessionId = card.getAttribute('data-new-model-band2-session-id');
+              var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
+              if (!sessionId || !instrumentId) { return; }
+              var orderedIds = [];
+              card.querySelectorAll('[data-new-model-band2-pill][data-reorderable="true"]').forEach(function (pill) {
+                var id = parseInt(pill.getAttribute('data-display-field-id') || '', 10);
+                if (id > 0) { orderedIds.push(id); }
+              });
+              fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/display-fields/order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify({ordered_ids: orderedIds}),
+              }).catch(function (err) {
+                if (window.console) { console.warn('Band 2 display field reorder save failed', err); }
+              });
+            }
             // Wire each Band 2 card on the page on first load.
             document.querySelectorAll('[data-new-model-band2]').forEach(function (card) {
               window.newModelRefreshBand2(card);

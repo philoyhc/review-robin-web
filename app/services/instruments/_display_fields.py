@@ -465,6 +465,70 @@ def move_display_field(
     db.commit()
 
 
+def reorder_display_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    ordered_ids: list[int],
+    actor: User,
+) -> None:
+    """Apply a bulk reorder of an instrument's non-locked display
+    fields. ``ordered_ids`` must be a permutation of every non-locked
+    display field id on the instrument — duplicates, unknown ids, or
+    locked ids raise ``ValueError`` / ``LockedDisplayFieldError``.
+
+    The two locked fields (RevieweeName, RevieweeEmail) keep their
+    pinned positions (orders 0 and 1); the non-locked fields take
+    orders 2..N+1 in the sequence ``ordered_ids`` describes. The
+    Band 2 drag-and-drop pill reorder writes through this helper.
+
+    No-op saves (the requested order matches the current order)
+    skip the audit + lifecycle side effects.
+    """
+    if len(set(ordered_ids)) != len(ordered_ids):
+        raise ValueError("ordered_ids contains duplicates")
+    fields = _ordered_display_fields(db, instrument)
+    locked: list[InstrumentDisplayField] = []
+    unlocked_by_id: dict[int, InstrumentDisplayField] = {}
+    for f in fields:
+        if is_locked_display_source(f.source_type, f.source_field):
+            locked.append(f)
+        else:
+            unlocked_by_id[f.id] = f
+    if set(ordered_ids) != set(unlocked_by_id):
+        raise ValueError(
+            "ordered_ids must enumerate every non-locked display field "
+            f"on instrument {instrument.id} exactly once"
+        )
+    new_order = locked + [unlocked_by_id[fid] for fid in ordered_ids]
+    current_order_ids = [f.id for f in fields]
+    desired_order_ids = [f.id for f in new_order]
+    if current_order_ids == desired_order_ids:
+        return
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_fields_reordered",
+    )
+    _repack_display_orders(new_order)
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.fields_reordered",
+        summary=(
+            f"Reordered display fields on instrument "
+            f"{_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes(
+            {"display_field_order": [current_order_ids, desired_order_ids]}
+        ),
+        refs={"instrument_id": instrument.id},
+    )
+
+
 def _seed_display_fields_for_instrument(
     db: Session,
     *,

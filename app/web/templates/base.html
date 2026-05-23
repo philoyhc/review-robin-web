@@ -255,6 +255,25 @@
           transparent 6px
         );
       }
+      /*
+       * Band 2 pill drag-and-drop affordances. Reorderable pills
+       * (every display field except Name + Email) carry
+       * ``draggable="true"`` and show a grab cursor; the dragging
+       * pill fades; the drop target gets a thick left accent so the
+       * operator can see where the pill will land.
+       */
+      [data-new-model-band2-pill][data-reorderable="true"] {
+        cursor: grab;
+      }
+      [data-new-model-band2-pill][data-reorderable="true"]:active {
+        cursor: grabbing;
+      }
+      .new-model-band2-pill-dragging {
+        opacity: 0.4;
+      }
+      .new-model-band2-pill-drop-before {
+        box-shadow: -3px 0 0 0 var(--text-secondary, #475569);
+      }
       .muted { color: #777; }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
