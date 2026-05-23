@@ -779,19 +779,19 @@
                   <div style="display: flex; align-items: center; gap: 4px;">
                     {% if operand_tag_options %}
                       {# Tag-operand dropdown shown when the operator
-                         is IS / IS NOT; hidden (display: none) when
-                         the operator is IS THE SAME AS / IS DIFFERENT
-                         FROM. pilotCycleOperator toggles visibility. #}
+                         is IS THE SAME AS / IS DIFFERENT FROM; hidden
+                         (display: none) when the operator is IS /
+                         IS NOT (default). pilotCycleOperator toggles
+                         visibility. #}
                       <select data-pilot-operand-tag
-                              style="flex: 0 0 40%; min-width: 0; padding: 4px;">
+                              style="flex: 0 0 40%; min-width: 0; padding: 4px; display: none;">
                         {% for opt in operand_tag_options %}
                           <option>{{ opt }}</option>
                         {% endfor %}
                       </select>
                     {% endif %}
                     <input data-pilot-operand-value type="text" placeholder="value"
-                           style="flex: 1; min-width: 0; padding: 4px;
-                                  {% if operand_tag_options %}display: none;{% endif %}">
+                           style="flex: 1; min-width: 0; padding: 4px;">
                     <button type="button" class="btn destructive"
                             style="padding: 4px 8px; flex-shrink: 0;"
                             onclick="pilotRemoveRule(this)"
@@ -838,14 +838,14 @@
               var cycle = (b.getAttribute('data-pilot-operator-cycle') || 'IS|IS NOT').split('|');
               b.textContent = cycle[0];
             });
-            // Reset operand variants on the cloned cell: tag dropdown
-            // (if present) shown, value input hidden — matching the
+            // Reset operand variants on the cloned cell: value input
+            // shown, tag dropdown (if present) hidden — matching the
             // default operator state (IS).
             var tagSel = clone.querySelector('[data-pilot-operand-tag]');
             var valInput = clone.querySelector('[data-pilot-operand-value]');
             if (tagSel && valInput) {
-              tagSel.style.display = '';
-              valInput.style.display = 'none';
+              tagSel.style.display = 'none';
+              valInput.style.display = '';
             }
             // New cell's X is active (only the first cell's X stays disabled).
             clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
@@ -861,13 +861,13 @@
             var next = cycle[(idx + 1) % cycle.length];
             btn.textContent = next;
             // If this cell has both operand variants, swap their
-            // visibility: IS / IS NOT → tag dropdown; anything else
-            // (IS THE SAME AS / IS DIFFERENT FROM) → value input.
+            // visibility: IS / IS NOT → value input; anything else
+            // (IS THE SAME AS / IS DIFFERENT FROM) → tag dropdown.
             var cell = btn.closest('[data-pilot-rule-cell]');
             var tagSel = cell.querySelector('[data-pilot-operand-tag]');
             var valInput = cell.querySelector('[data-pilot-operand-value]');
             if (tagSel && valInput) {
-              var useTag = next === 'IS' || next === 'IS NOT';
+              var useTag = next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM';
               tagSel.style.display = useTag ? '' : 'none';
               valInput.style.display = useTag ? 'none' : '';
             }
