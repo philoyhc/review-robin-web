@@ -736,13 +736,10 @@
             <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
               <button type="button" class="btn secondary"
                       style="padding: 4px 8px; flex-shrink: 0;"
-                      title="Add reviewer rule (placeholder)">+</button>
+                      onclick="this.textContent = this.textContent.trim() === '+AND' ? '+OR' : '+AND';"
+                      title="Add rule + toggle combinator (placeholder)">+AND</button>
               <div style="width: 3px; height: 28px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      onclick="this.textContent = this.textContent.trim() === 'AND' ? 'OR' : 'AND';"
-                      title="Toggle combinator (placeholder)">AND</button>
-              <select style="padding: 4px; min-width: 0; flex: 0 0 20%;">
+              <select style="padding: 4px; min-width: 0; flex: 0 0 25%;">
                 <option>reviewer.tag1</option>
                 <option>reviewer.tag2</option>
                 <option>reviewer.tag3</option>
@@ -755,7 +752,7 @@
                       onclick="this.textContent = this.textContent.trim() === 'IS' ? 'IS NOT' : 'IS';"
                       title="Toggle operator (placeholder)">IS</button>
               <input type="text" placeholder="value"
-                     style="min-width: 0; padding: 4px; flex: 0 0 20%;">
+                     style="min-width: 0; padding: 4px; flex: 0 0 25%;">
             </div>
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
