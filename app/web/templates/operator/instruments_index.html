@@ -1038,83 +1038,101 @@
         <h3 style="margin: 0;">Band 2</h3>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-        {# Band 3 — Links 4 + 5 + 6 (Visibility scope + Read shape +
-           Release timing). Table layout: 3 columns map to the
-           three links, 4 rows map to the audiences. The audience
-           chip in column 1 toggles the whole row on/off; the
-           ``What`` (col 2) and ``When`` (col 3) chips in a row
-           grey out when the audience is off. Placeholders only —
-           see guide/instrument_builder.md §Band 3. #}
-        {% macro pilot_chip(label, selected=false, audience_toggle=false) %}
+        {# Band 3 — Visibility / read-shape / release-timing
+           audience policy. Card splits into two columns. The left
+           column carries a ``Visibility`` table with one row per
+           audience (Operator / Reviewers / Reviewees / Observers)
+           and three cells per row: Who (chip toggles the audience
+           on/off), What (cycles Raw / Summarized / Anonymized
+           responses), When (cycles Always / While review ongoing /
+           After release). Disabled audience rows grey their What
+           and When cells. The right column is reserved for a
+           future band-3 detail surface — currently empty. All
+           placeholder; see guide/instrument_builder.md §Band 3. #}
+        {% macro pilot_audience_chip(label, selected=false) %}
           <button type="button" class="pill pill-info"
                   style="cursor: pointer; border: none; font: inherit; font-size: 0.8em;
                          opacity: {{ '1' if selected else '0.4' }};"
                   data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
-                  onclick="{% if audience_toggle %}pilotToggleAudience(this){% else %}pilotToggleChip(this){% endif %}"
-                  title="Click to toggle (placeholder)">{{ label }}</button>
+                  onclick="pilotToggleAudience(this)"
+                  title="Click to toggle audience (placeholder)">{{ label }}</button>
         {% endmacro %}
-        {% macro pilot_audience_row(audience_key, audience_label, enabled=false,
-                                    what_default="Raw responses",
-                                    when_default="After release") %}
+        {% macro pilot_cycle_button(cycle, current) %}
+          <button type="button" class="btn secondary"
+                  style="padding: 4px 10px;"
+                  data-pilot-cycle="{{ cycle | join('|') }}"
+                  onclick="pilotCycleButton(this)"
+                  title="Click to cycle (placeholder)">{{ current }}</button>
+        {% endmacro %}
+        {% macro pilot_visibility_row(audience_key, audience_label, enabled=false,
+                                      what_default="Raw responses",
+                                      when_default="Always") %}
           {% set _row_op = '1' if enabled else '0.4' %}
           {% set _row_pe = 'auto' if enabled else 'none' %}
-          <div data-pilot-audience-row="{{ audience_key }}"
-               style="padding: 8px 16px 8px 0;">
-            {{ pilot_chip(audience_label, selected=enabled, audience_toggle=true) }}
-          </div>
-          <div data-pilot-audience-row="{{ audience_key }}"
-               style="padding: 8px 16px; border-left: 1px solid var(--border-muted, #cbd5e1);
-                      display: flex; flex-wrap: wrap; gap: 6px;
-                      opacity: {{ _row_op }}; pointer-events: {{ _row_pe }};">
-            {{ pilot_chip("Raw responses", selected=(what_default == "Raw responses")) }}
-            {{ pilot_chip("Summarized responses", selected=(what_default == "Summarized responses")) }}
-            {{ pilot_chip("Anonymized responses", selected=(what_default == "Anonymized responses")) }}
-          </div>
-          <div data-pilot-audience-row="{{ audience_key }}"
-               style="padding: 8px 0 8px 16px; border-left: 1px solid var(--border-muted, #cbd5e1);
-                      display: flex; flex-wrap: wrap; gap: 6px;
-                      opacity: {{ _row_op }}; pointer-events: {{ _row_pe }};">
-            {{ pilot_chip("While review ongoing", selected=(when_default == "While review ongoing")) }}
-            {{ pilot_chip("After release", selected=(when_default == "After release")) }}
-          </div>
+          <tr data-pilot-audience="{{ audience_key }}">
+            <td style="padding: 6px 8px;">
+              {{ pilot_audience_chip(audience_label, selected=enabled) }}
+            </td>
+            <td data-pilot-audience-other-cell
+                style="padding: 6px 8px; opacity: {{ _row_op }};
+                       pointer-events: {{ _row_pe }};">
+              {{ pilot_cycle_button(
+                  ["Raw responses", "Summarized responses", "Anonymized responses"],
+                  what_default) }}
+            </td>
+            <td data-pilot-audience-other-cell
+                style="padding: 6px 8px; opacity: {{ _row_op }};
+                       pointer-events: {{ _row_pe }};">
+              {{ pilot_cycle_button(
+                  ["Always", "While review ongoing", "After release"],
+                  when_default) }}
+            </td>
+          </tr>
         {% endmacro %}
         <div data-pilot-band3
-             style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+             style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
                     align-items: start;">
-          {# Header row #}
-          <div style="padding: 0 16px 8px 0;">
-            <h3 style="margin: 0;">Who can see the responses?</h3>
+          <div>
+            <h3 style="margin: 0 0 12px 0;">Visibility</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="text-align: left;">
+                  <th style="padding: 6px 8px;">Who</th>
+                  <th style="padding: 6px 8px;">What</th>
+                  <th style="padding: 6px 8px;">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{ pilot_visibility_row("operator", "Operator", enabled=true,
+                                         what_default="Raw responses",
+                                         when_default="Always") }}
+                {{ pilot_visibility_row("reviewers", "Reviewers") }}
+                {{ pilot_visibility_row("reviewees", "Reviewees") }}
+                {{ pilot_visibility_row("observers", "Observers") }}
+              </tbody>
+            </table>
           </div>
-          <div style="padding: 0 16px 8px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">What can they see?</h3>
+          <div>
+            {# Right column reserved for a future band-3 detail
+               surface. #}
           </div>
-          <div style="padding: 0 0 8px 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">When can they see them?</h3>
-          </div>
-          {# Body rows — one per audience #}
-          {{ pilot_audience_row("operator", "Operator", enabled=true,
-                                 when_default="While review ongoing") }}
-          {{ pilot_audience_row("reviewers", "Reviewers") }}
-          {{ pilot_audience_row("reviewees", "Reviewees") }}
-          {{ pilot_audience_row("observers", "Observers") }}
         </div>
         <script>
-          window.pilotToggleChip = window.pilotToggleChip || function (btn) {
+          window.pilotToggleAudience = window.pilotToggleAudience || function (btn) {
             var selected = btn.getAttribute('data-pilot-chip-selected') !== 'true';
             btn.setAttribute('data-pilot-chip-selected', selected ? 'true' : 'false');
             btn.style.opacity = selected ? '1' : '0.4';
-          };
-          window.pilotToggleAudience = window.pilotToggleAudience || function (btn) {
-            pilotToggleChip(btn);
-            var enabled = btn.getAttribute('data-pilot-chip-selected') === 'true';
-            var audienceCell = btn.closest('[data-pilot-audience-row]');
-            var key = audienceCell.getAttribute('data-pilot-audience-row');
-            var band = audienceCell.closest('[data-pilot-band3]');
-            band.querySelectorAll('[data-pilot-audience-row="' + key + '"]').forEach(function (cell) {
-              if (cell === audienceCell) return;
-              cell.style.opacity = enabled ? '1' : '0.4';
-              cell.style.pointerEvents = enabled ? 'auto' : 'none';
+            var row = btn.closest('[data-pilot-audience]');
+            row.querySelectorAll('[data-pilot-audience-other-cell]').forEach(function (cell) {
+              cell.style.opacity = selected ? '1' : '0.4';
+              cell.style.pointerEvents = selected ? 'auto' : 'none';
             });
+          };
+          window.pilotCycleButton = window.pilotCycleButton || function (btn) {
+            var cycle = (btn.getAttribute('data-pilot-cycle') || '').split('|');
+            if (cycle.length < 2) return;
+            var idx = cycle.indexOf(btn.textContent.trim());
+            btn.textContent = cycle[(idx + 1) % cycle.length];
           };
         </script>
 
