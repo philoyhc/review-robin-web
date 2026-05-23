@@ -385,6 +385,13 @@ def _pilot_usable_tags(
         "reviewee": [],
         "pair_context": [],
     }
+    # Per-namespace disambiguation prefix on the friendly label so
+    # operators can tell which side of a relationship a tag belongs
+    # to when a dropdown mixes namespaces (notably Pool of those
+    # reviewed's "IS THE SAME AS" / "IS DIFFERENT FROM" operand).
+    # Pair-context tags carry no prefix — they're inherently
+    # relationship-level.
+    label_prefix = {"reviewer": "R-", "reviewee": "E-", "pair_context": ""}
     namespace_specs = [
         (
             "reviewer",
@@ -428,7 +435,9 @@ def _pilot_usable_tags(
             friendly = field_labels.resolve(
                 review_session, namespace, label_field
             )
-            result[namespace].append((canonical_key, friendly))
+            result[namespace].append(
+                (canonical_key, label_prefix[namespace] + friendly)
+            )
     return result
 
 
