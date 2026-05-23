@@ -727,13 +727,38 @@
            now; see guide/instrument_builder.md §Band 1. #}
         <div style="display: grid; grid-template-columns: 2fr 3fr 1fr; gap: 0;">
           <div style="padding: 0 16px 0 0;">
-            <h3 style="margin: 0;">Link 1</h3>
+            <h3 style="margin: 0 0 12px 0;">Reviewers</h3>
+            {# Placeholder Link 1 rule row: Add button, thick
+               separator, AND/OR combinator toggle, tag picker,
+               IS / IS NOT operator toggle, value editbox. Toggles
+               flip text on click via tiny inline JS. Nothing here
+               is wired to persistence. #}
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn secondary"
+                      title="Add reviewer rule (placeholder)">+</button>
+              <div style="width: 3px; height: 28px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+              <button type="button" class="btn secondary"
+                      onclick="this.textContent = this.textContent.trim() === 'AND' ? 'OR' : 'AND';"
+                      title="Toggle combinator (placeholder)">AND</button>
+              <select>
+                <option>reviewer.tag1</option>
+                <option>reviewer.tag2</option>
+                <option>reviewer.tag3</option>
+                <option>pair_context.tag1</option>
+                <option>pair_context.tag2</option>
+                <option>pair_context.tag3</option>
+              </select>
+              <button type="button" class="btn secondary"
+                      onclick="this.textContent = this.textContent.trim() === 'IS' ? 'IS NOT' : 'IS';"
+                      title="Toggle operator (placeholder)">IS</button>
+              <input type="text" placeholder="value" style="max-width: 8em;">
+            </div>
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">Link 2</h3>
+            <h3 style="margin: 0;">Pool of those reviewed</h3>
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">Link 3</h3>
+            <h3 style="margin: 0;">Unit of review</h3>
           </div>
         </div>
 
