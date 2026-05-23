@@ -733,14 +733,16 @@
                IS / IS NOT operator toggle, value editbox. Toggles
                flip text on click via tiny inline JS. Nothing here
                is wired to persistence. #}
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
               <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
                       title="Add reviewer rule (placeholder)">+</button>
               <div style="width: 3px; height: 28px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
               <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
                       onclick="this.textContent = this.textContent.trim() === 'AND' ? 'OR' : 'AND';"
                       title="Toggle combinator (placeholder)">AND</button>
-              <select>
+              <select style="padding: 4px; min-width: 0; flex-shrink: 1;">
                 <option>reviewer.tag1</option>
                 <option>reviewer.tag2</option>
                 <option>reviewer.tag3</option>
@@ -749,9 +751,11 @@
                 <option>pair_context.tag3</option>
               </select>
               <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
                       onclick="this.textContent = this.textContent.trim() === 'IS' ? 'IS NOT' : 'IS';"
                       title="Toggle operator (placeholder)">IS</button>
-              <input type="text" placeholder="value" style="max-width: 8em;">
+              <input type="text" placeholder="value"
+                     style="flex: 1; min-width: 0; padding: 4px;">
             </div>
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
