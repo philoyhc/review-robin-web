@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Relationship,
     Reviewee,
@@ -37,6 +38,7 @@ from app.db.models import (
 from app.services import field_labels
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
+from app.services._queries import slot_has_data
 from app.web import breadcrumbs
 
 from ._setup import session_status_pills
@@ -367,6 +369,99 @@ def build_instrument_rule_picker_contexts(
     return contexts
 
 
+def _new_model_band2_state(
+    db: Session,
+    instrument: Instrument,
+) -> dict[str, Any]:
+    """For the new-model card's Band 2 ("Review Instrument") preview:
+    every display field on the instrument whose source slot has data
+    somewhere in the session, with the field's friendly label and a
+    sample value pulled from the first active reviewee.
+
+    Filters out display fields whose underlying source column has no
+    populated value in the session — same "Fields with data" UX as
+    the Reviewers / Reviewees / Relationships Setup pages (which
+    consume the parallel
+    :func:`app.services.assignments.reviewee_fields_with_data` family
+    over the shared :func:`app.services._queries.slot_has_data`
+    primitive).
+
+    Returns ``{"fields": [{"label": str, "value": str | None}, ...],
+    "sample_reviewee_name": str | None}``. Pair-context fields surface
+    in the field list (when at least one active relationship carries a
+    value for that slot) with ``value=None`` until the sample-row
+    selector lands — they need a specific ``(reviewer, reviewee)``
+    relationship to resolve a concrete value.
+    """
+    review_session = instrument.session
+    sample = db.execute(
+        select(Reviewee)
+        .where(Reviewee.session_id == review_session.id)
+        .where(Reviewee.status == "active")
+        .order_by(Reviewee.id)
+        .limit(1)
+    ).scalar_one_or_none()
+    fields: list[dict[str, Any]] = []
+    for f in instrument.display_fields:
+        if not f.visible:
+            continue
+        if not _display_field_has_data(db, review_session.id, f):
+            continue
+        label = field_labels.resolve(
+            review_session,
+            f.source_type,
+            _label_slot(f.source_type, f.source_field),
+        )
+        value: str | None
+        if sample is None:
+            value = None
+        elif f.source_type == "reviewee":
+            raw = getattr(sample, f.source_field, None)
+            value = raw if raw else None
+        elif f.source_type == "pair_context":
+            value = None  # placeholder; needs a relationship to resolve
+        else:
+            value = None
+        fields.append({"label": label, "value": value})
+    return {
+        "fields": fields,
+        "sample_reviewee_name": sample.name if sample is not None else None,
+    }
+
+
+def _display_field_has_data(
+    db: Session, session_id: int, field: InstrumentDisplayField
+) -> bool:
+    """``True`` iff the display field's underlying source column has
+    at least one populated row in the session. Reuses
+    :func:`slot_has_data` for the column-level check; pair-context
+    rows are gated on ``status == "active"`` to mirror the rule
+    engine's view (the same gate ``_new_model_usable_tags`` applies)."""
+    if field.source_type == "reviewee":
+        col = getattr(Reviewee, field.source_field, None)
+        if col is None:
+            return False
+        return slot_has_data(db, session_id=session_id, column=col)
+    if field.source_type == "pair_context":
+        col = getattr(Relationship, f"tag_{field.source_field}", None)
+        if col is None:
+            return False
+        return slot_has_data(
+            db, session_id=session_id, column=col, active_only=True
+        )
+    return False
+
+
+def _label_slot(source_type: str, source_field: str) -> str:
+    """Map a display-field ``source_field`` to the
+    ``field_labels.resolve(...)`` slot name. Reviewee fields pass
+    through; pair-context strips the ``tag_`` prefix (the registry
+    keys pair-context slots as ``"1"`` / ``"2"`` / ``"3"``)."""
+    if source_type == "pair_context" and source_field.startswith("tag_"):
+        return source_field.split("_", 1)[1]
+    return source_field
+
+
 def _new_model_usable_tags(
     db: Session, review_session: ReviewSession
 ) -> dict[str, list[tuple[str, str]]]:
@@ -393,50 +488,31 @@ def _new_model_usable_tags(
     # relationship-level.
     label_prefix = {"reviewer": "R-", "reviewee": "E-", "pair_context": ""}
     namespace_specs = [
-        (
-            "reviewer",
-            Reviewer,
-            [("tag_1", "reviewer.tag1"), ("tag_2", "reviewer.tag2"), ("tag_3", "reviewer.tag3")],
-            None,
-        ),
-        (
-            "reviewee",
-            Reviewee,
-            [("tag_1", "reviewee.tag1"), ("tag_2", "reviewee.tag2"), ("tag_3", "reviewee.tag3")],
-            None,
-        ),
-        (
-            "pair_context",
-            Relationship,
-            [("tag_1", "pair_context.tag1"), ("tag_2", "pair_context.tag2"), ("tag_3", "pair_context.tag3")],
-            "1|2|3",
-        ),
+        ("reviewer", Reviewer, "reviewer.tag", False),
+        ("reviewee", Reviewee, "reviewee.tag", False),
+        ("pair_context", Relationship, "pair_context.tag", True),
     ]
-    for namespace, model, slots, _ in namespace_specs:
-        for column_name, canonical_key in slots:
-            col = getattr(model, column_name)
-            base_query = select(model.id).where(
-                model.session_id == review_session.id,
-                col.isnot(None),
-                col != "",
-            )
-            if namespace == "pair_context":
-                base_query = base_query.where(model.status == "active")
-            has_value = db.execute(base_query.limit(1)).first() is not None
-            if not has_value:
+    for namespace, model, canonical_prefix, active_only in namespace_specs:
+        for slot in (1, 2, 3):
+            column_name = f"tag_{slot}"
+            if not slot_has_data(
+                db,
+                session_id=review_session.id,
+                column=getattr(model, column_name),
+                active_only=active_only,
+            ):
                 continue
             # Field labels store pair_context slots as "1" / "2" / "3"
             # (without the "tag_" prefix); reviewer / reviewee use
             # "tag_1" / "tag_2" / "tag_3".
-            if namespace == "pair_context":
-                label_field = column_name.split("_", 1)[1]
-            else:
-                label_field = column_name
+            label_field = (
+                str(slot) if namespace == "pair_context" else column_name
+            )
             friendly = field_labels.resolve(
                 review_session, namespace, label_field
             )
             result[namespace].append(
-                (canonical_key, label_prefix[namespace] + friendly)
+                (f"{canonical_prefix}{slot}", label_prefix[namespace] + friendly)
             )
     return result
 
@@ -623,6 +699,11 @@ def build_instruments_context(
                     instrument.group_kind
                 ),
             }
+            for instrument in instruments
+            if instrument.is_new_model
+        },
+        "new_model_band2_state": {
+            instrument.id: _new_model_band2_state(db, instrument)
             for instrument in instruments
             if instrument.is_new_model
         },

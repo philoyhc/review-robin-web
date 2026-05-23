@@ -20,7 +20,7 @@ from app.db.models import (
 )
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, session_lifecycle as lifecycle
-from app.services._queries import session_scoped
+from app.services._queries import session_scoped, slot_has_data
 
 PAIR_PREVIEW_LIMIT = 200
 
@@ -37,14 +37,9 @@ def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
     if has_any:
         labels.extend(["ReviewerName", "ReviewerEmail"])
     for slot in (1, 2, 3):
-        col = getattr(Reviewer, f"tag_{slot}")
-        found = db.execute(
-            session_scoped(Reviewer.id, session_id)
-            .where(col.is_not(None))
-            .where(col != "")
-            .limit(1)
-        ).first()
-        if found is not None:
+        if slot_has_data(
+            db, session_id=session_id, column=getattr(Reviewer, f"tag_{slot}")
+        ):
             labels.append(f"ReviewerTag{slot}")
     return labels
 
@@ -60,23 +55,14 @@ def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
     )
     if has_any:
         labels.extend(["RevieweeName", "RevieweeEmail"])
-    profile_found = db.execute(
-        session_scoped(Reviewee.id, session_id)
-        .where(Reviewee.profile_link.is_not(None))
-        .where(Reviewee.profile_link != "")
-        .limit(1)
-    ).first()
-    if profile_found is not None:
+    if slot_has_data(
+        db, session_id=session_id, column=Reviewee.profile_link
+    ):
         labels.append("PhotoLink")
     for slot in (1, 2, 3):
-        col = getattr(Reviewee, f"tag_{slot}")
-        found = db.execute(
-            session_scoped(Reviewee.id, session_id)
-            .where(col.is_not(None))
-            .where(col != "")
-            .limit(1)
-        ).first()
-        if found is not None:
+        if slot_has_data(
+            db, session_id=session_id, column=getattr(Reviewee, f"tag_{slot}")
+        ):
             labels.append(f"RevieweeTag{slot}")
     return labels
 
@@ -103,15 +89,11 @@ def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
         return labels
     labels.extend(["ReviewerEmail", "RevieweeEmail", "IncludeAssignment"])
     for slot in (1, 2, 3):
-        col = getattr(Relationship, f"tag_{slot}")
-        found = db.execute(
-            select(Relationship.id)
-            .where(Relationship.session_id == session_id)
-            .where(col.is_not(None))
-            .where(col != "")
-            .limit(1)
-        ).first()
-        if found is not None:
+        if slot_has_data(
+            db,
+            session_id=session_id,
+            column=getattr(Relationship, f"tag_{slot}"),
+        ):
             labels.append(f"PairContext{slot}")
     return labels
 

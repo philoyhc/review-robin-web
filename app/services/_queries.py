@@ -41,3 +41,40 @@ def session_scoped(target: Any, session_id: int) -> Select[Any]:
     """
     model = target if isinstance(target, type) else target.class_
     return select(target).where(model.session_id == session_id)
+
+
+def slot_has_data(
+    db: Any,
+    *,
+    session_id: int,
+    column: Any,
+    active_only: bool = False,
+) -> bool:
+    """``True`` iff at least one row of ``column``'s model for this
+    session has a non-empty value in ``column`` (non-NULL and not the
+    empty string).
+
+    Shared primitive used by:
+
+    - The Setup pages' "Fields with data" pills
+      (``app.services.assignments.reviewer_fields_with_data`` etc.).
+    - Band 1's tag-slot dropdowns on the new-model instrument card
+      (``app.web.views._instruments._new_model_usable_tags``).
+    - Band 2's "Review Instrument" preview pills
+      (``app.web.views._instruments._new_model_band2_state``).
+
+    ``active_only=True`` restricts to rows where ``status == "active"``,
+    matching the rule engine's view of pair-context tags (only active
+    relationships contribute predicate values). Setup-page callers
+    leave it ``False`` — they show imported data regardless of status.
+    """
+    model = column.class_
+    q = (
+        select(model.id)
+        .where(model.session_id == session_id)
+        .where(column.is_not(None))
+        .where(column != "")
+    )
+    if active_only:
+        q = q.where(model.status == "active")
+    return db.execute(q.limit(1)).first() is not None

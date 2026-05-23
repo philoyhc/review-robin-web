@@ -597,7 +597,7 @@ def test_add_new_model_creates_instrument_with_is_new_model_flag(
     assert "Pool of reviewers" in body  # Band 1 Link 1 column
     assert "Pool of those reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
-    assert "Band 2" in body
+    assert "Review Instrument" in body  # Band 2 heading
     assert "Visibility" in body  # Band 3 left-column table title
     assert ">New model<" in body  # status pill on the new-model card
 
@@ -815,3 +815,57 @@ def test_new_model_band1_all_mode_clears_rules(
     rule_set = db.get(SessionRuleSet, rule_set_id)
     assert rule_set is not None
     assert rule_set.rules_json == []
+
+
+def test_new_model_band2_renders_review_instrument_pills_with_sample_data(
+    client: TestClient, db: Session
+) -> None:
+    """Band 2 (Review Instrument) lists every visible display field on
+    the new-model instrument as an inline pill, with the sample value
+    pulled from the first active reviewee in the session."""
+    review_session = _make_session(client, db, code="nm-band2")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # Band heading renamed.
+    assert "Review Instrument" in flat
+    assert ">Band 2<" not in flat
+    # Display fields render as inline chips. The seeded reviewee
+    # carries name=E1, email_or_identifier=e1@example.edu, tag_1=Team A —
+    # all three should surface on at least one pill.
+    assert "E1" in flat
+    assert "e1@example.edu" in flat
+    assert "Team A" in flat
+    # The sample reviewee caption names the source.
+    assert "Sample reviewee:" in flat
+    assert "<strong>E1</strong>" in flat
+
+
+def test_new_model_band2_handles_session_with_no_reviewees(
+    client: TestClient, db: Session
+) -> None:
+    """When the session has no reviewees with data, Band 2 renders a
+    Setup-page-style em-dash chip and a prompt to import reviewees."""
+    review_session = _make_session(client, db, code="nm-band2-empty")
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    assert "Review Instrument" in flat
+    assert "No populated reviewee fields yet" in flat
