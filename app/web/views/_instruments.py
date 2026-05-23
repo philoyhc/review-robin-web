@@ -461,11 +461,16 @@ def _new_model_band2_state(
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")
+    band2_state = instrument.band2_state or {}
+    selected_display_keys = set(band2_state.get("selected_display_keys") or [])
+    response_fields = list(band2_state.get("response_fields") or [])
     return {
         "fields": fields,
         "sample_names": sample_names,
         "sample_extra_count": sample_extra_count,
         "identity_width_px": identity_width_px,
+        "selected_display_keys": selected_display_keys,
+        "response_fields": response_fields,
     }
 
 

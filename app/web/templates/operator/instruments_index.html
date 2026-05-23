@@ -1177,9 +1177,10 @@
             <div data-new-model-band2-pills
                  style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
               {% for field in _band2.fields %}
-                <span class="pill tag-chip"
+                {% set _selected = field.key in _band2.selected_display_keys %}
+                <span class="pill tag-chip{% if _selected %} pill-count is-selected{% endif %}"
                       role="button" tabindex="0"
-                      aria-pressed="false"
+                      aria-pressed="{{ 'true' if _selected else 'false' }}"
                       data-new-model-band2-pill
                       data-key="{{ field.key }}"
                       data-label="{{ field.label }}"
@@ -1199,9 +1200,43 @@
                       {% endif %}
                       onclick="newModelToggleBand2Pill(this)"
                       title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
-              {% else %}
-                <span class="muted">—</span>
               {% endfor %}
+              {# Server-render the `||` divider + response pills
+                 from the persisted band2_state.response_fields list.
+                 Each entry's index gives a stable per-render key
+                 (``rf_<idx>``) that both the row and the pill share
+                 so the JS save / delete handlers can find them. #}
+              {% if _band2.response_fields %}
+                <span class="new-model-band2-pills-divider"
+                      data-new-model-band2-pills-divider
+                      aria-hidden="true">||</span>
+                {% for rf in _band2.response_fields %}
+                  {% set _key = 'rf_' ~ loop.index0 %}
+                  <span class="pill tag-chip{% if rf.selected %} pill-count is-selected{% endif %}"
+                        role="button" tabindex="0"
+                        aria-pressed="{{ 'true' if rf.selected else 'false' }}"
+                        data-new-model-band2-pill
+                        data-key="{{ _key }}"
+                        data-label="{{ rf.name }}"
+                        data-source-type="response"
+                        data-source-field="{{ rf.name }}"
+                        data-value=""
+                        data-selectable-in-group="true"
+                        data-row-key="{{ _key }}"
+                        data-response-key="{{ _key }}"
+                        data-reorderable="true"
+                        draggable="true"
+                        ondragstart="newModelBand2DragStart(event)"
+                        ondragend="newModelBand2DragEnd(event)"
+                        ondragover="newModelBand2DragOver(event)"
+                        ondrop="newModelBand2Drop(event)"
+                        onclick="newModelToggleBand2Pill(this)"
+                        title="Click to include / drag to reorder {{ rf.name }}"><span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{{ rf.name }}</span>
+                {% endfor %}
+              {% endif %}
+              {% if not _band2.fields and not _band2.response_fields %}
+                <span class="muted">—</span>
+              {% endif %}
             </div>
             {# Response field details now live as editable rows
                inside Band 3's "Response fields" section — the
@@ -1501,6 +1536,61 @@
                 if (window.console) { console.warn('Band 2 column widths save failed', err); }
               });
             }
+            // POST the operator's Band 2 selections + Band 3
+            // response-field row data to the band2-state route.
+            // Pill selection is read from aria-pressed; response
+            // field rows are matched to pills via data-row-key so
+            // only ✓'d rows persist. Best-effort: failures are
+            // logged but don't surface to the operator.
+            function saveBand2State(card) {
+              var sessionId = card.getAttribute('data-new-model-band2-session-id');
+              var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
+              if (!sessionId || !instrumentId) { return; }
+              var selectedDisplayKeys = [];
+              card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (pill) {
+                if (pill.getAttribute('data-source-type') !== 'response') {
+                  selectedDisplayKeys.push(pill.getAttribute('data-key'));
+                }
+              });
+              var instrumentCard = card.closest('[id^="instrument-"]');
+              var responseFields = [];
+              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"]').forEach(function (pill) {
+                var rowKey = pill.getAttribute('data-row-key');
+                if (!rowKey || !instrumentCard) { return; }
+                var row = instrumentCard.querySelector('[data-new-model-rf-row][data-row-key="' + rowKey + '"]');
+                if (!row) { return; }
+                var nameInput = row.querySelector('[data-new-model-rf-name]');
+                var typeSelect = row.querySelector('[data-new-model-rf-data-type]');
+                var name = (nameInput && nameInput.value || '').trim();
+                if (!name) { return; }
+                var rf = {
+                  name: name,
+                  data_type: typeSelect ? typeSelect.value : 'string',
+                  min: '',
+                  max: '',
+                  step: '',
+                  list_options: '',
+                  selected: pill.getAttribute('aria-pressed') === 'true',
+                };
+                row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+                  var key = input.getAttribute('data-new-model-rf-bound');
+                  if (key === 'list') { key = 'list_options'; }
+                  rf[key] = input.value || '';
+                });
+                responseFields.push(rf);
+              });
+              fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/band2-state', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  selected_display_keys: selectedDisplayKeys,
+                  response_fields: responseFields,
+                }),
+              }).catch(function (err) {
+                if (window.console) { console.warn('Band 2 state save failed', err); }
+              });
+            }
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
               if (!container) { return; }
@@ -1526,7 +1616,10 @@
                 pill.classList.remove('pill-count');
               }
               var card = pill.closest('[data-new-model-band2]');
-              if (card) { rebuildPreview(card); }
+              if (card) {
+                rebuildPreview(card);
+                saveBand2State(card);
+              }
             };
             window.newModelRefreshBand2 = function (card) {
               if (!card) { return; }
@@ -1611,11 +1704,15 @@
               target.parentNode.insertBefore(dragSource, target);
               var band2Card = target.closest('[data-new-model-band2]');
               if (band2Card) {
-                // Response-pill reorder is client-side only — no
-                // persistent ``display_field.order`` to write — so
-                // skip the POST when the drag source is a response.
+                // Display-pill reorder writes ``display_field.order``
+                // via the dedicated route. Response-pill reorder
+                // doesn't have a backing ``display_field.order``,
+                // but the new pill ordering does need to persist
+                // in band2_state — handle it via saveBand2State.
                 if (pillRegion(dragSource) === 'display') {
                   saveBand2DisplayFieldOrder(band2Card);
+                } else {
+                  saveBand2State(band2Card);
                 }
                 rebuildPreview(band2Card);
               }
@@ -1685,7 +1782,7 @@
         {% endmacro %}
         <div data-new-model-band3
              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-                    align-items: start;
+                    align-items: stretch;
                     {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           <div>
@@ -1762,13 +1859,77 @@
                on subsequent saves); the X button drops the row and
                its pill. The `+` button below the rows spawns a new
                empty row. Pure UX — nothing persists across reload. #}
+            {# Render one row per persisted response field, plus an
+               empty starter row at the end so the operator can keep
+               typing. Each row's data-row-key matches the paired
+               pill's data-row-key (``rf_<idx>`` for saved rows, or
+               a fresh ``rf_N`` from the row counter for the
+               trailing empty row). #}
+            {% set _rfs = _band2.response_fields %}
+            {% set _next_idx = (_rfs | length) %}
             <div data-new-model-rf-rows
-                 data-new-model-rf-row-counter="1">
-              {# Render one starter row template so the operator
-                 can start typing immediately. Subsequent rows are
-                 cloned from the first row's DOM via JS. #}
+                 data-new-model-rf-row-counter="{{ _next_idx + 1 }}">
+              {% for rf in _rfs %}
+                {% set _rkey = 'rf_' ~ loop.index0 %}
+                <div data-new-model-rf-row
+                     data-row-key="{{ _rkey }}"
+                     style="display: flex; flex-wrap: nowrap; gap: 8px;
+                            align-items: center; width: 100%;
+                            margin-bottom: 8px;">
+                  <input type="text"
+                         data-new-model-rf-name
+                         placeholder="Response field"
+                         value="{{ rf.name }}"
+                         style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                  <select data-new-model-rf-data-type
+                          onchange="newModelRfSyncBounds(this)"
+                          style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                    <option value="string" {% if rf.data_type == 'string' %}selected{% endif %}>String</option>
+                    <option value="integer" {% if rf.data_type == 'integer' %}selected{% endif %}>Integer</option>
+                    <option value="decimal" {% if rf.data_type == 'decimal' %}selected{% endif %}>Decimal</option>
+                    <option value="list" {% if rf.data_type == 'list' %}selected{% endif %}>List</option>
+                  </select>
+                  <div data-new-model-rf-bounds-wrap
+                       style="flex: 1 1 auto; min-width: 0;
+                              display: grid;
+                              grid-template-columns: 1fr 1fr 1fr;
+                              gap: 8px; align-items: center;">
+                    <input type="text"
+                           data-new-model-rf-bound="min"
+                           placeholder="Min"
+                           value="{{ rf.min }}"
+                           style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
+                    <input type="text"
+                           data-new-model-rf-bound="max"
+                           placeholder="Max"
+                           value="{{ rf.max }}"
+                           style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
+                    <input type="text"
+                           data-new-model-rf-bound="step"
+                           placeholder="Step"
+                           value="{{ rf.step }}"
+                           style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type not in ('integer', 'decimal') %} display: none;{% endif %}">
+                    <input type="text"
+                           data-new-model-rf-bound="list"
+                           placeholder="List (comma-separated)"
+                           value="{{ rf.list_options }}"
+                           style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
+                  </div>
+                  <button type="button" class="btn secondary"
+                          style="flex: 0 0 auto; padding: 4px 10px;"
+                          onclick="newModelRfSaveRow(this)"
+                          title="Save this response field to the pills + preview">✓</button>
+                  <button type="button" class="btn secondary"
+                          style="flex: 0 0 auto; padding: 4px 10px;"
+                          onclick="newModelRfDeleteRow(this)"
+                          title="Delete this row (and its paired pill, if saved)">X</button>
+                </div>
+              {% endfor %}
+              {# Trailing empty row so the operator can start typing
+                 a new field without first clicking +. Its data-row-key
+                 reuses the row counter so successive + clicks bump it. #}
               <div data-new-model-rf-row
-                   data-row-key="rf_1"
+                   data-row-key="rf_{{ _next_idx }}"
                    style="display: flex; flex-wrap: nowrap; gap: 8px;
                           align-items: center; width: 100%;
                           margin-bottom: 8px;">
@@ -1784,11 +1945,6 @@
                   <option value="decimal">Decimal</option>
                   <option value="list">List</option>
                 </select>
-                {# Bounds wrapper is a 3-column grid so Min / Max
-                   / Step each pin to a fixed 1/3 slot regardless
-                   of how many are visible — String's Min + Max
-                   stay the same pixel width as Decimal's. List
-                   spans the row when picked. #}
                 <div data-new-model-rf-bounds-wrap
                      style="flex: 1 1 auto; min-width: 0;
                             display: grid;
@@ -1962,6 +2118,7 @@
             // preview row), rebuild the preview so the new label
             // surfaces immediately as the column header.
             if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+            saveBand2State(band2);
           };
           // X on a row: remove the row + its paired pill if saved.
           // If this was the only row, leave one empty row in its
@@ -1985,6 +2142,7 @@
                 if (divider) { divider.remove(); }
               }
               if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+              saveBand2State(band2);
             }
             // If this was the last row, leave a clean empty row in
             // place so the operator has a surface to type into.

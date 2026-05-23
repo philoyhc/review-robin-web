@@ -1347,6 +1347,43 @@ async def instrument_display_fields_order(
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
 
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/band2-state"
+)
+async def instrument_band2_state(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Persist the new-model card's Band 2 selections + Band 3
+    response-field rows. Accepts JSON
+    ``{"selected_display_keys": [...], "response_fields": [...]}``
+    and writes through
+    :func:`instruments_service.set_band2_state`. Returns 200 on
+    success.
+    """
+    instrument, _ = bundle
+    _require_instrument_editable(instrument.session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="band2-state body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="band2-state body must be a JSON object",
+        )
+    instruments_service.set_band2_state(
+        db, instrument=instrument, state=body, actor=user
+    )
+    db.commit()
+    return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
 def instrument_visibility(
     visible_when_closed: str | None = Form(default=None),
