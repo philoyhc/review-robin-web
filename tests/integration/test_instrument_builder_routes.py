@@ -595,9 +595,7 @@ def test_add_pilot_creates_instrument_with_is_pilot_flag(
     assert "Pool of those reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
     assert "Band 2" in body
-    assert "Who can see the responses?" in body  # Band 3 Link 4 column
-    assert "What can they see?" in body  # Band 3 Link 5 column
-    assert "When can they see them?" in body  # Band 3 Link 6 column
+    assert "Visibility" in body  # Band 3 left-column table title
     assert ">Pilot<" in body  # status pill on the pilot card
 
     # Delete on the pilot card uses the standard delete route
