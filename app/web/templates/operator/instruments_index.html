@@ -1051,15 +1051,15 @@
            placeholder; see guide/instrument_builder.md §Band 3. #}
         {% macro pilot_audience_chip(label, selected=false) %}
           <button type="button" class="pill pill-info"
-                  style="cursor: pointer; border: none; font: inherit; font-size: 0.8em;
+                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;
                          opacity: {{ '1' if selected else '0.4' }};"
                   data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
                   onclick="pilotToggleAudience(this)"
                   title="Click to toggle audience (placeholder)">{{ label }}</button>
         {% endmacro %}
         {% macro pilot_cycle_button(cycle, current) %}
-          <button type="button" class="btn secondary"
-                  style="padding: 4px 10px;"
+          <button type="button" class="pill pill-info"
+                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
                   data-pilot-cycle="{{ cycle | join('|') }}"
                   onclick="pilotCycleButton(this)"
                   title="Click to cycle (placeholder)">{{ current }}</button>
@@ -1078,11 +1078,7 @@
                 {% if sub_cycle %}
                   <span data-pilot-audience-other-cell
                         style="opacity: {{ _row_op }}; pointer-events: {{ _row_pe }};">
-                    <button type="button" class="pill pill-warning"
-                            style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
-                            data-pilot-cycle="{{ sub_cycle | join('|') }}"
-                            onclick="pilotCycleButton(this)"
-                            title="Click to cycle (placeholder)">{{ sub_cycle[0] }}</button>
+                    {{ pilot_cycle_button(sub_cycle, sub_cycle[0]) }}
                   </span>
                 {% endif %}
               </span>
