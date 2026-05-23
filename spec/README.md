@@ -35,6 +35,7 @@ detailed contracts.
 | `session_home.md` | Session Home / Control Panel — Workflow card, Extract Data card, Quick Setup card, Session Details, Danger Zone. |
 | `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships) — shared body shape, visibility-toggle pattern, per-page column orders. |
 | `instruments.md` | Locked spec for the per-session Instruments page — per-instrument card, response-fields builder, RTD card. |
+| `instrument_builder.md` | Pilot-card surface for the in-flight Instrument Builder redesign (vertical-bands layout) — currently the identity section + Band 1 (Pool of reviewers / Pool of those reviewed / Unit of review). Hangs off the design plan at `guide/instrument_builder.md`. |
 | `group_scoped_instruments.md` | Group-scoped instruments (Segment 13C) — a second instrument flavour where one reviewer answer covers a whole group of reviewees. Group-boundary tags, the write fan-out + collapse-on-read model, the single-reviewee-rows storage decision, and the reviewer-group pair count. |
 | `quick_setup_card_spec.md` | Quick Setup card on Session Home — four-slot CSV upload (Reviewers / Reviewees / Relationships / Settings) with shared confirm + cascade + lifecycle-lock semantics. |
 | `preview_hub.md` | Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
