@@ -722,16 +722,18 @@
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
         {# Band 1 — Links 1 + 2 + 3 (Assignment rule + Unit of
-           review). Three columns of unequal width (2/6, 3/6,
-           1/6) with vertical rules between. Placeholders for
-           now; see guide/instrument_builder.md §Band 1. #}
-        {# Reusable rule-list placeholder. Used by Link 1 (Pool of
+           review). Three columns of equal width with vertical
+           rules between. Persisted via the per-instrument
+           ``dfsave-{id}`` form (Band 1 service:
+           ``app/services/instruments/_band1.py``). #}
+        {# Reusable rule-list editor. Used by Link 1 (Pool of
            reviewers) and Link 2 (Pool of those reviewed); the only
-           difference between them is the dropdown's tag namespace
-           (reviewer.tag* vs reviewee.tag*). All shared markup +
-           inline window.newModel* helpers — nothing wired to
-           persistence. #}
-        {% macro new_model_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
+           differences are the dropdown's tag namespace (reviewer.tag*
+           vs reviewee.tag*) and the operator cycle (Link 2 gets the
+           cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
+           Hydrated from ``state`` (a dict with mode / combinator /
+           rules — see views._instruments.build_band1_state). #}
+        {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
           {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
           {% set _is_active = tag_options | length > 0 %}
           {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
@@ -740,6 +742,15 @@
           {% if operand_tag_options is not none and operand_tag_options | length == 0 %}
             {% set _ops = _ops | reject('in', ['IS THE SAME AS', 'IS DIFFERENT FROM']) | list %}
           {% endif %}
+          {% set _stored_mode = state.mode if state is mapping else "all" %}
+          {% set _stored_combinator = state.combinator if state is mapping else "AND" %}
+          {% set _stored_rules = state.rules if state is mapping else [] %}
+          {# Render one cell per stored rule, falling back to one
+             default cell when no rules have been saved yet. The
+             default cell submits as a "blank" rule that the service
+             ignores — see _build_match_rule's blank-field guard. #}
+          {% set _cells = _stored_rules if _stored_rules | length > 0 else [None] %}
+          {% set _filter_on = _stored_mode == "filter" %}
           <div data-new-model-link-wrapper>
             <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
               {{ title }}
@@ -748,65 +759,96 @@
                  active). Default is All. Disabled (and stuck on
                  All) when no usable tags exist for this link. #}
               <span class="pill {% if _is_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                    data-new-model-rule-mode="all"
+                    data-new-model-rule-mode="{{ _stored_mode }}"
                     data-new-model-mode-on-label="{{ on_label }}"
-                    {% if _is_active %}role="button" tabindex="0" aria-pressed="false" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
-                    title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</span>
+                    {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'true' if _filter_on else 'false' }}" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
+                    title="{{ 'Click to toggle' if _is_active else 'No usable tags for this link' }}">{{ on_label if _filter_on else "All" }}</span>
             </h3>
+            {% if is_editing %}
+              {# Hidden inputs that carry mode + combinator state
+                 alongside the per-rule arrays. newModelToggleRuleMode
+                 and the AND/OR button below keep these in sync. #}
+              <input form="dfsave-{{ instrument_id }}" type="hidden"
+                     name="{{ link_id }}_mode"
+                     data-new-model-mode-input
+                     value="{{ _stored_mode }}">
+              <input form="dfsave-{{ instrument_id }}" type="hidden"
+                     name="{{ link_id }}_combinator"
+                     data-new-model-combinator-input
+                     value="{{ _stored_combinator }}">
+            {% endif %}
             <div data-new-model-rule-builder
                  style="display: flex; align-items: stretch; gap: 8px;
-                        opacity: 0.5; pointer-events: none;">
+                        {% if not _filter_on %}opacity: 0.5; pointer-events: none;{% endif %}">
               <div style="flex: 0 0 20%; display: flex;
                           align-items: center; justify-content: center; gap: 4px;">
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
                         onclick="newModelAddRule(this)"
-                        title="Add rule (placeholder)">+</button>
+                        title="Add rule">+</button>
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
-                        onclick="this.textContent = this.textContent.trim() === 'AND' ? 'OR' : 'AND';"
-                        title="Toggle combinator (placeholder)">AND</button>
+                        data-new-model-combinator-toggle
+                        onclick="newModelToggleCombinator(this)"
+                        title="Toggle combinator">{{ _stored_combinator }}</button>
               </div>
               <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
               <div data-new-model-rule-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
-                <div data-new-model-rule-cell
-                     style="display: flex; flex-direction: column; gap: 4px;">
-                  <div style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                      {% for key, label in tag_options %}
-                        <option value="{{ key }}">{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    <button type="button" class="btn secondary"
-                            style="padding: 4px 8px; flex-shrink: 0;"
-                            data-new-model-operator-cycle="{{ _ops | join('|') }}"
-                            onclick="newModelCycleOperator(this)"
-                            title="Toggle operator (placeholder)">{{ _ops[0] }}</button>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 4px;">
-                    {% if operand_tag_options %}
-                      {# Tag-operand dropdown shown when the operator
-                         is IS THE SAME AS / IS DIFFERENT FROM; hidden
-                         (display: none) when the operator is IS /
-                         IS NOT (default). newModelCycleOperator toggles
-                         visibility. #}
-                      <select data-new-model-operand-tag
-                              style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
-                        {% for key, label in operand_tag_options %}
-                          <option value="{{ key }}">{{ label }}</option>
+                {% for _rule in _cells %}
+                  {% set _r = _rule or {"field": "", "op": _ops[0], "operand_value": "", "operand_tag": ""} %}
+                  {% set _use_tag_operand = _r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
+                  {% set _is_first = loop.first %}
+                  <div data-new-model-rule-cell
+                       style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
+                              {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"{% endif %}>
+                        {% for key, label in tag_options %}
+                          <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                       </select>
-                    {% endif %}
-                    <input data-new-model-operand-value type="text" placeholder="value"
-                           style="flex: 1; min-width: 0; padding: 4px;">
-                    <button type="button" class="btn destructive"
-                            style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="newModelRemoveRule(this)"
-                            disabled aria-disabled="true"
-                            title="Cannot remove the first rule (placeholder)">X</button>
+                      <button type="button" class="btn secondary"
+                              style="padding: 4px 8px; flex-shrink: 0;"
+                              data-new-model-operator-cycle="{{ _ops | join('|') }}"
+                              onclick="newModelCycleOperator(this)"
+                              title="Toggle operator">{{ _r.op if _r.op in _ops else _ops[0] }}</button>
+                      {% if is_editing %}
+                        <input form="dfsave-{{ instrument_id }}" type="hidden"
+                               name="{{ link_id }}_op"
+                               data-new-model-op-input
+                               value="{{ _r.op if _r.op in _ops else _ops[0] }}">
+                      {% endif %}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      {% if operand_tag_options %}
+                        <select data-new-model-operand-tag
+                                style="flex: 0 0 50%; min-width: 0; padding: 4px; {% if not _use_tag_operand %}display: none;{% endif %}"
+                                {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_tag"{% endif %}>
+                          <option value="">—</option>
+                          {% for key, label in operand_tag_options %}
+                            <option value="{{ key }}" {% if key == _r.operand_tag %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                      {% else %}
+                        {% if is_editing %}
+                          <input form="dfsave-{{ instrument_id }}" type="hidden"
+                                 name="{{ link_id }}_operand_tag" value="">
+                        {% endif %}
+                      {% endif %}
+                      <input data-new-model-operand-value type="text" placeholder="value"
+                             style="flex: 1; min-width: 0; padding: 4px; {% if _use_tag_operand %}display: none;{% endif %}"
+                             value="{{ _r.operand_value }}"
+                             {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value"{% endif %}>
+                      <button type="button" class="btn destructive"
+                              style="padding: 4px 8px; flex-shrink: 0;"
+                              onclick="newModelRemoveRule(this)"
+                              {% if _is_first %}disabled aria-disabled="true"
+                              title="Cannot remove the first rule"
+                              {% else %}title="Remove rule"{% endif %}>X</button>
+                    </div>
                   </div>
-                </div>
+                {% endfor %}
               </div>
             </div>
           </div>
@@ -822,15 +864,28 @@
         {% set _link2_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
         {% set _link2_operand = new_model_tags.reviewer + new_model_tags.pair_context %}
         {% set _link3_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
+        {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
+        {% set _link3_state = new_model_link3_state.get(instrument.id, {"mode": "individual", "boundary_pairs": []}) %}
+        {# Canonical key lookup for the stored boundary pairs:
+           ``("reviewee", "tag_1")`` round-trips as ``"reviewee.tag1"``
+           on the UI side. Use a namespace so the loop appends
+           propagate to the outer scope. #}
+        {% set _ns = namespace(keys=[]) %}
+        {% for source, slot in _link3_state.boundary_pairs %}
+          {% set _ns.keys = _ns.keys + [source ~ "." ~ slot | replace("_", "")] %}
+        {% endfor %}
+        {% set _link3_selected = _ns.keys %}
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
                     {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           <div style="padding: 0 16px 0 0;">
-            {{ new_model_rule_list("Pool of reviewers", _link1_tags,
+            {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
+                "Pool of reviewers", _link1_tags,
                 on_label="Filter using reviewer attributes") }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            {{ new_model_rule_list("Pool of those reviewed", _link2_tags,
+            {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
+                "Pool of those reviewed", _link2_tags,
                 operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
                 operand_tag_options=_link2_operand,
                 on_label="Filter using reviewee attributes") }}
@@ -838,6 +893,7 @@
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <div data-new-model-link-wrapper>
               {% set _link3_active = _link3_tags | length > 0 %}
+              {% set _link3_grouped = _link3_state.mode == "grouped" %}
               <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
                 Unit of review
                 {# Mode-toggle pill: "Individual" (builder greyed out
@@ -845,70 +901,82 @@
                    Disabled (and stuck on Individual) when no usable
                    reviewee / pair_context tags exist for the session. #}
                 <span class="pill {% if _link3_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                      data-new-model-unit-mode="individual"
+                      data-new-model-unit-mode="{{ 'group' if _link3_grouped else 'individual' }}"
                       data-new-model-mode-on-label="Group using reviewee attributes"
-                      {% if _link3_active %}role="button" tabindex="0" aria-pressed="false" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
-                      title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</span>
+                      {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'true' if _link3_grouped else 'false' }}" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
+                      title="{{ 'Click to toggle' if _link3_active else 'No usable tags for this link' }}">{{ "Group using reviewee attributes" if _link3_grouped else "Individual" }}</span>
               </h3>
-              {# Placeholder Link 3 group-boundary picker. Left 45%
-                 carries the "+" (add boundary tag) and an inactive
-                 "THE SAME" label; right 55% holds a stack of cells.
-                 Each cell is a single row: tag dropdown (50%) +
-                 a final action button that is "X" on the LAST cell
-                 (removes it) and inactive "AND" on every earlier
-                 cell. The first cell's X is disabled (can't remove
-                 the only cell). All placeholder — nothing wired
-                 to persistence. #}
+              {% if is_editing %}
+                <input form="dfsave-{{ instrument.id }}" type="hidden"
+                       name="link3_mode"
+                       data-new-model-link3-mode-input
+                       value="{{ 'grouped' if _link3_grouped else 'individual' }}">
+              {% endif %}
+              {% set _link3_cells = _link3_selected if _link3_selected | length > 0 else [""] %}
               <div data-new-model-unit-builder
                    style="display: flex; align-items: stretch; gap: 8px;
-                          opacity: 0.5; pointer-events: none;">
+                          {% if not _link3_grouped %}opacity: 0.5; pointer-events: none;{% endif %}">
                 <div style="flex: 0 0 30%; display: flex;
                             align-items: center; justify-content: center; gap: 8px;">
                   <button type="button" class="btn secondary"
                           style="padding: 4px 10px;"
                           onclick="newModelAddUnitCell(this)"
-                          title="Add boundary tag (placeholder)">+</button>
+                          title="Add boundary tag">+</button>
                   <button type="button" class="btn secondary"
                           style="padding: 4px 10px;"
                           disabled aria-disabled="true"
-                          title="Group identity marker (placeholder)">THE SAME</button>
+                          title="Group identity marker">THE SAME</button>
                 </div>
                 <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
                 <div data-new-model-unit-cells
                      style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <div data-new-model-unit-cell
-                       style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 57.14%; min-width: 0; padding: 4px;">
-                      {% for key, label in _link3_tags %}
-                        <option value="{{ key }}">{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    <button type="button" class="btn destructive" data-new-model-cell-action
-                            style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="newModelRemoveUnitCell(this)"
-                            disabled aria-disabled="true"
-                            title="Cannot remove the first cell (placeholder)">X</button>
-                  </div>
+                  {% for _selected_key in _link3_cells %}
+                    {% set _is_first = loop.first %}
+                    <div data-new-model-unit-cell
+                         style="display: flex; align-items: center; gap: 4px;">
+                      <select style="flex: 0 0 57.14%; min-width: 0; padding: 4px;"
+                              {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
+                        <option value="">—</option>
+                        {% for key, label in _link3_tags %}
+                          <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="button" class="btn destructive" data-new-model-cell-action
+                              style="padding: 4px 8px; flex-shrink: 0;"
+                              onclick="newModelRemoveUnitCell(this)"
+                              {% if _is_first %}disabled aria-disabled="true"
+                              title="Cannot remove the first cell"
+                              {% else %}title="Remove cell"{% endif %}>X</button>
+                    </div>
+                  {% endfor %}
                 </div>
               </div>
             </div>
           </div>
         </div>
         <script>
-          {# Shared placeholder helpers for the rule-list cells.
-             Defined on window so re-rendering / multiple new-model
-             cards on one page is harmless. #}
+          {# Shared helpers for the rule-list cells. Defined on
+             window so re-rendering / multiple new-model cards on
+             one page is harmless. Each helper updates the visible
+             DOM AND the hidden form inputs so the per-instrument
+             ``dfsave-{id}`` submission carries the right values. #}
           window.newModelAddRule = window.newModelAddRule || function (btn) {
             var builder = btn.closest('[data-new-model-rule-builder]');
             var container = builder.querySelector('[data-new-model-rule-cells]');
             var first = container.querySelector('[data-new-model-rule-cell]');
             var clone = first.cloneNode(true);
-            clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+            clone.querySelectorAll('input[type="text"], [data-new-model-operand-value]').forEach(function (i) { i.value = ''; });
             clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
-            // Reset each operator-toggle button to the first option in its cycle.
+            // Reset each operator-toggle button + its hidden op input
+            // to the first option in the cycle.
             clone.querySelectorAll('button[data-new-model-operator-cycle]').forEach(function (b) {
               var cycle = (b.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
               b.textContent = cycle[0];
+            });
+            clone.querySelectorAll('[data-new-model-op-input]').forEach(function (i) {
+              var btnCycle = clone.querySelector('button[data-new-model-operator-cycle]');
+              var cycle = (btnCycle && btnCycle.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
+              i.value = cycle[0];
             });
             // Reset operand variants on the cloned cell: value input
             // shown, tag dropdown (if present) hidden — matching the
@@ -923,7 +991,7 @@
             clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
               b.disabled = false;
               b.removeAttribute('aria-disabled');
-              b.setAttribute('title', 'Remove rule (placeholder)');
+              b.setAttribute('title', 'Remove rule');
             });
             container.appendChild(clone);
           };
@@ -932,10 +1000,14 @@
             var idx = cycle.indexOf(btn.textContent.trim());
             var next = cycle[(idx + 1) % cycle.length];
             btn.textContent = next;
+            // Keep the hidden op input in sync so the form submission
+            // carries the operator label.
+            var cell = btn.closest('[data-new-model-rule-cell]');
+            var opInput = cell.querySelector('[data-new-model-op-input]');
+            if (opInput) { opInput.value = next; }
             // If this cell has both operand variants, swap their
             // visibility: IS / IS NOT → value input; anything else
             // (IS THE SAME AS / IS DIFFERENT FROM) → tag dropdown.
-            var cell = btn.closest('[data-new-model-rule-cell]');
             var tagSel = cell.querySelector('[data-new-model-operand-tag]');
             var valInput = cell.querySelector('[data-new-model-operand-value]');
             if (tagSel && valInput) {
@@ -951,22 +1023,53 @@
               cell.remove();
             }
           };
+          window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
+            var wrap = btn.closest('[data-new-model-link-wrapper]');
+            var builder = wrap.querySelector('[data-new-model-rule-builder]');
+            var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Filter using rules';
+            var modeInput = wrap.querySelector('[data-new-model-mode-input]');
+            if (btn.getAttribute('data-new-model-rule-mode') === 'all') {
+              btn.setAttribute('data-new-model-rule-mode', 'filter');
+              btn.setAttribute('aria-pressed', 'true');
+              btn.textContent = onLabel;
+              builder.style.opacity = '';
+              builder.style.pointerEvents = '';
+              if (modeInput) { modeInput.value = 'filter'; }
+            } else {
+              btn.setAttribute('data-new-model-rule-mode', 'all');
+              btn.setAttribute('aria-pressed', 'false');
+              btn.textContent = 'All';
+              builder.style.opacity = '0.5';
+              builder.style.pointerEvents = 'none';
+              if (modeInput) { modeInput.value = 'all'; }
+            }
+          };
+          window.newModelToggleCombinator = window.newModelToggleCombinator || function (btn) {
+            var wrap = btn.closest('[data-new-model-link-wrapper]');
+            var next = btn.textContent.trim() === 'AND' ? 'OR' : 'AND';
+            btn.textContent = next;
+            var combInput = wrap.querySelector('[data-new-model-combinator-input]');
+            if (combInput) { combInput.value = next; }
+          };
           window.newModelToggleUnitMode = window.newModelToggleUnitMode || function (btn) {
             var wrap = btn.closest('[data-new-model-link-wrapper]');
             var builder = wrap.querySelector('[data-new-model-unit-builder]');
             var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Group';
+            var modeInput = wrap.querySelector('[data-new-model-link3-mode-input]');
             if (btn.getAttribute('data-new-model-unit-mode') === 'individual') {
               btn.setAttribute('data-new-model-unit-mode', 'group');
               btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
-              builder.style.opacity = '1';
-              builder.style.pointerEvents = 'auto';
+              builder.style.opacity = '';
+              builder.style.pointerEvents = '';
+              if (modeInput) { modeInput.value = 'grouped'; }
             } else {
               btn.setAttribute('data-new-model-unit-mode', 'individual');
               btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'Individual';
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
+              if (modeInput) { modeInput.value = 'individual'; }
             }
           };
           window.newModelAddUnitCell = window.newModelAddUnitCell || function (btn) {

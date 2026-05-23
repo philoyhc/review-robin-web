@@ -746,6 +746,63 @@ def set_group_boundary(
     return instrument
 
 
+def set_unit_of_review(
+    db: Session,
+    *,
+    instrument: Instrument,
+    mode: str,
+    boundary_pairs: list[tuple[str, str]],
+    actor: User,
+) -> Instrument:
+    """Set the instrument's unit-of-review (Link 3 of the new-model
+    instrument builder).
+
+    ``mode`` is ``"individual"`` or ``"grouped"``. Individual stores
+    ``group_kind=NULL``; Grouped encodes ``boundary_pairs`` into
+    ``group_kind`` via :func:`encode_group_kind` (with the no-boundary
+    sentinel ``GROUP_KIND_SENTINEL`` when ``boundary_pairs`` is empty).
+
+    Unlike :func:`set_group_boundary` this helper accepts both
+    transitions (``individual ⇄ grouped``); it is the Band 1 writer
+    for new-model instruments where the operator picks the unit
+    inline. No-op saves skip the audit + lifecycle side effects.
+    """
+    if mode == "individual":
+        new_value: str | None = None
+    elif mode == "grouped":
+        new_value = encode_group_kind(boundary_pairs)
+    else:
+        raise ValueError(
+            f"unit_of_review mode must be 'individual' or 'grouped'; "
+            f"got {mode!r}"
+        )
+    if instrument.group_kind == new_value:
+        return instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_unit_of_review_updated",
+    )
+    old_value = instrument.group_kind
+    instrument.group_kind = new_value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.group_boundary_updated",
+        summary=(
+            f"Set unit of review on instrument "
+            f"{_instrument_label(instrument)} to "
+            f"{'grouped' if new_value is not None else 'individual'}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"group_kind": [old_value, new_value]}),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
 def bulk_set_accepting(
     db: Session,
     *,

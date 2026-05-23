@@ -1,0 +1,438 @@
+"""Band 1 persistence service for new-model instruments.
+
+The new-model instrument card surfaces three Links in Band 1:
+
+- **Link 1 — Pool of reviewers.** A list of rules over ``reviewer.*``
+  / ``pair_context.*`` tag predicates.
+- **Link 2 — Pool of those reviewed.** A list of rules over
+  ``reviewee.*`` / ``pair_context.*`` tag predicates, including
+  cross-side ``same_as`` / ``different_from`` operators that take a
+  reviewer-side tag as operand.
+- **Link 3 — Unit of review.** Individual vs Grouped + boundary
+  tags. Link 3 is wired separately in
+  :func:`app.services.instruments.set_unit_of_review` (it writes
+  ``instruments.group_kind``); this module only handles Links 1 + 2.
+
+Storage maps cleanly onto the existing rule engine + per-instrument
+``session_rule_sets`` row:
+
+- Each Link's rules become a ``COMPOSITE`` rule with the Link's
+  ``AND`` / ``OR`` combinator, holding ``MATCH`` rules — one per
+  filter row the operator authored.
+- The two Composites are wrapped under the SessionRuleSet's outer
+  ``ALL_OF`` combinator so Link 1 ∩ Link 2 semantics fall out for
+  free (each Composite is on its own side of the predicate).
+- A Link in "All" mode (no filtering) contributes no Composite —
+  the empty rule list means the full matrix.
+
+Hydration: :func:`decode_band1_state` reads the stored rules_json
+back into the same shape the UI submits.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.db.models import Instrument, SessionRuleSet, User
+from app.services import audit
+from app.services import session_lifecycle as lifecycle
+from app.services.instruments._state import _instrument_label
+
+
+# UI operator label → engine predicate operator.
+_UI_TO_ENGINE_OP: dict[str, str] = {
+    "IS": "equals",
+    "IS NOT": "not_equals",
+    "IS THE SAME AS": "same_as",
+    "IS DIFFERENT FROM": "different_from",
+}
+_ENGINE_TO_UI_OP: dict[str, str] = {v: k for k, v in _UI_TO_ENGINE_OP.items()}
+_TAG_OPERAND_OPS: frozenset[str] = frozenset({"same_as", "different_from"})
+
+
+class Band1ParseError(ValueError):
+    """Raised when a Band 1 form payload is malformed (mismatched
+    array lengths, unknown operator, etc.)."""
+
+
+def set_band1_assignment_rules(
+    db: Session,
+    *,
+    instrument: Instrument,
+    link1_mode: str,
+    link1_combinator: str,
+    link1_rules: list[dict[str, str]],
+    link2_mode: str,
+    link2_combinator: str,
+    link2_rules: list[dict[str, str]],
+    actor: User,
+) -> Instrument:
+    """Persist Band 1's two Link rule lists onto the instrument's
+    pinned :class:`SessionRuleSet`. Materialises a fresh per-instrument
+    row on first save; updates in place on subsequent saves.
+
+    ``link1_mode`` / ``link2_mode`` is ``"all"`` or ``"filter"``. In
+    ``"all"`` mode the Link contributes no rules regardless of the
+    rule list contents. ``"filter"`` mode with an empty rule list
+    folds back to ``"all"`` on storage (no Composite is emitted).
+
+    Each rule dict has shape::
+
+        {
+            "field": "reviewer.tag1",
+            "op": "IS" | "IS NOT" | "IS THE SAME AS" | "IS DIFFERENT FROM",
+            "operand_value": "Lead",      # used when op is IS / IS NOT
+            "operand_tag": "reviewee.tag1",  # used when op is IS THE SAME AS / IS DIFFERENT FROM
+        }
+    """
+    rules_json = _build_rules_json(
+        link1_mode=link1_mode,
+        link1_combinator=link1_combinator,
+        link1_rules=link1_rules,
+        link2_mode=link2_mode,
+        link2_combinator=link2_combinator,
+        link2_rules=link2_rules,
+    )
+
+    rule_set = (
+        db.get(SessionRuleSet, instrument.rule_set_id)
+        if instrument.rule_set_id is not None
+        else None
+    )
+
+    if rule_set is None:
+        if not rules_json:
+            return instrument
+        rule_set = _create_band1_rule_set(
+            db, instrument=instrument, rules_json=rules_json
+        )
+        instrument.rule_set_id = rule_set.id
+        db.flush()
+        lifecycle.invalidate_if_validated(
+            db,
+            review_session=instrument.session,
+            user=actor,
+            reason="instrument_band1_rules_updated",
+        )
+        audit.write_event(
+            db,
+            event_type="session_rule_set.created",
+            summary=(
+                f"Materialised Band 1 RuleSet for new-model instrument "
+                f"{_instrument_label(instrument)}"
+            ),
+            actor_user_id=actor.id,
+            session=instrument.session,
+            payload=audit.snapshot(
+                {
+                    "id": rule_set.id,
+                    "name": rule_set.name,
+                    "combinator": rule_set.combinator,
+                    "rule_count": len(rule_set.rules_json or []),
+                }
+            ),
+            refs={
+                "session_rule_set_id": rule_set.id,
+                "instrument_id": instrument.id,
+            },
+        )
+        return instrument
+
+    if (rule_set.rules_json or []) == rules_json:
+        return instrument
+
+    prev_count = len(rule_set.rules_json or [])
+    new_count = len(rules_json)
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_band1_rules_updated",
+    )
+    rule_set.rules_json = rules_json
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session_rule_set.updated",
+        summary=(
+            f"Updated Band 1 rules on new-model instrument "
+            f"{_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id,
+        session=instrument.session,
+        payload=audit.changes(
+            {
+                "rules_edited": [True, True],
+                "rule_count": [prev_count, new_count],
+            }
+        ),
+        refs={
+            "session_rule_set_id": rule_set.id,
+            "instrument_id": instrument.id,
+        },
+    )
+    return instrument
+
+
+def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
+    """Read the instrument's stored Band 1 state back into the same
+    shape the UI submits. Returns ``{"link1": {...}, "link2": {...}}``
+    with each link's ``mode`` / ``combinator`` / ``rules`` populated.
+    """
+    state: dict[str, Any] = {
+        "link1": _empty_link_state(),
+        "link2": _empty_link_state(),
+    }
+    if instrument.rule_set_id is None:
+        return state
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    if rule_set is None:
+        return state
+    for entry in rule_set.rules_json or []:
+        if entry.get("kind") != "COMPOSITE":
+            continue
+        link_id = entry.get("id")
+        if link_id not in ("link1", "link2"):
+            continue
+        target = state[link_id]
+        target["mode"] = "filter"
+        op = entry.get("op", "AND")
+        target["combinator"] = "OR" if op == "OR" else "AND"
+        target["rules"] = [
+            _decode_match_rule(child)
+            for child in entry.get("rules", [])
+            if child.get("kind") == "MATCH"
+        ]
+    return state
+
+
+def parse_band1_form(form: Any) -> dict[str, Any]:
+    """Parse a Starlette ``FormData`` payload's Band 1 fields into the
+    shape :func:`set_band1_assignment_rules` consumes. Missing fields
+    default to "All" mode with no rules — the empty default.
+
+    Raises :class:`Band1ParseError` if the parallel arrays for a link
+    have mismatched lengths.
+    """
+    return {
+        "link1_mode": _form_mode(form, "link1_mode"),
+        "link1_combinator": _form_combinator(form, "link1_combinator"),
+        "link1_rules": _form_rules(form, "link1"),
+        "link2_mode": _form_mode(form, "link2_mode"),
+        "link2_combinator": _form_combinator(form, "link2_combinator"),
+        "link2_rules": _form_rules(form, "link2"),
+    }
+
+
+def parse_link3_form(form: Any) -> tuple[str, list[tuple[str, str]]]:
+    """Parse Link 3 (Unit of review) from the form payload. Returns
+    ``(mode, boundary_pairs)`` where ``mode`` is ``"individual"`` or
+    ``"grouped"`` and ``boundary_pairs`` is the decoded list of
+    ``(source_type, source_field)`` pairs (empty when mode is
+    ``"individual"`` or grouped-with-no-boundary).
+    """
+    mode = str(form.get("link3_mode") or "individual").strip()
+    if mode not in ("individual", "grouped"):
+        mode = "individual"
+    if mode == "individual":
+        return mode, []
+    pairs: list[tuple[str, str]] = []
+    for raw in form.getlist("link3_boundary"):
+        s = str(raw).strip()
+        if not s:
+            continue
+        if "." not in s:
+            continue
+        source, _, slot = s.partition(".")
+        if source not in ("reviewee", "pair_context"):
+            continue
+        if not slot.startswith("tag"):
+            continue
+        tag_num = slot[len("tag"):]
+        if tag_num not in ("1", "2", "3"):
+            continue
+        pair = (source, f"tag_{tag_num}")
+        if pair not in pairs:
+            pairs.append(pair)
+    return mode, pairs
+
+
+# ---------------------------------------------------------------------------
+# Internals
+# ---------------------------------------------------------------------------
+
+
+def _empty_link_state() -> dict[str, Any]:
+    return {"mode": "all", "combinator": "AND", "rules": []}
+
+
+def _build_rules_json(
+    *,
+    link1_mode: str,
+    link1_combinator: str,
+    link1_rules: list[dict[str, str]],
+    link2_mode: str,
+    link2_combinator: str,
+    link2_rules: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
+    for link_id, mode, combinator, rules in (
+        ("link1", link1_mode, link1_combinator, link1_rules),
+        ("link2", link2_mode, link2_combinator, link2_rules),
+    ):
+        if mode != "filter":
+            continue
+        match_rules = [_build_match_rule(r, link_id, idx) for idx, r in enumerate(rules)]
+        match_rules = [m for m in match_rules if m is not None]
+        if not match_rules:
+            continue
+        op = "OR" if combinator == "OR" else "AND"
+        payload.append(
+            {
+                "id": link_id,
+                "enabled": True,
+                "kind": "COMPOSITE",
+                "op": op,
+                "rules": match_rules,
+            }
+        )
+    return payload
+
+
+def _build_match_rule(
+    rule_dict: dict[str, str], link_id: str, idx: int
+) -> dict[str, Any] | None:
+    ui_op = rule_dict.get("op", "").strip()
+    engine_op = _UI_TO_ENGINE_OP.get(ui_op)
+    if engine_op is None:
+        return None
+    field = rule_dict.get("field", "").strip()
+    if not field:
+        return None
+    if engine_op in _TAG_OPERAND_OPS:
+        operand = rule_dict.get("operand_tag", "").strip()
+        if not operand:
+            return None
+    else:
+        operand = rule_dict.get("operand_value", "").strip()
+        if not operand:
+            return None
+    return {
+        "id": f"{link_id}-r{idx}",
+        "enabled": True,
+        "kind": "MATCH",
+        "predicate": {
+            "field": field,
+            "operator": engine_op,
+            "operand": operand,
+            "case_sensitive": False,
+        },
+    }
+
+
+def _decode_match_rule(child: dict[str, Any]) -> dict[str, str]:
+    predicate = child.get("predicate", {})
+    engine_op = predicate.get("operator", "equals")
+    ui_op = _ENGINE_TO_UI_OP.get(engine_op, "IS")
+    operand = predicate.get("operand", "") or ""
+    if engine_op in _TAG_OPERAND_OPS:
+        return {
+            "field": predicate.get("field", ""),
+            "op": ui_op,
+            "operand_value": "",
+            "operand_tag": str(operand),
+        }
+    return {
+        "field": predicate.get("field", ""),
+        "op": ui_op,
+        "operand_value": str(operand),
+        "operand_tag": "",
+    }
+
+
+def _create_band1_rule_set(
+    db: Session, *, instrument: Instrument, rules_json: list[dict[str, Any]]
+) -> SessionRuleSet:
+    name = _band1_rule_set_name(db, instrument)
+    rule_set = SessionRuleSet(
+        session_id=instrument.session_id,
+        name=name,
+        description=(
+            f"Auto-managed by Band 1 of new-model instrument "
+            f"#{instrument.id}."
+        ),
+        combinator="ALL_OF",
+        exclude_self_reviews=True,
+        seed=None,
+        rules_json=rules_json,
+        is_seeded=False,
+        library_origin_id=None,
+    )
+    db.add(rule_set)
+    db.flush()
+    return rule_set
+
+
+def _band1_rule_set_name(db: Session, instrument: Instrument) -> str:
+    """Compose a per-instrument SessionRuleSet name unique within the
+    session. The base name is stable across edits (the same
+    instrument always points at the same row); collisions only happen
+    if a non-new-model RuleSet already carries the same name."""
+    base = f"New-model instrument #{instrument.id} Band 1"
+    candidate = base
+    suffix = 2
+    while _name_exists_in_session(
+        db, session_id=instrument.session_id, name=candidate
+    ):
+        candidate = f"{base} ({suffix})"
+        suffix += 1
+    return candidate
+
+
+def _name_exists_in_session(db: Session, *, session_id: int, name: str) -> bool:
+    return (
+        db.execute(
+            SessionRuleSet.__table__.select()
+            .where(SessionRuleSet.session_id == session_id)
+            .where(SessionRuleSet.name == name)
+        ).first()
+        is not None
+    )
+
+
+def _form_mode(form: Any, key: str) -> str:
+    raw = str(form.get(key) or "all").strip().lower()
+    return "filter" if raw == "filter" else "all"
+
+
+def _form_combinator(form: Any, key: str) -> str:
+    raw = str(form.get(key) or "AND").strip().upper()
+    return "OR" if raw == "OR" else "AND"
+
+
+def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
+    fields = [str(v) for v in form.getlist(f"{link_prefix}_field")]
+    ops = [str(v) for v in form.getlist(f"{link_prefix}_op")]
+    operand_values = [
+        str(v) for v in form.getlist(f"{link_prefix}_operand_value")
+    ]
+    operand_tags = [str(v) for v in form.getlist(f"{link_prefix}_operand_tag")]
+    n = len(fields)
+    if not (len(ops) == n and len(operand_values) == n and len(operand_tags) == n):
+        raise Band1ParseError(
+            f"Band 1 {link_prefix} arrays misaligned: "
+            f"fields={len(fields)}, ops={len(ops)}, "
+            f"operand_values={len(operand_values)}, "
+            f"operand_tags={len(operand_tags)}"
+        )
+    return [
+        {
+            "field": fields[i],
+            "op": ops[i],
+            "operand_value": operand_values[i],
+            "operand_tag": operand_tags[i],
+        }
+        for i in range(n)
+    ]

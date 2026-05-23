@@ -117,8 +117,16 @@ from ._instrument_crud import (
     has_unpinned,
     pin_rule_set,
     set_group_boundary,
+    set_unit_of_review,
     update_instrument_description,
     update_short_label,
+)
+from ._band1 import (
+    Band1ParseError,
+    decode_band1_state,
+    parse_band1_form,
+    parse_link3_form,
+    set_band1_assignment_rules,
 )
 
 
@@ -170,6 +178,12 @@ __all__ = [
     "ensure_default_instrument",
     "ensure_default_response_type_definitions",
     "ensure_locked_display_fields",
+    "Band1ParseError",
+    "decode_band1_state",
+    "parse_band1_form",
+    "parse_link3_form",
+    "set_band1_assignment_rules",
+    "set_unit_of_review",
     "group_boundary_pairs",
     "replicate_instrument",
     "has_unpinned",
