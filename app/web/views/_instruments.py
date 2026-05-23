@@ -28,9 +28,13 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Instrument,
     InstrumentResponseField,
+    Relationship,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     User,
 )
+from app.services import field_labels
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs
@@ -363,6 +367,71 @@ def build_instrument_rule_picker_contexts(
     return contexts
 
 
+def _pilot_usable_tags(
+    db: Session, review_session: ReviewSession
+) -> dict[str, list[tuple[str, str]]]:
+    """For the Instrument Builder pilot card: which tag slots are
+    populated for the session, paired with their friendly labels.
+
+    Returns a dict keyed by namespace (``reviewer`` / ``reviewee`` /
+    ``pair_context``) where each value is a list of
+    ``(canonical_key, friendly_label)`` tuples for slots that have
+    at least one non-empty value in the session. The canonical keys
+    follow the rule engine's vocabulary (``reviewer.tag1`` etc.).
+    Pair-context slots only count rows whose ``status == "active"``.
+    """
+    result: dict[str, list[tuple[str, str]]] = {
+        "reviewer": [],
+        "reviewee": [],
+        "pair_context": [],
+    }
+    namespace_specs = [
+        (
+            "reviewer",
+            Reviewer,
+            [("tag_1", "reviewer.tag1"), ("tag_2", "reviewer.tag2"), ("tag_3", "reviewer.tag3")],
+            None,
+        ),
+        (
+            "reviewee",
+            Reviewee,
+            [("tag_1", "reviewee.tag1"), ("tag_2", "reviewee.tag2"), ("tag_3", "reviewee.tag3")],
+            None,
+        ),
+        (
+            "pair_context",
+            Relationship,
+            [("tag_1", "pair_context.tag1"), ("tag_2", "pair_context.tag2"), ("tag_3", "pair_context.tag3")],
+            "1|2|3",
+        ),
+    ]
+    for namespace, model, slots, _ in namespace_specs:
+        for column_name, canonical_key in slots:
+            col = getattr(model, column_name)
+            base_query = select(model.id).where(
+                model.session_id == review_session.id,
+                col.isnot(None),
+                col != "",
+            )
+            if namespace == "pair_context":
+                base_query = base_query.where(model.status == "active")
+            has_value = db.execute(base_query.limit(1)).first() is not None
+            if not has_value:
+                continue
+            # Field labels store pair_context slots as "1" / "2" / "3"
+            # (without the "tag_" prefix); reviewer / reviewee use
+            # "tag_1" / "tag_2" / "tag_3".
+            if namespace == "pair_context":
+                label_field = column_name.split("_", 1)[1]
+            else:
+                label_field = column_name
+            friendly = field_labels.resolve(
+                review_session, namespace, label_field
+            )
+            result[namespace].append((canonical_key, friendly))
+    return result
+
+
 def build_instruments_context(
     db: Session,
     *,
@@ -530,4 +599,5 @@ def build_instruments_context(
         "breadcrumbs": breadcrumbs.operator_session_child(
             review_session, "Instruments"
         ),
+        "pilot_tags": _pilot_usable_tags(db, review_session),
     }
