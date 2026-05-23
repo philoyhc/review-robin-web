@@ -725,10 +725,16 @@
            review). Three columns of unequal width (2/6, 3/6,
            1/6) with vertical rules between. Placeholders for
            now; see guide/instrument_builder.md §Band 1. #}
-        <div style="display: grid; grid-template-columns: 40% 40% 20%; gap: 0;">
-          <div data-pilot-link1 style="padding: 0 16px 0 0;">
+        {# Reusable rule-list placeholder. Used by Link 1 (Pool of
+           reviewers) and Link 2 (Pool of those reviewed); the only
+           difference between them is the dropdown's tag namespace
+           (reviewer.tag* vs reviewee.tag*). All shared markup +
+           inline window.pilot* helpers — nothing wired to
+           persistence. #}
+        {% macro pilot_rule_list(title, tag_options) %}
+          <div data-pilot-link-wrapper>
             <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
-              Reviewers
+              {{ title }}
               {# Mode-toggle pill: "All" (no filter, builder greyed
                  out + inactive) vs "Filter using rules" (builder
                  active). Default is All. #}
@@ -738,20 +744,7 @@
                       onclick="pilotToggleRuleMode(this)"
                       title="Click to toggle (placeholder)">All</button>
             </h3>
-            {# Placeholder Link 1 rule list. Three-column flex
-               layout: left 20% holds the "+" (add rule) and
-               AND/OR (toggle combinator) buttons side by side;
-               a thick vertical line separates left from right;
-               right takes the remaining width with a stack of
-               rule cells. Each rule cell is two rows — row 1:
-               tag dropdown (50% of cell) + IS / IS NOT toggle;
-               row 2: value editbox + X (remove rule). The first
-               cell's X is disabled (can't delete the first).
-               Toggles flip text on click; + clones the first
-               rule cell; X removes the cell (keeping at least
-               one). All placeholder — nothing wired to
-               persistence. #}
-            <div data-pilot-reviewers-rules
+            <div data-pilot-rule-builder
                  style="display: flex; align-items: stretch; gap: 8px;
                         opacity: 0.5; pointer-events: none;">
               <div style="flex: 0 0 20%; display: flex;
@@ -771,13 +764,10 @@
                 <div data-pilot-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                      <option>reviewer.tag1</option>
-                      <option>reviewer.tag2</option>
-                      <option>reviewer.tag3</option>
-                      <option>pair_context.tag1</option>
-                      <option>pair_context.tag2</option>
-                      <option>pair_context.tag3</option>
+                    <select style="flex: 0 0 30%; min-width: 0; padding: 4px;">
+                      {% for opt in tag_options %}
+                        <option>{{ opt }}</option>
+                      {% endfor %}
                     </select>
                     <button type="button" class="btn secondary"
                             style="padding: 4px 8px; flex-shrink: 0;"
@@ -796,54 +786,67 @@
                 </div>
               </div>
             </div>
-            <script>
-              window.pilotAddRule = window.pilotAddRule || function (btn) {
-                var wrap = btn.closest('[data-pilot-reviewers-rules]');
-                var container = wrap.querySelector('[data-pilot-rule-cells]');
-                var first = container.querySelector('[data-pilot-rule-cell]');
-                var clone = first.cloneNode(true);
-                clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
-                clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
-                clone.querySelectorAll('button[title^="Toggle operator"]').forEach(function (b) { b.textContent = 'IS'; });
-                // New cell's X is active (only the first cell's X stays disabled).
-                clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
-                  b.disabled = false;
-                  b.removeAttribute('aria-disabled');
-                  b.setAttribute('title', 'Remove rule (placeholder)');
-                });
-                container.appendChild(clone);
-              };
-              window.pilotRemoveRule = window.pilotRemoveRule || function (btn) {
-                var cell = btn.closest('[data-pilot-rule-cell]');
-                var container = cell.parentElement;
-                if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
-                  cell.remove();
-                }
-              };
-              window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
-                var wrap = btn.closest('[data-pilot-link1]');
-                var builder = wrap.querySelector('[data-pilot-reviewers-rules]');
-                if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
-                  btn.setAttribute('data-pilot-rule-mode', 'filter');
-                  btn.textContent = 'Filter using rules';
-                  builder.style.opacity = '1';
-                  builder.style.pointerEvents = 'auto';
-                } else {
-                  btn.setAttribute('data-pilot-rule-mode', 'all');
-                  btn.textContent = 'All';
-                  builder.style.opacity = '0.5';
-                  builder.style.pointerEvents = 'none';
-                }
-              };
-            </script>
+          </div>
+        {% endmacro %}
+
+        <div style="display: grid; grid-template-columns: 40% 40% 20%; gap: 0;">
+          <div style="padding: 0 16px 0 0;">
+            {{ pilot_rule_list("Pool of reviewers",
+                ["reviewer.tag1", "reviewer.tag2", "reviewer.tag3",
+                 "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"]) }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">Pool of those reviewed</h3>
+            {{ pilot_rule_list("Pool of those reviewed",
+                ["reviewee.tag1", "reviewee.tag2", "reviewee.tag3",
+                 "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"]) }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <h3 style="margin: 0;">Unit of review</h3>
           </div>
         </div>
+        <script>
+          {# Shared placeholder helpers for the rule-list cells.
+             Defined on window so re-rendering / multiple pilot
+             cards on one page is harmless. #}
+          window.pilotAddRule = window.pilotAddRule || function (btn) {
+            var builder = btn.closest('[data-pilot-rule-builder]');
+            var container = builder.querySelector('[data-pilot-rule-cells]');
+            var first = container.querySelector('[data-pilot-rule-cell]');
+            var clone = first.cloneNode(true);
+            clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+            clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+            clone.querySelectorAll('button[title^="Toggle operator"]').forEach(function (b) { b.textContent = 'IS'; });
+            // New cell's X is active (only the first cell's X stays disabled).
+            clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
+              b.disabled = false;
+              b.removeAttribute('aria-disabled');
+              b.setAttribute('title', 'Remove rule (placeholder)');
+            });
+            container.appendChild(clone);
+          };
+          window.pilotRemoveRule = window.pilotRemoveRule || function (btn) {
+            var cell = btn.closest('[data-pilot-rule-cell]');
+            var container = cell.parentElement;
+            if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
+              cell.remove();
+            }
+          };
+          window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
+            var wrap = btn.closest('[data-pilot-link-wrapper]');
+            var builder = wrap.querySelector('[data-pilot-rule-builder]');
+            if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
+              btn.setAttribute('data-pilot-rule-mode', 'filter');
+              btn.textContent = 'Filter using rules';
+              builder.style.opacity = '1';
+              builder.style.pointerEvents = 'auto';
+            } else {
+              btn.setAttribute('data-pilot-rule-mode', 'all');
+              btn.textContent = 'All';
+              builder.style.opacity = '0.5';
+              builder.style.pointerEvents = 'none';
+            }
+          };
+        </script>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
         <h3 style="margin: 0;">Band 2</h3>

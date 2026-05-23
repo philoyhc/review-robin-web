@@ -591,7 +591,7 @@ def test_add_pilot_creates_instrument_with_is_pilot_flag(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "Reviewers" in body  # Band 1 Link 1 column
+    assert "Pool of reviewers" in body  # Band 1 Link 1 column
     assert "Pool of those reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
     assert "Band 2" in body
