@@ -1234,28 +1234,44 @@
             function esc(s) {
               return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             }
+            // Builds the preview <table> markup. Mirrors the actual
+            // reviewer surface (app/web/templates/reviewer/review_surface.html):
+            // same .rs-reviewee / .rs-group / .rs-narrow column classes,
+            // same <tbody class="rrw-rows">, same identity-cell
+            // composition (strong Name on top, code Email below).
+            // The card's base.html table rules give a 100%-width
+            // table with collapsed borders.
             function buildIndividualPreview(card, selected) {
               if (selected.length === 0) { return ''; }
               var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
               var email = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'email_or_identifier'; });
               var others = selected.filter(function (s) { return !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier')); });
-              var html = '<table style="width: auto; border-collapse: collapse; font-size: 0.9em;"><thead><tr>';
+              var html = '<table><thead><tr>';
               if (name || email) {
-                html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">Reviewee</th>';
+                html += '<th scope="col" class="rs-reviewee">Reviewee</th>';
               }
               others.forEach(function (o) {
-                html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">' + esc(o.label) + '</th>';
+                var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
+                html += '<th scope="col"' + (isProfile ? ' class="rs-narrow"' : '') + '>' + esc(o.label) + '</th>';
               });
-              html += '</tr></thead><tbody><tr>';
+              html += '</tr></thead><tbody class="rrw-rows"><tr>';
               if (name || email) {
-                html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">';
+                html += '<td class="rs-reviewee">';
                 if (name) { html += '<strong>' + esc(name.value || '—') + '</strong>'; }
                 if (name && email) { html += '<br>'; }
                 if (email) { html += '<code>' + esc(email.value || '—') + '</code>'; }
                 html += '</td>';
               }
               others.forEach(function (o) {
-                html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">' + esc(o.value || '—') + '</td>';
+                var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
+                var v = o.value || '';
+                var cell;
+                if (isProfile) {
+                  cell = v ? '<a href="' + esc(v) + '">View</a>' : '';
+                } else {
+                  cell = esc(v || '—');
+                }
+                html += '<td' + (isProfile ? ' class="rs-narrow"' : '') + '>' + cell + '</td>';
               });
               html += '</tr></tbody></table>';
               return html;
@@ -1266,10 +1282,10 @@
               var tagPills = selected.filter(function (s) { return s.sourceType === 'reviewee' && /^tag_/.test(s.sourceField); });
               var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
               var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
-              var html = '<table style="width: auto; border-collapse: collapse; font-size: 0.9em;"><thead><tr>';
-              html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">Group</th>';
-              html += '</tr></thead><tbody><tr>';
-              html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">';
+              var html = '<table class="rs-group-table"><thead><tr>';
+              html += '<th scope="col" class="rs-group">Group</th>';
+              html += '</tr></thead><tbody class="rrw-rows"><tr>';
+              html += '<td class="rs-group">';
               if (tagPills.length > 0) {
                 var tagLine = tagPills.map(function (t) { return esc(t.value || '—'); }).join(', ');
                 html += '<strong>' + tagLine + '</strong>';
