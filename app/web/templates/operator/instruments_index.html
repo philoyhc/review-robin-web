@@ -819,7 +819,62 @@
                                      "pair_context.tag1", "pair_context.tag2", "pair_context.tag3"]) }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <h3 style="margin: 0;">Unit of review</h3>
+            <div data-pilot-link-wrapper>
+              <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                Unit of review
+                {# Mode-toggle pill: "Individual" (builder greyed out
+                   + inactive — default) vs "Group" (builder active). #}
+                <button type="button" class="pill pill-info"
+                        style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
+                        data-pilot-unit-mode="individual"
+                        onclick="pilotToggleUnitMode(this)"
+                        title="Click to toggle (placeholder)">Individual</button>
+              </h3>
+              {# Placeholder Link 3 group-boundary picker. Left 45%
+                 carries the "+" (add boundary tag) and an inactive
+                 "THE SAME" label; right 55% holds a stack of cells.
+                 Each cell is a single row: tag dropdown (50%) +
+                 a final action button that is "X" on the LAST cell
+                 (removes it) and inactive "AND" on every earlier
+                 cell. The first cell's X is disabled (can't remove
+                 the only cell). All placeholder — nothing wired
+                 to persistence. #}
+              <div data-pilot-unit-builder
+                   style="display: flex; align-items: stretch; gap: 8px;
+                          opacity: 0.5; pointer-events: none;">
+                <div style="flex: 0 0 45%; display: flex; flex-direction: column;
+                            align-items: stretch; justify-content: center; gap: 8px;">
+                  <button type="button" class="btn secondary"
+                          style="padding: 4px 10px;"
+                          onclick="pilotAddUnitCell(this)"
+                          title="Add boundary tag (placeholder)">+</button>
+                  <button type="button" class="btn secondary"
+                          style="padding: 4px 10px;"
+                          disabled aria-disabled="true"
+                          title="Group identity marker (placeholder)">THE SAME</button>
+                </div>
+                <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+                <div data-pilot-unit-cells
+                     style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+                  <div data-pilot-unit-cell
+                       style="display: flex; align-items: center; gap: 4px;">
+                    <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                      <option>reviewee.tag1</option>
+                      <option>reviewee.tag2</option>
+                      <option>reviewee.tag3</option>
+                      <option>pair_context.tag1</option>
+                      <option>pair_context.tag2</option>
+                      <option>pair_context.tag3</option>
+                    </select>
+                    <button type="button" class="btn destructive" data-pilot-cell-action
+                            style="padding: 4px 8px; flex-shrink: 0;"
+                            onclick="pilotRemoveUnitCell(this)"
+                            disabled aria-disabled="true"
+                            title="Cannot remove the first cell (placeholder)">X</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <script>
@@ -878,6 +933,66 @@
             if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
               cell.remove();
             }
+          };
+          window.pilotToggleUnitMode = window.pilotToggleUnitMode || function (btn) {
+            var wrap = btn.closest('[data-pilot-link-wrapper]');
+            var builder = wrap.querySelector('[data-pilot-unit-builder]');
+            if (btn.getAttribute('data-pilot-unit-mode') === 'individual') {
+              btn.setAttribute('data-pilot-unit-mode', 'group');
+              btn.textContent = 'Group';
+              builder.style.opacity = '1';
+              builder.style.pointerEvents = 'auto';
+            } else {
+              btn.setAttribute('data-pilot-unit-mode', 'individual');
+              btn.textContent = 'Individual';
+              builder.style.opacity = '0.5';
+              builder.style.pointerEvents = 'none';
+            }
+          };
+          window.pilotAddUnitCell = window.pilotAddUnitCell || function (btn) {
+            var builder = btn.closest('[data-pilot-unit-builder]');
+            var container = builder.querySelector('[data-pilot-unit-cells]');
+            var first = container.querySelector('[data-pilot-unit-cell]');
+            var clone = first.cloneNode(true);
+            clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+            container.appendChild(clone);
+            pilotRefreshUnitButtons(container);
+          };
+          window.pilotRemoveUnitCell = window.pilotRemoveUnitCell || function (btn) {
+            var cell = btn.closest('[data-pilot-unit-cell]');
+            var container = cell.parentElement;
+            if (container.querySelectorAll('[data-pilot-unit-cell]').length > 1) {
+              cell.remove();
+              pilotRefreshUnitButtons(container);
+            }
+          };
+          window.pilotRefreshUnitButtons = window.pilotRefreshUnitButtons || function (container) {
+            var cells = container.querySelectorAll('[data-pilot-unit-cell]');
+            cells.forEach(function (cell, idx) {
+              var b = cell.querySelector('[data-pilot-cell-action]');
+              var isLast = (idx === cells.length - 1);
+              if (isLast) {
+                b.textContent = 'X';
+                b.className = 'btn destructive';
+                b.setAttribute('onclick', 'pilotRemoveUnitCell(this)');
+                var onlyOne = cells.length === 1;
+                b.disabled = onlyOne;
+                if (onlyOne) {
+                  b.setAttribute('aria-disabled', 'true');
+                  b.setAttribute('title', 'Cannot remove the first cell (placeholder)');
+                } else {
+                  b.removeAttribute('aria-disabled');
+                  b.setAttribute('title', 'Remove cell (placeholder)');
+                }
+              } else {
+                b.textContent = 'AND';
+                b.className = 'btn secondary';
+                b.removeAttribute('onclick');
+                b.disabled = true;
+                b.setAttribute('aria-disabled', 'true');
+                b.setAttribute('title', 'Combinator marker (placeholder)');
+              }
+            });
           };
           window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
             var wrap = btn.closest('[data-pilot-link-wrapper]');
