@@ -828,13 +828,13 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;">
           <div style="padding: 0 16px 0 0;">
             {{ pilot_rule_list("Pool of reviewers", _link1_tags,
-                on_label="Filter using reviewer and relationship tags") }}
+                on_label="Filter using reviewer attributes") }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             {{ pilot_rule_list("Pool of those reviewed", _link2_tags,
                 operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
                 operand_tag_options=_link2_operand,
-                on_label="Filter using reviewee and relationship tags") }}
+                on_label="Filter using reviewee attributes") }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <div data-pilot-link-wrapper>
@@ -850,7 +850,7 @@
                                cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};
                                opacity: {{ '1' if _link3_active else '0.5' }};"
                         data-pilot-unit-mode="individual"
-                        data-pilot-mode-on-label="Group using reviewee and relationship tags"
+                        data-pilot-mode-on-label="Group using reviewee attributes"
                         {% if _link3_active %}onclick="pilotToggleUnitMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
                         title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</button>
               </h3>
