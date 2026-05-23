@@ -1138,7 +1138,40 @@
         </script>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-        <h3 style="margin: 0;">Band 2</h3>
+        {# Band 2 — "Review Instrument": a preview of the row a
+           reviewer would see for one sample reviewee. Display fields
+           render as inline chips (label + sample data) using the same
+           pill style as Bands 1 and 3. The sample reviewee is the
+           first active reviewee in the session today; an
+           operator-pickable sample selector lands later. #}
+        {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_reviewee_name": none}) %}
+        <div data-new-model-band2>
+          <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
+          {% if _band2.fields %}
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              {% for field in _band2.fields %}
+                <span class="pill pill-count tag-chip is-selected"
+                      title="Display field — {{ field.label }}">
+                  <span style="opacity: 0.7;">{{ field.label }}:</span>
+                  {% if field.value %}{{ field.value }}{% else %}<span style="opacity: 0.55; font-style: italic;">—</span>{% endif %}
+                </span>
+              {% endfor %}
+            </div>
+            {% if _band2.sample_reviewee_name %}
+              <p style="margin: 8px 0 0 0; font-size: 0.85em; color: var(--text-muted, #6b7280);">
+                Sample reviewee: <strong>{{ _band2.sample_reviewee_name }}</strong>
+              </p>
+            {% else %}
+              <p style="margin: 8px 0 0 0; font-size: 0.85em; color: var(--text-muted, #6b7280); font-style: italic;">
+                No active reviewees yet — import or add at least one to see sample data.
+              </p>
+            {% endif %}
+          {% else %}
+            <p style="margin: 0; font-size: 0.9em; color: var(--text-muted, #6b7280); font-style: italic;">
+              No display fields on this instrument yet.
+            </p>
+          {% endif %}
+        </div>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
         {# Band 3 — Visibility / read-shape / release-timing

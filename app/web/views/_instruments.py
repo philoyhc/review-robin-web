@@ -367,6 +367,51 @@ def build_instrument_rule_picker_contexts(
     return contexts
 
 
+def _new_model_band2_state(
+    db: Session,
+    instrument: Instrument,
+) -> dict[str, Any]:
+    """For the new-model card's Band 2 ("Review Instrument") preview:
+    every display field on the instrument, with its friendly label
+    and a sample value pulled from the first active reviewee in the
+    session.
+
+    Returns ``{"fields": [{"label": str, "value": str | None}, ...],
+    "sample_reviewee_name": str | None}``. Pair-context fields render
+    with a placeholder value since they depend on a specific
+    ``(reviewer, reviewee)`` relationship; that gets wired when the
+    sample-row selector lands.
+    """
+    review_session = instrument.session
+    sample = db.execute(
+        select(Reviewee)
+        .where(Reviewee.session_id == review_session.id)
+        .where(Reviewee.status == "active")
+        .order_by(Reviewee.id)
+        .limit(1)
+    ).scalar_one_or_none()
+    fields: list[dict[str, Any]] = []
+    for f in instrument.display_fields:
+        if not f.visible:
+            continue
+        label = instruments_service.display_field_label(f, session=review_session)
+        value: str | None
+        if sample is None:
+            value = None
+        elif f.source_type == "reviewee":
+            raw = getattr(sample, f.source_field, None)
+            value = raw if raw else None
+        elif f.source_type == "pair_context":
+            value = None  # placeholder; needs a relationship to resolve
+        else:
+            value = None
+        fields.append({"label": label, "value": value})
+    return {
+        "fields": fields,
+        "sample_reviewee_name": sample.name if sample is not None else None,
+    }
+
+
 def _new_model_usable_tags(
     db: Session, review_session: ReviewSession
 ) -> dict[str, list[tuple[str, str]]]:
@@ -623,6 +668,11 @@ def build_instruments_context(
                     instrument.group_kind
                 ),
             }
+            for instrument in instruments
+            if instrument.is_new_model
+        },
+        "new_model_band2_state": {
+            instrument.id: _new_model_band2_state(db, instrument)
             for instrument in instruments
             if instrument.is_new_model
         },
