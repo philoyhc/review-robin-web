@@ -1071,6 +1071,16 @@
               builder.style.pointerEvents = 'none';
               if (modeInput) { modeInput.value = 'individual'; }
             }
+            // Band 2's preview depends on the unit-of-review mode —
+            // refresh its pill enabled-state and rebuild the preview
+            // row to reflect the flip. The Band 2 element lives on
+            // the same per-instrument wrapper (id="instrument-{N}").
+            var instrumentCard = btn.closest('[id^="instrument-"]');
+            if (instrumentCard && window.newModelRefreshBand2) {
+              instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
+                window.newModelRefreshBand2(b2);
+              });
+            }
           };
           window.newModelAddUnitCell = window.newModelAddUnitCell || function (btn) {
             var builder = btn.closest('[data-new-model-unit-builder]');
@@ -1138,39 +1148,179 @@
         </script>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
-        {# Band 2 — "Review Instrument": a preview of the row a
-           reviewer would see for one sample reviewee. Display fields
-           filtered to those whose source slot has data somewhere in
-           the session render as inline chips (label + sample data)
-           using the same pill style as Bands 1 and 3 — same
-           "Fields with data" UX as the Reviewers / Reviewees /
-           Relationships Setup pages. The sample reviewee is the
-           first active reviewee in the session today; an
-           operator-pickable sample selector lands later. #}
-        {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_reviewee_name": none}) %}
-        <div data-new-model-band2>
+        {# Band 2 — "Review Instrument": a selectable chip row that
+           drives a client-side preview of the reviewer-surface row
+           the reviewer would see for this instrument. Each populated
+           reviewee / pair_context display field renders as a chip;
+           clicking a chip toggles its column in the preview row
+           below. The preview row mirrors the actual reviewer surface
+           construction: Name + Email pair into one identity cell in
+           Individual mode, and Group mode composes a single cell
+           with bold comma-joined tag values on top and up to
+           GROUP_MEMBER_NAME_LIMIT (=10) member names below. #}
+        {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_names": [], "sample_extra_count": 0}) %}
+        <div data-new-model-band2
+             data-new-model-band2-sample-names="{{ _band2.sample_names | join('|') }}"
+             data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <div data-new-model-band2-pills
+               style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
             {% for field in _band2.fields %}
-              <span class="pill pill-count tag-chip is-selected"
-                    title="Display field — {{ field.label }}">
-                <span style="opacity: 0.7;">{{ field.label }}:</span>
-                {% if field.value %}{{ field.value }}{% else %}<span style="opacity: 0.55; font-style: italic;">—</span>{% endif %}
-              </span>
+              <span class="pill tag-chip"
+                    role="button" tabindex="0"
+                    aria-pressed="false"
+                    data-new-model-band2-pill
+                    data-key="{{ field.key }}"
+                    data-label="{{ field.label }}"
+                    data-source-type="{{ field.source_type }}"
+                    data-source-field="{{ field.source_field }}"
+                    data-value="{{ field.value or '' }}"
+                    data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
+                    onclick="newModelToggleBand2Pill(this)"
+                    title="Click to include {{ field.label }} in the preview row">{{ field.label }}</span>
             {% else %}
               <span class="muted">—</span>
             {% endfor %}
           </div>
-          {% if _band2.sample_reviewee_name %}
-            <p style="margin: 8px 0 0 0; font-size: 0.85em; color: var(--text-muted, #6b7280);">
-              Sample reviewee: <strong>{{ _band2.sample_reviewee_name }}</strong>
-            </p>
-          {% elif not _band2.fields %}
-            <p style="margin: 8px 0 0 0; font-size: 0.85em; color: var(--text-muted, #6b7280); font-style: italic;">
-              No populated reviewee fields yet — import or add reviewees with tag data to populate this preview.
-            </p>
-          {% endif %}
+          <div data-new-model-band2-preview
+               style="margin-top: 16px;"></div>
         </div>
+        <script>
+          (function () {
+            if (window.newModelToggleBand2Pill) { return; }
+            // Read the current Link 3 unit-of-review for a card,
+            // looking at the dedicated hidden input that
+            // newModelToggleUnitMode keeps in sync. The input lives
+            // up in Band 1, not inside Band 2, so we walk up to the
+            // per-instrument outer wrapper (id="instrument-{N}").
+            function unitMode(card) {
+              var wrap = card.closest('[id^="instrument-"]') || document;
+              var input = wrap.querySelector('[data-new-model-link3-mode-input]');
+              return input && input.value === 'grouped' ? 'grouped' : 'individual';
+            }
+            // Refresh each pill's enabled/disabled appearance based
+            // on the current unit-of-review mode. Disabled pills
+            // can't be toggled and lose their selection.
+            function refreshPillStates(card) {
+              var grouped = unitMode(card) === 'grouped';
+              card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
+                var groupOk = pill.getAttribute('data-selectable-in-group') === 'true';
+                var disabled = grouped && !groupOk;
+                pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+                pill.style.opacity = disabled ? '0.4' : '';
+                pill.style.cursor = disabled ? 'not-allowed' : 'pointer';
+                if (disabled && pill.getAttribute('aria-pressed') === 'true') {
+                  pill.setAttribute('aria-pressed', 'false');
+                  pill.classList.remove('is-selected');
+                  pill.classList.remove('pill-count');
+                }
+              });
+            }
+            function selectedPills(card) {
+              var sel = [];
+              card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (p) {
+                sel.push({
+                  key: p.getAttribute('data-key'),
+                  label: p.getAttribute('data-label'),
+                  sourceType: p.getAttribute('data-source-type'),
+                  sourceField: p.getAttribute('data-source-field'),
+                  value: p.getAttribute('data-value') || '',
+                });
+              });
+              return sel;
+            }
+            // Escape strings going into innerHTML so an operator's
+            // tag value with a stray < doesn't break the preview.
+            function esc(s) {
+              return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+            function buildIndividualPreview(card, selected) {
+              if (selected.length === 0) { return ''; }
+              var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
+              var email = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'email_or_identifier'; });
+              var others = selected.filter(function (s) { return !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier')); });
+              var html = '<table style="width: auto; border-collapse: collapse; font-size: 0.9em;"><thead><tr>';
+              if (name || email) {
+                html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">Reviewee</th>';
+              }
+              others.forEach(function (o) {
+                html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">' + esc(o.label) + '</th>';
+              });
+              html += '</tr></thead><tbody><tr>';
+              if (name || email) {
+                html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">';
+                if (name) { html += '<strong>' + esc(name.value || '—') + '</strong>'; }
+                if (name && email) { html += '<br>'; }
+                if (email) { html += '<code>' + esc(email.value || '—') + '</code>'; }
+                html += '</td>';
+              }
+              others.forEach(function (o) {
+                html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">' + esc(o.value || '—') + '</td>';
+              });
+              html += '</tr></tbody></table>';
+              return html;
+            }
+            function buildGroupPreview(card, selected) {
+              if (selected.length === 0) { return ''; }
+              var nameSelected = selected.some(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
+              var tagPills = selected.filter(function (s) { return s.sourceType === 'reviewee' && /^tag_/.test(s.sourceField); });
+              var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
+              var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
+              var html = '<table style="width: auto; border-collapse: collapse; font-size: 0.9em;"><thead><tr>';
+              html += '<th style="text-align: left; padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">Group</th>';
+              html += '</tr></thead><tbody><tr>';
+              html += '<td style="padding: 6px 12px; border: 1px solid var(--border-muted, #cbd5e1);">';
+              if (tagPills.length > 0) {
+                var tagLine = tagPills.map(function (t) { return esc(t.value || '—'); }).join(', ');
+                html += '<strong>' + tagLine + '</strong>';
+              }
+              if (nameSelected && samples.length > 0) {
+                if (tagPills.length > 0) { html += '<br>'; }
+                var names = samples.map(esc).join(', ');
+                if (extra > 0) { names += ', +' + extra + ' more'; }
+                html += '<span class="muted">' + names + '</span>';
+              }
+              html += '</td></tr></tbody></table>';
+              return html;
+            }
+            function rebuildPreview(card) {
+              var container = card.querySelector('[data-new-model-band2-preview]');
+              if (!container) { return; }
+              var selected = selectedPills(card);
+              var html;
+              if (unitMode(card) === 'grouped') {
+                html = buildGroupPreview(card, selected);
+              } else {
+                html = buildIndividualPreview(card, selected);
+              }
+              container.innerHTML = html;
+            }
+            window.newModelToggleBand2Pill = function (pill) {
+              if (pill.getAttribute('aria-disabled') === 'true') { return; }
+              var pressed = pill.getAttribute('aria-pressed') === 'true';
+              var next = !pressed;
+              pill.setAttribute('aria-pressed', next ? 'true' : 'false');
+              if (next) {
+                pill.classList.add('is-selected');
+                pill.classList.add('pill-count');
+              } else {
+                pill.classList.remove('is-selected');
+                pill.classList.remove('pill-count');
+              }
+              var card = pill.closest('[data-new-model-band2]');
+              if (card) { rebuildPreview(card); }
+            };
+            window.newModelRefreshBand2 = function (card) {
+              if (!card) { return; }
+              refreshPillStates(card);
+              rebuildPreview(card);
+            };
+            // Wire each Band 2 card on the page on first load.
+            document.querySelectorAll('[data-new-model-band2]').forEach(function (card) {
+              window.newModelRefreshBand2(card);
+            });
+          })();
+        </script>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
         {# Band 3 — Visibility / read-shape / release-timing

@@ -817,12 +817,14 @@ def test_new_model_band1_all_mode_clears_rules(
     assert rule_set.rules_json == []
 
 
-def test_new_model_band2_renders_review_instrument_pills_with_sample_data(
+def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     client: TestClient, db: Session
 ) -> None:
-    """Band 2 (Review Instrument) lists every visible display field on
-    the new-model instrument as an inline pill, with the sample value
-    pulled from the first active reviewee in the session."""
+    """Band 2 (Review Instrument) lists every populated display field
+    on the new-model instrument as a click-to-select chip, with
+    data-* attributes carrying the sample value the client-side
+    preview-row builder consumes. Sample data does NOT show inside
+    the pill text — pills only show the friendly label."""
     review_session = _make_session(client, db, code="nm-band2")
     _seed_tag_data(db, review_session.id)
     source = _instrument(db, review_session.id)
@@ -836,25 +838,45 @@ def test_new_model_band2_renders_review_instrument_pills_with_sample_data(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    # Band heading renamed.
+    # Band heading renamed; the "Sample reviewee:" sub-caption is gone.
     assert "Review Instrument" in flat
     assert ">Band 2<" not in flat
-    # Display fields render as inline chips. The seeded reviewee
-    # carries name=E1, email_or_identifier=e1@example.edu, tag_1=Team A —
-    # all three should surface on at least one pill.
-    assert "E1" in flat
-    assert "e1@example.edu" in flat
-    assert "Team A" in flat
-    # The sample reviewee caption names the source.
-    assert "Sample reviewee:" in flat
-    assert "<strong>E1</strong>" in flat
+    assert "Sample reviewee:" not in flat
+    # Pills are click-to-toggle (role=button) and carry the
+    # canonical key + sample value as data attributes for the JS
+    # preview builder.
+    assert 'data-key="reviewee.name"' in flat
+    assert 'data-key="reviewee.email_or_identifier"' in flat
+    assert 'data-key="reviewee.tag_1"' in flat
+    # Sample values ride on data-value (not inside the pill text).
+    assert 'data-value="E1"' in flat
+    assert 'data-value="e1@example.edu"' in flat
+    assert 'data-value="Team A"' in flat
+    # All pills start unselected (aria-pressed=false).
+    assert 'aria-pressed="false"' in flat
+    # Group-selectability is encoded for the JS unit-mode flip:
+    # name + tag_1 selectable in Group; email_or_identifier not.
+    assert (
+        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name" data-value="E1" data-selectable-in-group="true"'
+        in flat
+    )
+    assert (
+        'data-key="reviewee.email_or_identifier" data-label="Email" data-source-type="reviewee" data-source-field="email_or_identifier" data-value="e1@example.edu" data-selectable-in-group="false"'
+        in flat
+    )
+    # The sample-names list rides on the Band 2 wrapper for the
+    # Group-mode preview's member-name line. With one reviewee, the
+    # list is just "E1" and extra count is 0.
+    assert 'data-new-model-band2-sample-names="E1"' in flat
+    assert 'data-new-model-band2-sample-extra-count="0"' in flat
 
 
 def test_new_model_band2_handles_session_with_no_reviewees(
     client: TestClient, db: Session
 ) -> None:
-    """When the session has no reviewees with data, Band 2 renders a
-    Setup-page-style em-dash chip and a prompt to import reviewees."""
+    """When the session has no reviewees with data, Band 2 still
+    renders the heading; the pill row collapses to a Setup-page-style
+    em-dash placeholder."""
     review_session = _make_session(client, db, code="nm-band2-empty")
     source = _instrument(db, review_session.id)
     client.post(
@@ -868,4 +890,12 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     ).text
     flat = " ".join(body.split())
     assert "Review Instrument" in flat
-    assert "No populated reviewee fields yet" in flat
+    # Empty-pill-list placeholder lands inside the pill row.
+    assert (
+        '<div data-new-model-band2-pills style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;"> <span class="muted">—</span>'
+        in flat
+    )
+    # No pills rendered (the data-key attr only appears on pill
+    # spans, not on the JS selector matching them).
+    assert "data-key=" not in flat
+    assert 'data-new-model-band2-sample-names=""' in flat
