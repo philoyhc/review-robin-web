@@ -822,7 +822,8 @@
         {% set _link2_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
         {% set _link2_operand = pilot_tags.reviewer + pilot_tags.pair_context %}
         {% set _link3_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;"
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+                    {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           <div style="padding: 0 16px 0 0;">
             {{ pilot_rule_list("Pool of reviewers", _link1_tags,
@@ -1072,7 +1073,8 @@
         {% endmacro %}
         <div data-pilot-band3
              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-                    align-items: start;"
+                    align-items: start;
+                    {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           <div>
             <h3 style="margin: 0 0 12px 0;">Visibility</h3>
