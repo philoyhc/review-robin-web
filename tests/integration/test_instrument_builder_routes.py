@@ -1291,3 +1291,70 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     ).text
     flat = " ".join(body.split())
     assert 'data-new-model-band2-sample-names="Alice|Bob|Carol"' in flat
+
+
+def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
+    client: TestClient, db: Session
+) -> None:
+    """The wrapper's ``data-new-model-band2-unit-mode`` attribute
+    reflects the saved group_kind in both edit and view modes — so
+    the preview-builder JS picks the correct rendering branch
+    regardless of whether the per-instrument Edit gate is open."""
+    review_session = _make_session(client, db, code="nm-unit-mode")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Save: Group mode with boundary tag = reviewee.tag_1.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+
+    # View mode (no ?editing=) — the unit-mode attr should still
+    # carry "grouped" so the preview JS renders the group cell.
+    view_body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'data-new-model-band2-unit-mode="grouped"' in view_body
+    # The link3_mode form input only renders as an <input> in edit
+    # mode (the attribute name appears in inline JS selectors on
+    # every page, hence the more specific check).
+    assert '<input ' not in view_body.split(
+        'data-new-model-link3-mode-input'
+    )[0].rsplit('<', 1)[-1] if 'data-new-model-link3-mode-input' in view_body else True
+    assert 'name="link3_mode"' not in view_body
+
+    # Edit mode — wrapper attr still carries the saved mode, and
+    # the form input is rendered.
+    edit_body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    assert 'data-new-model-band2-unit-mode="grouped"' in edit_body
+    assert 'name="link3_mode"' in edit_body
