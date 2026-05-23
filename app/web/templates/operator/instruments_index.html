@@ -656,9 +656,6 @@
                      placeholder="(optional short label, e.g. Skills)"
                      value="{{ instrument.short_label or '' }}"
                      style="width: 100%; margin-bottom: 8px;">
-            {% elif instrument.short_label %}
-              <p class="short-label-text"
-                 style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
             {% endif %}
             <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
               {% if is_editing %}
@@ -703,17 +700,22 @@
               {% endif %}
             </div>
           </div>
-          <div class="card"
-               style="border-color: transparent; background: transparent; padding: 0;">
-            {% if is_editing %}
+          {% if is_editing %}
+            <div class="card"
+                 style="border-color: transparent; background: transparent; padding: 0;">
               <textarea form="dfsave-{{ instrument.id }}" name="description"
                         placeholder="(no description)"
                         style="width: 100%; min-height: 8em;">{{ instrument.description or "" }}</textarea>
-            {% else %}
+            </div>
+          {% else %}
+            <div class="card" style="margin: 0;">
+              {% if instrument.short_label %}
+                <h3 style="margin: 0 0 8px 0;">{{ instrument.short_label }}</h3>
+              {% endif %}
               <p class="description-text"
                  style="margin: 0;">{{ instrument.description or "(no description)" }}</p>
-            {% endif %}
-          </div>
+            </div>
+          {% endif %}
         </div>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
