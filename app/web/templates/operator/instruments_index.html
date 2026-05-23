@@ -1688,31 +1688,35 @@
                 <option value="list">List</option>
               </select>
               {# The remaining 60% holds the conditional bound inputs
-                 + the "+" button. The bounds wrapper flexes its
-                 visible children evenly — Min/Max (String, Integer)
-                 split it, Min/Max/Step (Decimal) split it three ways,
-                 and List takes it all in List mode. The single
-                 ``flex: 1 1 0`` per bound input keeps any hidden
-                 ones from claiming layout space. #}
+                 + the "+" button. The bounds wrapper is a 3-column
+                 CSS grid so Min / Max / Step each occupy a fixed
+                 1/3 slot regardless of how many are visible — that
+                 keeps String's Min + Max the same pixel width as
+                 Decimal's Min + Max (the missing Step slot stays
+                 empty rather than letting the others stretch).
+                 List spans the whole row when it's the chosen data
+                 type. #}
               <div data-new-model-rf-bounds-wrap
-                   style="flex: 1 1 auto; min-width: 0; display: flex;
+                   style="flex: 1 1 auto; min-width: 0;
+                          display: grid;
+                          grid-template-columns: 1fr 1fr 1fr;
                           gap: 8px; align-items: center;">
                 <input type="text"
                        data-new-model-rf-bound="min"
                        placeholder="Min"
-                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <input type="text"
                        data-new-model-rf-bound="max"
                        placeholder="Max"
-                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <input type="text"
                        data-new-model-rf-bound="step"
                        placeholder="Step"
-                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
                 <input type="text"
                        data-new-model-rf-bound="list"
                        placeholder="List (comma-separated)"
-                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                       style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
               </div>
               <button type="button" class="btn secondary"
                       style="flex: 0 0 auto; padding: 4px 10px;"
@@ -1731,7 +1735,7 @@
             var dataType = select.value;
             var show = {
               string:  ['min', 'max'],
-              integer: ['min', 'max'],
+              integer: ['min', 'max', 'step'],
               decimal: ['min', 'max', 'step'],
               list:    ['list'],
             }[dataType] || [];
