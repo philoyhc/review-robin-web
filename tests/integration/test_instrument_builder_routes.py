@@ -998,3 +998,103 @@ def test_new_model_band2_column_widths_clamps_and_clears(
     )
     db.refresh(new_model)
     assert new_model.column_widths is None
+
+
+def test_new_model_band2_display_fields_order_round_trip(
+    client: TestClient, db: Session
+) -> None:
+    """POSTing display-field ids to /display-fields/order persists the
+    new sequence onto each row's ``order`` column. Locked Name + Email
+    rows stay pinned at orders 0 and 1; the non-locked rows take
+    orders 2..N+1 in the order the client requested."""
+    review_session = _make_session(client, db, code="nm-order")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    # Trigger the lazy-seed for tag display fields by rendering the
+    # page first.
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+    db.refresh(new_model)
+    by_source = {
+        f.source_field: f for f in new_model.display_fields
+        if f.source_type == "reviewee"
+    }
+    tag_1 = by_source["tag_1"]
+    name = by_source["name"]
+    email = by_source["email_or_identifier"]
+
+    # Reorder the unlocked fields — swap tag_1 to first non-locked
+    # position. ``ordered_ids`` must enumerate every non-locked
+    # display field id exactly once.
+    unlocked_ids = [
+        f.id for f in new_model.display_fields
+        if (f.source_type, f.source_field) not in (("reviewee", "name"), ("reviewee", "email_or_identifier"))
+    ]
+    new_order = [tag_1.id] + [fid for fid in unlocked_ids if fid != tag_1.id]
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/display-fields/order",
+        json={"ordered_ids": new_order},
+    )
+    assert resp.status_code == 200
+
+    db.refresh(new_model)
+    db.refresh(name)
+    db.refresh(email)
+    db.refresh(tag_1)
+    # Locked fields stay at orders 0, 1.
+    assert name.order == 0
+    assert email.order == 1
+    # tag_1 lands at order 2 (first non-locked slot).
+    assert tag_1.order == 2
+
+
+def test_new_model_band2_display_fields_order_rejects_locked_id(
+    client: TestClient, db: Session
+) -> None:
+    """The route refuses an ordered_ids payload that includes a locked
+    field id (RevieweeName / RevieweeEmail) or omits a non-locked id."""
+    review_session = _make_session(client, db, code="nm-order-bad")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+    db.refresh(new_model)
+    name = next(
+        f for f in new_model.display_fields
+        if f.source_type == "reviewee" and f.source_field == "name"
+    )
+
+    # Including the locked Name id should yield a 400.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/display-fields/order",
+        json={"ordered_ids": [name.id]},
+    )
+    assert resp.status_code == 400
+
+    # Empty list (missing non-locked ids) is also rejected.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/display-fields/order",
+        json={"ordered_ids": []},
+    )
+    assert resp.status_code == 400
