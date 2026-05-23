@@ -1166,37 +1166,46 @@
              data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
              data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
-          <div data-new-model-band2-pills
-               style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            {% for field in _band2.fields %}
-              <span class="pill tag-chip"
-                    role="button" tabindex="0"
-                    aria-pressed="false"
-                    data-new-model-band2-pill
-                    data-key="{{ field.key }}"
-                    data-label="{{ field.label }}"
-                    data-source-type="{{ field.source_type }}"
-                    data-source-field="{{ field.source_field }}"
-                    data-value="{{ field.value or '' }}"
-                    data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
-                    data-display-field-id="{{ field.display_field_id }}"
-                    data-width="{{ field.width_px or '' }}"
-                    data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
-                    {% if field.reorderable %}
-                    draggable="true"
-                    ondragstart="newModelBand2DragStart(event)"
-                    ondragend="newModelBand2DragEnd(event)"
-                    ondragover="newModelBand2DragOver(event)"
-                    ondrop="newModelBand2Drop(event)"
-                    {% endif %}
-                    onclick="newModelToggleBand2Pill(this)"
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
-            {% else %}
-              <span class="muted">—</span>
-            {% endfor %}
+          {# Gate pill clicks / drag-resize / drag-reorder behind the
+             per-instrument Edit state — same pattern as Bands 1 + 3.
+             ``inert`` blocks every interaction below (clicks, focus,
+             native HTML5 drag); the opacity fade gives the visual
+             cue that the band is view-only until Edit is engaged. #}
+          <div data-new-model-band2-editable
+               style="{% if not is_editing %}opacity: 0.75;{% endif %}"
+               {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+            <div data-new-model-band2-pills
+                 style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              {% for field in _band2.fields %}
+                <span class="pill tag-chip"
+                      role="button" tabindex="0"
+                      aria-pressed="false"
+                      data-new-model-band2-pill
+                      data-key="{{ field.key }}"
+                      data-label="{{ field.label }}"
+                      data-source-type="{{ field.source_type }}"
+                      data-source-field="{{ field.source_field }}"
+                      data-value="{{ field.value or '' }}"
+                      data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
+                      data-display-field-id="{{ field.display_field_id }}"
+                      data-width="{{ field.width_px or '' }}"
+                      data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                      {% if field.reorderable %}
+                      draggable="true"
+                      ondragstart="newModelBand2DragStart(event)"
+                      ondragend="newModelBand2DragEnd(event)"
+                      ondragover="newModelBand2DragOver(event)"
+                      ondrop="newModelBand2Drop(event)"
+                      {% endif %}
+                      onclick="newModelToggleBand2Pill(this)"
+                      title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
+              {% else %}
+                <span class="muted">—</span>
+              {% endfor %}
+            </div>
+            <div data-new-model-band2-preview
+                 style="margin-top: 16px;"></div>
           </div>
-          <div data-new-model-band2-preview
-               style="margin-top: 16px;"></div>
         </div>
         <script>
           (function () {
