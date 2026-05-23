@@ -617,11 +617,12 @@
       {% if instrument.is_pilot %}
         {# Pilot card — concept-test layout for the Instrument
            Builder (guide/instrument_builder.md). Identity at the
-           top (status pills, description, edit/save/cancel,
-           show-when-closed); horizontal rules separating Band 1 /
-           Band 2 / Band 3 placeholders; standard action row +
-           delete-confirm checkbox at the bottom. Bands stay
-           placeholder until the builder lands per-band. #}
+           top in a two-column grid (left: title + pills, short
+           label, buttons; right: description); horizontal rules
+           separating Band 1 / Band 2 / Band 3 placeholders;
+           standard action row + delete-confirm checkbox at the
+           bottom. Bands stay placeholder until the builder lands
+           per-band. #}
         {% if is_editing %}
           {# Bulk-save form for the identity-card short_label +
              description (joins via form= on the inputs). No
@@ -629,7 +630,91 @@
           <form id="dfsave-{{ instrument.id }}" method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
         {% endif %}
-        {{ instrument_identity(session, instrument, loop.index, is_editing, is_ready, is_some_rtd_unlocked, false) }}
+        <div class="bottom-grid" style="align-items: stretch;">
+          <div class="card instrument-edit"
+               style="border-color: transparent; background: transparent; padding: 0;
+                      display: flex; flex-direction: column;">
+            <h2 style="margin-top: 0; font-size: 1.5rem;">
+              Instrument #{{ loop.index }}
+              <span class="pill pill-info">Pilot</span>
+              {% if instrument.accepting_responses %}
+                <span class="pill pill-count">accepting responses</span>
+              {% else %}
+                <span class="pill pill-empty">not accepting responses</span>
+              {% endif %}
+              {% if instrument.responses_visible_when_closed %}
+                <span class="pill pill-count">showing when closed</span>
+              {% else %}
+                <span class="pill pill-empty">not showing when closed</span>
+              {% endif %}
+            </h2>
+            {% if is_editing %}
+              <input form="dfsave-{{ instrument.id }}"
+                     type="text"
+                     name="short_label"
+                     maxlength="32"
+                     placeholder="(optional short label, e.g. Skills)"
+                     value="{{ instrument.short_label or '' }}"
+                     style="width: 100%; margin-bottom: 8px;">
+            {% elif instrument.short_label %}
+              <p class="short-label-text"
+                 style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
+            {% endif %}
+            <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
+              {% if is_editing %}
+                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary">Save</button>
+                <a class="btn secondary"
+                   href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}">Cancel</a>
+              {% elif is_some_rtd_unlocked %}
+                <a class="btn secondary disabled" aria-disabled="true"
+                   title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
+              {% else %}
+                <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+                   href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+                   {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+              {% endif %}
+              {% if is_ready and not instrument.accepting_responses %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
+                      style="margin: 0;">
+                  <button class="btn secondary" type="submit">Open this Instrument</button>
+                </form>
+              {% endif %}
+              {% if is_ready and instrument.accepting_responses %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
+                      style="margin: 0;">
+                  <button class="btn secondary" type="submit">Close this instrument</button>
+                </form>
+              {% endif %}
+              {% if not instrument.responses_visible_when_closed %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                      style="margin: 0;">
+                  <input type="hidden" name="visible_when_closed" value="true">
+                  <button class="btn secondary" type="submit">Show when closed</button>
+                </form>
+              {% else %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                      style="margin: 0;">
+                  <button class="btn secondary" type="submit">Don't show when closed</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card"
+               style="border-color: transparent; background: transparent; padding: 0;">
+            {% if is_editing %}
+              <textarea form="dfsave-{{ instrument.id }}" name="description"
+                        placeholder="(no description)"
+                        style="width: 100%; min-height: 8em;">{{ instrument.description or "" }}</textarea>
+            {% else %}
+              <p class="description-text"
+                 style="margin: 0;">{{ instrument.description or "(no description)" }}</p>
+            {% endif %}
+          </div>
+        </div>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
         <h3 style="margin: 0;">Band 1</h3>
