@@ -293,6 +293,19 @@
         .new-model-band2-pill-grip {
         color: var(--text-primary, #1f2937);
       }
+      /*
+       * `||` divider that sits between display pills and response
+       * pills in Band 2's pill row. Hidden until a response field
+       * is added (the JS only creates it then), so the display-only
+       * shape stays unchanged for instruments without responses.
+       */
+      .new-model-band2-pills-divider {
+        color: var(--text-muted, #94a3b8);
+        font-weight: bold;
+        font-size: 1.1em;
+        padding: 0 4px;
+        user-select: none;
+      }
       .muted { color: #777; }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
