@@ -375,8 +375,8 @@ def _new_model_band2_state(
 ) -> dict[str, Any]:
     """For the new-model card's Band 2 ("Review Instrument") preview:
     every display field on the instrument whose source slot has data
-    somewhere in the session, with the field's friendly label and a
-    sample value pulled from the first active reviewee.
+    somewhere in the session, plus the sample data the client-side
+    preview row builder needs to compose a reviewer-surface row.
 
     Filters out display fields whose underlying source column has no
     populated value in the session — same "Fields with data" UX as
@@ -386,21 +386,42 @@ def _new_model_band2_state(
     over the shared :func:`app.services._queries.slot_has_data`
     primitive).
 
-    Returns ``{"fields": [{"label": str, "value": str | None}, ...],
-    "sample_reviewee_name": str | None}``. Pair-context fields surface
-    in the field list (when at least one active relationship carries a
-    value for that slot) with ``value=None`` until the sample-row
-    selector lands — they need a specific ``(reviewer, reviewee)``
-    relationship to resolve a concrete value.
+    Returns a dict with:
+
+    - ``fields`` — one entry per populated display field, each
+      carrying ``{key, label, source_type, source_field, value,
+      selectable_in_group}``. ``key`` is the canonical
+      ``"{source_type}.{source_field}"`` identifier the client uses
+      to track selection. ``selectable_in_group`` is ``False`` for
+      ``reviewee.email_or_identifier`` / ``reviewee.profile_link``
+      and all pair-context tags, mirroring the actual reviewer
+      surface's group row (which composes group identity from
+      reviewee tag boundary values + member names only).
+    - ``sample_names`` — up to
+      :data:`~app.web.routes_reviewer._surface.GROUP_MEMBER_NAME_LIMIT`
+      reviewee names sorted alphabetically, for the Group-mode
+      preview's member-name line.
+    - ``sample_extra_count`` — count of active reviewees beyond the
+      shown sample names; drives the ``+N more`` suffix.
     """
+    # Local import to avoid a top-of-file circular dep (routes import
+    # from views).
+    from app.web.routes_reviewer._surface import GROUP_MEMBER_NAME_LIMIT
+
     review_session = instrument.session
-    sample = db.execute(
-        select(Reviewee)
-        .where(Reviewee.session_id == review_session.id)
-        .where(Reviewee.status == "active")
-        .order_by(Reviewee.id)
-        .limit(1)
-    ).scalar_one_or_none()
+    active_reviewees = list(
+        db.execute(
+            select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .where(Reviewee.status == "active")
+            .order_by(Reviewee.name, Reviewee.id)
+        ).scalars()
+    )
+    sample = active_reviewees[0] if active_reviewees else None
+    all_names = [r.name for r in active_reviewees]
+    sample_names = all_names[:GROUP_MEMBER_NAME_LIMIT]
+    sample_extra_count = max(0, len(all_names) - len(sample_names))
+
     fields: list[dict[str, Any]] = []
     for f in instrument.display_fields:
         if not f.visible:
@@ -418,15 +439,38 @@ def _new_model_band2_state(
         elif f.source_type == "reviewee":
             raw = getattr(sample, f.source_field, None)
             value = raw if raw else None
-        elif f.source_type == "pair_context":
-            value = None  # placeholder; needs a relationship to resolve
         else:
-            value = None
-        fields.append({"label": label, "value": value})
+            value = None  # pair_context — needs a relationship to resolve
+        fields.append(
+            {
+                "key": f"{f.source_type}.{f.source_field}",
+                "label": label,
+                "source_type": f.source_type,
+                "source_field": f.source_field,
+                "value": value,
+                "selectable_in_group": _is_selectable_in_group(
+                    f.source_type, f.source_field
+                ),
+            }
+        )
     return {
         "fields": fields,
-        "sample_reviewee_name": sample.name if sample is not None else None,
+        "sample_names": sample_names,
+        "sample_extra_count": sample_extra_count,
     }
+
+
+def _is_selectable_in_group(source_type: str, source_field: str) -> bool:
+    """Which display fields the operator can include in the Group-mode
+    preview row. Mirrors the actual reviewer surface's group cell
+    (``app/web/templates/reviewer/review_surface.html`` ~line 264):
+    group identity = boundary tag values + member name list; email,
+    profile link, and pair-context tags don't compose meaningfully
+    there.
+    """
+    if source_type != "reviewee":
+        return False
+    return source_field in {"name", "tag_1", "tag_2", "tag_3"}
 
 
 def _display_field_has_data(
