@@ -367,10 +367,10 @@ def build_instrument_rule_picker_contexts(
     return contexts
 
 
-def _pilot_usable_tags(
+def _new_model_usable_tags(
     db: Session, review_session: ReviewSession
 ) -> dict[str, list[tuple[str, str]]]:
-    """For the Instrument Builder pilot card: which tag slots are
+    """For the Instrument Builder new-model card: which tag slots are
     populated for the session, paired with their friendly labels.
 
     Returns a dict keyed by namespace (``reviewer`` / ``reviewee`` /
@@ -608,5 +608,5 @@ def build_instruments_context(
         "breadcrumbs": breadcrumbs.operator_session_child(
             review_session, "Instruments"
         ),
-        "pilot_tags": _pilot_usable_tags(db, review_session),
+        "new_model_tags": _new_model_usable_tags(db, review_session),
     }

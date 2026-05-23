@@ -200,18 +200,18 @@
                   data-delete-btn="{{ instrument.id }}"
                   disabled aria-disabled="true">Delete</button>
         {% endif %}
-        {# +Pilot — concept-test affordance for the Instrument
-           Builder vertical-bands card. Spawns a real pilot
+        {# +New model — concept-test affordance for the Instrument
+           Builder vertical-bands card. Spawns a real new-model
            instrument immediately after this one (same pattern as
            Add instrument / Add group instrument); the template
-           renders pilot rows with the bands placeholder layout.
+           renders new-model rows with the bands placeholder layout.
            See guide/instrument_builder.md. #}
         <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/add-pilot"
+              action="/operator/sessions/{{ session.id }}/instruments/add-new-model"
               style="display: inline; margin: 0;">
           <input type="hidden" name="after" value="{{ instrument.id }}">
           <button class="btn primary-outline" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+Pilot</button>
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+New model</button>
         </form>
       </div>
     </div>
@@ -276,7 +276,7 @@
                 display: flex; flex-direction: column;">
       <h2 style="margin-top: 0; font-size: 1.5rem;">
         Instrument #{{ index }}
-        {% if instrument.is_pilot %}<span class="pill pill-info">Pilot</span>{% endif %}
+        {% if instrument.is_new_model %}<span class="pill pill-info">New model</span>{% endif %}
         {% if is_group %}<span class="pill pill-info">Group-scoped</span>{% endif %}
         {% if instrument.accepting_responses %}
           <span class="pill pill-count">accepting responses</span>
@@ -614,8 +614,8 @@
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
-      {% if instrument.is_pilot %}
-        {# Pilot card — concept-test layout for the Instrument
+      {% if instrument.is_new_model %}
+        {# New-model card — concept-test layout for the Instrument
            Builder (guide/instrument_builder.md). Identity at the
            top in a two-column grid (left: title + pills, short
            label, buttons; right: description); horizontal rules
@@ -626,7 +626,7 @@
         {% if is_editing %}
           {# Bulk-save form for the identity-card short_label +
              description (joins via form= on the inputs). No
-             Display / Response Fields rows on a pilot card yet. #}
+             Display / Response Fields rows on a new-model card yet. #}
           <form id="dfsave-{{ instrument.id }}" method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
         {% endif %}
@@ -637,7 +637,7 @@
                       display: flex; flex-direction: column;">
             <h2 style="margin-top: 0; font-size: 1.5rem;">
               Instrument #{{ loop.index }}
-              <span class="pill pill-info">Pilot</span>
+              <span class="pill pill-info">New model</span>
               {% if instrument.accepting_responses %}
                 <span class="pill pill-count">accepting responses</span>
               {% else %}
@@ -729,9 +729,9 @@
            reviewers) and Link 2 (Pool of those reviewed); the only
            difference between them is the dropdown's tag namespace
            (reviewer.tag* vs reviewee.tag*). All shared markup +
-           inline window.pilot* helpers — nothing wired to
+           inline window.newModel* helpers — nothing wired to
            persistence. #}
-        {% macro pilot_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
+        {% macro new_model_rule_list(title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
           {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
           {% set _is_active = tag_options | length > 0 %}
           {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
@@ -740,7 +740,7 @@
           {% if operand_tag_options is not none and operand_tag_options | length == 0 %}
             {% set _ops = _ops | reject('in', ['IS THE SAME AS', 'IS DIFFERENT FROM']) | list %}
           {% endif %}
-          <div data-pilot-link-wrapper>
+          <div data-new-model-link-wrapper>
             <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
               {{ title }}
               {# Mode-toggle pill: "All" (no filter, builder greyed
@@ -748,19 +748,19 @@
                  active). Default is All. Disabled (and stuck on
                  All) when no usable tags exist for this link. #}
               <span class="pill {% if _is_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                    data-pilot-rule-mode="all"
-                    data-pilot-mode-on-label="{{ on_label }}"
-                    {% if _is_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
+                    data-new-model-rule-mode="all"
+                    data-new-model-mode-on-label="{{ on_label }}"
+                    {% if _is_active %}role="button" tabindex="0" aria-pressed="false" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
                     title="{{ 'Click to toggle (placeholder)' if _is_active else 'No usable tags for this link' }}">All</span>
             </h3>
-            <div data-pilot-rule-builder
+            <div data-new-model-rule-builder
                  style="display: flex; align-items: stretch; gap: 8px;
                         opacity: 0.5; pointer-events: none;">
               <div style="flex: 0 0 20%; display: flex;
                           align-items: center; justify-content: center; gap: 4px;">
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
-                        onclick="pilotAddRule(this)"
+                        onclick="newModelAddRule(this)"
                         title="Add rule (placeholder)">+</button>
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
@@ -768,9 +768,9 @@
                         title="Toggle combinator (placeholder)">AND</button>
               </div>
               <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-              <div data-pilot-rule-cells
+              <div data-new-model-rule-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
-                <div data-pilot-rule-cell
+                <div data-new-model-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
@@ -780,8 +780,8 @@
                     </select>
                     <button type="button" class="btn secondary"
                             style="padding: 4px 8px; flex-shrink: 0;"
-                            data-pilot-operator-cycle="{{ _ops | join('|') }}"
-                            onclick="pilotCycleOperator(this)"
+                            data-new-model-operator-cycle="{{ _ops | join('|') }}"
+                            onclick="newModelCycleOperator(this)"
                             title="Toggle operator (placeholder)">{{ _ops[0] }}</button>
                   </div>
                   <div style="display: flex; align-items: center; gap: 4px;">
@@ -789,20 +789,20 @@
                       {# Tag-operand dropdown shown when the operator
                          is IS THE SAME AS / IS DIFFERENT FROM; hidden
                          (display: none) when the operator is IS /
-                         IS NOT (default). pilotCycleOperator toggles
+                         IS NOT (default). newModelCycleOperator toggles
                          visibility. #}
-                      <select data-pilot-operand-tag
+                      <select data-new-model-operand-tag
                               style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
                         {% for key, label in operand_tag_options %}
                           <option value="{{ key }}">{{ label }}</option>
                         {% endfor %}
                       </select>
                     {% endif %}
-                    <input data-pilot-operand-value type="text" placeholder="value"
+                    <input data-new-model-operand-value type="text" placeholder="value"
                            style="flex: 1; min-width: 0; padding: 4px;">
                     <button type="button" class="btn destructive"
                             style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="pilotRemoveRule(this)"
+                            onclick="newModelRemoveRule(this)"
                             disabled aria-disabled="true"
                             title="Cannot remove the first rule (placeholder)">X</button>
                   </div>
@@ -812,31 +812,31 @@
           </div>
         {% endmacro %}
 
-        {# Per-link tag option lists. Each ``pilot_tags[ns]`` is a
+        {# Per-link tag option lists. Each ``new_model_tags[ns]`` is a
            list of ``(canonical_key, friendly_label)`` tuples for
            slots that have at least one populated row in the
-           session — built by ``views._instruments._pilot_usable_tags``.
+           session — built by ``views._instruments._new_model_usable_tags``.
            Empty lists drive the column's pill into the disabled /
            inactive state. #}
-        {% set _link1_tags = pilot_tags.reviewer + pilot_tags.pair_context %}
-        {% set _link2_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
-        {% set _link2_operand = pilot_tags.reviewer + pilot_tags.pair_context %}
-        {% set _link3_tags = pilot_tags.reviewee + pilot_tags.pair_context %}
+        {% set _link1_tags = new_model_tags.reviewer + new_model_tags.pair_context %}
+        {% set _link2_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
+        {% set _link2_operand = new_model_tags.reviewer + new_model_tags.pair_context %}
+        {% set _link3_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
                     {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           <div style="padding: 0 16px 0 0;">
-            {{ pilot_rule_list("Pool of reviewers", _link1_tags,
+            {{ new_model_rule_list("Pool of reviewers", _link1_tags,
                 on_label="Filter using reviewer attributes") }}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            {{ pilot_rule_list("Pool of those reviewed", _link2_tags,
+            {{ new_model_rule_list("Pool of those reviewed", _link2_tags,
                 operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
                 operand_tag_options=_link2_operand,
                 on_label="Filter using reviewee attributes") }}
           </div>
           <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
-            <div data-pilot-link-wrapper>
+            <div data-new-model-link-wrapper>
               {% set _link3_active = _link3_tags | length > 0 %}
               <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
                 Unit of review
@@ -845,9 +845,9 @@
                    Disabled (and stuck on Individual) when no usable
                    reviewee / pair_context tags exist for the session. #}
                 <span class="pill {% if _link3_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
-                      data-pilot-unit-mode="individual"
-                      data-pilot-mode-on-label="Group using reviewee attributes"
-                      {% if _link3_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
+                      data-new-model-unit-mode="individual"
+                      data-new-model-mode-on-label="Group using reviewee attributes"
+                      {% if _link3_active %}role="button" tabindex="0" aria-pressed="false" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
                       title="{{ 'Click to toggle (placeholder)' if _link3_active else 'No usable tags for this link' }}">Individual</span>
               </h3>
               {# Placeholder Link 3 group-boundary picker. Left 45%
@@ -859,14 +859,14 @@
                  cell. The first cell's X is disabled (can't remove
                  the only cell). All placeholder — nothing wired
                  to persistence. #}
-              <div data-pilot-unit-builder
+              <div data-new-model-unit-builder
                    style="display: flex; align-items: stretch; gap: 8px;
                           opacity: 0.5; pointer-events: none;">
                 <div style="flex: 0 0 30%; display: flex;
                             align-items: center; justify-content: center; gap: 8px;">
                   <button type="button" class="btn secondary"
                           style="padding: 4px 10px;"
-                          onclick="pilotAddUnitCell(this)"
+                          onclick="newModelAddUnitCell(this)"
                           title="Add boundary tag (placeholder)">+</button>
                   <button type="button" class="btn secondary"
                           style="padding: 4px 10px;"
@@ -874,18 +874,18 @@
                           title="Group identity marker (placeholder)">THE SAME</button>
                 </div>
                 <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-                <div data-pilot-unit-cells
+                <div data-new-model-unit-cells
                      style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
-                  <div data-pilot-unit-cell
+                  <div data-new-model-unit-cell
                        style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 57.14%; min-width: 0; padding: 4px;">
                       {% for key, label in _link3_tags %}
                         <option value="{{ key }}">{{ label }}</option>
                       {% endfor %}
                     </select>
-                    <button type="button" class="btn destructive" data-pilot-cell-action
+                    <button type="button" class="btn destructive" data-new-model-cell-action
                             style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="pilotRemoveUnitCell(this)"
+                            onclick="newModelRemoveUnitCell(this)"
                             disabled aria-disabled="true"
                             title="Cannot remove the first cell (placeholder)">X</button>
                   </div>
@@ -896,25 +896,25 @@
         </div>
         <script>
           {# Shared placeholder helpers for the rule-list cells.
-             Defined on window so re-rendering / multiple pilot
+             Defined on window so re-rendering / multiple new-model
              cards on one page is harmless. #}
-          window.pilotAddRule = window.pilotAddRule || function (btn) {
-            var builder = btn.closest('[data-pilot-rule-builder]');
-            var container = builder.querySelector('[data-pilot-rule-cells]');
-            var first = container.querySelector('[data-pilot-rule-cell]');
+          window.newModelAddRule = window.newModelAddRule || function (btn) {
+            var builder = btn.closest('[data-new-model-rule-builder]');
+            var container = builder.querySelector('[data-new-model-rule-cells]');
+            var first = container.querySelector('[data-new-model-rule-cell]');
             var clone = first.cloneNode(true);
             clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
             clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
             // Reset each operator-toggle button to the first option in its cycle.
-            clone.querySelectorAll('button[data-pilot-operator-cycle]').forEach(function (b) {
-              var cycle = (b.getAttribute('data-pilot-operator-cycle') || 'IS|IS NOT').split('|');
+            clone.querySelectorAll('button[data-new-model-operator-cycle]').forEach(function (b) {
+              var cycle = (b.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
               b.textContent = cycle[0];
             });
             // Reset operand variants on the cloned cell: value input
             // shown, tag dropdown (if present) hidden — matching the
             // default operator state (IS).
-            var tagSel = clone.querySelector('[data-pilot-operand-tag]');
-            var valInput = clone.querySelector('[data-pilot-operand-value]');
+            var tagSel = clone.querySelector('[data-new-model-operand-tag]');
+            var valInput = clone.querySelector('[data-new-model-operand-value]');
             if (tagSel && valInput) {
               tagSel.style.display = 'none';
               valInput.style.display = '';
@@ -927,74 +927,74 @@
             });
             container.appendChild(clone);
           };
-          window.pilotCycleOperator = window.pilotCycleOperator || function (btn) {
-            var cycle = (btn.getAttribute('data-pilot-operator-cycle') || 'IS|IS NOT').split('|');
+          window.newModelCycleOperator = window.newModelCycleOperator || function (btn) {
+            var cycle = (btn.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
             var idx = cycle.indexOf(btn.textContent.trim());
             var next = cycle[(idx + 1) % cycle.length];
             btn.textContent = next;
             // If this cell has both operand variants, swap their
             // visibility: IS / IS NOT → value input; anything else
             // (IS THE SAME AS / IS DIFFERENT FROM) → tag dropdown.
-            var cell = btn.closest('[data-pilot-rule-cell]');
-            var tagSel = cell.querySelector('[data-pilot-operand-tag]');
-            var valInput = cell.querySelector('[data-pilot-operand-value]');
+            var cell = btn.closest('[data-new-model-rule-cell]');
+            var tagSel = cell.querySelector('[data-new-model-operand-tag]');
+            var valInput = cell.querySelector('[data-new-model-operand-value]');
             if (tagSel && valInput) {
               var useTag = next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM';
               tagSel.style.display = useTag ? '' : 'none';
               valInput.style.display = useTag ? 'none' : '';
             }
           };
-          window.pilotRemoveRule = window.pilotRemoveRule || function (btn) {
-            var cell = btn.closest('[data-pilot-rule-cell]');
+          window.newModelRemoveRule = window.newModelRemoveRule || function (btn) {
+            var cell = btn.closest('[data-new-model-rule-cell]');
             var container = cell.parentElement;
-            if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
+            if (container.querySelectorAll('[data-new-model-rule-cell]').length > 1) {
               cell.remove();
             }
           };
-          window.pilotToggleUnitMode = window.pilotToggleUnitMode || function (btn) {
-            var wrap = btn.closest('[data-pilot-link-wrapper]');
-            var builder = wrap.querySelector('[data-pilot-unit-builder]');
-            var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Group';
-            if (btn.getAttribute('data-pilot-unit-mode') === 'individual') {
-              btn.setAttribute('data-pilot-unit-mode', 'group');
+          window.newModelToggleUnitMode = window.newModelToggleUnitMode || function (btn) {
+            var wrap = btn.closest('[data-new-model-link-wrapper]');
+            var builder = wrap.querySelector('[data-new-model-unit-builder]');
+            var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Group';
+            if (btn.getAttribute('data-new-model-unit-mode') === 'individual') {
+              btn.setAttribute('data-new-model-unit-mode', 'group');
               btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
-              btn.setAttribute('data-pilot-unit-mode', 'individual');
+              btn.setAttribute('data-new-model-unit-mode', 'individual');
               btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'Individual';
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
             }
           };
-          window.pilotAddUnitCell = window.pilotAddUnitCell || function (btn) {
-            var builder = btn.closest('[data-pilot-unit-builder]');
-            var container = builder.querySelector('[data-pilot-unit-cells]');
-            var first = container.querySelector('[data-pilot-unit-cell]');
+          window.newModelAddUnitCell = window.newModelAddUnitCell || function (btn) {
+            var builder = btn.closest('[data-new-model-unit-builder]');
+            var container = builder.querySelector('[data-new-model-unit-cells]');
+            var first = container.querySelector('[data-new-model-unit-cell]');
             var clone = first.cloneNode(true);
             clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
             container.appendChild(clone);
-            pilotRefreshUnitButtons(container);
+            newModelRefreshUnitButtons(container);
           };
-          window.pilotRemoveUnitCell = window.pilotRemoveUnitCell || function (btn) {
-            var cell = btn.closest('[data-pilot-unit-cell]');
+          window.newModelRemoveUnitCell = window.newModelRemoveUnitCell || function (btn) {
+            var cell = btn.closest('[data-new-model-unit-cell]');
             var container = cell.parentElement;
-            if (container.querySelectorAll('[data-pilot-unit-cell]').length > 1) {
+            if (container.querySelectorAll('[data-new-model-unit-cell]').length > 1) {
               cell.remove();
-              pilotRefreshUnitButtons(container);
+              newModelRefreshUnitButtons(container);
             }
           };
-          window.pilotRefreshUnitButtons = window.pilotRefreshUnitButtons || function (container) {
-            var cells = container.querySelectorAll('[data-pilot-unit-cell]');
+          window.newModelRefreshUnitButtons = window.newModelRefreshUnitButtons || function (container) {
+            var cells = container.querySelectorAll('[data-new-model-unit-cell]');
             cells.forEach(function (cell, idx) {
-              var b = cell.querySelector('[data-pilot-cell-action]');
+              var b = cell.querySelector('[data-new-model-cell-action]');
               var isLast = (idx === cells.length - 1);
               if (isLast) {
                 b.textContent = 'X';
                 b.className = 'btn destructive';
-                b.setAttribute('onclick', 'pilotRemoveUnitCell(this)');
+                b.setAttribute('onclick', 'newModelRemoveUnitCell(this)');
                 var onlyOne = cells.length === 1;
                 b.disabled = onlyOne;
                 if (onlyOne) {
@@ -1014,18 +1014,18 @@
               }
             });
           };
-          window.pilotToggleRuleMode = window.pilotToggleRuleMode || function (btn) {
-            var wrap = btn.closest('[data-pilot-link-wrapper]');
-            var builder = wrap.querySelector('[data-pilot-rule-builder]');
-            var onLabel = btn.getAttribute('data-pilot-mode-on-label') || 'Filter using rules';
-            if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
-              btn.setAttribute('data-pilot-rule-mode', 'filter');
+          window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
+            var wrap = btn.closest('[data-new-model-link-wrapper]');
+            var builder = wrap.querySelector('[data-new-model-rule-builder]');
+            var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Filter using rules';
+            if (btn.getAttribute('data-new-model-rule-mode') === 'all') {
+              btn.setAttribute('data-new-model-rule-mode', 'filter');
               btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
-              btn.setAttribute('data-pilot-rule-mode', 'all');
+              btn.setAttribute('data-new-model-rule-mode', 'all');
               btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'All';
               builder.style.opacity = '0.5';
@@ -1052,26 +1052,26 @@
            reserved for a future band-3 detail surface — currently
            empty. All placeholder; see
            guide/instrument_builder.md §Band 3. #}
-        {% macro pilot_static_pill(label) %}
+        {% macro new_model_static_pill(label) %}
           <span class="pill pill-count tag-chip is-selected"
                 title="Fixed (placeholder)">{{ label }}</span>
         {% endmacro %}
-        {% macro pilot_audience_chip(label, selected=false) %}
+        {% macro new_model_audience_chip(label, selected=false) %}
           <span class="pill pill-count tag-chip{% if selected %} is-selected{% endif %}"
                 role="button" tabindex="0"
                 aria-pressed="{{ 'true' if selected else 'false' }}"
-                data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
-                onclick="pilotToggleAudience(this)"
+                data-new-model-chip-selected="{{ 'true' if selected else 'false' }}"
+                onclick="newModelToggleAudience(this)"
                 title="Click to toggle audience (placeholder)">{{ label }}</span>
         {% endmacro %}
-        {% macro pilot_cycle_button(cycle, current) %}
+        {% macro new_model_cycle_button(cycle, current) %}
           <span class="pill pill-count tag-chip is-selected"
                 role="button" tabindex="0"
-                data-pilot-cycle="{{ cycle | join('|') }}"
-                onclick="pilotCycleButton(this)"
+                data-new-model-cycle="{{ cycle | join('|') }}"
+                onclick="newModelCycleButton(this)"
                 title="Click to cycle (placeholder)">{{ current }}</span>
         {% endmacro %}
-        <div data-pilot-band3
+        <div data-new-model-band3
              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
                     align-items: start;
                     {% if not is_editing %}opacity: 0.75;{% endif %}"
@@ -1089,51 +1089,51 @@
               <tbody>
                 {# Operator — every cell fixed. #}
                 <tr>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("Operator") }}</td>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("Raw responses") }}</td>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("Always") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("Operator") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("Raw responses") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("Always") }}</td>
                 </tr>
                 {# Reviewers — every cell fixed. #}
                 <tr>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("Reviewers") }}</td>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("Raw responses") }}</td>
-                  <td style="padding: 6px 8px;">{{ pilot_static_pill("While session ongoing") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("Reviewers") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("Raw responses") }}</td>
+                  <td style="padding: 6px 8px;">{{ new_model_static_pill("While session ongoing") }}</td>
                 </tr>
                 {# Reviewees — toggleable, default unselected. What
                    cycles (default Anonymized); When cycles (default
                    After release). #}
-                <tr data-pilot-audience="reviewees">
+                <tr data-new-model-audience="reviewees">
                   <td style="padding: 6px 8px;">
-                    {{ pilot_audience_chip("Reviewees", selected=false) }}
+                    {{ new_model_audience_chip("Reviewees", selected=false) }}
                   </td>
-                  <td data-pilot-audience-other-cell
+                  <td data-new-model-audience-other-cell
                       style="padding: 6px 8px; opacity: 0.4; pointer-events: none;">
-                    {{ pilot_cycle_button(
+                    {{ new_model_cycle_button(
                         ["Raw responses", "Summarized responses", "Anonymized responses"],
                         "Anonymized responses") }}
                   </td>
-                  <td data-pilot-audience-other-cell
+                  <td data-new-model-audience-other-cell
                       style="padding: 6px 8px; opacity: 0.4; pointer-events: none;">
-                    {{ pilot_cycle_button(
+                    {{ new_model_cycle_button(
                         ["While review ongoing", "After release"],
                         "After release") }}
                   </td>
                 </tr>
                 {# Observers — toggleable, default unselected. Same
                    What / When cycles + defaults as Reviewees. #}
-                <tr data-pilot-audience="observers">
+                <tr data-new-model-audience="observers">
                   <td style="padding: 6px 8px;">
-                    {{ pilot_audience_chip("Observers", selected=false) }}
+                    {{ new_model_audience_chip("Observers", selected=false) }}
                   </td>
-                  <td data-pilot-audience-other-cell
+                  <td data-new-model-audience-other-cell
                       style="padding: 6px 8px; opacity: 0.4; pointer-events: none;">
-                    {{ pilot_cycle_button(
+                    {{ new_model_cycle_button(
                         ["Raw responses", "Summarized responses", "Anonymized responses"],
                         "Anonymized responses") }}
                   </td>
-                  <td data-pilot-audience-other-cell
+                  <td data-new-model-audience-other-cell
                       style="padding: 6px 8px; opacity: 0.4; pointer-events: none;">
-                    {{ pilot_cycle_button(
+                    {{ new_model_cycle_button(
                         ["While review ongoing", "After release"],
                         "After release") }}
                   </td>
@@ -1147,20 +1147,20 @@
           </div>
         </div>
         <script>
-          window.pilotToggleAudience = window.pilotToggleAudience || function (btn) {
-            var selected = btn.getAttribute('data-pilot-chip-selected') !== 'true';
-            btn.setAttribute('data-pilot-chip-selected', selected ? 'true' : 'false');
+          window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
+            var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
+            btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
             btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
             if (selected) btn.classList.add('is-selected');
             else btn.classList.remove('is-selected');
-            var row = btn.closest('[data-pilot-audience]');
-            row.querySelectorAll('[data-pilot-audience-other-cell]').forEach(function (cell) {
+            var row = btn.closest('[data-new-model-audience]');
+            row.querySelectorAll('[data-new-model-audience-other-cell]').forEach(function (cell) {
               cell.style.opacity = selected ? '1' : '0.4';
               cell.style.pointerEvents = selected ? 'auto' : 'none';
             });
           };
-          window.pilotCycleButton = window.pilotCycleButton || function (btn) {
-            var cycle = (btn.getAttribute('data-pilot-cycle') || '').split('|');
+          window.newModelCycleButton = window.newModelCycleButton || function (btn) {
+            var cycle = (btn.getAttribute('data-new-model-cycle') || '').split('|');
             if (cycle.length < 2) return;
             var idx = cycle.indexOf(btn.textContent.trim());
             btn.textContent = cycle[(idx + 1) % cycle.length];
@@ -1193,7 +1193,7 @@
             <input type="checkbox" name="confirm" value="true" required
                    form="instrument-delete-{{ instrument.id }}"
                    {% if delete_disabled %}disabled{% else %}data-delete-confirm="{{ instrument.id }}"{% endif %}>
-            Yes, delete <strong>Pilot Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
+            Yes, delete <strong>New model Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
           </label>
         </p>
       {% elif is_group %}
