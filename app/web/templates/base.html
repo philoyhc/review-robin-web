@@ -225,6 +225,36 @@
         box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
+      /*
+       * Band 2 column-resize grippers (operator new-model card).
+       * A 6px-wide click target with a centered 2px vertical mark
+       * so the operator can see where the drag handle is. Darkens
+       * on hover for affordance. Sits absolute on each <th>'s
+       * right edge; the parent <th> carries ``position: relative``.
+       */
+      .new-model-band2-resize-handle {
+        background: linear-gradient(
+          to right,
+          transparent 0,
+          transparent 2px,
+          var(--border-strong, #94a3b8) 2px,
+          var(--border-strong, #94a3b8) 4px,
+          transparent 4px,
+          transparent 6px
+        );
+        transition: background 0.1s ease-in-out;
+      }
+      .new-model-band2-resize-handle:hover {
+        background: linear-gradient(
+          to right,
+          transparent 0,
+          transparent 1px,
+          var(--text-secondary, #475569) 1px,
+          var(--text-secondary, #475569) 5px,
+          transparent 5px,
+          transparent 6px
+        );
+      }
       .muted { color: #777; }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
