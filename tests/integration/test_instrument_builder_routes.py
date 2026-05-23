@@ -591,7 +591,9 @@ def test_add_pilot_creates_instrument_with_is_pilot_flag(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "Band 1" in body
+    assert "Link 1" in body  # Band 1 column placeholder
+    assert "Link 2" in body
+    assert "Link 3" in body
     assert "Band 2" in body
     assert "Band 3" in body
     assert ">Pilot<" in body  # status pill on the pilot card
