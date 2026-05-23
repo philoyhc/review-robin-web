@@ -853,9 +853,8 @@ def test_new_model_band2_renders_review_instrument_pills_with_sample_data(
 def test_new_model_band2_handles_session_with_no_reviewees(
     client: TestClient, db: Session
 ) -> None:
-    """When the session has no active reviewees yet, Band 2 still
-    renders the field list but warns the operator that no sample
-    data is available."""
+    """When the session has no reviewees with data, Band 2 renders a
+    Setup-page-style em-dash chip and a prompt to import reviewees."""
     review_session = _make_session(client, db, code="nm-band2-empty")
     source = _instrument(db, review_session.id)
     client.post(
@@ -869,4 +868,4 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     ).text
     flat = " ".join(body.split())
     assert "Review Instrument" in flat
-    assert "No active reviewees yet" in flat
+    assert "No populated reviewee fields yet" in flat
