@@ -728,32 +728,77 @@
         <div style="display: grid; grid-template-columns: 2fr 3fr 1fr; gap: 0;">
           <div style="padding: 0 16px 0 0;">
             <h3 style="margin: 0 0 12px 0;">Reviewers</h3>
-            {# Placeholder Link 1 rule row: Add button, thick
-               separator, AND/OR combinator toggle, tag picker,
-               IS / IS NOT operator toggle, value editbox. Toggles
-               flip text on click via tiny inline JS. Nothing here
-               is wired to persistence. #}
-            <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; row-gap: 8px;">
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      onclick="this.textContent = this.textContent.trim() === '+AND' ? '+OR' : '+AND';"
-                      title="Add rule + toggle combinator (placeholder)">+AND</button>
-              <div style="width: 3px; height: 28px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-              <select style="padding: 4px; min-width: 0; flex: 0 0 35%;">
-                <option>reviewer.tag1</option>
-                <option>reviewer.tag2</option>
-                <option>reviewer.tag3</option>
-                <option>pair_context.tag1</option>
-                <option>pair_context.tag2</option>
-                <option>pair_context.tag3</option>
-              </select>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      onclick="this.textContent = this.textContent.trim() === 'IS' ? 'IS NOT' : 'IS';"
-                      title="Toggle operator (placeholder)">IS</button>
-              <input type="text" placeholder="value"
-                     style="min-width: 0; padding: 4px; flex: 0 0 35%;">
+            {# Placeholder Link 1 rule list. Two-column layout:
+               left 20% holds the per-list "+" (add rule) and
+               combinator (+AND / +OR) buttons, vertically
+               centered; right 80% holds a stack of rule cells.
+               Each rule cell is two rows — row 1: tag dropdown
+               (40% of cell) + IS / IS NOT toggle; row 2: value
+               editbox + X (remove rule). Toggles flip text on
+               click; + clones the first rule cell; X removes the
+               cell (keeping at least one). All placeholder —
+               nothing wired to persistence. #}
+            <div data-pilot-reviewers-rules
+                 style="display: grid; grid-template-columns: 20% 1fr; gap: 8px; align-items: stretch;">
+              <div style="display: flex; flex-direction: column;
+                          align-items: stretch; justify-content: center; gap: 8px;">
+                <button type="button" class="btn secondary"
+                        style="padding: 4px 10px;"
+                        onclick="pilotAddRule(this)"
+                        title="Add rule (placeholder)">+</button>
+                <button type="button" class="btn secondary"
+                        style="padding: 4px 10px;"
+                        onclick="this.textContent = this.textContent.trim() === '+AND' ? '+OR' : '+AND';"
+                        title="Toggle combinator (placeholder)">+AND</button>
+              </div>
+              <div data-pilot-rule-cells
+                   style="display: flex; flex-direction: column; gap: 12px;">
+                <div data-pilot-rule-cell
+                     style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <select style="flex: 0 0 40%; min-width: 0; padding: 4px;">
+                      <option>reviewer.tag1</option>
+                      <option>reviewer.tag2</option>
+                      <option>reviewer.tag3</option>
+                      <option>pair_context.tag1</option>
+                      <option>pair_context.tag2</option>
+                      <option>pair_context.tag3</option>
+                    </select>
+                    <button type="button" class="btn secondary"
+                            style="padding: 4px 8px; flex-shrink: 0;"
+                            onclick="this.textContent = this.textContent.trim() === 'IS' ? 'IS NOT' : 'IS';"
+                            title="Toggle operator (placeholder)">IS</button>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="text" placeholder="value"
+                           style="flex: 1; min-width: 0; padding: 4px;">
+                    <button type="button" class="btn destructive"
+                            style="padding: 4px 8px; flex-shrink: 0;"
+                            onclick="pilotRemoveRule(this)"
+                            title="Remove rule (placeholder)">X</button>
+                  </div>
+                </div>
+              </div>
             </div>
+            <script>
+              window.pilotAddRule = window.pilotAddRule || function (btn) {
+                var wrap = btn.closest('[data-pilot-reviewers-rules]');
+                var container = wrap.querySelector('[data-pilot-rule-cells]');
+                var first = container.querySelector('[data-pilot-rule-cell]');
+                var clone = first.cloneNode(true);
+                clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+                clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+                clone.querySelectorAll('button[title^="Toggle operator"]').forEach(function (b) { b.textContent = 'IS'; });
+                container.appendChild(clone);
+              };
+              window.pilotRemoveRule = window.pilotRemoveRule || function (btn) {
+                var cell = btn.closest('[data-pilot-rule-cell]');
+                var container = cell.parentElement;
+                if (container.querySelectorAll('[data-pilot-rule-cell]').length > 1) {
+                  cell.remove();
+                }
+              };
+            </script>
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             <h3 style="margin: 0;">Pool of those reviewed</h3>
