@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -1247,6 +1247,49 @@ def instrument_close(
     return _instruments_redirect(
         review_session.id, fragment=f"instrument-{instrument.id}"
     )
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/column-widths"
+)
+async def instrument_column_widths(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Persist drag-resized column widths from the new-model card's
+    Band 2 preview table. Accepts a JSON body
+    ``{"widths": {"identity": 200, "df_<id>": 150, ...}}`` and writes
+    the sanitised payload onto ``instruments.column_widths`` via the
+    :func:`instruments_service.set_column_widths` service. Returns
+    204 No Content on success.
+    """
+    instrument, _ = bundle
+    _require_instrument_editable(instrument.session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="column-widths body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="column-widths body must be a JSON object",
+        )
+    widths = body.get("widths") or {}
+    if not isinstance(widths, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="column-widths.widths must be an object",
+        )
+    instruments_service.set_column_widths(
+        db, instrument=instrument, widths=widths, actor=user
+    )
+    db.commit()
+    return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")

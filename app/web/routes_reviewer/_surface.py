@@ -573,6 +573,13 @@ def _surface_context(
         # A group-scoped instrument renders no per-reviewee display
         # columns — the boundary tags compose the group-identity cell
         # instead — so its display-field header list is empty.
+        # Per-column pixel widths the operator set by drag-resizing
+        # Band 2 on the new-model card. ``widths_by_col_key`` keys
+        # match the keys persisted on ``instrument.column_widths``:
+        # ``"identity"`` for the always-rendered Reviewee / Group
+        # identity column; ``"df_<id>"`` for each display field.
+        widths_by_col_key: dict[str, int] = dict(instrument.column_widths or {})
+        identity_width_px = widths_by_col_key.get("identity")
         display_field_headers = (
             []
             if is_group
@@ -586,6 +593,7 @@ def _surface_context(
                         df.source_type == "reviewee"
                         and df.source_field == "profile_link"
                     ),
+                    "width_px": widths_by_col_key.get(f"df_{df.id}"),
                 }
                 for df in display_fields_by_instrument.get(instrument_id, [])
             ]
@@ -605,6 +613,8 @@ def _surface_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
+                "identity_width_px": identity_width_px,
+                "has_custom_widths": bool(widths_by_col_key),
                 "constraints": constraints,
                 "show_status_col": show_incomplete_marks
                 or any(r.get("submitted_at") for r in group_rows),

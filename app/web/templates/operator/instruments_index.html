@@ -1158,10 +1158,13 @@
            Individual mode, and Group mode composes a single cell
            with bold comma-joined tag values on top and up to
            GROUP_MEMBER_NAME_LIMIT (=10) member names below. #}
-        {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_names": [], "sample_extra_count": 0}) %}
+        {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_names": [], "sample_extra_count": 0, "identity_width_px": none}) %}
         <div data-new-model-band2
+             data-new-model-band2-instrument-id="{{ instrument.id }}"
+             data-new-model-band2-session-id="{{ session.id }}"
              data-new-model-band2-sample-names="{{ _band2.sample_names | join('|') }}"
-             data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}">
+             data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
+             data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
           <div data-new-model-band2-pills
                style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
@@ -1176,6 +1179,8 @@
                     data-source-field="{{ field.source_field }}"
                     data-value="{{ field.value or '' }}"
                     data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
+                    data-display-field-id="{{ field.display_field_id }}"
+                    data-width="{{ field.width_px or '' }}"
                     onclick="newModelToggleBand2Pill(this)"
                     title="Click to include {{ field.label }} in the preview row">{{ field.label }}</span>
             {% else %}
@@ -1225,9 +1230,32 @@
                   sourceType: p.getAttribute('data-source-type'),
                   sourceField: p.getAttribute('data-source-field'),
                   value: p.getAttribute('data-value') || '',
+                  displayFieldId: p.getAttribute('data-display-field-id') || '',
+                  width: parseInt(p.getAttribute('data-width') || '', 10) || 0,
                 });
               });
               return sel;
+            }
+            // Compose the inline ``width: Npx`` style for a <col>
+            // element. Empty string when no width is set so the
+            // browser falls back to the table's auto-distributed
+            // share. table-layout: fixed on the table makes these
+            // widths take hold deterministically.
+            function colStyle(w) {
+              return w && w > 0 ? 'width: ' + w + 'px;' : '';
+            }
+            // Resize handle markup. Sits absolutely positioned on
+            // the right edge of a <th>. mousedown wires a window-
+            // level mousemove that updates the <col>'s width live;
+            // mouseup detaches and POSTs the saved widths.
+            function resizeHandle(colKey) {
+              return '<span class="new-model-band2-resize-handle" '
+                + 'data-col-key="' + esc(colKey) + '" '
+                + 'onmousedown="newModelBand2ResizeStart(event)" '
+                + 'style="position: absolute; right: -2px; top: 0; bottom: 0; '
+                + 'width: 6px; cursor: col-resize; user-select: none; '
+                + 'z-index: 1;" '
+                + 'title="Drag to resize column"></span>';
             }
             // Escape strings going into innerHTML so an operator's
             // tag value with a stray < doesn't break the preview.
@@ -1241,18 +1269,37 @@
             // composition (strong Name on top, code Email below).
             // The card's base.html table rules give a 100%-width
             // table with collapsed borders.
+            // Builds the preview <table> markup. Mirrors the actual
+            // reviewer surface (app/web/templates/reviewer/review_surface.html):
+            // same .rs-reviewee / .rs-group / .rs-narrow column classes,
+            // same <tbody class="rrw-rows">, same identity-cell
+            // composition. Adds a <colgroup> with <col data-col-key>
+            // entries so the operator's drag-resize widths take hold,
+            // and table-layout: fixed so column widths are honored
+            // deterministically (matching the operator's intent for
+            // the reviewer to see exactly this width).
             function buildIndividualPreview(card, selected) {
               if (selected.length === 0) { return ''; }
               var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
               var email = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'email_or_identifier'; });
               var others = selected.filter(function (s) { return !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier')); });
-              var html = '<table><thead><tr>';
+              var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
+              var html = '<table style="table-layout: fixed;">';
+              html += '<colgroup>';
               if (name || email) {
-                html += '<th scope="col" class="rs-reviewee">Reviewee</th>';
+                html += '<col data-col-key="identity" style="' + colStyle(identityW) + '">';
+              }
+              others.forEach(function (o) {
+                html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + colStyle(o.width) + '">';
+              });
+              html += '</colgroup><thead><tr>';
+              if (name || email) {
+                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + resizeHandle('identity') + '</th>';
               }
               others.forEach(function (o) {
                 var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
-                html += '<th scope="col"' + (isProfile ? ' class="rs-narrow"' : '') + '>' + esc(o.label) + '</th>';
+                var cls = isProfile ? ' class="rs-narrow"' : '';
+                html += '<th scope="col"' + cls + ' style="position: relative;">' + esc(o.label) + resizeHandle('df_' + o.displayFieldId) + '</th>';
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               if (name || email) {
@@ -1282,8 +1329,11 @@
               var tagPills = selected.filter(function (s) { return s.sourceType === 'reviewee' && /^tag_/.test(s.sourceField); });
               var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
               var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
-              var html = '<table class="rs-group-table"><thead><tr>';
-              html += '<th scope="col" class="rs-group">Group</th>';
+              var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
+              var html = '<table class="rs-group-table">';
+              html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '"></colgroup>';
+              html += '<thead><tr>';
+              html += '<th scope="col" class="rs-group" style="position: relative;">Group' + resizeHandle('identity') + '</th>';
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               html += '<td class="rs-group">';
               if (tagPills.length > 0) {
@@ -1298,6 +1348,74 @@
               }
               html += '</td></tr></tbody></table>';
               return html;
+            }
+            // Live column-resize drag: track mouse delta against the
+            // initial col width; on mouseup, push the merged widths
+            // to the server.
+            window.newModelBand2ResizeStart = function (event) {
+              event.preventDefault();
+              var handle = event.target;
+              var key = handle.getAttribute('data-col-key');
+              var table = handle.closest('table');
+              if (!table) { return; }
+              var col = table.querySelector('col[data-col-key="' + key + '"]');
+              if (!col) { return; }
+              var card = table.closest('[data-new-model-band2]');
+              var startX = event.clientX;
+              var startWidth = col.offsetWidth || parseInt(col.style.width, 10) || 100;
+              var lastWidth = startWidth;
+              document.body.style.cursor = 'col-resize';
+              function onMove(ev) {
+                var delta = ev.clientX - startX;
+                var w = Math.max(40, Math.min(1200, startWidth + delta));
+                col.style.width = w + 'px';
+                lastWidth = w;
+              }
+              function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.body.style.cursor = '';
+                if (card) {
+                  // Mirror the new width onto the card / pill so the
+                  // value survives the next preview rebuild without
+                  // a server round-trip.
+                  if (key === 'identity') {
+                    card.setAttribute('data-new-model-band2-identity-width', lastWidth);
+                  } else if (key.indexOf('df_') === 0) {
+                    var fid = key.slice(3);
+                    var pill = card.querySelector('[data-new-model-band2-pill][data-display-field-id="' + fid + '"]');
+                    if (pill) { pill.setAttribute('data-width', lastWidth); }
+                  }
+                  saveBand2Widths(card);
+                }
+              }
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+            };
+            // POST the current per-column widths to the column-widths
+            // route. Best-effort: failures are logged but don't surface
+            // to the operator (the local width stays applied either
+            // way; a reload picks up server state).
+            function saveBand2Widths(card) {
+              var sessionId = card.getAttribute('data-new-model-band2-session-id');
+              var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
+              if (!sessionId || !instrumentId) { return; }
+              var widths = {};
+              var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10);
+              if (identityW > 0) { widths.identity = identityW; }
+              card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
+                var fid = pill.getAttribute('data-display-field-id');
+                var w = parseInt(pill.getAttribute('data-width') || '', 10);
+                if (fid && w > 0) { widths['df_' + fid] = w; }
+              });
+              fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/column-widths', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify({widths: widths}),
+              }).catch(function (err) {
+                if (window.console) { console.warn('Band 2 column widths save failed', err); }
+              });
             }
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
