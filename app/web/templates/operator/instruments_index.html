@@ -702,13 +702,14 @@
           </div>
           {% if is_editing %}
             <div class="card"
-                 style="border-color: transparent; background: transparent; padding: 0;">
+                 style="border-color: transparent; background: transparent; padding: 0;
+                        height: 100%; box-sizing: border-box;">
               <textarea form="dfsave-{{ instrument.id }}" name="description"
                         placeholder="(no description)"
                         style="width: 100%; min-height: 8em;">{{ instrument.description or "" }}</textarea>
             </div>
           {% else %}
-            <div class="card" style="margin: 0;">
+            <div class="card" style="margin: 0; height: 100%; box-sizing: border-box;">
               {% if instrument.short_label %}
                 <h3 style="margin: 0 0 8px 0;">{{ instrument.short_label }}</h3>
               {% endif %}
