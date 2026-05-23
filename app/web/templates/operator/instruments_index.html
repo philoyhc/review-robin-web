@@ -1283,6 +1283,13 @@
                 + 'z-index: 1;" '
                 + 'title="Drag to resize column"></span>';
             }
+            // Same as resizeHandle, but no-op on the trailing column
+            // so the table doesn't carry a vertical mark to the
+            // right of its right edge (nothing to resize against on
+            // that side).
+            function maybeResizeHandle(colKey, isLast) {
+              return isLast ? '' : resizeHandle(colKey);
+            }
             // Escape strings going into innerHTML so an operator's
             // tag value with a stray < doesn't break the preview.
             function esc(s) {
@@ -1319,26 +1326,39 @@
               });
               var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
               var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
+              // Last-column index drives the "no trailing gripper"
+              // rule. Identity (if present) sits first, then
+              // displays, then responses; total column count =
+              // (identity? 1 : 0) + displays.length + responses.length.
+              var hasIdentity = !!(name || email);
+              var totalCols = (hasIdentity ? 1 : 0) + displays.length + responses.length;
+              var lastIdx = totalCols - 1;
               var html = '<table style="table-layout: fixed;">';
               html += '<colgroup>';
-              if (name || email) {
+              if (hasIdentity) {
                 html += '<col data-col-key="identity" style="' + colStyle(identityW) + '">';
               }
               displays.forEach(function (o) {
                 html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + colStyle(o.width) + '">';
               });
-              responses.forEach(function () { html += '<col>'; });
+              responses.forEach(function (r) {
+                html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              });
               html += '</colgroup><thead><tr>';
-              if (name || email) {
-                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + resizeHandle('identity') + '</th>';
+              var colIdx = 0;
+              if (hasIdentity) {
+                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+                colIdx += 1;
               }
               displays.forEach(function (o) {
                 var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
                 var cls = isProfile ? ' class="rs-narrow"' : '';
-                html += '<th scope="col"' + cls + ' style="position: relative;">' + esc(o.label) + resizeHandle('df_' + o.displayFieldId) + '</th>';
+                html += '<th scope="col"' + cls + ' style="position: relative;">' + esc(o.label) + maybeResizeHandle('df_' + o.displayFieldId, colIdx === lastIdx) + '</th>';
+                colIdx += 1;
               });
               responses.forEach(function (r) {
-                html += '<th scope="col">' + esc(r.label) + '</th>';
+                html += '<th scope="col" style="position: relative;">' + esc(r.label) + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx) + '</th>';
+                colIdx += 1;
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               if (name || email) {
@@ -1373,13 +1393,22 @@
               var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
               var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
               var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
+              // Last-column index for the trailing-gripper skip.
+              // Group identity always sits first; responses follow.
+              var totalCols = 1 + responses.length;
+              var lastIdx = totalCols - 1;
               var html = '<table class="rs-group-table">';
               html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
-              responses.forEach(function () { html += '<col>'; });
-              html += '</colgroup><thead><tr>';
-              html += '<th scope="col" class="rs-group" style="position: relative;">Group' + resizeHandle('identity') + '</th>';
               responses.forEach(function (r) {
-                html += '<th scope="col">' + esc(r.label) + '</th>';
+                html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              });
+              html += '</colgroup><thead><tr>';
+              var colIdx = 0;
+              html += '<th scope="col" class="rs-group" style="position: relative;">Group' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+              colIdx += 1;
+              responses.forEach(function (r) {
+                html += '<th scope="col" style="position: relative;">' + esc(r.label) + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx) + '</th>';
+                colIdx += 1;
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
               html += '<td class="rs-group">';
@@ -1428,14 +1457,25 @@
                   // Mirror the new width onto the card / pill so the
                   // value survives the next preview rebuild without
                   // a server round-trip.
+                  var isResponse = key.indexOf('resp_') === 0;
                   if (key === 'identity') {
                     card.setAttribute('data-new-model-band2-identity-width', lastWidth);
                   } else if (key.indexOf('df_') === 0) {
                     var fid = key.slice(3);
                     var pill = card.querySelector('[data-new-model-band2-pill][data-display-field-id="' + fid + '"]');
                     if (pill) { pill.setAttribute('data-width', lastWidth); }
+                  } else if (isResponse) {
+                    var rkey = key.slice(5);
+                    var rpill = card.querySelector('[data-new-model-band2-pill][data-response-key="' + rkey + '"]');
+                    if (rpill) { rpill.setAttribute('data-width', lastWidth); }
                   }
-                  saveBand2Widths(card);
+                  // Response column widths are client-side only —
+                  // response fields aren't persisted yet, so skip
+                  // the server-side widths POST when only a
+                  // response column moved.
+                  if (!isResponse) {
+                    saveBand2Widths(card);
+                  }
                 }
               }
               document.addEventListener('mousemove', onMove);
