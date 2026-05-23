@@ -16,7 +16,10 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
+    Reviewee,
+    Reviewer,
     ReviewSession,
+    SessionRuleSet,
 )
 from ._full_matrix import (
     generate_via_page_button,
@@ -613,3 +616,202 @@ def test_add_new_model_creates_instrument_with_is_new_model_flag(
         .scalar_one_or_none()
         is None
     )
+
+
+def _seed_tag_data(db: Session, session_id: int) -> tuple[int, int]:
+    """Seed one reviewer + one reviewee with populated tag_1 values so
+    the new-model Band 1 dropdowns have usable tag options. Returns
+    ``(reviewer_id, reviewee_id)``."""
+    reviewer = Reviewer(
+        session_id=session_id,
+        name="R1",
+        email="r1@example.edu",
+        tag_1="Lead",
+    )
+    reviewee = Reviewee(
+        session_id=session_id,
+        name="E1",
+        email_or_identifier="e1@example.edu",
+        tag_1="Team A",
+    )
+    db.add_all([reviewer, reviewee])
+    db.commit()
+    return reviewer.id, reviewee.id
+
+
+def test_new_model_band1_persists_link1_link2_link3_round_trip(
+    client: TestClient, db: Session
+) -> None:
+    """End-to-end Band 1 wiring: edit a new-model card with Link 1
+    rules, Link 2 rules, and Link 3 grouped + boundary tag; POST the
+    bulk-save form; reload and assert each Link rehydrates exactly."""
+    review_session = _make_session(client, db, code="nm-band1")
+    _seed_tag_data(db, review_session.id)
+
+    # Add a new-model instrument after the default one.
+    source = _instrument(db, review_session.id)
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # POST Band 1: Link 1 in Filter mode with one rule
+    # (reviewer.tag1 IS "Lead"), Link 2 in Filter mode with one
+    # cross-side rule (reviewee.tag1 IS THE SAME AS reviewer.tag1),
+    # and Link 3 grouped on reviewee.tag1.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_field": "reviewer.tag1",
+            "link1_op": "IS",
+            "link1_operand_value": "Lead",
+            "link1_operand_tag": "",
+            "link2_mode": "filter",
+            "link2_combinator": "OR",
+            "link2_field": "reviewee.tag1",
+            "link2_op": "IS THE SAME AS",
+            "link2_operand_value": "",
+            "link2_operand_tag": "reviewer.tag1",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    # Reload from DB and check storage.
+    db.refresh(new_model)
+    assert new_model.group_kind == "r1"
+    assert new_model.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set is not None
+    # rules_json should carry one Composite per Link.
+    by_id = {entry["id"]: entry for entry in rule_set.rules_json}
+    assert set(by_id) == {"link1", "link2"}
+    assert by_id["link1"]["kind"] == "COMPOSITE"
+    assert by_id["link1"]["op"] == "AND"
+    assert by_id["link1"]["rules"][0]["predicate"] == {
+        "field": "reviewer.tag1",
+        "operator": "equals",
+        "operand": "Lead",
+        "case_sensitive": False,
+    }
+    assert by_id["link2"]["op"] == "OR"
+    assert by_id["link2"]["rules"][0]["predicate"] == {
+        "field": "reviewee.tag1",
+        "operator": "same_as",
+        "operand": "reviewer.tag1",
+        "case_sensitive": False,
+    }
+
+    # Reload the index and confirm the controls hydrate. We check key
+    # markers in the rendered HTML; the JS preserves the chip state
+    # client-side from the data-* attrs the template sets.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # Normalise whitespace so multi-line attribute formatting in the
+    # template doesn't make the substring checks brittle.
+    flat = " ".join(body.split())
+    assert 'data-new-model-rule-mode="filter"' in flat
+    assert 'data-new-model-unit-mode="group"' in flat
+    # The hidden form inputs round-trip the persisted state.
+    assert 'name="link1_mode" data-new-model-mode-input value="filter"' in flat
+    assert (
+        'name="link2_combinator" data-new-model-combinator-input value="OR"'
+        in flat
+    )
+    assert (
+        'name="link3_mode" data-new-model-link3-mode-input value="grouped"'
+        in flat
+    )
+    # Link 1's operand value re-renders into its input.
+    assert 'value="Lead"' in flat
+    # Link 2's tag-operand select marks reviewer.tag1 as the selected option.
+    assert '<option value="reviewer.tag1" selected>' in flat
+
+
+def test_new_model_band1_all_mode_clears_rules(
+    client: TestClient, db: Session
+) -> None:
+    """Switching a Link back to All mode drops its Composite from
+    rules_json, and switching Link 3 back to Individual clears
+    group_kind to NULL."""
+    review_session = _make_session(client, db, code="nm-clear")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Seed state: Filter + Grouped.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_field": "reviewer.tag1",
+            "link1_op": "IS",
+            "link1_operand_value": "Lead",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.group_kind == "r1"
+    rule_set_id = new_model.rule_set_id
+    assert rule_set_id is not None
+
+    # Now flip both Links to All and Link 3 to Individual.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "reviewer.tag1",
+            "link1_op": "IS",
+            "link1_operand_value": "Lead",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "individual",
+        },
+        follow_redirects=False,
+    )
+    db.refresh(new_model)
+    assert new_model.group_kind is None
+    # The SessionRuleSet row stays but its rules_json is now empty.
+    rule_set = db.get(SessionRuleSet, rule_set_id)
+    assert rule_set is not None
+    assert rule_set.rules_json == []

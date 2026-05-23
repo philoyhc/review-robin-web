@@ -609,4 +609,21 @@ def build_instruments_context(
             review_session, "Instruments"
         ),
         "new_model_tags": _new_model_usable_tags(db, review_session),
+        "new_model_band1_state": {
+            instrument.id: instruments_service.decode_band1_state(
+                instrument, db
+            )
+            for instrument in instruments
+            if instrument.is_new_model
+        },
+        "new_model_link3_state": {
+            instrument.id: {
+                "mode": "individual" if instrument.group_kind is None else "grouped",
+                "boundary_pairs": instruments_service.decode_group_kind(
+                    instrument.group_kind
+                ),
+            }
+            for instrument in instruments
+            if instrument.is_new_model
+        },
     }

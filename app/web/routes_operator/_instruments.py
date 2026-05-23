@@ -550,6 +550,72 @@ async def instrument_bulk_save_fields(
     _require_instrument_editable(review_session)
 
     form = await request.form()
+
+    # New-model instruments don't render the Display Fields / Response
+    # Fields tables — the form only carries identity (short_label /
+    # description) + Band 1's Link 1 / Link 2 / Link 3 controls. Branch
+    # off the table-driven bulk-save logic for them and call the Band 1
+    # service helpers instead.
+    if instrument.is_new_model:
+        try:
+            band1 = instruments_service.parse_band1_form(form)
+        except instruments_service.Band1ParseError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        link3_mode, link3_pairs = instruments_service.parse_link3_form(form)
+        instruments_service.set_band1_assignment_rules(
+            db, instrument=instrument, actor=user, **band1
+        )
+        instruments_service.set_unit_of_review(
+            db,
+            instrument=instrument,
+            mode=link3_mode,
+            boundary_pairs=link3_pairs,
+            actor=user,
+        )
+        # Identity edits (description / short_label) come through the
+        # same bulk-save form on the new-model card; reuse the same
+        # block at the bottom of the standard handler.
+        if "description" in form:
+            submitted_desc = form.get("description")
+            cleaned = (
+                submitted_desc.strip()
+                if isinstance(submitted_desc, str)
+                else None
+            ) or None
+            if cleaned != instrument.description:
+                instruments_service.update_instrument_description(
+                    db, instrument=instrument, description=cleaned, actor=user
+                )
+        if "short_label" in form:
+            submitted_label = form.get("short_label")
+            try:
+                instruments_service.update_short_label(
+                    db,
+                    instrument=instrument,
+                    short_label=(
+                        submitted_label
+                        if isinstance(submitted_label, str)
+                        else None
+                    ),
+                    actor=user,
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(exc),
+                ) from exc
+        db.commit()
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"#instrument-{instrument.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     kinds = [str(v) for v in form.getlist("kind")]
     raw_ids = [str(v) for v in form.getlist("id")]
     orders = [str(v) for v in form.getlist("order")]
