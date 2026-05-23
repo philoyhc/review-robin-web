@@ -747,10 +747,10 @@
                  out + inactive) vs "Filter using rules" (builder
                  active). Default is All. Disabled (and stuck on
                  All) when no usable tags exist for this link. #}
-              <button type="button" class="pill pill-info"
+              <button type="button"
+                      class="pill pill-info tag-chip{% if not _is_active %} is-disabled{% endif %}"
                       style="border: none; font: inherit; font-size: 0.7em;
-                             cursor: {{ 'pointer' if _is_active else 'not-allowed' }};
-                             opacity: {{ '1' if _is_active else '0.5' }};"
+                             cursor: {{ 'pointer' if _is_active else 'not-allowed' }};"
                       data-pilot-rule-mode="all"
                       data-pilot-mode-on-label="{{ on_label }}"
                       {% if _is_active %}onclick="pilotToggleRuleMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
@@ -845,10 +845,10 @@
                    + inactive — default) vs "Group" (builder active).
                    Disabled (and stuck on Individual) when no usable
                    reviewee / pair_context tags exist for the session. #}
-                <button type="button" class="pill pill-info"
+                <button type="button"
+                        class="pill pill-info tag-chip{% if not _link3_active %} is-disabled{% endif %}"
                         style="border: none; font: inherit; font-size: 0.7em;
-                               cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};
-                               opacity: {{ '1' if _link3_active else '0.5' }};"
+                               cursor: {{ 'pointer' if _link3_active else 'not-allowed' }};"
                         data-pilot-unit-mode="individual"
                         data-pilot-mode-on-label="Group using reviewee attributes"
                         {% if _link3_active %}onclick="pilotToggleUnitMode(this)"{% else %}disabled aria-disabled="true"{% endif %}
@@ -962,11 +962,13 @@
             if (btn.getAttribute('data-pilot-unit-mode') === 'individual') {
               btn.setAttribute('data-pilot-unit-mode', 'group');
               btn.textContent = onLabel;
+              btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-unit-mode', 'individual');
               btn.textContent = 'Individual';
+              btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
             }
@@ -1023,11 +1025,13 @@
             if (btn.getAttribute('data-pilot-rule-mode') === 'all') {
               btn.setAttribute('data-pilot-rule-mode', 'filter');
               btn.textContent = onLabel;
+              btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-rule-mode', 'all');
               btn.textContent = 'All';
+              btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
             }
@@ -1053,21 +1057,21 @@
            empty. All placeholder; see
            guide/instrument_builder.md §Band 3. #}
         {% macro pilot_static_pill(label) %}
-          <button type="button" class="pill pill-info"
+          <button type="button" class="pill pill-info tag-chip is-selected"
                   style="border: none; font: inherit; font-size: 0.7em; cursor: default;"
                   tabindex="-1"
                   title="Fixed (placeholder)">{{ label }}</button>
         {% endmacro %}
         {% macro pilot_audience_chip(label, selected=false) %}
-          <button type="button" class="pill pill-info"
-                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;
-                         opacity: {{ '1' if selected else '0.4' }};"
+          <button type="button"
+                  class="pill pill-info tag-chip{% if selected %} is-selected{% endif %}"
+                  style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
                   data-pilot-chip-selected="{{ 'true' if selected else 'false' }}"
                   onclick="pilotToggleAudience(this)"
                   title="Click to toggle audience (placeholder)">{{ label }}</button>
         {% endmacro %}
         {% macro pilot_cycle_button(cycle, current) %}
-          <button type="button" class="pill pill-info"
+          <button type="button" class="pill pill-info tag-chip is-selected"
                   style="cursor: pointer; border: none; font: inherit; font-size: 0.7em;"
                   data-pilot-cycle="{{ cycle | join('|') }}"
                   onclick="pilotCycleButton(this)"
@@ -1150,7 +1154,8 @@
           window.pilotToggleAudience = window.pilotToggleAudience || function (btn) {
             var selected = btn.getAttribute('data-pilot-chip-selected') !== 'true';
             btn.setAttribute('data-pilot-chip-selected', selected ? 'true' : 'false');
-            btn.style.opacity = selected ? '1' : '0.4';
+            if (selected) btn.classList.add('is-selected');
+            else btn.classList.remove('is-selected');
             var row = btn.closest('[data-pilot-audience]');
             row.querySelectorAll('[data-pilot-audience-other-cell]').forEach(function (cell) {
               cell.style.opacity = selected ? '1' : '0.4';
