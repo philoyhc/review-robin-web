@@ -1673,35 +1673,47 @@
                Placeholder for now — nothing wired to persistence
                yet; the "+" button doesn't add additional rows. #}
             <div data-new-model-response-fields
-                 style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                 style="display: flex; flex-wrap: nowrap; gap: 8px;
+                        align-items: center; width: 100%;">
               <input type="text"
                      data-new-model-rf-name
                      placeholder="Response field"
-                     style="flex: 1 1 9em; min-width: 7em; padding: 4px 8px;">
+                     style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
               <select data-new-model-rf-data-type
                       onchange="newModelRfSyncBounds(this)"
-                      style="flex: 0 0 auto; padding: 4px 8px;">
+                      style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <option value="string">String</option>
                 <option value="integer">Integer</option>
                 <option value="decimal">Decimal</option>
                 <option value="list">List</option>
               </select>
-              <input type="text"
-                     data-new-model-rf-bound="min"
-                     placeholder="Min"
-                     style="flex: 0 0 5em; padding: 4px 8px;">
-              <input type="text"
-                     data-new-model-rf-bound="max"
-                     placeholder="Max"
-                     style="flex: 0 0 5em; padding: 4px 8px;">
-              <input type="text"
-                     data-new-model-rf-bound="step"
-                     placeholder="Step"
-                     style="flex: 0 0 5em; padding: 4px 8px; display: none;">
-              <input type="text"
-                     data-new-model-rf-bound="list"
-                     placeholder="List (comma-separated)"
-                     style="flex: 1 1 12em; min-width: 10em; padding: 4px 8px; display: none;">
+              {# The remaining 60% holds the conditional bound inputs
+                 + the "+" button. The bounds wrapper flexes its
+                 visible children evenly — Min/Max (String, Integer)
+                 split it, Min/Max/Step (Decimal) split it three ways,
+                 and List takes it all in List mode. The single
+                 ``flex: 1 1 0`` per bound input keeps any hidden
+                 ones from claiming layout space. #}
+              <div data-new-model-rf-bounds-wrap
+                   style="flex: 1 1 auto; min-width: 0; display: flex;
+                          gap: 8px; align-items: center;">
+                <input type="text"
+                       data-new-model-rf-bound="min"
+                       placeholder="Min"
+                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                <input type="text"
+                       data-new-model-rf-bound="max"
+                       placeholder="Max"
+                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                <input type="text"
+                       data-new-model-rf-bound="step"
+                       placeholder="Step"
+                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                <input type="text"
+                       data-new-model-rf-bound="list"
+                       placeholder="List (comma-separated)"
+                       style="flex: 1 1 0; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+              </div>
               <button type="button" class="btn secondary"
                       style="flex: 0 0 auto; padding: 4px 10px;"
                       title="Add response field (placeholder)">+</button>
