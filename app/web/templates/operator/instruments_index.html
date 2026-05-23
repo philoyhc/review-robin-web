@@ -747,7 +747,7 @@
                  out + inactive) vs "Filter using rules" (builder
                  active). Default is All. Disabled (and stuck on
                  All) when no usable tags exist for this link. #}
-              <span class="pill {% if _is_active %}pill-count{% else %}pill-empty{% endif %} tag-chip{% if not _is_active %} is-disabled{% endif %}"
+              <span class="pill {% if _is_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
                     data-pilot-rule-mode="all"
                     data-pilot-mode-on-label="{{ on_label }}"
                     {% if _is_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
@@ -842,7 +842,7 @@
                    + inactive — default) vs "Group" (builder active).
                    Disabled (and stuck on Individual) when no usable
                    reviewee / pair_context tags exist for the session. #}
-                <span class="pill {% if _link3_active %}pill-count{% else %}pill-empty{% endif %} tag-chip{% if not _link3_active %} is-disabled{% endif %}"
+                <span class="pill {% if _link3_active %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
                       data-pilot-unit-mode="individual"
                       data-pilot-mode-on-label="Group using reviewee attributes"
                       {% if _link3_active %}role="button" tabindex="0" aria-pressed="false" onclick="pilotToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
@@ -957,14 +957,12 @@
               btn.setAttribute('data-pilot-unit-mode', 'group');
               btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
-              btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-unit-mode', 'individual');
               btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'Individual';
-              btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
             }
@@ -1022,14 +1020,12 @@
               btn.setAttribute('data-pilot-rule-mode', 'filter');
               btn.setAttribute('aria-pressed', 'true');
               btn.textContent = onLabel;
-              btn.classList.add('is-selected');
               builder.style.opacity = '1';
               builder.style.pointerEvents = 'auto';
             } else {
               btn.setAttribute('data-pilot-rule-mode', 'all');
               btn.setAttribute('aria-pressed', 'false');
               btn.textContent = 'All';
-              btn.classList.remove('is-selected');
               builder.style.opacity = '0.5';
               builder.style.pointerEvents = 'none';
             }
