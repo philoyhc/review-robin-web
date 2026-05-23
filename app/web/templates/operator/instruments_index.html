@@ -1661,12 +1661,80 @@
               </tbody>
             </table>
           </div>
-          <div>
-            {# Right column reserved for a future band-3 detail
-               surface. #}
+          <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
+            <h3 style="margin: 0 0 12px 0;">Response Fields</h3>
+            {# Inline response-field editor row. The visible bounds
+               inputs (Min / Max / Step / List) swap based on the
+               data-type pick:
+                 String   → Min, Max
+                 Integer  → Min, Max
+                 Decimal  → Min, Max, Step
+                 List     → List
+               Placeholder for now — nothing wired to persistence
+               yet; the "+" button doesn't add additional rows. #}
+            <div data-new-model-response-fields
+                 style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <input type="text"
+                     data-new-model-rf-name
+                     placeholder="Response field"
+                     style="flex: 1 1 9em; min-width: 7em; padding: 4px 8px;">
+              <select data-new-model-rf-data-type
+                      onchange="newModelRfSyncBounds(this)"
+                      style="flex: 0 0 auto; padding: 4px 8px;">
+                <option value="string">String</option>
+                <option value="integer">Integer</option>
+                <option value="decimal">Decimal</option>
+                <option value="list">List</option>
+              </select>
+              <input type="text"
+                     data-new-model-rf-bound="min"
+                     placeholder="Min"
+                     style="flex: 0 0 5em; padding: 4px 8px;">
+              <input type="text"
+                     data-new-model-rf-bound="max"
+                     placeholder="Max"
+                     style="flex: 0 0 5em; padding: 4px 8px;">
+              <input type="text"
+                     data-new-model-rf-bound="step"
+                     placeholder="Step"
+                     style="flex: 0 0 5em; padding: 4px 8px; display: none;">
+              <input type="text"
+                     data-new-model-rf-bound="list"
+                     placeholder="List (comma-separated)"
+                     style="flex: 1 1 12em; min-width: 10em; padding: 4px 8px; display: none;">
+              <button type="button" class="btn secondary"
+                      style="flex: 0 0 auto; padding: 4px 10px;"
+                      title="Add response field (placeholder)">+</button>
+            </div>
           </div>
         </div>
         <script>
+          window.newModelRfSyncBounds = window.newModelRfSyncBounds || function (select) {
+            // Show only the bound inputs that apply to the picked
+            // data type. Bound visibility map mirrors the spec:
+            //   string  → min, max
+            //   integer → min, max
+            //   decimal → min, max, step
+            //   list    → list
+            var dataType = select.value;
+            var show = {
+              string:  ['min', 'max'],
+              integer: ['min', 'max'],
+              decimal: ['min', 'max', 'step'],
+              list:    ['list'],
+            }[dataType] || [];
+            var row = select.closest('[data-new-model-response-fields]');
+            if (!row) { return; }
+            row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+              var key = input.getAttribute('data-new-model-rf-bound');
+              input.style.display = show.indexOf(key) >= 0 ? '' : 'none';
+            });
+          };
+          // Sync each row on page load so the initial data-type pick
+          // shows the right bounds. (Default is String → min, max.)
+          document.querySelectorAll('[data-new-model-rf-data-type]').forEach(function (sel) {
+            window.newModelRfSyncBounds(sel);
+          });
           window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
             var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
             btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
