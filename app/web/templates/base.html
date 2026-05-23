@@ -274,6 +274,25 @@
       .new-model-band2-pill-drop-before {
         box-shadow: -3px 0 0 0 var(--text-secondary, #475569);
       }
+      /*
+       * Six-dot grip glyph (⠿) rendered as the first child of every
+       * reorderable Band 2 pill. Muted by default so it doesn't
+       * dominate the label; darkens to match the pill text on hover
+       * so the affordance lights up exactly when the operator is
+       * reaching for it.
+       */
+      .new-model-band2-pill-grip {
+        display: inline-block;
+        margin-right: 6px;
+        color: var(--text-muted, #94a3b8);
+        font-size: 0.9em;
+        letter-spacing: -1px;
+        transition: color 0.1s ease-in-out;
+      }
+      [data-new-model-band2-pill][data-reorderable="true"]:hover
+        .new-model-band2-pill-grip {
+        color: var(--text-primary, #1f2937);
+      }
       .muted { color: #777; }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /

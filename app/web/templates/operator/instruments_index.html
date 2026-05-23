@@ -1190,7 +1190,7 @@
                     ondrop="newModelBand2Drop(event)"
                     {% endif %}
                     onclick="newModelToggleBand2Pill(this)"
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{{ field.label }}</span>
+                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
             {% else %}
               <span class="muted">—</span>
             {% endfor %}
