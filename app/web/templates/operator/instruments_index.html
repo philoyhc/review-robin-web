@@ -1099,13 +1099,23 @@
             newModelRefreshBand2FromLink3(btn);
           };
           window.newModelRemoveUnitCell = window.newModelRemoveUnitCell || function (btn) {
+            // Capture the per-instrument wrapper BEFORE removing the
+            // cell — once cell.remove() runs, btn is detached from
+            // the live document tree and ``btn.closest(...)`` no
+            // longer reaches up to it, so the post-remove preview
+            // refresh would silently no-op.
+            var instrumentCard = btn.closest('[id^="instrument-"]');
             var cell = btn.closest('[data-new-model-unit-cell]');
             var container = cell.parentElement;
             if (container.querySelectorAll('[data-new-model-unit-cell]').length > 1) {
               cell.remove();
               newModelRefreshUnitButtons(container);
             }
-            newModelRefreshBand2FromLink3(btn);
+            if (instrumentCard && window.newModelRefreshBand2) {
+              instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
+                window.newModelRefreshBand2(b2);
+              });
+            }
           };
           // Onchange handler for the Link 3 boundary tag dropdowns.
           // The preview-builder JS reads the boundary tag values
