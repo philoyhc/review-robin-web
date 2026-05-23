@@ -418,7 +418,38 @@ def _new_model_band2_state(
         ).scalars()
     )
     sample = active_reviewees[0] if active_reviewees else None
-    all_names = [r.name for r in active_reviewees]
+    # Group-mode partitioning: when the instrument is set to Group
+    # mode with reviewee boundary tags, the preview row's member-
+    # name list should reflect *one* group (the one the sample
+    # reviewee belongs to), not the entire roster. Otherwise the
+    # preview falsely shows the whole roster as a single group.
+    # Pair-context boundary tags need a specific reviewer's
+    # relationships to compute, so they're skipped for the preview
+    # — the partition falls back to all reviewees when the only
+    # boundary is pair-context-side.
+    boundary_pairs = instruments_service.decode_group_kind(
+        instrument.group_kind
+    )
+    reviewee_boundary_fields = [
+        field for (src, field) in boundary_pairs if src == "reviewee"
+    ]
+    if sample is not None and reviewee_boundary_fields:
+        sample_key = tuple(
+            getattr(sample, field, "") or ""
+            for field in reviewee_boundary_fields
+        )
+        group_members = [
+            r
+            for r in active_reviewees
+            if tuple(
+                getattr(r, field, "") or ""
+                for field in reviewee_boundary_fields
+            )
+            == sample_key
+        ]
+    else:
+        group_members = active_reviewees
+    all_names = [r.name for r in group_members]
     sample_names = all_names[:GROUP_MEMBER_NAME_LIMIT]
     sample_extra_count = max(0, len(all_names) - len(sample_names))
 

@@ -1187,3 +1187,107 @@ def test_new_model_band2_state_round_trip(
     # values.
     assert 'value="Rating"' in flat
     assert 'value="Comments"' in flat
+
+
+def test_new_model_band2_group_preview_partitions_by_boundary_tag(
+    client: TestClient, db: Session
+) -> None:
+    """When the instrument is in Group mode with a reviewee boundary
+    tag, the Band 2 preview's sample-names list reflects ONE group
+    (the group the sample reviewee belongs to), not the whole
+    roster."""
+    review_session = _make_session(client, db, code="nm-group-part")
+    # Seed three reviewees split across two tag_1 values.
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Alice",
+                email_or_identifier="a@example.edu",
+                tag_1="Alpha",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Bob",
+                email_or_identifier="b@example.edu",
+                tag_1="Alpha",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="c@example.edu",
+                tag_1="Beta",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Save: Group mode with boundary tag = reviewee.tag_1.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    # Sample-names attr should hold only the Alpha group (Alice +
+    # Bob, sorted alphabetically), NOT Carol.
+    assert 'data-new-model-band2-sample-names="Alice|Bob"' in flat
+    assert "Carol" not in body.split('data-new-model-band2-sample-names="')[1].split('"')[0]
+
+    # Flip to individual: sample-names goes back to all reviewees.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "individual",
+        },
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    assert 'data-new-model-band2-sample-names="Alice|Bob|Carol"' in flat
