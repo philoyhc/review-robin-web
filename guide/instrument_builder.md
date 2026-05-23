@@ -3,6 +3,53 @@
 > **Stub created 2026-05-22, centered as the canonical design 2026-05-22.** Sketch-level scope only.
 > Detailed PR breakdowns get drafted when this work is picked up.
 
+> **Shipped-state snapshot (2026-05-23).** A concept-test
+> "Pilot" instrument flavour gated by a new
+> `Instrument.is_pilot` flag (`app/db/models/instrument.py:92-99`)
+> renders the three-band layout (Identity + Band 1 + Band 2 +
+> Band 3) on the Instruments page
+> (`app/web/templates/operator/instruments_index.html:617+`).
+> See `spec/instrument_builder.md` for what's on the page today.
+>
+> Concretely shipped:
+> - The full-width `is_pilot` card with the three-band frame, a
+>   `+Pilot` action button, and the cross-flavour Edit / Save /
+>   Cancel / Delete / Replicate / Open / Close action row.
+> - **Band 1 layout** — three equal-width columns (Pool of
+>   reviewers / Pool of those reviewed / Unit of review) with
+>   placeholder rule rows, tag-chip dropdowns, mode-toggle pills,
+>   and view-only fading gated on the instrument's edit mode.
+>   None of the controls persist yet (placeholders, no service
+>   wiring, no autosave).
+> - **Band 3 layout** — a two-column card carrying a Visibility
+>   table with fixed (Operator / Reviewers) + toggleable
+>   (Reviewees / Observers) audience rows and Who / What / When
+>   columns. No persistence, no read-path guards.
+> - **Band 2** — header placeholder only; no preview row yet.
+>
+> Nothing else from this doc has shipped:
+> - **No schema deltas** — none of the proposed columns exist
+>   (`unit_of_review`, `group_boundary_tags`, `visibility_audiences`,
+>   `read_shapes`, `release_timing`, inline `data_type` / bounds
+>   on `instrument_response_fields`, `instrument_releases`
+>   table). `group_kind` flag is still in place. Part 0 not done.
+> - **No library retirement** — `OperatorResponseTypeDefinition`
+>   still exists; `library_origin_id` still on `session_rule_sets`;
+>   the 5 seeded RuleSets (`app/services/rules/seeds.py`) and 10
+>   seeded RTDs (`app/services/instruments/_rtds.py:45-56`) still
+>   ship on every new session; the operator-Settings Library
+>   RuleSets + Library RTDs cards still render
+>   (`app/web/routes_operator/_settings.py:69-86, 104-105`); the
+>   Rule Builder child page and its Save-to / Add-from library
+>   affordances are intact (`app/web/routes_operator/_rule_builder.py`).
+> - **No live preview, no inline assignment rule editor, no
+>   inline type editor, no per-audience access controls wired,
+>   no reconciler work for Link 3 mode switching.**
+>
+> The shipped Pilot card is a UI-shell concept test (a partial
+> Part 1) — every wired behaviour from the parts plan below is
+> still ahead.
+
 The per-instrument editor's UI shape and conceptual model.
 One full-width card per instrument carrying every decision the
 operator makes about that instrument:
@@ -690,21 +737,21 @@ non-operator surfaces.
 
 A sequence of independently-shippable parts:
 
-| Part | Scope | Depends on |
-|---|---|---|
-| **0 — Schema pre-positioning** | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
-| **1 — UI shell (vertical bands)** | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
-| **1b — Inline Assignment rule editor** | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
-| **1c — Live-preview row** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
-| **1d — RTD-library retirement** | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |
-| **2 — Link 3 (unit of review)** | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
-| **3 — Link 4 (visibility, operator + reviewee audiences)** | Light up the Visibility summary block in Band 3. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface. | Parts 0 + 1 |
-| **4 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | Light up the Read-shape summary block in Band 3. Aggregator service, anonymisation transformer, k-anonymity floor. | Part 3 |
-| **5 — Link 6 (release timing, operator + reviewee audiences)** | Light up the Release-timing summary block in Band 3 + per-instrument-per-audience Release / Un-release affordance. Read-path guard consults `instrument_releases`. | Part 3 |
-| **6 — Link 4 (observer audiences)** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 3 |
-| **7 — Link 5 (read shape for observer audiences)** | Per-observer-audience read shape configuration. | Parts 4 + 6 |
-| **8 — Link 6 (release timing for observer audiences)** | Per-observer-audience release timing. | Parts 5 + 6 |
-| **9 — Band 3 table collapse (optional)** | Replace the three-summary-blocks layout with the single-row-per-audience table. | Parts 5 + 6 + 7 + 8 |
+| Part | Status | Scope | Depends on |
+|---|---|---|---|
+| **0 — Schema pre-positioning** | **Not started** | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
+| **1 — UI shell (vertical bands)** | **Partial (concept-test only)** — shipped behind a new `is_pilot` flag as a parallel instrument flavour, not yet replacing the standard per-instrument card. Identity section + Band 1 layout + Band 3 Visibility-table layout are in place as placeholders; Band 2 is a heading-only stub. Nothing in Bands 1 or 3 persists; no Unit-of-review picker reading `group_kind` yet. | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
+| **1b — Inline Assignment rule editor** | **Not started** — Rule Builder child page, seeded RuleSets, personal library, Save-to / Add-from library affordances, and `library_origin_id` are all still in place. | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
+| **1c — Live-preview row** | **Not started** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
+| **1d — RTD-library retirement** | **Not started** — `OperatorResponseTypeDefinition` model, 10 seeded RTDs per session, and the Library RTDs operator-Settings card are all still in place. | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |
+| **2 — Link 3 (unit of review)** | **Not started** | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
+| **3 — Link 4 (visibility, operator + reviewee audiences)** | **Not started** | Light up the Visibility summary block in Band 3. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface. | Parts 0 + 1 |
+| **4 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | **Not started** | Light up the Read-shape summary block in Band 3. Aggregator service, anonymisation transformer, k-anonymity floor. | Part 3 |
+| **5 — Link 6 (release timing, operator + reviewee audiences)** | **Not started** | Light up the Release-timing summary block in Band 3 + per-instrument-per-audience Release / Un-release affordance. Read-path guard consults `instrument_releases`. | Part 3 |
+| **6 — Link 4 (observer audiences)** | **Not started** | Reviewee-tag-defined and pair-context-defined observer audiences. Observer dashboard surface. | Part 3 |
+| **7 — Link 5 (read shape for observer audiences)** | **Not started** | Per-observer-audience read shape configuration. | Parts 4 + 6 |
+| **8 — Link 6 (release timing for observer audiences)** | **Not started** | Per-observer-audience release timing. | Parts 5 + 6 |
+| **9 — Band 3 table collapse (optional)** | **Not started** | Replace the three-summary-blocks layout with the single-row-per-audience table. | Parts 5 + 6 + 7 + 8 |
 
 Parts 0 + 1 must land in that order. Parts 1b and 1c are
 independent once Part 1 ships. Parts 2 / 3 are independent
