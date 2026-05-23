@@ -452,6 +452,20 @@ def _new_model_band2_state(
     all_names = [r.name for r in group_members]
     sample_names = all_names[:GROUP_MEMBER_NAME_LIMIT]
     sample_extra_count = max(0, len(all_names) - len(sample_names))
+    # Roster payload for client-side dynamic partitioning. Lets the
+    # Band 2 preview-builder JS re-compute group membership on the
+    # fly when the operator picks / changes a Link 3 boundary tag
+    # before saving (the server-rendered ``sample_names`` above
+    # reflects the SAVED group_kind, not the in-progress edit).
+    roster = [
+        {
+            "name": r.name,
+            "tag_1": r.tag_1 or "",
+            "tag_2": r.tag_2 or "",
+            "tag_3": r.tag_3 or "",
+        }
+        for r in active_reviewees
+    ]
 
     fields: list[dict[str, Any]] = []
     for f in instrument.display_fields:
@@ -502,6 +516,7 @@ def _new_model_band2_state(
         "identity_width_px": identity_width_px,
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
+        "roster": roster,
     }
 
 

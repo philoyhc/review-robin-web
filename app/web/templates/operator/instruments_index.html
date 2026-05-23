@@ -935,6 +935,7 @@
                     <div data-new-model-unit-cell
                          style="display: flex; align-items: center; gap: 4px;">
                       <select style="flex: 0 0 57.14%; min-width: 0; padding: 4px;"
+                              onchange="newModelLink3BoundaryChanged(this)"
                               {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
                         <option value="">—</option>
                         {% for key, label in _link3_tags %}
@@ -1095,6 +1096,7 @@
             clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
             container.appendChild(clone);
             newModelRefreshUnitButtons(container);
+            newModelRefreshBand2FromLink3(btn);
           };
           window.newModelRemoveUnitCell = window.newModelRemoveUnitCell || function (btn) {
             var cell = btn.closest('[data-new-model-unit-cell]');
@@ -1103,7 +1105,26 @@
               cell.remove();
               newModelRefreshUnitButtons(container);
             }
+            newModelRefreshBand2FromLink3(btn);
           };
+          // Onchange handler for the Link 3 boundary tag dropdowns.
+          // The preview-builder JS reads the boundary tag values
+          // live (from the <select>s) when partitioning the group
+          // sample, so any dropdown change should trigger a
+          // preview rebuild.
+          window.newModelLink3BoundaryChanged = window.newModelLink3BoundaryChanged || function (sel) {
+            newModelRefreshBand2FromLink3(sel);
+          };
+          // Shared "any Link 3 movement → rebuild the Band 2
+          // preview" walker — used by the boundary dropdown
+          // onchange, add cell, and remove cell handlers above.
+          function newModelRefreshBand2FromLink3(el) {
+            var instrumentCard = el && el.closest('[id^="instrument-"]');
+            if (!instrumentCard || !window.newModelRefreshBand2) { return; }
+            instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
+              window.newModelRefreshBand2(b2);
+            });
+          }
           window.newModelRefreshUnitButtons = window.newModelRefreshUnitButtons || function (container) {
             var cells = container.querySelectorAll('[data-new-model-unit-cell]');
             cells.forEach(function (cell, idx) {
@@ -1179,7 +1200,8 @@
              data-new-model-band2-sample-names="{{ _band2.sample_names | join('|') }}"
              data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
              data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}"
-             data-new-model-band2-unit-mode="{{ _saved_unit_mode }}">
+             data-new-model-band2-unit-mode="{{ _saved_unit_mode }}"
+             data-new-model-band2-roster='{{ _band2.roster | tojson }}'>
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
           {# Gate pill clicks / drag-resize / drag-reorder behind the
              per-instrument Edit state — same pattern as Bands 1 + 3.
@@ -1274,6 +1296,70 @@
             function unitMode(card) {
               return card.getAttribute('data-new-model-band2-unit-mode') === 'grouped'
                 ? 'grouped' : 'individual';
+            }
+            // Parse the roster payload (per-active-reviewee tag
+            // values, JSON-encoded by the server-side view layer).
+            function rosterFor(card) {
+              try {
+                return JSON.parse(card.getAttribute('data-new-model-band2-roster') || '[]') || [];
+              } catch (_) { return []; }
+            }
+            // Read the current reviewee boundary tag fields from
+            // the live Link 3 boundary <select>s in Band 1. Returns
+            // an ordered list of attribute names on the Reviewee
+            // model (``tag_1`` / ``tag_2`` / ``tag_3``). Pair-context
+            // boundary tags are skipped — they need a specific
+            // reviewer's relationships to compute, which the
+            // single-row preview can't synthesize. Empty list means
+            // "no reviewee boundary — preview's group is the whole
+            // roster", which mirrors the server-side fallback.
+            function currentReviewerBoundaryFields(card) {
+              var instrumentCard = card.closest('[id^="instrument-"]');
+              if (!instrumentCard) { return []; }
+              var fields = [];
+              instrumentCard.querySelectorAll('select[name="link3_boundary"]').forEach(function (sel) {
+                var v = (sel.value || '').trim();
+                if (v.indexOf('reviewee.tag') !== 0) { return; }
+                var num = v.slice('reviewee.tag'.length);
+                if (num === '1' || num === '2' || num === '3') {
+                  var field = 'tag_' + num;
+                  if (fields.indexOf(field) < 0) { fields.push(field); }
+                }
+              });
+              return fields;
+            }
+            // Compute the group-cell member-name list for the
+            // current Link 3 boundary tag selection. Returns
+            // ``{names: [...], extra: N}`` where ``names`` is up to
+            // GROUP_MEMBER_NAME_LIMIT (=10) reviewee names and
+            // ``extra`` is the count of overflow members beyond
+            // the first 10. Falls back to the server-rendered
+            // sample_names attr when the roster payload is empty.
+            function partitionedSampleNames(card) {
+              var LIMIT = 10;
+              var roster = rosterFor(card);
+              if (roster.length === 0) {
+                var fallback = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
+                return {
+                  names: fallback,
+                  extra: parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10),
+                };
+              }
+              var fields = currentReviewerBoundaryFields(card);
+              var members;
+              if (fields.length === 0) {
+                members = roster;
+              } else {
+                var sample = roster[0];
+                var keyOf = function (r) {
+                  return fields.map(function (f) { return r[f] || ''; }).join(' ');
+                };
+                var sampleKey = keyOf(sample);
+                members = roster.filter(function (r) { return keyOf(r) === sampleKey; });
+              }
+              var allNames = members.map(function (r) { return r.name; });
+              var shown = allNames.slice(0, LIMIT);
+              return { names: shown, extra: Math.max(0, allNames.length - shown.length) };
             }
             // Refresh each pill's enabled/disabled appearance based
             // on the current unit-of-review mode. Disabled pills
@@ -1436,8 +1522,13 @@
               var nameSelected = selected.some(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
               var tagPills = selected.filter(function (s) { return s.sourceType === 'reviewee' && /^tag_/.test(s.sourceField); });
               var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
-              var samples = (card.getAttribute('data-new-model-band2-sample-names') || '').split('|').filter(function (s) { return s !== ''; });
-              var extra = parseInt(card.getAttribute('data-new-model-band2-sample-extra-count') || '0', 10);
+              // Dynamically partition the roster using the *current*
+              // Link 3 boundary tag selections (live, before save).
+              // Falls back to the server-rendered sample_names when
+              // the roster payload is missing for some reason.
+              var partition = partitionedSampleNames(card);
+              var samples = partition.names;
+              var extra = partition.extra;
               var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
               // Last-column index for the trailing-gripper skip.
               // Group identity always sits first; responses follow.
