@@ -878,10 +878,23 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
                     {% if not is_editing %}opacity: 0.75;{% endif %}"
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
-          <div style="padding: 0 16px 0 0;">
+          <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
             {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
                 "Pool of reviewers", _link1_tags,
                 on_label="Filter using reviewer attributes") }}
+            {# "Refresh preview" — runs the rule engine against the
+               current Link 1 + Link 2 form state on the server,
+               then re-picks the Band 2 preview's sample reviewee
+               from the first in-scope (reviewer, reviewee) pair.
+               Only fires on explicit click — keystroke / dropdown
+               edits don't trigger the engine, which can be heavy
+               on large rosters. #}
+            <div style="margin-top: 12px; text-align: left;">
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 10px;"
+                      onclick="newModelBand2RefreshSample(this)"
+                      title="Pick a new preview sample reviewee using the current Link 1 + Link 2 rules">↻ Refresh preview</button>
+            </div>
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
@@ -1356,11 +1369,19 @@
                 };
               }
               var fields = currentReviewerBoundaryFields(card);
+              // The Refresh-preview button writes the picked
+              // sample reviewee's name onto the wrapper as
+              // ``data-new-model-band2-sample-name`` so subsequent
+              // rebuilds use that reviewee (and its group) instead
+              // of the default "first reviewee by name".
+              var overrideName = card.getAttribute('data-new-model-band2-sample-name') || '';
+              var sample = overrideName
+                ? (roster.find(function (r) { return r.name === overrideName; }) || roster[0])
+                : roster[0];
               var members;
               if (fields.length === 0) {
                 members = roster;
               } else {
-                var sample = roster[0];
                 var keyOf = function (r) {
                   return fields.map(function (f) { return r[f] || ''; }).join(' ');
                 };
@@ -1742,6 +1763,105 @@
               if (!card) { return; }
               refreshPillStates(card);
               rebuildPreview(card);
+            };
+            // ---- Band 2 sample-reviewee refresh (Link 1 + 2) ----
+            // Reads the current Link 1 + Link 2 form state from
+            // Band 1, POSTs to the preview-sample route, and
+            // updates the Band 2 preview row with the returned
+            // sample reviewee's field values. The pills carry the
+            // sample data on their ``data-value`` attribute — the
+            // existing preview-builder JS already reads from there.
+            function collectLinkRules(instrumentCard, linkPrefix) {
+              var rules = [];
+              // Each rule cell sits inside a [data-new-model-rule-cell]
+              // — collect by iterating cells in the Link's wrapper.
+              // The link wrapper is identified by its position in
+              // the Band 1 grid; collect from any cell whose nearest
+              // ancestor select carries name="<linkPrefix>_field".
+              var inputs = instrumentCard.querySelectorAll(
+                '[name="' + linkPrefix + '_field"]'
+              );
+              inputs.forEach(function (fieldEl, idx) {
+                var cell = fieldEl.closest('[data-new-model-rule-cell]');
+                if (!cell) { return; }
+                var opEl = cell.querySelector('[name="' + linkPrefix + '_op"]');
+                var valEl = cell.querySelector('[name="' + linkPrefix + '_operand_value"]');
+                var tagEl = cell.querySelector('[name="' + linkPrefix + '_operand_tag"]');
+                rules.push({
+                  field: fieldEl.value || '',
+                  op: (opEl && opEl.value) || '',
+                  operand_value: (valEl && valEl.value) || '',
+                  operand_tag: (tagEl && tagEl.value) || '',
+                });
+              });
+              return rules;
+            }
+            function collectLinkMode(instrumentCard, linkPrefix) {
+              var modeInput = instrumentCard.querySelector(
+                '[name="' + linkPrefix + '_mode"]'
+              );
+              return modeInput ? modeInput.value : 'all';
+            }
+            function collectLinkCombinator(instrumentCard, linkPrefix) {
+              var input = instrumentCard.querySelector(
+                '[name="' + linkPrefix + '_combinator"]'
+              );
+              return input ? input.value : 'AND';
+            }
+            window.newModelBand2RefreshSample = window.newModelBand2RefreshSample || function (btn) {
+              var instrumentCard = btn.closest('[id^="instrument-"]');
+              if (!instrumentCard) { return; }
+              var band2 = instrumentCard.querySelector('[data-new-model-band2]');
+              if (!band2) { return; }
+              var sessionId = band2.getAttribute('data-new-model-band2-session-id');
+              var instrumentId = band2.getAttribute('data-new-model-band2-instrument-id');
+              if (!sessionId || !instrumentId) { return; }
+              var body = {
+                link1_mode: collectLinkMode(instrumentCard, 'link1'),
+                link1_combinator: collectLinkCombinator(instrumentCard, 'link1'),
+                link1_rules: collectLinkRules(instrumentCard, 'link1'),
+                link2_mode: collectLinkMode(instrumentCard, 'link2'),
+                link2_combinator: collectLinkCombinator(instrumentCard, 'link2'),
+                link2_rules: collectLinkRules(instrumentCard, 'link2'),
+              };
+              btn.disabled = true;
+              btn.textContent = '↻ Refreshing...';
+              fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/preview-sample', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify(body),
+              }).then(function (resp) {
+                if (!resp.ok) { throw new Error('preview-sample HTTP ' + resp.status); }
+                return resp.json();
+              }).then(function (data) {
+                var sample = data && data.sample_reviewee;
+                if (!sample) {
+                  btn.textContent = '↻ No matching pair';
+                  setTimeout(function () { btn.textContent = '↻ Refresh preview'; btn.disabled = false; }, 1800);
+                  return;
+                }
+                // Update each reviewee-side pill's data-value with
+                // the new sample's matching field. partitionedSampleNames
+                // uses the wrapper sample-name override to pick the
+                // group containing this sample.
+                band2.querySelectorAll('[data-new-model-band2-pill][data-source-type="reviewee"]').forEach(function (pill) {
+                  var field = pill.getAttribute('data-source-field');
+                  if (field && Object.prototype.hasOwnProperty.call(sample, field)) {
+                    pill.setAttribute('data-value', sample[field] || '');
+                  }
+                });
+                if (sample.name) {
+                  band2.setAttribute('data-new-model-band2-sample-name', sample.name);
+                }
+                window.newModelRefreshBand2(band2);
+                btn.textContent = '↻ Refreshed';
+                setTimeout(function () { btn.textContent = '↻ Refresh preview'; btn.disabled = false; }, 1000);
+              }).catch(function (err) {
+                if (window.console) { console.warn('Band 2 preview-sample refresh failed', err); }
+                btn.textContent = '↻ Refresh failed';
+                setTimeout(function () { btn.textContent = '↻ Refresh preview'; btn.disabled = false; }, 1800);
+              });
             };
             // Response field row management lives further down in
             // the script — see newModelRfAddRow / newModelRfSaveRow

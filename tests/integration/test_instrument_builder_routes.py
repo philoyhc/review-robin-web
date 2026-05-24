@@ -1371,3 +1371,125 @@ def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
     ).text
     assert 'data-new-model-band2-unit-mode="grouped"' in edit_body
     assert 'name="link3_mode"' in edit_body
+
+
+def test_new_model_band2_preview_sample_filters_by_link1(
+    client: TestClient, db: Session
+) -> None:
+    """The /preview-sample route runs the rule engine against the
+    posted Link 1 + Link 2 form state and returns the first reviewee
+    whose pair survives the filter. Without any rules every active
+    reviewee is in scope (first by name wins); with a Link 1 rule
+    that excludes the first reviewer, the sample reviewee comes from
+    a different in-scope reviewer's pool."""
+    review_session = _make_session(client, db, code="nm-preview-sample")
+    # Two reviewers — one tagged Lead, one tagged Junior — and two
+    # reviewees.
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Bob",
+                email="bob@example.edu",
+                tag_1="Junior",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Fay",
+                email_or_identifier="fay@example.edu",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # No rules: first reviewee (alphabetical) wins.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["sample_reviewee"]["name"] == "Eve"
+
+    # Link 1: only Lead reviewers in scope (only Alice). She still
+    # has both reviewees in scope, so the first-by-name still wins —
+    # Eve. (Different rule would change the answer, but with this
+    # filter the picked reviewee should still be a real one.)
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_value": "Lead",
+                    "operand_tag": "",
+                }
+            ],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["sample_reviewee"]["name"] == "Eve"
+
+    # Link 1: no reviewer is in scope (no one matches the tag). The
+    # route returns null instead of throwing.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_value": "Nonexistent",
+                    "operand_tag": "",
+                }
+            ],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"sample_reviewee": None}

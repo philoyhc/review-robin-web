@@ -436,3 +436,103 @@ def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
         }
         for i in range(n)
     ]
+
+
+def find_sample_in_scope_reviewee(
+    db: Session,
+    *,
+    instrument: Instrument,
+    link1_mode: str,
+    link1_combinator: str,
+    link1_rules: list[dict[str, str]],
+    link2_mode: str,
+    link2_combinator: str,
+    link2_rules: list[dict[str, str]],
+) -> Any | None:
+    """Run the rule engine with the given Band 1 + Link 2 inputs and
+    return the first reviewee that ends up in any in-scope
+    ``(reviewer, reviewee)`` pair — the Band 2 preview's "Refresh"
+    button consumes this to update the sample.
+
+    Returns the first matched pair's reviewee (an ORM ``Reviewee``
+    instance), or ``None`` when the rules narrow the candidate pair
+    space down to zero. The roster bytes loaded here are the same
+    set the actual assignment generator uses, so the picked sample
+    is one the operator's reviewers would really see when generation
+    runs.
+    """
+    # Local imports to avoid pulling the rule engine + roster
+    # primitives at module-load time (this module is imported during
+    # every operator request, the engine + roster only when the
+    # operator clicks Refresh).
+    from sqlalchemy import select as sa_select
+
+    from app.db.models import Relationship, Reviewee, Reviewer
+    from app.schemas.rules import Combinator, RuleSetOptions, RuleSetSchema
+    from app.services.rules import engine
+
+    review_session = instrument.session
+    reviewers = list(
+        db.execute(
+            sa_select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.name, Reviewer.id)
+        ).scalars()
+    )
+    reviewees = list(
+        db.execute(
+            sa_select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .where(Reviewee.status == "active")
+            .order_by(Reviewee.name, Reviewee.id)
+        ).scalars()
+    )
+    if not reviewers or not reviewees:
+        return None
+    pair_context_lookup = {
+        (r.reviewer_id, r.reviewee_id): r
+        for r in db.execute(
+            sa_select(Relationship)
+            .where(Relationship.session_id == review_session.id)
+            .where(Relationship.status == "active")
+        ).scalars()
+    }
+    rules_json = _build_rules_json(
+        link1_mode=link1_mode,
+        link1_combinator=link1_combinator,
+        link1_rules=link1_rules,
+        link2_mode=link2_mode,
+        link2_combinator=link2_combinator,
+        link2_rules=link2_rules,
+    )
+    # Build a temp RuleSetSchema directly from the JSON payload so
+    # we evaluate exactly the Link 1 + Link 2 the operator has on
+    # screen (not whatever's persisted on the SessionRuleSet row).
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import Rule
+
+    rule_adapter = TypeAdapter(Rule)
+    try:
+        rules = [rule_adapter.validate_python(payload) for payload in rules_json]
+    except Exception:
+        return None
+    schema = RuleSetSchema(
+        name="_band1_preview",
+        combinator=Combinator.ALL_OF,
+        rules=rules,
+        options=RuleSetOptions(excludeSelfReviews=True),
+    )
+    try:
+        result = engine.evaluate(
+            schema,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            pair_context_lookup=pair_context_lookup,
+        )
+    except Exception:
+        return None
+    if not result.pairs:
+        return None
+    _reviewer, reviewee = result.pairs[0]
+    return reviewee

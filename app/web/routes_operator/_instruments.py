@@ -1384,6 +1384,83 @@ async def instrument_band2_state(
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
 
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/preview-sample"
+)
+async def instrument_preview_sample(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Run the rule engine against the current Band 1 form state and
+    return the first reviewee that lands in any in-scope
+    ``(reviewer, reviewee)`` pair. The Band 2 preview's "Refresh"
+    button consumes this to re-pick the sample reviewee so the
+    operator can see Link 1 + Link 2 filtering applied to the
+    preview row without saving first.
+    """
+    instrument, _ = bundle
+    _require_instrument_editable(instrument.session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="preview-sample body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="preview-sample body must be a JSON object",
+        )
+    def _str_list(v: Any) -> list[str]:
+        return [str(x) for x in v] if isinstance(v, list) else []
+    def _rule_list(v: Any) -> list[dict[str, str]]:
+        out: list[dict[str, str]] = []
+        if not isinstance(v, list):
+            return out
+        for entry in v:
+            if not isinstance(entry, dict):
+                continue
+            out.append(
+                {
+                    "field": str(entry.get("field") or ""),
+                    "op": str(entry.get("op") or ""),
+                    "operand_value": str(entry.get("operand_value") or ""),
+                    "operand_tag": str(entry.get("operand_tag") or ""),
+                }
+            )
+        return out
+    reviewee = instruments_service.find_sample_in_scope_reviewee(
+        db,
+        instrument=instrument,
+        link1_mode=str(body.get("link1_mode") or "all"),
+        link1_combinator=str(body.get("link1_combinator") or "AND"),
+        link1_rules=_rule_list(body.get("link1_rules")),
+        link2_mode=str(body.get("link2_mode") or "all"),
+        link2_combinator=str(body.get("link2_combinator") or "AND"),
+        link2_rules=_rule_list(body.get("link2_rules")),
+    )
+    if reviewee is None:
+        return JSONResponse(
+            {"sample_reviewee": None}, status_code=status.HTTP_200_OK
+        )
+    return JSONResponse(
+        {
+            "sample_reviewee": {
+                "name": reviewee.name or "",
+                "email_or_identifier": reviewee.email_or_identifier or "",
+                "profile_link": reviewee.profile_link or "",
+                "tag_1": reviewee.tag_1 or "",
+                "tag_2": reviewee.tag_2 or "",
+                "tag_3": reviewee.tag_3 or "",
+            }
+        },
+        status_code=status.HTTP_200_OK,
+    )
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
 def instrument_visibility(
     visible_when_closed: str | None = Form(default=None),
