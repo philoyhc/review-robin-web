@@ -41,7 +41,7 @@ Cross-referenced against the legacy individual + group cards
 `app/web/routes_operator/_rule_builder.py`), and the RTD library
 (`app/services/instruments/_rtds.py`,
 `app/web/routes_operator/_response_types.py`,
-the Response Type Definitions card lines 2877-3196).
+the Response Type Definitions card lines 2888-3240).
 
 Each gap carries a rough complexity (T = trivial, S = small, M
 = medium, L = large) and notes any blocking dependency.
@@ -54,9 +54,11 @@ sees the column drop from the new-model preview; the reviewer
 still sees it on the actual surface.
 
 **Close.** Mirror each pill toggle through the existing
-`set_display_field_visibility` service (with the Name + Email
-locked-row guard already in place there). One small wiring
-change in `set_band2_state` (or a paired call in the route).
+`update_display_field` service
+(`app/services/instruments/_display_fields.py:291`, with the
+Name + Email locked-row guard at lines 308-315). One small
+wiring change in `set_band2_state` (or a paired call in the
+route).
 
 ### Gap 2 — Response fields → real `InstrumentResponseField` rows (M-L)
 
@@ -132,7 +134,7 @@ first).
 operator library) + `response_type_definitions` (per-session
 copies, 10 seeded RTDs per session). Per-session card lets the
 operator Edit / Delete / Save-to-library / Add-from-library
-(template lines 2877-3196).
+(template lines 2888-3240).
 
 **Plan.** `guide/instrument_builder.md` §D-RTD + §1d sketches
 the retirement:
@@ -464,17 +466,23 @@ order of payoff and effort:
   the network-time win is linear in `K`.
 
 - **D3: Skip the on-load preview rebuild in view mode.** The
-  inline JS loop
-  `document.querySelectorAll('[data-new-model-band2]').forEach(window.newModelRefreshBand2)`
-  unconditionally rebuilds every new-model card's preview
+  inline JS loop at `instruments_index.html:2024` —
+  `document.querySelectorAll('[data-new-model-band2]').forEach(...newModelRefreshBand2)`
+  — unconditionally rebuilds every new-model card's preview
   table on page load. In view mode the server already
   rendered the correct preview table HTML; the JS rebuild
   is a no-op that re-runs filter logic against the roster
-  JSON only to produce the same DOM. Gate the loop on edit
-  mode (the wrapper already exposes `data-edit-mode="1"` via
-  the lock card). On a `K`-card page in view mode this
-  removes `K` JS rebuilds + the JSON parse entirely; page
-  becomes interactive measurably sooner.
+  JSON only to produce the same DOM. The card root does not
+  currently expose an edit-mode data attribute (the Jinja
+  `is_editing` flag drives `data-new-model-band2-editable`
+  inside the wrapper, plus `inert aria-hidden="true"` when
+  not editing — line 1242). Either add a
+  `data-edit-mode="{{ 1 if is_editing else 0 }}"` attribute
+  on the card root for the JS to read, or have the loop skip
+  cards whose `[data-new-model-band2-editable]` child carries
+  `inert`. On a `K`-card page in view mode this removes
+  `K` JS rebuilds + the JSON parse entirely; page becomes
+  interactive measurably sooner.
 
 D1 is a few lines and worth doing alongside Rec A. D2 + D3
 can land together as a follow-up once D1 proves the shape
