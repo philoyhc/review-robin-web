@@ -939,7 +939,10 @@ def set_band2_state(
     # nuking the operator's ``response_fields`` or
     # ``sample_reviewee_name``, and lets ↻ Refresh send only
     # ``sample_reviewee_name`` without nuking the pill / RF state.
-    if isinstance(state, dict) and "selected_display_keys" in state:
+    selected_keys_in_payload = (
+        isinstance(state, dict) and "selected_display_keys" in state
+    )
+    if selected_keys_in_payload:
         raw_keys = state.get("selected_display_keys")
         if isinstance(raw_keys, list):
             sanitised_keys: list[str] = []
@@ -949,6 +952,18 @@ def set_band2_state(
                     sanitised_keys.append(k)
             if sanitised_keys:
                 sanitised["selected_display_keys"] = sanitised_keys
+            # Gap 1: propagate the pill selection to
+            # ``InstrumentDisplayField.visible`` so the reviewer
+            # surface honours the operator's pill toggles. Locked
+            # Name / Email rows stay visible regardless.
+            _sync_display_field_visibility(
+                db,
+                instrument=instrument,
+                selected_keys=set(sanitised_keys)
+                if isinstance(raw_keys, list)
+                else None,
+                actor=actor,
+            )
     else:
         existing_keys = existing.get("selected_display_keys")
         if isinstance(existing_keys, list) and existing_keys:
@@ -1044,6 +1059,51 @@ def set_band2_state(
         refs={"instrument_id": instrument.id},
     )
     return instrument
+
+
+def _sync_display_field_visibility(
+    db: Session,
+    *,
+    instrument: Instrument,
+    selected_keys: set[str] | None,
+    actor: User,
+) -> None:
+    """Gap 1 — propagate the operator's pill selection (Band 2's
+    ``selected_display_keys``) onto each
+    ``InstrumentDisplayField.visible`` so the reviewer surface
+    honours the toggle.
+
+    For every non-locked display field on the instrument: visible
+    is set True when the field's canonical
+    ``"{source_type}.{source_field}"`` key is in ``selected_keys``,
+    False otherwise. Locked rows (Name / Email) always stay
+    visible — :func:`update_display_field` would refuse the flip
+    anyway, but we skip the call to keep the audit log quiet.
+    """
+    if selected_keys is None:
+        return
+    # Local import to avoid module-load circular dep:
+    # _display_fields → _instrument_crud already exists via the
+    # public re-exports in __init__.py.
+    from app.services.instruments._display_fields import (
+        is_locked_display_source,
+        update_display_field,
+    )
+
+    for field in list(instrument.display_fields):
+        if is_locked_display_source(field.source_type, field.source_field):
+            continue
+        key = f"{field.source_type}.{field.source_field}"
+        desired = key in selected_keys
+        if field.visible == desired:
+            continue
+        update_display_field(
+            db,
+            field=field,
+            label=field.label,
+            visible=desired,
+            actor=actor,
+        )
 
 
 def bulk_set_accepting(

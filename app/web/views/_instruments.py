@@ -506,10 +506,12 @@ def _new_model_band2_state(
         for r in active_reviewees
     ]
 
+    # Pills cover every display field that has data — including ones
+    # the operator has currently toggled off (visible=False) so the
+    # pill remains clickable in edit mode (Gap 1). Selection state is
+    # derived from ``visible`` at render time below.
     fields: list[dict[str, Any]] = []
     for f in instrument.display_fields:
-        if not f.visible:
-            continue
         if not _display_field_has_data(db, review_session.id, f):
             continue
         label = field_labels.resolve(
@@ -546,7 +548,17 @@ def _new_model_band2_state(
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")
     band2_state = instrument.band2_state or {}
-    selected_display_keys = set(band2_state.get("selected_display_keys") or [])
+    # Gap 1: selected_display_keys is derived from
+    # ``InstrumentDisplayField.visible`` (the source of truth that
+    # the reviewer surface honours), not from the band2_state JSON.
+    # The JSON slot stays for back-compat with code that round-trips
+    # the dict but is no longer authoritative — set_band2_state
+    # writes both together via _sync_display_field_visibility.
+    selected_display_keys = {
+        f"{f.source_type}.{f.source_field}"
+        for f in instrument.display_fields
+        if f.visible
+    }
     response_fields = list(band2_state.get("response_fields") or [])
     return {
         "fields": fields,
