@@ -3019,3 +3019,71 @@ def test_wave2_pr_i_listener_inlines_bounds_on_new_response_field(
     assert new_list._inline_max is None
     assert new_list._inline_step is None
     assert new_list._inline_list_csv == rtd_list.list_csv
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 2 PR ii — .response_type / .data_type properties
+# now prefer the inline columns over the RTD-tier relationship.
+# --------------------------------------------------------------------------- #
+
+
+def test_wave2_pr_ii_property_prefers_inline_over_rtd(
+    client: TestClient, db: Session
+) -> None:
+    """The .response_type / .data_type properties on
+    InstrumentResponseField now read from the inline columns when
+    set, only falling back to response_type_definition when inline
+    is NULL. Verify by mutating the inline columns to a value the
+    RTD doesn't carry and asserting the property returns the
+    inline value."""
+    from app.db.models import ResponseTypeDefinition, User
+    from app.services import instruments as instruments_service
+
+    review_session = _make_session(client, db, code="w2-prii")
+    actor = db.execute(select(User).limit(1)).scalar_one()
+    client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    )
+    rtd_int = db.execute(
+        select(ResponseTypeDefinition)
+        .where(ResponseTypeDefinition.session_id == review_session.id)
+        .where(ResponseTypeDefinition.response_type == "1-to-5int")
+    ).scalar_one()
+    instrument = _instrument(db, review_session.id)
+    field = instruments_service.add_response_field(
+        db,
+        instrument=instrument,
+        field_key="rating_new",
+        label="Rating",
+        response_type="1-to-5int",
+        required=False,
+        help_text=None,
+        help_text_visible=True,
+        actor=actor,
+    )
+    db.flush()
+    db.refresh(field)
+
+    # Sanity: post-listener, inline columns mirror the RTD; the
+    # properties agree with both.
+    assert field._inline_response_type == "1-to-5int"
+    assert field.response_type == "1-to-5int"
+    assert field.data_type == rtd_int.data_type
+
+    # Mutate the inline columns to a sentinel the RTD doesn't
+    # carry. The property must return the inline value, not the
+    # (still-unchanged) RTD value.
+    field._inline_response_type = "Inline_Sentinel"
+    field._inline_data_type = "Inline_DT_Sentinel"
+    db.flush()
+    assert field.response_type == "Inline_Sentinel"
+    assert field.data_type == "Inline_DT_Sentinel"
+    assert rtd_int.response_type == "1-to-5int"
+
+    # Fall-back path: with inline cleared, the property reaches
+    # through to the RTD as before.
+    field._inline_response_type = None
+    field._inline_data_type = None
+    db.flush()
+    assert field.response_type == "1-to-5int"
+    assert field.data_type == rtd_int.data_type

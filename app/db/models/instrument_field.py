@@ -101,10 +101,19 @@ class InstrumentResponseField(Base):
 
     @property
     def response_type(self) -> str:
+        # Segment 18J Wave 2 PR ii — prefer the inline column,
+        # fall back to the RTD-tier relationship for any row whose
+        # inline copy is unset (legacy data not yet backfilled, or
+        # a brand-new row created in an isolated bind that bypasses
+        # the before_insert listener).
+        if self._inline_response_type is not None:
+            return self._inline_response_type
         return self.response_type_definition.response_type
 
     @property
     def data_type(self) -> str:
+        if self._inline_data_type is not None:
+            return self._inline_data_type
         return self.response_type_definition.data_type
 
 
