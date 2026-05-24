@@ -800,6 +800,29 @@ Plan archived: `guide/archive/segment_18G_scheduled_events.md`.
 
 ---
 
+### Segment 18I — New-model instruments (exploration + main push) — done 2026-05-24
+
+Notional segment label for the new-model instrument card work
+that shipped without its own plan doc. **Exploration phase**
+(PRs **#1302 → #1304**, 2026-05-22→23): the chain-builder concept
+retired, the instrument-builder vertical-layout design landed
+(`guide/instrument_builder.md`, `spec/instrument_builder.md`).
+**Main push** (PRs **#1305 → #1386**, 2026-05-23→24): iterative
+UI build-out behind the `instruments.is_pilot` → `is_new_model`
+flag — Band 1 (rule editor + Individual/Grouped toggle), Band 2
+(selectable pills, drag-reorder, column resize, live preview,
+group-partition sample), Band 3 (response-field editable rows),
+plus persistence wiring (`band2_state` / `column_widths` JSON
+columns; `set_band2_state` service; the `_new_model_band2_state`
+view-shape adapter). Gap inventory + perf cost model captured in
+`guide/new_model_instruments_outstanding.md`. The card reaches
+"usable end-to-end for design feedback" — not yet at parity with
+the legacy individual + group cards. The remaining parity work
++ perf follow-on are tracked under **Segment 18J** (mopping up).
+No segment-plan doc; this entry is the canonical record.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -869,6 +892,17 @@ bottom of this file.
   fields answered, required fields, String-typed response
   chars). **Plan:**
   `guide/segment_18H_post_assessment_update.md`.
+
+- **18J — New-model takeover mopping-up** *(stub created
+  2026-05-24)*. Five-wave sequencing plan that completes the
+  Segment 18I work: closes the parity gaps that still keep the
+  legacy individual + group instrument cards alive, lands the
+  perf wins that bite as new-model card volume grows, and ends
+  with a cleanup PR that drops the `instruments.is_new_model`
+  flag. Adopts the Gap / Rec catalogue from
+  `guide/new_model_instruments_outstanding.md` verbatim and
+  decides only the order. **Plan:**
+  `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
