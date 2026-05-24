@@ -1,15 +1,23 @@
-# Segment 18J — New-model instruments takeover + perf
+# Segment 18J — New-model takeover mopping-up
 
 > **Stub created 2026-05-24.** Sketch-level scope only — detailed
 > PR breakdowns get drafted when each Part is picked up. The
 > per-item Gap / Rec definitions and rationale live in
 > `guide/new_model_instruments_outstanding.md`; this file's job
 > is purely to sequence them.
+>
+> **Antecedent.** Segment 18I shipped the new-model
+> instrument card from concept through main push (PRs **#1302
+> → #1386**, see `guide/todo_master.md` Done section). 18J is
+> the mopping-up sibling: it closes the parity gaps 18I left
+> open, lands the perf follow-on, and ends with the
+> `is_new_model` flag drop.
 
 ## Goal
 
 Drive the new-model instrument card (the flavour gated on
-`instruments.is_new_model`) to **full takeover** — every
+`instruments.is_new_model`) from "usable end-to-end for design
+feedback" (where 18I left it) to **full takeover** — every
 operator-facing affordance covered, the legacy individual +
 group cards retired, the `is_new_model` flag dropped — while
 keeping Save / Refresh latency tolerable as adoption grows the
