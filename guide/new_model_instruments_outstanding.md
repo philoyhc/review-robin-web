@@ -197,15 +197,66 @@ Alembic revision drops `is_new_model` and the `+New model`
 button. Template branches on `is_new_model` collapse to a single
 shape.
 
+### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug)
+
+**Today.** In Grouped mode, the Band 2 preview shows a sample
+group's member names — but the **sample reviewee pick** is
+rule-constrained (via `find_sample_in_scope_reviewee` →
+`engine.evaluate`) while the **group expansion** is not.
+`_new_model_band2_state` at `app/web/views/_instruments.py:456-464`
+partitions *all active reviewees* by boundary-tag match against
+the sample reviewee's key:
+
+```python
+group_members = [
+    r
+    for r in active_reviewees  # ← unfiltered roster
+    if tuple(getattr(r, field, "") or "" for field in reviewee_boundary_fields)
+    == sample_key
+]
+```
+
+`active_reviewees` (lines 412-419) is a flat
+`SELECT * FROM reviewees WHERE session_id=? AND status='active'`
+with no engine intersection. So the preview can show member
+names that Links 1+2 will exclude at Generate time: operator
+sees Alice / Bob / Carol / Dan in tag A; only Alice + Bob
+become assignees.
+
+This contradicts the contract the Refresh button is meant to
+honour — Refresh runs the engine so the operator can trust
+the preview reflects the actual assignment-time result. The
+sample-reviewee pick honours that; the member-list expansion
+does not. The defect re-becomes more visible as Wave 1's
+Gap 1 (pill → visible) and Gap 3 (sort badges) push the
+preview to be the operator's main authoring surface.
+
+**Close.** Have the engine-driven sample-pick path return
+**both** the sample reviewee and the set of rule-surviving
+reviewee IDs that share the sample's boundary key (an
+intersection over `result.pairs` the engine already produces;
+~zero extra cost). Persist the ID set into `band2_state`
+(e.g. `sample_group_member_ids`) at Refresh time; the render
+path filters `group_members` by that set. The Refresh-gated
+contract — preview is honest as of the last Refresh,
+potentially stale if Links 1+2 change without a Refresh —
+is preserved.
+
+Sequenced in **Segment 18J Wave 1** as PR ε (sibling to
+PRs α-δ); no schema change, ~one engine call already on the
+Refresh path, set-intersection cost negligible.
+
 ## Roadmap: smallest path to full takeover
 
 Sequenced so each step is independently shippable and the
 operator gains parity progressively:
 
 1. **Gap 1** (pill → visible) + **Gap 3** (sort priorities) +
-   **Gap 5** (required flag). All T-S, no schema delta. Once
+   **Gap 5** (required flag) + **Gap 10** (rule-constrained
+   preview group expansion). All T-S, no schema delta. Once
    these land, the new-model card surfaces every per-display-
-   field affordance the legacy card has.
+   field affordance the legacy card has and the preview is
+   honest about group membership.
 2. **Gap 6** (RTD library retirement). Schema delta on
    `instrument_response_fields` + data migration. Lands before
    Gap 2 so Gap 2 doesn't have to author the bloat workaround.
@@ -235,6 +286,8 @@ The gaps become blocking when:
   3 response field (Gap 2).
 - A pilot operator wants pill deselect to truly hide a column
   on the reviewer surface (Gap 1).
+- A pilot operator authors a Links 1+2 rule and expects the
+  Grouped-mode preview's member list to reflect it (Gap 10).
 - The team wants to stop maintaining two card flavours +
   library subsystems and consolidate (Gaps 6 + 7 + 9).
 

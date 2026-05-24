@@ -56,7 +56,8 @@ each wave is drafted when the wave is picked up.
 
 Land first; small diffs that cure the most visible operator
 pain today. After this wave the new-model card surfaces every
-per-display-field affordance the legacy card has, and Save no
+per-display-field affordance the legacy card has, the Grouped-
+mode preview is honest about group membership, and Save no
 longer pays the engine cost on the new-model path.
 
 **Design decisions taken at pickup.**
@@ -210,13 +211,63 @@ Tests:
   across no-op and edit cycles.
 - Preview asterisk renders when required.
 
+#### PR ε — Gap 10 (rule-constrained preview group expansion) *(T-S)*
+
+Make the Grouped-mode preview's member list honest about
+which reviewees Links 1+2 actually admit. Today the sample
+**reviewee** is rule-constrained but the sample **group**
+is not (see `guide/new_model_instruments_outstanding.md`
+Gap 10).
+
+- **Server-side.** Extend the sample-pick path
+  (`find_sample_in_scope_reviewee` at
+  `app/services/instruments/_band1.py:441-538`, or its
+  caller in `_instruments.py::instrument_preview_sample`)
+  to also return the set of rule-surviving reviewee IDs
+  sharing the sample's boundary key. Compute by
+  intersecting `engine.evaluate(...).pairs` (already
+  produced) against the sample's `boundary_key` — pure
+  set work, no second engine call.
+- **Persistence.** Persist the ID set as
+  `band2_state.sample_group_member_ids` (list of int) at
+  Refresh time, alongside the existing
+  `sample_reviewee_name`.
+- **Render path.** `_new_model_band2_state` at
+  `app/web/views/_instruments.py:456-464` filters
+  `group_members` by `sample_group_member_ids` when the
+  set is present. Fall through to the current
+  unconstrained partition only when the set is absent
+  (e.g. legacy band2_state rows that pre-date this PR —
+  preview reflects stale unconstrained view until next
+  Refresh, matching the existing Refresh-gated contract).
+
+**Refresh contract preserved.** Preview honesty is gated on
+the most recent Refresh; editing Links 1+2 without a
+Refresh leaves the preview reflecting the previous engine
+result. This matches today's contract for the sample
+reviewee pick — Gap 10 just extends it to the member list.
+
+Tests:
+
+- After a Refresh under Links 1+2 that exclude half of a
+  group's reviewees, the preview's `sample_names` shows
+  only the surviving half.
+- A pure tag-set rule (no QUOTA) and a QUOTA rule both
+  filter the preview's group correctly.
+- Legacy band2_state without `sample_group_member_ids`
+  still renders (back-compat: unconstrained partition,
+  same behaviour as today).
+
 #### Recommended landing order
 
 1. PR α first — smallest diff, biggest immediate operator
    win (Save lag), zero UI change.
-2. PRs β / γ / δ in any order; mutually independent. Three
+2. PR ε second — correctness bug; cheap; lands before β/γ
+   so the preview is honest as Gap 1's pill toggles and
+   Gap 3's sort badges start exercising it more heavily.
+3. PRs β / γ / δ in any order; mutually independent. Three
    sibling PRs let the reviewer batch them.
-3. Rec E (no-op Save cache verify) can land as a tiny
+4. Rec E (no-op Save cache verify) can land as a tiny
    safety-net commit at any point in this wave or after.
 
 **Out of Wave 1 scope** (per the catalogue split):
