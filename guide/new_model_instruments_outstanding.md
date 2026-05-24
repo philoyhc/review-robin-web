@@ -104,20 +104,38 @@ control. The underlying `instruments.sort_display_fields` JSON
 + `instruments_service.set_sort_display_fields` already exist
 unchanged.
 
-### Gap 4 — Response field help text + visibility (S)
+### Gap 4 — Response field help text + visibility (S) — partially shipped 2026-05-24 (PRs #1408, #1409)
+
+> The new-model card now surfaces both the visibility toggle
+> and the help-text body via the in-card ✎/✓ editor pattern.
+> What remains is the broader Band 3 UX decision (accordion vs
+> dedicated pane vs always-visible — see Wave 3 design decision
+> 13 in `guide/segment_18J_new_model_takeover.md`). The
+> underlying columns + persistence are in place; once the
+> remaining Band 3 UX choice is made, that work is the only
+> piece left.
+
 
 **Legacy.** Response Fields Help table — `help_text` textarea +
 `help_text_visible` toggle per response field. Reviewer surface
 renders help text inline below the input when visible.
 
-**New-model.** Not surfaced. Band 3 Response Fields rows only
-have name / data_type / bounds.
+**New-model status.** Each Band 3 row carries an "≡" toggle
+button (PR #1408) that controls whether a half-width help card
+renders above the preview table for that field. Each help card
+carries an in-card ✎/✓ icon-button pair (PR #1409) that lets the
+operator edit the help-text body inline; the body persists into
+`band2_state.response_fields[*].help_text` (server-side clamp at
+1000 chars). The chip-gating tweak in PR #1409 hides the card
+when the response pill is deselected without flipping the "≡"
+state. Reviewer-surface rendering of the help text waits for
+Wave 3 (Gap 2 bridges JSON rows to real
+`InstrumentResponseField` rows; the bridge code preserves both
+flags).
 
-**Close.** Either an expandable accordion per row in Band 3, or
-a dedicated help editor. Wires to the existing
-`InstrumentResponseField.help_text` + `.help_text_visible`
-columns once Gap 2 lands (response fields become real DB rows
-first).
+**What's left.** The broader Band 3 UX decision (accordion vs
+dedicated pane vs always-visible textarea) is the deferred Gap 4
+piece. The plumbing is shipped.
 
 ### Gap 5 — Response field "required" flag (T) — shipped 2026-05-24 (PR #1397, metadata only)
 
