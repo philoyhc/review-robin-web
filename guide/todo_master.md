@@ -764,9 +764,38 @@ on the Setup-page preview tables), Part 2 (eligible-pair count
 cache on the per-instrument rule card), Part 3 (friendly-label
 Fields-with-data pills on the Reviewers / Reviewees / Relationships
 stats info cards). Segment closed 2026-05-20; the "small
-enhancements" holding-pen role lives on **Segment 18H** from there
-forward. Plan archived:
+enhancements" holding-pen role passed to **Segment 18H** (also
+since closed 2026-05-24 — see below). Future small enhancements
+get a fresh segment slot when they come up. Plan archived:
 `guide/archive/segment_18E_small_enhancements.md`.
+
+---
+
+### Segment 18H — Post-assessment update + small enhancements — done 2026-05-24
+
+Created 2026-05-19 after the 2026-05-19 codebase assessment;
+inherited the small-enhancements holding-pen role from the
+now-closed 18E. Closed 2026-05-24 with no further open work.
+**Post-assessment fixes:** group-scoped instrument config
+round-trip fix (PR #1216), relationship re-point under-
+defuncting fix (PR #1218), representative-staleness on group
+join fix (PR #1219; introduces `reconcile_group_responses_for_*`
++ `_refan_group_responses`). **Three Parts shipped:**
+**Part 1** — Rule Builder ergonomics (3-column grid for
+MATCH / FILTER / QUOTA controls, PR #1220; mutually exclusive
+include/exclude checkboxes replacing the kind dropdown,
+PR #1221). Part 1's three further-refinement stubs
+(seeded-vs-personal library affordances, validation feedback,
+RuleSet read-back) closed defunct 2026-05-24 once
+Segment 18J Wave 4 (Gap 7) committed to retiring the Rule
+Builder child page + RuleSet library tier wholesale.
+**Part 2** — per-instrument response CSVs in the Zip-all
+bundle (`{code}_instrument_{n}.csv`, long format sorted
+reviewee-first; rejected the §22 wide-format alternative).
+**Part 3** — bundle-only Reviewer / Reviewee stats CSVs
+(roster + draft/submitted aggregates for partners, fields
+answered, required fields, String-typed response chars).
+Plan archived: `guide/archive/segment_18H_post_assessment_update.md`.
 
 ---
 
@@ -836,7 +865,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 18H, 19, 20**. No global ordering
+**14B, 18J, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -870,31 +899,6 @@ bottom of this file.
   **Plan:** `guide/archive/segment_17B_reviewer_surface_refinements.md`.
 
 
-
-- **18H — Post-assessment update + small enhancements**
-  *(created 2026-05-19; Parts 1-3 shipped 2026-05-19→20)*. A
-  holding pen opened after the 2026-05-19 codebase assessment;
-  inherits the small-enhancements role from the now-closed
-  Segment 18E. Future small operator-surface improvements land
-  here as new Parts rather than spawning one-off segment stubs.
-  **Logs as shipped:** the group-scoped instrument config
-  round-trip fix (PR #1216) + the relationship re-point /
-  group-join representative-staleness defunct fixes (PRs #1218,
-  #1220). **Three Parts shipped:** **Part 1** — Rule Builder
-  ergonomics (3-column grid layout for MATCH / FILTER / QUOTA
-  controls; mutually exclusive include/exclude checkboxes
-  replacing the kind dropdown). Part 1 closed 2026-05-24: the
-  three remaining open refinements (seeded-vs-personal library
-  affordances, validation feedback, RuleSet read-back) all
-  closed defunct by Segment 18J Wave 4 (Gap 7 retires the
-  Rule Builder child page + RuleSet library tier). **Part 2** — per-instrument response CSVs in the
-  Zip-all bundle (`{code}_instrument_{n}.csv`, long format
-  sorted reviewee-first; rejected the §22 wide-format
-  alternative). **Part 3** — bundle-only Reviewer / Reviewee
-  stats CSVs (roster + draft/submitted aggregates for partners,
-  fields answered, required fields, String-typed response
-  chars). **Plan:**
-  `guide/segment_18H_post_assessment_update.md`.
 
 - **18J — New-model takeover mopping-up** *(stub created
   2026-05-24)*. Five-wave sequencing plan that completes the
@@ -941,6 +945,6 @@ bottom of this file.
 - **Within 14B**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps. **18G Part 3 (reminders)** shipped 2026-05-21 and layered on
   top of 14B Parts A / B / C.
-- **18H, 19, 20** are
+- **18J, 19, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
