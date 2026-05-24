@@ -12,30 +12,34 @@
       text-align: center;
       vertical-align: middle;
     }
+    /* Match the reviewer surface's compact .rrw-sort-btn dimensions
+       so the Band 2 preview header doesn't bloat the row height. */
     body.ui-v2 .sort-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 4px;
+      padding: 0 4px;
+      min-width: 18px;
+      height: 18px;
+      line-height: 1;
       background: transparent;
       border: 1px solid transparent;
-      padding: 2px 6px;
-      cursor: pointer;
       border-radius: 4px;
+      cursor: pointer;
+      color: var(--color-muted, #94a3b8);
       font: inherit;
+      font-size: 0.85em;
     }
     body.ui-v2 .sort-btn:hover {
       border-color: var(--border-muted, #cbd5e1);
       background: var(--bg-muted, #f1f5f9);
     }
     body.ui-v2 .sort-badge {
-      display: inline-block;
-      min-width: 28px;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: var(--bg-muted, #f1f5f9);
-      color: var(--color-text, #0f172a);
-      font-size: 0.85em;
+      display: inline;
       font-variant-numeric: tabular-nums;
     }
     body.ui-v2 .sort-badge.sort-badge-empty {
-      background: transparent;
       color: var(--color-muted, #94a3b8);
     }
   </style>
@@ -1778,9 +1782,13 @@
                 }
                 html += '<td' + (isProfile ? ' class="rs-narrow"' : '') + '>' + cell + '</td>';
               });
-              // Response cells are empty in the preview — no real
-              // reviewer has typed an answer yet.
-              responses.forEach(function () { html += '<td>—</td>'; });
+              // Response cells render disabled placeholder inputs so
+              // the operator sees the reviewer-surface shape (textarea
+              // / number / list / text) for each response field, not
+              // a bare ``—``.
+              responses.forEach(function (r) {
+                html += '<td>' + buildResponseFieldPreviewCell(card, r) + '</td>';
+              });
               html += '</tr></tbody></table>';
               return html;
             }
@@ -1831,7 +1839,9 @@
                 html += '<span class="muted">' + names + '</span>';
               }
               html += '</td>';
-              responses.forEach(function () { html += '<td>—</td>'; });
+              responses.forEach(function (r) {
+                html += '<td>' + buildResponseFieldPreviewCell(card, r) + '</td>';
+              });
               html += '</tr></tbody></table>';
               return html;
             }
@@ -2204,6 +2214,71 @@
                 );
               });
             };
+            // Render a disabled placeholder input/textarea/select for
+            // a selected response-field cell in the preview row. Shape
+            // matches the reviewer surface (review_surface.html lines
+            // 345-410): short String → <input type=text>, long String
+            // (max_len > 100) → <textarea rows=2>, Integer / Decimal →
+            // <input type=number>, List → <select>. The placeholder
+            // string mirrors ``views/_instruments.py::placeholder_for_field``.
+            function buildResponseFieldPreviewCell(card, r) {
+              var instrumentCard = card.closest('[id^="instrument-"]');
+              if (!instrumentCard) { return '<span class="muted">—</span>'; }
+              var row = instrumentCard.querySelector(
+                '[data-new-model-rf-row][data-row-key="' + r.key + '"]'
+              );
+              if (!row) { return '<span class="muted">—</span>'; }
+              var typeSel = row.querySelector('[data-new-model-rf-data-type]');
+              var dataType = typeSel ? typeSel.value : 'string';
+              var bounds = {min: '', max: '', step: '', list: ''};
+              row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+                bounds[input.getAttribute('data-new-model-rf-bound')] = (input.value || '').trim();
+              });
+              var placeholder = '';
+              if (dataType === 'string' && bounds.max) {
+                placeholder = (bounds.min || '0') + ' to ' + bounds.max + ' char';
+              } else if ((dataType === 'integer' || dataType === 'decimal')
+                         && bounds.min && bounds.max && bounds.step) {
+                placeholder = bounds.min + ' to ' + bounds.max + ', steps of ' + bounds.step;
+              }
+              var maxLenInt = parseInt(bounds.max || '0', 10) || 0;
+              var commonAttrs = 'disabled tabindex="-1" aria-hidden="true" '
+                + 'style="width: 100%; box-sizing: border-box; font: inherit;"';
+              if (dataType === 'string' && maxLenInt > 100) {
+                return '<textarea ' + commonAttrs.replace(
+                  'width: 100%;',
+                  'width: 100%; min-height: 44px;'
+                ) + ' rows="2"'
+                  + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
+                  + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')
+                  + '></textarea>';
+              }
+              if (dataType === 'string') {
+                return '<input type="text" ' + commonAttrs
+                  + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
+                  + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')
+                  + '>';
+              }
+              if (dataType === 'integer' || dataType === 'decimal') {
+                return '<input type="number" ' + commonAttrs
+                  + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
+                  + (bounds.min ? ' min="' + esc(bounds.min) + '"' : '')
+                  + (bounds.max ? ' max="' + esc(bounds.max) + '"' : '')
+                  + (bounds.step ? ' step="' + esc(bounds.step) + '"' : '')
+                  + '>';
+              }
+              if (dataType === 'list') {
+                var html = '<select ' + commonAttrs + '>';
+                html += '<option value="">—</option>';
+                var choices = (bounds.list || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                choices.forEach(function (c) {
+                  html += '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+                });
+                html += '</select>';
+                return html;
+              }
+              return '<span class="muted">—</span>';
+            }
             // Short-form per-response-field constraint summary
             // (e.g. "Rating (1-5, steps of 1), Notes (0-2000 char)"),
             // rendered above the preview table and flush-right.
