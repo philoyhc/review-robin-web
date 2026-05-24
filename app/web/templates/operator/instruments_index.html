@@ -929,7 +929,7 @@
               <div data-new-model-unit-builder
                    style="display: flex; align-items: stretch; gap: 8px;
                           {% if not _link3_grouped %}opacity: 0.5; pointer-events: none;{% endif %}">
-                <div style="flex: 0 0 30%; display: flex;
+                <div style="flex: 0 0 40%; display: flex;
                             align-items: center; justify-content: center; gap: 8px;">
                   <button type="button" class="btn secondary"
                           style="padding: 4px 10px;"
@@ -947,7 +947,7 @@
                     {% set _is_first = loop.first %}
                     <div data-new-model-unit-cell
                          style="display: flex; align-items: center; gap: 4px;">
-                      <select style="flex: 0 0 57.14%; min-width: 0; padding: 4px;"
+                      <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
                               onchange="newModelLink3BoundaryChanged(this)"
                               {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
                         <option value="">—</option>
