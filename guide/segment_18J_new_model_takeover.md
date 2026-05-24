@@ -52,27 +52,179 @@ catalogue verbatim and decides only **what order to ship in**.
 Five waves, each independently shippable. The PR ladder inside
 each wave is drafted when the wave is picked up.
 
-### Wave 1 — Quick wins (T-S, no schema)
+### Wave 1 — Quick wins (T-S, no schema) — picked up 2026-05-24
 
-Land first; both halves are small diffs and cure the most
-visible operator pain today.
+Land first; small diffs that cure the most visible operator
+pain today. After this wave the new-model card surfaces every
+per-display-field affordance the legacy card has, and Save no
+longer pays the engine cost on the new-model path.
 
-- **Gaps 1, 3, 5** — pill → `InstrumentDisplayField.visible`
-  (Gap 1, via `update_display_field` at
-  `_display_fields.py:291`), sort priorities on Band 2 pills
-  (Gap 3), required-flag checkbox on Band 3 rows (Gap 5).
-  After this wave the new-model card surfaces every per-
-  display-field affordance the legacy card has.
-- **Rec A** — drop the per-instrument eligible-pair count
-  from `build_instruments_context`. Save → redirect → render
-  stops paying the engine cost on the new-model path.
-- **Rec D1** — single roster query per render. Lift the
-  reviewee SELECT out of `_new_model_band2_state`
-  (`app/web/views/_instruments.py:412-419`) into
-  `build_instruments_context`. `O(K)` → 1 query.
+**Design decisions taken at pickup.**
 
-Recommend A + D1 together as a single PR; Gaps 1 / 3 / 5 as
-one or three sibling PRs depending on review-load.
+- **Rec A flavour: conditional skip.** Skip
+  `evaluate_session_rule_eligibility` for `is_new_model`
+  instruments only. Legacy individual + group cards keep
+  their counts unchanged. Smallest possible diff; lazy/async
+  deferred until the legacy cards' count also becomes a felt
+  latency complaint.
+- **Gap 3 surface: preview-table header.** Sort badges live
+  on the Band 2 preview table's `<th>` cells (tri-state
+  cycle: unsorted → asc → desc → unsorted; priority number
+  rendered on each sorted column). Pills keep their existing
+  role — selection + display order — and stay free of the
+  sort click conflict. Falls back to pill-mounted badges only
+  if implementation finds the header-cell approach clearly
+  unworkable (re-confirm before flipping).
+
+**Caveat on Gap 5.** The required-flag checkbox persists into
+`band2_state.response_fields[*]` JSON in Wave 1, but
+**enforcement on the reviewer surface** waits for Wave 3
+(Gap 2 bridging the JSON rows to real
+`InstrumentResponseField` rows). Wave 1 ships
+operator-authored metadata; the asterisk + validation
+materialise alongside Gap 2. Bridge code in Wave 3 preserves
+the `required` value across the migration.
+
+**PR ladder.**
+
+#### PR α — Rec A (conditional skip) + Rec D1 (single roster query) *(S)*
+
+Perf double-tap. Both touch only the view-shape layer; no
+template / JS change.
+
+- **Rec A.** In `app/web/views/_instruments.py`, guard the
+  `evaluate_session_rule_eligibility` call inside
+  `_build_rule_picker_options` (line 312, reached from
+  `build_instrument_rule_picker_contexts` lines 776-778) so
+  it short-circuits when the requesting context is a
+  `is_new_model` instrument. Confirm at implementation time
+  whether the same call also feeds the picker dropdown's
+  per-option counts: if it does, the skip is scoped to "no
+  count rendered on this card" rather than "no count loaded
+  for this picker" — pick whichever boundary matches the
+  template's actual read.
+- **Rec D1.** Lift the active-reviewees `SELECT` out of
+  `_new_model_band2_state` (`_instruments.py:412-419`) into
+  `build_instruments_context` (line 645). Fetch once at the
+  top of the function; pass a `list[Reviewee]` (or
+  `dict[id, Reviewee]`) into each `_new_model_band2_state`
+  call. Signature change is
+  `_new_model_band2_state(db, instrument)
+  → (db, instrument, *, active_reviewees)`.
+
+Tests:
+
+- `tests/integration/test_instruments_index_perf.py`
+  (new) — assert SQL query count is constant in the number
+  of new-model instruments on the page (regression-style:
+  count `Reviewee.session_id` SELECTs).
+- Assert `evaluate_session_rule_eligibility` is not called
+  for sessions whose only instruments are new-model
+  (monkeypatch / spy).
+
+Doc impact: annotate Recs A + D1 as shipped in
+`guide/new_model_instruments_outstanding.md`.
+
+#### PR β — Gap 1 (pill → `InstrumentDisplayField.visible`) *(T-S)*
+
+Make the Band 2 pill toggle propagate to the real
+`InstrumentDisplayField.visible` column so the reviewer
+surface honours the operator's selection.
+
+- **Write path.** When `set_band2_state`
+  (`app/services/instruments/_instrument_crud.py:901`)
+  mutates `band2_state.selected_display_keys`, paired call
+  to `update_display_field`
+  (`app/services/instruments/_display_fields.py:291`) for
+  each newly-selected or newly-deselected display field,
+  respecting the Name / Email locked-row guard (lines
+  308-315). Name + Email pills render unclickable (already
+  treated as a special case in the template — confirm at
+  impl).
+- **Read path.** `_new_model_band2_state` derives the
+  initial pill `selected` state from
+  `InstrumentDisplayField.visible` (the source of truth)
+  rather than from `band2_state.selected_display_keys`
+  alone. The JSON shape stays as a render hint / cache but
+  the DB column wins on read.
+
+Tests:
+
+- Pill toggle → DB write covered for both selection and
+  deselection; locked Name/Email rejected.
+- Reviewer surface (`tests/integration/test_reviewer_*`)
+  regression: deselecting a column on the new-model card
+  drops it from the reviewer table.
+
+#### PR γ — Gap 3 (sort badges on preview table header) *(S)*
+
+Surface sort priorities in the Band 2 preview table header
+cells.
+
+- **Template.** Each `<th>` in the preview table
+  (`app/web/templates/operator/instruments_index.html`,
+  inside the `data-new-model-band2-preview` block at
+  ~line 1314) gains a sort badge: priority number +
+  asc/desc arrow when sorted, neutral icon when unsorted.
+- **JS.** Click on header cell cycles unsorted → asc → desc
+  → unsorted. When a column is removed from the sort,
+  remaining columns renumber. POST the updated state via
+  the existing `set_sort_display_fields` service
+  (`_display_fields.py:771`) on each cycle (or on Save —
+  decide at impl time based on whether the operator expects
+  preview to reflect immediately).
+- **Read path.** Reviewer surface already honours
+  `instruments.sort_display_fields` from Segment 13B —
+  no change needed.
+
+Tests:
+
+- Tri-state cycle round-trips through Save; multi-column
+  sort assigns sequential priorities; removing a column
+  renumbers the rest.
+- Reviewer surface default sort matches the new-model
+  card's authored priorities.
+
+#### PR δ — Gap 5 (required-flag checkbox on Band 3 rows) *(T)*
+
+Add the operator-authored required flag to each Band 3
+response-field row.
+
+- **Template.** Each Band 3 response-field row in the
+  editor grows a Required checkbox column.
+- **JS.** Row ✓ Save includes `required: bool` in the
+  `band2_state.response_fields[*]` JSON.
+- **Server.** `set_band2_state` preserves the new field
+  (already round-trips arbitrary keys per PR #1379's
+  `band2_state preserve all` fix — confirm at impl).
+- **Preview.** Asterisk on the response-field column header
+  in the Band 2 preview when required = true.
+
+PR description **must** call out the half-shipped state:
+checkbox visible + persisted; reviewer-surface enforcement
+arrives with Wave 3.
+
+Tests:
+
+- Checkbox round-trip through Save preserves the value
+  across no-op and edit cycles.
+- Preview asterisk renders when required.
+
+#### Recommended landing order
+
+1. PR α first — smallest diff, biggest immediate operator
+   win (Save lag), zero UI change.
+2. PRs β / γ / δ in any order; mutually independent. Three
+   sibling PRs let the reviewer batch them.
+3. Rec E (no-op Save cache verify) can land as a tiny
+   safety-net commit at any point in this wave or after.
+
+**Out of Wave 1 scope** (per the catalogue split):
+
+- Rec B (engine fast path), Rec D2 / D3 (page-level roster
+  JSON + skip rebuild in view mode) — Wave 4.
+- Gap 4 (help text + visibility) — Wave 3.
+- Gap 2 / 6 / 7 (the schema-touching gaps) — Waves 2 / 3 / 4.
 
 ### Wave 2 — RTD library retirement (M, schema delta)
 
