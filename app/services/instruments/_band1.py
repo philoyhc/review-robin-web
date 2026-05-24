@@ -448,18 +448,29 @@ def find_sample_in_scope_reviewee(
     link2_mode: str,
     link2_combinator: str,
     link2_rules: list[dict[str, str]],
-) -> Any | None:
+) -> tuple[Any, list[int] | None] | None:
     """Run the rule engine with the given Band 1 + Link 2 inputs and
-    return the first reviewee that ends up in any in-scope
-    ``(reviewer, reviewee)`` pair — the Band 2 preview's "Refresh"
-    button consumes this to update the sample.
+    return both the sample reviewee and the rule-surviving group
+    member IDs that share its reviewee-side boundary key — the
+    Band 2 preview's "Refresh" button consumes this so the Grouped-
+    mode preview's member list is honest about Links 1+2 filtering
+    (Segment 18J Wave 1 Gap 10).
 
-    Returns the first matched pair's reviewee (an ORM ``Reviewee``
-    instance), or ``None`` when the rules narrow the candidate pair
-    space down to zero. The roster bytes loaded here are the same
-    set the actual assignment generator uses, so the picked sample
-    is one the operator's reviewers would really see when generation
-    runs.
+    Returns ``(reviewee, member_ids)`` where:
+
+    - ``reviewee`` is the first matched pair's reviewee (an ORM
+      ``Reviewee`` instance);
+    - ``member_ids`` is the sorted list of unique reviewee IDs
+      whose surviving pairs share the sample's reviewee-side
+      boundary key, or ``None`` when the instrument has no
+      reviewee-side boundary (per-reviewee mode, or grouped-by-
+      pair-context-only — the render path falls back to its
+      pre-Gap-10 unconstrained partition for those cases).
+
+    Returns ``None`` when the rules narrow the candidate pair space
+    down to zero. The roster bytes loaded here are the same set the
+    actual assignment generator uses, so the picked sample is one
+    the operator's reviewers would really see when generation runs.
     """
     # Local imports to avoid pulling the rule engine + roster
     # primitives at module-load time (this module is imported during
@@ -535,4 +546,30 @@ def find_sample_in_scope_reviewee(
     if not result.pairs:
         return None
     _reviewer, reviewee = result.pairs[0]
-    return reviewee
+    # Gap 10: compute rule-surviving group member IDs for the
+    # sample's reviewee-side boundary key. Skipped when there's no
+    # reviewee-side boundary (per-reviewee mode or grouped-by-
+    # pair-context-only) — render falls back to its existing
+    # unconstrained partition. Iterates result.pairs the engine
+    # already produced; no second engine call.
+    from app.services.instruments._instrument_crud import decode_group_kind
+
+    reviewee_boundary_fields = [
+        field
+        for (src, field) in decode_group_kind(instrument.group_kind)
+        if src == "reviewee"
+    ]
+    if not reviewee_boundary_fields:
+        return reviewee, None
+    sample_key = tuple(
+        getattr(reviewee, field, "") or ""
+        for field in reviewee_boundary_fields
+    )
+    member_ids: set[int] = set()
+    for _r, e in result.pairs:
+        if (
+            tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
+            == sample_key
+        ):
+            member_ids.add(e.id)
+    return reviewee, sorted(member_ids)

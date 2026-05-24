@@ -471,6 +471,21 @@ def _new_model_band2_state(
             )
             == sample_key
         ]
+        # Gap 10: intersect with the rule-surviving member-ID set
+        # persisted at the last Refresh. The Refresh path runs the
+        # engine and writes the surviving IDs onto
+        # ``band2_state.sample_group_member_ids`` so the preview
+        # member list honours Links 1+2, not just the boundary
+        # partition. Falls back to the boundary-only partition when
+        # the key is absent (legacy band2_state from before
+        # Gap 10 shipped — render reflects the pre-Gap-10 view
+        # until the next Refresh writes the new key).
+        persisted_member_ids = (instrument.band2_state or {}).get(
+            "sample_group_member_ids"
+        )
+        if isinstance(persisted_member_ids, list) and persisted_member_ids:
+            allowed = {int(i) for i in persisted_member_ids if isinstance(i, int)}
+            group_members = [r for r in group_members if r.id in allowed]
     else:
         group_members = active_reviewees
     all_names = [r.name for r in group_members]
