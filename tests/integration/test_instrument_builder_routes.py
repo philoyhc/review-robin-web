@@ -2028,3 +2028,178 @@ def test_new_model_response_field_width_persists_on_band2_state(
         'data-row-key="rf_0" data-response-key="rf_0" data-width="1200"'
         in flat
     )
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 1 PR α — Rec A (conditional skip) + Rec D1 (single roster)
+# --------------------------------------------------------------------------- #
+
+
+def _all_new_model_session(
+    client: TestClient, db: Session, *, code: str, n_extra: int = 0
+) -> tuple[ReviewSession, list[Instrument]]:
+    """Build a session whose instruments are all new-model. Returns
+    the session and its instruments. ``n_extra`` adds further
+    new-model instruments via the +New model route."""
+    review_session = _make_session(client, db, code=code)
+    _populate_rosters(client, review_session.id)
+    seed = _instrument(db, review_session.id)
+    # Convert the seeded instrument to new-model in place rather than
+    # adding then deleting it — keeps the test setup minimal.
+    seed.is_new_model = True
+    db.commit()
+    for _ in range(n_extra):
+        resp = client.post(
+            f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+            data={"after": str(seed.id)},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    return review_session, instruments
+
+
+def test_rec_a_skips_eligibility_engine_for_all_new_model_page(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rec A — when every instrument on the Instruments index is
+    new-model, ``evaluate_session_rule_eligibility`` and
+    ``evaluate_instrument_group_pair_counts`` are never called: the
+    new-model card renders its rule editor inline and does not use
+    the legacy assignment-rule-picker card."""
+    review_session, _ = _all_new_model_session(
+        client, db, code="rec-a-skip"
+    )
+
+    from app.services.rules import session_library
+
+    elig_calls = 0
+    group_calls = 0
+    real_elig = session_library.evaluate_session_rule_eligibility
+    real_group = session_library.evaluate_instrument_group_pair_counts
+
+    def spy_elig(*a, **kw):
+        nonlocal elig_calls
+        elig_calls += 1
+        return real_elig(*a, **kw)
+
+    def spy_group(*a, **kw):
+        nonlocal group_calls
+        group_calls += 1
+        return real_group(*a, **kw)
+
+    monkeypatch.setattr(
+        session_library, "evaluate_session_rule_eligibility", spy_elig
+    )
+    monkeypatch.setattr(
+        session_library,
+        "evaluate_instrument_group_pair_counts",
+        spy_group,
+    )
+    # Patch the names where views imports them too.
+    from app.web.views import _instruments as views_instruments
+
+    if hasattr(views_instruments, "session_library"):
+        monkeypatch.setattr(
+            views_instruments.session_library,
+            "evaluate_session_rule_eligibility",
+            spy_elig,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            views_instruments.session_library,
+            "evaluate_instrument_group_pair_counts",
+            spy_group,
+            raising=False,
+        )
+
+    resp = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    )
+    assert resp.status_code == 200
+    assert elig_calls == 0
+    assert group_calls == 0
+
+
+def test_rec_a_runs_eligibility_engine_when_legacy_card_present(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rec A's flip side — a page with at least one legacy
+    (non-new-model) instrument still pays the eligibility cost.
+    Conditional skip is scoped to new-model-only pages."""
+    review_session = _make_session(client, db, code="rec-a-legacy")
+    _populate_rosters(client, review_session.id)
+    # Seeded instrument stays legacy; add a new-model one alongside.
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(_instrument(db, review_session.id).id)},
+        follow_redirects=False,
+    )
+
+    from app.services.rules import session_library
+
+    elig_calls = 0
+    real_elig = session_library.evaluate_session_rule_eligibility
+
+    def spy_elig(*a, **kw):
+        nonlocal elig_calls
+        elig_calls += 1
+        return real_elig(*a, **kw)
+
+    monkeypatch.setattr(
+        session_library, "evaluate_session_rule_eligibility", spy_elig
+    )
+    resp = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    )
+    assert resp.status_code == 200
+    assert elig_calls == 1
+
+
+def test_rec_d1_single_active_reviewees_query_per_render(
+    client: TestClient, db: Session
+) -> None:
+    """Rec D1 — the active-reviewees SELECT runs exactly once per
+    page render even when K new-model instruments are on the page.
+    Before D1 the call was per-card (O(K) queries)."""
+    from sqlalchemy import event
+
+    review_session, instruments = _all_new_model_session(
+        client, db, code="rec-d1", n_extra=3
+    )
+    assert len([i for i in instruments if i.is_new_model]) == 4
+
+    bind = db.get_bind()
+    active_reviewee_selects = 0
+
+    def before_cursor_execute(conn, cursor, statement, *_a, **_kw):
+        nonlocal active_reviewee_selects
+        s = " ".join(statement.split()).lower()
+        # Match the _new_model_band2_states_for active-reviewees
+        # SELECT: a select against reviewees with both the
+        # session_id and status filters in the WHERE.
+        if (
+            "from reviewees" in s
+            and "reviewees.session_id" in s
+            and "reviewees.status" in s
+        ):
+            active_reviewee_selects += 1
+
+    event.listen(bind, "before_cursor_execute", before_cursor_execute)
+    try:
+        resp = client.get(
+            f"/operator/sessions/{review_session.id}/instruments"
+        )
+    finally:
+        event.remove(bind, "before_cursor_execute", before_cursor_execute)
+
+    assert resp.status_code == 200
+    # Exactly one shared fetch for the four new-model cards' Band 2
+    # state, instead of the pre-D1 O(K) per-card pattern.
+    assert active_reviewee_selects == 1
