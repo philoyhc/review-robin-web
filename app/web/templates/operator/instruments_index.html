@@ -3118,24 +3118,9 @@
             <tr id="rtd-row-{{ rtd.id }}" class="muted">
               <td>
                 <code>{{ rtd.response_type }}</code>
-                {# Pills mirror the Rule Builder's Available rulesets
-                   convention:
-                     - seeded rows: no pill.
-                     - library_origin_id set (non-seeded): "in library"
-                       green pill.
-                     - else (operator-authored, session-only): "personal"
-                       blue pill. #}
-                {% if not rtd.is_seeded %}
-                  {% if rtd.library_origin_id is not none %}
-                    <span class="pill pill-success"
-                          title="Linked to an entry in your operator library."
-                          style="margin-left: 6px;">in library</span>
-                  {% else %}
-                    <span class="pill pill-info"
-                          title="Session-only — not yet saved to your operator library."
-                          style="margin-left: 6px;">personal</span>
-                  {% endif %}
-                {% endif %}
+                {# Segment 18J Wave 2 PR iii-b3 retired the operator
+                   RTD library tier; the per-row "in library" /
+                   "personal" pills retired with it. #}
               </td>
               <td>{{ rtd.data_type }}</td>
               {% if is_editing_this %}
@@ -3221,23 +3206,9 @@
                     <a class="btn secondary" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
                   {% endif %}
-                  {# 15C Slice 3: Save-to-library affordance — only on
-                     operator-defined rows that aren't already linked
-                     to a library entry. Hidden on seeded rows, ready
-                     sessions, and rows mid-edit. #}
-                  {% if not rtd.is_seeded
-                        and not is_ready
-                        and rtd.library_origin_id is none
-                        and not is_some_row_unlocked
-                        and not is_some_instrument_editing %}
-                    <form method="post"
-                          action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/save-to-library"
-                          style="display: inline; margin: 0;">
-                      <button class="btn secondary" type="submit"
-                              title="Save this Response Type to your operator library."
-                              style="min-width: 6em; box-sizing: border-box; text-align: center;">To library</button>
-                    </form>
-                  {% endif %}
+                  {# Segment 18J Wave 2 PR iii-b3 retired the
+                     Save-to-library button + the operator RTD
+                     library tier. #}
                   </div>
                 </td>
               {% endif %}
@@ -3271,35 +3242,9 @@
          saved anything to their library yet). #}
       <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch; justify-content: flex-end;"
            id="rtd-add-row">
-        {% if library_rtds_available %}
-          <div class="card card-half" style="margin-bottom: 0; flex: 1;">
-            <h2 style="margin-top: 0;">Add from library</h2>
-            <p class="form-help">
-              Pull a Response Type from your operator library into this
-              session. Library entries currently in this session aren't
-              listed.
-            </p>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/response-types/add-from-library"
-                  style="display: flex; gap: 16px; align-items: center; justify-content: flex-end;">
-              <label for="operator-rtd-picker"
-                     style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
-                Response Type
-                <select id="operator-rtd-picker" name="operator_rtd_id"
-                        style="position: relative; top: 2px;"
-                        {% if add_disabled %}disabled{% endif %}>
-                  {% for lib in library_rtds_available %}
-                    <option value="{{ lib.id }}">{{ lib.response_type }} ({{ lib.data_type }})</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <button type="submit" class="btn secondary"
-                      style="width: 6em; box-sizing: border-box;"
-                      {% if add_disabled %}disabled
-                      title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
-            </form>
-          </div>
-        {% endif %}
+        {# Segment 18J Wave 2 PR iii-b3 retired the
+           Add-from-library card alongside the operator RTD
+           library tier. #}
         <div class="card card-half" style="margin-bottom: 0; flex: 1;"
              id="rtd-add-card">
           <h2 style="margin-top: 0;">Add a new Response Type</h2>

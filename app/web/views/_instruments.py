@@ -785,13 +785,12 @@ def build_instruments_context(
     rtds = instruments_service.get_session_rtds(
         db, session_id=review_session.id
     )
-    # 15C Slice 3: library RTDs the operator hasn't already pulled
-    # into this session — drives the "Add from library" picker on
-    # the RTD card. Empty list means either no library entries or
-    # every library entry is already in this session.
-    library_rtds_available = instruments_service.list_library_rtds_not_in_session(
-        db, owner_user=user, session_id=review_session.id
-    )
+    # Segment 18J Wave 2 PR iii-b3 — the operator RTD library tier
+    # is retired; the "Add from library" picker is gone alongside
+    # ``list_library_rtds_not_in_session``. Empty list keeps the
+    # template happy until the corresponding template block is
+    # removed below.
+    library_rtds_available: list[Any] = []
 
     rtd_delete_blocked = (
         {

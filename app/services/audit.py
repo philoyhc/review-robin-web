@@ -540,29 +540,14 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session_rule_sets.materialised_from_library": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
-    "response_type_definitions.materialised_from_library": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
-    # Segment 15C Slice 3 — RTD library promote / demote actions.
-    # The library-side ``operator_rtd.created`` event is workspace-
-    # scoped (no session_id) and fires when the operator hits "Save
-    # to library" on a session RTD; the session-side
-    # ``saved_to_library`` event tells the session-scoped audit log
-    # that the same RTD was promoted, with refs back to both rows.
-    # ``added_from_library`` is the reverse direction (library → new
-    # session copy via the picker).
-    "operator_rtd.created": EventSchema(
-        frozenset({"snapshot", "refs", "context"})
-    ),
-    "operator_rtd.deleted": EventSchema(
-        frozenset({"snapshot", "refs", "context"})
-    ),
-    "response_type_definitions.saved_to_library": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
-    "response_type_definitions.added_from_library": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
+    # Segment 18J Wave 2 PR iii-b3 retired the RTD library tier
+    # (operator_response_type_definitions table + its UI). The
+    # ``response_type_definitions.materialised_from_library``,
+    # ``operator_rtd.created`` / ``.deleted``,
+    # ``response_type_definitions.saved_to_library``, and
+    # ``.added_from_library`` event types are no longer emitted.
+    # Historical rows in audit_events with those event_type strings
+    # remain readable — strict-mode validation only fires on write.
     # Segment 15C Slice 4 — session-tier RuleSet mutations + the
     # paired Save-to-library / Add-from-library transitions. The
     # session-tier `.created` / `.updated` / `.deleted` events

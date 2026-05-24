@@ -14,10 +14,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import OperatorResponseTypeDefinition, RuleSet, User
+from app.db.models import RuleSet, User
 from app.db.session import get_db
 from app.services import date_formatting
-from app.services import instruments as instruments_service
 from app.services import operator_settings
 from app.services._secrets import MissingEncryptionKey
 from app.services.rules import library as rules_library
@@ -63,21 +62,12 @@ def operator_settings_form(
     current_timezone = operator_settings.get_display_timezone(user)
     target = resolve_return_to(return_to, db)
 
-    # 15C Slice 5: operator-library management. List the operator's
-    # library entries on both tiers + per-row session-copy counts so
-    # the operator can see who's using each entry before deleting.
-    library_rtds = instruments_service.list_operator_rtds(
-        db, owner_user=user
-    )
+    # 15C Slice 5: operator-library management. iii-b3 retired the
+    # RTD half of the library tier; only the RuleSet library tier
+    # survives until Wave 4 Gap 7 retires that too.
     library_rule_sets = rules_library.list_personal_rule_sets(
         db, owner_user=user
     )
-    rtd_session_copy_counts = {
-        rtd.id: instruments_service.count_rtd_session_copies(
-            db, operator_rtd=rtd
-        )
-        for rtd in library_rtds
-    }
     rule_set_session_copy_counts = {
         rs.id: rules_library.count_rule_set_session_copies(
             db, rule_set=rs
@@ -101,9 +91,7 @@ def operator_settings_form(
             "return_to_url": target.url,
             "return_to_label": target.label,
             "breadcrumbs": breadcrumbs.operator_root(),
-            "library_rtds": library_rtds,
             "library_rule_sets": library_rule_sets,
-            "rtd_session_copy_counts": rtd_session_copy_counts,
             "rule_set_session_copy_counts": rule_set_session_copy_counts,
         },
     )
@@ -206,37 +194,9 @@ def operator_settings_clear(
     )
 
 
-@router.post("/settings/library/rtd/{rtd_id}/delete")
-def operator_settings_delete_library_rtd(
-    rtd_id: int,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Hard-delete a library RTD from the operator's tier. Refuses
-    (404) if the RTD isn't owned by the actor. Session copies
-    survive — their ``library_origin_id`` clears to NULL via the
-    SQL ``SET NULL`` cascade per 15C invariant #3."""
-    target = db.execute(
-        select(OperatorResponseTypeDefinition).where(
-            OperatorResponseTypeDefinition.id == rtd_id,
-            OperatorResponseTypeDefinition.owner_user_id == user.id,
-        )
-    ).scalar_one_or_none()
-    if target is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Library Response Type not found",
-        )
-    instruments_service.delete_operator_rtd(
-        db,
-        operator_rtd=target,
-        actor=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url="/operator/settings",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+# Segment 18J Wave 2 PR iii-b3 — the operator RTD library tier is
+# retired; the per-row delete handler that lived here is gone with
+# the operator_response_type_definitions table.
 
 
 @router.post("/settings/library/rule-set/{rule_set_id}/delete")

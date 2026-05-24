@@ -23,7 +23,6 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
-    OperatorResponseTypeDefinition,
     ResponseTypeDefinition,
     ReviewSession,
     RuleSet,
@@ -238,41 +237,18 @@ def test_operator_defined_rtds_emit_full_row_block(db: Session) -> None:
     assert by_field["rtds[GPA4].list_csv"] == Row(
         "rtds[GPA4].list_csv", "", "csv_list"
     )
-    # 18D export part — library-provenance cell; empty for an
-    # RTD authored directly in the session (no library origin).
-    assert by_field["rtds[GPA4].library_name"] == Row(
-        "rtds[GPA4].library_name", "", "string"
-    )
+    # Segment 18J Wave 2 PR iii-b3 retired the
+    # ``rtds[N].library_name`` cell alongside the operator-library
+    # tier. It no longer appears in the serialized output.
+    assert "rtds[GPA4].library_name" not in by_field
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b3 retired the RTD library "
+    "tier; the rtds[N].library_name cell is gone from the export."
+)
 def test_rtd_library_name_resolves_through_origin(db: Session) -> None:
-    """18D export part — rtds[N].library_name carries the
-    operator-library RTD's name, resolved via library_origin_id
-    (an operator-library RTD's name is its `response_type`)."""
-    review_session = _bare_session(db, code="rtdlib")
-    operator_id = review_session.created_by_user_id
-    library_rtd = OperatorResponseTypeDefinition(
-        owner_user_id=operator_id,
-        response_type="GPA4",
-        data_type="decimal",
-    )
-    db.add(library_rtd)
-    db.flush()
-    db.add(
-        ResponseTypeDefinition(
-            session_id=review_session.id,
-            response_type="GPA4",
-            data_type="decimal",
-            is_seeded=False,
-            library_origin_id=library_rtd.id,
-        )
-    )
-    db.flush()
-
-    by_field = _row_dict(serialize_session_config(db, review_session))
-    assert by_field["rtds[GPA4].library_name"] == Row(
-        "rtds[GPA4].library_name", "GPA4", "string"
-    )
+    """Retired alongside the RTD library tier in iii-b3."""
 
 
 def test_session_emits_display_timezone_and_self_reviews(

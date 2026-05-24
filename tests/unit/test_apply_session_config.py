@@ -445,11 +445,11 @@ def test_apply_force_applies_display_timezone_and_self_reviews(
 
 
 def test_apply_library_name_cells_always_clone(db: Session) -> None:
-    """18D import part — the `…library_name` provenance cells are
-    recognised and skipped (not rejected), and the imported RTD is
-    **always a standalone clone**: `library_origin_id` stays NULL,
-    never linked to a destination-operator library entry. The
-    link-vs-clone decision (2026-05-17) is always-clone."""
+    """18D import part — the ``…library_name`` provenance cell is
+    still tolerated on import for back-compat with pre-iii-b3 CSVs
+    (it's silently ignored). Segment 18J Wave 2 PR iii-b3 retired
+    the RTD library tier; the imported RTD has no library-origin
+    link anymore (the column is dropped)."""
 
     review_session = _bare_session(db, code="libname")
     rows = [
@@ -465,7 +465,9 @@ def test_apply_library_name_cells_always_clone(db: Session) -> None:
             ResponseTypeDefinition.response_type == "GPA4",
         )
     ).scalar_one()
-    assert rtd.library_origin_id is None
+    # ``library_origin_id`` column dropped by iii-b3 migration; the
+    # imported row has no provenance pointer.
+    assert not hasattr(rtd, "library_origin_id")
 
 
 def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
