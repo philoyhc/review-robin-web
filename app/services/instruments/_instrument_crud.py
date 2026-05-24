@@ -986,6 +986,13 @@ def set_band2_state(
                     value = raw.get(bound_key)
                     rf[bound_key] = str(value).strip()[:255] if value is not None else ""
                 rf["selected"] = bool(raw.get("selected"))
+                # Gap 5 (18J Wave 1) — required flag persists into
+                # band2_state JSON. Reviewer-surface enforcement
+                # arrives with Wave 3 when Gap 2 bridges these JSON
+                # rows to real InstrumentResponseField rows; the
+                # bridge code will preserve this flag across the
+                # migration.
+                rf["required"] = bool(raw.get("required"))
                 # Per-response-field column width (px). Carried on
                 # the entry itself so the width travels with the
                 # field across drag-reorder. Clamped to the same

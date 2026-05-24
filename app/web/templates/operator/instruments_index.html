@@ -1312,6 +1312,7 @@
                         data-selectable-in-group="true"
                         data-row-key="{{ _key }}"
                         data-response-key="{{ _key }}"
+                        data-required="{{ 'true' if rf.required else 'false' }}"
                         data-width="{{ rf.width_px or '' }}"
                         data-reorderable="true"
                         draggable="true"
@@ -1468,6 +1469,7 @@
                   value: p.getAttribute('data-value') || '',
                   displayFieldId: p.getAttribute('data-display-field-id') || '',
                   width: parseInt(p.getAttribute('data-width') || '', 10) || 0,
+                  required: p.getAttribute('data-required') === 'true',
                 });
               });
               return sel;
@@ -1629,7 +1631,11 @@
                 colIdx += 1;
               });
               responses.forEach(function (r) {
-                html += '<th scope="col" style="position: relative;">' + esc(r.label) + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx) + '</th>';
+                html += '<th scope="col" style="position: relative;">'
+                  + esc(r.label)
+                  + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                  + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
+                  + '</th>';
                 colIdx += 1;
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
@@ -1684,7 +1690,11 @@
               html += '<th scope="col" class="rs-group" style="position: relative;">Group' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
               colIdx += 1;
               responses.forEach(function (r) {
-                html += '<th scope="col" style="position: relative;">' + esc(r.label) + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx) + '</th>';
+                html += '<th scope="col" style="position: relative;">'
+                  + esc(r.label)
+                  + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                  + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
+                  + '</th>';
                 colIdx += 1;
               });
               html += '</tr></thead><tbody class="rrw-rows"><tr>';
@@ -1821,6 +1831,7 @@
                 var typeSelect = row.querySelector('[data-new-model-rf-data-type]');
                 var name = (nameInput && nameInput.value || '').trim();
                 if (!name) { return; }
+                var requiredInput = row.querySelector('[data-new-model-rf-required]');
                 var rf = {
                   name: name,
                   data_type: typeSelect ? typeSelect.value : 'string',
@@ -1829,6 +1840,7 @@
                   step: '',
                   list_options: '',
                   selected: pill.getAttribute('aria-pressed') === 'true',
+                  required: !!(requiredInput && requiredInput.checked),
                 };
                 row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
                   var key = input.getAttribute('data-new-model-rf-bound');
@@ -2278,6 +2290,16 @@
                            value="{{ rf.list_options }}"
                            style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                   </div>
+                  <label style="flex: 0 0 auto; display: inline-flex;
+                                align-items: center; gap: 4px; white-space: nowrap;
+                                font-size: 0.9em;"
+                         title="Required for reviewers to submit (enforced from Wave 3)">
+                    <input type="checkbox"
+                           data-new-model-rf-required
+                           onchange="newModelRfRequiredChanged(this)"
+                           {% if rf.required %}checked{% endif %}>
+                    Required
+                  </label>
                   <button type="button" class="btn secondary"
                           style="flex: 0 0 auto; padding: 4px 10px;"
                           onclick="newModelRfSaveRow(this)"
@@ -2330,6 +2352,15 @@
                          placeholder="List (comma-separated)"
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
                 </div>
+                <label style="flex: 0 0 auto; display: inline-flex;
+                              align-items: center; gap: 4px; white-space: nowrap;
+                              font-size: 0.9em;"
+                       title="Required for reviewers to submit (enforced from Wave 3)">
+                  <input type="checkbox"
+                         data-new-model-rf-required
+                         onchange="newModelRfRequiredChanged(this)">
+                  Required
+                </label>
                 <button type="button" class="btn secondary"
                         style="flex: 0 0 auto; padding: 4px 10px;"
                         onclick="newModelRfSaveRow(this)"
@@ -2350,6 +2381,32 @@
           </div>
         </div>
         <script>
+          // Gap 5 (18J Wave 1) — the Required checkbox on a Band 3
+          // response field row. Mirrors the new state onto the
+          // paired pill's ``data-required`` attr (so the next
+          // preview rebuild reads it) and triggers an immediate
+          // rebuild so the * appears / disappears live. Persistence
+          // still waits for the row's ✓ button (matches the
+          // name / bounds inputs' commit semantics).
+          window.newModelRfRequiredChanged = window.newModelRfRequiredChanged || function (input) {
+            var row = input.closest('[data-new-model-rf-row]');
+            if (!row) { return; }
+            var rowKey = row.getAttribute('data-row-key');
+            var instrumentCard = input.closest('[id^="instrument-"]');
+            var band2 = instrumentCard
+              ? instrumentCard.querySelector('[data-new-model-band2]')
+              : null;
+            if (!band2 || !rowKey) { return; }
+            var pill = band2.querySelector(
+              '[data-new-model-band2-pill][data-row-key="' + rowKey + '"]'
+            );
+            if (pill) {
+              pill.setAttribute('data-required', input.checked ? 'true' : 'false');
+            }
+            if (window.newModelRefreshBand2) {
+              window.newModelRefreshBand2(band2);
+            }
+          };
           window.newModelRfSyncBounds = window.newModelRfSyncBounds || function (select) {
             // Show only the bound inputs that apply to the picked
             // data type. Bound visibility map mirrors the spec:
@@ -2465,6 +2522,7 @@
               pill.setAttribute('data-selectable-in-group', 'true');
               pill.setAttribute('data-row-key', rowKey);
               pill.setAttribute('data-response-key', rowKey);
+              pill.setAttribute('data-required', 'false');
               pill.setAttribute('data-reorderable', 'true');
               pill.setAttribute('draggable', 'true');
               pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');
