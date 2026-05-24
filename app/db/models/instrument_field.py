@@ -60,6 +60,13 @@ class InstrumentResponseField(Base):
     validation: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     help_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     help_text_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Segment 18J Wave 3 PR i — visibility flag mirroring the
+    # ``InstrumentDisplayField.visible`` pattern Gap 1 shipped in
+    # Wave 1. Band 2's response-field chip toggle dual-writes
+    # through to this column via ``set_band2_state``; reviewer-
+    # surface read path starts filtering by ``visible=true`` in
+    # PR ii.
+    visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Segment 18J Wave 2 PR i — inline bound columns (now the sole
     # source of truth for type + bounds; PR iii-b4 dropped the

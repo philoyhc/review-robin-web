@@ -1979,6 +1979,12 @@
                 if (!name) { return; }
                 var requiredBtn = row.querySelector('[data-new-model-rf-required]');
                 var helpBtn = row.querySelector('[data-new-model-rf-help-visible]');
+                // Wave 3 PR i — include the DB row id when the
+                // Band 3 row has been server-rendered with one
+                // (existing InstrumentResponseField); the server
+                // dual-write uses it for id-match update vs
+                // create-new.
+                var rfIdAttr = row.getAttribute('data-rf-id');
                 var rf = {
                   name: name,
                   data_type: typeSelect ? typeSelect.value : 'string',
@@ -1991,6 +1997,9 @@
                   help_text_visible: !!(helpBtn && helpBtn.getAttribute('data-help-visible') === 'true'),
                   help_text: pill.getAttribute('data-help-text') || '',
                 };
+                if (rfIdAttr && /^\d+$/.test(rfIdAttr)) {
+                  rf.id = parseInt(rfIdAttr, 10);
+                }
                 row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
                   var key = input.getAttribute('data-new-model-rf-bound');
                   if (key === 'list') { key = 'list_options'; }
@@ -2746,6 +2755,8 @@
                 {% set _rkey = 'rf_' ~ loop.index0 %}
                 <div data-new-model-rf-row
                      data-row-key="{{ _rkey }}"
+                     {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
+                     {% if rf.has_responses %}data-has-responses="true"{% endif %}
                      style="display: flex; flex-wrap: nowrap; gap: 8px;
                             align-items: center; width: 100%;
                             margin-bottom: 8px;">
@@ -2810,9 +2821,10 @@
                           onclick="newModelRfSaveRow(this)"
                           title="Save this response field to the pills + preview">✓</button>
                   <button type="button" class="btn secondary"
+                          {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
                           style="flex: 0 0 auto; padding: 4px 10px;"
-                          onclick="newModelRfDeleteRow(this)"
-                          title="Delete this row (and its paired pill, if saved)">X</button>
+                          {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
+                          title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% else %}Delete this row (and its paired pill, if saved){% endif %}">X</button>
                 </div>
               {% endfor %}
               {# Trailing empty row so the operator can start typing

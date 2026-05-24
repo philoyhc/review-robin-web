@@ -1000,6 +1000,18 @@ def set_band2_state(
                 if data_type not in _BAND2_ALLOWED_DATA_TYPES:
                     data_type = "string"
                 rf: dict[str, Any] = {"name": name, "data_type": data_type}
+                # Wave 3 PR i — optional ``id`` round-trips the
+                # matching InstrumentResponseField.id back through
+                # the JSON so subsequent saves can id-match the
+                # existing row rather than creating a duplicate.
+                # Operator-forged ids that don't belong to this
+                # instrument fall through to "create new row"
+                # in :func:`_sync_response_fields_to_db`.
+                raw_id = raw.get("id")
+                if isinstance(raw_id, int) and raw_id > 0:
+                    rf["id"] = raw_id
+                elif isinstance(raw_id, str) and raw_id.strip().isdigit():
+                    rf["id"] = int(raw_id)
                 for bound_key in _BAND2_RF_BOUND_KEYS:
                     value = raw.get(bound_key)
                     rf[bound_key] = str(value).strip()[:255] if value is not None else ""
@@ -1081,6 +1093,33 @@ def set_band2_state(
         existing_ids = existing.get("sample_group_member_ids")
         if isinstance(existing_ids, list) and existing_ids:
             sanitised["sample_group_member_ids"] = list(existing_ids)
+    # Wave 3 PR i — dual-write sanitised response_fields into real
+    # InstrumentResponseField rows. The helper mutates the entries
+    # in place to back-fill ``id`` for newly-created rows, so the
+    # band2_state JSON we write below stays in sync with the DB.
+    # Pre-existing rows whose ids appear in the previous JSON but
+    # not in the new payload get deleted; rows that were never in
+    # JSON (seeded defaults on a fresh new-model instrument) are
+    # left alone — matches the (b) contract where Band 3 surfaces
+    # those rows on first render and the JS payload picks them up
+    # on the operator's next save.
+    if "response_fields" in sanitised and isinstance(
+        sanitised.get("response_fields"), list
+    ):
+        previous_json_ids: set[int] = set()
+        for prev_rf in (existing.get("response_fields") or []):
+            if isinstance(prev_rf, dict):
+                prev_id = prev_rf.get("id")
+                if isinstance(prev_id, int):
+                    previous_json_ids.add(prev_id)
+        _sync_response_fields_to_db(
+            db,
+            instrument=instrument,
+            sanitised_rfs=sanitised["response_fields"],
+            previous_json_ids=previous_json_ids,
+            actor=actor,
+        )
+
     new_value: dict[str, Any] | None = sanitised or None
     if (instrument.band2_state or None) == new_value:
         return instrument
@@ -1102,6 +1141,175 @@ def set_band2_state(
         refs={"instrument_id": instrument.id},
     )
     return instrument
+
+
+_BAND2_DATA_TYPE_TO_INLINE: dict[str, str] = {
+    "string": "String",
+    "integer": "Integer",
+    "decimal": "Decimal",
+    "list": "List",
+}
+
+
+def _band2_parse_float(value: Any) -> float | None:
+    """Parse a band2_state numeric string ("1", "0.5", "") into a
+    float. Returns ``None`` for empty / unparseable values so the
+    inline column stays nullable rather than landing 0 for absent
+    bounds."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def _band2_unique_field_key(
+    name: str, used_keys: set[str], existing_key: str | None = None
+) -> str:
+    """Slugify ``name`` to a field_key, suffixing -2 / -3 / ...
+    on collision. If ``existing_key`` is supplied and already
+    matches the slug of the new name (or is already taken), keep
+    it unchanged (decision 9: field_key stable across renames)."""
+    from app.services.instruments._response_fields import slugify_field_key
+
+    if existing_key:
+        # Decision 9 — once a field has an id, field_key never
+        # changes. The caller only invokes this branch when
+        # there's no existing key (new row), so this is just a
+        # safety net.
+        return existing_key
+    base = slugify_field_key(name) or "field"
+    candidate = base
+    suffix = 2
+    while candidate in used_keys:
+        candidate = f"{base}_{suffix}"
+        suffix += 1
+    return candidate
+
+
+def _sync_response_fields_to_db(
+    db: Session,
+    *,
+    instrument: Instrument,
+    sanitised_rfs: list[dict[str, Any]],
+    previous_json_ids: set[int],
+    actor: User,
+) -> None:
+    """Wave 3 PR i — dual-write the operator-authored response-
+    field JSON entries through to real ``InstrumentResponseField``
+    rows.
+
+    - JSON entry with an ``id`` matching one of this instrument's
+      rows → update that row in place (label / inline type +
+      bounds / required / visible / help_text / help_text_visible /
+      order).
+    - JSON entry without ``id`` → create a new row; back-fill
+      ``id`` into the JSON entry so subsequent saves can id-match.
+    - DB row whose id is absent from the JSON payload → delete
+      (raises :class:`ResponsesPresentError` if the row has
+      attached :class:`Response` rows; the operator-side X is
+      rendered disabled when ``has_responses`` is true to prevent
+      this surfacing in the typical flow).
+
+    The reviewer-surface read path is untouched in this PR — it
+    still pulls only the seeded ``DEFAULT_RESPONSE_FIELDS`` rows.
+    PR ii flips the read path to ``WHERE visible=true``.
+
+    ``sanitised_rfs`` is mutated in place: every entry has its
+    ``id`` field populated on return (either preserved if already
+    present, or back-filled from a newly-created row's PK).
+    """
+    from app.services.instruments._response_fields import (
+        ResponsesPresentError,
+    )
+
+    existing_by_id: dict[int, InstrumentResponseField] = {
+        f.id: f for f in instrument.response_fields
+    }
+    used_field_keys: set[str] = {
+        f.field_key for f in instrument.response_fields
+    }
+    seen_ids: set[int] = set()
+
+    for order_idx, rf in enumerate(sanitised_rfs):
+        rf_id_raw = rf.get("id")
+        rf_id: int | None = None
+        if isinstance(rf_id_raw, int):
+            rf_id = rf_id_raw
+        elif isinstance(rf_id_raw, str) and rf_id_raw.strip().isdigit():
+            rf_id = int(rf_id_raw)
+
+        if rf_id is not None and rf_id in existing_by_id:
+            field = existing_by_id[rf_id]
+        else:
+            # New row — slugify the name to a unique field_key.
+            field = InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key=_band2_unique_field_key(rf["name"], used_field_keys),
+                label=rf["name"][:255],
+                order=order_idx,
+            )
+            db.add(field)
+            db.flush()  # populate field.id
+            used_field_keys.add(field.field_key)
+            rf["id"] = field.id
+
+        seen_ids.add(field.id)
+
+        # Update label + flags + order.
+        field.label = rf["name"][:255]
+        field.order = order_idx
+        field.required = bool(rf.get("required"))
+        # Band 2 response-pill "selected" flag flows through to
+        # the new visible column. Mirrors how Gap 1 wired the
+        # display-field pill to InstrumentDisplayField.visible.
+        field.visible = bool(rf.get("selected", True))
+        help_text_raw = rf.get("help_text")
+        field.help_text = (
+            str(help_text_raw)[:1000] if help_text_raw else None
+        )
+        field.help_text_visible = bool(rf.get("help_text_visible"))
+
+        # Inline type + bounds. Sanitised JSON uses lowercase
+        # ``string`` / ``integer`` / ``decimal`` / ``list``; the
+        # inline column keeps the legacy capitalised form for
+        # round-trip compat with the Wave 2 _inline_* columns.
+        data_type_lower = rf.get("data_type", "string")
+        field._inline_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(
+            data_type_lower, "String"
+        )
+        field._inline_min = _band2_parse_float(rf.get("min"))
+        field._inline_max = _band2_parse_float(rf.get("max"))
+        field._inline_step = _band2_parse_float(rf.get("step"))
+        list_csv = rf.get("list_options") or ""
+        field._inline_list_csv = list_csv if list_csv else None
+
+    # Delete rows whose ids were in the *previous* JSON state but
+    # not in the new payload — i.e. operator clicked X on a row
+    # that had been saved before. Rows that exist in DB but were
+    # NEVER tracked in JSON (e.g. seeded DEFAULT_RESPONSE_FIELDS
+    # rows on a fresh new-model instrument that the operator
+    # hasn't yet round-tripped through Band 3) stay put — the
+    # operator's payload reflects only what they're actively
+    # managing, so missing ids without provenance mean "leave
+    # alone", not "delete".
+    #
+    # ``cascade="all, delete-orphan"`` on the responses
+    # relationship would silently cascade if we just ``db.delete``;
+    # intercept by checking for attached Response rows first and
+    # raising so the route surfaces the error rather than letting
+    # the operator nuke saved response data invisibly.
+    for rf_id in previous_json_ids - seen_ids:
+        field = existing_by_id.get(rf_id)
+        if field is None:
+            continue
+        if field.responses:
+            raise ResponsesPresentError(len(field.responses))
+        db.delete(field)
 
 
 def _sync_display_field_visibility(
