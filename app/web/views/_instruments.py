@@ -560,6 +560,7 @@ def _new_model_band2_state(
         if f.visible
     }
     response_fields = list(band2_state.get("response_fields") or [])
+    sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
         "sample_names": sample_names,
@@ -574,6 +575,11 @@ def _new_model_band2_state(
         # partition in view mode, where the live ``link3_boundary``
         # <select>s aren't reachable as form-field inputs.
         "saved_reviewee_boundary_fields": ",".join(reviewee_boundary_fields),
+        # Gap 3 (18J Wave 1) — per-instrument sort spec, shared with
+        # the legacy card's hidden-inputs slot.
+        # ``[{"display_field_id": N, "dir": "asc|desc"}, ...]`` in
+        # cascade order (Segment 13B PR 2 contract).
+        "sort_spec": sort_spec,
     }
 
 

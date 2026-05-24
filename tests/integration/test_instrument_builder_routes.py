@@ -2670,3 +2670,123 @@ def test_gap_1_view_derives_pill_selection_from_visible(
     snippet_start = max(0, tag1_idx - 250)
     tag1_pill = flat[snippet_start:tag1_idx + len(tag1_marker)]
     assert 'aria-pressed="true"' in tag1_pill
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 1 PR γ — Gap 3 (sort badges on preview table header)
+# --------------------------------------------------------------------------- #
+
+
+def test_gap_3_band2_state_carries_sort_spec(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 3 — the view-layer band2 state exposes the persisted
+    sort spec so the template can stamp the data attribute + the
+    sort-spec hidden-inputs slot, and the preview-builder JS can
+    render badges."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-3-state"
+    )
+    fields = _df_by_key(db, new_model.id)
+    tag1_id = fields["reviewee.tag_1"].id
+    tag2_id = fields["reviewee.tag_2"].id
+    from app.services import instruments as instruments_service
+    from app.db.models import User
+
+    actor = db.execute(select(User).limit(1)).scalar_one()
+    instruments_service.set_sort_display_fields(
+        db,
+        instrument=new_model,
+        fields=[(tag1_id, "asc"), (tag2_id, "desc")],
+        actor=actor,
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    needle = "data-new-model-band2-sort-spec='"
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find("'", idx + len(needle))
+    spec_json = flat[idx + len(needle) : end]
+    import json as _json
+
+    spec = _json.loads(spec_json)
+    assert [(e["display_field_id"], e["dir"]) for e in spec] == [
+        (tag1_id, "asc"),
+        (tag2_id, "desc"),
+    ]
+
+    slot_id = f'id="sort-spec-inputs-{new_model.id}"'
+    assert slot_id in flat
+    assert (
+        flat.count(f'name="sort_display_field_id" value="{tag1_id}"') >= 1
+    )
+    assert (
+        flat.count(f'name="sort_display_field_id" value="{tag2_id}"') >= 1
+    )
+    assert flat.count('name="sort_dir" value="asc"') >= 1
+    assert flat.count('name="sort_dir" value="desc"') >= 1
+
+
+def test_gap_3_bulk_save_persists_sort_spec_via_existing_form(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 3 — the bulk-save form's sort_display_field_id /
+    sort_dir parallel arrays (populated by the existing
+    _rebuildSortInputs JS on badge cycle) round-trip through the
+    same /fields/save route the legacy card uses."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-3-save"
+    )
+    fields = _df_by_key(db, new_model.id)
+    tag1_id = fields["reviewee.tag_1"].id
+    tag2_id = fields["reviewee.tag_2"].id
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "sort_display_field_id": [str(tag2_id), str(tag1_id)],
+            "sort_dir": ["desc", "asc"],
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303, resp.text
+    # Defensive: assert the redirect didn't carry a sort_save_error
+    # (which would mean the spec was rejected, not persisted).
+    assert "sort_save_error" not in resp.headers.get("location", ""), (
+        resp.headers.get("location")
+    )
+    db.refresh(new_model)
+    assert new_model.sort_display_fields == [
+        {"display_field_id": tag2_id, "dir": "desc"},
+        {"display_field_id": tag1_id, "dir": "asc"},
+    ]
+
+
+def test_gap_3_no_sort_spec_renders_empty_inputs_slot(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 3 — a fresh new-model card with no sort spec renders the
+    sort-spec-inputs slot empty (no hidden inputs) and the
+    data-new-model-band2-sort-spec attr as []. Both the JS
+    preview-builder + bulk-save form handle the empty case."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-3-empty"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    assert "data-new-model-band2-sort-spec='[]'" in flat
+    slot_open = flat.find(f'id="sort-spec-inputs-{new_model.id}"')
+    assert slot_open != -1
+    slot_close = flat.find("</div>", slot_open)
+    assert slot_close != -1
+    assert "sort_display_field_id" not in flat[slot_open:slot_close]
