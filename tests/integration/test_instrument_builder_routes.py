@@ -896,9 +896,12 @@ def test_new_model_band2_handles_session_with_no_reviewees(
         '<div data-new-model-band2-pills style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;"> <span class="muted">—</span>'
         in flat
     )
-    # No pills rendered (the data-key attr only appears on pill
-    # spans, not on the JS selector matching them).
-    assert "data-key=" not in flat
+    # No Band 2 pills rendered. The selector substrings in the
+    # inline JS use ``data-new-model-band2-pill`` and ``data-key=``
+    # inside bracket-enclosed CSS selectors, so we look for the
+    # unique pill click handler binding instead — it only renders
+    # on actual pill spans.
+    assert "onclick=\"newModelToggleBand2Pill(this)\"" not in body
     assert 'data-new-model-band2-sample-names=""' in flat
 
 
@@ -3054,6 +3057,104 @@ def test_band3_help_text_visible_defaults_to_false_when_omitted(
         new_model.band2_state["response_fields"][0]["help_text_visible"]
         is False
     )
+
+
+def test_band3_help_text_body_persists_and_renders_on_pill(
+    client: TestClient, db: Session
+) -> None:
+    """Help-text body persists into
+    band2_state.response_fields[*].help_text and the response pill
+    carries the value on data-help-text so the operator-surface
+    help card (and a JS-driven preview rebuild) can render it
+    without a server round-trip."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band3-help-body"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "selected": True,
+                    "help_text_visible": True,
+                    "help_text": "Rate from 1 (poor) to 5 (great).",
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert (
+        new_model.band2_state["response_fields"][0]["help_text"]
+        == "Rate from 1 (poor) to 5 (great)."
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    # The Band 2 pill carries the help-text body so the JS preview
+    # rebuild can inject it into the help card without re-fetching.
+    assert 'data-help-text="Rate from 1 (poor) to 5 (great).' in body
+
+
+def test_band3_help_text_body_clamped_to_1000_chars(
+    client: TestClient, db: Session
+) -> None:
+    """Help-text body is clamped to 1000 chars server-side as a
+    defence-in-depth (the textarea's maxlength already enforces
+    the same cap on the client). Wave 3 doc decision E."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band3-help-clamp"
+    )
+    long_text = "x" * 1500
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                    "help_text_visible": True,
+                    "help_text": long_text,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    stored = new_model.band2_state["response_fields"][0]["help_text"]
+    assert len(stored) == 1000
+    assert stored == "x" * 1000
+
+
+def test_band3_help_text_body_defaults_to_empty_when_omitted(
+    client: TestClient, db: Session
+) -> None:
+    """Payloads that omit help_text default to empty string —
+    matches the sanitiser's ``str(...)[:1000] if not None else ""``
+    contract."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band3-help-body-default"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["response_fields"][0]["help_text"] == ""
 
 
 # --------------------------------------------------------------------------- #
