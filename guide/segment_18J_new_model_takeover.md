@@ -287,14 +287,41 @@ Tests:
 - Gap 4 (help text + visibility) — Wave 3.
 - Gap 2 / 6 / 7 (the schema-touching gaps) — Waves 2 / 3 / 4.
 
-### Wave 2 — RTD library retirement (M, schema delta)
+### Wave 2 — RTD library retirement — shipped 2026-05-24
 
-- **Gap 6** — inline numerical + string bounds onto
-  `instrument_response_fields`; keep List-type RTDs as a
-  per-session catalogue; retire
-  `operator_response_type_definitions`. Lands **before**
-  Wave 3 so Gap 2 doesn't have to author the per-instrument-
-  RTD bloat workaround.
+Originally scoped as one M-sized PR; the test-fixture cascade
+made that infeasible. Landed across **eight PRs** (PRs #1399 →
+#1405) using a series of additive / flip / retire slices. The
+end state:
+
+- Numerical + string + List bounds all live inline on
+  `instrument_response_fields` (six `_inline_*` columns).
+- The `response_type_id` FK + the `response_type_definition`
+  relationship + the `before_insert` listener + the
+  validation-propagation loop are all retired.
+- `operator_response_type_definitions` table + the entire
+  cross-session library tier (Save-to-library / Add-from-library
+  buttons, Settings page library card, library routes + audit
+  events) — gone.
+- The seeded RTD set is empty.
+
+**One half-shipped piece deferred to Wave 5**: the
+`response_type_definitions` table itself + the per-instrument
+RTD card UI still exist so operators can author standalone RTDs
+on the legacy individual/group cards. They retire together with
+those cards in Wave 5 (Gap 8 + 9 cleanup).
+
+**Shipped PRs.**
+
+| PR | Slice | Lift | Summary |
+|---|---|---|---|
+| #1399 | i — additive schema | S | Add six `_inline_*` columns to `instrument_response_fields`; backfill from each row's RTD; `before_insert` listener bridges new rows. |
+| #1400 | ii — flip readers | S | `.response_type` / `.data_type` properties prefer inline columns; fall back to FK relationship for safety. |
+| #1401 | iii-a — FK nullable | S | Alter `response_type_id` to nullable so iii-b1 can land NULL refs. |
+| #1402 | iii-b1 — explicit creators | S | All 7 production creator sites populate inline kwargs via `inline_kwargs_from_rtd`. Drop the property fallback. |
+| #1403 | iii-b2 — seed retirement | M | `SEEDED_RESPONSE_TYPE_DEFINITIONS = []`. `DEFAULT_RESPONSE_FIELDS` rewritten to embed bounds inline. Migration NULLs FK refs + deletes seeded RTDs. Test-side `_legacy_rtd_helpers` + conftest seed shim for back-compat. |
+| #1404 | iii-b3 — library tier | M | Drop `operator_response_type_definitions` table + `library_origin_id` column + 5 library audit events. Retire library routes / services / templates / 5 library test files. ~2300-line net reduction. |
+| #1405 | iii-b4 — drop FK | S | Drop `response_type_id` column + listener + relationship. Add phantom property + init shim for back-compat with lingering test fixtures. 14 FK-driven tests skipped with TODO refs (deletion in Wave 5). |
 
 ### Wave 3 — Response fields become real (M-L)
 
