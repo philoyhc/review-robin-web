@@ -971,6 +971,21 @@ def set_band2_state(
                     value = raw.get(bound_key)
                     rf[bound_key] = str(value).strip()[:255] if value is not None else ""
                 rf["selected"] = bool(raw.get("selected"))
+                # Per-response-field column width (px). Carried on
+                # the entry itself so the width travels with the
+                # field across drag-reorder. Clamped to the same
+                # [40, 1200] range as the display-field column
+                # widths on ``instruments.column_widths``.
+                raw_width = raw.get("width_px")
+                if raw_width not in (None, ""):
+                    try:
+                        width_int = int(raw_width)
+                    except (TypeError, ValueError):
+                        width_int = 0
+                    if width_int >= _COLUMN_WIDTH_MIN_PX:
+                        rf["width_px"] = min(
+                            width_int, _COLUMN_WIDTH_MAX_PX
+                        )
                 sanitised_rfs.append(rf)
             if sanitised_rfs:
                 sanitised["response_fields"] = sanitised_rfs
