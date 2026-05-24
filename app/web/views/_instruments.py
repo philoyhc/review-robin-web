@@ -338,12 +338,23 @@ def build_instrument_rule_picker_contexts(
     by ``instrument.id``. The option list + eligibility map are shared
     across cards on the page — only the selected id + Rule Builder
     deep-link vary per instrument.
+
+    New-model cards render their rule editor inline (Band 1) and do
+    not call into ``assignment_rule_card``, so they get no entry in
+    the returned dict. When every instrument on the page is
+    new-model, the expensive
+    ``evaluate_session_rule_eligibility`` /
+    ``evaluate_instrument_group_pair_counts`` calls are skipped
+    entirely — see Segment 18J Wave 1 Rec A.
     """
+    legacy_instruments = [i for i in instruments if not i.is_new_model]
+    if not legacy_instruments:
+        return {}
     options, eligibility_by_id, group_count_by_instrument = (
         _build_rule_picker_options(db, review_session)
     )
     contexts: dict[int, InstrumentRulePickerContext] = {}
-    for instrument in instruments:
+    for instrument in legacy_instruments:
         selected_id = instrument.rule_set_id
         selected_count = (
             eligibility_by_id.get(selected_id)
@@ -372,6 +383,8 @@ def build_instrument_rule_picker_contexts(
 def _new_model_band2_state(
     db: Session,
     instrument: Instrument,
+    *,
+    active_reviewees: list[Reviewee],
 ) -> dict[str, Any]:
     """For the new-model card's Band 2 ("Review Instrument") preview:
     every display field on the instrument whose source slot has data
@@ -385,6 +398,10 @@ def _new_model_band2_state(
     :func:`app.services.assignments.reviewee_fields_with_data` family
     over the shared :func:`app.services._queries.slot_has_data`
     primitive).
+
+    ``active_reviewees`` is fetched once per page render and passed
+    in by :func:`build_instruments_context` — see Segment 18J Wave 1
+    Rec D1.
 
     Returns a dict with:
 
@@ -409,14 +426,6 @@ def _new_model_band2_state(
     from app.web.routes_reviewer._surface import GROUP_MEMBER_NAME_LIMIT
 
     review_session = instrument.session
-    active_reviewees = list(
-        db.execute(
-            select(Reviewee)
-            .where(Reviewee.session_id == review_session.id)
-            .where(Reviewee.status == "active")
-            .order_by(Reviewee.name, Reviewee.id)
-        ).scalars()
-    )
     # Respect the operator's last "↻ Refresh preview" pick (stored
     # on band2_state.sample_reviewee_name). Falls back to the first
     # active reviewee by name when the saved sample no longer exists
@@ -827,9 +836,34 @@ def build_instruments_context(
             for instrument in instruments
             if instrument.is_new_model
         },
-        "new_model_band2_state": {
-            instrument.id: _new_model_band2_state(db, instrument)
-            for instrument in instruments
-            if instrument.is_new_model
-        },
+        "new_model_band2_state": _new_model_band2_states_for(
+            db, instruments
+        ),
+    }
+
+
+def _new_model_band2_states_for(
+    db: Session, instruments: list[Instrument]
+) -> dict[int, dict[str, Any]]:
+    """Build the ``new_model_band2_state`` dict for every new-model
+    instrument on the page, sharing one active-reviewees fetch across
+    them (Segment 18J Wave 1 Rec D1).
+    """
+    new_model_instruments = [i for i in instruments if i.is_new_model]
+    if not new_model_instruments:
+        return {}
+    review_session = new_model_instruments[0].session
+    active_reviewees = list(
+        db.execute(
+            select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .where(Reviewee.status == "active")
+            .order_by(Reviewee.name, Reviewee.id)
+        ).scalars()
+    )
+    return {
+        instrument.id: _new_model_band2_state(
+            db, instrument, active_reviewees=active_reviewees
+        )
+        for instrument in new_model_instruments
     }
