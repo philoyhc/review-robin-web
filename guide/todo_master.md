@@ -883,8 +883,11 @@ bottom of this file.
   #1220). **Three Parts shipped:** **Part 1** — Rule Builder
   ergonomics (3-column grid layout for MATCH / FILTER / QUOTA
   controls; mutually exclusive include/exclude checkboxes
-  replacing the kind dropdown). Further Rule Builder refinements
-  remain open. **Part 2** — per-instrument response CSVs in the
+  replacing the kind dropdown). Part 1 closed 2026-05-24: the
+  three remaining open refinements (seeded-vs-personal library
+  affordances, validation feedback, RuleSet read-back) all
+  closed defunct by Segment 18J Wave 4 (Gap 7 retires the
+  Rule Builder child page + RuleSet library tier). **Part 2** — per-instrument response CSVs in the
   Zip-all bundle (`{code}_instrument_{n}.csv`, long format
   sorted reviewee-first; rejected the §22 wide-format
   alternative). **Part 3** — bundle-only Reviewer / Reviewee

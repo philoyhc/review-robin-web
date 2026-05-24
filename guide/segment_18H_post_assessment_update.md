@@ -166,10 +166,31 @@ Both the server-rendered `_rule_builder_card.html` and the
 client-side row builder / serialiser in
 `_rule_based_editor_js.html` were updated together.
 
-**Further refinements: TBD.** The remaining rough edges
-(seeded-vs-personal library affordances, validation feedback,
-RuleSet read-back) are still open and will land as further PRs
-under this Part as they are picked up.
+**Further refinements: closed defunct by Segment 18J Wave 4
+(Gap 7).** The remaining open items below were predicated on
+the Rule Builder child page + the RuleSet library tier
+continuing to exist. Segment 18J Wave 4 retires both — Band 1's
+inline editor on the new-model card becomes the canonical
+authoring surface; the personal library, seeded RuleSets, the
+"Save to / Add from library" affordances, the Available
+RuleSets sidebar on the Instruments page, `library_origin_id`
+provenance, and the Rule Builder child page itself all retire
+together (`guide/new_model_instruments_outstanding.md` Gap 7;
+`guide/instrument_builder.md` Part 1b).
+
+- ~~Seeded-vs-personal library affordances~~ — defunct (no
+  library tier to distinguish).
+- ~~Validation feedback~~ — defunct as Rule Builder polish;
+  the operator's need for inline rule-edit validation transfers
+  to Band 1's inline editor on the new-model card and is
+  picked up as part of 18J Wave 4 rather than as Part 1
+  follow-on.
+- ~~RuleSet read-back~~ — defunct (the Rule Builder page is
+  retired; per-instrument Band 1 already surfaces the pinned
+  rules inline on the new-model card).
+
+With these closed, **Part 1 is complete** — no further Rule
+Builder polish is on the roadmap.
 
 ### Part 2 — Enhanced response export — shipped 2026-05-20
 
