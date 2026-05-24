@@ -3224,11 +3224,13 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     )
     assert "Quick sanity check after milestone 1." in intro_block
 
-    # 2 selected response fields (Rating, Notes) — Bonus is
-    # deselected, so it doesn't contribute. 1 of them is required.
-    assert "Required items completed: 0/1" in flat
-    assert "All items completed: 0/2" in flat
-    # Required pill is warning (1 required, 0 done). All pill is
+    # Counts reflect the full authored response-field set, not
+    # just the chips currently toggled on in the preview. All 3
+    # fields contribute to "All items"; the 2 marked
+    # ``required=True`` (Rating + Bonus) contribute to "Required".
+    assert "Required items completed: 0/2" in flat
+    assert "All items completed: 0/3" in flat
+    # Required pill is warning (2 required, 0 done). All pill is
     # neutral count.
     assert 'class="pill pill-warning"' in intro_block
     assert 'class="pill pill-count"' in intro_block
