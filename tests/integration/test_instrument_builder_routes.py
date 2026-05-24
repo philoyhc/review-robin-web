@@ -598,7 +598,7 @@ def test_add_new_model_creates_instrument_with_is_new_model_flag(
     assert "Pool of reviewers" in body  # Band 1 Link 1 column
     assert "Pool of those reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
-    assert "Review Instrument" in body  # Band 2 heading
+    assert "Preview review instrument" in body  # Band 2 heading
     assert "Visibility" in body  # Band 3 left-column table title
     assert ">New model<" in body  # status pill on the new-model card
 
@@ -821,7 +821,7 @@ def test_new_model_band1_all_mode_clears_rules(
 def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     client: TestClient, db: Session
 ) -> None:
-    """Band 2 (Review Instrument) lists every populated display field
+    """Band 2 (Preview review instrument) lists every populated display field
     on the new-model instrument as a click-to-select chip, with
     data-* attributes carrying the sample value the client-side
     preview-row builder consumes. Sample data does NOT show inside
@@ -840,7 +840,7 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     ).text
     flat = " ".join(body.split())
     # Band heading renamed; the "Sample reviewee:" sub-caption is gone.
-    assert "Review Instrument" in flat
+    assert "Preview review instrument" in flat
     assert ">Band 2<" not in flat
     assert "Sample reviewee:" not in flat
     # Pills are click-to-toggle (role=button) and carry the
@@ -890,12 +890,16 @@ def test_new_model_band2_handles_session_with_no_reviewees(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    assert "Review Instrument" in flat
+    assert "Preview review instrument" in flat
     # Empty-pill-list placeholder lands inside the pill row.
+    # (The pill row sits at the bottom of Band 2, flush-right, with
+    # ``justify-content: flex-end`` and ``margin-top: 16px``.)
     assert (
-        '<div data-new-model-band2-pills style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;"> <span class="muted">—</span>'
+        '<div data-new-model-band2-pills style="display: flex; flex-wrap: wrap; gap: 8px;'
         in flat
     )
+    assert "justify-content: flex-end" in flat
+    assert '<span class="muted">—</span>' in flat
     # No Band 2 pills rendered. The selector substrings in the
     # inline JS use ``data-new-model-band2-pill`` and ``data-key=``
     # inside bracket-enclosed CSS selectors, so we look for the

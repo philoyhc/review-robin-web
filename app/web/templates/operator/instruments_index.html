@@ -1203,7 +1203,7 @@
              data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
              data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
              data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
-          <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
+          <h3 style="margin: 0 0 12px 0;">Preview review instrument</h3>
           {# Hidden form field that snapshots the current column
              widths as JSON. The drag-resize JS POSTs to
              /column-widths AND mirrors the widths into this input
@@ -1244,75 +1244,6 @@
           <div data-new-model-band2-editable
                style="{% if not is_editing %}opacity: 0.75;{% endif %}"
                {% if not is_editing %}inert aria-hidden="true"{% endif %}>
-            <div data-new-model-band2-pills
-                 style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-              {% for field in _band2.fields %}
-                {% set _selected = field.key in _band2.selected_display_keys %}
-                <span class="pill tag-chip{% if _selected %} pill-count is-selected{% endif %}"
-                      role="button" tabindex="0"
-                      aria-pressed="{{ 'true' if _selected else 'false' }}"
-                      data-new-model-band2-pill
-                      data-key="{{ field.key }}"
-                      data-label="{{ field.label }}"
-                      data-source-type="{{ field.source_type }}"
-                      data-source-field="{{ field.source_field }}"
-                      data-value="{{ field.value or '' }}"
-                      data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
-                      data-display-field-id="{{ field.display_field_id }}"
-                      data-width="{{ field.width_px or '' }}"
-                      data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
-                      {% if field.reorderable %}
-                      draggable="true"
-                      ondragstart="newModelBand2DragStart(event)"
-                      ondragend="newModelBand2DragEnd(event)"
-                      ondragover="newModelBand2DragOver(event)"
-                      ondrop="newModelBand2Drop(event)"
-                      {% endif %}
-                      onclick="newModelToggleBand2Pill(this)"
-                      title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
-              {% endfor %}
-              {# Server-render the `||` divider + response pills
-                 from the persisted band2_state.response_fields list.
-                 Each entry's index gives a stable per-render key
-                 (``rf_<idx>``) that both the row and the pill share
-                 so the JS save / delete handlers can find them. #}
-              {% if _band2.response_fields %}
-                <span class="new-model-band2-pills-divider"
-                      data-new-model-band2-pills-divider
-                      aria-hidden="true">||</span>
-                {% for rf in _band2.response_fields %}
-                  {% set _key = 'rf_' ~ loop.index0 %}
-                  <span class="pill tag-chip{% if rf.selected %} pill-count is-selected{% endif %}"
-                        role="button" tabindex="0"
-                        aria-pressed="{{ 'true' if rf.selected else 'false' }}"
-                        data-new-model-band2-pill
-                        data-key="{{ _key }}"
-                        data-label="{{ rf.name }}"
-                        data-source-type="response"
-                        data-source-field="{{ rf.name }}"
-                        data-value=""
-                        data-selectable-in-group="true"
-                        data-row-key="{{ _key }}"
-                        data-response-key="{{ _key }}"
-                        data-required="{{ 'true' if rf.required else 'false' }}"
-                        data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
-                        data-help-text="{{ rf.help_text or '' }}"
-                        data-help-edit-mode="false"
-                        data-width="{{ rf.width_px or '' }}"
-                        data-reorderable="true"
-                        draggable="true"
-                        ondragstart="newModelBand2DragStart(event)"
-                        ondragend="newModelBand2DragEnd(event)"
-                        ondragover="newModelBand2DragOver(event)"
-                        ondrop="newModelBand2Drop(event)"
-                        onclick="newModelToggleBand2Pill(this)"
-                        title="Click to include / drag to reorder {{ rf.name }}"><span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{{ rf.name }}</span>
-                {% endfor %}
-              {% endif %}
-              {% if not _band2.fields and not _band2.response_fields %}
-                <span class="muted">—</span>
-              {% endif %}
-            </div>
             {# Replicate the reviewer-surface per-instrument intro
                card — short_label / description + completion-progress
                pills — so the operator can preview the chrome the
@@ -1420,6 +1351,83 @@
                in a separate card above the preview. #}
             <div data-new-model-band2-preview
                  style="margin-top: 16px;"></div>
+            {# Selector-chip row, moved to the bottom of Band 2 and
+               flush-right. Display-field chips first, then a ``||``
+               divider, then response-field chips (one per Band 3
+               row). Pill clicks toggle the corresponding column in
+               the preview table above; drag reorders for chips
+               that are reorderable. #}
+            <div data-new-model-band2-pills
+                 style="display: flex; flex-wrap: wrap; gap: 8px;
+                        align-items: center; justify-content: flex-end;
+                        margin-top: 16px;">
+              {% for field in _band2.fields %}
+                {% set _selected = field.key in _band2.selected_display_keys %}
+                <span class="pill tag-chip{% if _selected %} pill-count is-selected{% endif %}"
+                      role="button" tabindex="0"
+                      aria-pressed="{{ 'true' if _selected else 'false' }}"
+                      data-new-model-band2-pill
+                      data-key="{{ field.key }}"
+                      data-label="{{ field.label }}"
+                      data-source-type="{{ field.source_type }}"
+                      data-source-field="{{ field.source_field }}"
+                      data-value="{{ field.value or '' }}"
+                      data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
+                      data-display-field-id="{{ field.display_field_id }}"
+                      data-width="{{ field.width_px or '' }}"
+                      data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                      {% if field.reorderable %}
+                      draggable="true"
+                      ondragstart="newModelBand2DragStart(event)"
+                      ondragend="newModelBand2DragEnd(event)"
+                      ondragover="newModelBand2DragOver(event)"
+                      ondrop="newModelBand2Drop(event)"
+                      {% endif %}
+                      onclick="newModelToggleBand2Pill(this)"
+                      title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
+              {% endfor %}
+              {# Server-render the `||` divider + response pills
+                 from the persisted band2_state.response_fields list.
+                 Each entry's index gives a stable per-render key
+                 (``rf_<idx>``) that both the row and the pill share
+                 so the JS save / delete handlers can find them. #}
+              {% if _band2.response_fields %}
+                <span class="new-model-band2-pills-divider"
+                      data-new-model-band2-pills-divider
+                      aria-hidden="true">||</span>
+                {% for rf in _band2.response_fields %}
+                  {% set _key = 'rf_' ~ loop.index0 %}
+                  <span class="pill tag-chip{% if rf.selected %} pill-count is-selected{% endif %}"
+                        role="button" tabindex="0"
+                        aria-pressed="{{ 'true' if rf.selected else 'false' }}"
+                        data-new-model-band2-pill
+                        data-key="{{ _key }}"
+                        data-label="{{ rf.name }}"
+                        data-source-type="response"
+                        data-source-field="{{ rf.name }}"
+                        data-value=""
+                        data-selectable-in-group="true"
+                        data-row-key="{{ _key }}"
+                        data-response-key="{{ _key }}"
+                        data-required="{{ 'true' if rf.required else 'false' }}"
+                        data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
+                        data-help-text="{{ rf.help_text or '' }}"
+                        data-help-edit-mode="false"
+                        data-width="{{ rf.width_px or '' }}"
+                        data-reorderable="true"
+                        draggable="true"
+                        ondragstart="newModelBand2DragStart(event)"
+                        ondragend="newModelBand2DragEnd(event)"
+                        ondragover="newModelBand2DragOver(event)"
+                        ondrop="newModelBand2Drop(event)"
+                        onclick="newModelToggleBand2Pill(this)"
+                        title="Click to include / drag to reorder {{ rf.name }}"><span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{{ rf.name }}</span>
+                {% endfor %}
+              {% endif %}
+              {% if not _band2.fields and not _band2.response_fields %}
+                <span class="muted">—</span>
+              {% endif %}
+            </div>
           </div>
         </div>
         <script>
@@ -2190,6 +2198,51 @@
                 );
               });
             };
+            // Short-form per-response-field constraint summary
+            // (e.g. "Rating (1-5, steps of 1), Notes (0-2000 char)"),
+            // rendered above the preview table and flush-right.
+            // Mirrors the reviewer surface's ``.rs-constraints`` line
+            // (see ``views/_instruments.py::constraint_summary_for_field``).
+            // Reads each selected response pill's paired Band 3 row
+            // to pull data_type + bounds.
+            function buildConstraints(card) {
+              var instrumentCard = card.closest('[id^="instrument-"]');
+              if (!instrumentCard) { return ''; }
+              var parts = [];
+              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"][aria-pressed="true"]').forEach(function (pill) {
+                var rowKey = pill.getAttribute('data-row-key');
+                if (!rowKey) { return; }
+                var row = instrumentCard.querySelector(
+                  '[data-new-model-rf-row][data-row-key="' + rowKey + '"]'
+                );
+                if (!row) { return; }
+                var typeSel = row.querySelector('[data-new-model-rf-data-type]');
+                var dataType = typeSel ? typeSel.value : 'string';
+                var bounds = {min: '', max: '', step: ''};
+                row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
+                  var k = input.getAttribute('data-new-model-rf-bound');
+                  bounds[k] = (input.value || '').trim();
+                });
+                var summary = '';
+                if (dataType === 'integer' || dataType === 'decimal') {
+                  if (bounds.min && bounds.max && bounds.step) {
+                    summary = bounds.min + '-' + bounds.max + ', steps of ' + bounds.step;
+                  }
+                } else if (dataType === 'string') {
+                  if (bounds.max) {
+                    summary = (bounds.min || '0') + '-' + bounds.max + ' char';
+                  }
+                }
+                // List rows are intentionally skipped — the chip
+                // already constrains the choice. Matches reviewer-
+                // surface behaviour.
+                if (!summary) { return; }
+                var label = pill.getAttribute('data-label') || '';
+                parts.push('<strong>' + esc(label) + '</strong> (' + esc(summary) + ')');
+              });
+              if (parts.length === 0) { return ''; }
+              return '<p class="rs-constraints muted">' + parts.join(', ') + '</p>';
+            }
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
               if (!container) { return; }
@@ -2200,7 +2253,9 @@
               } else {
                 tableHtml = buildIndividualPreview(card, selected);
               }
-              container.innerHTML = buildResponseFieldHelpCards(card) + tableHtml;
+              container.innerHTML = buildResponseFieldHelpCards(card)
+                + buildConstraints(card)
+                + tableHtml;
             }
             window.newModelToggleBand2Pill = function (pill) {
               if (pill.getAttribute('aria-disabled') === 'true') { return; }
