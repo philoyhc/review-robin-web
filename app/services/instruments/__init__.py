@@ -127,6 +127,7 @@ from ._instrument_crud import (
 from ._band1 import (
     Band1ParseError,
     decode_band1_state,
+    find_sample_in_scope_reviewee,
     parse_band1_form,
     parse_link3_form,
     set_band1_assignment_rules,
@@ -183,6 +184,7 @@ __all__ = [
     "ensure_locked_display_fields",
     "Band1ParseError",
     "decode_band1_state",
+    "find_sample_in_scope_reviewee",
     "parse_band1_form",
     "parse_link3_form",
     "set_band1_assignment_rules",
