@@ -82,12 +82,14 @@ single reviewee's own tags. The function deletes exactly the
 tag-changed reviewee's response copies on exactly the instruments
 whose key shifted — the minimal correct set.
 
-The one imprecision is the **docstring**, not the code: "lossless
-for the reviewer — survives on the group's other member rows"
-holds only when the old group keeps ≥1 other member; if the
-reviewee was the sole member, the answer is destroyed — but
-correctly, since that group has ceased to exist. A docstring
-tweak would make that honest; the behaviour is right.
+The one imprecision was the **docstring**, not the code: the
+original wording ("lossless for the reviewer — survives on the
+group's other member rows") held only when the old group kept
+≥1 other member. Shipped alongside the rename in PR #1219:
+`reconcile_group_responses_for_tag_change`
+(`app/services/responses.py:585-606`) carries a fresh docstring
+that describes the actual delete + re-fan behaviour without the
+"lossless" claim.
 
 ### Representative-staleness on group join — confirmed and fixed
 
@@ -119,7 +121,7 @@ sees their answer apparently gone, and the completion rollup
 regresses. Severity **LOW–MEDIUM**: a transient display +
 completion regression, no data loss.
 
-**Fix (PR #1220).** The root cause is a violated invariant — a
+**Fix (PR #1219).** The root cause is a violated invariant — a
 group-scoped instrument keeps *identical* answer copies on every
 assignment in a group, and every reader (`_collapse_group_rows`,
 `_state_from_assignments`, the extract) trusts that. The
