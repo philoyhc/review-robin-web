@@ -1011,6 +1011,14 @@ def set_band2_state(
                 # bridge code will preserve this flag across the
                 # migration.
                 rf["required"] = bool(raw.get("required"))
+                # Help-text visibility toggle (Band 3 "≡" button).
+                # When true, the operator surface renders a
+                # half-width help-text card above the Band 2
+                # preview table for this field. Reviewer-surface
+                # rendering reads ``InstrumentResponseField.help_text_visible``
+                # post-Wave-3; the JSON shape carries the flag
+                # in the interim.
+                rf["help_text_visible"] = bool(raw.get("help_text_visible"))
                 # Per-response-field column width (px). Carried on
                 # the entry itself so the width travels with the
                 # field across drag-reorder. Clamped to the same
