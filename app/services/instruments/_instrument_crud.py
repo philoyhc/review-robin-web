@@ -1001,6 +1001,28 @@ def set_band2_state(
         existing_sample = existing.get("sample_reviewee_name")
         if existing_sample:
             sanitised["sample_reviewee_name"] = str(existing_sample)[:255]
+    # Gap 10: rule-surviving group member ID set persisted alongside
+    # sample_reviewee_name by the preview-sample route. Present +
+    # list-of-ints stores; present + None / non-list drops (e.g.
+    # boundary switched off — render falls back to unconstrained
+    # partition). Missing preserves existing.
+    if isinstance(state, dict) and "sample_group_member_ids" in state:
+        raw_ids = state.get("sample_group_member_ids")
+        if isinstance(raw_ids, list):
+            cleaned_ids: list[int] = []
+            for raw in raw_ids:
+                try:
+                    rid = int(raw)
+                except (TypeError, ValueError):
+                    continue
+                if rid > 0 and rid not in cleaned_ids:
+                    cleaned_ids.append(rid)
+            if cleaned_ids:
+                sanitised["sample_group_member_ids"] = cleaned_ids
+    else:
+        existing_ids = existing.get("sample_group_member_ids")
+        if isinstance(existing_ids, list) and existing_ids:
+            sanitised["sample_group_member_ids"] = list(existing_ids)
     new_value: dict[str, Any] | None = sanitised or None
     if (instrument.band2_state or None) == new_value:
         return instrument

@@ -1454,7 +1454,7 @@ async def instrument_preview_sample(
                 }
             )
         return out
-    reviewee = instruments_service.find_sample_in_scope_reviewee(
+    sample_pick = instruments_service.find_sample_in_scope_reviewee(
         db,
         instrument=instrument,
         link1_mode=str(body.get("link1_mode") or "all"),
@@ -1464,20 +1464,31 @@ async def instrument_preview_sample(
         link2_combinator=str(body.get("link2_combinator") or "AND"),
         link2_rules=_rule_list(body.get("link2_rules")),
     )
-    if reviewee is None:
+    if sample_pick is None:
         return JSONResponse(
             {"sample_reviewee": None}, status_code=status.HTTP_200_OK
         )
+    reviewee, sample_group_member_ids = sample_pick
     # Persist the picked sample on band2_state so the choice
     # survives across page reloads (especially the transition from
     # edit → view mode after Save, which is where the operator
-    # first noticed the sample resetting to "first by name").
+    # first noticed the sample resetting to "first by name"). Also
+    # persist the rule-surviving group-member ID set (Gap 10) so
+    # the next render's Grouped-mode preview filters its member
+    # list against the engine's actual survivors rather than the
+    # full active-reviewee roster. None when there's no
+    # reviewee-side boundary — render falls back to its existing
+    # unconstrained partition.
     # set_band2_state preserves the existing selected_display_keys
     # + response_fields when not in the payload.
+    state_update: dict[str, Any] = {
+        "sample_reviewee_name": reviewee.name or "",
+        "sample_group_member_ids": sample_group_member_ids,
+    }
     instruments_service.set_band2_state(
         db,
         instrument=instrument,
-        state={"sample_reviewee_name": reviewee.name or ""},
+        state=state_update,
         actor=user,
     )
     db.commit()

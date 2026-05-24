@@ -2203,3 +2203,248 @@ def test_rec_d1_single_active_reviewees_query_per_render(
     # Exactly one shared fetch for the four new-model cards' Band 2
     # state, instead of the pre-D1 O(K) per-card pattern.
     assert active_reviewee_selects == 1
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 1 PR ε — Gap 10 (rule-constrained preview group expansion)
+# --------------------------------------------------------------------------- #
+
+
+def _group_band2_session(
+    client: TestClient, db: Session, *, code: str
+) -> tuple[ReviewSession, Instrument]:
+    """Build a session with two Team-A reviewees + two Team-B reviewees
+    + two reviewers (one Lead, one Junior), and a new-model instrument
+    set to Grouped mode on RevieweeTag1."""
+    review_session = _make_session(client, db, code=code)
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Bob",
+                email="bob@example.edu",
+                tag_1="Junior",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                tag_1="Team A",
+                tag_2="exclude",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@example.edu",
+                tag_1="Team A",
+                tag_2="keep",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                tag_1="Team B",
+                tag_2="keep",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Fay",
+                email_or_identifier="fay@example.edu",
+                tag_1="Team B",
+                tag_2="keep",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    # Grouped by RevieweeTag1 (encoded ``r1``).
+    new_model.group_kind = "r1"
+    db.commit()
+    return review_session, new_model
+
+
+def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 — the Refresh route now persists the rule-surviving
+    reviewee IDs for the sample's boundary key on
+    ``band2_state.sample_group_member_ids``. With Links 1+2 narrow
+    enough to exclude part of the sample's group, the persisted ID
+    set must reflect only the surviving members."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-route"
+    )
+    # Link 1: only Lead reviewers (Alice). Both Team A reviewees are
+    # still in scope under Alice, so both Carol + Dan should appear
+    # in the surviving member ID set.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_value": "Lead",
+                    "operand_tag": "",
+                }
+            ],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    db.refresh(new_model)
+    sample_name = new_model.band2_state["sample_reviewee_name"]
+    member_ids = new_model.band2_state["sample_group_member_ids"]
+    # Sample is one of the Team A pair (alphabetically Carol first
+    # within Team A); both Team A reviewees in the ID set.
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    assert sample_name in {"Carol", "Dan"}
+    assert sorted(member_ids) == sorted([by_name["Carol"], by_name["Dan"]])
+
+    # Now narrow Link 2 to exclude Carol (filter reviewee by name).
+    # Only Dan should survive in Team A.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS NOT",
+                    "operand_value": "exclude",
+                    "operand_tag": "",
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    db.refresh(new_model)
+    sample_name = new_model.band2_state["sample_reviewee_name"]
+    member_ids = new_model.band2_state["sample_group_member_ids"]
+    # Sample must be Dan (Carol excluded). Member set must be {Dan}
+    # — not {Carol, Dan}, which is what the pre-Gap-10 unconstrained
+    # boundary partition would have returned.
+    assert sample_name == "Dan"
+    assert member_ids == [by_name["Dan"]]
+
+
+def test_gap_10_render_filters_group_members_by_persisted_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 — the render path's `sample_names` reflects the
+    persisted rule-surviving ID set. After a Refresh under Link 2
+    that excludes Carol from Team A, the rendered preview must show
+    only Dan in the Team A group's member list — not Carol + Dan."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-render"
+    )
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    # Refresh with Link 2 excluding Carol; the sample falls on Dan.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS NOT",
+                    "operand_value": "exclude",
+                    "operand_tag": "",
+                }
+            ],
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_reviewee_name"] == "Dan"
+    assert new_model.band2_state["sample_group_member_ids"] == [
+        by_name["Dan"]
+    ]
+    # Render the index page; the data-new-model-band2-sample-names
+    # attribute carries the rendered group member name list.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # Find the sample-names attribute on the new-model band 2 card.
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    names = flat[idx + len(needle) : end].split("|") if end > idx else []
+    # Member list reflects only the rule-surviving ID set — Dan only.
+    assert names == ["Dan"]
+
+
+def test_gap_10_legacy_band2_state_without_member_ids_falls_back(
+    client: TestClient, db: Session
+) -> None:
+    """Back-compat — band2_state rows that pre-date Gap 10 (no
+    ``sample_group_member_ids`` key) still render via the
+    unconstrained boundary partition. Render must not crash and the
+    member list must equal the boundary-tag partition."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-legacy"
+    )
+    # Simulate a legacy band2_state: only sample_reviewee_name, no
+    # member ID set. Write through the ORM directly so we bypass the
+    # set_band2_state sanitiser (which would carry no member IDs
+    # forward anyway, but make the intent explicit).
+    new_model.band2_state = {"sample_reviewee_name": "Carol"}
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    names = flat[idx + len(needle) : end].split("|") if end > idx else []
+    # Legacy fallback: both Team A reviewees show (unconstrained
+    # boundary partition), as before Gap 10.
+    assert sorted(names) == ["Carol", "Dan"]
