@@ -417,7 +417,22 @@ def _new_model_band2_state(
             .order_by(Reviewee.name, Reviewee.id)
         ).scalars()
     )
-    sample = active_reviewees[0] if active_reviewees else None
+    # Respect the operator's last "↻ Refresh preview" pick (stored
+    # on band2_state.sample_reviewee_name). Falls back to the first
+    # active reviewee by name when the saved sample no longer exists
+    # (deleted / deactivated) or when nothing has been refreshed
+    # yet.
+    saved_sample_name = (
+        (instrument.band2_state or {}).get("sample_reviewee_name") or ""
+    )
+    sample: Reviewee | None = None
+    if saved_sample_name:
+        sample = next(
+            (r for r in active_reviewees if r.name == saved_sample_name),
+            None,
+        )
+    if sample is None and active_reviewees:
+        sample = active_reviewees[0]
     # Group-mode partitioning: when the instrument is set to Group
     # mode with reviewee boundary tags, the preview row's member-
     # name list should reflect *one* group (the one the sample
@@ -517,6 +532,7 @@ def _new_model_band2_state(
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
         "roster": roster,
+        "sample_reviewee_name": sample.name if sample is not None else "",
     }
 
 

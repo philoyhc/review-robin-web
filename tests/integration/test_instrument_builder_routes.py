@@ -1493,3 +1493,90 @@ def test_new_model_band2_preview_sample_filters_by_link1(
     )
     assert resp.status_code == 200
     assert resp.json() == {"sample_reviewee": None}
+
+
+def test_new_model_band2_refresh_persists_sample_to_band2_state(
+    client: TestClient, db: Session
+) -> None:
+    """Clicking ↻ Refresh preview persists the picked sample
+    reviewee on band2_state.sample_reviewee_name so the choice
+    survives the next render — operators no longer lose the sample
+    when navigating from edit mode to view mode after Save."""
+    review_session = _make_session(client, db, code="nm-sample-persist")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Fay",
+                email_or_identifier="fay@example.edu",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Refresh fires the preview-sample route; the picked sample is
+    # written through to band2_state.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["sample_reviewee"]["name"] == "Eve"
+    db.refresh(new_model)
+    assert new_model.band2_state == {"sample_reviewee_name": "Eve"}
+
+    # A subsequent band2_state save (e.g. operator toggles a pill)
+    # MUST NOT clobber the sample. set_band2_state preserves the
+    # existing sample_reviewee_name when not in the input payload.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": ["reviewee.name"],
+            "response_fields": [],
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+    assert new_model.band2_state["selected_display_keys"] == ["reviewee.name"]
+
+    # View renders the saved sample-name onto the wrapper data-attr
+    # — view mode (no ?editing=) carries the saved sample so the
+    # preview-builder JS doesn't fall back to "first reviewee by
+    # name" on reload.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'data-new-model-band2-sample-name="Eve"' in body

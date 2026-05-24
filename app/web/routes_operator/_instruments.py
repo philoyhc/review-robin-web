@@ -1446,6 +1446,19 @@ async def instrument_preview_sample(
         return JSONResponse(
             {"sample_reviewee": None}, status_code=status.HTTP_200_OK
         )
+    # Persist the picked sample on band2_state so the choice
+    # survives across page reloads (especially the transition from
+    # edit → view mode after Save, which is where the operator
+    # first noticed the sample resetting to "first by name").
+    # set_band2_state preserves the existing selected_display_keys
+    # + response_fields when not in the payload.
+    instruments_service.set_band2_state(
+        db,
+        instrument=instrument,
+        state={"sample_reviewee_name": reviewee.name or ""},
+        actor=user,
+    )
+    db.commit()
     return JSONResponse(
         {
             "sample_reviewee": {

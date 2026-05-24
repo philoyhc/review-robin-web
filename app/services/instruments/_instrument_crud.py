@@ -959,6 +959,21 @@ def set_band2_state(
             sanitised_rfs.append(rf)
         if sanitised_rfs:
             sanitised["response_fields"] = sanitised_rfs
+    # Preserve ``sample_reviewee_name`` across "non-sample" writes
+    # (pill toggle, RF save, RF delete) by carrying the existing
+    # value forward when the input payload doesn't mention it. The
+    # Refresh-preview endpoint sets it explicitly via this same
+    # service path with the sample name in the payload.
+    if isinstance(state, dict) and "sample_reviewee_name" in state:
+        candidate = str(state.get("sample_reviewee_name") or "").strip()[:255]
+        if candidate:
+            sanitised["sample_reviewee_name"] = candidate
+    else:
+        existing_sample = (instrument.band2_state or {}).get(
+            "sample_reviewee_name"
+        )
+        if existing_sample:
+            sanitised["sample_reviewee_name"] = str(existing_sample)[:255]
     new_value: dict[str, Any] | None = sanitised or None
     if (instrument.band2_state or None) == new_value:
         return instrument

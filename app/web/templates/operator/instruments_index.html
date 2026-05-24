@@ -1087,17 +1087,19 @@
             }
             // Band 2's preview depends on the unit-of-review mode —
             // refresh its pill enabled-state and rebuild the preview
-            // row to reflect the flip. Mirror the new mode onto each
-            // Band 2 wrapper's ``data-new-model-band2-unit-mode``
-            // attr so the preview JS picks up the change without
-            // having to consult the (edit-mode-only) Link 3 input.
+            // row state is mirrored onto each Band 2 wrapper's
+            // ``data-new-model-band2-unit-mode`` attr so the next
+            // Refresh-triggered rebuild picks up the change.
+            // Link 3 changes deliberately DON'T rebuild the preview
+            // immediately — they wait for the operator to click
+            // ↻ Refresh preview, matching Link 1 + Link 2's
+            // explicit-refresh contract.
             var newMode = btn.getAttribute('data-new-model-unit-mode') === 'group'
               ? 'grouped' : 'individual';
             var instrumentCard = btn.closest('[id^="instrument-"]');
-            if (instrumentCard && window.newModelRefreshBand2) {
+            if (instrumentCard) {
               instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
                 b2.setAttribute('data-new-model-band2-unit-mode', newMode);
-                window.newModelRefreshBand2(b2);
               });
             }
           };
@@ -1109,38 +1111,28 @@
             clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
             container.appendChild(clone);
             newModelRefreshUnitButtons(container);
-            newModelRefreshBand2FromLink3(btn);
+            // Preview rebuild gated on ↻ Refresh — see toggle above.
           };
           window.newModelRemoveUnitCell = window.newModelRemoveUnitCell || function (btn) {
-            // Capture the per-instrument wrapper BEFORE removing the
-            // cell — once cell.remove() runs, btn is detached from
-            // the live document tree and ``btn.closest(...)`` no
-            // longer reaches up to it, so the post-remove preview
-            // refresh would silently no-op.
-            var instrumentCard = btn.closest('[id^="instrument-"]');
             var cell = btn.closest('[data-new-model-unit-cell]');
             var container = cell.parentElement;
             if (container.querySelectorAll('[data-new-model-unit-cell]').length > 1) {
               cell.remove();
               newModelRefreshUnitButtons(container);
             }
-            if (instrumentCard && window.newModelRefreshBand2) {
-              instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
-                window.newModelRefreshBand2(b2);
-              });
-            }
+            // Preview rebuild gated on ↻ Refresh — see toggle above.
           };
           // Onchange handler for the Link 3 boundary tag dropdowns.
-          // The preview-builder JS reads the boundary tag values
-          // live (from the <select>s) when partitioning the group
-          // sample, so any dropdown change should trigger a
-          // preview rebuild.
-          window.newModelLink3BoundaryChanged = window.newModelLink3BoundaryChanged || function (sel) {
-            newModelRefreshBand2FromLink3(sel);
+          // No-op now — the boundary value rides into the next
+          // ↻ Refresh preview click, same as Link 1 + Link 2 rules.
+          // Kept as a window export so the onchange="..." attr on
+          // the dropdown doesn't 404 in older browser caches.
+          window.newModelLink3BoundaryChanged = window.newModelLink3BoundaryChanged || function (_sel) {
+            // intentionally empty — explicit refresh model
           };
-          // Shared "any Link 3 movement → rebuild the Band 2
-          // preview" walker — used by the boundary dropdown
-          // onchange, add cell, and remove cell handlers above.
+          // Walker no longer in use (Link 3 → preview rebuild went
+          // explicit), but kept on the window for any out-of-tree
+          // call sites that haven't been redeployed yet.
           function newModelRefreshBand2FromLink3(el) {
             var instrumentCard = el && el.closest('[id^="instrument-"]');
             if (!instrumentCard || !window.newModelRefreshBand2) { return; }
@@ -1224,7 +1216,8 @@
              data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
              data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}"
              data-new-model-band2-unit-mode="{{ _saved_unit_mode }}"
-             data-new-model-band2-roster='{{ _band2.roster | tojson }}'>
+             data-new-model-band2-roster='{{ _band2.roster | tojson }}'
+             data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
           {# Gate pill clicks / drag-resize / drag-reorder behind the
              per-instrument Edit state — same pattern as Bands 1 + 3.
