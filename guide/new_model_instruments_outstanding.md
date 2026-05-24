@@ -46,7 +46,7 @@ the Response Type Definitions card lines 2888-3240).
 Each gap carries a rough complexity (T = trivial, S = small, M
 = medium, L = large) and notes any blocking dependency.
 
-### Gap 1 — Pill selection → `InstrumentDisplayField.visible` (T)
+### Gap 1 — Pill selection → `InstrumentDisplayField.visible` (T) — shipped 2026-05-24 (PR #1395)
 
 **Today.** Pill click toggles `band2_state.selected_display_keys`
 but doesn't update `InstrumentDisplayField.visible`. Operator
@@ -88,7 +88,7 @@ exist. The pill's `selected` flag needs either a new
 `InstrumentResponseField.visible`-style column or a "if it's in
 the table, it's shown" contract.
 
-### Gap 3 — Sort priorities (T-S)
+### Gap 3 — Sort priorities (T-S) — shipped 2026-05-24 (PR #1396)
 
 **Legacy.** Sort cell on each Display Fields row — tri-state
 click button cycling unsorted → asc → desc → unsorted, persisting
@@ -119,7 +119,11 @@ a dedicated help editor. Wires to the existing
 columns once Gap 2 lands (response fields become real DB rows
 first).
 
-### Gap 5 — Response field "required" flag (T)
+### Gap 5 — Response field "required" flag (T) — shipped 2026-05-24 (PR #1397, metadata only)
+
+> Reviewer-surface enforcement waits for Wave 3 (Gap 2 bridge);
+> Wave 1 ships operator-authored metadata only.
+
 
 **Legacy.** Required checkbox on each Response Fields row.
 
@@ -197,7 +201,7 @@ Alembic revision drops `is_new_model` and the `+New model`
 button. Template branches on `is_new_model` collapse to a single
 shape.
 
-### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug)
+### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug) — shipped 2026-05-24 (PR #1394)
 
 **Today.** In Grouped mode, the Band 2 preview shows a sample
 group's member names — but the **sample reviewee pick** is
@@ -387,7 +391,7 @@ new-model takes over from the legacy cards.
 Sequenced from smallest lift to biggest payoff, framed against
 the new-model card's actual needs.
 
-#### Rec A — Drop the per-instrument eligible-pair count from the index render *(S)*
+#### Rec A — Drop the per-instrument eligible-pair count from the index render *(S)* — shipped 2026-05-24 (PR #1393, conditional-skip flavour)
 
 The new-model card does not need to display a pair count. The
 legacy individual + group cards render it in the Assignment
@@ -494,7 +498,7 @@ every new-model card on the page re-fetches and re-ships the
 same active-reviewee roster. Three sub-recs in increasing
 order of payoff and effort:
 
-- **D1: Single roster query per render.** Lift the
+- **D1: Single roster query per render — shipped 2026-05-24 (PR #1393).** Lift the
   `SELECT * FROM reviewees WHERE session_id=? AND status='active'`
   out of `_new_model_band2_state`
   (`app/web/views/_instruments.py:412-419`) into

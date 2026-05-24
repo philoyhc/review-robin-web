@@ -52,15 +52,25 @@ catalogue verbatim and decides only **what order to ship in**.
 Five waves, each independently shippable. The PR ladder inside
 each wave is drafted when the wave is picked up.
 
-### Wave 1 — Quick wins (T-S, no schema) — picked up 2026-05-24
+### Wave 1 — Quick wins (T-S, no schema) — shipped 2026-05-24
 
-Land first; small diffs that cure the most visible operator
-pain today. After this wave the new-model card surfaces every
+Landed across five PRs (#1393, #1394, #1395, #1396, #1397) in
+one sitting. After this wave the new-model card surfaces every
 per-display-field affordance the legacy card has, the Grouped-
 mode preview is honest about group membership, and Save no
 longer pays the engine cost on the new-model path.
 
-**Design decisions taken at pickup.**
+**Shipped PRs.**
+
+| PR | Closes | Lift | Summary |
+|---|---|---|---|
+| #1393 | Rec A + Rec D1 | S | Conditional skip of `evaluate_session_rule_eligibility` for new-model-only pages; single active-reviewees query per render (was O(K)). |
+| #1394 | Gap 10 | T-S | `find_sample_in_scope_reviewee` returns the rule-surviving group-member ID set alongside the sample reviewee; persisted to `band2_state.sample_group_member_ids`; render filters group_members by the set. Refresh-gated honesty contract preserved. |
+| #1395 | Gap 1 | T-S | Pill toggle propagates to `InstrumentDisplayField.visible` via paired `update_display_field` calls; read path derives `selected_display_keys` from visible. Reviewer surface honours pill state. |
+| #1396 | Gap 3 | S | Sort badges on Band 2 preview `<th>` cells, reusing the legacy `toggleSort` / `_rebuildSortInputs` JS. New-model branch of `/fields/save` processes the same parallel arrays. |
+| #1397 | Gap 5 | T | Required checkbox on each Band 3 response-field row; persisted to `band2_state.response_fields[i].required`; preview column header gains `*` when required. Reviewer-surface enforcement waits for Wave 3 (Gap 2 bridge). |
+
+**Design decisions taken at pickup** (preserved for the record).
 
 - **Rec A flavour: conditional skip.** Skip
   `evaluate_session_rule_eligibility` for `is_new_model`
