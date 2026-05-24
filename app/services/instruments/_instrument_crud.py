@@ -930,48 +930,60 @@ def set_band2_state(
     persisted) skip the audit + lifecycle side effects.
     """
     sanitised: dict[str, Any] = {}
-    raw_keys = state.get("selected_display_keys") if isinstance(state, dict) else None
-    if isinstance(raw_keys, list):
-        sanitised_keys: list[str] = []
-        for raw in raw_keys:
-            k = str(raw).strip()
-            if k in _BAND2_ALLOWED_DISPLAY_KEYS and k not in sanitised_keys:
-                sanitised_keys.append(k)
-        if sanitised_keys:
-            sanitised["selected_display_keys"] = sanitised_keys
-    raw_rfs = state.get("response_fields") if isinstance(state, dict) else None
-    if isinstance(raw_rfs, list):
-        sanitised_rfs: list[dict[str, Any]] = []
-        for raw in raw_rfs:
-            if not isinstance(raw, dict):
-                continue
-            name = str(raw.get("name") or "").strip()[:255]
-            if not name:
-                continue
-            data_type = str(raw.get("data_type") or "string").strip().lower()
-            if data_type not in _BAND2_ALLOWED_DATA_TYPES:
-                data_type = "string"
-            rf: dict[str, Any] = {"name": name, "data_type": data_type}
-            for bound_key in _BAND2_RF_BOUND_KEYS:
-                value = raw.get(bound_key)
-                rf[bound_key] = str(value).strip()[:255] if value is not None else ""
-            rf["selected"] = bool(raw.get("selected"))
-            sanitised_rfs.append(rf)
-        if sanitised_rfs:
-            sanitised["response_fields"] = sanitised_rfs
-    # Preserve ``sample_reviewee_name`` across "non-sample" writes
-    # (pill toggle, RF save, RF delete) by carrying the existing
-    # value forward when the input payload doesn't mention it. The
-    # Refresh-preview endpoint sets it explicitly via this same
-    # service path with the sample name in the payload.
+    existing = instrument.band2_state or {}
+    # Field-presence semantics: every top-level key in band2_state
+    # is independently writable. A payload that *omits* a key
+    # carries the existing value forward; a payload that *includes*
+    # a key (even with an empty value) replaces it. This lets the
+    # pill-toggle save send only ``selected_display_keys`` without
+    # nuking the operator's ``response_fields`` or
+    # ``sample_reviewee_name``, and lets ↻ Refresh send only
+    # ``sample_reviewee_name`` without nuking the pill / RF state.
+    if isinstance(state, dict) and "selected_display_keys" in state:
+        raw_keys = state.get("selected_display_keys")
+        if isinstance(raw_keys, list):
+            sanitised_keys: list[str] = []
+            for raw in raw_keys:
+                k = str(raw).strip()
+                if k in _BAND2_ALLOWED_DISPLAY_KEYS and k not in sanitised_keys:
+                    sanitised_keys.append(k)
+            if sanitised_keys:
+                sanitised["selected_display_keys"] = sanitised_keys
+    else:
+        existing_keys = existing.get("selected_display_keys")
+        if isinstance(existing_keys, list) and existing_keys:
+            sanitised["selected_display_keys"] = list(existing_keys)
+    if isinstance(state, dict) and "response_fields" in state:
+        raw_rfs = state.get("response_fields")
+        if isinstance(raw_rfs, list):
+            sanitised_rfs: list[dict[str, Any]] = []
+            for raw in raw_rfs:
+                if not isinstance(raw, dict):
+                    continue
+                name = str(raw.get("name") or "").strip()[:255]
+                if not name:
+                    continue
+                data_type = str(raw.get("data_type") or "string").strip().lower()
+                if data_type not in _BAND2_ALLOWED_DATA_TYPES:
+                    data_type = "string"
+                rf: dict[str, Any] = {"name": name, "data_type": data_type}
+                for bound_key in _BAND2_RF_BOUND_KEYS:
+                    value = raw.get(bound_key)
+                    rf[bound_key] = str(value).strip()[:255] if value is not None else ""
+                rf["selected"] = bool(raw.get("selected"))
+                sanitised_rfs.append(rf)
+            if sanitised_rfs:
+                sanitised["response_fields"] = sanitised_rfs
+    else:
+        existing_rfs = existing.get("response_fields")
+        if isinstance(existing_rfs, list) and existing_rfs:
+            sanitised["response_fields"] = list(existing_rfs)
     if isinstance(state, dict) and "sample_reviewee_name" in state:
         candidate = str(state.get("sample_reviewee_name") or "").strip()[:255]
         if candidate:
             sanitised["sample_reviewee_name"] = candidate
     else:
-        existing_sample = (instrument.band2_state or {}).get(
-            "sample_reviewee_name"
-        )
+        existing_sample = existing.get("sample_reviewee_name")
         if existing_sample:
             sanitised["sample_reviewee_name"] = str(existing_sample)[:255]
     new_value: dict[str, Any] | None = sanitised or None

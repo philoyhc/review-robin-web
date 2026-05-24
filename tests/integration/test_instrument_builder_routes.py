@@ -1580,3 +1580,143 @@ def test_new_model_band2_refresh_persists_sample_to_band2_state(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     assert 'data-new-model-band2-sample-name="Eve"' in body
+
+
+def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
+    client: TestClient, db: Session
+) -> None:
+    """Each top-level band2_state key is independently writable —
+    a payload that *omits* a key carries the existing value forward
+    rather than wiping it. Regression coverage for the bug where
+    clicking ↻ Refresh preview (writes sample_reviewee_name only)
+    or toggling a pill (writes selected_display_keys only) clobbered
+    the operator's other Band 2 / Band 3 choices."""
+    review_session = _make_session(client, db, code="nm-state-preserve")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Seed all three keys via a single full POST.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": ["reviewee.name"],
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "list_options": "",
+                    "selected": True,
+                }
+            ],
+            "sample_reviewee_name": "Eve",
+        },
+    )
+    db.refresh(new_model)
+    seeded = new_model.band2_state
+    assert seeded["selected_display_keys"] == ["reviewee.name"]
+    assert len(seeded["response_fields"]) == 1
+    assert seeded["sample_reviewee_name"] == "Eve"
+
+    # Pill-toggle write: only selected_display_keys. response_fields
+    # + sample_reviewee_name must carry forward.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={"selected_display_keys": ["reviewee.name", "reviewee.email_or_identifier"]},
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["selected_display_keys"] == [
+        "reviewee.name",
+        "reviewee.email_or_identifier",
+    ]
+    assert len(new_model.band2_state["response_fields"]) == 1
+    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+
+    # RF-save write: only response_fields. selected_display_keys +
+    # sample_reviewee_name must carry forward.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "list_options": "",
+                    "selected": True,
+                },
+                {
+                    "name": "Comments",
+                    "data_type": "string",
+                    "min": "",
+                    "max": "200",
+                    "step": "",
+                    "list_options": "",
+                    "selected": False,
+                },
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert len(new_model.band2_state["response_fields"]) == 2
+    assert new_model.band2_state["selected_display_keys"] == [
+        "reviewee.name",
+        "reviewee.email_or_identifier",
+    ]
+    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+
+    # Refresh-sample write: only sample_reviewee_name (via the
+    # preview-sample route which now persists). Both other keys
+    # must survive.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+    assert new_model.band2_state["selected_display_keys"] == [
+        "reviewee.name",
+        "reviewee.email_or_identifier",
+    ]
+    assert len(new_model.band2_state["response_fields"]) == 2
