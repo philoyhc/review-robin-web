@@ -1464,6 +1464,62 @@ async def instrument_band2_state(
 
 
 @router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/identity"
+)
+async def instrument_set_identity(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Patch a single identity field (short_label or description)
+    on an instrument. Backs the new-model card's intro-card inline
+    edit toggles — the operator clicks ✎, types, clicks ✓, and the
+    JS fetches this endpoint with just the field that changed.
+    Mirrors the band2-state and help-text card pattern of small
+    JSON POSTs that persist independently of the bottom Save button.
+    """
+    instrument, _ = bundle
+    _require_instrument_editable(instrument.session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="identity body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="identity body must be a JSON object",
+        )
+    if "short_label" in body:
+        raw = body.get("short_label")
+        try:
+            instruments_service.update_short_label(
+                db,
+                instrument=instrument,
+                short_label=(raw if isinstance(raw, str) else None),
+                actor=user,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+    if "description" in body:
+        raw = body.get("description")
+        instruments_service.update_instrument_description(
+            db,
+            instrument=instrument,
+            description=(raw if isinstance(raw, str) else None),
+            actor=user,
+        )
+    db.commit()
+    return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
+
+
+@router.post(
     "/sessions/{session_id}/instruments/{instrument_id}/preview-sample"
 )
 async def instrument_preview_sample(

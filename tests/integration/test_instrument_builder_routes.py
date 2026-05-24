@@ -3204,10 +3204,21 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     ).text
     flat = " ".join(body.split())
 
-    # Card scaffolding present.
+    # Card scaffolding present. Title is "Page #N: <short_label>"
+    # (instrument position from the surrounding loop — the
+    # helper seeds a source instrument first, so the new model is
+    # the 2nd instrument).
     assert "data-new-model-band2-intro-card" in flat
-    assert '<h2>Peer Review</h2>' in flat
-    assert "Quick sanity check after milestone 1." in flat
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    intro_block = flat[intro_idx : intro_idx + 4000]
+    assert "Page #2:" in intro_block
+    # short_label renders inside the view span (alongside the
+    # Page # prefix); description renders inside the view paragraph.
+    assert (
+        '<span data-intro-short-label-view style="font-weight: inherit;">Peer Review</span>'
+        in intro_block
+    )
+    assert "Quick sanity check after milestone 1." in intro_block
 
     # 2 selected response fields (Rating, Notes) — Bonus is
     # deselected, so it doesn't contribute. 1 of them is required.
@@ -3215,8 +3226,6 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     assert "All items completed: 0/2" in flat
     # Required pill is warning (1 required, 0 done). All pill is
     # neutral count.
-    intro_idx = flat.find("data-new-model-band2-intro-card")
-    intro_block = flat[intro_idx : intro_idx + 2500]
     assert 'class="pill pill-warning"' in intro_block
     assert 'class="pill pill-count"' in intro_block
 
@@ -3246,9 +3255,14 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     flat = " ".join(body.split())
     intro_idx = flat.find("data-new-model-band2-intro-card")
     assert intro_idx != -1
-    intro_block = flat[intro_idx : intro_idx + 2000]
-    # Heading still renders.
-    assert '<h2>Reflection</h2>' in intro_block
+    intro_block = flat[intro_idx : intro_idx + 3000]
+    # Heading still renders (Page #2: Reflection — source seed
+    # instrument is #1).
+    assert "Page #2:" in intro_block
+    assert (
+        '<span data-intro-short-label-view style="font-weight: inherit;">Reflection</span>'
+        in intro_block
+    )
     # Progress pills do not.
     assert "Required items completed" not in intro_block
     assert "All items completed" not in intro_block
@@ -3288,6 +3302,119 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     intro_idx = flat.find("data-new-model-band2-intro-card")
     intro_block = flat[intro_idx : intro_idx + 2500]
     assert 'class="pill pill-success"' in intro_block
+
+
+def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """The intro card's ✎/✓ icons for short_label + description only
+    render when the instrument is in edit mode. In view mode (no
+    ``editing=`` query param), the icons are absent — operator
+    cannot toggle the inline editor."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-intro-edit-gate"
+    )
+    new_model.short_label = "Gated"
+    new_model.description = "View-mode placeholder."
+    db.commit()
+
+    # View mode (no ``editing=...`` param). The JS code that
+    # implements the toggle contains the attribute names as
+    # CSS-selector substrings, so we look for the button
+    # markup specifically (the onclick handler is unique to
+    # the button element).
+    view_body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "newModelIntroShortLabelEdit(this)" not in view_body
+    assert "newModelIntroShortLabelSave(this)" not in view_body
+    assert "newModelIntroDescriptionEdit(this)" not in view_body
+    assert "newModelIntroDescriptionSave(this)" not in view_body
+
+    # Edit mode — ✎/✓ icons render (✓ hidden by default).
+    edit_body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert "newModelIntroShortLabelEdit(this)" in edit_body
+    assert "newModelIntroShortLabelSave(this)" in edit_body
+    assert "newModelIntroDescriptionEdit(this)" in edit_body
+    assert "newModelIntroDescriptionSave(this)" in edit_body
+
+
+def test_intro_identity_endpoint_updates_short_label(
+    client: TestClient, db: Session
+) -> None:
+    """POST /identity with {short_label: "..."} updates the
+    instrument's short_label and returns 200."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="identity-short-label"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={"short_label": "Q1 Self-Eval"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    db.refresh(new_model)
+    assert new_model.short_label == "Q1 Self-Eval"
+
+
+def test_intro_identity_endpoint_updates_description(
+    client: TestClient, db: Session
+) -> None:
+    """POST /identity with {description: "..."} updates the
+    instrument's description and returns 200."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="identity-description"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={"description": "Reflect on the milestone."},
+    )
+    assert response.status_code == 200
+    db.refresh(new_model)
+    assert new_model.description == "Reflect on the milestone."
+
+
+def test_intro_identity_endpoint_updates_both_fields(
+    client: TestClient, db: Session
+) -> None:
+    """A single POST can update both fields together."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="identity-both"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={
+            "short_label": "Skills Check",
+            "description": "Quarterly skills review.",
+        },
+    )
+    assert response.status_code == 200
+    db.refresh(new_model)
+    assert new_model.short_label == "Skills Check"
+    assert new_model.description == "Quarterly skills review."
+
+
+def test_intro_identity_endpoint_rejects_short_label_over_32_chars(
+    client: TestClient, db: Session
+) -> None:
+    """short_label > 32 chars is rejected with 400 by the service-side
+    cap. UI maxlength enforces the same cap; the endpoint guards
+    against bypasses."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="identity-too-long"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={"short_label": "x" * 33},
+    )
+    assert response.status_code == 400
 
 
 # --------------------------------------------------------------------------- #
