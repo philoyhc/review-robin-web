@@ -1171,6 +1171,10 @@ def _apply_instruments(
                     f"unknown RTD {rf_spec.response_type!r} on this session "
                     f"(instruments[{n}].response_fields[{m}].response_type)"
                 )
+            from app.services.instruments._response_fields import (
+                inline_kwargs_from_rtd,
+            )
+
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
@@ -1182,6 +1186,7 @@ def _apply_instruments(
                     validation=validation_block_for_rtd(rtd),
                     help_text=rf_spec.help_text,
                     help_text_visible=rf_spec.help_text_visible,
+                    **inline_kwargs_from_rtd(rtd),
                 )
             )
             counts["response_fields"] += 1

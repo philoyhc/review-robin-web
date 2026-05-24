@@ -106,44 +106,32 @@ class InstrumentResponseField(Base):
 
     @property
     def response_type(self) -> str:
-        # Segment 18J Wave 2 PR iii-a — inline columns are the
-        # source of truth. List-type fields keep the FK around for
-        # option-list reuse across instruments; numerical / string
-        # fields land with response_type_id = NULL post-iii-a (the
-        # seeded non-List RTDs are dropped by the iii-a migration).
-        # The fallback to response_type_definition is belt-and-
-        # braces for the brief window where a transitional creator
-        # path might still be setting the FK without the listener
-        # firing; it retires in PR iii-b alongside the FK column
-        # itself.
-        if self._inline_response_type is not None:
-            return self._inline_response_type
-        if self.response_type_definition is not None:
-            return self.response_type_definition.response_type
-        return ""
+        # Segment 18J Wave 2 PR iii-b1 — production creators
+        # populate the inline columns explicitly via
+        # ``inline_kwargs_from_rtd`` and reads now go straight to
+        # the inline column. The before_insert listener stays as a
+        # safety net for direct-ORM construction paths in tests
+        # (~15 sites that bypass the service layer); it retires
+        # alongside the FK column itself in a later iii-b sub-PR.
+        return self._inline_response_type or ""
 
     @property
     def data_type(self) -> str:
-        if self._inline_data_type is not None:
-            return self._inline_data_type
-        if self.response_type_definition is not None:
-            return self.response_type_definition.data_type
-        return ""
+        return self._inline_data_type or ""
 
 
 @event.listens_for(InstrumentResponseField, "before_insert")
 def _sync_inline_bounds_from_rtd(mapper, connection, target) -> None:
-    """Bridge listener: when a new ``InstrumentResponseField`` row
-    sets ``response_type_id`` (typical for List fields, and for
-    backward-compatible numerical / string creation paths that
-    haven't yet been updated to populate inline directly), copy
-    the RTD's bounds onto the inline columns so reads land in the
-    right shape regardless of which API the caller used.
+    """Bridge listener — copies an RTD's data_type / response_type /
+    bounds onto the inline columns when a row is inserted with
+    ``response_type_id`` set but no explicit inline kwargs.
 
-    Originally added in PR i; survives iii-a so the FK still
-    works as a bound source for callers in transition. Retires in
-    PR iii-b alongside the FK column itself, once every creator
-    populates inline columns explicitly.
+    Production creators all populate inline explicitly via
+    ``inline_kwargs_from_rtd`` post-iii-b1, so the listener is a
+    no-op for them (idempotent: skipped when ``_inline_data_type``
+    is already set). It remains as a safety net for direct-ORM
+    construction paths in tests + retires in a later iii-b sub-PR
+    alongside the FK column itself.
     """
     if target._inline_data_type is not None:
         return
