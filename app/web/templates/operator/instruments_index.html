@@ -1170,7 +1170,7 @@
           };
         </script>
 
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+        <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-muted, #cbd5e1);">
         {# Band 2 — "Review Instrument": a selectable chip row that
            drives a client-side preview of the reviewer-surface row
            the reviewer would see for this instrument. Each populated
@@ -1261,9 +1261,15 @@
                /identity (independent of the bottom Save button —
                same pattern as the help-text cards). The toggles
                only render when the instrument is in edit mode. #}
+            {# Counts reflect the operator-authored response-field
+               set as a whole, NOT just the chips currently toggled
+               on in the preview. Pill-toggle visibility is a
+               column-render concern; the progress numbers a
+               reviewer would see are based on every response field
+               attached to the instrument. #}
             {% set _rf_list = _band2.response_fields or [] %}
-            {% set _all_count = (_rf_list | selectattr('selected') | list | length) %}
-            {% set _required_count = (_rf_list | selectattr('selected') | selectattr('required') | list | length) %}
+            {% set _all_count = (_rf_list | list | length) %}
+            {% set _required_count = (_rf_list | selectattr('required') | list | length) %}
             {% set _intro_title = instrument.short_label or instrument.name %}
             <div class="rs-intro-grid"
                  data-new-model-band2-intro-card
@@ -2499,7 +2505,7 @@
           })();
         </script>
 
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+        <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-muted, #cbd5e1);">
         {# Band 3 — Visibility / read-shape / release-timing
            audience policy. Card splits into two columns. The left
            column carries a ``Visibility`` table with one row per
