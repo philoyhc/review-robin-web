@@ -93,14 +93,13 @@ def ensure_default_instrument(
         )
 
         for spec in DEFAULT_RESPONSE_FIELDS:
-            # iii-b2: default response fields no longer reference
-            # an RTD — data_type + bounds ride inline on the spec.
+            # iii-b2: default response fields carry data_type +
+            # bounds inline (no RTD reference).
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
                     field_key=spec["field_key"],
                     label=spec["label"],
-                    response_type_id=None,
                     required=spec["required"],
                     order=spec["order"],
                     validation=_validation_block_from_default_spec(spec),
@@ -234,7 +233,6 @@ def create_instrument(
                 instrument_id=instrument.id,
                 field_key=spec["field_key"],
                 label=spec["label"],
-                response_type_id=None,
                 required=spec["required"],
                 order=spec["order"],
                 validation=_validation_block_from_default_spec(spec),
@@ -369,7 +367,6 @@ def replicate_instrument(
                 instrument_id=instrument.id,
                 field_key=field.field_key,
                 label=field.label,
-                response_type_id=field.response_type_id,
                 required=field.required,
                 order=field.order,
                 validation=(

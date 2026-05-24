@@ -11,6 +11,7 @@ guide/archive/major_refactor.md §12.D.
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -162,6 +163,10 @@ def test_rtd_edit_route_locks_seeded_rows(
     assert response.status_code == 409
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — RTD-field FK retired; "
+    "deleting an RTD no longer cascades anywhere."
+)
 def test_rtd_delete_route_blocks_in_use_then_confirm_cascades(
     client: TestClient, db: Session
 ) -> None:
@@ -450,6 +455,10 @@ def test_rtd_add_button_disabled_when_editing_an_existing_row(
 # --- Slice 4c: operator-pickable Type on new RF rows --------------
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — RTD-field FK retired; "
+    "the would-empty-instrument check is moot."
+)
 def test_rtd_delete_blocks_when_cascade_would_empty_instrument(
     client: TestClient, db: Session
 ) -> None:
@@ -511,6 +520,10 @@ def test_rtd_delete_blocks_when_cascade_would_empty_instrument(
 # --- Banner scroll-target convention --------------------------------
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — would-empty banner gone "
+    "with the FK retirement."
+)
 def test_rtd_would_empty_banner_carries_scroll_target_and_source_cancel(
     client: TestClient, db: Session
 ) -> None:

@@ -39,7 +39,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -201,7 +200,6 @@ def _response_row_tuple(
     reviewee: Reviewee,
     instrument: Instrument,
     field: InstrumentResponseField,
-    rtd: ResponseTypeDefinition,
     *,
     instrument_label: str,
     group_key: tuple[str, ...] | None,
@@ -210,9 +208,8 @@ def _response_row_tuple(
 ) -> tuple[str, ...]:
     """Build the 21-column data tuple for one ``Response``.
 
-    ``group_key`` is the assignment's group key on a group-scoped
-    instrument (``None`` for per-reviewee) — the caller dedupes the
-    fan-out's duplicate rows before invoking this helper.
+    iii-b4: the ``response_type`` column reads ``field.response_type``
+    (inline; no RTD join). Pre-iii-b4 callers passed an RTD instance.
     """
     if group_key is not None:
         reviewee_name = group_identity.get(
@@ -249,7 +246,7 @@ def _response_row_tuple(
         instrument.short_label or "",
         field.field_key,
         field.label,
-        rtd.response_type,
+        field.response_type,
         response.value if response.value is not None else "",
         self_review,
         iso_in_zone(response.saved_at, session_zone),
@@ -336,7 +333,6 @@ def serialize_responses(
             Reviewee,
             Instrument,
             InstrumentResponseField,
-            ResponseTypeDefinition,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -345,11 +341,6 @@ def serialize_responses(
         .join(
             InstrumentResponseField,
             Response.response_field_id == InstrumentResponseField.id,
-        )
-        .join(
-            ResponseTypeDefinition,
-            InstrumentResponseField.response_type_id
-            == ResponseTypeDefinition.id,
         )
         .where(Assignment.session_id == review_session.id)
         .order_by(
@@ -363,14 +354,11 @@ def serialize_responses(
         .execution_options(yield_per=1000)
     )
 
-    for response, reviewer, reviewee, instrument, field, rtd in db.execute(
+    for response, reviewer, reviewee, instrument, field in db.execute(
         stmt
     ):
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
-            # Group-scoped — collapse the fanned-out member
-            # duplicates to one row per (reviewer, instrument,
-            # group, field).
             cell = (reviewer.id, instrument.id, group_key, field.id)
             if cell in seen_group_cells:
                 continue
@@ -381,7 +369,6 @@ def serialize_responses(
             reviewee,
             instrument,
             field,
-            rtd,
             instrument_label=instrument_label.get(instrument.id, ""),
             group_key=group_key,
             group_identity=group_identity,
@@ -447,7 +434,6 @@ def serialize_responses_for_instrument(
             Reviewee,
             Instrument,
             InstrumentResponseField,
-            ResponseTypeDefinition,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -456,11 +442,6 @@ def serialize_responses_for_instrument(
         .join(
             InstrumentResponseField,
             Response.response_field_id == InstrumentResponseField.id,
-        )
-        .join(
-            ResponseTypeDefinition,
-            InstrumentResponseField.response_type_id
-            == ResponseTypeDefinition.id,
         )
         .where(Assignment.session_id == review_session.id)
         .where(Assignment.instrument_id == instrument.id)
@@ -474,7 +455,7 @@ def serialize_responses_for_instrument(
     )
 
     collected: list[tuple[tuple[str, str, int, int], tuple[str, ...]]] = []
-    for response, reviewer, reviewee, instr, field, rtd in db.execute(stmt):
+    for response, reviewer, reviewee, instr, field in db.execute(stmt):
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
             cell = (reviewer.id, instr.id, group_key, field.id)
@@ -487,7 +468,6 @@ def serialize_responses_for_instrument(
             reviewee,
             instr,
             field,
-            rtd,
             instrument_label=label,
             group_key=group_key,
             group_identity=group_identity,
@@ -589,7 +569,6 @@ def serialize_reviewer_session_summary(
             Reviewee,
             Instrument,
             InstrumentResponseField,
-            ResponseTypeDefinition,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -598,11 +577,6 @@ def serialize_reviewer_session_summary(
         .join(
             InstrumentResponseField,
             Response.response_field_id == InstrumentResponseField.id,
-        )
-        .join(
-            ResponseTypeDefinition,
-            InstrumentResponseField.response_type_id
-            == ResponseTypeDefinition.id,
         )
         .where(Assignment.session_id == review_session.id)
         .where(Assignment.reviewer_id == reviewer.id)
@@ -616,7 +590,7 @@ def serialize_reviewer_session_summary(
         .execution_options(yield_per=1000)
     )
 
-    for response, the_reviewer, reviewee, instrument, field, rtd in db.execute(
+    for response, the_reviewer, reviewee, instrument, field in db.execute(
         stmt
     ):
         group_key = group_key_by_assignment.get(response.assignment_id)
@@ -631,7 +605,6 @@ def serialize_reviewer_session_summary(
             reviewee,
             instrument,
             field,
-            rtd,
             instrument_label=instrument_label.get(instrument.id, ""),
             group_key=group_key,
             group_identity=group_identity,

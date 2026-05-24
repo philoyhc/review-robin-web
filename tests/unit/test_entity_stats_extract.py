@@ -126,9 +126,16 @@ def _field(
         instrument_id=instrument.id,
         field_key=field_key,
         label=field_key.title(),
-        response_type_id=rtd.id,
         required=required,
         order=order,
+        # iii-b4: FK retired; inline columns carry data_type for
+        # the extract's "string chars" filter.
+        _inline_data_type=rtd.data_type,
+        _inline_response_type=rtd.response_type,
+        _inline_min=rtd.min,
+        _inline_max=rtd.max,
+        _inline_step=rtd.step,
+        _inline_list_csv=rtd.list_csv,
     )
     db.add(f)
     db.flush()

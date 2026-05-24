@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.models.instrument_field import InstrumentResponseField
     from app.db.models.review_session import ReviewSession
 
 
@@ -34,21 +33,15 @@ class ResponseTypeDefinition(Base):
     list_csv: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_seeded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     seed_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    # Segment 18J Wave 2 PR iii-b3 retired the operator RTD
-    # library tier (the cross-session "Save to library" /
-    # "Add from library" workflow). The ``library_origin_id``
-    # provenance FK + the ``operator_response_type_definitions``
-    # table were both dropped; per-session RTDs no longer carry
-    # a cross-session provenance pointer.
+    # Segment 18J Wave 2 PR iii-b3 retired the operator RTD library
+    # tier (cross-session library workflow); PR iii-b4 dropped the
+    # ``instrument_response_fields.response_type_id`` FK + the
+    # ``response_fields`` back-population. Post-iii-b4 this table
+    # carries no inbound FKs from instrument fields — it survives
+    # only for operator-authored standalone RTD CRUD via the per-
+    # instrument card, which retires alongside the legacy
+    # individual / group cards in Wave 5.
 
     session: Mapped[ReviewSession] = relationship(
         back_populates="response_type_definitions"
-    )
-    response_fields: Mapped[list[InstrumentResponseField]] = relationship(
-        back_populates="response_type_definition",
-        # ``passive_deletes`` lets the database FK ``ON DELETE CASCADE``
-        # handle dependent-row removal instead of having SQLAlchemy
-        # NULL-out the FK column before the parent delete fires (which
-        # would violate the column's NOT NULL constraint).
-        passive_deletes=True,
     )

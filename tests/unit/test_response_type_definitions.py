@@ -256,6 +256,9 @@ def test_assert_rtd_precision_skips_string_and_list() -> None:
     )
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — response_type_id FK retired."
+)
 def test_response_field_carries_response_type_id_fk_with_cascade() -> None:
     """The schema declares the ``response_type_id`` FK with
     ``ON DELETE CASCADE`` so 4b's operator-defined-RTD delete drops
@@ -405,6 +408,10 @@ def test_add_rtd_rejects_duplicate_name_on_session(db: Session) -> None:
         )
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — RTDs have no dependent "
+    "fields post-FK-retirement; propagation is a no-op."
+)
 def test_update_rtd_propagates_validation_to_dependent_rf(
     db: Session,
 ) -> None:
@@ -503,6 +510,9 @@ def test_delete_rtd_not_in_use_drops_immediately(db: Session) -> None:
     assert remaining is None
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — no FK, no in-use, no cascade."
+)
 def test_delete_rtd_in_use_with_saved_responses_cascades(
     db: Session,
 ) -> None:
@@ -594,6 +604,9 @@ def test_delete_rtd_in_use_with_saved_responses_cascades(
     )
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — no FK, no in-use check."
+)
 def test_delete_rtd_in_use_without_confirm_raises_with_dependent_counts(
     db: Session,
 ) -> None:
@@ -773,6 +786,10 @@ def test_add_default_response_field_field_key_collision_gets_numeric_suffix(
 # --- Slice 4d: would-empty-instrument cascade-delete block ---------
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — count_rtd_dependents "
+    "always returns zero dependents post-FK-retirement."
+)
 def test_count_rtd_dependents_lists_would_be_emptied_instruments(
     db: Session,
 ) -> None:
@@ -814,6 +831,9 @@ def test_count_rtd_dependents_lists_would_be_emptied_instruments(
     ]
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — cascade is gone."
+)
 def test_delete_rtd_blocks_when_cascade_would_empty_instrument(
     db: Session,
 ) -> None:
@@ -856,6 +876,9 @@ def test_delete_rtd_blocks_when_cascade_would_empty_instrument(
     assert db.get(ResponseTypeDefinition, custom.id) is not None
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b4 — in-use check is gone."
+)
 def test_delete_rtd_in_use_but_other_rows_remain_still_raises_in_use_error(
     db: Session,
 ) -> None:

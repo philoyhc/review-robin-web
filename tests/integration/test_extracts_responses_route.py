@@ -95,8 +95,11 @@ def _seed_pair_with_response(
         instrument_id=instrument.id,
         field_key="overall",
         label="Overall",
-        response_type_id=likert.id,
         order=0,
+        # iii-b4: FK retired; inline columns carry the data.
+        _inline_data_type=likert.data_type,
+        _inline_response_type=likert.response_type,
+        _inline_list_csv=likert.list_csv,
     )
     db.add(field)
     db.flush()

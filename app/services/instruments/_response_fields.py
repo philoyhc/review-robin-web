@@ -496,7 +496,6 @@ def add_response_field(
         instrument_id=instrument.id,
         field_key=field_key,
         label=label.strip(),
-        response_type_id=rtd.id,
         required=required,
         order=len(fields),
         validation=validation_block_for_rtd(rtd),
@@ -524,7 +523,6 @@ def add_response_field(
                 "id": new_field.id,
                 "field_key": new_field.field_key,
                 "label": new_field.label,
-                "response_type_id": rtd.id,
                 "required": new_field.required,
                 "order": new_field.order,
                 "validation": new_field.validation,
@@ -532,7 +530,7 @@ def add_response_field(
                 "help_text_visible": new_field.help_text_visible,
             }
         ),
-        refs={"instrument_id": instrument.id, "response_type_id": rtd.id},
+        refs={"instrument_id": instrument.id},
         context={"response_type": rtd.response_type},
     )
     db.commit()
@@ -632,21 +630,17 @@ def add_default_response_field(
 
     if chosen_rtd is not None:
         field_kwargs: dict[str, Any] = {
-            "response_type_id": chosen_rtd.id,
             "validation": validation_block_for_rtd(chosen_rtd),
             **inline_kwargs_from_rtd(chosen_rtd),
         }
         audit_response_type: str = chosen_rtd.response_type
-        audit_response_type_id: int | None = chosen_rtd.id
     else:
         default_spec = DEFAULT_RESPONSE_FIELDS[0]
         field_kwargs = {
-            "response_type_id": None,
             "validation": _validation_block_from_default_spec(default_spec),
             **_inline_kwargs_from_default_spec(default_spec),
         }
         audit_response_type = default_spec["response_type"]
-        audit_response_type_id = None
 
     new_field = InstrumentResponseField(
         instrument_id=instrument.id,
@@ -662,8 +656,6 @@ def add_default_response_field(
     db.flush()
 
     default_add_refs: dict[str, int] = {"instrument_id": instrument.id}
-    if audit_response_type_id is not None:
-        default_add_refs["response_type_id"] = audit_response_type_id
     if after_field_id is not None:
         default_add_refs["after_field_id"] = after_field_id
     audit.write_event(
@@ -680,7 +672,6 @@ def add_default_response_field(
                 "id": new_field.id,
                 "field_key": new_field.field_key,
                 "label": new_field.label,
-                "response_type_id": audit_response_type_id,
                 "required": new_field.required,
                 "order": new_order,
             }
@@ -821,7 +812,6 @@ def delete_response_field(
         "id": field.id,
         "field_key": field.field_key,
         "label": field.label,
-        "response_type_id": field.response_type_id,
         "required": field.required,
         "order": field.order,
         "validation": field.validation,

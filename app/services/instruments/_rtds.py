@@ -17,13 +17,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    Instrument,
-    InstrumentResponseField,
-    Response,
     ResponseTypeDefinition,
     ReviewSession,
     User,
@@ -267,74 +264,16 @@ class RTDDeleteWouldEmptyInstrumentError(Exception):
 def count_rtd_dependents(
     db: Session, *, rtd: ResponseTypeDefinition
 ) -> dict[str, Any]:
-    """Count the rows that would be cascade-dropped if this RTD is
-    deleted, plus the list of instruments that would be left with
-    zero Response Fields rows after the cascade. Used by the
-    operator-delete confirmation dialog and the hard-block check."""
-    rf_rows = list(
-        db.execute(
-            select(InstrumentResponseField.id, InstrumentResponseField.instrument_id)
-            .where(InstrumentResponseField.response_type_id == rtd.id)
-        )
-    )
-    rf_ids = [r[0] for r in rf_rows]
-    instrument_ids = {r[1] for r in rf_rows}
-
-    if not rf_ids:
-        response_count = 0
-        assignment_count = 0
-    else:
-        response_count = int(
-            db.execute(
-                select(func.count(Response.id)).where(
-                    Response.response_field_id.in_(rf_ids)
-                )
-            ).scalar_one()
-        )
-        assignment_count = int(
-            db.execute(
-                select(func.count(func.distinct(Response.assignment_id))).where(
-                    Response.response_field_id.in_(rf_ids)
-                )
-            ).scalar_one()
-        )
-
-    # For each instrument that has any RF row referencing this RTD,
-    # count the *other* RF rows on that instrument (rows not
-    # referencing this RTD). If zero, the cascade would empty it.
+    """Segment 18J Wave 2 PR iii-b4 — the ``response_type_id`` FK
+    from ``instrument_response_fields`` retired. RTDs no longer
+    have any inbound field references, so deleting an RTD never
+    cascades and never empties an instrument. Returns the zero-
+    dependent shape for back-compat with the route's signature."""
+    rf_ids: list[int] = []
+    instrument_ids: set[int] = set()
+    response_count = 0
+    assignment_count = 0
     would_empty: list[dict[str, Any]] = []
-    if instrument_ids:
-        instruments_in_session = list(
-            db.execute(
-                select(Instrument)
-                .where(Instrument.session_id == rtd.session_id)
-                .order_by(Instrument.order, Instrument.id)
-            ).scalars()
-        )
-        position_by_id = {inst.id: idx for idx, inst in enumerate(instruments_in_session, start=1)}
-        for instrument_id in instrument_ids:
-            # iii-b2: ``response_type_id IS NULL`` rows (numerical /
-            # string fields with bounds inline) count as still on
-            # the instrument. SQL ``!=`` against NULL is NULL, so
-            # the bare predicate would silently drop them.
-            other_rf_count = int(
-                db.execute(
-                    select(func.count(InstrumentResponseField.id)).where(
-                        InstrumentResponseField.instrument_id == instrument_id,
-                        (
-                            InstrumentResponseField.response_type_id != rtd.id
-                        )
-                        | InstrumentResponseField.response_type_id.is_(None),
-                    )
-                ).scalar_one()
-            )
-            if other_rf_count == 0:
-                would_empty.append({
-                    "instrument_id": instrument_id,
-                    "instrument_number": position_by_id.get(instrument_id, 0),
-                })
-        # Sort by on-screen number so the banner reads in card order.
-        would_empty.sort(key=lambda e: e["instrument_number"])
 
     return {
         "response_field_count": len(rf_ids),
@@ -537,24 +476,10 @@ def update_response_type_definition(
 
     db.flush()
 
-    # Propagate the new validation block to every dependent RF row
-    # (per spec). Do this regardless of whether ``changes`` is empty —
-    # if some upstream code wrote an out-of-sync block, this re-syncs.
-    new_block = validation_block_for_rtd(rtd)
-    dependent_rfs = list(
-        db.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.response_type_id == rtd.id
-            )
-        ).scalars()
-    )
+    # Segment 18J Wave 2 PR iii-b4 — the FK from
+    # ``instrument_response_fields`` retired; an RTD update no
+    # longer propagates to dependent fields (there are none).
     propagated = 0
-    for rf in dependent_rfs:
-        if rf.validation != new_block:
-            rf.validation = new_block
-            propagated += 1
-    if propagated:
-        db.flush()
 
     if changes or propagated:
         audit.write_event(
@@ -628,20 +553,9 @@ def delete_response_type_definition(
     }
     review_session = rtd.session
     rtd_id = rtd.id
-    # Clear dependent ``responses`` before the delete. The DB
-    # cascade reaches ``instrument_response_fields`` but not the
-    # ``responses`` below them (``response_field_id`` has no
-    # ``ON DELETE CASCADE``), so an RTD whose fields carry saved
-    # responses would otherwise abort the delete on an FK violation.
-    db.execute(
-        delete(Response).where(
-            Response.response_field_id.in_(
-                select(InstrumentResponseField.id).where(
-                    InstrumentResponseField.response_type_id == rtd_id
-                )
-            )
-        )
-    )
+    # Segment 18J Wave 2 PR iii-b4 — the field → RTD FK retired;
+    # an RTD has no inbound field references and deleting it never
+    # cascades anywhere. The Response-pre-delete dance is gone.
     db.delete(rtd)
     db.flush()
 

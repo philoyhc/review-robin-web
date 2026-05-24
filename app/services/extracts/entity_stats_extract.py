@@ -32,7 +32,6 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -161,7 +160,11 @@ def build_entity_stats(
             Assignment.instrument_id,
             InstrumentResponseField.id,
             InstrumentResponseField.required,
-            ResponseTypeDefinition.data_type,
+            # iii-b4: data_type now reads from the inline column on
+            # ``instrument_response_fields`` directly (column name
+            # ``data_type``; the FK to ``response_type_definitions``
+            # retired with this PR).
+            InstrumentResponseField._inline_data_type.label("data_type"),
             Response.value,
             Response.submitted_at,
         )
@@ -170,11 +173,6 @@ def build_entity_stats(
         .join(
             InstrumentResponseField,
             Response.response_field_id == InstrumentResponseField.id,
-        )
-        .join(
-            ResponseTypeDefinition,
-            InstrumentResponseField.response_type_id
-            == ResponseTypeDefinition.id,
         )
         .where(Assignment.session_id == review_session.id)
         .execution_options(yield_per=1000)

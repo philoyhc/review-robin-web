@@ -153,9 +153,17 @@ def _add_field(
         instrument_id=instrument.id,
         field_key=field_key,
         label=label,
-        response_type_id=rtd.id,
         order=order,
         help_text=help_text,
+        # iii-b4: FK retired; populate inline columns directly so
+        # downstream readers (extracts, properties) see the right
+        # data_type / response_type.
+        _inline_data_type=rtd.data_type,
+        _inline_response_type=rtd.response_type,
+        _inline_min=rtd.min,
+        _inline_max=rtd.max,
+        _inline_step=rtd.step,
+        _inline_list_csv=rtd.list_csv,
     )
     db.add(f)
     db.flush()
