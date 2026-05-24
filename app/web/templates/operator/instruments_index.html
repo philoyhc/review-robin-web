@@ -1372,11 +1372,18 @@
                   <p class="rs-instrument-subtitle muted"
                      data-intro-description-view
                      style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
+                  {# ``hidden`` on the textarea relies on UA
+                     stylesheet's [hidden] { display: none } rule —
+                     so the inline style must NOT carry an explicit
+                     display, or it would win on specificity and
+                     leave the textarea visible alongside the view
+                     paragraph in non-edit mode. JS toggles
+                     ``input.hidden`` to swap into edit mode. #}
                   <textarea data-intro-description-input
                             placeholder="(no description)"
                             maxlength="2000"
                             hidden
-                            style="display: block; width: 100%; margin-top: 4px;
+                            style="width: 100%; margin-top: 4px;
                                    min-height: 4em; box-sizing: border-box;
                                    font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
                   {% if is_editing %}

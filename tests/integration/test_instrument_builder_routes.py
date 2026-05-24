@@ -3304,6 +3304,41 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     assert 'class="pill pill-success"' in intro_block
 
 
+def test_band2_intro_card_description_textarea_hidden_uses_hidden_attr_only(
+    client: TestClient, db: Session
+) -> None:
+    """Regression: the description textarea must NOT carry an
+    explicit ``display`` value in its inline style, otherwise the
+    ``hidden`` attribute (which works via the UA stylesheet's
+    [hidden] { display: none } rule) gets out-specificity'd by the
+    inline style and the textarea remains visible alongside the
+    view paragraph in non-edit mode — appearing as a perceivable
+    empty box, and doubling up with the view text when JS enters
+    edit mode."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-intro-textarea-hidden"
+    )
+    new_model.short_label = "Hidden Test"
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    assert intro_idx != -1
+    intro_block = flat[intro_idx : intro_idx + 4000]
+    ta_idx = intro_block.find("data-intro-description-input")
+    assert ta_idx != -1
+    # Walk back to the opening <textarea tag and scan its
+    # attributes for an inline display value.
+    ta_open = intro_block.rfind("<textarea", 0, ta_idx)
+    ta_close = intro_block.find(">", ta_idx)
+    ta_tag = intro_block[ta_open : ta_close + 1]
+    assert "hidden" in ta_tag
+    assert "display:" not in ta_tag.lower()
+
+
 def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
     client: TestClient, db: Session
 ) -> None:
