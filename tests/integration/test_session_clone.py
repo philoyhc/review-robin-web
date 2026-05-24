@@ -124,7 +124,12 @@ def test_clone_remaps_response_field_rtd(db: Session) -> None:
     ).scalars().all()
     assert response_fields
     for field in response_fields:
-        assert field.response_type_id in clone_rtd_ids
+        # iii-b2: default response fields land with response_type_id
+        # = NULL (bounds inline). List-typed operator-authored RTDs
+        # still point at a clone-tier RTD.
+        assert field.response_type_id is None or (
+            field.response_type_id in clone_rtd_ids
+        )
 
 
 def test_clone_config_skips_roster(db: Session) -> None:

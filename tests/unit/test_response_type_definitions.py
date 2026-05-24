@@ -51,31 +51,12 @@ def _session(
 
 
 def test_seeded_constants_match_spec_count_and_order() -> None:
-    """The 10 seeded RTDs match the locked spec in
-    ``spec/instruments.md`` (count + order + parameters)."""
-    names = [r["response_type"] for r in SEEDED_RESPONSE_TYPE_DEFINITIONS]
-    assert names == [
-        "Long_text",
-        "Short_text",
-        "Yes_no",
-        "Grade",
-        "Likert5",
-        "100int",
-        "0-to-2int",
-        "1-to-5int",
-        "1-to-5half",
-        "1-to-5dec",
-    ]
-    by_name = {r["response_type"]: r for r in SEEDED_RESPONSE_TYPE_DEFINITIONS}
-    assert by_name["Long_text"]["max"] == 2000
-    assert by_name["Short_text"]["max"] == 100
-    assert by_name["100int"] == {
-        "response_type": "100int", "data_type": "Integer",
-        "min": 0, "max": 100, "step": 1, "list_csv": None,
-    }
-    assert by_name["Likert5"]["list_csv"] == (
-        "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree"
-    )
+    """Segment 18J Wave 2 PR iii-b2 — the seeded RTD catalogue
+    fully retired. Bounds + list options now live inline on
+    ``instrument_response_fields``. The legacy-shape constants
+    survive in ``tests/_legacy_rtd_helpers.py`` purely for back-
+    compat with pre-iii-b2 fixtures that look RTDs up by name."""
+    assert SEEDED_RESPONSE_TYPE_DEFINITIONS == []
 
 
 def test_ensure_seed_is_idempotent(db: Session) -> None:

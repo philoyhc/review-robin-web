@@ -48,28 +48,88 @@ from app.services.instruments._display_fields import (
 from app.services.instruments._rtds import (
     _rtd_by_id,
     _rtd_by_name,
-    ensure_default_response_type_definitions,
     validation_block_for_rtd,
 )
 from app.services.instruments._state import _instrument_label
 
 
+# Segment 18J Wave 2 PR iii-b2 — default response fields now carry
+# inline bound info directly. Pre-iii-b2 they pointed at the seeded
+# ``1-to-5int`` + ``Long_text`` RTDs; all seeded RTDs retire in
+# this PR so the defaults can't depend on them anymore.
+# ``response_type`` is the analytical-export name; bounds populate
+# ``data_type`` / ``min`` / ``max`` / ``step`` inline.
+# ``response_type_id`` lands NULL on every default field.
 DEFAULT_RESPONSE_FIELDS: list[dict[str, Any]] = [
     {
         "field_key": "rating",
         "label": "Rating",
-        "rtd_name": "1-to-5int",
+        "data_type": "Integer",
+        "response_type": "1-to-5int",
+        "min": 1.0,
+        "max": 5.0,
+        "step": 1.0,
+        "list_csv": None,
         "required": True,
         "order": 1,
     },
     {
         "field_key": "comments",
         "label": "Comments",
-        "rtd_name": "Long_text",
+        "data_type": "String",
+        "response_type": "Long_text",
+        "min": 0.0,
+        "max": 2000.0,
+        "step": None,
+        "list_csv": None,
         "required": False,
         "order": 2,
     },
 ]
+
+
+def _inline_kwargs_from_default_spec(
+    spec: dict[str, Any],
+) -> dict[str, Any]:
+    """Lift inline-bound kwargs out of a DEFAULT_RESPONSE_FIELDS
+    entry so creators can splat them into an
+    InstrumentResponseField constructor."""
+    return {
+        "_inline_data_type": spec["data_type"],
+        "_inline_response_type": spec["response_type"],
+        "_inline_min": spec.get("min"),
+        "_inline_max": spec.get("max"),
+        "_inline_step": spec.get("step"),
+        "_inline_list_csv": spec.get("list_csv"),
+    }
+
+
+def _validation_block_from_default_spec(
+    spec: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Build the ``instrument_response_fields.validation`` JSON for
+    a DEFAULT_RESPONSE_FIELDS entry. Mirrors
+    :func:`validation_block_for_rtd` shape but reads the inline
+    spec instead of an RTD instance."""
+    data_type = spec["data_type"]
+    if data_type == "String":
+        block: dict[str, Any] = {}
+        if spec.get("min") is not None:
+            block["min_length"] = int(spec["min"])
+        if spec.get("max") is not None:
+            block["max_length"] = int(spec["max"])
+        return block or None
+    if data_type in ("Integer", "Decimal"):
+        cast = int if data_type == "Integer" else float
+        block = {}
+        if spec.get("min") is not None:
+            block["min"] = cast(spec["min"])
+        if spec.get("max") is not None:
+            block["max"] = cast(spec["max"])
+        if spec.get("step") is not None:
+            block["step"] = cast(spec["step"])
+        return block or None
+    return None
 
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
@@ -520,16 +580,17 @@ def add_default_response_field(
     )
     fields = _ordered_fields(db, instrument)
 
-    rtds_by_name = ensure_default_response_type_definitions(
-        db, instrument.session
-    )
+    # iii-b2: the seeded RTD set is now empty. The default fallback
+    # (when no rtd_id is passed) used to point at the seeded
+    # ``1-to-5int`` RTD, which no longer exists. Fall back to
+    # constructing the row from DEFAULT_RESPONSE_FIELDS[0]'s inline
+    # spec ("rating" 1-to-5 Integer). Operator-authored custom RTDs
+    # (not seeded) are still pickable via rtd_id until iii-b3 / iii-b4.
     chosen_rtd: ResponseTypeDefinition | None = None
     if rtd_id is not None:
         chosen_rtd = _rtd_by_id(
             db, session_id=instrument.session_id, rtd_id=rtd_id
         )
-    if chosen_rtd is None:
-        chosen_rtd = rtds_by_name["1-to-5int"]
 
     cleaned_label = (label or "").strip()
     base_num = len(fields) + 1
@@ -569,25 +630,40 @@ def add_default_response_field(
 
     is_required = True if required is None else bool(required)
 
+    if chosen_rtd is not None:
+        field_kwargs: dict[str, Any] = {
+            "response_type_id": chosen_rtd.id,
+            "validation": validation_block_for_rtd(chosen_rtd),
+            **inline_kwargs_from_rtd(chosen_rtd),
+        }
+        audit_response_type: str = chosen_rtd.response_type
+        audit_response_type_id: int | None = chosen_rtd.id
+    else:
+        default_spec = DEFAULT_RESPONSE_FIELDS[0]
+        field_kwargs = {
+            "response_type_id": None,
+            "validation": _validation_block_from_default_spec(default_spec),
+            **_inline_kwargs_from_default_spec(default_spec),
+        }
+        audit_response_type = default_spec["response_type"]
+        audit_response_type_id = None
+
     new_field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key=candidate,
         label=new_label,
-        response_type_id=chosen_rtd.id,
         required=is_required,
         order=new_order,
-        validation=validation_block_for_rtd(chosen_rtd),
         help_text=None,
         help_text_visible=True,
-        **inline_kwargs_from_rtd(chosen_rtd),
+        **field_kwargs,
     )
     db.add(new_field)
     db.flush()
 
-    default_add_refs: dict[str, int] = {
-        "instrument_id": instrument.id,
-        "response_type_id": chosen_rtd.id,
-    }
+    default_add_refs: dict[str, int] = {"instrument_id": instrument.id}
+    if audit_response_type_id is not None:
+        default_add_refs["response_type_id"] = audit_response_type_id
     if after_field_id is not None:
         default_add_refs["after_field_id"] = after_field_id
     audit.write_event(
@@ -604,13 +680,13 @@ def add_default_response_field(
                 "id": new_field.id,
                 "field_key": new_field.field_key,
                 "label": new_field.label,
-                "response_type_id": chosen_rtd.id,
+                "response_type_id": audit_response_type_id,
                 "required": new_field.required,
                 "order": new_order,
             }
         ),
         refs=default_add_refs,
-        context={"response_type": chosen_rtd.response_type},
+        context={"response_type": audit_response_type},
     )
     db.commit()
     return new_field

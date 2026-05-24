@@ -42,18 +42,13 @@ _VALID_DATA_TYPES: frozenset[str] = frozenset(
     {"String", "Integer", "Decimal", "List"}
 )
 
-SEEDED_RESPONSE_TYPE_DEFINITIONS: list[dict[str, Any]] = [
-    {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 2000, "step": None, "list_csv": None},
-    {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 100,  "step": None, "list_csv": None},
-    {"response_type": "Yes_no",     "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Yes, No"},
-    {"response_type": "Grade",      "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F"},
-    {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree"},
-    {"response_type": "100int",     "data_type": "Integer", "min": 0,    "max": 100,  "step": 1,    "list_csv": None},
-    {"response_type": "0-to-2int",  "data_type": "Integer", "min": 0,    "max": 2,    "step": 1,    "list_csv": None},
-    {"response_type": "1-to-5int",  "data_type": "Integer", "min": 1,    "max": 5,    "step": 1,    "list_csv": None},
-    {"response_type": "1-to-5half", "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.5,  "list_csv": None},
-    {"response_type": "1-to-5dec",  "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.1,  "list_csv": None},
-]
+# Segment 18J Wave 2 PR iii-b2 — fully retired. Numerical / string
+# bounds + list options now live inline on
+# ``instrument_response_fields`` (PR i schema, PR iii-b1 creators).
+# The seed list is empty; the ``response_type_definitions`` table
+# still exists for operator-authored custom RTDs but the whole
+# library tier (including the table) retires in iii-b3.
+SEEDED_RESPONSE_TYPE_DEFINITIONS: list[dict[str, Any]] = []
 
 
 def ensure_default_response_type_definitions(
@@ -319,11 +314,18 @@ def count_rtd_dependents(
         )
         position_by_id = {inst.id: idx for idx, inst in enumerate(instruments_in_session, start=1)}
         for instrument_id in instrument_ids:
+            # iii-b2: ``response_type_id IS NULL`` rows (numerical /
+            # string fields with bounds inline) count as still on
+            # the instrument. SQL ``!=`` against NULL is NULL, so
+            # the bare predicate would silently drop them.
             other_rf_count = int(
                 db.execute(
                     select(func.count(InstrumentResponseField.id)).where(
                         InstrumentResponseField.instrument_id == instrument_id,
-                        InstrumentResponseField.response_type_id != rtd.id,
+                        (
+                            InstrumentResponseField.response_type_id != rtd.id
+                        )
+                        | InstrumentResponseField.response_type_id.is_(None),
                     )
                 ).scalar_one()
             )

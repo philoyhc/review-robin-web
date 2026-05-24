@@ -43,7 +43,6 @@ from app.services import audit
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._rtds import (
     ensure_default_response_type_definitions,
-    validation_block_for_rtd,
 )
 from app.services.instruments._state import _instrument_label
 
@@ -73,7 +72,10 @@ def ensure_default_instrument(
         db.add(instrument)
         db.flush()
 
-    rtds_by_name = ensure_default_response_type_definitions(db, review_session)
+    # iii-b2: kept for List-type operator RTDs + back-compat
+    # fixtures; the return value is no longer indexed by name
+    # because defaults inline their bounds.
+    ensure_default_response_type_definitions(db, review_session)
 
     has_fields = (
         db.execute(
@@ -86,21 +88,23 @@ def ensure_default_instrument(
 
     if not has_fields:
         from app.services.instruments._response_fields import (
-            inline_kwargs_from_rtd,
+            _inline_kwargs_from_default_spec,
+            _validation_block_from_default_spec,
         )
 
         for spec in DEFAULT_RESPONSE_FIELDS:
-            rtd = rtds_by_name[spec["rtd_name"]]
+            # iii-b2: default response fields no longer reference
+            # an RTD — data_type + bounds ride inline on the spec.
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
                     field_key=spec["field_key"],
                     label=spec["label"],
-                    response_type_id=rtd.id,
+                    response_type_id=None,
                     required=spec["required"],
                     order=spec["order"],
-                    validation=validation_block_for_rtd(rtd),
-                    **inline_kwargs_from_rtd(rtd),
+                    validation=_validation_block_from_default_spec(spec),
+                    **_inline_kwargs_from_default_spec(spec),
                 )
             )
         db.flush()
@@ -218,22 +222,23 @@ def create_instrument(
     db.flush()
 
     from app.services.instruments._response_fields import (
-        inline_kwargs_from_rtd,
+        _inline_kwargs_from_default_spec,
+        _validation_block_from_default_spec,
     )
 
-    rtds_by_name = ensure_default_response_type_definitions(db, review_session)
+    # iii-b2: the seeded RTD set is empty post-retirement; defaults
+    # carry data_type + bounds inline on the spec dict.
     for spec in DEFAULT_RESPONSE_FIELDS:
-        rtd = rtds_by_name[spec["rtd_name"]]
         db.add(
             InstrumentResponseField(
                 instrument_id=instrument.id,
                 field_key=spec["field_key"],
                 label=spec["label"],
-                response_type_id=rtd.id,
+                response_type_id=None,
                 required=spec["required"],
                 order=spec["order"],
-                validation=validation_block_for_rtd(rtd),
-                **inline_kwargs_from_rtd(rtd),
+                validation=_validation_block_from_default_spec(spec),
+                **_inline_kwargs_from_default_spec(spec),
             )
         )
     db.flush()
