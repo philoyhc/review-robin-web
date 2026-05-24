@@ -1815,3 +1815,131 @@ def test_new_model_link3_and_column_widths_survive_form_save(
             + 1200
         ]
     )
+
+
+def test_new_model_band2_view_mode_saved_boundary_drives_partition(
+    client: TestClient, db: Session
+) -> None:
+    """View mode (Band 1 inert, link3_boundary <select>s have no
+    ``name=`` attr) must still surface the saved boundary fields
+    so the preview-builder JS picks the right partition. The
+    wrapper carries ``data-new-model-band2-saved-boundary-fields``
+    which the JS reads as a fallback in view mode."""
+    review_session = _make_session(client, db, code="nm-view-partition")
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Alice",
+                email_or_identifier="a@example.edu",
+                tag_1="Alpha",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Bob",
+                email_or_identifier="b@example.edu",
+                tag_1="Alpha",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="c@example.edu",
+                tag_1="Beta",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'data-new-model-band2-saved-boundary-fields="tag_1"' in body
+    assert 'data-new-model-band2-unit-mode="grouped"' in body
+
+
+def test_new_model_column_widths_snapshot_rides_with_form_save(
+    client: TestClient, db: Session
+) -> None:
+    """Form Save reads the ``column_widths_snapshot`` hidden form
+    field and persists the widths in the same transaction —
+    eliminates the race where a fast Save click navigates the
+    page before the async /column-widths fetch reaches the
+    server."""
+    review_session = _make_session(client, db, code="nm-widths-form")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Skip the /column-widths POST entirely — simulate the race
+    # where the async fetch never made it. Form Save carries the
+    # snapshot.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "individual",
+            "column_widths_snapshot": '{"identity": 240}',
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.refresh(new_model)
+    assert new_model.column_widths == {"identity": 240}
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert 'name="column_widths_snapshot"' in body
+    assert 'data-new-model-band2-identity-width="240"' in body

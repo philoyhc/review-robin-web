@@ -533,6 +533,11 @@ def _new_model_band2_state(
         "response_fields": response_fields,
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",
+        # Comma-joined list of reviewee-side boundary field names
+        # (``tag_1`` / ``tag_2`` / ``tag_3``) so the preview JS can
+        # partition in view mode, where the live ``link3_boundary``
+        # <select>s aren't reachable as form-field inputs.
+        "saved_reviewee_boundary_fields": ",".join(reviewee_boundary_fields),
     }
 
 
