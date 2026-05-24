@@ -901,23 +901,38 @@ bottom of this file.
 
 
 - **18J — New-model takeover mopping-up** *(stub created
-  2026-05-24; Wave 1 shipped 2026-05-24)*. Five-wave sequencing
-  plan that completes the Segment 18I work: closes the parity
-  gaps that still keep the legacy individual + group instrument
-  cards alive, lands the perf wins that bite as new-model card
-  volume grows, and ends with a cleanup PR that drops the
-  `instruments.is_new_model` flag. Adopts the Gap / Rec
-  catalogue from `guide/new_model_instruments_outstanding.md`
-  verbatim and decides only the order. **Wave 1 shipped** (PRs
-  **#1393 → #1397**): Rec A + Rec D1 (perf double-tap),
-  Gap 10 (rule-constrained preview group expansion),
-  Gap 1 (pill → InstrumentDisplayField.visible), Gap 3 (sort
-  badges on preview table header), Gap 5 (required-flag
-  checkbox; reviewer-surface enforcement deferred to Wave 3).
-  **Waves 2-5 open**: Gap 6 (RTD library retirement, M, schema
-  delta) → Gap 2 + 4 (response fields → real DB rows + help
-  text) → Rec B + D2/D3 + Gap 7 (perf followers + RuleSet
-  library retirement) → Gap 8 + 9 (cleanup). **Plan:**
+  2026-05-24; Waves 1 + 2 shipped 2026-05-24)*. Five-wave
+  sequencing plan that completes the Segment 18I work: closes
+  the parity gaps that still keep the legacy individual + group
+  instrument cards alive, lands the perf wins that bite as
+  new-model card volume grows, and ends with a cleanup PR that
+  drops the `instruments.is_new_model` flag. Adopts the Gap /
+  Rec catalogue from `guide/new_model_instruments_outstanding.md`
+  verbatim and decides only the order.
+
+  **Wave 1 shipped** (PRs **#1393 → #1397**): Rec A + Rec D1
+  (perf double-tap), Gap 10 (rule-constrained preview group
+  expansion), Gap 1 (pill → InstrumentDisplayField.visible),
+  Gap 3 (sort badges on preview table header), Gap 5
+  (required-flag checkbox; reviewer-surface enforcement
+  deferred to Wave 3).
+
+  **Wave 2 shipped** (PRs **#1399 → #1405**, eight slices):
+  Gap 6 — RTD library retirement. Numerical + string + List
+  bounds now live inline on `instrument_response_fields`
+  (six `_inline_*` columns); `response_type_id` FK +
+  `before_insert` listener + property fallback + seeded RTD
+  set + `operator_response_type_definitions` table + cross-
+  session library tier (UI, routes, services, audit events)
+  all retired. The `response_type_definitions` table + the
+  per-instrument RTD card still exist for operator-authored
+  standalone RTDs; both retire alongside Gaps 8 + 9 in Wave 5.
+
+  **Waves 3-5 open**: Gap 2 + 4 (response fields → real DB
+  rows + help text) → Rec B + D2/D3 + Gap 7 (perf followers +
+  RuleSet library retirement) → Gap 8 + 9 (cleanup; also
+  retires the per-instrument RTD card + the
+  `response_type_definitions` table). **Plan:**
   `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.

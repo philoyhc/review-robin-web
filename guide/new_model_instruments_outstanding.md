@@ -132,7 +132,20 @@ first).
 **Close.** Add a checkbox to each Band 3 row; wire to
 `InstrumentResponseField.required`. Trivial once Gap 2 closes.
 
-### Gap 6 — RTD library retirement (M, prereq for Gap 2 cheapness)
+### Gap 6 — RTD library retirement (M, prereq for Gap 2 cheapness) — shipped 2026-05-24 (PRs #1399 → #1405)
+
+> Landed across **eight PRs** as Segment 18J Wave 2 (originally
+> scoped as one M-sized PR; the test-fixture cascade made that
+> infeasible). Six `_inline_*` columns on
+> `instrument_response_fields` carry every field's type + bounds.
+> The `response_type_id` FK, the `before_insert` listener, the
+> property fallback, the seeded RTD set, the
+> `operator_response_type_definitions` table, and the entire
+> cross-session library tier are all gone. The
+> `response_type_definitions` table + the per-instrument RTD card
+> still exist for operator-authored standalone RTDs — they retire
+> with Gaps 8 + 9 in Wave 5.
+
 
 **Today.** Two tiers — `operator_response_type_definitions` (per-
 operator library) + `response_type_definitions` (per-session
@@ -261,9 +274,12 @@ operator gains parity progressively:
    these land, the new-model card surfaces every per-display-
    field affordance the legacy card has and the preview is
    honest about group membership.
-2. **Gap 6** (RTD library retirement). Schema delta on
-   `instrument_response_fields` + data migration. Lands before
-   Gap 2 so Gap 2 doesn't have to author the bloat workaround.
+2. **Gap 6** (RTD library retirement) — **shipped 2026-05-24**
+   as Segment 18J Wave 2 across PRs #1399 → #1405. The
+   `instrument_response_fields` table now carries six
+   `_inline_*` columns for every field's type + bounds; the
+   `response_type_id` FK retired alongside the operator library
+   tier. Gap 2 is now cheap as planned.
 3. **Gap 2** (response fields → real DB rows). Now cheap because
    bounds inline onto `instrument_response_fields` directly. +
    **Gap 4** (help text) rides along since the columns exist.
