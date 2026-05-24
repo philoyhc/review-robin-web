@@ -1475,15 +1475,18 @@
               });
               return sel;
             }
-            // Help-card-visible response pills, regardless of
-            // aria-pressed. The help card sits above the preview
-            // table whether the field's column is included in the
-            // table or not — visibility of the card is governed by
-            // the Band 3 row's "≡" toggle, not the pill's
-            // selected state.
+            // Response pills whose help-text card should render
+            // above the preview table. Two conditions must both
+            // hold: the Band 3 row's "≡" toggle is on
+            // (data-help-visible="true") AND the pill itself is
+            // currently selected into the preview row
+            // (aria-pressed="true"). Deselecting the pill via the
+            // chip below "Review Instrument" hides the column AND
+            // the card, but leaves the Band 3 "≡" button state
+            // untouched so re-selecting the pill restores the card.
             function helpVisibleResponsePills(card) {
               var out = [];
-              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"][data-help-visible="true"]').forEach(function (p) {
+              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"][data-help-visible="true"][aria-pressed="true"]').forEach(function (p) {
                 out.push({
                   key: p.getAttribute('data-key'),
                   label: p.getAttribute('data-label'),
