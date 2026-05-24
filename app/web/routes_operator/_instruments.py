@@ -575,6 +575,28 @@ async def instrument_bulk_save_fields(
             boundary_pairs=link3_pairs,
             actor=user,
         )
+        # Column-widths race fix: the drag-resize handler POSTs to
+        # /column-widths asynchronously. A fast Save click can win
+        # the race and navigate the page before the async fetch
+        # reaches the server. The JS mirrors the current widths
+        # into ``column_widths_snapshot`` on every drag, so the
+        # form payload always carries the latest set and the form
+        # Save can persist them in the same transaction.
+        snapshot = form.get("column_widths_snapshot")
+        if isinstance(snapshot, str) and snapshot.strip():
+            import json as _json
+
+            try:
+                widths_payload = _json.loads(snapshot)
+            except (TypeError, ValueError):
+                widths_payload = None
+            if isinstance(widths_payload, dict):
+                instruments_service.set_column_widths(
+                    db,
+                    instrument=instrument,
+                    widths=widths_payload,
+                    actor=user,
+                )
         # Identity edits (description / short_label) come through the
         # same bulk-save form on the new-model card; reuse the same
         # block at the bottom of the standard handler.

@@ -1217,8 +1217,23 @@
              data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}"
              data-new-model-band2-unit-mode="{{ _saved_unit_mode }}"
              data-new-model-band2-roster='{{ _band2.roster | tojson }}'
-             data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}">
+             data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}"
+             data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}">
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
+          {# Hidden form field that snapshots the current column
+             widths as JSON. The drag-resize JS POSTs to
+             /column-widths AND mirrors the widths into this input
+             so the form Save (which fires the same instant the
+             column-widths fetch is in flight) carries the widths
+             through the form payload too — eliminates the race
+             where a fast Save click can navigate the page before
+             the async column-widths POST reaches the server. #}
+          {% if is_editing %}
+            <input form="dfsave-{{ instrument.id }}" type="hidden"
+                   name="column_widths_snapshot"
+                   data-new-model-band2-widths-snapshot
+                   value="{{ (instrument.column_widths or {}) | tojson }}">
+          {% endif %}
           {# Gate pill clicks / drag-resize / drag-reorder behind the
              per-instrument Edit state — same pattern as Bands 1 + 3.
              ``inert`` blocks every interaction below (clicks, focus,
@@ -1333,16 +1348,34 @@
               var instrumentCard = card.closest('[id^="instrument-"]');
               if (!instrumentCard) { return []; }
               var fields = [];
-              instrumentCard.querySelectorAll('select[name="link3_boundary"]').forEach(function (sel) {
-                var v = (sel.value || '').trim();
-                if (v.indexOf('reviewee.tag') !== 0) { return; }
-                var num = v.slice('reviewee.tag'.length);
-                if (num === '1' || num === '2' || num === '3') {
-                  var field = 'tag_' + num;
-                  if (fields.indexOf(field) < 0) { fields.push(field); }
-                }
-              });
-              return fields;
+              // In edit mode the live boundary <select>s carry
+              // ``name="link3_boundary"`` so the form submit can
+              // pick them up — read them here so the operator's
+              // in-progress edits drive the partition.
+              var selects = instrumentCard.querySelectorAll('select[name="link3_boundary"]');
+              if (selects.length > 0) {
+                selects.forEach(function (sel) {
+                  var v = (sel.value || '').trim();
+                  if (v.indexOf('reviewee.tag') !== 0) { return; }
+                  var num = v.slice('reviewee.tag'.length);
+                  if (num === '1' || num === '2' || num === '3') {
+                    var field = 'tag_' + num;
+                    if (fields.indexOf(field) < 0) { fields.push(field); }
+                  }
+                });
+                return fields;
+              }
+              // In view mode the <select>s lose their ``name=``
+              // attribute (the Band 1 grid is inert + form-less),
+              // so fall back to the saved boundary fields the
+              // server stashes on the band2 wrapper. Without this
+              // fallback the partition was silently the whole
+              // roster in view mode.
+              var saved = (card.getAttribute('data-new-model-band2-saved-boundary-fields') || '')
+                .split(',')
+                .map(function (s) { return s.trim(); })
+                .filter(function (s) { return s === 'tag_1' || s === 'tag_2' || s === 'tag_3'; });
+              return saved;
             }
             // Compute the group-cell member-name list for the
             // current Link 3 boundary tag selection. Returns
@@ -1658,6 +1691,14 @@
                 var w = parseInt(pill.getAttribute('data-width') || '', 10);
                 if (fid && w > 0) { widths['df_' + fid] = w; }
               });
+              // Mirror the current widths into the hidden form
+              // snapshot input so a form Save click that fires the
+              // same instant as this fetch still carries the new
+              // widths through the form payload — eliminates the
+              // race where the async fetch hadn't reached the
+              // server before the page navigated away.
+              var snapshot = card.querySelector('[data-new-model-band2-widths-snapshot]');
+              if (snapshot) { snapshot.value = JSON.stringify(widths); }
               fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/column-widths', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
