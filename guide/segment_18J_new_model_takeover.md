@@ -325,16 +325,201 @@ those cards in Wave 5 (Gap 8 + 9 cleanup).
 
 ### Wave 3 — Response fields become real (M-L)
 
-- **Gap 2** — `band2_state.response_fields` JSON entries
-  become real `InstrumentResponseField` rows. Cheap now
-  because Wave 2 inlined the bounds.
-- **Gap 4** — response-field help text + visibility. Rides
-  along since `InstrumentResponseField.help_text` /
-  `.help_text_visible` exist once Gap 2 closes.
+**Scope.** Gap 2 (bridge `band2_state.response_fields` JSON
+to real `InstrumentResponseField` rows) + Gap 5 enforcement
+on the reviewer surface (Wave 1 shipped the required-flag
+checkbox as metadata only). Gap 4 (help text UX) is
+**deferred to a later wave** — the underlying `help_text` /
+`help_text_visible` columns exist already and are untouched
+in this wave; only the Band 3 surface for editing them is
+deferred pending an operator-side design call.
 
-At the end of Wave 3 the new-model card has full parity with
-the legacy individual + group cards. Operators can switch
-their pilots over.
+At the end of Wave 3 the new-model card reaches functional
+parity with the legacy individual + group cards on the
+reviewer-surface read path. Operators can switch pilots over.
+
+#### Locked design decisions
+
+1. **Field-row identity.** Each
+   `band2_state.response_fields[*]` entry gains an optional
+   `id` field carrying the matching
+   `InstrumentResponseField.id`. Save-time mapping is
+   id-match: entries with `id` update the matching row;
+   entries without `id` create a new row and back-fill the
+   `id` on render; rows present in DB but absent from the
+   JSON payload are deleted (cascade-checked, see decision 3).
+2. **Visibility column.** Add
+   `InstrumentResponseField.visible` (Boolean, default true).
+   Mirrors the `InstrumentDisplayField.visible` pattern
+   (Gap 1). The reviewer surface filters response fields by
+   `visible=true` after PR ii flips readers.
+3. **Cascade on delete.** The Band 3 row X button is
+   rendered **disabled** when the field has ≥1 attached
+   `Response` row. The Band 3 section title becomes
+   "Response fields *(fields with undeleted responses
+   cannot be removed)*" with the parenthetical in a muted
+   weight. No confirm-dialog escape hatch from the row —
+   operators must delete the responses first (or use Hide
+   via the pill toggle to keep the field out of the
+   reviewer surface non-destructively).
+4. **Visibility UX.** The response-field pill in Band 2's
+   "Review Instrument" row (the chips after the `||`
+   divider, `instruments_index.html:1297-1310`) controls
+   visibility. Pill toggle writes through to
+   `InstrumentResponseField.visible`. The Band 3 editor's X
+   button is **delete only** (subject to cascade check) —
+   no separate Hide control in the editor row.
+5. **`band2_state.response_fields` JSON shape.** Retired
+   entirely once DB rows are authoritative. JSON becomes
+   the wire format from Band 3's ✓ click, never the
+   persisted state. The other `band2_state` keys
+   (`selected_display_keys`, `sample_reviewee_name`,
+   `sample_group_member_ids`, column widths) stay
+   unchanged.
+6. **Default seed preserved.**
+   `DEFAULT_RESPONSE_FIELDS` (Rating: Integer, 1-5, step 1,
+   required + Comments: String, 0-2000 chars, optional) is
+   already seeded on every new instrument by
+   `create_instrument`. Wave 3 inherits this on new-model
+   instruments unchanged.
+7. **Migration strategy.** Lazy materialise on first Save
+   after deploy. No Alembic data migration; JSON entries
+   without `id` get new rows the first time the operator
+   Saves Band 3 after PR i lands.
+8. **Band 3 first-render contract.** Band 3 reads rows
+   directly from `InstrumentResponseField` when
+   `band2_state.response_fields` is empty / absent.
+   First-render is pure read — no write-on-read side
+   effects, no audit churn. Edits-in-flight live in the
+   browser DOM; Save POSTs the diff as JSON which becomes
+   the transient wire format → DB rows.
+9. **`field_key` stable across renames.** Operator-side
+   rename mutates `label` only; `field_key` (the
+   `responses.field_key` join key) never changes once a
+   row exists.
+10. **`validation` JSON column kept as cache.** Already
+    populated from RTDs pre-Wave-2; now derived from the
+    `_inline_*` columns. Current readers (reviewer-surface
+    validators) untouched. Column retires in Wave 5
+    cleanup, not mid-wave.
+11. **Validation logic at two points.** Band 3 row save
+    enforces authoring-time sanity (max ≥ min, step > 0,
+    numeric values parse, `list_csv` non-empty for list
+    type, `max_length` sane for string). Reviewer-surface
+    submission enforces response sanity (value parses to
+    `data_type`, falls within min/max, satisfies required
+    flag). Both reads pull directly from the `_inline_*`
+    columns on `InstrumentResponseField`.
+12. **List options shape.** Inline CSV string on
+    `_inline_list_csv` suffices for new-model. No
+    per-option list editor in Band 3 (the legacy RTD
+    list-editor UX does not port over).
+13. **Help text UI deferred.** `help_text` (`Text`,
+    nullable) and `help_text_visible` (Boolean, default
+    true) columns exist and stay populated by any code
+    path that already writes them. Wave 3 does not add a
+    Band 3 surface for editing these — that's a separate
+    UI decision the operator will return to. When the UX
+    lands, three options are sketched: (1) inline
+    accordion per row with a ▸ toggle that expands a
+    `help_text` textarea + `help_text_visible` checkbox;
+    (2) dedicated help-editor pane below the Response
+    Fields editor (mirrors the legacy Response Fields Help
+    table); (3) always-visible textarea + checkbox under
+    each row.
+14. **`help_text` length + rendering** (when Gap 4 lands).
+    UI cap 1000 chars. Plain text, HTML-escaped on
+    render. No markdown, no embedded HTML. Underlying
+    column (`Text`, nullable) imposes no DB cap.
+
+#### PR ladder
+
+Three PRs, additive-first (same shape as Wave 2). Each
+slice keeps the system functional end-to-end at HEAD —
+reviewer surface behaviour only changes at PR ii.
+
+##### PR i — Additive schema + dual-write (M)
+
+- **Schema.** Add `InstrumentResponseField.visible`
+  (Boolean, default true) via Alembic migration with
+  `batch_alter_table` for SQLite. Add optional `id`
+  field to the `band2_state.response_fields[*]` JSON
+  shape (sanitiser in
+  `app/services/instruments/_instrument_crud.py:989-1035`
+  rounds-trips it).
+- **Dual-write.** `set_band2_state` continues to persist
+  `response_fields` JSON **and** additionally
+  creates / updates / deletes `InstrumentResponseField`
+  rows via id-match. Lazy materialise: entries without
+  `id` get new rows and the new `id` is reflected in the
+  persisted JSON for the next render.
+- **Cascade check in service.** Row delete inside
+  `set_band2_state` raises if the row has any attached
+  `Response` rows. The route catches this and the next
+  render of the page sees the row still in DB; the X
+  button renders disabled (`disabled` attribute + muted
+  styling).
+- **Template surface.** Band 3 row X gets the disabled
+  state when `field.has_responses` is true; section
+  title gains the parenthetical.
+- **Reviewer surface unchanged.** Still reads only the
+  `DEFAULT_RESPONSE_FIELDS` rows seeded by
+  `create_instrument`. Operator-authored rows now exist
+  in DB but the reviewer-surface code path doesn't read
+  them yet — pure additive.
+- **Tests.** JSON ↔ DB round-trip for create / update /
+  delete via Band 3 Save; delete-with-responses keeps
+  the row + renders disabled X; lazy materialise on
+  first Save backfills `id`.
+
+##### PR ii — Flip readers + enforce required (M)
+
+- **Reviewer surface read.** Switch the response-fields
+  read path used by the reviewer surface to return all
+  rows where `visible=true`, ordered by `order`.
+  Replaces the current `DEFAULT_RESPONSE_FIELDS`-only
+  behaviour.
+- **Pill → visibility write.** When the Band 2
+  response-field pill toggles, the click handler POSTs
+  a partial `band2_state.response_fields` payload with
+  the matching row's `id` + `selected` (now interpreted
+  as `visible`); `set_band2_state` writes through to
+  `InstrumentResponseField.visible`.
+- **Gap 5 enforcement flips on.** The reviewer-surface
+  form renders the asterisk for `required=true` fields
+  and the submit handler rejects empty values on those
+  fields. Wave 1's metadata-only required flag becomes
+  load-bearing.
+- **Authoring-time validation.** `set_band2_state`
+  validates each `response_fields[*]` entry (max ≥ min,
+  step > 0, numeric values parse, list_csv non-empty
+  for list type) before write. Validation errors
+  surface to the operator via the existing form-error
+  path.
+- **Tests.** Reviewer surface sees operator-authored
+  rows; deselected pill drops the field from the
+  reviewer surface (without delete); required field
+  validation rejects empty submission; authoring
+  validation rejects nonsensical bounds at Save.
+
+##### PR iii — Retire JSON write side (S)
+
+- `set_band2_state` stops persisting `response_fields`
+  in JSON. Sanitiser drops the key.
+- Band 3 initial render reads from
+  `InstrumentResponseField` directly (the (b)
+  contract from decision 8 — already partially in
+  place from PR i, now the only path).
+- JSON payload on Band 3 Save is consumed transactionally
+  and discarded; only DB rows persist.
+- Migration: no schema change; one-time backfill of any
+  remaining JSON-only entries lazy via PR i's
+  dual-write path before PR iii lands.
+- **Tests.** Band 3 round-trip without JSON state;
+  `band2_state` audit history shows no
+  `response_fields` keys post-PR iii; pre-existing JSON
+  entries on instruments untouched since PR ii are
+  back-filled correctly by PR ii's last Save.
 
 ### Wave 4 — Perf followers + RuleSet library retirement
 
