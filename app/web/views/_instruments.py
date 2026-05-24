@@ -30,6 +30,7 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Relationship,
+    Response,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -134,6 +135,17 @@ class PageButton:
     label: str
     href: str
     is_current: bool
+
+
+def _format_band2_bound(value: float) -> str:
+    """Format a Wave-2 ``_inline_min`` / ``_inline_max`` / ``_inline_step``
+    float for re-serialisation back into the band2_state JSON
+    shape (which carries strings, not numbers). Trim trailing
+    ``.0`` so an integer-valued float renders as ``"1"`` not
+    ``"1.0"`` — matches what the operator would have typed."""
+    if value == int(value):
+        return str(int(value))
+    return str(value)
 
 
 def placeholder_for_field(field: InstrumentResponseField) -> str:
@@ -560,6 +572,64 @@ def _new_model_band2_state(
         if f.visible
     }
     response_fields = list(band2_state.get("response_fields") or [])
+    # Wave 3 PR i (b) contract — when band2_state has no
+    # response_fields entries yet, populate Band 3 directly from
+    # the instrument's InstrumentResponseField rows (the seeded
+    # DEFAULT_RESPONSE_FIELDS rows on a brand-new instrument).
+    # First-render is pure read: no write-on-load side effect; the
+    # next saveBand2State POST round-trips the rendered entries
+    # back to the server, where the dual-write picks them up by
+    # id and persists the JSON copy alongside.
+    if not response_fields and instrument.response_fields:
+        for rf in sorted(instrument.response_fields, key=lambda f: f.order):
+            data_type_lower = (rf._inline_data_type or "String").lower()
+            response_fields.append(
+                {
+                    "id": rf.id,
+                    "name": rf.label,
+                    "data_type": data_type_lower,
+                    "min": ""
+                    if rf._inline_min is None
+                    else _format_band2_bound(rf._inline_min),
+                    "max": ""
+                    if rf._inline_max is None
+                    else _format_band2_bound(rf._inline_max),
+                    "step": ""
+                    if rf._inline_step is None
+                    else _format_band2_bound(rf._inline_step),
+                    "list_options": rf._inline_list_csv or "",
+                    "selected": rf.visible,
+                    "required": rf.required,
+                    "help_text": rf.help_text or "",
+                    "help_text_visible": rf.help_text_visible,
+                }
+            )
+    # Wave 3 PR i — annotate each entry with has_responses so the
+    # Band 3 template can render the X button disabled for fields
+    # with attached reviewer responses (cascade-blocked delete).
+    # Entries without an id (newly authored, not yet saved) carry
+    # has_responses=False.
+    rf_ids_with_id = [
+        rf.get("id") for rf in response_fields
+        if isinstance(rf, dict) and isinstance(rf.get("id"), int)
+    ]
+    has_responses_by_id: dict[int, bool] = {}
+    if rf_ids_with_id:
+        rows_with_responses = set(
+            db.execute(
+                select(Response.response_field_id)
+                .where(Response.response_field_id.in_(rf_ids_with_id))
+                .distinct()
+            ).scalars()
+        )
+        for fid in rf_ids_with_id:
+            has_responses_by_id[fid] = fid in rows_with_responses
+    for rf in response_fields:
+        if isinstance(rf, dict):
+            rf_id = rf.get("id")
+            rf["has_responses"] = bool(
+                isinstance(rf_id, int) and has_responses_by_id.get(rf_id, False)
+            )
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,

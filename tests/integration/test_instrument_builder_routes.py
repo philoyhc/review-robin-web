@@ -875,8 +875,9 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
 def test_new_model_band2_handles_session_with_no_reviewees(
     client: TestClient, db: Session
 ) -> None:
-    """When the session has no reviewees with data, Band 2 still
-    renders the heading; the pill row collapses to a Setup-page-style
+    """When the session has no reviewees with data and no
+    operator-authored response fields, Band 2 still renders the
+    heading; the pill row collapses to a Setup-page-style
     em-dash placeholder."""
     review_session = _make_session(client, db, code="nm-band2-empty")
     source = _instrument(db, review_session.id)
@@ -885,6 +886,21 @@ def test_new_model_band2_handles_session_with_no_reviewees(
         data={"after": str(source.id)},
         follow_redirects=False,
     )
+    # Wave 3 PR i (b) contract — band2 view layer surfaces the
+    # instrument's InstrumentResponseField rows (including the
+    # seeded Rating + Comments defaults from create_instrument)
+    # as response chips when band2_state.response_fields is
+    # empty. Clear those rows so the "no pills" assertion below
+    # holds.
+    new_model = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.is_new_model.is_(True),
+        )
+    ).scalar_one()
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
+    db.commit()
 
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
@@ -3161,6 +3177,421 @@ def test_band3_help_text_body_defaults_to_empty_when_omitted(
     assert new_model.band2_state["response_fields"][0]["help_text"] == ""
 
 
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 3 PR i — dual-write band2_state.response_fields JSON
+# entries into real InstrumentResponseField rows.
+# --------------------------------------------------------------------------- #
+
+
+def test_wave3_pri_creates_irf_row_for_new_entry(
+    client: TestClient, db: Session
+) -> None:
+    """A response-field JSON entry without ``id`` materialises a
+    new InstrumentResponseField row on first save; the JSON gets
+    its ``id`` back-filled to the new row's PK so subsequent
+    saves id-match instead of creating duplicates."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-create"
+    )
+    # Drop the seeded defaults so we can see the create cleanly.
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    rows = list(new_model.response_fields)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.label == "Rating"
+    assert row.required is True
+    assert row.visible is True
+    assert row._inline_data_type == "Integer"
+    assert row._inline_min == 1.0
+    assert row._inline_max == 5.0
+    assert row._inline_step == 1.0
+    # JSON ``id`` back-filled to the new row's PK.
+    assert new_model.band2_state["response_fields"][0]["id"] == row.id
+
+
+def test_wave3_pri_id_match_updates_existing_row(
+    client: TestClient, db: Session
+) -> None:
+    """A response-field JSON entry with a matching ``id`` updates
+    the existing row in place — no duplicate row is created."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-update"
+    )
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    row_id = new_model.band2_state["response_fields"][0]["id"]
+
+    # Second save — same id, updated label + bounds.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": row_id,
+                    "name": "Score",
+                    "data_type": "integer",
+                    "min": "0",
+                    "max": "10",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    rows = list(new_model.response_fields)
+    assert len(rows) == 1
+    assert rows[0].id == row_id
+    assert rows[0].label == "Score"
+    assert rows[0]._inline_min == 0.0
+    assert rows[0]._inline_max == 10.0
+
+
+def test_wave3_pri_pill_selected_flows_through_to_visible_column(
+    client: TestClient, db: Session
+) -> None:
+    """The Band 2 response-pill ``selected`` flag flows through
+    to ``InstrumentResponseField.visible`` — mirrors Gap 1's
+    display-pill → ``InstrumentDisplayField.visible`` wiring."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-visible"
+    )
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": False,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    rows = list(new_model.response_fields)
+    assert len(rows) == 1
+    assert rows[0].visible is False
+
+
+def test_wave3_pri_deletes_unreferenced_row_without_responses(
+    client: TestClient, db: Session
+) -> None:
+    """Posting a JSON payload that omits an existing row's id
+    deletes the row (no attached Response rows)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-delete"
+    )
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                },
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": True,
+                },
+            ]
+        },
+    )
+    db.refresh(new_model)
+    rating_id = new_model.band2_state["response_fields"][0]["id"]
+    notes_id = new_model.band2_state["response_fields"][1]["id"]
+    assert len(list(new_model.response_fields)) == 2
+
+    # Second save — drop Notes by id.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating_id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    remaining_ids = {rf.id for rf in new_model.response_fields}
+    assert rating_id in remaining_ids
+    assert notes_id not in remaining_ids
+
+
+def test_wave3_pri_b_contract_populates_band3_from_db(
+    client: TestClient, db: Session
+) -> None:
+    """(b) contract — when band2_state.response_fields is empty,
+    the band2 view-layer populates response_fields from the
+    instrument's seeded DB rows so Band 3 renders them and the
+    next save round-trips ids back through the JSON."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-b-contract"
+    )
+    # Fresh instrument with seeded Rating + Comments rows;
+    # band2_state has no response_fields yet.
+    assert new_model.band2_state is None or "response_fields" not in (
+        new_model.band2_state or {}
+    )
+    seeded_rows = {rf.label: rf.id for rf in new_model.response_fields}
+    assert "Rating" in seeded_rows
+    assert "Comments" in seeded_rows
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    # Band 3 rows render with the seeded rows' ids on the row
+    # element (data-rf-id).
+    for rf_id in seeded_rows.values():
+        assert f'data-rf-id="{rf_id}"' in body
+
+
+def test_wave3_pri_disabled_x_when_responses_present(
+    client: TestClient, db: Session
+) -> None:
+    """When a response field has attached Response rows, the
+    Band 3 X button renders ``disabled`` (no onclick) so the
+    operator can't trigger a cascade delete from the UI."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-disabled-x"
+    )
+    # The seeded "Rating" row will get a Response attached.
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    # Create an assignment + a response for that field.
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assert reviewer is not None and reviewee is not None
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=rating.id,
+            value="4",
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    # The row carries data-has-responses.
+    assert f'data-rf-id="{rating.id}"' in body
+    assert 'data-has-responses="true"' in body
+    # The X button on the rating row renders disabled (no onclick).
+    flat = " ".join(body.split())
+    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
+    # Find the X button after this row marker. The button is
+    # within ~2500 chars of the row start.
+    rating_block = flat[rating_row_idx : rating_row_idx + 3000]
+    x_idx = rating_block.find(">X</button>")
+    assert x_idx != -1
+    # Walk back to the <button to read its attrs.
+    x_open = rating_block.rfind("<button", 0, x_idx)
+    x_tag = rating_block[x_open : x_idx]
+    assert "disabled" in x_tag
+    assert "newModelRfDeleteRow" not in x_tag
+
+
+def test_wave3_pri_cascade_blocked_delete_returns_409(
+    client: TestClient, db: Session
+) -> None:
+    """Defence-in-depth — even when the X button is disabled in
+    the UI, a JSON payload that omits a previously-tracked row id
+    whose row has attached Response rows gets rejected with 409.
+    The dual-write only acts on previously-tracked ids, so seeded
+    rows that have never been in JSON are spared; to exercise the
+    delete-with-cascade path we first round-trip the row's id
+    into JSON, then attach a Response, then POST a payload that
+    omits the id."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-cascade-409"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    # First save — round-trip Rating's id into the JSON so a
+    # subsequent omitting save lands in the delete branch.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+
+    # Attach a Response to the rating row.
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=rating.id,
+            value="4",
+        )
+    )
+    db.commit()
+
+    # POST a payload that omits the rating's id — would otherwise
+    # delete the row. The route converts ResponsesPresentError
+    # into a 409.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Just a placeholder",
+                    "data_type": "string",
+                    "max": "100",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 409
+
+
+def test_wave3_pri_reviewer_surface_unchanged(
+    client: TestClient, db: Session
+) -> None:
+    """PR i is additive — the reviewer-surface read path still
+    pulls the seeded DEFAULT_RESPONSE_FIELDS rows only.
+    Operator-authored rows now exist in DB but aren't surfaced
+    to reviewers yet (PR ii flips the read)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-pri-reviewer-unchanged"
+    )
+    # Author a new field via dual-write.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Bonus",
+                    "data_type": "integer",
+                    "min": "0",
+                    "max": "100",
+                    "step": "1",
+                    "selected": True,
+                    "required": False,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    # The DB carries the operator-authored row alongside the
+    # seeded Rating + Comments — three rows total.
+    labels = {rf.label for rf in new_model.response_fields}
+    assert {"Rating", "Comments", "Bonus"} <= labels
+
+
+
+
+
 def test_band2_intro_card_renders_short_label_description_and_progress(
     client: TestClient, db: Session
 ) -> None:
@@ -3239,14 +3670,21 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
 def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     client: TestClient, db: Session
 ) -> None:
-    """When zero response fields are selected, the progress pill
-    row is omitted (matches the reviewer surface's "no completion
-    data → no pills" contract)."""
+    """When zero response fields exist on the instrument (no
+    operator-authored entries AND seeded defaults cleared), the
+    progress-pill row is omitted (matches the reviewer surface's
+    "no completion data → no pills" contract)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-intro-no-rfs"
     )
     new_model.short_label = "Reflection"
     new_model.description = ""
+    # Wave 3 PR i (b) contract — band2 view layer surfaces the
+    # instrument's InstrumentResponseField rows when band2_state
+    # response_fields is empty. Clear the seeded Rating + Comments
+    # defaults so the progress pills truly see "zero" and omit.
+    for rf in list(new_model.response_fields):
+        db.delete(rf)
     db.commit()
 
     # No response fields seeded → progress row should not render.

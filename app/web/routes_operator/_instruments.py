@@ -1456,9 +1456,23 @@ async def instrument_band2_state(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="band2-state body must be a JSON object",
         )
-    instruments_service.set_band2_state(
-        db, instrument=instrument, state=body, actor=user
-    )
+    try:
+        instruments_service.set_band2_state(
+            db, instrument=instrument, state=body, actor=user
+        )
+    except instruments_service.ResponsesPresentError as exc:
+        # Wave 3 PR i — cascade-blocked delete. The Band 3 row's X
+        # is rendered ``disabled`` when ``has_responses`` is true,
+        # so this code path is defence-in-depth for a buggy /
+        # forged client that posts a JSON payload omitting an id
+        # whose row has saved responses. Surface 409.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "cascade_blocked",
+                "responses": exc.cascaded_response_count,
+            },
+        ) from exc
     db.commit()
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
