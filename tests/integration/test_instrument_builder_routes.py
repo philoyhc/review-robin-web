@@ -3080,10 +3080,108 @@ def test_wave2_pr_ii_property_prefers_inline_over_rtd(
     assert field.data_type == "Inline_DT_Sentinel"
     assert rtd_int.response_type == "1-to-5int"
 
-    # Fall-back path: with inline cleared, the property reaches
-    # through to the RTD as before.
+    # PR iii-b1 retired the RTD-relationship fallback on these
+    # properties: clearing inline now returns the empty string
+    # (the inline columns are the only source of truth post-iii-b1).
     field._inline_response_type = None
     field._inline_data_type = None
     db.flush()
-    assert field.response_type == "1-to-5int"
-    assert field.data_type == rtd_int.data_type
+    assert field.response_type == ""
+    assert field.data_type == ""
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 2 PR iii-b1 — production creators explicitly populate
+# inline columns via inline_kwargs_from_rtd; before_insert listener stays
+# as a test-edge-case safety net only.
+# --------------------------------------------------------------------------- #
+
+
+def test_wave2_pr_iii_b1_inline_kwargs_helper_shape(db: Session) -> None:
+    """``inline_kwargs_from_rtd`` returns a kwargs dict whose keys
+    line up with the InstrumentResponseField inline columns. Each
+    creator splatting it via ``**`` populates all six in one go."""
+    from app.db.models import ResponseTypeDefinition
+    from app.services.instruments._response_fields import (
+        inline_kwargs_from_rtd,
+    )
+
+    rtd = ResponseTypeDefinition(
+        session_id=0,  # unused for this shape test
+        response_type="Sentinel_int",
+        data_type="Integer",
+        min=1.0,
+        max=9.0,
+        step=1.0,
+        list_csv=None,
+    )
+    kwargs = inline_kwargs_from_rtd(rtd)
+    assert set(kwargs.keys()) == {
+        "_inline_data_type",
+        "_inline_response_type",
+        "_inline_min",
+        "_inline_max",
+        "_inline_step",
+        "_inline_list_csv",
+    }
+    assert kwargs["_inline_data_type"] == "Integer"
+    assert kwargs["_inline_response_type"] == "Sentinel_int"
+    assert kwargs["_inline_min"] == 1.0
+    assert kwargs["_inline_max"] == 9.0
+    assert kwargs["_inline_step"] == 1.0
+    assert kwargs["_inline_list_csv"] is None
+
+
+def test_wave2_pr_iii_b1_property_no_longer_falls_back_to_rtd(
+    client: TestClient, db: Session
+) -> None:
+    """The RTD-relationship fallback on the ``.response_type`` /
+    ``.data_type`` properties is gone in iii-b1. A row whose
+    inline columns are NULL returns "" even though the RTD it
+    points at is still present (List-type RTDs survive iii-a)."""
+    from app.db.models import ResponseTypeDefinition, User
+    from app.services import instruments as instruments_service
+
+    review_session = _make_session(client, db, code="w2-iiib1-nofallback")
+    actor = db.execute(select(User).limit(1)).scalar_one()
+    client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    )
+    rtd_list = db.execute(
+        select(ResponseTypeDefinition)
+        .where(ResponseTypeDefinition.session_id == review_session.id)
+        .where(ResponseTypeDefinition.response_type == "Yes_no")
+    ).scalar_one()
+    instrument = _instrument(db, review_session.id)
+    field = instruments_service.add_response_field(
+        db,
+        instrument=instrument,
+        field_key="yn",
+        label="Verdict",
+        response_type="Yes_no",
+        required=False,
+        help_text=None,
+        help_text_visible=True,
+        actor=actor,
+    )
+    db.flush()
+    db.refresh(field)
+
+    # Sanity: creator populated inline + the FK still points at
+    # the surviving List RTD.
+    assert field._inline_response_type == "Yes_no"
+    assert field.response_type_id == rtd_list.id
+    assert field.response_type == "Yes_no"
+
+    # Clear inline; the RTD still exists at field.
+    # response_type_definition, but the property no longer falls
+    # back through the relationship.
+    field._inline_response_type = None
+    field._inline_data_type = None
+    db.flush()
+    assert field.response_type == ""
+    assert field.data_type == ""
+    # FK + relationship are still intact — fallback was a property
+    # behaviour, not a data change.
+    assert field.response_type_id == rtd_list.id
+    assert field.response_type_definition is not None

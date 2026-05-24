@@ -75,6 +75,25 @@ _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
 
 
+def inline_kwargs_from_rtd(
+    rtd: ResponseTypeDefinition,
+) -> dict[str, Any]:
+    """Return the ``InstrumentResponseField`` inline-column kwargs
+    populated from ``rtd``'s data_type + bounds (Segment 18J Wave 2
+    PR iii-b1). Every creator passes these alongside the existing
+    ``response_type_id`` so reads land in the inline shape without
+    relying on the before_insert listener (now retired).
+    """
+    return {
+        "_inline_data_type": rtd.data_type,
+        "_inline_response_type": rtd.response_type,
+        "_inline_min": rtd.min,
+        "_inline_max": rtd.max,
+        "_inline_step": rtd.step,
+        "_inline_list_csv": rtd.list_csv,
+    }
+
+
 class FieldKeyError(ValueError):
     """Raised when a proposed field_key is invalid or duplicates an existing key."""
 
@@ -423,6 +442,7 @@ def add_response_field(
         validation=validation_block_for_rtd(rtd),
         help_text=(help_text or None),
         help_text_visible=help_text_visible,
+        **inline_kwargs_from_rtd(rtd),
     )
     db.add(new_field)
     db.flush()
@@ -559,6 +579,7 @@ def add_default_response_field(
         validation=validation_block_for_rtd(chosen_rtd),
         help_text=None,
         help_text_visible=True,
+        **inline_kwargs_from_rtd(chosen_rtd),
     )
     db.add(new_field)
     db.flush()

@@ -85,6 +85,10 @@ def ensure_default_instrument(
     )
 
     if not has_fields:
+        from app.services.instruments._response_fields import (
+            inline_kwargs_from_rtd,
+        )
+
         for spec in DEFAULT_RESPONSE_FIELDS:
             rtd = rtds_by_name[spec["rtd_name"]]
             db.add(
@@ -96,6 +100,7 @@ def ensure_default_instrument(
                     required=spec["required"],
                     order=spec["order"],
                     validation=validation_block_for_rtd(rtd),
+                    **inline_kwargs_from_rtd(rtd),
                 )
             )
         db.flush()
@@ -212,6 +217,10 @@ def create_instrument(
     db.add(instrument)
     db.flush()
 
+    from app.services.instruments._response_fields import (
+        inline_kwargs_from_rtd,
+    )
+
     rtds_by_name = ensure_default_response_type_definitions(db, review_session)
     for spec in DEFAULT_RESPONSE_FIELDS:
         rtd = rtds_by_name[spec["rtd_name"]]
@@ -224,6 +233,7 @@ def create_instrument(
                 required=spec["required"],
                 order=spec["order"],
                 validation=validation_block_for_rtd(rtd),
+                **inline_kwargs_from_rtd(rtd),
             )
         )
     db.flush()
@@ -364,6 +374,12 @@ def replicate_instrument(
                 ),
                 help_text=field.help_text,
                 help_text_visible=field.help_text_visible,
+                _inline_data_type=field._inline_data_type,
+                _inline_response_type=field._inline_response_type,
+                _inline_min=field._inline_min,
+                _inline_max=field._inline_max,
+                _inline_step=field._inline_step,
+                _inline_list_csv=field._inline_list_csv,
             )
         )
     source_displays = db.execute(
