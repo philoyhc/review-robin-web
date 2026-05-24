@@ -2884,9 +2884,11 @@ def test_gap_5_required_defaults_false_when_omitted(
 def test_gap_5_template_renders_checkbox_and_data_required(
     client: TestClient, db: Session
 ) -> None:
-    """Gap 5 template — the Band 3 row's Required checkbox preset
-    from rf.required, and the Band 2 pill's data-required attr
-    reflects the same value."""
+    """Gap 5 template — the Band 3 row's Required toggle button
+    presets from rf.required (primary class + data-required="true"
+    when required, secondary class + data-required="false" when
+    not), and the Band 2 pill's data-required attr reflects the
+    same value."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="gap-5-render"
     )
@@ -2916,32 +2918,142 @@ def test_gap_5_template_renders_checkbox_and_data_required(
         f"/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
-    # Row 1 (Rating, required=True): the checkbox is rendered with
-    # a checked attribute.
+    # Row 1 (Rating, required=True): the R button carries
+    # data-required="true" and renders without the secondary
+    # class (so it picks up the default primary .btn styling).
     rating_idx = flat.find('value="Rating"')
     assert rating_idx != -1
-    # Walk forward enough to cover name → type → bounds → required
-    # checkbox → ✓ / X buttons.
     rating_block = flat[rating_idx : rating_idx + 2500]
     assert 'data-new-model-rf-required' in rating_block
-    # The checked attribute appears within the checkbox tag.
-    cb_idx = rating_block.find('data-new-model-rf-required')
-    cb_block = rating_block[cb_idx : cb_idx + 200]
-    assert 'checked' in cb_block
+    btn_idx = rating_block.find('data-new-model-rf-required')
+    btn_block = rating_block[btn_idx : btn_idx + 300]
+    assert 'data-required="true"' in btn_block
+    # Primary style — no "secondary" modifier on the .btn class.
+    btn_open_idx = rating_block.rfind('<button', 0, btn_idx)
+    btn_open_tag = rating_block[btn_open_idx : btn_idx]
+    assert 'class="btn"' in btn_open_tag
 
-    # Row 2 (Notes, required=False): checkbox is rendered but NOT
-    # checked.
+    # Row 2 (Notes, required=False): the R button carries
+    # data-required="false" and gets the .btn.secondary class.
     notes_idx = flat.find('value="Notes"')
     assert notes_idx != -1
     notes_block = flat[notes_idx : notes_idx + 2500]
-    cb_idx2 = notes_block.find('data-new-model-rf-required')
-    assert cb_idx2 != -1
-    cb_block2 = notes_block[cb_idx2 : cb_idx2 + 200]
-    assert 'checked' not in cb_block2
+    btn_idx2 = notes_block.find('data-new-model-rf-required')
+    assert btn_idx2 != -1
+    btn_block2 = notes_block[btn_idx2 : btn_idx2 + 300]
+    assert 'data-required="false"' in btn_block2
+    btn_open_idx2 = notes_block.rfind('<button', 0, btn_idx2)
+    btn_open_tag2 = notes_block[btn_open_idx2 : btn_idx2]
+    assert 'class="btn secondary"' in btn_open_tag2
 
     # Band 2 pill data-required reflects each row.
     assert 'data-required="true"' in flat
     assert 'data-required="false"' in flat
+
+
+def test_band3_help_text_visible_toggle_persists_and_renders(
+    client: TestClient, db: Session
+) -> None:
+    """Band 3 ≡ button — when the operator toggles help-text
+    visibility for a response field row, the flag persists into
+    band2_state.response_fields[*].help_text_visible. The template
+    presets the row button's primary/secondary style from the
+    flag, and the Band 2 pill carries the same flag on
+    data-help-visible so the client-side preview rebuild can
+    inject the half-width help card above the table."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band3-help-toggle"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "selected": True,
+                    "help_text_visible": True,
+                },
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                    "help_text_visible": False,
+                },
+            ]
+        },
+    )
+    db.refresh(new_model)
+    rfs = new_model.band2_state["response_fields"]
+    assert rfs[0]["help_text_visible"] is True
+    assert rfs[1]["help_text_visible"] is False
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    # Row 1 (Rating, help_text_visible=True): the ≡ button is
+    # primary (.btn, no .secondary modifier) and carries
+    # data-help-visible="true".
+    rating_idx = flat.find('value="Rating"')
+    assert rating_idx != -1
+    rating_block = flat[rating_idx : rating_idx + 2500]
+    btn_idx = rating_block.find('data-new-model-rf-help-visible')
+    assert btn_idx != -1
+    btn_block = rating_block[btn_idx : btn_idx + 300]
+    assert 'data-help-visible="true"' in btn_block
+    btn_open_idx = rating_block.rfind('<button', 0, btn_idx)
+    btn_open_tag = rating_block[btn_open_idx : btn_idx]
+    assert 'class="btn"' in btn_open_tag
+
+    # Row 2 (Notes, help_text_visible=False): the ≡ button is
+    # secondary (.btn.secondary) and carries
+    # data-help-visible="false".
+    notes_idx = flat.find('value="Notes"')
+    assert notes_idx != -1
+    notes_block = flat[notes_idx : notes_idx + 2500]
+    btn_idx2 = notes_block.find('data-new-model-rf-help-visible')
+    assert btn_idx2 != -1
+    btn_block2 = notes_block[btn_idx2 : btn_idx2 + 300]
+    assert 'data-help-visible="false"' in btn_block2
+    btn_open_idx2 = notes_block.rfind('<button', 0, btn_idx2)
+    btn_open_tag2 = notes_block[btn_open_idx2 : btn_idx2]
+    assert 'class="btn secondary"' in btn_open_tag2
+
+    # Band 2 pill data-help-visible reflects each row.
+    assert 'data-help-visible="true"' in flat
+    assert 'data-help-visible="false"' in flat
+
+
+def test_band3_help_text_visible_defaults_to_false_when_omitted(
+    client: TestClient, db: Session
+) -> None:
+    """Payloads that omit help_text_visible default to False —
+    matches bool(raw.get("help_text_visible")) for missing keys."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band3-help-default"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert (
+        new_model.band2_state["response_fields"][0]["help_text_visible"]
+        is False
+    )
 
 
 # --------------------------------------------------------------------------- #
