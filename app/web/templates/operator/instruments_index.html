@@ -42,6 +42,21 @@
     body.ui-v2 .sort-badge.sort-badge-empty {
       color: var(--color-muted, #94a3b8);
     }
+    /* Band 2 preview table — keep cell + input padding compact so
+       the operator-side preview row matches the reviewer surface's
+       visual density rather than inheriting the operator-table
+       defaults (var(--space-3) var(--space-4)) which bloat both
+       the header row and the data row. */
+    body.ui-v2 [data-new-model-band2-preview] th,
+    body.ui-v2 [data-new-model-band2-preview] td {
+      padding: var(--space-2) var(--space-3);
+    }
+    body.ui-v2 [data-new-model-band2-preview] input,
+    body.ui-v2 [data-new-model-band2-preview] textarea,
+    body.ui-v2 [data-new-model-band2-preview] select {
+      padding: var(--space-1) var(--space-2);
+      font-size: var(--fs-small);
+    }
   </style>
 {% endblock %}
 
@@ -2574,9 +2589,28 @@
               });
             }
             // Wire each Band 2 card on the page on first load.
-            document.querySelectorAll('[data-new-model-band2]').forEach(function (card) {
-              window.newModelRefreshBand2(card);
-            });
+            // Deferred to DOMContentLoaded because this <script>
+            // sits inline in the body *before* Band 3 (which
+            // renders later in the same instrument card). The
+            // preview rebuild reads Band 3 rows to source response-
+            // field data_type + bounds (buildConstraints +
+            // buildResponseFieldPreviewCell). Firing at parse time
+            // would query for rows that aren't in the DOM yet, so
+            // the constraints line + response-cell placeholders
+            // would render empty on a page reload (only refreshing
+            // when a Band 2 / Band 3 interaction triggers a later
+            // rebuild). Wait for full body parse so all band-2 +
+            // band-3 elements are reachable.
+            function _newModelInitialRefresh() {
+              document.querySelectorAll('[data-new-model-band2]').forEach(function (card) {
+                window.newModelRefreshBand2(card);
+              });
+            }
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', _newModelInitialRefresh);
+            } else {
+              _newModelInitialRefresh();
+            }
           })();
         </script>
 
