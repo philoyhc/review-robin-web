@@ -4,9 +4,6 @@ from app.db.models.email_outbox import EmailOutbox
 from app.db.models.instrument import Instrument
 from app.db.models.instrument_field import InstrumentDisplayField, InstrumentResponseField
 from app.db.models.invitation import Invitation
-from app.db.models.operator_response_type_definition import (
-    OperatorResponseTypeDefinition,
-)
 from app.db.models.relationship import Relationship
 from app.db.models.response import Response
 from app.db.models.response_type_definition import ResponseTypeDefinition
@@ -28,7 +25,6 @@ __all__ = [
     "InstrumentDisplayField",
     "InstrumentResponseField",
     "Invitation",
-    "OperatorResponseTypeDefinition",
     "Relationship",
     "Response",
     "ResponseTypeDefinition",

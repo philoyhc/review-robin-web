@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     AuditEvent,
     Instrument,
-    OperatorResponseTypeDefinition,
     ResponseTypeDefinition,
     ReviewSession,
     RuleSet,
@@ -191,7 +190,6 @@ def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
         .scalars()
         .all()
     )
-    library_names = _library_rtd_name_lookup(db, rtds)
     rows: list[Row] = []
     for rtd in rtds:
         prefix = f"rtds[{rtd.response_type}]"
@@ -202,39 +200,10 @@ def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
         rows.append(
             Row(f"{prefix}.list_csv", _str(rtd.list_csv), "csv_list")
         )
-        # 15C library provenance — the name of the operator-library
-        # RTD this per-session copy came from. Export leg only; the
-        # importer recognises and skips it (link/clone is the 18D
-        # import part). Empty when authored in-session.
-        rows.append(
-            Row(
-                f"{prefix}.library_name",
-                _str(library_names.get(rtd.library_origin_id)),
-                "string",
-            )
-        )
+        # Segment 18J Wave 2 PR iii-b3 — the per-RTD library_name
+        # cell retired with the operator library tier. The importer
+        # still ignores it for back-compat with pre-iii-b3 CSVs.
     return rows
-
-
-def _library_rtd_name_lookup(
-    db: Session, rtds: list[ResponseTypeDefinition]
-) -> dict[int, str]:
-    """Map each referenced ``operator_response_type_definitions.id``
-    to its name — resolves ``ResponseTypeDefinition.library_origin_id``
-    into the export's name-based provenance cell. An operator-library
-    RTD's name is its ``response_type`` (the operator-chosen label),
-    matching the per-session RTD's own keying."""
-    ids = {r.library_origin_id for r in rtds if r.library_origin_id is not None}
-    if not ids:
-        return {}
-    return {
-        row.id: row.response_type
-        for row in db.execute(
-            select(OperatorResponseTypeDefinition).where(
-                OperatorResponseTypeDefinition.id.in_(ids)
-            )
-        ).scalars()
-    }
 
 
 # --------------------------------------------------------------------------- #

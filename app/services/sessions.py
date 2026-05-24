@@ -112,21 +112,9 @@ def create_session(
             ),
             correlation_id=correlation_id,
         )
-    if library_result.rtds_copied:
-        audit.write_event(
-            db,
-            event_type="response_type_definitions.materialised_from_library",
-            summary=(
-                f"Copied {library_result.rtds_copied} library RTD(s) "
-                f"into session {review_session.code}"
-            ),
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.counts(
-                materialised=library_result.rtds_copied,
-            ),
-            correlation_id=correlation_id,
-        )
+    # Segment 18J Wave 2 PR iii-b3 — the RTD library tier is gone;
+    # ``library_result.rtds_copied`` is always 0 post-iii-b3 and the
+    # paired audit event is no longer emitted.
     if library_result.rule_sets_copied:
         audit.write_event(
             db,

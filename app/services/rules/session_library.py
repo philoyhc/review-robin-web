@@ -24,11 +24,10 @@ Public API:
   — past audit refs use refs.rule_set_id which already survives
   hard deletes for assignments.generated rows).
 - :func:`save_to_library` — promote a SessionRuleSet to the
-  operator library; mirror of
-  :func:`app.services.instruments._rtds.save_session_rtd_to_library`.
+  operator library. (The mirror RTD operation was retired in
+  Segment 18J Wave 2 PR iii-b3 alongside the RTD library tier.)
 - :func:`add_from_library` — copy a library RuleSet into the
-  session; mirror of
-  :func:`app.services.instruments._rtds.add_rtd_from_library`.
+  session.
 """
 
 from __future__ import annotations
