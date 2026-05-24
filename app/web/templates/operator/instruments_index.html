@@ -2275,8 +2275,13 @@
                   + '>';
               }
               if (dataType === 'integer' || dataType === 'decimal') {
+                // Numeric inputs deliberately drop the placeholder
+                // text — the constraint summary line above the
+                // preview table already shows the min-max + step.
+                // Matches reviewer surface which puts the validation
+                // info on ``title`` (tooltip), not as a visible
+                // placeholder, on ``<input type="number">``.
                 return '<input type="number" ' + commonAttrs
-                  + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
                   + (bounds.min ? ' min="' + esc(bounds.min) + '"' : '')
                   + (bounds.max ? ' max="' + esc(bounds.max) + '"' : '')
                   + (bounds.step ? ' step="' + esc(bounds.step) + '"' : '')
