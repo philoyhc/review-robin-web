@@ -251,6 +251,13 @@ cost via the per-instrument eligibility cache invalidation.
 
 ### Where the cost actually lives
 
+There are three independent cost layers, and the new-model
+card pays more on every one of them than the legacy
+individual / group cards. That asymmetry is what makes "Save
+feels slower on the new card" perceivable even though the
+underlying engine is identical.
+
+**Layer 1 — Engine evaluation (shared with legacy cards).**
 `GET /operator/sessions/{id}/instruments` calls
 `build_instruments_context`, which in turn calls
 `session_library.evaluate_session_rule_eligibility(...)` to
@@ -259,10 +266,9 @@ compute the **pinned-rule eligible-pair count per instrument**
 the Validate page). The function stamps a content hash of
 `(roster + rule definition)` against
 `session_rule_sets.cached_eligibility_stamp` and re-runs
-`engine.evaluate(...)` on cache miss. Any rule edit changes
-the hash, so the first render after Save always pays the full
-~1-3s/instrument cost. A group-scoped instrument additionally
-hits `evaluate_instrument_group_pair_counts` for the same
+`engine.evaluate(...)` on cache miss. A group-scoped
+instrument additionally hits
+`evaluate_instrument_group_pair_counts` for the same
 brute-force `O(N · M · rules)` walk.
 
 `engine.evaluate` itself (`app/services/rules/engine.py`)
@@ -270,6 +276,56 @@ materialises the full `[(r, e) for r in reviewers for e in
 reviewees]` list (1M tuples ≈ 30 MB), sorts it, then evaluates
 each rule against every surviving pair. No tag-side indexes,
 no short-circuit.
+
+**Layer 2 — Per-new-model-card overhead (new-model only).**
+For every new-model instrument on the page, the view-layer
+helper `_new_model_band2_state`
+(`app/web/views/_instruments.py:372`) runs a fresh
+`SELECT * FROM reviewees WHERE session_id=? AND status='active'`
+(lines 412-419), serialises the whole roster into a
+`data-new-model-band2-roster` JSON attribute on the card's
+root element, and the inline on-load JS loop
+(`document.querySelectorAll('[data-new-model-band2]').forEach(window.newModelRefreshBand2)`
+in `instruments_index.html`) re-runs the Band 2 preview
+rebuild against that JSON for every card whether the page is
+in view mode or edit mode. On a 1k roster the JSON blob is
+~100KB; with `K` new-model cards on the page that's `K` round
+trips to the DB and `K × 100KB` of HTML payload + `K` JS
+rebuilds before the page is interactive. Legacy individual /
+group cards do none of this — they render a static preview
+table from server-computed view rows and ship no roster JSON.
+
+**Layer 3 — Cache-invalidation cadence (new-model only).**
+The new-model card edits rules **inline** (Band 1 Links 1-3
+save through the same form Submit that drops the edit lock).
+The legacy individual / group cards bounce out to the Rule
+Builder page, edit, then return — meaning the Instruments
+index typically renders with the rules-content-hash stamp
+already warm. On the new-model card, the form Submit changes
+`rules_json` for the embedded rule set ≥ 50% of the time
+operators click Save, so
+`session_library.evaluate_session_rule_eligibility(...)`
+misses cache on the post-Save redirect and pays the full
+engine cost again. Even a no-op Save would stay warm only if
+the rules-content-hash comparison is bit-stable across the
+round trip (worth verifying; see Rec E).
+
+**Numerical sketch** on a 1k × 1k roster, `K` = number of
+new-model cards on the page, ignoring the per-stage constant:
+
+| Stage | Legacy (individual/group cards) | New-model cards |
+|---|---|---|
+| Server: engine eval per card | hot path, ~0ms (cache hit common) | cold after every rule edit, ~1-3s |
+| Server: per-card roster SELECT + serialise | none | `K × ~50ms` + `K × 100KB` HTML |
+| Network / HTML size | small | + `K × 100KB` |
+| Client on-load: rebuild preview | none | `K` rebuilds against parsed JSON |
+
+The Layer 1 cost is the headline number, but Layers 2-3 are
+why the new-model card feels slower on top of an already-slow
+engine. Layer 2 in particular grows linearly with the
+number of new-model cards on the page, so it gets worse as
+operators add instruments — exactly the wrong direction once
+new-model takes over from the legacy cards.
 
 ### Recommendations
 
@@ -376,14 +432,97 @@ the broad-rule cases pilot operators are likely to author,
 Rec B alone should keep latencies well under 100ms even on
 1k × 1k.
 
+#### Rec D — De-duplicate per-new-model-card roster work *(S-M)*
+
+Layers 2 of the cost breakdown above is purely incidental:
+every new-model card on the page re-fetches and re-ships the
+same active-reviewee roster. Three sub-recs in increasing
+order of payoff and effort:
+
+- **D1: Single roster query per render.** Lift the
+  `SELECT * FROM reviewees WHERE session_id=? AND status='active'`
+  out of `_new_model_band2_state`
+  (`app/web/views/_instruments.py:412-419`) into
+  `build_instruments_context`, fetch once per request, and
+  pass the materialised list (or a mapping by id) into each
+  `_new_model_band2_state` call. Server CPU drops from
+  `O(K)` queries to `O(1)`; round-trip latency on Save with
+  a dozen new-model cards on the page drops by `K × ~50ms`.
+  Smallest possible diff — purely a plumbing change in the
+  view-shape adapter.
+
+- **D2: Single roster JSON blob per page.** Today each card
+  carries its own `data-new-model-band2-roster='…'` attribute
+  with the same `K × 100KB` JSON. Lift the JSON onto a single
+  page-level `<script type="application/json"
+  id="new-model-roster-data">` block keyed by session id;
+  rewrite the on-load JS in `instruments_index.html` to read
+  from that single block when rebuilding each card's preview.
+  HTML payload drops from `K × 100KB` to `1 × 100KB`. The
+  on-load JS still iterates `K` cards but parses the JSON
+  once. Moderate diff (touch template + the inline JS), but
+  the network-time win is linear in `K`.
+
+- **D3: Skip the on-load preview rebuild in view mode.** The
+  inline JS loop
+  `document.querySelectorAll('[data-new-model-band2]').forEach(window.newModelRefreshBand2)`
+  unconditionally rebuilds every new-model card's preview
+  table on page load. In view mode the server already
+  rendered the correct preview table HTML; the JS rebuild
+  is a no-op that re-runs filter logic against the roster
+  JSON only to produce the same DOM. Gate the loop on edit
+  mode (the wrapper already exposes `data-edit-mode="1"` via
+  the lock card). On a `K`-card page in view mode this
+  removes `K` JS rebuilds + the JSON parse entirely; page
+  becomes interactive measurably sooner.
+
+D1 is a few lines and worth doing alongside Rec A. D2 + D3
+can land together as a follow-up once D1 proves the shape
+out.
+
+#### Rec E — Verify Band 1 no-op Save stays cache-warm *(T, safety net)*
+
+If the operator opens the lock, makes no rule changes, and
+clicks Save, the post-Save render should hit the
+`session_rule_sets.cached_eligibility_stamp` cache. Whether
+it actually does depends on whether the rules-content-hash
+comparison is bit-stable across the Submit round trip
+(JSON key ordering, whitespace, default-value normalisation).
+Two parts:
+
+- **Observability.** Add a counter / log line in
+  `evaluate_session_rule_eligibility` distinguishing cache
+  hit vs miss, and check post-deploy whether no-op Saves on
+  the new-model card actually hit. If they don't, the rules
+  serialiser is drifting — fix the comparison rather than
+  the cache.
+- **Drift check in tests.** Add a regression test that opens
+  + closes the lock with no field changes and asserts the
+  stamp value is unchanged. Cheap insurance against future
+  edits to the rule-serialise path silently invalidating
+  every no-op Save.
+
+This doesn't fix the lag — it just makes sure operators who
+*didn't* edit rules don't accidentally pay the engine cost
+they shouldn't. Pair it with Rec A so even rule-edit Saves
+return instantly.
+
 ### Sequencing
 
-| # | Recommendation | Lift | Impact on Save lag | Impact on Refresh lag |
-|---|---|---|---|---|
-| A | Drop per-instrument eligible-pair count from index render | S | **Cured.** Save returns instantly; no engine on the redirect path. | None — Refresh still hits the engine. |
-| B | `find_first_n_pairs` engine fast path | M | None directly (Rec A already cured Save). | **Cured.** Refresh typically <100ms; worst case = today. |
-| C | Single-side predicate indexes (+ roster-upload cache) | L | None directly. | Brings Rec B's worst case down to interactive. Also speeds the real Assignments-page Generate. |
+| # | Recommendation | Lift | Layer 1 (engine) | Layer 2 (per-card overhead) | Layer 3 (cache cadence) |
+|---|---|---|---|---|---|
+| A  | Drop per-instrument eligible-pair count from index render | S | **Cured on Save.** No engine on redirect path. | — | Layer 3 stops mattering on Save. |
+| D1 | Single roster query per render | S | — | `K` queries → 1 query | — |
+| D2 | Single roster JSON blob per page | S-M | — | `K × 100KB` → `1 × 100KB` payload | — |
+| D3 | Skip on-load preview rebuild in view mode | S | — | Removes `K` JS rebuilds in view mode | — |
+| B  | `find_first_n_pairs` engine fast path | M | **Cures Refresh.** Typically <100ms. | — | — |
+| E  | Verify no-op Save stays cache-warm | T | Belt-and-braces if cache should hit. | — | Confirms warm path actually warm. |
+| C  | Single-side predicate indexes (+ roster-upload cache) | L | Brings Rec B's worst case down. | — | — |
 
-Recommend landing A first as a one-PR quick win, B as a follow-up,
-and reserving C for if pilot rosters expose the narrow-rule worst
-case.
+**Recommend landing A + D1 together as the first quick win**
+— both are small diffs and together they cure the Save lag
+that operators notice today (A removes the engine cost on
+redirect; D1 removes the duplicated roster query). D2 + D3
+are a natural second PR once D1 lands. B then targets Refresh
+explicitly. E is a tiny safety-net commit any time. C stays
+deferred until pilot rosters expose Rec B's worst case.
