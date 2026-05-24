@@ -14,6 +14,7 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     Reviewee,
@@ -2448,3 +2449,224 @@ def test_gap_10_legacy_band2_state_without_member_ids_falls_back(
     # Legacy fallback: both Team A reviewees show (unconstrained
     # boundary partition), as before Gap 10.
     assert sorted(names) == ["Carol", "Dan"]
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 1 PR β — Gap 1 (pill → InstrumentDisplayField.visible)
+# --------------------------------------------------------------------------- #
+
+
+def _new_model_with_tags(
+    client: TestClient, db: Session, *, code: str
+) -> tuple[ReviewSession, Instrument]:
+    """Build a session with reviewees that have populated tag_1 +
+    tag_2, then create a new-model instrument. The index GET at
+    the end triggers the lazy seed of tag_1 / tag_2
+    InstrumentDisplayField rows. Returns the session and the
+    new-model instrument."""
+    review_session = _make_session(client, db, code=code)
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                tag_1="Team A",
+                tag_2="alpha",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    # Render the index once so build_instruments_context's lazy
+    # seed populates tag_1 / tag_2 InstrumentDisplayField rows.
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    return review_session, new_model
+
+
+def _df_by_key(
+    db: Session, instrument_id: int
+) -> dict[str, InstrumentDisplayField]:
+    fields = list(
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument_id
+            )
+        ).scalars()
+    )
+    return {f"{f.source_type}.{f.source_field}": f for f in fields}
+
+
+def test_gap_1_pill_selection_writes_visible_on_display_fields(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 1 — when set_band2_state receives selected_display_keys,
+    InstrumentDisplayField.visible is set True for each pill in the
+    set and False for each non-locked field NOT in the set. Locked
+    Name / Email stay visible regardless."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-1-write"
+    )
+    # Sanity: by default all display fields default to visible=True.
+    before = _df_by_key(db, new_model.id)
+    assert before["reviewee.name"].visible is True
+    assert before["reviewee.email_or_identifier"].visible is True
+    assert before["reviewee.tag_1"].visible is True
+    assert before["reviewee.tag_2"].visible is True
+
+    # Operator selects only name + tag_1 (deselects email + tag_2).
+    # Name + email are locked and always stay visible regardless of
+    # what the payload says, so the meaningful effect is tag_2 →
+    # invisible while tag_1 stays visible.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [
+                "reviewee.name",
+                "reviewee.tag_1",
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    db.expire_all()
+    after = _df_by_key(db, new_model.id)
+    # Locked rows stay visible no matter what.
+    assert after["reviewee.name"].visible is True
+    assert after["reviewee.email_or_identifier"].visible is True
+    # Non-locked fields reflect the selection.
+    assert after["reviewee.tag_1"].visible is True
+    assert after["reviewee.tag_2"].visible is False
+
+    # Re-select tag_2; it flips back to visible.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [
+                "reviewee.name",
+                "reviewee.tag_1",
+                "reviewee.tag_2",
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    db.expire_all()
+    after2 = _df_by_key(db, new_model.id)
+    assert after2["reviewee.tag_2"].visible is True
+
+
+def test_gap_1_empty_selection_hides_all_non_locked_fields(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 1 boundary case — an empty selected_display_keys payload
+    means "operator unselected everything"; every non-locked field
+    flips to invisible. Locked Name / Email still stay visible."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-1-empty"
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={"selected_display_keys": []},
+    )
+    assert resp.status_code == 200
+    db.expire_all()
+    after = _df_by_key(db, new_model.id)
+    # Locked stay visible.
+    assert after["reviewee.name"].visible is True
+    assert after["reviewee.email_or_identifier"].visible is True
+    # Non-locked all hidden.
+    assert after["reviewee.tag_1"].visible is False
+    assert after["reviewee.tag_2"].visible is False
+
+
+def test_gap_1_omitted_selection_preserves_existing_visibility(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 1 — a payload that omits selected_display_keys (e.g. a
+    Refresh-only or response-fields-only save) must not touch
+    InstrumentDisplayField.visible. The pill→visible sync only
+    fires when the key is in the payload."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-1-omit"
+    )
+    # First: a payload that DOES include selected_display_keys, to
+    # set tag_2 invisible.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={"selected_display_keys": ["reviewee.tag_1"]},
+    )
+    db.expire_all()
+    assert _df_by_key(db, new_model.id)["reviewee.tag_2"].visible is False
+
+    # Second: a payload that OMITS selected_display_keys (a Refresh-
+    # only save). tag_2 must stay invisible — not silently flipped
+    # back to True.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={"sample_reviewee_name": "Carol"},
+    )
+    db.expire_all()
+    assert _df_by_key(db, new_model.id)["reviewee.tag_2"].visible is False
+
+
+def test_gap_1_view_derives_pill_selection_from_visible(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 1 read path — the rendered pills' is-selected state
+    reflects ``InstrumentDisplayField.visible``, not whatever the
+    legacy band2_state.selected_display_keys JSON happens to hold.
+    Editing the visible flag directly on the ORM (simulating a
+    Gap-7 / future-source change to the field model) shows up on
+    the next render's pill."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="gap-1-render"
+    )
+    # Flip tag_2 invisible directly (bypassing set_band2_state) and
+    # leave band2_state.selected_display_keys JSON stale / empty.
+    fields = _df_by_key(db, new_model.id)
+    fields["reviewee.tag_2"].visible = False
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    # The pills are server-rendered with aria-pressed reflecting
+    # the visible flag. Find the tag_2 pill and check it's unpressed;
+    # tag_1 should still be pressed.
+    tag2_marker = 'data-source-field="tag_2"'
+    tag2_idx = flat.find(tag2_marker)
+    assert tag2_idx != -1
+    # Walk back ~200 chars to find the pill's aria-pressed value.
+    snippet_start = max(0, tag2_idx - 250)
+    tag2_pill = flat[snippet_start:tag2_idx + len(tag2_marker)]
+    assert 'aria-pressed="false"' in tag2_pill
+
+    tag1_marker = 'data-source-field="tag_1"'
+    tag1_idx = flat.find(tag1_marker)
+    assert tag1_idx != -1
+    snippet_start = max(0, tag1_idx - 250)
+    tag1_pill = flat[snippet_start:tag1_idx + len(tag1_marker)]
+    assert 'aria-pressed="true"' in tag1_pill
