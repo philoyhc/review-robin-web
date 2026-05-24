@@ -1314,6 +1314,8 @@
                         data-response-key="{{ _key }}"
                         data-required="{{ 'true' if rf.required else 'false' }}"
                         data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
+                        data-help-text="{{ rf.help_text or '' }}"
+                        data-help-edit-mode="false"
                         data-width="{{ rf.width_px or '' }}"
                         data-reorderable="true"
                         draggable="true"
@@ -1475,18 +1477,23 @@
               });
               return sel;
             }
-            // Help-card-visible response pills, regardless of
-            // aria-pressed. The help card sits above the preview
-            // table whether the field's column is included in the
-            // table or not — visibility of the card is governed by
-            // the Band 3 row's "≡" toggle, not the pill's
-            // selected state.
+            // Response pills whose help-text card should render
+            // above the preview table. Two conditions must both
+            // hold: the Band 3 row's "≡" toggle is on
+            // (data-help-visible="true") AND the pill itself is
+            // currently selected into the preview row
+            // (aria-pressed="true"). Deselecting the pill via the
+            // chip below "Review Instrument" hides the column AND
+            // the card, but leaves the Band 3 "≡" button state
+            // untouched so re-selecting the pill restores the card.
             function helpVisibleResponsePills(card) {
               var out = [];
-              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"][data-help-visible="true"]').forEach(function (p) {
+              card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"][data-help-visible="true"][aria-pressed="true"]').forEach(function (p) {
                 out.push({
                   key: p.getAttribute('data-key'),
                   label: p.getAttribute('data-label'),
+                  helpText: p.getAttribute('data-help-text') || '',
+                  editMode: p.getAttribute('data-help-edit-mode') === 'true',
                 });
               });
               return out;
@@ -1860,6 +1867,7 @@
                   selected: pill.getAttribute('aria-pressed') === 'true',
                   required: !!(requiredBtn && requiredBtn.getAttribute('data-required') === 'true'),
                   help_text_visible: !!(helpBtn && helpBtn.getAttribute('data-help-visible') === 'true'),
+                  help_text: pill.getAttribute('data-help-text') || '',
                 };
                 row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
                   var key = input.getAttribute('data-new-model-rf-bound');
@@ -1891,12 +1899,94 @@
               if (pills.length === 0) { return ''; }
               var html = '<div class="rs-help-grid" data-new-model-band2-help-cards>';
               pills.forEach(function (p) {
-                html += '<div class="card rs-help-card"><strong>'
-                  + esc(p.label || '') + '</strong></div>';
+                var keyAttr = esc(p.key || '');
+                var helpText = p.helpText || '';
+                html += '<div class="card rs-help-card" '
+                  + 'data-help-card-key="' + keyAttr + '" '
+                  + 'style="position: relative; padding-right: 28px;">';
+                html += '<strong>' + esc(p.label || '') + '</strong>';
+                if (p.editMode) {
+                  html += '<textarea data-help-card-textarea '
+                    + 'data-help-card-key="' + keyAttr + '" '
+                    + 'oninput="newModelHelpCardInput(this)" '
+                    + 'maxlength="1000" '
+                    + 'style="display: block; width: 100%; margin-top: 6px; '
+                    + 'min-height: 60px; box-sizing: border-box; '
+                    + 'font: inherit; padding: 4px 6px;">'
+                    + esc(helpText) + '</textarea>';
+                  html += '<button type="button" class="btn-icon" '
+                    + 'data-help-card-key="' + keyAttr + '" '
+                    + 'onclick="newModelHelpCardSaveClick(this)" '
+                    + 'title="Save help text" '
+                    + 'aria-label="Save help text" '
+                    + 'style="position: absolute; bottom: 4px; right: 4px;">✓</button>';
+                } else {
+                  if (helpText) { html += ' — ' + esc(helpText); }
+                  html += '<button type="button" class="btn-icon" '
+                    + 'data-help-card-key="' + keyAttr + '" '
+                    + 'onclick="newModelHelpCardEditClick(this)" '
+                    + 'title="Edit help text" '
+                    + 'aria-label="Edit help text" '
+                    + 'style="position: absolute; bottom: 4px; right: 4px;">✎</button>';
+                }
+                html += '</div>';
               });
               html += '</div>';
               return html;
             }
+            // Help-card icon-button handlers. ``data-help-edit-mode``
+            // on the paired response pill is the source of truth for
+            // edit/view mode — toggling it + calling rebuildPreview
+            // re-renders the card in the right shape. The textarea's
+            // ``oninput`` mirrors the live value onto the pill's
+            // ``data-help-text`` so a rebuild mid-edit (e.g. a sibling
+            // pill toggle) doesn't drop the typed content.
+            window.newModelHelpCardEditClick = window.newModelHelpCardEditClick || function (btn) {
+              var key = btn.getAttribute('data-help-card-key');
+              var band2 = btn.closest('[data-new-model-band2]');
+              if (!key || !band2) { return; }
+              var pill = band2.querySelector(
+                '[data-new-model-band2-pill][data-key="' + key + '"]'
+              );
+              if (!pill) { return; }
+              pill.setAttribute('data-help-edit-mode', 'true');
+              rebuildPreview(band2);
+              var ta = band2.querySelector(
+                'textarea[data-help-card-textarea][data-help-card-key="' + key + '"]'
+              );
+              if (ta) {
+                ta.focus();
+                var len = ta.value.length;
+                try { ta.setSelectionRange(len, len); } catch (_) {}
+              }
+            };
+            window.newModelHelpCardSaveClick = window.newModelHelpCardSaveClick || function (btn) {
+              var key = btn.getAttribute('data-help-card-key');
+              var band2 = btn.closest('[data-new-model-band2]');
+              if (!key || !band2) { return; }
+              var pill = band2.querySelector(
+                '[data-new-model-band2-pill][data-key="' + key + '"]'
+              );
+              if (!pill) { return; }
+              // Pull the latest textarea value just in case oninput
+              // missed something (e.g. browser autocomplete).
+              var ta = band2.querySelector(
+                'textarea[data-help-card-textarea][data-help-card-key="' + key + '"]'
+              );
+              if (ta) { pill.setAttribute('data-help-text', ta.value); }
+              pill.setAttribute('data-help-edit-mode', 'false');
+              rebuildPreview(band2);
+              saveBand2State(band2);
+            };
+            window.newModelHelpCardInput = window.newModelHelpCardInput || function (ta) {
+              var key = ta.getAttribute('data-help-card-key');
+              var band2 = ta.closest('[data-new-model-band2]');
+              if (!key || !band2) { return; }
+              var pill = band2.querySelector(
+                '[data-new-model-band2-pill][data-key="' + key + '"]'
+              );
+              if (pill) { pill.setAttribute('data-help-text', ta.value); }
+            };
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
               if (!container) { return; }
@@ -2612,6 +2702,8 @@
                 'data-help-visible',
                 (rowHelpBtn && rowHelpBtn.getAttribute('data-help-visible') === 'true') ? 'true' : 'false'
               );
+              pill.setAttribute('data-help-text', '');
+              pill.setAttribute('data-help-edit-mode', 'false');
               pill.setAttribute('data-reorderable', 'true');
               pill.setAttribute('draggable', 'true');
               pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');

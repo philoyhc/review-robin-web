@@ -1019,6 +1019,16 @@ def set_band2_state(
                 # post-Wave-3; the JSON shape carries the flag
                 # in the interim.
                 rf["help_text_visible"] = bool(raw.get("help_text_visible"))
+                # Help-text body. Plain text, HTML-escaped on render
+                # by both the operator-surface help card and (once
+                # Gap 4 lands) the reviewer surface. UI cap is 1000
+                # chars per the Wave 3 doc; we clamp here as a
+                # defence-in-depth even though the textarea's
+                # maxlength already enforces it on the client.
+                help_text_raw = raw.get("help_text")
+                rf["help_text"] = (
+                    str(help_text_raw)[:1000] if help_text_raw is not None else ""
+                )
                 # Per-response-field column width (px). Carried on
                 # the entry itself so the width travels with the
                 # field across drag-reorder. Clamped to the same
