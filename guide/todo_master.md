@@ -901,7 +901,7 @@ bottom of this file.
 
 
 - **18J — New-model takeover mopping-up** *(stub created
-  2026-05-24; Waves 1 + 2 shipped 2026-05-24)*. Five-wave
+  2026-05-24; Waves 1 + 2 + 2½ shipped 2026-05-24)*. Five-wave
   sequencing plan that completes the Segment 18I work: closes
   the parity gaps that still keep the legacy individual + group
   instrument cards alive, lands the perf wins that bite as
@@ -928,11 +928,30 @@ bottom of this file.
   per-instrument RTD card still exist for operator-authored
   standalone RTDs; both retire alongside Gaps 8 + 9 in Wave 5.
 
-  **Waves 3-5 open**: Gap 2 + 4 (response fields → real DB
-  rows + help text) → Rec B + D2/D3 + Gap 7 (perf followers +
-  RuleSet library retirement) → Gap 8 + 9 (cleanup; also
-  retires the per-instrument RTD card + the
-  `response_type_definitions` table). **Plan:**
+  **Wave 2½ shipped** (PRs **#1408 → #1416**, nine UX-only
+  slices): Band 2 reviewer-surface parity polish. The
+  new-model card's Band 2 preview now mirrors the reviewer
+  surface — same intro card ("Page #N: <short_label>" +
+  description + completion-progress pills), same constraint
+  summary line, same disabled-input placeholder cells per
+  response field, compact sort buttons, chips moved to the
+  flush-right bottom row, etc. Gap 4's underlying plumbing
+  (help-text body editing, visibility toggle, persistence in
+  `band2_state.response_fields[*].help_text` /
+  `.help_text_visible`) is shipped via the in-card ✎/✓ help
+  card editor; the broader Band 3 help-text UX (accordion
+  vs dedicated pane vs always-visible) remains tabled as
+  the deferred Gap 4 decision. One new JSON endpoint:
+  `POST /instruments/{id}/identity` accepts
+  `{short_label?, description?}` independently. Legacy
+  heading-area short_label `<input>` + right-column
+  description editor / display card retired.
+
+  **Waves 3-5 open**: Gap 2 (response fields → real DB rows)
+  + Gap 4 UX decision (currently tabled) → Rec B + D2/D3 +
+  Gap 7 (perf followers + RuleSet library retirement) →
+  Gap 8 + 9 (cleanup; also retires the per-instrument RTD
+  card + the `response_type_definitions` table). **Plan:**
   `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.

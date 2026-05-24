@@ -323,6 +323,40 @@ those cards in Wave 5 (Gap 8 + 9 cleanup).
 | #1404 | iii-b3 — library tier | M | Drop `operator_response_type_definitions` table + `library_origin_id` column + 5 library audit events. Retire library routes / services / templates / 5 library test files. ~2300-line net reduction. |
 | #1405 | iii-b4 — drop FK | S | Drop `response_type_id` column + listener + relationship. Add phantom property + init shim for back-compat with lingering test fixtures. 14 FK-driven tests skipped with TODO refs (deletion in Wave 5). |
 
+### Wave 2½ — Band 2 reviewer-surface parity polish — shipped 2026-05-24
+
+Nine UX-only PRs landed between Wave 2 and the start of Wave 3
+to bring the new-model card's Band 2 preview much closer to what
+a reviewer actually sees, plus stand up most of Gap 4's
+underlying plumbing ahead of the formal Gap 4 UX decision. No
+schema change in this wave — pure template / JS / CSS work
+backed by one tiny new JSON endpoint (`/identity`).
+
+**Shipped PRs.**
+
+| PR | Slice | Lift | Summary |
+|---|---|---|---|
+| #1408 | Band 3 row toggles | T | Data-type `<select>` 20% → 15% width. "Required" checkbox replaced by an "R" toggle button (primary/secondary). New "≡" toggle button before ✓ shows / hides a half-width help card above the preview table per response field. `help_text_visible` persists in `band2_state.response_fields[*]`. |
+| #1409 | Help card polish | T | Help card hides when the response chip is deselected (even if "≡" stays on). In-card ✎/✓ icon-button toggle for editing the help-text body inline; `help_text` persists alongside `help_text_visible`, clamped to 1000 chars server-side. |
+| #1410 | Intro card v1 | S | Reviewer-surface `rs-intro-grid` / `rs-instrument-card` pattern transplanted into Band 2 — `<h2>` (short_label or name) + description subtitle + progress pills derived from `band2_state.response_fields`. Sits below the selector chips, above the help cards. |
+| #1411 | Inline ✎/✓ for identity | S | Heading becomes "Page #N: <short_label or name>" (loop-index sourced — matches reviewer page numbering). short_label + description gain ✎/✓ pairs inside the intro card, gated on `is_editing`. New `POST /identity` JSON endpoint accepts `{short_label?, description?}` independently. Legacy heading-area short_label `<input>` + right-column description editor / display card + bottom-grid wrapper retired. |
+| #1412 | Description textarea hide fix | T | Drop `display: block` from the description textarea's inline style so the `hidden` attribute's UA `[hidden]{display:none}` rule wins on specificity. Textarea now properly hides in non-edit mode (no perceivable empty box, no doubling-up with the view paragraph in edit mode). |
+| #1413 | Heading + chips + constraints | S | "Review Instrument" → "Preview review instrument". Selector-chip row (display chips + `\|\|` divider + response chips) moved from above the intro card to the bottom of Band 2, flush-right. New constraint-summary row ("Rating (1-5, steps of 1), Notes (0-2000 char)") above the preview table — sibling to `buildResponseFieldHelpCards`, mirrors reviewer surface's `.rs-constraints`. |
+| #1414 | Count semantics + thicker rules | T | Intro-card progress denominators count the full operator-authored response-field set (drop `selectattr('selected')`) — pill selection is a column-render concern, not a per-row item count. Band 2 separator `<hr>` lines bump from 1px to 3px. |
+| #1415 | Compact sort buttons + RF cells | S | `.sort-btn` / `.sort-badge` shrink to match `.rrw-sort-btn` (18px height, no pill badge). Response-field preview cells now render disabled placeholder inputs / textareas / selects whose shape matches the reviewer surface (`review_surface.html` L345-410) — String / Integer / Decimal / List each render their own input shape with placeholder strings matching `placeholder_for_field`. |
+| #1416 | Persistence-across-save + row height | T | Initial `newModelRefreshBand2` deferred to `DOMContentLoaded` — the inline `<script>` sat in the body *before* Band 3, so `buildConstraints` + `buildResponseFieldPreviewCell` were querying for Band 3 rows that hadn't been parsed yet on a page reload. Result before the fix: constraints line + placeholder inputs vanished into `—` after Save, only re-populating after a later Band-2/Band-3 interaction. Plus compact cell + input padding inside `[data-new-model-band2-preview]` to bring the row height down to reviewer-surface density. |
+
+**What this means for Wave 3.** The preview surface is now
+visually faithful to the reviewer experience — same intro card,
+same constraint line, same input shapes, same progress pills.
+Gap 4's underlying plumbing (help-text-body editing, visibility
+toggle, persistence in `band2_state` + JSON-API) is shipped; the
+deferred decision is purely the broader Band 3 UX (accordion vs
+dedicated pane vs always-visible — see Wave 3 design decision 13
+below). The remaining Gap 2 work (bridging JSON entries to real
+`InstrumentResponseField` rows) is untouched and lands as the
+three-PR Wave 3 ladder.
+
 ### Wave 3 — Response fields become real (M-L)
 
 **Scope.** Gap 2 (bridge `band2_state.response_fields` JSON
