@@ -52,10 +52,15 @@ class InstrumentResponseField(Base):
     )
     field_key: Mapped[str] = mapped_column(String(255), nullable=False)
     label: Mapped[str] = mapped_column(String(255), nullable=False)
-    response_type_id: Mapped[int] = mapped_column(
+    # Segment 18J Wave 2 PR iii-a — FK is now nullable. List-type
+    # fields point at a per-session List RTD (option-list reuse).
+    # Numerical / string fields hold their type + bounds inline on
+    # ``_inline_*`` columns below; ``response_type_id`` is NULL for
+    # them. The full RTD library tier retires in PR iii-b.
+    response_type_id: Mapped[int | None] = mapped_column(
         ForeignKey("response_type_definitions.id", ondelete="CASCADE"),
         index=True,
-        nullable=False,
+        nullable=True,
     )
     required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -91,7 +96,7 @@ class InstrumentResponseField(Base):
     )
 
     instrument: Mapped[Instrument] = relationship(back_populates="response_fields")
-    response_type_definition: Mapped[ResponseTypeDefinition] = relationship(
+    response_type_definition: Mapped[ResponseTypeDefinition | None] = relationship(
         back_populates="response_fields",
     )
     responses: Mapped[list[Response]] = relationship(
@@ -101,39 +106,49 @@ class InstrumentResponseField(Base):
 
     @property
     def response_type(self) -> str:
-        # Segment 18J Wave 2 PR ii — prefer the inline column,
-        # fall back to the RTD-tier relationship for any row whose
-        # inline copy is unset (legacy data not yet backfilled, or
-        # a brand-new row created in an isolated bind that bypasses
-        # the before_insert listener).
+        # Segment 18J Wave 2 PR iii-a — inline columns are the
+        # source of truth. List-type fields keep the FK around for
+        # option-list reuse across instruments; numerical / string
+        # fields land with response_type_id = NULL post-iii-a (the
+        # seeded non-List RTDs are dropped by the iii-a migration).
+        # The fallback to response_type_definition is belt-and-
+        # braces for the brief window where a transitional creator
+        # path might still be setting the FK without the listener
+        # firing; it retires in PR iii-b alongside the FK column
+        # itself.
         if self._inline_response_type is not None:
             return self._inline_response_type
-        return self.response_type_definition.response_type
+        if self.response_type_definition is not None:
+            return self.response_type_definition.response_type
+        return ""
 
     @property
     def data_type(self) -> str:
         if self._inline_data_type is not None:
             return self._inline_data_type
-        return self.response_type_definition.data_type
+        if self.response_type_definition is not None:
+            return self.response_type_definition.data_type
+        return ""
 
 
 @event.listens_for(InstrumentResponseField, "before_insert")
 def _sync_inline_bounds_from_rtd(mapper, connection, target) -> None:
-    """Segment 18J Wave 2 PR i — populate the inline bound columns
-    from the row's associated RTD on insert so the schema is in the
-    target shape before PR ii flips readers. Skips when the caller
-    already populated ``_inline_data_type`` (idempotent for tests /
-    seeders that hand-set the columns). PR iii drops the listener
-    + the RTD FK + the seeded numerical / string RTDs.
+    """Bridge listener: when a new ``InstrumentResponseField`` row
+    sets ``response_type_id`` (typical for List fields, and for
+    backward-compatible numerical / string creation paths that
+    haven't yet been updated to populate inline directly), copy
+    the RTD's bounds onto the inline columns so reads land in the
+    right shape regardless of which API the caller used.
 
-    Local import of ``ResponseTypeDefinition`` avoids a module-load
-    circular dep — the relationship target lives in a sibling file.
+    Originally added in PR i; survives iii-a so the FK still
+    works as a bound source for callers in transition. Retires in
+    PR iii-b alongside the FK column itself, once every creator
+    populates inline columns explicitly.
     """
     if target._inline_data_type is not None:
         return
     if target.response_type_id is None:
         return
-    # Local import — same-package circular dep avoidance.
     from app.db.models.response_type_definition import ResponseTypeDefinition
 
     row = connection.execute(
