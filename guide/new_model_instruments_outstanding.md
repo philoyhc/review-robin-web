@@ -1,125 +1,241 @@
-# New-model instruments — outstanding integration
+# New-model instruments — outstanding work for full takeover
 
-The new-model instrument card (the "Pilot"-flagged flavour
-introduced in Segment-equivalent slices via PRs #1336–#1371,
-gated on `instruments.is_new_model`) lights up the operator's
-design surface for the Instrument Builder concept test. Most of
-the card writes through the existing schema; two pieces are
-stored as JSON metadata on `instruments.band2_state` instead and
-do **not** flow into the assignment engine or the reviewer
-surface yet.
+The new-model instrument card (the flavour gated on
+`instruments.is_new_model`) has grown from a concept-test shell
+into a near-complete operator surface. This doc tracks **how far
+it is from replacing the legacy individual + group instrument
+cards outright**, and what would need to retire / consolidate
+once it does.
 
-This doc lists what's connected today and what would close each
-remaining gap, in priority order if/when the operator's choices
-need to drive what the reviewer actually sees.
+Scope of "full takeover":
 
-## Where new-model writes flow
+1. Every operator-facing affordance on the legacy individual +
+   group cards exists on the new-model card (or is consciously
+   retired).
+2. The reviewer surface + assignment engine read identical
+   per-instrument state regardless of card flavour.
+3. The RuleSet library (`operator_rule_sets` +
+   `rule_set_revisions`) and RTD library
+   (`operator_response_type_definitions`) are either retired or
+   coexist intentionally.
+4. The `is_new_model` flag column can be dropped.
+
+## What the new-model card already does (parity)
 
 | Operator surface | Storage | Read-path |
 |---|---|---|
-| Identity (name, short label, description) | `instruments.name` / `short_label` / `description` | Reviewer surface heading + setup pages — same as ordinary instruments. |
-| Band 1 Link 1 + Link 2 (assignment rules) | `session_rule_sets.rules_json` via `instruments.rule_set_id` | Assignment engine (`app/services/rules/engine.py`) — same as ordinary instruments. |
-| Band 1 Link 3 (unit of review) | `instruments.group_kind` | Reviewer surface group-row composition + the rule engine's group-pair-count cache — same as group-scoped instruments. |
-| Band 2 column widths | `instruments.column_widths` JSON | Reviewer surface table renders `<col>` widths + opts into `table-layout: fixed` when any width is set. |
-| Band 2 display-field order | `instrument_display_fields.order` | Reviewer surface column order + Setup-page display fields list — same as ordinary instruments. |
+| Identity (name, short_label, description) | `instruments.{name, short_label, description}` | Reviewer surface heading + Setup pages — same as legacy. |
+| Band 1 Link 1 + 2 (assignment rules) | `session_rule_sets.rules_json` via `instruments.rule_set_id` | Assignment engine (`app/services/rules/engine.py`) — same as legacy. |
+| Band 1 Link 3 (unit of review) | `instruments.group_kind` | Reviewer surface group-row composition + group-pair-count cache — same shape as the legacy group-instrument variant. |
+| Band 2 display-field order (pill drag) | `instrument_display_fields.order` | Reviewer surface column order — same as legacy. |
+| Band 2 column widths (display + identity) | `instruments.column_widths` JSON | Reviewer surface table renders `<col>` widths + opts into `table-layout: fixed` when widths are set. |
+| Band 2 pill selection / response-field rows / preview-sample reviewee / response-field column widths | `instruments.band2_state` JSON (`selected_display_keys` / `response_fields[*]` / `sample_reviewee_name`) | **New-model card preview only — see Gap 1 + Gap 2 below for the reviewer-surface bridge.** |
+| Lifecycle (Edit / Save / Cancel / Open / Close / Show-when-closed / Replicate / Delete) | Standard `instruments` columns | Standard action row at the bottom of every card flavour. |
 
-## Where new-model writes are JSON-only
+## Gap inventory — what the new-model card doesn't do yet
 
-These pieces persist on `instruments.band2_state` but don't
-update the existing schema rows the reviewer surface + assignment
-engine actually consume.
+Cross-referenced against the legacy individual + group cards
+(`app/web/templates/operator/instruments_index.html` — non-
+`is_new_model` branches), the RuleSet library
+(`app/services/rules/seeds.py`, `app/services/rules/session_library.py`,
+`app/web/routes_operator/_rule_builder.py`), and the RTD library
+(`app/services/instruments/_rtds.py`,
+`app/web/routes_operator/_response_types.py`,
+the Response Type Definitions card lines 2877-3196).
 
-### 1. Pill selection (which display columns appear)
+Each gap carries a rough complexity (T = trivial, S = small, M
+= medium, L = large) and notes any blocking dependency.
 
-**What the operator sees.** Clicking a pill in Band 2's pill row
-adds the corresponding column to the preview table inside the
-new-model card.
+### Gap 1 — Pill selection → `InstrumentDisplayField.visible` (T)
 
-**What persists.** The pill's canonical key
-(`reviewee.name`, `reviewee.tag_1`, etc.) is added to
-`band2_state.selected_display_keys`. The corresponding
-`InstrumentDisplayField.visible` flag is **not** updated.
+**Today.** Pill click toggles `band2_state.selected_display_keys`
+but doesn't update `InstrumentDisplayField.visible`. Operator
+sees the column drop from the new-model preview; the reviewer
+still sees it on the actual surface.
 
-**Gap.** The reviewer surface filters columns by
-`InstrumentDisplayField.visible`, not by the pill selection. So
-the operator can deselect a pill in the preview but the
-reviewer still sees that column.
+**Close.** Mirror each pill toggle through the existing
+`set_display_field_visibility` service (with the Name + Email
+locked-row guard already in place there). One small wiring
+change in `set_band2_state` (or a paired call in the route).
 
-**To close.** On each pill toggle, mirror the selection to the
-matching `InstrumentDisplayField.visible` row. The
-`set_band2_state` service already validates against
-`_BAND2_ALLOWED_DISPLAY_KEYS`; extending it to also call the
-existing `instruments_service.set_display_field_visibility`
-helper would be the bulk of the work. Edge cases to think
-through: locked display fields (Name, Email — already filtered
-out of the visibility toggle on the standard surface), and
-whether the operator can ever *gain* a column they didn't pre-
-select (today they can only see what `display_fields` lists).
+### Gap 2 — Response fields → real `InstrumentResponseField` rows (M-L)
 
-### 2. Response fields (the Band 3 Response fields rows)
+**Today.** Band 3's Response Fields editor persists rows to
+`band2_state.response_fields` JSON. No `InstrumentResponseField`
+rows are created; no `ResponseTypeDefinition` rows referenced.
+The reviewer surface sees only the default response fields
+seeded by `create_instrument`, not the operator's authored
+fields.
 
-**What the operator sees.** The "Response fields" right column
-of Band 3 lets the operator define rows
-(name + data type + bounds), commit them with ✓, and toggle the
-resulting pills into the preview.
+**Close.** Each Band 3 ✓ creates / updates a real
+`InstrumentResponseField` pointing at an RTD. Two flavours of
+RTD wiring:
 
-**What persists.** Each row's `{name, data_type, min, max, step,
-list_options, selected}` is appended to
-`band2_state.response_fields`. No `InstrumentResponseField` rows
-are created; no `ResponseTypeDefinition` rows either.
+- **Pre-RTD-retirement (today's schema):** auto-create a
+  per-instrument `ResponseTypeDefinition` row on each ✓ save,
+  carrying the bounds (`min` / `max` / `step` / `max_length`).
+  Per-instrument RTD bloat is the cost.
+- **Post-RTD-retirement** (see Gap 6 below + `guide/instrument_builder.md`
+  §D-RTD + §1d): inline `data_type` + bounds directly onto
+  `instrument_response_fields`. No per-instrument RTD rows at
+  all for numerical / string types; List types stay as
+  session-level RTDs.
 
-**Gap.** The reviewer surface renders input controls from
-`InstrumentResponseField` rows (each pointing at an RTD that
-carries the type + bounds). New-model instruments only have the
-default response fields the standard `create_instrument` flow
-seeds — the operator's Band 3 entries are invisible to the
-reviewer.
+Cascade-aware delete needed for X on a row when responses already
+exist. The pill's `selected` flag needs either a new
+`InstrumentResponseField.visible`-style column or a "if it's in
+the table, it's shown" contract.
 
-**To close.** Significantly bigger work:
+### Gap 3 — Sort priorities (T-S)
 
-- Each Band 3 row needs a real `InstrumentResponseField` row on
-  the instrument, pointed at a `ResponseTypeDefinition`.
-- For numerical + string types: today every bounds combination
-  needs a dedicated RTD row (`min` / `max` / `step` /
-  `max_length`). Either auto-create a per-instrument RTD on each
-  ✓ save, or wait on the
-  [RTD-library retirement](./instrument_builder.md#d-rtd--response-field-type-inlining)
-  that inlines bounds onto the response field directly (Part 1d
-  in the sequencing plan).
-- For list types: the row's `list_options` would create or
-  reference a List RTD on the session.
-- The ✓ → save flow would write through
-  `instruments_service.add_response_field` /
-  `update_response_field`; the X → delete flow would call
-  `delete_response_field` (or its cascade-aware sibling when the
-  field has saved responses).
-- The pill's `selected` flag would mirror to a per-instrument
-  flag — there's no existing "include in surface" concept for
-  response fields (every response field renders on the surface
-  today), so this might need a new boolean column or simply
-  rely on "if it's in the table, it's shown".
+**Legacy.** Sort cell on each Display Fields row — tri-state
+click button cycling unsorted → asc → desc → unsorted, persisting
+to `instruments.sort_display_fields` JSON (Segment 13B). Reviewer
+surface default sort honours this.
 
-The RTD-library retirement design (`guide/instrument_builder.md`
-§D-RTD + §1d) is the prerequisite cleanup that makes the
-numerical / string side of this much less ceremonial. Tackling
-the integration before that retirement means accepting per-
-instrument RTD bloat.
+**New-model.** No sort UI today; the preview pills are
+drag-orderable but don't expose sort priorities.
 
-## When the integration matters
+**Close.** Either add a sort badge to each Band 2 pill (click to
+cycle, badge shows priority number) or move sort to a separate
+control. The underlying `instruments.sort_display_fields` JSON
++ `instruments_service.set_sort_display_fields` already exist
+unchanged.
 
-For the current pilot phase the gap is benign — the operator's
-Band 2 / Band 3 choices visibly shape the preview row inside
-the new-model card, which is enough for design feedback. The
-gap matters once the new-model card stops being a concept test
-and starts driving real reviewer-facing instruments.
+### Gap 4 — Response field help text + visibility (S)
 
-Trigger conditions:
+**Legacy.** Response Fields Help table — `help_text` textarea +
+`help_text_visible` toggle per response field. Reviewer surface
+renders help text inline below the input when visible.
 
-- A pilot operator wants a reviewer to actually fill in one of
-  the new-model card's Band 3 response fields, end-to-end.
-- A pilot operator wants pill selection to act as a true
-  visibility toggle (deselect = column doesn't appear on the
-  reviewer surface).
+**New-model.** Not surfaced. Band 3 Response Fields rows only
+have name / data_type / bounds.
 
-At that point Gap 1 (pill selection → visibility) is the
-smaller of the two and should land first.
+**Close.** Either an expandable accordion per row in Band 3, or
+a dedicated help editor. Wires to the existing
+`InstrumentResponseField.help_text` + `.help_text_visible`
+columns once Gap 2 lands (response fields become real DB rows
+first).
+
+### Gap 5 — Response field "required" flag (T)
+
+**Legacy.** Required checkbox on each Response Fields row.
+
+**New-model.** Not surfaced.
+
+**Close.** Add a checkbox to each Band 3 row; wire to
+`InstrumentResponseField.required`. Trivial once Gap 2 closes.
+
+### Gap 6 — RTD library retirement (M, prereq for Gap 2 cheapness)
+
+**Today.** Two tiers — `operator_response_type_definitions` (per-
+operator library) + `response_type_definitions` (per-session
+copies, 10 seeded RTDs per session). Per-session card lets the
+operator Edit / Delete / Save-to-library / Add-from-library
+(template lines 2877-3196).
+
+**Plan.** `guide/instrument_builder.md` §D-RTD + §1d sketches
+the retirement:
+
+- **Inline** numerical + string types' bounds onto
+  `instrument_response_fields` directly. Drop the corresponding
+  seeded RTDs.
+- **Keep** List-type RTDs as a small per-session catalog (the
+  shared option-list still has reuse value across instruments).
+- **Retire** `operator_response_type_definitions` entirely.
+- Personal-library copy-in retires too. Session replication
+  carries any per-session List RTDs along with the clone.
+
+Migration: backfill bounds inline onto every referencing
+`instrument_response_fields` row, then drop the numerical /
+string seeded RTDs.
+
+### Gap 7 — RuleSet library retirement (M)
+
+**Today.** Two tiers — `operator_rule_sets` (library) +
+`session_rule_sets` (per-session copies, 5 seeded RuleSets per
+session: `Full Matrix` / `Intra-group peer review` /
+`Cross-group peer review` / `Same group, different role` /
+`Three reviewers per reviewee`). Rule Builder child page
+(`app/web/routes_operator/_rule_builder.py`) is the editor; the
+per-instrument card's Assignment Rule section pins a session
+copy via `instrument.rule_set_id`.
+
+**Plan.** `guide/instrument_builder.md` Part 1b sketches the
+retirement:
+
+- Band 1's inline rule editor (already shipped on new-model)
+  becomes the canonical authoring surface.
+- Retire seeded RuleSets, the personal library, "Save to /
+  Add from library" affordances, the Available RuleSets sidebar
+  on the Instruments page, and `library_origin_id` provenance.
+- Retire the Rule Builder child page entirely.
+- Replace with one-shot "Insert starter ▾" templates (no
+  provenance, no library row).
+
+The new-model card already authors rules inline through
+`session_rule_sets.rules_json`, so the engine path is unchanged
+— what retires is the library tier + the separate editor page.
+
+### Gap 8 — "+Group instrument" button becomes redundant (T)
+
+**Legacy.** The Instruments index has a dedicated "+Group
+instrument" button that creates an instrument with
+`group_kind=GROUP_KIND_SENTINEL` so the per-instrument card
+renders the group-scoped variant.
+
+**New-model.** Band 1 Link 3's Individual ↔ Grouped toggle
+already covers this. The "+Group instrument" button retires once
+new-model is the default.
+
+### Gap 9 — Drop the `is_new_model` flag (T, last step)
+
+Once new-model is the only flavour, the column is dead. Final
+Alembic revision drops `is_new_model` and the `+New model`
+button. Template branches on `is_new_model` collapse to a single
+shape.
+
+## Roadmap: smallest path to full takeover
+
+Sequenced so each step is independently shippable and the
+operator gains parity progressively:
+
+1. **Gap 1** (pill → visible) + **Gap 3** (sort priorities) +
+   **Gap 5** (required flag). All T-S, no schema delta. Once
+   these land, the new-model card surfaces every per-display-
+   field affordance the legacy card has.
+2. **Gap 6** (RTD library retirement). Schema delta on
+   `instrument_response_fields` + data migration. Lands before
+   Gap 2 so Gap 2 doesn't have to author the bloat workaround.
+3. **Gap 2** (response fields → real DB rows). Now cheap because
+   bounds inline onto `instrument_response_fields` directly. +
+   **Gap 4** (help text) rides along since the columns exist.
+4. **Gap 7** (RuleSet library retirement). Independent of
+   anything else once Band 1's inline editor is the canonical
+   path.
+5. **Gap 8** (retire +Group button) + **Gap 9** (drop
+   `is_new_model`). Cleanup. The legacy template branches +
+   routes + buttons retire in the same PR.
+
+Estimated effort: roughly 6-10 medium PRs for steps 1-3, 3-5
+medium PRs for step 4, 1-2 small PRs for step 5. Total
+~10-17 PRs spread across a small handful of segments.
+
+## When this matters
+
+The card is usable end-to-end today **for design feedback** —
+operators can author rules, pick unit of review, lay out
+columns, design response shapes, all visibly in the preview.
+
+The gaps become blocking when:
+
+- A pilot operator wants a reviewer to actually fill in a Band
+  3 response field (Gap 2).
+- A pilot operator wants pill deselect to truly hide a column
+  on the reviewer surface (Gap 1).
+- The team wants to stop maintaining two card flavours +
+  library subsystems and consolidate (Gaps 6 + 7 + 9).
+
+Until then, the new-model card is best framed as a
+concept-test surface that runs alongside the legacy cards,
+with the gaps documented above as the price of running both.
