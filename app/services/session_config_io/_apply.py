@@ -1180,7 +1180,6 @@ def _apply_instruments(
                     instrument_id=instrument.id,
                     field_key=rf_spec.field_key or "",
                     label=rf_spec.label or "",
-                    response_type_id=rtd.id,
                     required=rf_spec.required,
                     order=m,
                     validation=validation_block_for_rtd(rtd),

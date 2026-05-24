@@ -38,6 +38,16 @@ from app.services.session_config_io import (
     serialize_session_config,
 )
 from app.services.session_config_io import _ParseError, _parse_group_kind
+from _legacy_rtd_helpers import (
+    inline_kwargs_legacy as _inline_kwargs_legacy,
+)
+
+
+# Segment 18J Wave 2 PR iii-b4 — the FK from
+# ``instrument_response_fields`` to ``response_type_definitions``
+# retired. The Likert5 inline shape is used by field fixtures
+# below.
+_LIKERT_INLINE = _inline_kwargs_legacy("Likert5")
 
 
 # --------------------------------------------------------------------------- #
@@ -287,6 +297,8 @@ def _likert_id(db: Session, review_session: ReviewSession) -> int:
     )
 
 
+
+
 def test_instrument_block_emits_canonical_fields(db: Session) -> None:
     review_session = _bare_session(db, code="instr")
     instr = Instrument(
@@ -305,7 +317,7 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
             instrument_id=instr.id,
             field_key="overall",
             label="Overall",
-            response_type_id=_likert_id(db, review_session),
+            **_LIKERT_INLINE,
             required=True,
             order=0,
             help_text="How would you rate them?",
@@ -394,7 +406,7 @@ def test_multiple_instruments_indexed_by_order_position(db: Session) -> None:
     determines the index for fields within an instrument."""
 
     review_session = _bare_session(db, code="multi")
-    likert = _likert_id(db, review_session)
+    _likert_id(db, review_session)  # ensure seeded RTDs exist
     for n, name in enumerate(["First", "Second"]):
         instr = Instrument(
             session_id=review_session.id,
@@ -408,7 +420,7 @@ def test_multiple_instruments_indexed_by_order_position(db: Session) -> None:
                 instrument_id=instr.id,
                 field_key="q1",
                 label="Q1",
-                response_type_id=likert,
+                **_LIKERT_INLINE,
                 order=0,
             )
         )
@@ -509,7 +521,7 @@ def test_instrument_rule_set_name_resolves_through_session_rule_sets(
             instrument_id=instr.id,
             field_key="q1",
             label="Q1",
-            response_type_id=_likert_id(db, review_session),
+            **_LIKERT_INLINE,
             order=0,
         )
     )
@@ -572,7 +584,7 @@ def test_section_ordering_is_deterministic(db: Session) -> None:
             instrument_id=instr.id,
             field_key="q1",
             label="Q1",
-            response_type_id=_likert_id(db, review_session),
+            **_LIKERT_INLINE,
             order=0,
         )
     )
@@ -630,7 +642,7 @@ def _add_instrument(
             instrument_id=instr.id,
             field_key="q1",
             label="Q1",
-            response_type_id=_likert_id(db, review_session),
+            **_LIKERT_INLINE,
             order=0,
         )
     )

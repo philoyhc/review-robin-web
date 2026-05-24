@@ -3167,21 +3167,20 @@ def test_wave2_pr_iii_b1_property_no_longer_falls_back_to_rtd(
     db.flush()
     db.refresh(field)
 
-    # Sanity: creator populated inline + the FK still points at
-    # the surviving List RTD.
+    # Sanity: creator populated inline. iii-b4 retired the FK
+    # column + the response_type_definition relationship; the
+    # phantom response_type_id property returns None.
     assert field._inline_response_type == "Yes_no"
-    assert field.response_type_id == rtd_list.id
+    assert field.response_type_id is None
     assert field.response_type == "Yes_no"
 
-    # Clear inline; the RTD still exists at field.
-    # response_type_definition, but the property no longer falls
-    # back through the relationship.
+    # Clear inline; reads return the empty string (no fallback
+    # anywhere — the relationship is gone too).
     field._inline_response_type = None
     field._inline_data_type = None
     db.flush()
     assert field.response_type == ""
     assert field.data_type == ""
-    # FK + relationship are still intact — fallback was a property
-    # behaviour, not a data change.
-    assert field.response_type_id == rtd_list.id
-    assert field.response_type_definition is not None
+    # ``rtd_list`` is unused now that the FK is gone; reference it
+    # to keep ruff quiet.
+    assert rtd_list.id is not None

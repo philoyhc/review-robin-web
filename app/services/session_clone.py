@@ -170,13 +170,14 @@ def clone_session(
                 )
             )
         for field in instrument.response_fields:
+            # iii-b4: response_type_id FK dropped; just clone every
+            # mapped column (including the inline bounds).
             db.add(
                 InstrumentResponseField(
                     instrument_id=new_instrument.id,
-                    response_type_id=rtd_map.get(field.response_type_id),
                     **_column_values(
                         field,
-                        skip={"id", "instrument_id", "response_type_id"},
+                        skip={"id", "instrument_id"},
                     ),
                 )
             )
