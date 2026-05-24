@@ -1720,3 +1720,98 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         "reviewee.email_or_identifier",
     ]
     assert len(new_model.band2_state["response_fields"]) == 2
+
+
+def test_new_model_link3_and_column_widths_survive_form_save(
+    client: TestClient, db: Session
+) -> None:
+    """Repro: column_widths (auto-saved on drag) and group_kind
+    (saved via the form Submit) should both survive the form-Save
+    POST and re-render with the same values."""
+    review_session = _make_session(client, db, code="nm-save-thru")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Simulate a drag-resize: POST column-widths first.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/column-widths",
+        json={"widths": {"identity": 220}},
+    )
+    assert resp.status_code == 200
+    db.refresh(new_model)
+    assert new_model.column_widths == {"identity": 220}
+
+    # Now simulate the operator clicking Save on the form — POST
+    # /fields/save with link3 set to grouped + boundary.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_field": "",
+            "link1_op": "",
+            "link1_operand_value": "",
+            "link1_operand_tag": "",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_field": "",
+            "link2_op": "",
+            "link2_operand_value": "",
+            "link2_operand_tag": "",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag1",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    # Both must still be there.
+    db.refresh(new_model)
+    assert new_model.group_kind == "r1", (
+        f"Link 3 group_kind cleared by Save (got {new_model.group_kind!r})"
+    )
+    assert new_model.column_widths == {"identity": 220}, (
+        f"column_widths cleared by Save (got {new_model.column_widths!r})"
+    )
+
+    # And the re-rendered HTML should reflect both — in view mode
+    # AND in edit mode.
+    view_body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'data-new-model-band2-identity-width="220"' in view_body
+    assert 'data-new-model-band2-unit-mode="grouped"' in view_body
+    edit_body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert 'data-new-model-band2-identity-width="220"' in edit_body
+    assert 'data-new-model-band2-unit-mode="grouped"' in edit_body
+    # The Link 3 boundary picker in edit mode should show
+    # reviewee.tag1 as the currently selected option (not "—").
+    # If this assertion fails, the operator would see the boundary
+    # cleared when re-entering edit mode after Save.
+    assert (
+        '<option value="reviewee.tag1" selected>' in edit_body
+    ), (
+        "Link 3 boundary picker lost its reviewee.tag1 selection "
+        "after Save → reload → re-edit. Re-edit body excerpt:\n"
+        + edit_body[
+            edit_body.find("data-new-model-unit-cell") : edit_body.find(
+                "data-new-model-unit-cell"
+            )
+            + 1200
+        ]
+    )
