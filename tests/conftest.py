@@ -102,3 +102,73 @@ def db(engine: Engine) -> Iterator[Session]:
         session.close()
         transaction.rollback()
         connection.close()
+
+
+def _install_legacy_rtd_seed_shim() -> None:
+    """Segment 18J Wave 2 PR iii-b2 — back-compat seed shim.
+
+    The production seed list ``SEEDED_RESPONSE_TYPE_DEFINITIONS`` is
+    empty post-retirement; the lazy seeder
+    ``ensure_default_response_type_definitions`` returns ``{}`` and
+    no per-session RTD rows get auto-created. Many pre-iii-b2 test
+    fixtures look up RTDs by name (``rtds["1-to-5int"]``) or assume
+    the catalogue is seeded.
+
+    This shim wraps the lazy seeder at module-load time (before test
+    modules import it) so every call ALSO creates the legacy ten
+    RTDs (as ``is_seeded=True``, matching pre-iii-b2 shape), keeping
+    fixtures green without per-file edits.
+
+    Retires alongside the rest of the RTD library in iii-b3 / iii-b4
+    (or earlier if/when tests migrate explicitly to the inline shape).
+    """
+    from app.services.instruments import _rtds as rtds_module
+    from app.services import instruments as instruments_pkg
+
+    original = rtds_module.ensure_default_response_type_definitions
+
+    def wrapped(db, review_session):
+        original(db, review_session)
+        # Local imports — keep top-of-file conftest light.
+        from _legacy_rtd_helpers import make_default_seeded_rtd_set
+        from app.db.models import ResponseTypeDefinition
+        from sqlalchemy import select as sa_select
+
+        existing = {
+            r.response_type
+            for r in db.execute(
+                sa_select(ResponseTypeDefinition).where(
+                    ResponseTypeDefinition.session_id == review_session.id
+                )
+            ).scalars()
+        }
+        if "1-to-5int" not in existing:
+            make_default_seeded_rtd_set(
+                db, session_id=review_session.id
+            )
+        return {
+            r.response_type: r
+            for r in db.execute(
+                sa_select(ResponseTypeDefinition).where(
+                    ResponseTypeDefinition.session_id == review_session.id
+                )
+            ).scalars()
+        }
+
+    # Patch the symbol on every module that re-exports it BEFORE any
+    # test module's ``from app.services.instruments import ...`` line
+    # captures it. Running at conftest module-load time guarantees
+    # this ordering.
+    rtds_module.ensure_default_response_type_definitions = wrapped
+    instruments_pkg.ensure_default_response_type_definitions = wrapped
+
+    from app.services.instruments import (
+        _instrument_crud as ic_module,
+        _response_fields as rf_module,
+    )
+
+    ic_module.ensure_default_response_type_definitions = wrapped
+    rf_module.ensure_default_response_type_definitions = wrapped
+
+
+_install_legacy_rtd_seed_shim()

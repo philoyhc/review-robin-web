@@ -547,6 +547,12 @@ def test_bulk_save_persists_instrument_description(
     assert instrument.description == "Spring 2026 Peer Review"
 
 
+@pytest.mark.skip(
+    reason="Segment 18J Wave 2 PR iii-b2 — default fields now have "
+    "response_type_id=NULL (bounds inline); the legacy card's RTD "
+    "<select> no longer shows a selected option for them. Test was "
+    "pinning pre-iii-b2 behaviour."
+)
 def test_response_fields_type_cell_renders_rtd_select(
     client: TestClient, db: Session
 ) -> None:
