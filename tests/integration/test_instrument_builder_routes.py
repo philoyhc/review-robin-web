@@ -1943,3 +1943,88 @@ def test_new_model_column_widths_snapshot_rides_with_form_save(
     ).text
     assert 'name="column_widths_snapshot"' in body
     assert 'data-new-model-band2-identity-width="240"' in body
+
+
+def test_new_model_response_field_width_persists_on_band2_state(
+    client: TestClient, db: Session
+) -> None:
+    """Response-column widths ride on the band2_state response_fields
+    entry (not on instruments.column_widths) so they travel with the
+    field through drag-reorder. set_band2_state sanitises width_px
+    per entry (clamped 40-1200); the template renders it as
+    data-width on the response pill."""
+    review_session = _make_session(client, db, code="nm-rf-width")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+
+    # Persist a response field with a drag-resized width.
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "list_options": "",
+                    "selected": True,
+                    "width_px": 260,
+                }
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    db.refresh(new_model)
+    rfs = new_model.band2_state["response_fields"]
+    assert rfs[0]["width_px"] == 260
+
+    # Out-of-range widths clamp on store.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "list_options": "",
+                    "selected": True,
+                    "width_px": 9999,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["response_fields"][0]["width_px"] == 1200
+
+    # Template renders the stored width as data-width on the
+    # response pill — the preview-builder JS picks it up to set
+    # the response column's <col style="width: Npx">.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    assert 'data-source-type="response"' in body
+    # The data-width attribute on the response pill should carry
+    # the saved width.
+    flat = " ".join(body.split())
+    assert (
+        'data-row-key="rf_0" data-response-key="rf_0" data-width="1200"'
+        in flat
+    )

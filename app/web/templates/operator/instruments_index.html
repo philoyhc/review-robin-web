@@ -1292,6 +1292,7 @@
                         data-selectable-in-group="true"
                         data-row-key="{{ _key }}"
                         data-response-key="{{ _key }}"
+                        data-width="{{ rf.width_px or '' }}"
                         data-reorderable="true"
                         draggable="true"
                         ondragstart="newModelBand2DragStart(event)"
@@ -1663,11 +1664,14 @@
                     var rpill = card.querySelector('[data-new-model-band2-pill][data-response-key="' + rkey + '"]');
                     if (rpill) { rpill.setAttribute('data-width', lastWidth); }
                   }
-                  // Response column widths are client-side only —
-                  // response fields aren't persisted yet, so skip
-                  // the server-side widths POST when only a
-                  // response column moved.
-                  if (!isResponse) {
+                  // Display-field (+ identity) widths go through
+                  // /column-widths via saveBand2Widths. Response
+                  // column widths ride on the response_fields
+                  // entry inside band2_state instead, so a
+                  // response-side resize fires saveBand2State.
+                  if (isResponse) {
+                    saveBand2State(card);
+                  } else {
                     saveBand2Widths(card);
                   }
                 }
@@ -1749,6 +1753,12 @@
                   if (key === 'list') { key = 'list_options'; }
                   rf[key] = input.value || '';
                 });
+                // Carry the drag-resized column width along with
+                // the response field entry so the width travels
+                // with the field through drag-reorder and survives
+                // Save. ``set_band2_state`` sanitises (clamps 40-1200).
+                var widthAttr = parseInt(pill.getAttribute('data-width') || '', 10);
+                if (widthAttr > 0) { rf.width_px = widthAttr; }
                 responseFields.push(rf);
               });
               fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/band2-state', {
