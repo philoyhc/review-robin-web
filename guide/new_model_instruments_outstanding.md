@@ -239,3 +239,151 @@ The gaps become blocking when:
 Until then, the new-model card is best framed as a
 concept-test surface that runs alongside the legacy cards,
 with the gaps documented above as the price of running both.
+
+## Performance: scaling Save + Refresh preview to large rosters
+
+On a 1k × 1k roster (~1M candidate `(reviewer, reviewee)`
+pairs), both the post-Save page render and the ↻ Refresh
+preview click lag in the 1-3s range. The Refresh latency is
+expected — it explicitly runs the rule engine — but the Save
+lag is incidental: the redirect-rerender pays the same engine
+cost via the per-instrument eligibility cache invalidation.
+
+### Where the cost actually lives
+
+`GET /operator/sessions/{id}/instruments` calls
+`build_instruments_context`, which in turn calls
+`session_library.evaluate_session_rule_eligibility(...)` to
+compute the **pinned-rule eligible-pair count per instrument**
+(rendered on the legacy assignment-rule card and consulted by
+the Validate page). The function stamps a content hash of
+`(roster + rule definition)` against
+`session_rule_sets.cached_eligibility_stamp` and re-runs
+`engine.evaluate(...)` on cache miss. Any rule edit changes
+the hash, so the first render after Save always pays the full
+~1-3s/instrument cost. A group-scoped instrument additionally
+hits `evaluate_instrument_group_pair_counts` for the same
+brute-force `O(N · M · rules)` walk.
+
+`engine.evaluate` itself (`app/services/rules/engine.py`)
+materialises the full `[(r, e) for r in reviewers for e in
+reviewees]` list (1M tuples ≈ 30 MB), sorts it, then evaluates
+each rule against every surviving pair. No tag-side indexes,
+no short-circuit.
+
+### Recommendations
+
+Sequenced from smallest lift to biggest payoff, framed against
+the new-model card's actual needs.
+
+#### Rec A — Drop the per-instrument eligible-pair count from the index render *(S)*
+
+The new-model card does not need to display a pair count. The
+legacy individual + group cards render it in the Assignment
+Rule card (`spec/rule_based_assignment.md` §7.1) and the
+Validate page consults it for a staleness rule — but neither
+of those is on the path the operator hits after clicking
+Save.
+
+Move the eligibility-count fetch off the
+`build_instruments_context` hot path. Two flavours:
+
+- **Conditional skip.** Only call `evaluate_session_rule_eligibility`
+  for instruments whose flavour actually renders a count. For
+  new-model instruments (which don't), skip entirely. The
+  legacy cards keep their counts unchanged. Smallest possible
+  diff; lets the legacy + new-model cards coexist with
+  different performance profiles.
+- **Full lazy / async.** Render the index page with a
+  "Counting…" placeholder badge per pinned rule set; a small
+  inline JS fetch hits a new count endpoint that runs the
+  engine and fills in the badge. The Save → redirect → render
+  no longer blocks on the engine at all. Bigger change but
+  benefits every flavour and decouples the index render from
+  the engine entirely.
+
+Either flavour makes Save feel instant on 1k × 1k rosters.
+No engine work changes; no schema change; the
+`cached_eligible_pair_count` mechanism stays in place for the
+surfaces that still want a count.
+
+Eligibility for new-model preview still needs the engine
+(Rec B) — Rec A is purely about getting the cost off the
+Save flow.
+
+#### Rec B — Engine fast path: "find first N in-scope pairs" *(M)*
+
+The new-model card's actual need from the engine is a small
+sample for the Band 2 preview, not a count and not the full
+pair list:
+
+- **Individual mode:** one `(sample_reviewer, sample_reviewee)`
+  pair surviving Link 1 + Link 2 + cross-side ops.
+- **Group mode:** up to `GROUP_MEMBER_NAME_LIMIT` (=10)
+  reviewees in the sample group, plus the boundary-tag values.
+
+Today the Refresh-preview route
+(`app/web/routes_operator/_instruments.py::instrument_preview_sample`
+→ `find_sample_in_scope_reviewee`) calls `engine.evaluate(...)`
+and then takes `result.pairs[0]`. That throws away ~999,999
+pairs of work.
+
+Add a `find_first_n_pairs(rule_set, *, reviewers, reviewees,
+limit, pair_context_lookup)` entry point next to `evaluate` in
+`app/services/rules/engine.py`. Same predicate vocabulary, but:
+
+- Iterates `(reviewer, reviewee)` pairs lazily (generator,
+  not materialised list).
+- Short-circuits the moment `limit` matches are accumulated.
+- Skips the candidates sort + quota assignment (preview
+  doesn't need a deterministic ordering of the full result).
+- For Refresh on Individual mode: `limit=1`. Typical case:
+  first reviewer × first reviewee passes — returns in
+  microseconds. Worst case (very narrow rules): walks the
+  full 1M pairs, same as today.
+- For Refresh on Group mode: server picks one sample reviewer,
+  walks their reviewees until `limit=10` (or the reviewer is
+  exhausted), returns the partition. Typically << 1000
+  predicate evaluations.
+
+`find_sample_in_scope_reviewee` swaps over to
+`find_first_n_pairs(limit=1)`. Refresh preview on 1k × 1k
+drops from 1-3s to typically <100ms; only narrow / no-match
+rules hit the worst case.
+
+#### Rec C — Single-side predicate indexes (L, optional)
+
+Only worth doing if Rec B's worst case still bites on real
+rosters. Pre-compute a `(side, tag_slot, value) → id_set` dict
+at evaluation start (cheap, `O(N + M)`). For single-side
+`equals` / `not_equals` / `in` / `not_in` / `is_empty` /
+`is_not_empty` rules, intersect / subtract id sets before
+materialising any pair. Cross-side `same_as` / `different_from`
+still iterate per pair but over a much smaller surviving
+set.
+
+This is where roster-upload-time caching could meaningfully
+contribute — the index lives on a new
+`sessions.roster_index_json` column populated at import (or
+lazily on first eval and invalidated on roster edit, mirroring
+the existing `cached_eligibility_stamp` pattern). With the
+index, the brute-force `O(N · M)` step collapses to
+`O(K · L · cross_side_rules)` where `K` and `L` are the
+post-filter subset sizes.
+
+Defer until Rec B's worst case is observed in practice. For
+the broad-rule cases pilot operators are likely to author,
+Rec B alone should keep latencies well under 100ms even on
+1k × 1k.
+
+### Sequencing
+
+| # | Recommendation | Lift | Impact on Save lag | Impact on Refresh lag |
+|---|---|---|---|---|
+| A | Drop per-instrument eligible-pair count from index render | S | **Cured.** Save returns instantly; no engine on the redirect path. | None — Refresh still hits the engine. |
+| B | `find_first_n_pairs` engine fast path | M | None directly (Rec A already cured Save). | **Cured.** Refresh typically <100ms; worst case = today. |
+| C | Single-side predicate indexes (+ roster-upload cache) | L | None directly. | Brings Rec B's worst case down to interactive. Also speeds the real Assignments-page Generate. |
+
+Recommend landing A first as a one-PR quick win, B as a follow-up,
+and reserving C for if pilot rosters expose the narrow-rule worst
+case.
