@@ -3157,6 +3157,139 @@ def test_band3_help_text_body_defaults_to_empty_when_omitted(
     assert new_model.band2_state["response_fields"][0]["help_text"] == ""
 
 
+def test_band2_intro_card_renders_short_label_description_and_progress(
+    client: TestClient, db: Session
+) -> None:
+    """Band 2 replicates the reviewer-surface per-instrument intro
+    card: short_label / description + progress pills (0 done /
+    required + all totals). Pill count source is
+    band2_state.response_fields filtered by ``selected``."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-intro"
+    )
+    # Stamp the instrument with a short_label + description so the
+    # heading + subtitle both render.
+    new_model.short_label = "Peer Review"
+    new_model.description = "Quick sanity check after milestone 1."
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "selected": True,
+                    "required": True,
+                },
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                    "required": False,
+                },
+                {
+                    "name": "Bonus",
+                    "data_type": "integer",
+                    "selected": False,
+                    "required": True,
+                },
+            ]
+        },
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    # Card scaffolding present.
+    assert "data-new-model-band2-intro-card" in flat
+    assert '<h2>Peer Review</h2>' in flat
+    assert "Quick sanity check after milestone 1." in flat
+
+    # 2 selected response fields (Rating, Notes) — Bonus is
+    # deselected, so it doesn't contribute. 1 of them is required.
+    assert "Required items completed: 0/1" in flat
+    assert "All items completed: 0/2" in flat
+    # Required pill is warning (1 required, 0 done). All pill is
+    # neutral count.
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    intro_block = flat[intro_idx : intro_idx + 2500]
+    assert 'class="pill pill-warning"' in intro_block
+    assert 'class="pill pill-count"' in intro_block
+
+
+def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
+    client: TestClient, db: Session
+) -> None:
+    """When zero response fields are selected, the progress pill
+    row is omitted (matches the reviewer surface's "no completion
+    data → no pills" contract)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-intro-no-rfs"
+    )
+    new_model.short_label = "Reflection"
+    new_model.description = ""
+    db.commit()
+
+    # No response fields seeded → progress row should not render.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={"response_fields": []},
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    assert intro_idx != -1
+    intro_block = flat[intro_idx : intro_idx + 2000]
+    # Heading still renders.
+    assert '<h2>Reflection</h2>' in intro_block
+    # Progress pills do not.
+    assert "Required items completed" not in intro_block
+    assert "All items completed" not in intro_block
+
+
+def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
+    client: TestClient, db: Session
+) -> None:
+    """When the operator selects response fields but none are
+    required, the Required pill renders as pill-success (vacuously
+    complete) instead of pill-warning."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-intro-no-required"
+    )
+    new_model.short_label = "Notes"
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": True,
+                    "required": False,
+                }
+            ]
+        },
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    assert "Required items completed: 0/0" in flat
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    intro_block = flat[intro_idx : intro_idx + 2500]
+    assert 'class="pill pill-success"' in intro_block
+
+
 # --------------------------------------------------------------------------- #
 # Segment 18J Wave 2 PR i — before_insert listener auto-populates
 # inline bound columns from the RTD on new InstrumentResponseField

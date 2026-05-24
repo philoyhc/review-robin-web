@@ -1331,6 +1331,42 @@
                 <span class="muted">—</span>
               {% endif %}
             </div>
+            {# Replicate the reviewer-surface per-instrument intro
+               card — short_label / description + completion-progress
+               pills — so the operator can preview the chrome the
+               reviewer will see at the top of this instrument's
+               section. Counts are per-row representative: ``all`` is
+               the count of selected response fields, ``required`` is
+               those with the required flag. Preview is always at
+               ``0 done`` since no real responses exist here. #}
+            {% set _rf_list = _band2.response_fields or [] %}
+            {% set _all_count = (_rf_list | selectattr('selected') | list | length) %}
+            {% set _required_count = (_rf_list | selectattr('selected') | selectattr('required') | list | length) %}
+            {% set _intro_title = instrument.short_label or instrument.name %}
+            {% if _intro_title or instrument.description or _all_count > 0 %}
+              <div class="rs-intro-grid"
+                   data-new-model-band2-intro-card
+                   style="margin-top: 16px;">
+                <div class="card rs-instrument-card">
+                  {% if _intro_title %}
+                    <h2>{{ _intro_title }}</h2>
+                  {% endif %}
+                  {% if instrument.description %}
+                    <p class="rs-instrument-subtitle muted">{{ instrument.description }}</p>
+                  {% endif %}
+                  {% if _all_count > 0 %}
+                    <p class="rs-instrument-progress">
+                      <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}">
+                        Required items completed: 0/{{ _required_count }}
+                      </span>
+                      <span class="pill pill-count">
+                        All items completed: 0/{{ _all_count }}
+                      </span>
+                    </p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
             {# Response field details now live as editable rows
                inside Band 3's "Response fields" section — the
                operator views + edits each field there rather than
