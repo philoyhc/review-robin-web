@@ -1218,7 +1218,9 @@
              data-new-model-band2-unit-mode="{{ _saved_unit_mode }}"
              data-new-model-band2-roster='{{ _band2.roster | tojson }}'
              data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}"
-             data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}">
+             data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
+             data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
+             data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
           <h3 style="margin: 0 0 12px 0;">Review Instrument</h3>
           {# Hidden form field that snapshots the current column
              widths as JSON. The drag-resize JS POSTs to
@@ -1233,6 +1235,24 @@
                    name="column_widths_snapshot"
                    data-new-model-band2-widths-snapshot
                    value="{{ (instrument.column_widths or {}) | tojson }}">
+            {# Gap 3 (18J Wave 1) — sort-spec hidden inputs slot.
+               Mirrors the legacy card's slot (same id, same parallel-
+               array shape). ``toggleSort`` / ``_rebuildSortInputs``
+               (shared with the legacy card) populate / refresh these
+               on each badge click; the bulk-save form's
+               ``sort_display_field_id`` + ``sort_dir`` inputs ride
+               with submit. Initial fill round-trips a no-op save. #}
+            <div id="sort-spec-inputs-{{ instrument.id }}"
+                 data-instrument-id="{{ instrument.id }}"
+                 hidden>
+              {% for entry in _band2.sort_spec %}
+                <input form="dfsave-{{ instrument.id }}" type="hidden"
+                       name="sort_display_field_id"
+                       value="{{ entry.display_field_id }}">
+                <input form="dfsave-{{ instrument.id }}" type="hidden"
+                       name="sort_dir" value="{{ entry.dir }}">
+              {% endfor %}
+            </div>
           {% endif %}
           {# Gate pill clicks / drag-resize / drag-reorder behind the
              per-instrument Edit state — same pattern as Bands 1 + 3.
@@ -1485,6 +1505,64 @@
             function esc(s) {
               return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             }
+            // Gap 3 (18J Wave 1) — sort-badge for a display-field
+            // column's <th>. Reads the persisted spec from the
+            // band2 wrapper's data-new-model-band2-sort-spec attr,
+            // matches by display_field_id, returns either a
+            // toggleSort-wired <button> (edit mode) or a static
+            // <span> (view mode). Shape mirrors the legacy
+            // sort_cell macro so the existing toggleSort /
+            // _refreshSortBadges / _rebuildSortInputs JS works
+            // unchanged.
+            function sortBadgeHtml(card, dfId) {
+              if (!dfId) { return ''; }
+              var instrumentId = card.getAttribute(
+                'data-new-model-band2-instrument-id'
+              );
+              var editMode = card.getAttribute(
+                'data-new-model-band2-edit-mode'
+              ) === '1';
+              var spec = [];
+              try {
+                spec = JSON.parse(
+                  card.getAttribute('data-new-model-band2-sort-spec') || '[]'
+                ) || [];
+              } catch (e) { spec = []; }
+              var idx = -1;
+              for (var i = 0; i < spec.length; i += 1) {
+                if (String(spec[i].display_field_id) === String(dfId)) {
+                  idx = i;
+                  break;
+                }
+              }
+              var priority = idx >= 0 ? (idx + 1) : 0;
+              var dir = idx >= 0 ? (spec[idx].dir || '') : '';
+              var badgeText, badgeCls;
+              if (priority === 0) {
+                badgeText = '↕';
+                badgeCls = 'sort-badge sort-badge-empty';
+              } else {
+                badgeText = priority + (dir === 'asc' ? '↑' : '↓');
+                badgeCls = 'sort-badge';
+              }
+              if (editMode) {
+                return (
+                  ' <button type="button" class="sort-btn"'
+                  + ' data-df-id="' + esc(dfId) + '"'
+                  + ' data-instrument-id="' + esc(instrumentId) + '"'
+                  + ' data-priority="' + priority + '"'
+                  + ' data-dir="' + esc(dir) + '"'
+                  + ' onclick="toggleSort(this)"'
+                  + ' title="Click to cycle sort: unsorted → asc → desc → unsorted">'
+                  + '<span class="' + badgeCls + '">' + badgeText + '</span>'
+                  + '</button>'
+                );
+              }
+              if (priority === 0) { return ''; }
+              return (
+                ' <span class="' + badgeCls + '">' + badgeText + '</span>'
+              );
+            }
             // Builds the preview <table> markup. Mirrors the actual
             // reviewer surface (app/web/templates/reviewer/review_surface.html):
             // same .rs-reviewee / .rs-group / .rs-narrow column classes,
@@ -1543,7 +1621,11 @@
               displays.forEach(function (o) {
                 var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
                 var cls = isProfile ? ' class="rs-narrow"' : '';
-                html += '<th scope="col"' + cls + ' style="position: relative;">' + esc(o.label) + maybeResizeHandle('df_' + o.displayFieldId, colIdx === lastIdx) + '</th>';
+                html += '<th scope="col"' + cls + ' style="position: relative;">'
+                  + esc(o.label)
+                  + sortBadgeHtml(card, o.displayFieldId)
+                  + maybeResizeHandle('df_' + o.displayFieldId, colIdx === lastIdx)
+                  + '</th>';
                 colIdx += 1;
               });
               responses.forEach(function (r) {
@@ -3294,6 +3376,33 @@
       }
       _refreshSortBadges(buttons);
       _rebuildSortInputs(instrumentId, buttons);
+      // Gap 3 (18J Wave 1) — if the clicked badge lives inside a
+      // new-model card's Band 2 preview, sync the wrapper's
+      // ``data-new-model-band2-sort-spec`` attr so subsequent
+      // preview re-renders (e.g. on a pill toggle) read the fresh
+      // spec.
+      var band2 = button.closest('[data-new-model-band2]');
+      if (band2) {
+        var active = buttons
+          .filter(function (b) {
+            return (parseInt(b.getAttribute('data-priority'), 10) || 0) > 0;
+          })
+          .sort(function (a, b) {
+            return (
+              parseInt(a.getAttribute('data-priority'), 10) -
+              parseInt(b.getAttribute('data-priority'), 10)
+            );
+          })
+          .map(function (b) {
+            return {
+              display_field_id: parseInt(b.getAttribute('data-df-id'), 10),
+              dir: b.getAttribute('data-dir') || '',
+            };
+          });
+        band2.setAttribute(
+          'data-new-model-band2-sort-spec', JSON.stringify(active)
+        );
+      }
     }
     function _refreshSortBadges(buttons) {
       buttons.forEach(function (b) {

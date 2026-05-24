@@ -597,6 +597,63 @@ async def instrument_bulk_save_fields(
                     widths=widths_payload,
                     actor=user,
                 )
+        # Sort spec (Gap 3, 18J Wave 1) — the new-model card's
+        # Band 2 preview header carries clickable sort badges that
+        # populate the same ``sort_display_field_id`` /
+        # ``sort_dir`` parallel arrays the legacy editor table
+        # uses. Reuse the same service-layer call + error path as
+        # the standard branch below; any rejection (length / dup /
+        # cross-instrument / dir) redirects back to the index with
+        # an inline banner.
+        sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
+        sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
+        if len(sort_ids_raw) != len(sort_dirs_raw):
+            return RedirectResponse(
+                url=(
+                    f"/operator/sessions/{review_session.id}/instruments"
+                    f"?editing={instrument.id}"
+                    f"&sort_save_error_instrument_id={instrument.id}"
+                    f"&sort_save_error=Sort+spec+arrays+misaligned."
+                    f"#instrument-{instrument.id}"
+                ),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+        sort_pairs: list[tuple[int, str]] = []
+        for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
+            try:
+                sort_pairs.append((int(raw_id), raw_dir))
+            except ValueError:
+                return RedirectResponse(
+                    url=(
+                        f"/operator/sessions/{review_session.id}/instruments"
+                        f"?editing={instrument.id}"
+                        f"&sort_save_error_instrument_id={instrument.id}"
+                        f"&sort_save_error=Sort+spec+ids+must+be+integers."
+                        f"#instrument-{instrument.id}"
+                    ),
+                    status_code=status.HTTP_303_SEE_OTHER,
+                )
+        try:
+            instruments_service.set_sort_display_fields(
+                db,
+                instrument=instrument,
+                fields=sort_pairs,
+                actor=user,
+                correlation_id=request_correlation_id(),
+            )
+        except instruments_service.SortSpecError as exc:
+            from urllib.parse import quote
+
+            return RedirectResponse(
+                url=(
+                    f"/operator/sessions/{review_session.id}/instruments"
+                    f"?editing={instrument.id}"
+                    f"&sort_save_error_instrument_id={instrument.id}"
+                    f"&sort_save_error={quote(exc.message, safe=' ')}"
+                    f"#instrument-{instrument.id}"
+                ),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
         # Identity edits (description / short_label) come through the
         # same bulk-save form on the new-model card; reuse the same
         # block at the bottom of the standard handler.
