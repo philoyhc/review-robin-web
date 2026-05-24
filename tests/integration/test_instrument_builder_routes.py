@@ -2942,3 +2942,80 @@ def test_gap_5_template_renders_checkbox_and_data_required(
     # Band 2 pill data-required reflects each row.
     assert 'data-required="true"' in flat
     assert 'data-required="false"' in flat
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18J Wave 2 PR i — before_insert listener auto-populates
+# inline bound columns from the RTD on new InstrumentResponseField
+# rows (additive; backfilled rows already covered in tests/db).
+# --------------------------------------------------------------------------- #
+
+
+def test_wave2_pr_i_listener_inlines_bounds_on_new_response_field(
+    client: TestClient, db: Session
+) -> None:
+    """The before_insert listener on InstrumentResponseField fills
+    in the inline bound columns from the row's pointed-at RTD so
+    rows created post-migration land in the target shape (not just
+    historically-backfilled rows)."""
+    from app.db.models import ResponseTypeDefinition, User
+    from app.services import instruments as instruments_service
+
+    review_session = _make_session(client, db, code="w2-pri-listener")
+    actor = db.execute(select(User).limit(1)).scalar_one()
+    # Trigger the lazy RTD seed via the index render.
+    client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    )
+    rtd_int = db.execute(
+        select(ResponseTypeDefinition)
+        .where(ResponseTypeDefinition.session_id == review_session.id)
+        .where(ResponseTypeDefinition.response_type == "1-to-5int")
+    ).scalar_one()
+    rtd_list = db.execute(
+        select(ResponseTypeDefinition)
+        .where(ResponseTypeDefinition.session_id == review_session.id)
+        .where(ResponseTypeDefinition.response_type == "Yes_no")
+    ).scalar_one()
+    instrument = _instrument(db, review_session.id)
+
+    new_int = instruments_service.add_response_field(
+        db,
+        instrument=instrument,
+        field_key="rating_new",
+        label="Rating",
+        response_type="1-to-5int",
+        required=False,
+        help_text=None,
+        help_text_visible=True,
+        actor=actor,
+    )
+    new_list = instruments_service.add_response_field(
+        db,
+        instrument=instrument,
+        field_key="verdict",
+        label="Verdict",
+        response_type="Yes_no",
+        required=False,
+        help_text=None,
+        help_text_visible=True,
+        actor=actor,
+    )
+    db.flush()
+    db.refresh(new_int)
+    db.refresh(new_list)
+
+    # Numeric row: inline bounds match the RTD verbatim.
+    assert new_int._inline_data_type == rtd_int.data_type
+    assert new_int._inline_response_type == "1-to-5int"
+    assert new_int._inline_min == rtd_int.min
+    assert new_int._inline_max == rtd_int.max
+    assert new_int._inline_step == rtd_int.step
+    assert new_int._inline_list_csv is None
+    # List row: list_csv inlined; numeric bounds NULL.
+    assert new_list._inline_data_type == rtd_list.data_type
+    assert new_list._inline_response_type == "Yes_no"
+    assert new_list._inline_min is None
+    assert new_list._inline_max is None
+    assert new_list._inline_step is None
+    assert new_list._inline_list_csv == rtd_list.list_csv
