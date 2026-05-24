@@ -624,41 +624,41 @@
            bottom. Bands stay placeholder until the builder lands
            per-band. #}
         {% if is_editing %}
-          {# Bulk-save form for the identity-card short_label +
-             description (joins via form= on the inputs). No
-             Display / Response Fields rows on a new-model card yet. #}
+          {# Bulk-save form that the heading's Save button submits.
+             Picks up Band 1's Link 1 / Link 2 / Link 3 inputs (and
+             the column_widths_snapshot mirror) via ``form=`` on each
+             input. short_label + description used to ride this form
+             too; they now save independently via the Band 2 intro
+             card's ✎/✓ buttons → /identity endpoint. #}
           <form id="dfsave-{{ instrument.id }}" method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
         {% endif %}
-        <div class="bottom-grid" style="align-items: stretch; margin-bottom: 0;">
-          <div class="card instrument-edit"
-               style="border-color: transparent; background: transparent; padding: 0; margin: 0;
-                      height: 100%; box-sizing: border-box;
-                      display: flex; flex-direction: column;">
-            <h2 style="margin-top: 0; font-size: 1.5rem;">
-              Instrument #{{ loop.index }}
-              <span class="pill pill-info">New model</span>
-              {% if instrument.accepting_responses %}
-                <span class="pill pill-count">accepting responses</span>
-              {% else %}
-                <span class="pill pill-empty">not accepting responses</span>
-              {% endif %}
-              {% if instrument.responses_visible_when_closed %}
-                <span class="pill pill-count">showing when closed</span>
-              {% else %}
-                <span class="pill pill-empty">not showing when closed</span>
-              {% endif %}
-            </h2>
-            {% if is_editing %}
-              <input form="dfsave-{{ instrument.id }}"
-                     type="text"
-                     name="short_label"
-                     maxlength="32"
-                     placeholder="(optional short label, e.g. Skills)"
-                     value="{{ instrument.short_label or '' }}"
-                     style="width: 100%; margin-bottom: 8px;">
+        {# New-model card heading. Short_label + description used to
+           render here (left-column input + right-column display /
+           textarea inside a bottom-grid). Both moved into the Band 2
+           intro card's inline ✎/✓ editors — the heading now carries
+           just the "Instrument #N" title pill row + the action
+           buttons. The bottom-grid wrapper and the right-column
+           description card are gone. #}
+        <div class="card instrument-edit"
+             style="border-color: transparent; background: transparent; padding: 0; margin: 0;
+                    box-sizing: border-box;
+                    display: flex; flex-direction: column;">
+          <h2 style="margin-top: 0; font-size: 1.5rem;">
+            Instrument #{{ loop.index }}
+            <span class="pill pill-info">New model</span>
+            {% if instrument.accepting_responses %}
+              <span class="pill pill-count">accepting responses</span>
+            {% else %}
+              <span class="pill pill-empty">not accepting responses</span>
             {% endif %}
-            <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
+            {% if instrument.responses_visible_when_closed %}
+              <span class="pill pill-count">showing when closed</span>
+            {% else %}
+              <span class="pill pill-empty">not showing when closed</span>
+            {% endif %}
+          </h2>
+          <div style="display: flex; gap: 8px; justify-content: flex-start; padding-top: 12px; flex-wrap: wrap;">
               {% if is_editing %}
                 <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary">Save</button>
                 <a class="btn secondary"
@@ -699,25 +699,7 @@
                   <button class="btn secondary" type="submit">Don't show when closed</button>
                 </form>
               {% endif %}
-            </div>
           </div>
-          {% if is_editing %}
-            <div class="card"
-                 style="border-color: transparent; background: transparent; padding: 0;
-                        height: 100%; box-sizing: border-box;">
-              <textarea form="dfsave-{{ instrument.id }}" name="description"
-                        placeholder="(no description)"
-                        style="width: 100%; min-height: 8em;">{{ instrument.description or "" }}</textarea>
-            </div>
-          {% else %}
-            <div class="card" style="margin: 0; height: 100%; box-sizing: border-box;">
-              {% if instrument.short_label %}
-                <h3 style="margin: 0 0 8px 0;">{{ instrument.short_label }}</h3>
-              {% endif %}
-              <p class="description-text"
-                 style="margin: 0;">{{ instrument.description or "(no description)" }}</p>
-            </div>
-          {% endif %}
         </div>
 
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
@@ -1338,35 +1320,93 @@
                section. Counts are per-row representative: ``all`` is
                the count of selected response fields, ``required`` is
                those with the required flag. Preview is always at
-               ``0 done`` since no real responses exist here. #}
+               ``0 done`` since no real responses exist here.
+
+               This card also owns the inline edit surface for the
+               instrument's short_label and description (replaces the
+               legacy heading-area inputs and the right-column
+               display card the new-model layout used to carry).
+               Each field has its own ✎/✓ toggle that POSTs to
+               /identity (independent of the bottom Save button —
+               same pattern as the help-text cards). The toggles
+               only render when the instrument is in edit mode. #}
             {% set _rf_list = _band2.response_fields or [] %}
             {% set _all_count = (_rf_list | selectattr('selected') | list | length) %}
             {% set _required_count = (_rf_list | selectattr('selected') | selectattr('required') | list | length) %}
             {% set _intro_title = instrument.short_label or instrument.name %}
-            {% if _intro_title or instrument.description or _all_count > 0 %}
-              <div class="rs-intro-grid"
-                   data-new-model-band2-intro-card
-                   style="margin-top: 16px;">
-                <div class="card rs-instrument-card">
-                  {% if _intro_title %}
-                    <h2>{{ _intro_title }}</h2>
+            <div class="rs-intro-grid"
+                 data-new-model-band2-intro-card
+                 data-instrument-id="{{ instrument.id }}"
+                 data-session-id="{{ session.id }}"
+                 style="margin-top: 16px;">
+              <div class="card rs-instrument-card"
+                   style="position: relative;">
+                <h2 data-intro-short-label-block
+                    style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                  <span>Page #{{ loop.index }}:</span>
+                  <span data-intro-short-label-view
+                        style="font-weight: inherit;">{{ _intro_title }}</span>
+                  <input type="text"
+                         data-intro-short-label-input
+                         maxlength="32"
+                         value="{{ instrument.short_label or '' }}"
+                         placeholder="(optional short label, e.g. Skills)"
+                         hidden
+                         style="font: inherit; padding: 2px 6px; flex: 1 1 auto; min-width: 120px;">
+                  {% if is_editing %}
+                    <button type="button" class="btn-icon"
+                            data-intro-short-label-edit
+                            onclick="newModelIntroShortLabelEdit(this)"
+                            title="Edit short label"
+                            aria-label="Edit short label">✎</button>
+                    <button type="button" class="btn-icon"
+                            data-intro-short-label-save
+                            onclick="newModelIntroShortLabelSave(this)"
+                            title="Save short label"
+                            aria-label="Save short label"
+                            hidden>✓</button>
                   {% endif %}
-                  {% if instrument.description %}
-                    <p class="rs-instrument-subtitle muted">{{ instrument.description }}</p>
-                  {% endif %}
-                  {% if _all_count > 0 %}
-                    <p class="rs-instrument-progress">
-                      <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}">
-                        Required items completed: 0/{{ _required_count }}
-                      </span>
-                      <span class="pill pill-count">
-                        All items completed: 0/{{ _all_count }}
-                      </span>
-                    </p>
+                </h2>
+                <div data-intro-description-block
+                     style="position: relative;">
+                  <p class="rs-instrument-subtitle muted"
+                     data-intro-description-view
+                     style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
+                  <textarea data-intro-description-input
+                            placeholder="(no description)"
+                            maxlength="2000"
+                            hidden
+                            style="display: block; width: 100%; margin-top: 4px;
+                                   min-height: 4em; box-sizing: border-box;
+                                   font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
+                  {% if is_editing %}
+                    <button type="button" class="btn-icon"
+                            data-intro-description-edit
+                            onclick="newModelIntroDescriptionEdit(this)"
+                            title="Edit description"
+                            aria-label="Edit description"
+                            style="position: absolute; bottom: 0; right: 0;">✎</button>
+                    <button type="button" class="btn-icon"
+                            data-intro-description-save
+                            onclick="newModelIntroDescriptionSave(this)"
+                            title="Save description"
+                            aria-label="Save description"
+                            hidden
+                            style="position: absolute; bottom: 0; right: 0;">✓</button>
                   {% endif %}
                 </div>
+                {% if _all_count > 0 %}
+                  <p class="rs-instrument-progress">
+                    <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}">
+                      Required items completed: 0/{{ _required_count }}
+                    </span>
+                    <span class="pill pill-count">
+                      All items completed: 0/{{ _all_count }}
+                    </span>
+                  </p>
+                {% endif %}
               </div>
-            {% endif %}
+            </div>
             {# Response field details now live as editable rows
                inside Band 3's "Response fields" section — the
                operator views + edits each field there rather than
@@ -2022,6 +2062,126 @@
                 '[data-new-model-band2-pill][data-key="' + key + '"]'
               );
               if (pill) { pill.setAttribute('data-help-text', ta.value); }
+            };
+            // ---- Intro card inline edit (short_label / description) ----
+            // Each field has its own ✎/✓ pair that swaps the view
+            // span / paragraph for an input / textarea and back.
+            // Saving fetches /identity with just the field that
+            // changed — independent of the bottom Save button,
+            // same model as help-text cards.
+            function _introIdentityEndpoint(intro) {
+              return '/operator/sessions/' + intro.getAttribute('data-session-id')
+                + '/instruments/' + intro.getAttribute('data-instrument-id')
+                + '/identity';
+            }
+            function _introEnterEdit(intro, block, viewSel, inputSel, editBtnSel, saveBtnSel) {
+              var view = block.querySelector(viewSel);
+              var input = block.querySelector(inputSel);
+              var editBtn = block.querySelector(editBtnSel);
+              var saveBtn = block.querySelector(saveBtnSel);
+              if (!input || !editBtn || !saveBtn) { return; }
+              if (view) { view.hidden = true; }
+              input.hidden = false;
+              editBtn.hidden = true;
+              saveBtn.hidden = false;
+              try {
+                input.focus();
+                var len = (input.value || '').length;
+                if (input.setSelectionRange) { input.setSelectionRange(len, len); }
+              } catch (_) {}
+            }
+            function _introExitEdit(intro, block, viewSel, inputSel, editBtnSel, saveBtnSel, displayText) {
+              var view = block.querySelector(viewSel);
+              var input = block.querySelector(inputSel);
+              var editBtn = block.querySelector(editBtnSel);
+              var saveBtn = block.querySelector(saveBtnSel);
+              if (!input || !editBtn || !saveBtn) { return; }
+              if (view) {
+                view.textContent = displayText;
+                view.hidden = false;
+              }
+              input.hidden = true;
+              editBtn.hidden = false;
+              saveBtn.hidden = true;
+            }
+            function _introPostIdentity(intro, payload, onSuccess) {
+              fetch(_introIdentityEndpoint(intro), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+              }).then(function (resp) {
+                if (resp.ok) { onSuccess(); }
+                else if (window.console) {
+                  console.warn('intro identity save failed', resp.status);
+                }
+              }).catch(function (err) {
+                if (window.console) { console.warn('intro identity save error', err); }
+              });
+            }
+            window.newModelIntroShortLabelEdit = window.newModelIntroShortLabelEdit || function (btn) {
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              var block = btn.closest('[data-intro-short-label-block]');
+              if (!intro || !block) { return; }
+              _introEnterEdit(intro, block,
+                '[data-intro-short-label-view]',
+                '[data-intro-short-label-input]',
+                '[data-intro-short-label-edit]',
+                '[data-intro-short-label-save]'
+              );
+            };
+            window.newModelIntroShortLabelSave = window.newModelIntroShortLabelSave || function (btn) {
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              var block = btn.closest('[data-intro-short-label-block]');
+              if (!intro || !block) { return; }
+              var input = block.querySelector('[data-intro-short-label-input]');
+              if (!input) { return; }
+              var newValue = (input.value || '').trim().slice(0, 32);
+              _introPostIdentity(intro, {short_label: newValue}, function () {
+                input.value = newValue;
+                // View span shows the "Page #N: ..." short_label
+                // segment. If empty, fall back to whatever label
+                // was originally rendered there — we keep the
+                // current displayed label as the only client-side
+                // signal of name/short_label fallback, so an empty
+                // save shows the input's empty state.
+                _introExitEdit(intro, block,
+                  '[data-intro-short-label-view]',
+                  '[data-intro-short-label-input]',
+                  '[data-intro-short-label-edit]',
+                  '[data-intro-short-label-save]',
+                  newValue
+                );
+              });
+            };
+            window.newModelIntroDescriptionEdit = window.newModelIntroDescriptionEdit || function (btn) {
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              var block = btn.closest('[data-intro-description-block]');
+              if (!intro || !block) { return; }
+              _introEnterEdit(intro, block,
+                '[data-intro-description-view]',
+                '[data-intro-description-input]',
+                '[data-intro-description-edit]',
+                '[data-intro-description-save]'
+              );
+            };
+            window.newModelIntroDescriptionSave = window.newModelIntroDescriptionSave || function (btn) {
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              var block = btn.closest('[data-intro-description-block]');
+              if (!intro || !block) { return; }
+              var ta = block.querySelector('[data-intro-description-input]');
+              if (!ta) { return; }
+              var newValue = (ta.value || '').slice(0, 2000);
+              _introPostIdentity(intro, {description: newValue}, function () {
+                ta.value = newValue;
+                _introExitEdit(intro, block,
+                  '[data-intro-description-view]',
+                  '[data-intro-description-input]',
+                  '[data-intro-description-edit]',
+                  '[data-intro-description-save]',
+                  newValue
+                );
+              });
             };
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
