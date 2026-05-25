@@ -34,6 +34,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Response,
     ReviewSession,
     SessionRuleSet,
     User,
@@ -1167,6 +1168,40 @@ def _band2_parse_float(value: Any) -> float | None:
         return None
 
 
+def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
+    """Wave 3 PR ii — check a sanitised band2_state response-field
+    entry against the locked-decision-11 authoring rules. Returns
+    an operator-facing error message or None.
+
+    Sanitised numeric fields arrive as strings ("" for unset);
+    parse here and accept None as "no bound" for Integer / Decimal.
+    For List the option set must be non-empty; for String the
+    max_length (carried on the ``max`` slot) must be > 0 when set.
+    """
+    data_type = rf.get("data_type", "string")
+    if data_type in ("integer", "decimal"):
+        min_ = _band2_parse_float(rf.get("min"))
+        max_ = _band2_parse_float(rf.get("max"))
+        step = _band2_parse_float(rf.get("step"))
+        if min_ is not None and max_ is not None and max_ < min_:
+            return "Max must be at least Min."
+        if step is not None and step <= 0:
+            return "Step must be greater than zero."
+        return None
+    if data_type == "string":
+        max_ = _band2_parse_float(rf.get("max"))
+        if max_ is not None and max_ <= 0:
+            return "Max length must be greater than zero."
+        return None
+    if data_type == "list":
+        list_csv = (rf.get("list_options") or "").strip()
+        options = [opt.strip() for opt in list_csv.split(",") if opt.strip()]
+        if not options:
+            return "List options must include at least one entry."
+        return None
+    return None
+
+
 def _band2_unique_field_key(
     name: str, used_keys: set[str], existing_key: str | None = None
 ) -> str:
@@ -1224,8 +1259,21 @@ def _sync_response_fields_to_db(
     present, or back-filled from a newly-created row's PK).
     """
     from app.services.instruments._response_fields import (
+        InvalidResponseFieldShapeError,
+        ResponseFieldShapeChangeError,
         ResponsesPresentError,
     )
+
+    # Wave 3 PR ii — authoring-shape validation. Reject the whole
+    # payload (atomic save) when any entry has nonsensical bounds,
+    # mirroring the locked-decision-11 contract.
+    shape_errors: list[tuple[str, str]] = []
+    for rf in sanitised_rfs:
+        msg = _validate_response_field_shape(rf)
+        if msg is not None:
+            shape_errors.append((rf["name"], msg))
+    if shape_errors:
+        raise InvalidResponseFieldShapeError(shape_errors)
 
     existing_by_id: dict[int, InstrumentResponseField] = {
         f.id: f for f in instrument.response_fields
@@ -1279,14 +1327,57 @@ def _sync_response_fields_to_db(
         # inline column keeps the legacy capitalised form for
         # round-trip compat with the Wave 2 _inline_* columns.
         data_type_lower = rf.get("data_type", "string")
-        field._inline_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(
+        new_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(
             data_type_lower, "String"
         )
-        field._inline_min = _band2_parse_float(rf.get("min"))
-        field._inline_max = _band2_parse_float(rf.get("max"))
-        field._inline_step = _band2_parse_float(rf.get("step"))
-        list_csv = rf.get("list_options") or ""
-        field._inline_list_csv = list_csv if list_csv else None
+        new_min = _band2_parse_float(rf.get("min"))
+        new_max = _band2_parse_float(rf.get("max"))
+        new_step = _band2_parse_float(rf.get("step"))
+        new_list_csv_raw = rf.get("list_options") or ""
+        new_list_csv = new_list_csv_raw if new_list_csv_raw else None
+
+        # Wave 3 PR ii — block any data_type / bounds change on a row
+        # that already has saved responses. The Band 3 row's data_type
+        # select + bound inputs are rendered ``disabled`` when
+        # ``has_responses`` is true; this server-side guard catches
+        # direct API hits / forged sendBeacon payloads. Operator must
+        # clear the responses first to re-shape the field.
+        #
+        # Use a counted SELECT rather than touching ``field.responses``
+        # so the relationship cache stays untouched — populating it
+        # here would persist a stale empty list across the request
+        # boundary (sessions use ``expire_on_commit=False``) and let
+        # the downstream delete-cascade check miss a freshly-attached
+        # Response row.
+        shape_changed: list[str] = []
+        if field._inline_data_type != new_data_type:
+            shape_changed.append("data_type")
+        if field._inline_min != new_min:
+            shape_changed.append("min")
+        if field._inline_max != new_max:
+            shape_changed.append("max")
+        if field._inline_step != new_step:
+            shape_changed.append("step")
+        if field._inline_list_csv != new_list_csv:
+            shape_changed.append("list_options")
+        if shape_changed:
+            response_count = db.execute(
+                select(func.count(Response.id)).where(
+                    Response.response_field_id == field.id
+                )
+            ).scalar_one()
+            if response_count:
+                raise ResponseFieldShapeChangeError(
+                    field_label=field.label,
+                    count=response_count,
+                    changed_attrs=shape_changed,
+                )
+
+        field._inline_data_type = new_data_type
+        field._inline_min = new_min
+        field._inline_max = new_max
+        field._inline_step = new_step
+        field._inline_list_csv = new_list_csv
 
     # Delete rows whose ids were in the *previous* JSON state but
     # not in the new payload — i.e. operator clicked X on a row

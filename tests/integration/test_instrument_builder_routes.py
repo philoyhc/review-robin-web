@@ -4401,3 +4401,195 @@ def test_wave2_pr_iii_b1_property_no_longer_falls_back_to_rtd(
     # ``rtd_list`` is unused now that the FK is gone; reference it
     # to keep ruff quiet.
     assert rtd_list.id is not None
+
+
+def test_wave3_prii_invalid_field_shape_returns_422(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR ii — authoring-shape validation. A payload whose
+    bounds don't make sense (max < min on an integer field) gets
+    rejected with 422 and a structured detail listing each offending
+    field. The Band 3 ✓ button is client-side-gated against the same
+    check; this exercises the defence-in-depth path."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-prii-invalid"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Backwards bounds",
+                    "data_type": "integer",
+                    "min": "10",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"] == "invalid_field_shape"
+    assert body["errors"][0]["field_label"] == "Backwards bounds"
+    assert "at least" in body["errors"][0]["message"].lower()
+
+
+def test_wave3_prii_shape_change_blocked_when_responses_exist(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR ii — once a response field has saved responses, any
+    data_type / bounds change is blocked with 409. The Band 3 row's
+    data_type select + bound inputs are rendered ``disabled`` when
+    ``has_responses`` is true; this server guard catches direct API
+    hits. The operator-side workflow is to clear responses first."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-prii-shape-change"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    # Round-trip Rating's id into JSON so the subsequent update path
+    # is exercised (rather than the new-row path).
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+
+    # Attach a Response to the rating row.
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=rating.id,
+            value="4",
+        )
+    )
+    db.commit()
+
+    # Try to change Rating's data_type to string — should be blocked.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "string",
+                    "max": "100",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 409
+    body = response.json()
+    assert body["error"] == "shape_change_blocked"
+    assert body["field_label"] == "Rating"
+    assert body["responses"] == 1
+    assert "data_type" in body["changed"]
+
+
+def test_wave3_prii_label_rename_allowed_when_responses_exist(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR ii — label / name changes don't invalidate existing
+    responses (decision 9 locks ``field_key`` stable across renames),
+    so the shape-change guard must NOT fire when only the label
+    changes. Counterpart to
+    test_wave3_prii_shape_change_blocked_when_responses_exist."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-prii-rename-allowed"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=rating.id,
+            value="4",
+        )
+    )
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Overall Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+    db.refresh(rating)
+    assert rating.label == "Overall Rating"
