@@ -248,8 +248,16 @@
            is past setup phase (``is_ready``) or when the
            RTD-library editor holds the edit token. #}
         {% if is_editing %}
-          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
-                  {% if is_ready %}disabled{% endif %}>Save</button>
+          {# Wave 4 PR 2 — Save starts disabled. The
+             ``newModelInitSaveDirtyTracking`` JS helper enables it
+             on the first dirty event (any Band 1 input change or
+             Band 3 row tick/X/+ click) and the server-side redirect
+             after a successful Save re-renders with Save disabled
+             again. ``data-new-model-save`` scopes the JS lookup. #}
+          <button form="dfsave-{{ instrument.id }}" type="submit"
+                  class="btn secondary"
+                  data-new-model-save
+                  disabled>Save</button>
         {% endif %}
         {% if is_some_rtd_unlocked %}
           <button class="btn secondary" type="button" disabled aria-disabled="true"
@@ -2893,8 +2901,51 @@
             function _newModelInitialRefresh() {
               document.querySelectorAll('[data-new-model-band2]').forEach(function (card) {
                 window.newModelRefreshBand2(card);
+                window.newModelInitSaveDirtyTracking(card);
               });
             }
+            // Wave 4 PR 2 — Save-when-dirty. Save starts disabled
+            // (per the template) and the first event that signals
+            // a pending change on the bulk-save surface (Band 1
+            // form inputs ride the dfsave form; Band 3 row tick /
+            // X / + clicks compose the row payload the dfsave
+            // pipeline persists) enables Save. The server-side
+            // redirect after a successful Save re-renders with
+            // ``editing=<id>`` preserved AND Save fresh-disabled,
+            // so the wiring naturally resets without a JS-side
+            // re-disable hook.
+            window.newModelInitSaveDirtyTracking = window.newModelInitSaveDirtyTracking || function (band2) {
+              if (!band2) { return; }
+              var instrumentCard = band2.closest('[id^="instrument-"]') || band2;
+              var saveBtn = instrumentCard.querySelector(
+                '[data-new-model-save]'
+              );
+              if (!saveBtn) { return; }
+              function markDirty() {
+                if (saveBtn.disabled) { saveBtn.disabled = false; }
+              }
+              // Band 1 form inputs ride the dfsave form via
+              // ``form="dfsave-<id>"``. Their input / change events
+              // bubble through the instrument card.
+              instrumentCard.addEventListener('input', markDirty);
+              instrumentCard.addEventListener('change', markDirty);
+              // Band 3 row actions (tick / X / +) compose the row
+              // payload the dfsave pipeline persists. They're
+              // ``<button type="button">`` so they don't fire
+              // change / input — wire click explicitly. The Band 3
+              // rows live inside the instrument card too, so the
+              // delegated click handler catches them no matter how
+              // many rows the operator adds.
+              instrumentCard.addEventListener('click', function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) { return; }
+                if (t.closest('[data-new-model-rf-save]')
+                  || t.closest('[data-new-model-rf-delete]')
+                  || t.closest('[data-new-model-rf-add]')) {
+                  markDirty();
+                }
+              });
+            };
             // Belt-and-suspenders flush: intercept every dfsave
             // form's submit (the bottom Save button) and fire
             // saveBand2State one more time before navigation, so
@@ -3231,6 +3282,7 @@
             <div style="display: flex; justify-content: flex-end;
                         margin-top: 4px;">
               <button type="button" class="btn secondary"
+                      data-new-model-rf-add
                       style="padding: 4px 10px;"
                       onclick="newModelRfAddRow(this)"
                       title="Add another response field row">+</button>
