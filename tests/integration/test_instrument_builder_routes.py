@@ -5117,3 +5117,120 @@ def test_new_model_untouched_band1_activates_and_accepts_responses(
     db.refresh(new_model)
     assert new_model.rule_set_id is None  # still NULL
     assert new_model.accepting_responses is True
+
+
+# --------------------------------------------------------------------------- #
+# Progress pills flush-left above the table (reviewer surface + Band 2)
+# --------------------------------------------------------------------------- #
+
+
+def test_band2_intro_progress_pills_render_outside_intro_card(
+    client: TestClient, db: Session
+) -> None:
+    """The progress pills (Required / All items completed) sit
+    just above the Band 2 preview table, flush left — outside the
+    intro card itself. Mirrors the reviewer-surface layout so the
+    operator sees the same eye path the reviewer will."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-pills-outside"
+    )
+    new_model.short_label = "Sanity"
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    intro_idx = flat.find("data-new-model-band2-intro-card")
+    assert intro_idx != -1
+    # The intro card's closing </div></div> (card + grid wrappers)
+    # must precede the progress paragraph.
+    progress_idx = flat.find("data-new-model-intro-progress", intro_idx)
+    assert progress_idx != -1
+    between = flat[intro_idx:progress_idx]
+    # The progress pill sits AFTER the intro card's closing tags
+    # — there's at least one ``</div> </div>`` between the intro
+    # card opening attribute and the progress paragraph.
+    assert "</div> </div>" in between or "</div></div>" in between
+    # And the progress paragraph precedes the preview table div.
+    preview_idx = flat.find("data-new-model-band2-preview", progress_idx)
+    assert preview_idx != -1
+
+
+def test_band2_description_button_does_not_overlap_textarea(
+    client: TestClient, db: Session
+) -> None:
+    """The ✎ / ✓ buttons on the description edit block sit in a
+    right-side gutter (matching the help-text card pattern) rather
+    than overlapping the textarea. Verified by the container's
+    ``padding-right: 28px`` style."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-desc-gutter"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    desc_idx = flat.find("data-intro-description-block")
+    assert desc_idx != -1
+    # The container carries position: relative + padding-right: 28px
+    # so the absolute-positioned button sits to the right of the
+    # textarea instead of on top of it.
+    desc_tag = flat[desc_idx : flat.find(">", desc_idx) + 1]
+    assert "padding-right: 28px" in desc_tag
+    # The save (✓) button is in the right gutter.
+    save_btn_idx = flat.find("data-intro-description-save", desc_idx)
+    assert save_btn_idx != -1
+    save_tag = flat[
+        flat.rfind("<button", 0, save_btn_idx) : flat.find(">", save_btn_idx) + 1
+    ]
+    assert "right: 4px" in save_tag
+
+
+def test_reviewer_surface_progress_pills_render_outside_intro_card(
+    client: TestClient,
+    db: Session,
+    alice: AuthenticatedUser,
+    reviewer_user: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer surface's per-instrument progress pills sit
+    flush-left just above the review table, not inside the
+    ``.rs-instrument-card``."""
+    operator = make_client(alice)
+    review_session = _make_session(operator, db, code="rs-pills-outside")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Rae",
+                email="r@example.edu",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session.id)
+
+    rae_client = make_client(reviewer_user)
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    flat = " ".join(body.split())
+    # The progress paragraph appears after the intro card's closing
+    # tags and before the table wrapper.
+    card_idx = flat.find("rs-instrument-card")
+    progress_idx = flat.find("rs-instrument-progress", card_idx)
+    table_idx = flat.find("table-scroll", progress_idx)
+    assert card_idx != -1 and progress_idx != -1 and table_idx != -1
+    # The card's closing </div></div> sits between the card opening
+    # and the progress paragraph.
+    between = flat[card_idx:progress_idx]
+    assert "</div> </div>" in between or "</div></div>" in between
