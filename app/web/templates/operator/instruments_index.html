@@ -2785,7 +2785,14 @@
                 title="Fixed (placeholder)">{{ label }}</span>
         {% endmacro %}
         {% macro new_model_audience_chip(label, selected=false) %}
-          <span class="pill pill-count tag-chip{% if selected %} is-selected{% endif %}"
+          {# Match Band 2's pill style — ``pill-count`` + ``is-selected``
+             only when the chip is on, so the off-state matches the
+             rest of the chip family (outline, no fill). Without this
+             the unselected Reviewees / Observers chips inherited
+             pill-count's filled-style font/background and looked out
+             of place next to the off-state of the Operator /
+             Reviewers chips. #}
+          <span class="pill tag-chip{% if selected %} pill-count is-selected{% endif %}"
                 role="button" tabindex="0"
                 aria-pressed="{{ 'true' if selected else 'false' }}"
                 data-new-model-chip-selected="{{ 'true' if selected else 'false' }}"
@@ -2810,8 +2817,8 @@
               <thead>
                 <tr style="text-align: left;">
                   <th style="width: 30%; padding: 6px 8px;">User type</th>
-                  <th style="width: 35%; padding: 6px 8px;">Able to view</th>
-                  <th style="width: 35%; padding: 6px 8px;">When viewable</th>
+                  <th style="width: 35%; padding: 6px 8px;">Able to view what</th>
+                  <th style="width: 35%; padding: 6px 8px;">When able to view</th>
                 </tr>
               </thead>
               <tbody>
@@ -3310,8 +3317,11 @@
             var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
             btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
             btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            if (selected) btn.classList.add('is-selected');
-            else btn.classList.remove('is-selected');
+            // ``pill-count`` + ``is-selected`` move together so the
+            // chip matches Band 2's "outline when off, filled when
+            // on" pattern.
+            btn.classList.toggle('pill-count', selected);
+            btn.classList.toggle('is-selected', selected);
             var row = btn.closest('[data-new-model-audience]');
             row.querySelectorAll('[data-new-model-audience-other-cell]').forEach(function (cell) {
               cell.style.opacity = selected ? '1' : '0.4';
