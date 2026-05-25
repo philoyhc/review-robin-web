@@ -5268,7 +5268,7 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
 ) -> None:
     """An instrument card in view mode (no ``?editing=`` param) carries
     an ``Unlock`` button at the end of the action row (after
-    +New model) — the previous ``Edit`` button retires. Clicking
+    +Instrument) — the previous ``Edit`` button retires. Clicking
     Unlock takes the operator to ``?editing=<id>``, the same URL
     state Edit used to reach. The toggle button carries
     ``data-instrument-lock-toggle=<id>`` for test + JS scoping."""
@@ -5280,7 +5280,7 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
     ).text
     flat = " ".join(body.split())
 
-    # Edit / Cancel button text retires.
+    # Edit / Cancel anchor text retires.
     assert ">Edit</a>" not in flat
     assert ">Cancel</a>" not in flat
 
@@ -5295,10 +5295,11 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
     assert "Unlock" in flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
     assert f"editing={new_model.id}" in toggle_tag
 
-    # The toggle sits AFTER the +New model button in the row (the
-    # last action before the toggle is +New model).
-    new_model_btn_idx = flat.rfind("+New model", 0, toggle_idx)
-    assert new_model_btn_idx != -1, "Unlock toggle must come after +New model"
+    # The toggle sits AFTER the +Instrument button in the row (the
+    # last action before the toggle is +Instrument). Wave 4 renamed
+    # +New model → +Instrument when the legacy add buttons retired.
+    add_btn_idx = flat.rfind("+Instrument", 0, toggle_idx)
+    assert add_btn_idx != -1, "Unlock toggle must come after +Instrument"
 
 
 def test_lock_unlock_replaces_cancel_button_in_edit_mode(
@@ -5502,3 +5503,151 @@ def test_band3_row_pending_visual_css_ships_in_base(
     # JS handler that sets / clears the pending attribute is on
     # the page and lives inside the dirty-tracking init function.
     assert "data-row-pending" in body
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 bottom-row restructure — Cancel button, button order, retired adds
+# --------------------------------------------------------------------------- #
+
+
+def test_action_row_retires_add_instrument_and_add_group_buttons(
+    client: TestClient, db: Session
+) -> None:
+    """The legacy 'Add instrument' and 'Add group instrument' buttons
+    are gone from the per-instrument action row. The +Instrument
+    button (renamed from +New model) is the sole 'create new
+    instrument' affordance. The /add and /add-group POST routes
+    still exist server-side — only the buttons are retired."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-retire-add-buttons"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    assert ">Add instrument</button>" not in flat
+    assert ">Add group instrument</button>" not in flat
+    # +New model renamed to +Instrument.
+    assert ">+New model</button>" not in flat
+    assert ">+Instrument</button>" in flat
+
+
+def test_action_row_button_order_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """In edit mode the per-instrument action row carries (left → right,
+    flushed right): Save | Cancel | Replicate | Delete | +Instrument
+    | Lock. Each button precedes the next in the flat HTML."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-row-order-edit"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    # Anchor on the Lock toggle (uniquely scoped per instrument by
+    # the data attribute), then constrain other markers to the
+    # window of HTML that ends with Lock — that's the editing
+    # instrument's action row. Note: Delete renders as a disabled
+    # static button when ``is_editing`` (add_delete_disabled gate),
+    # so the test searches for the literal ``>Delete</button>``
+    # rather than the ``data-delete-btn`` marker.
+    lock_idx = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    assert lock_idx != -1
+    save_idx = flat.rfind("data-new-model-save", 0, lock_idx)
+    cancel_idx = flat.rfind(f'data-new-model-cancel="{new_model.id}"', 0, lock_idx)
+    delete_idx = flat.rfind(">Delete</button>", 0, lock_idx)
+    replicate_idx = flat.rfind(
+        f'action="/operator/sessions/{review_session.id}'
+        f'/instruments/{new_model.id}/replicate"',
+        0,
+        lock_idx,
+    )
+    add_idx = flat.rfind(
+        f'<input type="hidden" name="after" value="{new_model.id}">',
+        0,
+        lock_idx,
+    )
+    for idx, name in [
+        (save_idx, "save"), (cancel_idx, "cancel"),
+        (replicate_idx, "replicate"), (delete_idx, "delete"),
+        (add_idx, "add"), (lock_idx, "lock"),
+    ]:
+        assert idx != -1, f"{name} marker missing"
+    # Strict left-to-right ordering within the new-model card's
+    # action row.
+    assert save_idx < cancel_idx < replicate_idx < delete_idx < add_idx < lock_idx
+
+
+def test_action_row_button_order_in_view_mode(
+    client: TestClient, db: Session
+) -> None:
+    """In view mode the per-instrument action row drops Save + Cancel
+    and shows: Replicate | Delete | +Instrument | Unlock."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-row-order-view"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    # Save and Cancel attached to instrument rows don't render in
+    # view mode. The marker strings appear elsewhere in inline JS
+    # source, so check the actual rendered button-attribute syntax.
+    assert 'data-new-model-cancel="' not in flat
+    # Save button is identified by ``form="dfsave-<id>" ... data-
+    # new-model-save`` — check the form binding absence (Save is
+    # the only thing that targets dfsave-<id>).
+    assert f'form="dfsave-{new_model.id}"' not in flat
+
+    # Anchor on the Unlock toggle for this instrument; walk back.
+    unlock_idx = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    assert unlock_idx != -1
+    replicate_idx = flat.rfind(
+        f'action="/operator/sessions/{review_session.id}'
+        f'/instruments/{new_model.id}/replicate"',
+        0,
+        unlock_idx,
+    )
+    delete_idx = flat.rfind(f'data-delete-btn="{new_model.id}"', 0, unlock_idx)
+    add_idx = flat.rfind(
+        f'<input type="hidden" name="after" value="{new_model.id}">',
+        0,
+        unlock_idx,
+    )
+    for idx, name in [
+        (replicate_idx, "replicate"), (delete_idx, "delete"),
+        (add_idx, "add"), (unlock_idx, "unlock"),
+    ]:
+        assert idx != -1, f"{name} marker missing"
+    assert replicate_idx < delete_idx < add_idx < unlock_idx
+
+
+def test_cancel_button_starts_disabled_and_carries_marker(
+    client: TestClient, db: Session
+) -> None:
+    """The Cancel button starts ``disabled`` (mirrors Save's clean
+    state — nothing to discard until something is dirty), carries
+    ``data-new-model-cancel=<id>`` for JS scoping, and wires the
+    ``newModelCancelEdits`` onclick handler that confirms then
+    reloads to discard the unsaved client state."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-cancel-disabled"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    cancel_end = flat.find(">Cancel</button>")
+    assert cancel_end != -1
+    btn_open = flat.rfind("<button", 0, cancel_end)
+    btn_tag = flat[btn_open : cancel_end + 1]
+    assert f'data-new-model-cancel="{new_model.id}"' in btn_tag
+    assert "newModelCancelEdits(this)" in btn_tag
+    assert "disabled" in btn_tag
+    # The JS handler itself ships on the page.
+    assert "window.newModelCancelEdits" in body
