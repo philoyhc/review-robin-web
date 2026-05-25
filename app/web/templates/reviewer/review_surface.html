@@ -229,7 +229,8 @@
                 {% endfor %}
                 {% set first_row_cg = group.rows[0] %}
                 {% for cell in first_row_cg.cells %}
-                  <col>
+                  {% set _rfw = group.response_field_width_by_id.get(cell.field.id) %}
+                  <col{% if _rfw %} style="width: {{ _rfw }}px"{% endif %}>
                 {% endfor %}
                 {% if group.show_status_col %}<col>{% endif %}
               </colgroup>

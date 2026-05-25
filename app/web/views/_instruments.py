@@ -559,7 +559,6 @@ def _new_model_band2_state(
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")
-    band2_state = instrument.band2_state or {}
     # Gap 1: selected_display_keys is derived from
     # ``InstrumentDisplayField.visible`` (the source of truth that
     # the reviewer surface honours), not from the band2_state JSON.
@@ -571,39 +570,38 @@ def _new_model_band2_state(
         for f in instrument.display_fields
         if f.visible
     }
-    response_fields = list(band2_state.get("response_fields") or [])
-    # Wave 3 PR i (b) contract — when band2_state has no
-    # response_fields entries yet, populate Band 3 directly from
-    # the instrument's InstrumentResponseField rows (the seeded
-    # DEFAULT_RESPONSE_FIELDS rows on a brand-new instrument).
-    # First-render is pure read: no write-on-load side effect; the
-    # next saveBand2State POST round-trips the rendered entries
-    # back to the server, where the dual-write picks them up by
-    # id and persists the JSON copy alongside.
-    if not response_fields and instrument.response_fields:
-        for rf in sorted(instrument.response_fields, key=lambda f: f.order):
-            data_type_lower = (rf._inline_data_type or "String").lower()
-            response_fields.append(
-                {
-                    "id": rf.id,
-                    "name": rf.label,
-                    "data_type": data_type_lower,
-                    "min": ""
-                    if rf._inline_min is None
-                    else _format_band2_bound(rf._inline_min),
-                    "max": ""
-                    if rf._inline_max is None
-                    else _format_band2_bound(rf._inline_max),
-                    "step": ""
-                    if rf._inline_step is None
-                    else _format_band2_bound(rf._inline_step),
-                    "list_options": rf._inline_list_csv or "",
-                    "selected": rf.visible,
-                    "required": rf.required,
-                    "help_text": rf.help_text or "",
-                    "help_text_visible": rf.help_text_visible,
-                }
-            )
+    # Wave 3 PR iii — DB rows are the only source of truth for
+    # response-field metadata. ``band2_state.response_fields`` JSON
+    # retired; PR i's (b)-contract read path is now the unconditional
+    # read path. width_px reads from ``column_widths["rf_<id>"]``
+    # (migrated out of the JSON entry into the canonical widths dict).
+    column_widths_map = instrument.column_widths or {}
+    response_fields: list[dict[str, Any]] = []
+    for rf in sorted(instrument.response_fields, key=lambda f: f.order):
+        data_type_lower = (rf._inline_data_type or "String").lower()
+        entry: dict[str, Any] = {
+            "id": rf.id,
+            "name": rf.label,
+            "data_type": data_type_lower,
+            "min": ""
+            if rf._inline_min is None
+            else _format_band2_bound(rf._inline_min),
+            "max": ""
+            if rf._inline_max is None
+            else _format_band2_bound(rf._inline_max),
+            "step": ""
+            if rf._inline_step is None
+            else _format_band2_bound(rf._inline_step),
+            "list_options": rf._inline_list_csv or "",
+            "selected": rf.visible,
+            "required": rf.required,
+            "help_text": rf.help_text or "",
+            "help_text_visible": rf.help_text_visible,
+        }
+        width = column_widths_map.get(f"rf_{rf.id}")
+        if width is not None:
+            entry["width_px"] = width
+        response_fields.append(entry)
     # Wave 3 PR i — annotate each entry with has_responses so the
     # Band 3 template can render the X button disabled for fields
     # with attached reviewer responses (cascade-blocked delete).

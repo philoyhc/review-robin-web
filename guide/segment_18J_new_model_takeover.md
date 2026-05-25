@@ -357,7 +357,7 @@ below). The remaining Gap 2 work (bridging JSON entries to real
 `InstrumentResponseField` rows) is untouched and lands as the
 three-PR Wave 3 ladder.
 
-### Wave 3 — Response fields become real (M-L) — PRs i + ii shipped 2026-05-25; PR iii pending
+### Wave 3 — Response fields become real (M-L) — shipped 2026-05-25
 
 **Scope.** Gap 2 (bridge `band2_state.response_fields` JSON
 to real `InstrumentResponseField` rows) + Gap 5 enforcement
@@ -377,7 +377,8 @@ reviewer-surface read path. Operators can switch pilots over.
 | PR | Slice | Lift | Summary |
 |---|---|---|---|
 | #1418 | i — additive schema + dual-write | M | `InstrumentResponseField.visible` column added (Boolean, default true). `set_band2_state` dual-writes JSON entries through to real `InstrumentResponseField` rows via id-match (`_sync_response_fields_to_db` in `app/services/instruments/_instrument_crud.py:1194`): entries with `id` update; entries without get a new row with `id` back-filled; absent ids delete (raising `ResponsesPresentError` when responses are attached so the route surfaces the error rather than cascading silently). Reviewer surface unchanged — still seeds the `DEFAULT_RESPONSE_FIELDS`-only rows; the read flip is PR ii. |
-| TBD | ii — flip readers + enforce required + authoring + shape-lock | M | Reviewer-surface response-field reads (`responses.py`, `routes_reviewer/_surface.py`, `routes_reviewer/_preview.py`) now filter by `visible=true`, so a deselected Band 2 pill actually hides the column. `validate_value` reads `_inline_*` directly per decision 11 and gains String `max_length` + List option-membership branches — the bounds-rejection gap on new-model authored fields is closed. Two new service-level exceptions: `InvalidResponseFieldShapeError` (422 — max < min, step ≤ 0, empty List, etc) and `ResponseFieldShapeChangeError` (409 — data_type / bounds change on a row with saved responses). Band 3 row template renders `disabled` on `data_type` select + bound inputs when `has_responses=true`; ✓ button live-disables on empty name or invalid bounds; X button disables on empty awaiting-fill rows. Required flag is now load-bearing (Gap 5 enforcement). |
+| #1431 | ii — flip readers + enforce required + authoring + shape-lock | M | Reviewer-surface response-field reads (`responses.py`, `routes_reviewer/_surface.py`, `routes_reviewer/_preview.py`) now filter by `visible=true`, so a deselected Band 2 pill actually hides the column. `validate_value` reads `_inline_*` directly per decision 11 and gains String `max_length` + List option-membership branches — the bounds-rejection gap on new-model authored fields is closed. Two new service-level exceptions: `InvalidResponseFieldShapeError` (422 — max < min, step ≤ 0, empty List, etc) and `ResponseFieldShapeChangeError` (409 — data_type / bounds change on a row with saved responses). Band 3 row template renders `disabled` on `data_type` select + bound inputs when `has_responses=true`; ✓ button live-disables on empty name or invalid bounds; X button disables on empty awaiting-fill rows. Required flag is now load-bearing (Gap 5 enforcement). |
+| TBD | iii — retire JSON write side | M | DB rows become the sole source of truth: `set_band2_state` stops persisting `response_fields` into the JSON dict; the view layer drops the JSON read path and unconditionally builds from `instrument.response_fields`. Delete contract switches from "ids in old JSON" to "all current DB row ids." Response-column widths migrate from `band2_state.response_fields[i].width_px` into the canonical `instrument.column_widths` under `rf_<id>` keys; the reviewer surface emits matching `<col style="width: Npx">` so operator-set widths persist all the way to the reviewer experience. Alembic data migration `c3a7e9d8b154` is defence-in-depth for any instrument that never re-saved between PR i and PR iii — synthesises missing DB rows from stale JSON, migrates widths, pops the key. |
 
 #### Locked design decisions
 
@@ -552,7 +553,15 @@ reviewer surface behaviour only changes at PR ii.
   validation rejects empty submission; authoring
   validation rejects nonsensical bounds at Save.
 
-##### PR iii — Retire JSON write side (S)
+##### PR iii — Retire JSON write side (S → M shipped) — shipped 2026-05-25
+
+> Originally scoped as S; actually shipped as M because the
+> response-column width plumbing (originally tied to
+> `band2_state.response_fields[i].width_px`) had to migrate to
+> `instrument.column_widths["rf_<id>"]` to avoid a UX regression,
+> which required wiring the reviewer surface to emit response-column
+> `<col>` widths too. ~20 existing tests were converted from JSON
+> probing to a `_band2_rfs` DB-rows helper.
 
 - `set_band2_state` stops persisting `response_fields`
   in JSON. Sanitiser drops the key.

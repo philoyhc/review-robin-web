@@ -28,6 +28,50 @@ from ._full_matrix import (
 )
 
 
+def _band2_rfs(instrument: Instrument) -> list[dict]:
+    """Wave 3 PR iii test helper — rebuild the legacy
+    ``band2_state.response_fields`` JSON shape from
+    ``InstrumentResponseField`` rows + ``instrument.column_widths``,
+    sorted by order. Lets existing tests that probe the old JSON
+    shape keep their assertions with minimal churn after the JSON
+    write side retired (decision 5 — DB is now authoritative).
+    """
+    column_widths = instrument.column_widths or {}
+    out: list[dict] = []
+    for rf in sorted(instrument.response_fields, key=lambda f: f.order):
+        data_type_lower = (rf._inline_data_type or "String").lower()
+        entry: dict = {
+            "id": rf.id,
+            "name": rf.label,
+            "data_type": data_type_lower,
+            "min": "" if rf._inline_min is None else (
+                str(int(rf._inline_min))
+                if rf._inline_min == int(rf._inline_min)
+                else f"{rf._inline_min:g}"
+            ),
+            "max": "" if rf._inline_max is None else (
+                str(int(rf._inline_max))
+                if rf._inline_max == int(rf._inline_max)
+                else f"{rf._inline_max:g}"
+            ),
+            "step": "" if rf._inline_step is None else (
+                str(int(rf._inline_step))
+                if rf._inline_step == int(rf._inline_step)
+                else f"{rf._inline_step:g}"
+            ),
+            "list_options": rf._inline_list_csv or "",
+            "selected": rf.visible,
+            "required": rf.required,
+            "help_text": rf.help_text or "",
+            "help_text_visible": rf.help_text_visible,
+        }
+        width = column_widths.get(f"rf_{rf.id}")
+        if width is not None:
+            entry["width_px"] = width
+        out.append(entry)
+    return out
+
+
 @pytest.fixture
 def reviewer_user() -> AuthenticatedUser:
     return AuthenticatedUser(
@@ -1185,7 +1229,7 @@ def test_new_model_band2_state_round_trip(
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
-    rfs = new_model.band2_state["response_fields"]
+    rfs = _band2_rfs(new_model)
     assert len(rfs) == 2
     assert rfs[0]["name"] == "Rating"
     assert rfs[0]["data_type"] == "integer"
@@ -1668,7 +1712,9 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
     db.refresh(new_model)
     seeded = new_model.band2_state
     assert seeded["selected_display_keys"] == ["reviewee.name"]
-    assert len(seeded["response_fields"]) == 1
+    # Wave 3 PR iii — response fields are DB rows; legacy JSON shape
+    # rebuilt via _band2_rfs.
+    assert len(_band2_rfs(new_model)) == 1
     assert seeded["sample_reviewee_name"] == "Eve"
 
     # Pill-toggle write: only selected_display_keys. response_fields
@@ -1683,7 +1729,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
-    assert len(new_model.band2_state["response_fields"]) == 1
+    assert len(_band2_rfs(new_model)) == 1
     assert new_model.band2_state["sample_reviewee_name"] == "Eve"
 
     # RF-save write: only response_fields. selected_display_keys +
@@ -1715,7 +1761,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         },
     )
     db.refresh(new_model)
-    assert len(new_model.band2_state["response_fields"]) == 2
+    assert len(_band2_rfs(new_model)) == 2
     assert new_model.band2_state["selected_display_keys"] == [
         "reviewee.name",
         "reviewee.email_or_identifier",
@@ -1743,7 +1789,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
-    assert len(new_model.band2_state["response_fields"]) == 2
+    assert len(_band2_rfs(new_model)) == 2
 
 
 def test_new_model_link3_and_column_widths_survive_form_save(
@@ -2012,7 +2058,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
     )
     assert resp.status_code == 200
     db.refresh(new_model)
-    rfs = new_model.band2_state["response_fields"]
+    rfs = _band2_rfs(new_model)
     assert rfs[0]["width_px"] == 260
 
     # Out-of-range widths clamp on store.
@@ -2035,7 +2081,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["response_fields"][0]["width_px"] == 1200
+    assert _band2_rfs(new_model)[0]["width_px"] == 1200
 
     # Template renders the stored width as data-width on the
     # response pill — the preview-builder JS picks it up to set
@@ -2852,7 +2898,7 @@ def test_gap_5_required_round_trips_through_band2_state(
     )
     assert resp.status_code == 200
     db.refresh(new_model)
-    rfs = new_model.band2_state["response_fields"]
+    rfs = _band2_rfs(new_model)
     assert len(rfs) == 1
     assert rfs[0]["required"] is True
     # Edit the row to required=False; the change persists.
@@ -2876,7 +2922,7 @@ def test_gap_5_required_round_trips_through_band2_state(
     )
     assert resp.status_code == 200
     db.refresh(new_model)
-    assert new_model.band2_state["response_fields"][0]["required"] is False
+    assert _band2_rfs(new_model)[0]["required"] is False
 
 
 def test_gap_5_required_defaults_false_when_omitted(
@@ -2901,7 +2947,7 @@ def test_gap_5_required_defaults_false_when_omitted(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["response_fields"][0]["required"] is False
+    assert _band2_rfs(new_model)[0]["required"] is False
 
 
 def test_gap_5_template_renders_checkbox_and_data_required(
@@ -3008,7 +3054,7 @@ def test_band3_help_text_visible_toggle_persists_and_renders(
         },
     )
     db.refresh(new_model)
-    rfs = new_model.band2_state["response_fields"]
+    rfs = _band2_rfs(new_model)
     assert rfs[0]["help_text_visible"] is True
     assert rfs[1]["help_text_visible"] is False
 
@@ -3074,7 +3120,7 @@ def test_band3_help_text_visible_defaults_to_false_when_omitted(
     )
     db.refresh(new_model)
     assert (
-        new_model.band2_state["response_fields"][0]["help_text_visible"]
+        _band2_rfs(new_model)[0]["help_text_visible"]
         is False
     )
 
@@ -3107,7 +3153,7 @@ def test_band3_help_text_body_persists_and_renders_on_pill(
     )
     db.refresh(new_model)
     assert (
-        new_model.band2_state["response_fields"][0]["help_text"]
+        _band2_rfs(new_model)[0]["help_text"]
         == "Rate from 1 (poor) to 5 (great)."
     )
 
@@ -3146,7 +3192,7 @@ def test_band3_help_text_body_clamped_to_1000_chars(
         },
     )
     db.refresh(new_model)
-    stored = new_model.band2_state["response_fields"][0]["help_text"]
+    stored = _band2_rfs(new_model)[0]["help_text"]
     assert len(stored) == 1000
     assert stored == "x" * 1000
 
@@ -3174,7 +3220,7 @@ def test_band3_help_text_body_defaults_to_empty_when_omitted(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["response_fields"][0]["help_text"] == ""
+    assert _band2_rfs(new_model)[0]["help_text"] == ""
 
 
 # --------------------------------------------------------------------------- #
@@ -3227,7 +3273,7 @@ def test_wave3_pri_creates_irf_row_for_new_entry(
     assert row._inline_max == 5.0
     assert row._inline_step == 1.0
     # JSON ``id`` back-filled to the new row's PK.
-    assert new_model.band2_state["response_fields"][0]["id"] == row.id
+    assert _band2_rfs(new_model)[0]["id"] == row.id
 
 
 def test_wave3_pri_id_match_updates_existing_row(
@@ -3259,7 +3305,7 @@ def test_wave3_pri_id_match_updates_existing_row(
         },
     )
     db.refresh(new_model)
-    row_id = new_model.band2_state["response_fields"][0]["id"]
+    row_id = _band2_rfs(new_model)[0]["id"]
 
     # Second save — same id, updated label + bounds.
     client.post(
@@ -3349,7 +3395,7 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
         rf for rf in new_model.response_fields if rf.label == "Rating"
     )
     assert rating_row.required is False
-    assert new_model.band2_state["response_fields"][0]["required"] is False
+    assert _band2_rfs(new_model)[0]["required"] is False
 
     # Step 2 — simulate the bottom Save (POST /fields/save with
     # the dfsave form payload — Band 1 + sort spec). This MUST
@@ -3371,24 +3417,20 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
 
-    # Step 3 — band2_state.response_fields still has the toggled
-    # state; DB row's required still False; the seeded default
-    # has NOT crept back in.
+    # Step 3 — Wave 3 PR iii: response-field state lives on DB rows,
+    # not in band2_state JSON. The DB row's required must still be
+    # False; the seeded default has NOT crept back in.
     rating_row = next(
         rf for rf in new_model.response_fields if rf.label == "Rating"
     )
     assert rating_row.required is False, (
         "Bottom Save reverted Rating.required back to seeded default"
     )
-    assert (
-        new_model.band2_state is not None
-        and "response_fields" in new_model.band2_state
-    ), "Bottom Save cleared band2_state.response_fields"
-    rating_json = next(
-        r for r in new_model.band2_state["response_fields"]
+    rating_view = next(
+        r for r in _band2_rfs(new_model)
         if r.get("id") == rating_row.id
     )
-    assert rating_json["required"] is False
+    assert rating_view["required"] is False
 
 
 def test_full_flow_add_new_response_field_persists_through_save(
@@ -3469,12 +3511,10 @@ def test_full_flow_add_new_response_field_persists_through_save(
     assert "Bonus" in labels, (
         "Bottom Save removed the operator-added Bonus row"
     )
-    json_labels = {
-        r["name"] for r in (new_model.band2_state or {}).get(
-            "response_fields", []
-        )
-    }
-    assert "Bonus" in json_labels
+    # Wave 3 PR iii — the legacy JSON-shape view (rebuilt from DB
+    # rows) also shows Bonus.
+    view_labels = {r["name"] for r in _band2_rfs(new_model)}
+    assert "Bonus" in view_labels
 
 
 def test_r_toggle_persists_required_flag_via_dual_write(
@@ -3541,7 +3581,7 @@ def test_r_toggle_persists_required_flag_via_dual_write(
     # required flag — used by the template's initial render
     # to set the R button's primary/secondary class.
     json_by_id = {
-        r["id"]: r for r in new_model.band2_state["response_fields"]
+        r["id"]: r for r in _band2_rfs(new_model)
     }
     assert json_by_id[rating.id]["required"] is False
     assert json_by_id[comments.id]["required"] is False
@@ -3615,8 +3655,8 @@ def test_wave3_pri_deletes_unreferenced_row_without_responses(
         },
     )
     db.refresh(new_model)
-    rating_id = new_model.band2_state["response_fields"][0]["id"]
-    notes_id = new_model.band2_state["response_fields"][1]["id"]
+    rating_id = _band2_rfs(new_model)[0]["id"]
+    notes_id = _band2_rfs(new_model)[1]["id"]
     assert len(list(new_model.response_fields)) == 2
 
     # Second save — drop Notes by id.
@@ -3718,12 +3758,13 @@ def test_wave3_pri_disabled_x_when_responses_present(
     assert f'data-rf-id="{rating.id}"' in body
     assert 'data-has-responses="true"' in body
     # The X button on the rating row renders disabled (no onclick).
+    # Wave 3 PR iii — ``data-rf-id`` now also appears on the response
+    # pill, so anchor on the Band 3 row's ``data-new-model-rf-row``
+    # combined with the rf-id to find the row uniquely.
     flat = " ".join(body.split())
-    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
-    # Find the X button after this row marker. Wave 3 PR ii's
-    # template addition (oninput handlers + disabled/title on the
-    # type+bounds widgets + data-new-model-rf-save/-delete attrs)
-    # widens the per-row markup, so the search window grew to 6000.
+    row_marker = f'data-new-model-rf-row data-row-key="rf_0" data-rf-id="{rating.id}"'
+    rating_row_idx = flat.find(row_marker)
+    assert rating_row_idx != -1, "Band 3 row for rating not found"
     rating_block = flat[rating_row_idx : rating_row_idx + 6000]
     x_idx = rating_block.find(">X</button>")
     assert x_idx != -1
@@ -3776,9 +3817,12 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
+    # Wave 3 PR iii — ``data-rf-id`` now also rides on the response
+    # pill, so anchor on the Band 3 row's combined marker instead.
     flat = " ".join(body.split())
-    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
-    assert rating_row_idx != -1
+    row_marker = f'data-new-model-rf-row data-row-key="rf_0" data-rf-id="{rating.id}"'
+    rating_row_idx = flat.find(row_marker)
+    assert rating_row_idx != -1, "Band 3 row for rating not found"
     rating_block = flat[rating_row_idx : rating_row_idx + 6000]
     assert 'data-new-model-rf-shape-locked="true"' in rating_block
 
@@ -3818,8 +3862,12 @@ def test_wave3_prii_no_shape_lock_when_no_responses(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
+    # Wave 3 PR iii — ``data-rf-id`` now also appears on the response
+    # pill, so anchor on the Band 3 row's combined marker.
     flat = " ".join(body.split())
-    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
+    row_marker = f'data-new-model-rf-row data-row-key="rf_0" data-rf-id="{rating.id}"'
+    rating_row_idx = flat.find(row_marker)
+    assert rating_row_idx != -1, "Band 3 row for rating not found"
     rating_block = flat[rating_row_idx : rating_row_idx + 6000]
     assert 'data-new-model-rf-shape-locked' not in rating_block
     # data_type select is editable.
@@ -3911,22 +3959,47 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     assert response.status_code == 409
 
 
-def test_wave3_pri_reviewer_surface_unchanged(
+def test_wave3_pri_dual_write_authors_new_response_field(
     client: TestClient, db: Session
 ) -> None:
-    """PR i is additive — the reviewer-surface read path still
-    pulls the seeded DEFAULT_RESPONSE_FIELDS rows only.
-    Operator-authored rows now exist in DB but aren't surfaced
-    to reviewers yet (PR ii flips the read)."""
+    """Wave 3 PR i — operator-authored rows persist as real
+    ``InstrumentResponseField`` rows alongside the seeded defaults.
+    Per the PR iii contract, the incoming payload now carries the
+    full id set (the view layer's (b) contract populates the JS
+    payload from DB rows on first render), so the seeded rows are
+    preserved and the new ``Bonus`` row gets created."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="w3-pri-reviewer-unchanged"
     )
-    # Author a new field via dual-write.
+    seeded_rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    seeded_comments = next(
+        rf for rf in new_model.response_fields if rf.label == "Comments"
+    )
     client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
+                {
+                    "id": seeded_rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": True,
+                },
+                {
+                    "id": seeded_comments.id,
+                    "name": "Comments",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": True,
+                    "required": False,
+                },
                 {
                     "name": "Bonus",
                     "data_type": "integer",
@@ -3935,13 +4008,11 @@ def test_wave3_pri_reviewer_surface_unchanged(
                     "step": "1",
                     "selected": True,
                     "required": False,
-                }
+                },
             ]
         },
     )
     db.refresh(new_model)
-    # The DB carries the operator-authored row alongside the
-    # seeded Rating + Comments — three rows total.
     labels = {rf.label for rf in new_model.response_fields}
     assert {"Rating", "Comments", "Bonus"} <= labels
 
@@ -4691,3 +4762,167 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
     assert response.status_code == 200
     db.refresh(rating)
     assert rating.label == "Overall Rating"
+
+
+def test_wave3_priii_band2_state_drops_response_fields_key(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR iii — ``set_band2_state`` no longer persists
+    ``response_fields`` into the JSON dict. DB rows are the source
+    of truth (decision 5). After a Save, ``band2_state`` carries
+    only the surviving keys (``selected_display_keys``,
+    ``sample_reviewee_name``, ``sample_group_member_ids``)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-priii-no-rfs"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": ["reviewee.name"],
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": True,
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    db.refresh(new_model)
+    # JSON dict carries the other keys but NOT response_fields.
+    assert new_model.band2_state is not None
+    assert "response_fields" not in new_model.band2_state
+    assert new_model.band2_state["selected_display_keys"] == ["reviewee.name"]
+    # The DB row still reflects the incoming required flag.
+    db.refresh(rating)
+    assert rating.required is True
+
+
+def test_wave3_priii_response_field_width_migrates_to_column_widths(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR iii — ``width_px`` on a response field entry no
+    longer lands in ``band2_state.response_fields`` (which is gone)
+    but instead routes into ``instrument.column_widths["rf_<id>"]``
+    so reviewer-surface ``<col style="width: Npx">`` can pick it up
+    and render the same width the operator saw in the Band 2
+    preview."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-priii-rf-width"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "width_px": 240,
+                }
+            ]
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.column_widths is not None
+    assert new_model.column_widths.get(f"rf_{rating.id}") == 240
+    assert "response_fields" not in (new_model.band2_state or {})
+
+
+def test_wave3_priii_reviewer_surface_emits_response_column_width(
+    client: TestClient,
+    db: Session,
+    alice: AuthenticatedUser,
+    reviewer_user: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Wave 3 PR iii — once response-column widths land on
+    ``column_widths["rf_<id>"]``, the reviewer surface emits the
+    matching ``<col style="width: Npx">`` so the table column
+    visually matches what the operator saw in the Band 2 preview."""
+    operator = make_client(alice)
+    review_session = _make_session(operator, db, code="w3-priii-surface-rfw")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Rae",
+                email="r@example.edu",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "width_px": 260,
+                }
+            ]
+        },
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session.id)
+    # Pick out the new-model instrument's position from the reviewer
+    # page; only that instrument has the operator-set width.
+    instruments = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().all()
+    new_model_position = (
+        [i.id for i in instruments].index(new_model.id) + 1
+    )
+    rae_client = make_client(reviewer_user)
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/{new_model_position}"
+    ).text
+    assert "width: 260px" in body

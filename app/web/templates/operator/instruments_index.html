@@ -1459,6 +1459,7 @@
                         data-selectable-in-group="true"
                         data-row-key="{{ _key }}"
                         data-response-key="{{ _key }}"
+                        {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
                         data-required="{{ 'true' if rf.required else 'false' }}"
                         data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
                         data-help-text="{{ rf.help_text or '' }}"
@@ -1947,16 +1948,11 @@
                     var rpill = card.querySelector('[data-new-model-band2-pill][data-response-key="' + rkey + '"]');
                     if (rpill) { rpill.setAttribute('data-width', lastWidth); }
                   }
-                  // Display-field (+ identity) widths go through
-                  // /column-widths via saveBand2Widths. Response
-                  // column widths ride on the response_fields
-                  // entry inside band2_state instead, so a
-                  // response-side resize fires saveBand2State.
-                  if (isResponse) {
-                    saveBand2State(card);
-                  } else {
-                    saveBand2Widths(card);
-                  }
+                  // Wave 3 PR iii — both display- and response-column
+                  // widths now persist via /column-widths under
+                  // ``df_<id>`` / ``rf_<id>`` keys; the JSON
+                  // ``response_fields[i].width_px`` slot retired.
+                  saveBand2Widths(card);
                 }
               }
               document.addEventListener('mousemove', onMove);
@@ -1977,6 +1973,11 @@
                 var fid = pill.getAttribute('data-display-field-id');
                 var w = parseInt(pill.getAttribute('data-width') || '', 10);
                 if (fid && w > 0) { widths['df_' + fid] = w; }
+                // Wave 3 PR iii — response-column widths under
+                // rf_<db_id> keys, mirroring the df_<id> shape.
+                // Pills without a data-rf-id (unsaved rows) skip.
+                var rfid = pill.getAttribute('data-rf-id');
+                if (rfid && w > 0) { widths['rf_' + rfid] = w; }
               });
               // Mirror the current widths into the hidden form
               // snapshot input so a form Save click that fires the
@@ -2050,12 +2051,10 @@
                   if (key === 'list') { key = 'list_options'; }
                   rf[key] = input.value || '';
                 });
-                // Carry the drag-resized column width along with
-                // the response field entry so the width travels
-                // with the field through drag-reorder and survives
-                // Save. ``set_band2_state`` sanitises (clamps 40-1200).
-                var widthAttr = parseInt(pill.getAttribute('data-width') || '', 10);
-                if (widthAttr > 0) { rf.width_px = widthAttr; }
+                // Wave 3 PR iii — width_px retired from the
+                // response_fields JSON payload; response-column
+                // widths persist via /column-widths under
+                // ``rf_<db_id>`` keys (saveBand2Widths).
                 responseFields.push(rf);
               });
               // Use ``navigator.sendBeacon`` first — designed
