@@ -4606,6 +4606,80 @@ def test_wave3_prii_invalid_field_shape_returns_422(
     assert "at least" in body["errors"][0]["message"].lower()
 
 
+def test_step_must_be_at_most_half_of_max_minus_min(
+    client: TestClient, db: Session
+) -> None:
+    """Authoring-shape validation — a Step larger than half of
+    (Max − Min) leaves only the two endpoints reachable, so the
+    Step field adds no expressive power. Server rejects with 422;
+    the Band 3 ✓ button is client-side-gated against the same check.
+    Equal-to-half is accepted (yields exactly three values: min,
+    mid, max)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="step-half-range"
+    )
+
+    # min=1, max=5, step=3 → (5-1)/2 = 2, 3 > 2 → invalid.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Step too big",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "3",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"] == "invalid_field_shape"
+    assert "half" in body["errors"][0]["message"].lower()
+
+    # min=1, max=5, step=2 → exactly half, valid (yields 1, 3, 5).
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Step exactly half",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "2",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+    # min=1.0, max=5.0, step=2.5 → (5-1)/2 = 2, 2.5 > 2 → invalid.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Decimal step too big",
+                    "data_type": "decimal",
+                    "min": "1.0",
+                    "max": "5.0",
+                    "step": "2.5",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_wave3_prii_shape_change_blocked_when_responses_exist(
     client: TestClient, db: Session
 ) -> None:
