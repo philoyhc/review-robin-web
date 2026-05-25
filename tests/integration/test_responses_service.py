@@ -324,3 +324,138 @@ def test_reviewer_session_state_session_pill_projection(db: Session) -> None:
     assert pill.state == state.pill_state
     assert pill.total_assignments == state.total_assignments
     assert pill.completed_rows == state.completed_count
+
+
+def _hide_field(db: Session, instrument_id: int, field_key: str) -> None:
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument_id,
+            InstrumentResponseField.field_key == field_key,
+        )
+    ).scalar_one()
+    field.visible = False
+    db.flush()
+
+
+def test_compute_row_completion_excludes_hidden_required_field(
+    db: Session,
+) -> None:
+    """Wave 3 PR ii — a hidden required field doesn't block completion:
+    if the operator deselects it via the Band 2 pill, reviewers can't
+    see / fill it, so it must not count as "missing required"."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "rating")
+
+    is_complete, missing, _ = responses_service.compute_row_completion(
+        db, assignment
+    )
+    assert is_complete is True
+    assert missing == 0
+
+
+def test_submit_skips_hidden_required_field(db: Session) -> None:
+    """Wave 3 PR ii — submit's missing-required gate ignores hidden
+    fields. Mirrors the row-completion behaviour."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "rating")
+
+    result = responses_service.submit(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[],
+        correlation_id="c1",
+    )
+
+    assert result.submitted is True
+    assert result.missing == []
+
+
+def test_save_draft_drops_upsert_to_hidden_field(db: Session) -> None:
+    """Wave 3 PR ii — save path's field index filters by visible=true,
+    so a value posted against a now-hidden field is silently dropped
+    rather than written to DB. Matches the read-path contract: the
+    reviewer surface never rendered the field in the first place."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "comments")
+
+    result = responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(
+                assignment_id=assignment.id, field_key="comments", value="hi"
+            ),
+        ],
+        correlation_id="c1",
+    )
+
+    assert result.upsert_count == 0
+
+
+def test_validate_value_integer_reads_inline_bounds(db: Session) -> None:
+    """Wave 3 PR ii — ``validate_value`` reads ``_inline_min`` /
+    ``_inline_max`` / ``_inline_step`` directly per locked decision
+    11. A new-model integer field with bounds 1-5 rejects "999"
+    (previously silent-pass when ``validation`` JSON was None)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    # Simulate a new-model authored row: drop the cached validation
+    # JSON to prove the validator no longer depends on it.
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "3") is None
+    assert "at least 1" in (responses_service.validate_value(field, "0") or "")
+    assert "at most 5" in (responses_service.validate_value(field, "999") or "")
+    assert "whole number" in (responses_service.validate_value(field, "abc") or "")
+
+
+def test_validate_value_string_max_length(db: Session) -> None:
+    """Wave 3 PR ii — String fields enforce ``_inline_max`` as the
+    char-length cap (per the model column comment + decision 11)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    field._inline_max = 5.0
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "okay") is None
+    assert "at most 5" in (
+        responses_service.validate_value(field, "too long") or ""
+    )
+
+
+def test_validate_value_list_option_membership(db: Session) -> None:
+    """Wave 3 PR ii — List fields reject values that aren't in the
+    inline option set (parsed from ``_inline_list_csv``)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    field._inline_data_type = "List"
+    field._inline_list_csv = "Yes, No, Maybe"
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "Yes") is None
+    assert responses_service.validate_value(field, "Maybe") is None
+    assert "one of the listed" in (
+        responses_service.validate_value(field, "Sometimes") or ""
+    )

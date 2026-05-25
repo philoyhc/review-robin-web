@@ -166,6 +166,44 @@ class ResponsesPresentError(Exception):
         self.cascaded_response_count = count
 
 
+class ResponseFieldShapeChangeError(Exception):
+    """Raised when an operator tries to change a response field's data
+    type or numeric / list bounds while the field already has saved
+    responses (Wave 3 PR ii — sibling of ResponsesPresentError).
+    The contract: operator must clear the responses first before
+    re-shaping the field, so existing response data doesn't end up
+    silently mis-typed (e.g. Integer → String leaving stray "abc"
+    values un-flagged) or out-of-bounds (e.g. tightening max=5 below
+    a saved "999")."""
+
+    def __init__(
+        self,
+        *,
+        field_label: str,
+        count: int,
+        changed_attrs: list[str],
+    ) -> None:
+        super().__init__(
+            f"{count} response(s) exist for {field_label!r}; "
+            f"cannot change {', '.join(changed_attrs)}"
+        )
+        self.field_label = field_label
+        self.cascaded_response_count = count
+        self.changed_attrs = changed_attrs
+
+
+class InvalidResponseFieldShapeError(Exception):
+    """Raised when an operator-authored response field has a
+    nonsensical authoring shape (Wave 3 PR ii) — max < min, step
+    ≤ 0, empty List options, or max_length ≤ 0 for String. The
+    Band 3 ✓ button is client-side-gated against the same checks;
+    this exception is defence-in-depth for direct API hits."""
+
+    def __init__(self, errors: list[tuple[str, str]]) -> None:
+        super().__init__("; ".join(f"{label}: {msg}" for label, msg in errors))
+        self.errors = errors
+
+
 def slugify_field_key(label: str) -> str:
     """Derive a default field_key from an operator-typed label.
 

@@ -14,6 +14,7 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     Instrument,
+    InstrumentResponseField,
     Response,
     Reviewee,
     Reviewer,
@@ -2205,3 +2206,45 @@ def test_group_instrument_counts_once_per_group_in_reviewer_state(
     # the collapsed count must match the direct call above.
     progress = monitoring_service.per_reviewer_progress(db, review_session)
     assert [p.assignment_count for p in progress] == [5]
+
+
+def test_surface_hides_response_field_when_visible_false(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Wave 3 PR ii — once the operator deselects a response-field
+    pill in Band 2, the underlying ``InstrumentResponseField.visible``
+    flips to False and the reviewer surface stops rendering the
+    column header + cell."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-hide",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    _activate(operator, db, review_session)
+
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    comments_field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    comments_field.visible = False
+    db.commit()
+
+    rae_client = make_client(rae)
+    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+
+    assert response.status_code == 200
+    # Rating (visible) still renders; Comments (hidden) does not.
+    assert "Rating" in response.text
+    assert "Comments" not in response.text

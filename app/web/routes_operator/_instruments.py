@@ -1473,6 +1473,38 @@ async def instrument_band2_state(
                 "responses": exc.cascaded_response_count,
             },
         ) from exc
+    except instruments_service.ResponseFieldShapeChangeError as exc:
+        # Wave 3 PR ii — operator tried to change data_type / bounds
+        # on a row with saved responses. The Band 3 data_type select
+        # + bound inputs are rendered ``disabled`` when has_responses
+        # is true; this server guard catches direct API hits. 409.
+        # Return JSONResponse directly so the structured detail
+        # reaches the client (the app's global HTTPException handler
+        # renders HTML and drops dict ``detail``).
+        return JSONResponse(
+            {
+                "error": "shape_change_blocked",
+                "field_label": exc.field_label,
+                "responses": exc.cascaded_response_count,
+                "changed": exc.changed_attrs,
+            },
+            status_code=status.HTTP_409_CONFLICT,
+        )
+    except instruments_service.InvalidResponseFieldShapeError as exc:
+        # Wave 3 PR ii — operator-authored bounds don't make sense
+        # (max < min, step ≤ 0, empty List, etc). The Band 3 ✓ button
+        # is client-side-gated against the same checks; surface 422
+        # for the defence-in-depth case.
+        return JSONResponse(
+            {
+                "error": "invalid_field_shape",
+                "errors": [
+                    {"field_label": label, "message": msg}
+                    for label, msg in exc.errors
+                ],
+            },
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
     db.commit()
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 

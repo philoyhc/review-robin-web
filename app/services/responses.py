@@ -83,15 +83,17 @@ def _format_number(v: float, *, integer: bool) -> str:
 def validate_value(
     field: InstrumentResponseField, value: str
 ) -> str | None:
-    """Validate a non-empty form value against the field's RTD-derived
-    ``validation`` block. Returns an error message or None.
+    """Validate a non-empty form value against the field's inline
+    type + bounds (Wave 3 PR ii — reads ``_inline_*`` directly per
+    locked decision 11; the ``validation`` JSON cache stays for now
+    but is no longer the source of truth for this code path).
+    Returns an error message or None.
 
-    Empty values are treated as "delete the row" by the save layer and
-    are not validated here.
+    Empty values are treated as "delete the row" by the save layer
+    and are not validated here.
     """
     if value == "":
         return None
-    validation = field.validation or {}
     data_type = field.data_type
     if data_type in ("Integer", "Decimal"):
         integer = data_type == "Integer"
@@ -99,9 +101,9 @@ def validate_value(
             v = int(value) if integer else float(value)
         except ValueError:
             return "Must be a whole number." if integer else "Must be a number."
-        min_ = validation.get("min")
-        max_ = validation.get("max")
-        step = validation.get("step")
+        min_ = field._inline_min
+        max_ = field._inline_max
+        step = field._inline_step
         if min_ is not None and v < min_:
             return f"Must be at least {_format_number(min_, integer=integer)}."
         if max_ is not None and v > max_:
@@ -114,6 +116,20 @@ def validate_value(
                     "Must be in increments of "
                     f"{_format_number(step, integer=integer)}."
                 )
+        return None
+    if data_type == "String":
+        # ``_inline_max`` doubles as the char-length cap for String
+        # fields (per the model column comment + decision 11).
+        max_length = field._inline_max
+        if max_length is not None and len(value) > int(max_length):
+            return f"Must be at most {int(max_length)} characters."
+        return None
+    if data_type == "List":
+        options_csv = field._inline_list_csv or ""
+        options = [opt.strip() for opt in options_csv.split(",") if opt.strip()]
+        if options and value not in options:
+            return "Must be one of the listed options."
+        return None
     return None
 
 
@@ -141,6 +157,7 @@ def _instrument_fields_by_id(
     stmt = (
         select(InstrumentResponseField)
         .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
+        .where(InstrumentResponseField.visible.is_(True))
         .order_by(InstrumentResponseField.order)
     )
     by_instrument: dict[int, list[InstrumentResponseField]] = {}
@@ -266,6 +283,7 @@ def compute_row_completion(
         db.execute(
             select(InstrumentResponseField)
             .where(InstrumentResponseField.instrument_id == assignment.instrument_id)
+            .where(InstrumentResponseField.visible.is_(True))
             .order_by(InstrumentResponseField.order)
         ).scalars()
     )
