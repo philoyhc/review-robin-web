@@ -576,6 +576,35 @@ def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
     )
 
 
+def _full_matrix_schema() -> Any:
+    """Synthetic ``RuleSetSchema`` representing the Full Matrix
+    default: empty rules, ALL_OF combinator, self-reviews allowed.
+
+    Wave 4 — new-model instruments with untouched Band 1 (both Links
+    in ``"all"`` mode) carry ``rule_set_id = NULL``; the engine
+    treats this synthetic schema as "no filter," producing every
+    (reviewer, reviewee) pair. Legacy instruments with NULL
+    ``rule_set_id`` continue to be filtered out upstream — they
+    require an explicit pin per Segment 13C.
+    """
+    from app.schemas.rules import (
+        Combinator,
+        RuleSetOptions,
+        RuleSetSchema,
+        RuleSetScope,
+    )
+
+    return RuleSetSchema(
+        id=0,
+        name="Full Matrix (new-model default)",
+        description="",
+        scope=RuleSetScope.personal,
+        combinator=Combinator.ALL_OF,
+        rules=[],
+        options=RuleSetOptions(excludeSelfReviews=False, seed=0),
+    )
+
+
 @dataclass
 class _InstrumentDiff:
     """The reconcile diff for one instrument — see :func:`_diff_one_instrument`."""
@@ -595,7 +624,7 @@ def _diff_one_instrument(
     *,
     review_session: ReviewSession,
     instrument: Instrument,
-    session_rule_set: SessionRuleSet,
+    session_rule_set: SessionRuleSet | None,
     reviewers: list[Reviewer],
     reviewees: list[Reviewee],
     pair_context_lookup: dict[tuple[int, int], Relationship],
@@ -608,16 +637,26 @@ def _diff_one_instrument(
     writes nothing. Shared by :func:`_materialise_one_instrument` (which
     then applies the diff) and :func:`reconcile_impact` (which only
     sums the counts for the dry-run).
+
+    ``session_rule_set=None`` is the Full Matrix default — used for
+    new-model instruments with untouched Band 1 (Wave 4). The engine
+    evaluates a synthetic empty-rules schema and the revision seed
+    falls back to ``0``.
     """
     from app.services.rules import engine
 
-    rule_set_schema = _session_rule_set_to_schema(session_rule_set)
+    if session_rule_set is None:
+        rule_set_schema = _full_matrix_schema()
+        revision_seed = 0
+    else:
+        rule_set_schema = _session_rule_set_to_schema(session_rule_set)
+        revision_seed = session_rule_set.id
     result = engine.evaluate(
         rule_set_schema,
         reviewers=reviewers,
         reviewees=reviewees,
         override_exclude_self_reviews=override_exclude_self_reviews,
-        revision_seed=session_rule_set.id,
+        revision_seed=revision_seed,
         pair_context_lookup=pair_context_lookup,
     )
 
@@ -710,7 +749,7 @@ def _materialise_one_instrument(
     review_session: ReviewSession,
     user: User,
     instrument: Instrument,
-    session_rule_set: SessionRuleSet,
+    session_rule_set: SessionRuleSet | None,
     reviewers: list[Reviewer],
     reviewees: list[Reviewee],
     pair_context_lookup: dict[tuple[int, int], Relationship],
@@ -789,10 +828,9 @@ def _materialise_one_instrument(
     context: dict[str, str | int | bool] = {"mode": mode.value}
     if override_exclude_self_reviews is not None:
         context["exclude_self_reviews"] = override_exclude_self_reviews
-    refs: dict[str, int] = {
-        "instrument_id": instrument.id,
-        "rule_set_id": session_rule_set.id,
-    }
+    refs: dict[str, int] = {"instrument_id": instrument.id}
+    if session_rule_set is not None:
+        refs["rule_set_id"] = session_rule_set.id
     audit.write_event(
         db,
         event_type="assignments.generated",
@@ -822,7 +860,14 @@ class _ReconcileInputs:
     pair_context_lookup: dict[tuple[int, int], Relationship]
     rule_set_rows: dict[int, SessionRuleSet]
 
-    def rule_set_for(self, instrument: Instrument) -> SessionRuleSet:
+    def rule_set_for(self, instrument: Instrument) -> SessionRuleSet | None:
+        # Wave 4 — new-model instruments with untouched Band 1 carry
+        # ``rule_set_id = NULL``; the diff/materialise path treats
+        # ``None`` as the Full Matrix default. Legacy instruments
+        # with NULL ``rule_set_id`` are filtered out upstream in
+        # ``_load_reconcile_inputs`` and never reach this method.
+        if instrument.rule_set_id is None:
+            return None
         rule_set = self.rule_set_rows.get(instrument.rule_set_id)
         if rule_set is None:
             # Dangling FK shouldn't happen given the SET NULL cascade;
@@ -865,17 +910,25 @@ def _load_reconcile_inputs(
             f"{review_session.id}"
         )
     if instrument_id is not None:
-        # Single-instrument scope: the caller named the target; we
-        # require its ``rule_set_id`` to be pinned.
-        if all_instruments[0].rule_set_id is None:
+        # Single-instrument scope: the caller named the target. Legacy
+        # instruments require an explicit pin (per Segment 13C);
+        # new-model instruments with NULL ``rule_set_id`` are
+        # interpreted as Full Matrix at the diff site.
+        only = all_instruments[0]
+        if only.rule_set_id is None and not only.is_new_model:
             raise ValueError(
                 f"instrument {instrument_id} has no rule pinned "
                 "(rule_set_id is NULL)"
             )
         targets = list(all_instruments)
     else:
-        # Cross-instrument scope: silently skip unpinned ones.
-        targets = [i for i in all_instruments if i.rule_set_id is not None]
+        # Cross-instrument scope: silently skip legacy unpinned ones;
+        # keep new-model NULL-rule_set instruments (Full Matrix
+        # default — Wave 4).
+        targets = [
+            i for i in all_instruments
+            if i.rule_set_id is not None or i.is_new_model
+        ]
 
     reviewers = list_reviewers(db, review_session.id)
     reviewees = list_reviewees(db, review_session.id)
@@ -885,7 +938,7 @@ def _load_reconcile_inputs(
         db, review_session.id
     )
 
-    rule_set_ids = {i.rule_set_id for i in targets}
+    rule_set_ids = {i.rule_set_id for i in targets if i.rule_set_id is not None}
     rule_set_rows = {
         row.id: row
         for row in db.execute(

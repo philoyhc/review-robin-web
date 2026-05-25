@@ -5020,3 +5020,100 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
         f"/reviewer/sessions/{review_session.id}/{new_model_position}"
     ).text
     assert "width: 260px" in body
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 PR 1 — Full Matrix default for new-model NULL rule_set
+# --------------------------------------------------------------------------- #
+
+
+def test_new_model_untouched_band1_generates_full_matrix(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 1 — a new-model instrument with untouched Band 1
+    (Link 1 + Link 2 both in 'all' mode → no SessionRuleSet
+    materialised → ``rule_set_id IS NULL``) is no longer silently
+    skipped by ``replace_assignments``. The engine treats it as
+    Full Matrix and produces every (reviewer, reviewee) pair."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-default-matrix"
+    )
+    # Add a second reviewer + reviewee so Full Matrix produces > 1 pair
+    # — makes the count assertion meaningful.
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Bob",
+                email="bob@example.edu",
+                tag_1="Lead",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@example.edu",
+                tag_1="Team A",
+                tag_2="beta",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+
+    # No Band 1 save, no rule pin. Just hit Generate.
+    resp = generate_via_page_button(client, review_session.id)
+    assert resp.status_code == 303
+
+    # rule_set_id stayed NULL — we didn't materialise a SessionRuleSet.
+    db.refresh(new_model)
+    assert new_model.rule_set_id is None
+
+    # Full Matrix: 2 reviewers × 2 reviewees = 4 assignments.
+    rows = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == new_model.id,
+        )
+    ).scalars().all()
+    assert len(rows) == 4
+    pair_set = {(r.reviewer_id, r.reviewee_id) for r in rows}
+    reviewers = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()
+    reviewees = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().all()
+    expected = {(rv.id, re.id) for rv in reviewers for re in reviewees}
+    assert pair_set == expected
+
+
+def test_new_model_untouched_band1_activates_and_accepts_responses(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 1 — activation flips ``accepting_responses=True`` on
+    new-model instruments with NULL ``rule_set_id`` (Full Matrix
+    default). The legacy ``group_kind + rule_set_id IS NULL`` skip
+    no longer triggers for new-model rows."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-default-activate"
+    )
+    # Delete the legacy source instrument so the session has only the
+    # new-model row. (``_new_model_with_tags`` seeds a legacy
+    # ``source`` instrument as the anchor for ``add-new-model``; it's
+    # not relevant to this test and would carry NULL rule_set_id
+    # itself.)
+    source = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != new_model.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{source.id}/delete",
+        follow_redirects=False,
+    )
+    generate_via_page_button(client, review_session.id)
+    _activate(client, db, review_session.id)
+
+    db.refresh(new_model)
+    assert new_model.rule_set_id is None  # still NULL
+    assert new_model.accepting_responses is True
