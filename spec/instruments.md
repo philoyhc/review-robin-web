@@ -238,17 +238,20 @@ empty) and the Show checkbox is disabled.
 
 ### C. Action row (two half-width cards)
 
-The per-instrument card's bottom action row is a `.bottom-grid` of
-two half-width cards:
+The per-instrument card's bottom action row is a single
+right-flushed row (no cards). Wave 4 (2026-05-25) restructured
+both the buttons present and their state model. Left-to-right
+at the right edge:
 
-A single right-flushed action row (no cards). Left-to-right at
-the right edge: the state-machine pair (`Edit`, or `Save` /
-`Cancel`), then `Add instrument`, `Add group instrument`,
-`Replicate`, and `Delete` last. The separate Danger Zone card
-was retired in the Segment 13C harmonization (2026-05-19);
-`Delete` is now a `btn destructive` at the end of the row, and
-its confirm checkbox + message sit flush-right on a line just
-below the row: *"Yes, delete {Group }Instrument #N and its
+`Save` | `Cancel` | `Replicate` | `Delete` | `+Instrument` |
+`Lock` / `Unlock`
+
+`Save` and `Cancel` only render when the card is unlocked
+(edit mode); the other four are always present. The separate
+Danger Zone card was retired in the Segment 13C harmonization
+(2026-05-19); `Delete` is now a `btn destructive` flush-right
+in the row, and its confirm checkbox + message sit on a line
+just below the row: *"Yes, delete {Group }Instrument #N and its
 associated assignments and reviewer responses."*
 
 `Delete` follows the **checkbox-gates-button** standard — it
@@ -263,66 +266,75 @@ Buttons use the canonical `.btn` modifier classes catalogued in
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary Outline (`btn secondary`) | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and the button is replaced by `Edit`. |
-| `Cancel` | Primary Outline (`btn secondary`) | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
-| `Edit` | Primary Outline (`btn secondary`) | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
-| `Add new instrument` | Primary Outline (`btn secondary`) | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
+| `Save` | Primary Outline (`btn secondary`) | Writes the current Band 1 form fields, Band 3 row state, and bulk-save batch to the database in one round-trip. Starts `disabled`; activates on the first dirty event (Band 1 input change or Band 3 row tick/X/+ click). Save **preserves** `?editing=<id>` on redirect so the card stays unlocked after Save — the operator keeps editing without re-unlocking (Wave 4 PR 2). |
+| `Cancel` | Primary Outline (`btn secondary`) | Discards any unsaved client-side edits by reloading the page in edit mode (the form re-renders from persisted state). Confirms first (`confirm('Discard unsaved changes?')`). Mirrors Save's `disabled` state — when nothing is dirty there's nothing to discard. (Wave 4 PR 4c, PR #1443.) |
 | `Replicate` | Primary Outline (`btn secondary`) | Clones this instrument's content into a new card slotted immediately after it (Segment 13C PR 3). |
-| `Delete` | Danger (`btn destructive`) | Last in the row. Deletes this instrument; gated by the confirm checkbox below the row (checkbox-gates-button standard). |
+| `Delete` | Danger (`btn destructive`) | Deletes this instrument; gated by the confirm checkbox below the row (checkbox-gates-button standard). |
+| `+Instrument` | Primary Outline-Primary (`btn primary-outline`) | Spawns a new instrument immediately after this one. With every new instrument now created as a new-model one (post-Wave-3), this is the sole "create new instrument" affordance — the legacy `Add instrument` / `Add group instrument` buttons retired in Wave 4 PR 4c (PR #1443). |
+| `Lock` / `Unlock` | Primary Outline (`btn secondary`) | The gating toggle. **Unlocked** = `?editing=<id>` in the URL (card is in edit mode); **Locked** = no editing param (view mode). Button label flips between the two states. Clicking `Lock` while Save is active (dirty) prompts a `confirm()` dialog before navigating away (Wave 4 PR 3). Modelled on the Quick Setup card's footer (`_quick_setup_card.html`). Replaces the pre-Wave-4 per-card `Edit` button. |
 
 The Instruments page leans on Primary Outline (`btn secondary`)
-across the per-instrument action surface so the visual difference
-between Save / Cancel / Edit / Add / Replicate stays minimal —
-the role each button plays is conveyed by its label and
-position, not by colour. The `Delete` Danger button is the
-single exception.
+across the per-instrument action surface so the visual
+difference between Save / Cancel / Replicate / Lock stays
+minimal — the role each button plays is conveyed by its label
+and position, not by colour. The `Delete` (Danger) button is
+the single exception; `+Instrument` uses `btn primary-outline`
+to signal the create-something action.
 
-`Save` + `Cancel` and `Edit` are **mutually exclusive** — only
-one of the two states is shown at a time. When the card is open
-for editing, `Save` and `Cancel` are shown; when the card is
-locked, only `Edit` is shown.
+**Lock owns gating; Save owns persistence.** Pre-Wave-4 the
+`Save` action also implicitly re-locked the card (Save flipped
+the URL back to view mode). Wave 4 PR 2 split these concerns —
+Save persists and stays in edit mode; only `Lock` flips the
+URL back to view mode. The mental model is consistent across
+the page: lock state is visible, persistence is action-driven.
 
-**Two avenues, same state.** The `Save` / `Cancel` / `Edit` set
-appears in **two places** on the per-instrument card — bottom-
-right of this row, and bottom-left of the Section A description
-card. The pairs share the same underlying state machine
-(`?editing={iid}` URL param + the shared `dfsave-{iid}` form), so
-the operator can flip in or out of edit mode from either pair
-without scrolling past the tables.
+**Save dirty-tracking.** Save and Cancel both render `disabled`
+on entry to edit mode (operator unlocks the card → URL adds
+`?editing=<id>` → page re-renders with both buttons disabled).
+The first dirty event flips both to enabled. After a successful
+Save the server-side redirect re-renders fresh, returning both
+buttons to disabled. **Per-row pending visual.** Band 3 rows
+whose inputs the operator has typed into but not yet committed
+via the ✓ button get a subtle amber-accent visual
+(`[data-row-pending="true"]`); clicking ✓ clears it (Wave 4
+PR 3, base.html inline CSS).
 
 **One editing context at a time (Slice 4d).** The per-instrument
 card's editing state and the Response Type Definitions card's
 editing state are **mutually exclusive** — only one editing
 context can be open on the page at a time. While any
-per-instrument card is in edit mode, every operator-defined RTD
+per-instrument card is unlocked, every operator-defined RTD
 row's `Edit` and `Delete` buttons + the `Add a Response Type`
 block all render disabled (with a tooltip pointing back to the
 open instrument). The reverse holds too: while an RTD row is
-unlocked, every per-instrument card's `Edit` button greys out.
-This stops the cross-table cascade-edits problem (operator
-deletes an in-use ODT mid-instrument-edit; the cascade rewrites
-RF rows the browser still has open in inputs).
+unlocked, every per-instrument card's `Unlock` toggle renders
+as a disabled `<button>` with the explanatory tooltip
+("Save or cancel the Response Type Definitions edit before
+unlocking an instrument."). This stops the cross-table
+cascade-edits problem (operator deletes an in-use RTD
+mid-instrument-edit; the cascade rewrites RF rows the browser
+still has open in inputs).
 
 #### Initial state
 
 - A **brand-new instrument** card (operator just clicked
-  `Add new instrument`, or the session was just created and the
-  default instrument was seeded) starts in the **editable** state
-  — `Save` + `Cancel` shown, tables open.
+  `+Instrument`, or the session was just created and the
+  default instrument was seeded) starts **locked** in view
+  mode. The operator clicks `Unlock` to enter edit mode. Save
+  and Cancel start `disabled` until the first dirty event.
 - An **existing instrument** with previously-saved field rows
-  starts in the **locked** state — `Edit` shown, tables read-only.
+  starts **locked** — `Unlock` shown, fields read-only.
 
 #### Locked when session is `ready`
 
 While the session is `ready` (the yellow lock card at the top of
 the page is visible), every per-instrument card stays in the
-**locked** state regardless of saved-vs-new, and the `Save` /
-`Cancel` / `Edit` buttons render greyed-out (disabled) so the
-operator cannot toggle into edit mode. The operator must
-`Revert to draft` (via the lock card) before any of the
-field-table buttons become usable. The `Add new instrument` and
-`Delete this instrument` buttons follow the same lock — both are
-disabled while `ready`.
+**locked** state regardless of saved-vs-new, and the `Lock` /
+`Unlock` toggle renders greyed-out (disabled) so the operator
+cannot enter edit mode. The operator must `Revert to draft`
+(via the lock card) before any of the field-table buttons
+become usable. The `+Instrument` and `Delete this instrument`
+buttons follow the same lock — both are disabled while `ready`.
 
 ## Add / Delete semantics
 
@@ -330,10 +342,14 @@ The Add / Delete semantics in this section apply to **instrument
 cards** only. The Response Type Definitions card itself is
 permanent — it cannot be added or removed.
 
-**Add new instrument** appends a new instrument card below the
+**+Instrument** appends a new instrument card below the
 current one. The underlying database row is created immediately
 (no draft / unsaved state). The new card seeds with the default
-Display Fields and Response Fields rows defined above.
+Display Fields and Response Fields rows defined above. (The
+pre-Wave-4 `Add new instrument` button was renamed to
+`+Instrument` in PR #1443 — the only "create new instrument"
+affordance left after the legacy `Add instrument` / `Add group
+instrument` buttons retired in the same PR.)
 
 **Delete this instrument** removes the instrument and all its
 dependent rows (display fields, response fields, assignments,

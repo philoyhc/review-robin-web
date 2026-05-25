@@ -23,18 +23,22 @@ the slice that wires it lands those pieces later.
 The Instruments page renders one full-width per-instrument card
 per instrument in `Instrument.order` (see
 `spec/instruments.md`). Each card's action row carries a
-**`+New model`** button that creates a new instrument flagged
-`is_new_model=True` and slotted immediately after the source — same
-pattern as Add instrument / Add group instrument. New-model
+**`+Instrument`** button (renamed from `+New model` in PR
+#1443) that creates a new instrument flagged
+`is_new_model=True` and slotted immediately after the source.
+The pre-Wave-4 `Add instrument` / `Add group instrument`
+buttons retired in the same PR, so `+Instrument` is the sole
+"create new instrument" affordance on the action row. New-model
 instruments render with the vertical-bands layout described
 below instead of the standard Display / Response Fields tables;
-the rest of the per-instrument actions (Edit / Save / Cancel /
-Delete / Replicate / Open / Close / Show when closed) work
-identically across all three flavours.
+the rest of the per-instrument actions (Save / Cancel /
+Replicate / Delete / Lock / Unlock / Open / Close / Show when
+closed) work identically across the flavours that remain.
 
-The `+New model` button uses the `btn primary-outline` canonical
-style and sits to the right of the Delete button on the action
-row.
+The `+Instrument` button uses the `btn primary-outline`
+canonical style and sits between `Delete` and the
+`Lock` / `Unlock` toggle on the bottom action row (per the
+Wave 4 PR 4c restructure documented in `spec/instruments.md`).
 
 ## Card layout
 
@@ -56,7 +60,8 @@ cards. Inside, vertically stacked:
    followed by a placeholder `Band 3` heading.
 5. **Action row + delete-confirm checkbox** — identical to the
    ordinary per-instrument card's bottom row. Carries the
-   `+New model` button as the rightmost action.
+   `+Instrument` button between `Delete` and the `Lock` /
+   `Unlock` toggle (Wave 4 PR 4c).
 
 The four horizontal rules use 1px `var(--border-muted, #cbd5e1)`
 and 20px vertical margins.
