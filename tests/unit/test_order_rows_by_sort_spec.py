@@ -195,3 +195,26 @@ def test_bad_dir_entries_skipped() -> None:
     out = order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)
     # Invalid dir → entry drops; input order preserved.
     assert [r.rid for r in out] == [1, 2]
+
+
+def test_group_identity_sentinel_exempt_from_known_id_filter() -> None:
+    """The ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel for the
+    composed Group cell sort isn't a real
+    InstrumentDisplayField id; the helper must NOT drop it via
+    the ``known_display_field_ids`` cross-instrument check. The
+    caller's ``key_resolver`` is responsible for translating
+    -1 into the row's group identity."""
+    rows = [
+        _Row(1, {-1: "Team B"}),
+        _Row(2, {-1: "Team A"}),
+    ]
+    spec = [{"display_field_id": -1, "dir": "asc"}]
+    out = order_rows_by_sort_spec(
+        rows,
+        spec,
+        key_resolver=_resolver,
+        known_display_field_ids={9},  # real DF ids only
+    )
+    # Sentinel survives the filter; rows ordered by the resolved
+    # values from each row's ``-1`` slot.
+    assert [r.rid for r in out] == [2, 1]

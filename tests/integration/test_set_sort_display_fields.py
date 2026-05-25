@@ -235,6 +235,29 @@ def test_set_sort_rejects_cross_instrument_id(
     assert excinfo.value.code == "cross_instrument"
 
 
+def test_set_sort_accepts_group_identity_sentinel(
+    db: Session, client: TestClient
+) -> None:
+    """The ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel for the
+    composed Group cell sort on a new-model group-scoped
+    instrument's preview is exempt from the cross-instrument
+    check — it isn't a real InstrumentDisplayField row."""
+    review_session = _make_session(client, db, code="ssdf-group-sentinel")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+
+    instruments.set_sort_display_fields(
+        db,
+        instrument=instrument,
+        fields=[(instruments.GROUP_IDENTITY_SORT_KEY, "desc")],
+        actor=_actor(db),
+    )
+    db.refresh(instrument)
+    assert instrument.sort_display_fields == [
+        {"display_field_id": -1, "dir": "desc"},
+    ]
+
+
 def test_set_sort_emits_audit_on_diff(
     db: Session, client: TestClient
 ) -> None:

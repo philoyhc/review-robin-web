@@ -752,6 +752,11 @@ def prune_unpopulated_display_fields(
 # surface render falls back to insertion order).
 _VALID_SORT_DIRS: frozenset[str] = frozenset({"asc", "desc"})
 _MAX_SORT_KEYS: int = 3
+# Sentinel ``display_field_id`` for the composed Group cell sort
+# on a new-model group-scoped instrument's preview. Not a real
+# InstrumentDisplayField row — the reviewer-surface render path
+# interprets it as "sort group rows by composed group identity".
+GROUP_IDENTITY_SORT_KEY: int = -1
 
 
 class SortSpecError(ValueError):
@@ -822,14 +827,21 @@ def set_sort_display_fields(
                     "more than once in the sort spec."
                 ),
             )
-        if entry["display_field_id"] not in valid_ids:
-            raise SortSpecError(
-                code="cross_instrument",
-                message=(
-                    f"Display field {entry['display_field_id']} is not "
-                    f"on instrument {_instrument_label(instrument)}."
-                ),
-            )
+        # ``display_field_id == GROUP_IDENTITY_SORT_KEY`` (-1) is a
+        # sentinel for the composed Group cell on a group-scoped
+        # new-model instrument's preview. It isn't a real
+        # InstrumentDisplayField row; skip the cross-instrument
+        # check and let the reviewer-surface render path interpret
+        # it (see ``app/web/routes_reviewer/_surface.py``).
+        if entry["display_field_id"] != GROUP_IDENTITY_SORT_KEY:
+            if entry["display_field_id"] not in valid_ids:
+                raise SortSpecError(
+                    code="cross_instrument",
+                    message=(
+                        f"Display field {entry['display_field_id']} is not "
+                        f"on instrument {_instrument_label(instrument)}."
+                    ),
+                )
         seen.add(entry["display_field_id"])
 
     old_value = instrument.sort_display_fields

@@ -1760,7 +1760,19 @@
               html += '</colgroup><thead><tr>';
               var colIdx = 0;
               if (hasIdentity) {
-                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+                // Sort badge on the identity ("Reviewee") cell —
+                // pins to the Name display field's id (matches the
+                // reviewer surface's ``data-sort-key="reviewee.name"``
+                // semantics). Falls through when Name isn't
+                // selected; deselecting Name typically drops the
+                // identity column entirely anyway.
+                var identitySortBadge = (name && name.displayFieldId)
+                  ? sortBadgeHtml(card, name.displayFieldId)
+                  : '';
+                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee'
+                  + identitySortBadge
+                  + maybeResizeHandle('identity', colIdx === lastIdx)
+                  + '</th>';
                 colIdx += 1;
               }
               displays.forEach(function (o) {
@@ -1834,7 +1846,15 @@
               });
               html += '</colgroup><thead><tr>';
               var colIdx = 0;
-              html += '<th scope="col" class="rs-group" style="position: relative;">Group' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+              // Group sort badge pins to the
+              // ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel — the
+              // reviewer surface group branch reverses the
+              // default group-key order on ``dir=desc``.
+              var groupSortBadge = sortBadgeHtml(card, '-1');
+              html += '<th scope="col" class="rs-group" style="position: relative;">Group'
+                + groupSortBadge
+                + maybeResizeHandle('identity', colIdx === lastIdx)
+                + '</th>';
               colIdx += 1;
               responses.forEach(function (r) {
                 html += '<th scope="col" style="position: relative;">'
