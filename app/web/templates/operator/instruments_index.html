@@ -1318,22 +1318,21 @@
                  data-session-id="{{ session.id }}"
                  style="margin-top: 16px;">
               <div class="card rs-instrument-card"
+                   data-intro-edit-block
                    style="position: relative;">
                 <h2 data-intro-short-label-block
                     style="display: flex; align-items: baseline; gap: 8px;">
                   <span>Page #{{ loop.index }}:</span>
                   <span data-intro-short-label-view
                         style="font-weight: inherit;">{{ _intro_title }}</span>
-                  {# Edit-input wrapper mirrors the description block —
-                     ``position: relative; padding-right: 28px;`` reserves
-                     a right-side gutter so the ✎ / ✓ buttons sit to the
-                     right of the input instead of wrapping below it on
-                     narrow viewports. ``min-width: 0`` lets the wrapper
-                     shrink within the flex h2 (otherwise the input's
-                     intrinsic width would block flex shrinking). #}
+                  {# ``min-width: 0`` lets the wrapper shrink within
+                     the flex h2 — otherwise the input's intrinsic
+                     width would block flex shrinking. The unified
+                     ✎ / ✓ pair lives at the card's bottom-right
+                     (matching the help-text card pattern); per-field
+                     buttons no longer crowd this row. #}
                   <span data-intro-short-label-edit-wrap
-                        style="flex: 1 1 auto; min-width: 0;
-                               {% if is_editing %}position: relative; padding-right: 28px;{% endif %}">
+                        style="flex: 1 1 auto; min-width: 0;">
                     <input type="text"
                            data-intro-short-label-input
                            maxlength="32"
@@ -1342,30 +1341,9 @@
                            hidden
                            style="font: inherit; padding: 2px 6px;
                                   width: 100%; box-sizing: border-box;">
-                    {% if is_editing %}
-                      <button type="button" class="btn-icon"
-                              data-intro-short-label-edit
-                              onclick="newModelIntroShortLabelEdit(this)"
-                              title="Edit short label"
-                              aria-label="Edit short label"
-                              style="position: absolute; top: 0; right: 0;">✎</button>
-                      <button type="button" class="btn-icon"
-                              data-intro-short-label-save
-                              onclick="newModelIntroShortLabelSave(this)"
-                              title="Save short label"
-                              aria-label="Save short label"
-                              hidden
-                              style="position: absolute; top: 0; right: 0;">✓</button>
-                    {% endif %}
                   </span>
                 </h2>
-                {# ``padding-right: 28px`` reserves a gutter on the
-                   right of the description block so the ✎ / ✓
-                   button can sit to the right of the textarea
-                   instead of overlapping it — same pattern the
-                   help-text card uses (see ``buildResponseFieldHelpCards``). #}
-                <div data-intro-description-block
-                     style="position: relative; padding-right: 28px;">
+                <div data-intro-description-block>
                   <p class="rs-instrument-subtitle muted"
                      data-intro-description-view
                      style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
@@ -1383,22 +1361,26 @@
                             style="width: 100%; margin-top: 4px;
                                    min-height: 4em; box-sizing: border-box;
                                    font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
-                  {% if is_editing %}
-                    <button type="button" class="btn-icon"
-                            data-intro-description-edit
-                            onclick="newModelIntroDescriptionEdit(this)"
-                            title="Edit description"
-                            aria-label="Edit description"
-                            style="position: absolute; bottom: 4px; right: 4px;">✎</button>
-                    <button type="button" class="btn-icon"
-                            data-intro-description-save
-                            onclick="newModelIntroDescriptionSave(this)"
-                            title="Save description"
-                            aria-label="Save description"
-                            hidden
-                            style="position: absolute; bottom: 4px; right: 4px;">✓</button>
-                  {% endif %}
                 </div>
+                {# Single ✎ / ✓ pair at the card's bottom-right —
+                   opens / saves both short_label + description in
+                   one go. Matches the help-text card's
+                   ``bottom: 4px; right: 4px`` placement. #}
+                {% if is_editing %}
+                  <button type="button" class="btn-icon"
+                          data-intro-edit
+                          onclick="newModelIntroEdit(this)"
+                          title="Edit short label and description"
+                          aria-label="Edit short label and description"
+                          style="position: absolute; bottom: 4px; right: 4px;">✎</button>
+                  <button type="button" class="btn-icon"
+                          data-intro-save
+                          onclick="newModelIntroSave(this)"
+                          title="Save short label and description"
+                          aria-label="Save short label and description"
+                          hidden
+                          style="position: absolute; bottom: 4px; right: 4px;">✓</button>
+                {% endif %}
               </div>
             </div>
             {# Response field details now live as editable rows
@@ -2390,6 +2372,96 @@
                   newValue
                 );
               });
+            };
+            // Unified intro edit/save — opens / saves both short_label
+            // and description in one go. ✎ swaps both view → input/textarea
+            // and toggles the icon to ✓; ✓ POSTs both fields in one
+            // identity request and reverts both view modes on success.
+            function _introToggleEditUI(card, editing) {
+              var editBtn = card.querySelector('[data-intro-edit]');
+              var saveBtn = card.querySelector('[data-intro-save]');
+              if (editBtn) { editBtn.hidden = editing; }
+              if (saveBtn) { saveBtn.hidden = !editing; }
+            }
+            function _introEnterField(block, viewSel, inputSel) {
+              var view = block.querySelector(viewSel);
+              var input = block.querySelector(inputSel);
+              if (!input) { return null; }
+              if (view) { view.hidden = true; }
+              input.hidden = false;
+              return input;
+            }
+            function _introExitField(block, viewSel, inputSel, displayText) {
+              var view = block.querySelector(viewSel);
+              var input = block.querySelector(inputSel);
+              if (!input) { return; }
+              if (view) {
+                view.textContent = displayText;
+                view.hidden = false;
+              }
+              input.hidden = true;
+            }
+            window.newModelIntroEdit = window.newModelIntroEdit || function (btn) {
+              var card = btn.closest('[data-intro-edit-block]');
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              if (!card || !intro) { return; }
+              var labelBlock = card.querySelector('[data-intro-short-label-block]');
+              var descBlock = card.querySelector('[data-intro-description-block]');
+              if (!labelBlock || !descBlock) { return; }
+              var labelInput = _introEnterField(labelBlock,
+                '[data-intro-short-label-view]',
+                '[data-intro-short-label-input]');
+              _introEnterField(descBlock,
+                '[data-intro-description-view]',
+                '[data-intro-description-input]');
+              _introToggleEditUI(card, true);
+              // Focus short_label first so the operator can type
+              // immediately; tab moves to the description textarea.
+              if (labelInput) {
+                try {
+                  labelInput.focus();
+                  var len = (labelInput.value || '').length;
+                  if (labelInput.setSelectionRange) {
+                    labelInput.setSelectionRange(len, len);
+                  }
+                } catch (_) {}
+              }
+            };
+            window.newModelIntroSave = window.newModelIntroSave || function (btn) {
+              var card = btn.closest('[data-intro-edit-block]');
+              var intro = btn.closest('[data-new-model-band2-intro-card]');
+              if (!card || !intro) { return; }
+              var labelBlock = card.querySelector('[data-intro-short-label-block]');
+              var descBlock = card.querySelector('[data-intro-description-block]');
+              if (!labelBlock || !descBlock) { return; }
+              var labelInput = labelBlock.querySelector(
+                '[data-intro-short-label-input]'
+              );
+              var descInput = descBlock.querySelector(
+                '[data-intro-description-input]'
+              );
+              if (!labelInput || !descInput) { return; }
+              var newLabel = (labelInput.value || '').trim().slice(0, 32);
+              var newDesc = (descInput.value || '').slice(0, 2000);
+              _introPostIdentity(
+                intro,
+                {short_label: newLabel, description: newDesc},
+                function () {
+                  labelInput.value = newLabel;
+                  descInput.value = newDesc;
+                  _introExitField(labelBlock,
+                    '[data-intro-short-label-view]',
+                    '[data-intro-short-label-input]',
+                    newLabel
+                  );
+                  _introExitField(descBlock,
+                    '[data-intro-description-view]',
+                    '[data-intro-description-input]',
+                    newDesc
+                  );
+                  _introToggleEditUI(card, false);
+                }
+              );
             };
             // Render a disabled placeholder input/textarea/select for
             // a selected response-field cell in the preview row. Shape

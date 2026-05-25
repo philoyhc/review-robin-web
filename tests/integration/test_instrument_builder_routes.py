@@ -4220,10 +4220,10 @@ def test_band2_intro_card_description_textarea_hidden_uses_hidden_attr_only(
 def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
     client: TestClient, db: Session
 ) -> None:
-    """The intro card's ✎/✓ icons for short_label + description only
-    render when the instrument is in edit mode. In view mode (no
-    ``editing=`` query param), the icons are absent — operator
-    cannot toggle the inline editor."""
+    """The intro card's unified ✎/✓ pair (opens / saves both
+    short_label + description) only renders when the instrument is
+    in edit mode. In view mode (no ``editing=`` query param), the
+    icons are absent — operator cannot toggle the inline editor."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-intro-edit-gate"
     )
@@ -4232,27 +4232,21 @@ def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
     db.commit()
 
     # View mode (no ``editing=...`` param). The JS code that
-    # implements the toggle contains the attribute names as
-    # CSS-selector substrings, so we look for the button
-    # markup specifically (the onclick handler is unique to
-    # the button element).
+    # implements the toggle contains the function names so we
+    # look for the onclick wiring on the button element.
     view_body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "newModelIntroShortLabelEdit(this)" not in view_body
-    assert "newModelIntroShortLabelSave(this)" not in view_body
-    assert "newModelIntroDescriptionEdit(this)" not in view_body
-    assert "newModelIntroDescriptionSave(this)" not in view_body
+    assert "newModelIntroEdit(this)" not in view_body
+    assert "newModelIntroSave(this)" not in view_body
 
-    # Edit mode — ✎/✓ icons render (✓ hidden by default).
+    # Edit mode — unified ✎/✓ pair renders (✓ hidden by default).
     edit_body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
-    assert "newModelIntroShortLabelEdit(this)" in edit_body
-    assert "newModelIntroShortLabelSave(this)" in edit_body
-    assert "newModelIntroDescriptionEdit(this)" in edit_body
-    assert "newModelIntroDescriptionSave(this)" in edit_body
+    assert "newModelIntroEdit(this)" in edit_body
+    assert "newModelIntroSave(this)" in edit_body
 
 
 def test_intro_identity_endpoint_updates_short_label(
@@ -5156,68 +5150,56 @@ def test_band2_intro_progress_pills_render_inside_preview_row(
     assert "justify-content: flex-end" in between
 
 
-def test_band2_description_button_does_not_overlap_textarea(
+def test_band2_intro_unified_edit_save_at_card_bottom_right(
     client: TestClient, db: Session
 ) -> None:
-    """The ✎ / ✓ buttons on the description edit block sit in a
-    right-side gutter (matching the help-text card pattern) rather
-    than overlapping the textarea. Verified by the container's
-    ``padding-right: 28px`` style."""
+    """The intro card carries a single ✎ / ✓ pair at its bottom-right
+    corner that opens / saves BOTH the short_label and description
+    edit boxes in one go. Matches the help-text card placement
+    (``bottom: 4px; right: 4px``). Per-field ✎ / ✓ pairs no longer
+    render."""
     review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-desc-gutter"
+        client, db, code="band2-intro-unified-edit"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
-    desc_idx = flat.find("data-intro-description-block")
-    assert desc_idx != -1
-    # The container carries position: relative + padding-right: 28px
-    # so the absolute-positioned button sits to the right of the
-    # textarea instead of on top of it.
-    desc_tag = flat[desc_idx : flat.find(">", desc_idx) + 1]
-    assert "padding-right: 28px" in desc_tag
-    # The save (✓) button is in the right gutter.
-    save_btn_idx = flat.find("data-intro-description-save", desc_idx)
-    assert save_btn_idx != -1
-    save_tag = flat[
-        flat.rfind("<button", 0, save_btn_idx) : flat.find(">", save_btn_idx) + 1
+
+    # Per-field onclick handlers retired — only the unified pair
+    # is wired. (Substring checks on the attribute names would
+    # collide with ``data-intro-short-label-edit-wrap`` which is
+    # the kept wrapper span.)
+    assert "newModelIntroShortLabelEdit(this)" not in flat
+    assert "newModelIntroShortLabelSave(this)" not in flat
+    assert "newModelIntroDescriptionEdit(this)" not in flat
+    assert "newModelIntroDescriptionSave(this)" not in flat
+
+    # Unified ✎ / ✓ live on the card with bottom-right placement
+    # matching the help-text card pattern.
+    edit_idx = flat.find("data-intro-edit ")
+    save_idx = flat.find("data-intro-save ")
+    assert edit_idx != -1 and save_idx != -1
+    edit_tag = flat[
+        flat.rfind("<button", 0, edit_idx) : flat.find(">", edit_idx) + 1
     ]
-    assert "right: 4px" in save_tag
+    save_tag = flat[
+        flat.rfind("<button", 0, save_idx) : flat.find(">", save_idx) + 1
+    ]
+    for tag in (edit_tag, save_tag):
+        assert "position: absolute" in tag
+        assert "bottom: 4px" in tag
+        assert "right: 4px" in tag
+    # Initial state: ✎ visible, ✓ hidden.
+    assert "hidden" not in edit_tag
+    assert " hidden" in save_tag
+
+    # The unified edit handlers are wired.
+    assert "newModelIntroEdit(this)" in edit_tag
+    assert "newModelIntroSave(this)" in save_tag
 
 
-def test_band2_short_label_save_button_does_not_wrap_below_input(
-    client: TestClient, db: Session
-) -> None:
-    """The ✎ / ✓ buttons on the short_label edit block sit absolute-
-    positioned in a 28px right-side gutter (mirroring the description
-    edit block) instead of as inline flex siblings of the input.
-    Without this, ``flex: 1 1 auto`` on the input + ``flex-wrap: wrap``
-    on the parent ``<h2>`` would push the save button below the
-    edit box on narrow viewports."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-short-label-gutter"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
-    ).text
-    flat = " ".join(body.split())
-    # The wrapper span carries the right-side gutter (only when in
-    # edit lock — the buttons render only then).
-    wrap_idx = flat.find("data-intro-short-label-edit-wrap")
-    assert wrap_idx != -1
-    wrap_tag = flat[wrap_idx : flat.find(">", wrap_idx) + 1]
-    assert "padding-right: 28px" in wrap_tag
-    assert "position: relative" in wrap_tag
-    # The save (✓) button is absolute-positioned in the gutter, not
-    # an inline flex sibling.
-    save_btn_idx = flat.find("data-intro-short-label-save", wrap_idx)
-    assert save_btn_idx != -1
-    save_tag = flat[
-        flat.rfind("<button", 0, save_btn_idx) : flat.find(">", save_btn_idx) + 1
-    ]
-    assert "position: absolute" in save_tag
-    assert "right: 0" in save_tag
+
 
 
 def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
