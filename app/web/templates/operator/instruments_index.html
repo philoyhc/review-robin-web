@@ -3224,16 +3224,16 @@
               if (st !== null && st <= 0) {
                 return 'Step must be greater than zero.';
               }
-              // Step must allow at least one value between Min and
-              // Max (mirrors _validate_response_field_shape on the
-              // server). 1e-9 epsilon guards against float-precision
-              // drift in the (max - min) / 2 division.
+              // Step must be reachable at least once from Min
+              // (mirrors _validate_response_field_shape on the
+              // server). Equal is fine — min=0, max=1, step=1
+              // yields a Boolean-like 0/1 field.
               if (
                 mn !== null && mx !== null && st !== null
                 && mx > mn
-                && st > (mx - mn) / 2 + 1e-9
+                && st > (mx - mn) + 1e-9
               ) {
-                return 'Step must be at most half of (Max − Min) so the field has at least one value between Min and Max.';
+                return 'Step must be at most (Max − Min) so the field has at least two valid values.';
               }
               return null;
             }

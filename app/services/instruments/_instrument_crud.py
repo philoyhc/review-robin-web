@@ -1211,22 +1211,24 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
             return "Max must be at least Min."
         if step is not None and step <= 0:
             return "Step must be greater than zero."
-        # Step must allow at least one value between min and max
-        # (i.e. at least three valid values total: min, min+step, ...,
-        # max). When ``step > (max - min) / 2`` only the two endpoints
-        # are reachable and the operator should be authoring a List
-        # instead. Tiny epsilon guards against float-precision drift
-        # (e.g. 0.3 / 2 == 0.149999...).
+        # Step must be reachable at least once from Min — i.e.
+        # ``step <= (max - min)`` so the field has at least two
+        # valid values (Min and Min+step). A larger step leaves only
+        # Min as a valid value and the Step bound adds nothing the
+        # operator couldn't achieve with a fixed value. Equal is
+        # accepted (min=0, max=1, step=1 → values 0, 1 — useful for
+        # Boolean-like numeric fields). Tiny epsilon guards against
+        # float-precision drift.
         if (
             min_ is not None
             and max_ is not None
             and step is not None
             and max_ > min_
-            and step > (max_ - min_) / 2 + 1e-9
+            and step > (max_ - min_) + 1e-9
         ):
             return (
-                "Step must be at most half of (Max − Min) so the field "
-                "has at least one value between Min and Max."
+                "Step must be at most (Max − Min) so the field has "
+                "at least two valid values."
             )
         return None
     if data_type == "string":

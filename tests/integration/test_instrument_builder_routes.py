@@ -4606,20 +4606,20 @@ def test_wave3_prii_invalid_field_shape_returns_422(
     assert "at least" in body["errors"][0]["message"].lower()
 
 
-def test_step_must_be_at_most_half_of_max_minus_min(
+def test_step_must_be_at_most_max_minus_min(
     client: TestClient, db: Session
 ) -> None:
-    """Authoring-shape validation — a Step larger than half of
-    (Max − Min) leaves only the two endpoints reachable, so the
-    Step field adds no expressive power. Server rejects with 422;
-    the Band 3 ✓ button is client-side-gated against the same check.
-    Equal-to-half is accepted (yields exactly three values: min,
-    mid, max)."""
+    """Authoring-shape validation — a Step larger than (Max − Min)
+    leaves only Min as a valid value, so the Step bound adds no
+    expressive power. Server rejects with 422; the Band 3 ✓ button
+    is client-side-gated against the same check. Equal-to-range is
+    accepted (yields exactly two values: Min and Max — useful for
+    Boolean-like numeric fields, e.g. 0/1)."""
     review_session, new_model = _new_model_with_tags(
-        client, db, code="step-half-range"
+        client, db, code="step-range"
     )
 
-    # min=1, max=5, step=3 → (5-1)/2 = 2, 3 > 2 → invalid.
+    # min=1, max=5, step=10 → (5-1) = 4, 10 > 4 → invalid.
     response = client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/band2-state",
@@ -4630,7 +4630,7 @@ def test_step_must_be_at_most_half_of_max_minus_min(
                     "data_type": "integer",
                     "min": "1",
                     "max": "5",
-                    "step": "3",
+                    "step": "10",
                     "selected": True,
                 }
             ]
@@ -4639,20 +4639,21 @@ def test_step_must_be_at_most_half_of_max_minus_min(
     assert response.status_code == 422
     body = response.json()
     assert body["error"] == "invalid_field_shape"
-    assert "half" in body["errors"][0]["message"].lower()
+    assert "at least two" in body["errors"][0]["message"].lower()
 
-    # min=1, max=5, step=2 → exactly half, valid (yields 1, 3, 5).
+    # Boolean-like — min=0, max=1, step=1 → step == range, accepted
+    # (yields exactly two values: 0, 1).
     response = client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
-                    "name": "Step exactly half",
+                    "name": "Boolean-like",
                     "data_type": "integer",
-                    "min": "1",
-                    "max": "5",
-                    "step": "2",
+                    "min": "0",
+                    "max": "1",
+                    "step": "1",
                     "selected": True,
                 }
             ]
@@ -4660,7 +4661,26 @@ def test_step_must_be_at_most_half_of_max_minus_min(
     )
     assert response.status_code == 200
 
-    # min=1.0, max=5.0, step=2.5 → (5-1)/2 = 2, 2.5 > 2 → invalid.
+    # min=1, max=5, step=4 → equal to range, accepted (yields 1, 5).
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "name": "Step equals range",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "4",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+    # min=1.0, max=5.0, step=4.5 → (5-1) = 4, 4.5 > 4 → invalid.
     response = client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/band2-state",
@@ -4671,7 +4691,7 @@ def test_step_must_be_at_most_half_of_max_minus_min(
                     "data_type": "decimal",
                     "min": "1.0",
                     "max": "5.0",
-                    "step": "2.5",
+                    "step": "4.5",
                     "selected": True,
                 }
             ]
