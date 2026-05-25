@@ -2036,10 +2036,19 @@
                 if (widthAttr > 0) { rf.width_px = widthAttr; }
                 responseFields.push(rf);
               });
+              // ``keepalive: true`` lets the request complete even
+              // when the operator immediately clicks the bottom Save
+              // (or otherwise navigates) before the fetch lands.
+              // Without it, the browser aborts in-flight requests
+              // on navigation — the most likely reason a chip /
+              // R-button / help-toggle change "doesn't persist"
+              // when the operator quickly hits Save next. Payload
+              // is well under the 64 KB keepalive limit.
               fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/band2-state', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'same-origin',
+                keepalive: true,
                 body: JSON.stringify({
                   selected_display_keys: selectedDisplayKeys,
                   response_fields: responseFields,

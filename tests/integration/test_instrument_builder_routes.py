@@ -3288,6 +3288,76 @@ def test_wave3_pri_id_match_updates_existing_row(
     assert rows[0]._inline_max == 10.0
 
 
+def test_r_toggle_persists_required_flag_via_dual_write(
+    client: TestClient, db: Session
+) -> None:
+    """Reproduction for the operator-reported "R doesn't persist"
+    bug. Simulates the R-toggle saveBand2State payload (which
+    keeps every existing pill, with the toggled row's
+    ``required`` flipped) and confirms the dual-write helper
+    writes through to InstrumentResponseField.required AND
+    preserves the flag in band2_state JSON across reload."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="r-toggle-persist"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    comments = next(
+        rf for rf in new_model.response_fields if rf.label == "Comments"
+    )
+    # Seeded defaults: Rating is required=True, Comments is required=False.
+    assert rating.required is True
+    assert comments.required is False
+
+    # Simulate the R toggle on Rating (off) + saveBand2State.
+    # JS payload keeps Comments untouched and flips Rating's
+    # required flag.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [],
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": False,
+                },
+                {
+                    "id": comments.id,
+                    "name": "Comments",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": True,
+                    "required": False,
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    new_model = db.get(type(new_model), new_model.id)
+    by_label = {rf.label: rf for rf in new_model.response_fields}
+    # Rating.required should now be False.
+    assert by_label["Rating"].required is False
+    assert by_label["Comments"].required is False
+    # band2_state.response_fields JSON also carries the new
+    # required flag — used by the template's initial render
+    # to set the R button's primary/secondary class.
+    json_by_id = {
+        r["id"]: r for r in new_model.band2_state["response_fields"]
+    }
+    assert json_by_id[rating.id]["required"] is False
+    assert json_by_id[comments.id]["required"] is False
+
+
 def test_wave3_pri_pill_selected_flows_through_to_visible_column(
     client: TestClient, db: Session
 ) -> None:
