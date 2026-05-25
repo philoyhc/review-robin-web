@@ -30,7 +30,6 @@ from . import (
     _operations,
     _quick_setup,
     _response_types,
-    _rule_builder,
     _session_home,
     _settings,
     _setup_invite,
@@ -55,7 +54,6 @@ router.include_router(_setup_reviewees.router)
 router.include_router(_setup_relationships.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
-router.include_router(_rule_builder.router)
 router.include_router(_operations.router)
 router.include_router(_instruments.router)
 router.include_router(_response_types.router)

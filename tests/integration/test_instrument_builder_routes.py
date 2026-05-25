@@ -2133,101 +2133,13 @@ def _all_new_model_session(
     return review_session, instruments
 
 
-def test_rec_a_skips_eligibility_engine_for_all_new_model_page(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Rec A — when every instrument on the Instruments index is
-    new-model, ``evaluate_session_rule_eligibility`` and
-    ``evaluate_instrument_group_pair_counts`` are never called: the
-    new-model card renders its rule editor inline and does not use
-    the legacy assignment-rule-picker card."""
-    review_session, _ = _all_new_model_session(
-        client, db, code="rec-a-skip"
-    )
-
-    from app.services.rules import session_library
-
-    elig_calls = 0
-    group_calls = 0
-    real_elig = session_library.evaluate_session_rule_eligibility
-    real_group = session_library.evaluate_instrument_group_pair_counts
-
-    def spy_elig(*a, **kw):
-        nonlocal elig_calls
-        elig_calls += 1
-        return real_elig(*a, **kw)
-
-    def spy_group(*a, **kw):
-        nonlocal group_calls
-        group_calls += 1
-        return real_group(*a, **kw)
-
-    monkeypatch.setattr(
-        session_library, "evaluate_session_rule_eligibility", spy_elig
-    )
-    monkeypatch.setattr(
-        session_library,
-        "evaluate_instrument_group_pair_counts",
-        spy_group,
-    )
-    # Patch the names where views imports them too.
-    from app.web.views import _instruments as views_instruments
-
-    if hasattr(views_instruments, "session_library"):
-        monkeypatch.setattr(
-            views_instruments.session_library,
-            "evaluate_session_rule_eligibility",
-            spy_elig,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            views_instruments.session_library,
-            "evaluate_instrument_group_pair_counts",
-            spy_group,
-            raising=False,
-        )
-
-    resp = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    )
-    assert resp.status_code == 200
-    assert elig_calls == 0
-    assert group_calls == 0
-
-
-def test_rec_a_runs_eligibility_engine_when_legacy_card_present(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Rec A's flip side — a page with at least one legacy
-    (non-new-model) instrument still pays the eligibility cost.
-    Conditional skip is scoped to new-model-only pages."""
-    review_session = _make_session(client, db, code="rec-a-legacy")
-    _populate_rosters(client, review_session.id)
-    # Seeded instrument stays legacy; add a new-model one alongside.
-    client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
-        data={"after": str(_instrument(db, review_session.id).id)},
-        follow_redirects=False,
-    )
-
-    from app.services.rules import session_library
-
-    elig_calls = 0
-    real_elig = session_library.evaluate_session_rule_eligibility
-
-    def spy_elig(*a, **kw):
-        nonlocal elig_calls
-        elig_calls += 1
-        return real_elig(*a, **kw)
-
-    monkeypatch.setattr(
-        session_library, "evaluate_session_rule_eligibility", spy_elig
-    )
-    resp = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    )
-    assert resp.status_code == 200
-    assert elig_calls == 1
+# Wave 5 PR 5.1 — ``test_rec_a_skips_eligibility_engine_for_all_new_model_page``
+# and ``test_rec_a_runs_eligibility_engine_when_legacy_card_present``
+# retired. Both tested Rec A's conditional-skip of
+# ``evaluate_session_rule_eligibility`` /
+# ``evaluate_instrument_group_pair_counts`` — both functions
+# retired with the session_library service when the
+# per-instrument Assignment Rule picker card was retired.
 
 
 def test_rec_d1_single_active_reviewees_query_per_render(

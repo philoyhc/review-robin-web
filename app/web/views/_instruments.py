@@ -250,146 +250,12 @@ def _bulk_state(values: list[bool]) -> str:
     return "mixed"
 
 
-@dataclass(frozen=True)
-class InstrumentRulePickerOption:
-    """One row in the per-card Assignment Rule picker's `<select>`.
-
-    Mirrors :class:`app.web.views._rule_builder.RuleBasedSelectorOption`
-    in shape but is keyed on ``session_rule_sets.id`` (not the
-    operator-tier id) because the picker writes that id to
-    ``instruments.rule_set_id``.
-    """
-
-    id: int
-    name: str
-    description: str
-    is_seeded: bool
-
-
-@dataclass(frozen=True)
-class InstrumentRulePickerContext:
-    """Per-instrument context for the Assignment Rule sub-card.
-
-    ``selected_rule_set_id`` is the instrument's current pin (``None``
-    means the operator hasn't pinned anything yet — picker renders
-    the "— No rule —" sentinel option pre-selected). ``options`` is
-    the same list for every card on the page (the visible session
-    RuleSets); the per-card variation lives in
-    ``selected_rule_set_id`` + ``selected_eligible_pair_count`` +
-    ``open_rule_builder_url``.
-
-    ``selected_eligible_pair_count`` is ``None`` when the instrument
-    has no rule pinned — the template renders "--" rather than a
-    number, and the rule engine is not run for it.
-
-    ``selected_group_pair_count`` is the secondary reviewer-group
-    pair count, set only for a **group-scoped** instrument with a
-    rule pinned (``None`` for per-reviewee instruments and unpinned
-    ones — the template omits the parenthetical).
-    """
-
-    options: list[InstrumentRulePickerOption]
-    selected_rule_set_id: int | None
-    selected_eligible_pair_count: int | None
-    selected_group_pair_count: int | None
-    open_rule_builder_url: str
-
-
-def _build_rule_picker_options(
-    db: Session, review_session: ReviewSession
-) -> tuple[
-    list[InstrumentRulePickerOption],
-    dict[int, int],
-    dict[int, int],
-]:
-    """Compute the picker option list, the per-rule eligibility-count
-    map (``rule_set_id -> N pairs``), and the per-instrument
-    reviewer-group pair count (``instrument_id -> M groups``, for
-    group-scoped instruments with a rule pinned), once per page
-    load.
-
-    The dropdown options carry no per-option count — the engine is
-    run only for rules actually pinned to an instrument
-    (:func:`session_library.evaluate_session_rule_eligibility`),
-    so an unpinned rule is never evaluated. Empty rule pool →
-    ``([], {}, {})``.
-    """
-    from app.services.rules import session_library
-
-    rule_sets = session_library.list_visible_session_rule_sets(
-        db, session_id=review_session.id
-    )
-    if not rule_sets:
-        return [], {}, {}
-    eligibility_by_id = session_library.evaluate_session_rule_eligibility(
-        db, review_session
-    )
-    group_count_by_instrument = (
-        session_library.evaluate_instrument_group_pair_counts(
-            db, review_session
-        )
-    )
-    options = [
-        InstrumentRulePickerOption(
-            id=row.id,
-            name=row.name,
-            description=row.description or "",
-            is_seeded=row.is_seeded,
-        )
-        for row in rule_sets
-    ]
-    return options, eligibility_by_id, group_count_by_instrument
-
-
-def build_instrument_rule_picker_contexts(
-    db: Session,
-    review_session: ReviewSession,
-    instruments: list[Instrument],
-) -> dict[int, InstrumentRulePickerContext]:
-    """One :class:`InstrumentRulePickerContext` per instrument, keyed
-    by ``instrument.id``. The option list + eligibility map are shared
-    across cards on the page — only the selected id + Rule Builder
-    deep-link vary per instrument.
-
-    New-model cards render their rule editor inline (Band 1) and do
-    not call into ``assignment_rule_card``, so they get no entry in
-    the returned dict. When every instrument on the page is
-    new-model, the expensive
-    ``evaluate_session_rule_eligibility`` /
-    ``evaluate_instrument_group_pair_counts`` calls are skipped
-    entirely — see Segment 18J Wave 1 Rec A.
-    """
-    legacy_instruments = [i for i in instruments if not i.is_new_model]
-    if not legacy_instruments:
-        return {}
-    options, eligibility_by_id, group_count_by_instrument = (
-        _build_rule_picker_options(db, review_session)
-    )
-    contexts: dict[int, InstrumentRulePickerContext] = {}
-    for instrument in legacy_instruments:
-        selected_id = instrument.rule_set_id
-        selected_count = (
-            eligibility_by_id.get(selected_id)
-            if selected_id is not None
-            else None
-        )
-        builder_url = (
-            f"/operator/sessions/{review_session.id}"
-            f"/assignments/rule-based-editor"
-            f"?instrument_id={instrument.id}"
-        )
-        if selected_id is not None:
-            builder_url += f"&rule_set_id={selected_id}"
-        contexts[instrument.id] = InstrumentRulePickerContext(
-            options=options,
-            selected_rule_set_id=selected_id,
-            selected_eligible_pair_count=selected_count,
-            selected_group_pair_count=group_count_by_instrument.get(
-                instrument.id
-            ),
-            open_rule_builder_url=builder_url,
-        )
-    return contexts
+# Wave 5 PR 5.1 — ``InstrumentRulePickerOption`` /
+# ``InstrumentRulePickerContext`` / ``_build_rule_picker_options`` /
+# ``build_instrument_rule_picker_contexts`` retired alongside the
+# per-instrument Assignment Rule sub-card. Legacy instruments keep
+# any existing ``rule_set_id`` pin (driving generate); they retire
+# entirely in PR 5.3.
 
 
 def _new_model_band2_state(
@@ -882,16 +748,11 @@ def build_instruments_context(
         else None
     )
 
-    rule_picker_by_instrument_id = build_instrument_rule_picker_contexts(
-        db, review_session, instruments
-    )
-
     return {
         "user": user,
         "session": review_session,
         "status_pills": session_status_pills(db, review_session),
         "instruments": instruments,
-        "rule_picker_by_instrument_id": rule_picker_by_instrument_id,
         "is_ready": is_ready,
         "can_edit": can_edit,
         "bulk_accepting_state": _bulk_state(

@@ -340,57 +340,27 @@ def test_stale_generated_silent_when_no_instrument_pinned(
     assert _issues_with_key(issues, "instruments.stale_generated") == []
 
 
-def test_stale_generated_fires_when_pinned_but_not_generated(
+def test_stale_generated_silent_after_wave_5_retirement(
     db: Session,
 ) -> None:
-    """Operator pinned a rule but hasn't clicked Generate → stale
-    fires (eligible > 0, generated == 0)."""
-    _user, review_session, instrument, rule_set = _seed(
-        db, code="stale-pinned-only"
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
-    issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(issues, "instruments.stale_generated")
-    assert len(fired) == 1
-    assert fired[0].severity is Severity.warning
-    assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
-    assert "eligible 1" in fired[0].message
-    assert "generated 0" in fired[0].message
-
-
-def test_stale_generated_silent_post_clean_generate(db: Session) -> None:
-    """Post-Generate eligible == generated → silent."""
+    """Wave 5 PR 5.1 — ``instruments.stale_generated`` retired as a
+    no-op check. The per-rule eligibility helper retired with the
+    operator-library tier; without it the rule can't compare
+    eligible vs. generated counts. The rule key stays registered
+    so audit history remains addressable, but it never fires."""
     user, review_session, instrument, rule_set = _seed(
-        db, code="stale-clean"
+        db, code="stale-retired"
     )
     instrument.rule_set_id = rule_set.id
     db.flush()
     db.commit()
-    _generate(db, review_session=review_session, user=user)
-    issues = validate_session_setup(db, review_session)
-    assert _issues_with_key(issues, "instruments.stale_generated") == []
-
-
-def test_stale_generated_fires_when_roster_changed_post_generate(
-    db: Session,
-) -> None:
-    """Add a new reviewer post-Generate → eligibility grows but
-    materialised rows stay; stale fires."""
-    user, review_session, instrument, rule_set = _seed(
-        db, code="stale-roster"
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
-    _generate(db, review_session=review_session, user=user)
-    # Sanity check: no stale at this point.
+    # Pre-generate: would have fired pre-Wave-5; now silent.
     assert _issues_with_key(
         validate_session_setup(db, review_session),
         "instruments.stale_generated",
     ) == []
-    # Add a second reviewer; eligibility doubles, materialised stays.
+    _generate(db, review_session=review_session, user=user)
+    # Post-roster change: would have fired pre-Wave-5; now silent.
     db.add(
         Reviewer(
             session_id=review_session.id,
@@ -400,9 +370,10 @@ def test_stale_generated_fires_when_roster_changed_post_generate(
     )
     db.flush()
     db.commit()
-    issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(issues, "instruments.stale_generated")
-    assert len(fired) == 1
+    assert _issues_with_key(
+        validate_session_setup(db, review_session),
+        "instruments.stale_generated",
+    ) == []
 
 
 # --------------------------------------------------------------------------- #

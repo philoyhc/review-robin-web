@@ -109,9 +109,13 @@ def test_pin_rules_state_when_no_instrument_has_rule(
 def test_generate_state_when_pinned_but_never_materialised(
     db: Session,
 ) -> None:
-    """Pinned but ``generated_count == 0`` → ``state="generate"``.
-    Catches the first-time generation case (operator just pinned
-    rules and hasn't materialised yet)."""
+    """Wave 5 PR 5.1 — staleness detection retired with the
+    session_library eligibility helper. The Next Action card no
+    longer nudges ``state="generate"`` for pinned-but-never-
+    materialised instruments (operator clicks Generate manually).
+    Returns ``state="hidden"`` instead. The signal returns once
+    the new-model card's Band 1 rule editor surfaces an
+    equivalent."""
 
     user, review_session, instrument, rule_set = _seed(
         db, code="na-pinned-empty"
@@ -122,7 +126,7 @@ def test_generate_state_when_pinned_but_never_materialised(
 
     result = compute_next_action_generate_state(db, review_session)
 
-    assert result.state == "generate"
+    assert result.state == "hidden"
     assert result.pinned_instrument_count == 1
 
 
@@ -150,12 +154,13 @@ def test_hidden_state_when_fresh_after_generation(
     assert result.pinned_instrument_count == 1
 
 
-def test_generate_state_when_roster_added_post_generate(
+def test_hidden_state_when_roster_added_post_generate(
     db: Session,
 ) -> None:
-    """Materialised pairs go stale when a new reviewer joins —
-    eligible_count (engine run now) diverges from generated_count
-    (last materialise). The resolver returns to ``"generate"``."""
+    """Wave 5 PR 5.1 — staleness detection retired. The Next Action
+    card no longer flips back to ``"generate"`` when a roster
+    change makes materialised pairs stale (operator clicks
+    Generate manually). Stays ``"hidden"``."""
 
     user, review_session, instrument, rule_set = _seed(db, code="na-stale")
     instrument.rule_set_id = rule_set.id
@@ -167,8 +172,6 @@ def test_generate_state_when_roster_added_post_generate(
         user=user,
         correlation_id="na-stale-1",
     )
-    # A new reviewer post-Generate bumps the eligible count for
-    # Full Matrix; generated_count stays at 1.
     db.add(
         Reviewer(
             session_id=review_session.id,
@@ -181,7 +184,7 @@ def test_generate_state_when_roster_added_post_generate(
 
     result = compute_next_action_generate_state(db, review_session)
 
-    assert result.state == "generate"
+    assert result.state == "hidden"
 
 
 def test_hidden_state_when_session_is_ready(db: Session) -> None:
@@ -227,15 +230,13 @@ def test_hidden_state_when_validated_and_fresh(db: Session) -> None:
     assert result.state == "hidden"
 
 
-def test_partial_pinning_still_nudges_generate(db: Session) -> None:
-    """If at least one instrument is pinned + the per-instrument
-    status block reports staleness, the resolver returns
-    ``"generate"`` even when some instruments are unpinned
-    alongside (the resolver doesn't gate on "every instrument is
-    pinned")."""
+def test_partial_pinning_stays_hidden_post_wave_5(db: Session) -> None:
+    """Wave 5 PR 5.1 — staleness detection retired. Mixed
+    (pinned + unpinned) sessions stay ``"hidden"`` instead of
+    nudging Generate, since the resolver can no longer detect
+    that the pinned instrument's pairs are stale."""
 
     user, review_session, instrument, rule_set = _seed(db, code="na-mixed")
-    # Pin the default instrument; add a second unpinned one.
     instrument.rule_set_id = rule_set.id
     db.add(
         Instrument(
@@ -247,8 +248,5 @@ def test_partial_pinning_still_nudges_generate(db: Session) -> None:
 
     result = compute_next_action_generate_state(db, review_session)
 
-    # 1 pinned (stale, never generated) + 1 unpinned (skipped) →
-    # signal is "generate". The unpinned instrument doesn't gate
-    # this — operators can pin rules independently per instrument.
-    assert result.state == "generate"
+    assert result.state == "hidden"
     assert result.pinned_instrument_count == 1

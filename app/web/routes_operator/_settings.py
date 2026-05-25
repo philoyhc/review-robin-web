@@ -11,15 +11,13 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import RuleSet, User
+from app.db.models import User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import operator_settings
 from app.services._secrets import MissingEncryptionKey
-from app.services.rules import library as rules_library
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.return_to import resolve_return_to
@@ -62,18 +60,10 @@ def operator_settings_form(
     current_timezone = operator_settings.get_display_timezone(user)
     target = resolve_return_to(return_to, db)
 
-    # 15C Slice 5: operator-library management. iii-b3 retired the
-    # RTD half of the library tier; only the RuleSet library tier
-    # survives until Wave 4 Gap 7 retires that too.
-    library_rule_sets = rules_library.list_personal_rule_sets(
-        db, owner_user=user
-    )
-    rule_set_session_copy_counts = {
-        rs.id: rules_library.count_rule_set_session_copies(
-            db, rule_set=rs
-        )
-        for rs in library_rule_sets
-    }
+    # Wave 5 PR 5.1 — the operator-library section retired alongside
+    # the Rule Builder + RuleSet library tier. The 15C Slice 5
+    # listing (Personal RuleSets + session-copy counts) is gone;
+    # PR 5.2 drops the underlying ``operator_rule_sets`` table.
 
     return _templates.TemplateResponse(
         request,
@@ -91,8 +81,6 @@ def operator_settings_form(
             "return_to_url": target.url,
             "return_to_label": target.label,
             "breadcrumbs": breadcrumbs.operator_root(),
-            "library_rule_sets": library_rule_sets,
-            "rule_set_session_copy_counts": rule_set_session_copy_counts,
         },
     )
 
@@ -199,36 +187,6 @@ def operator_settings_clear(
 # the operator_response_type_definitions table.
 
 
-@router.post("/settings/library/rule-set/{rule_set_id}/delete")
-def operator_settings_delete_library_rule_set(
-    rule_set_id: int,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Soft-delete a library RuleSet from the operator's tier.
-    Refuses (404) on cross-operator id, seeded rows, or already-
-    soft-deleted rows. Session copies survive (provenance pointer
-    clears via SET NULL per 13D PR 2)."""
-    target = db.execute(
-        select(RuleSet).where(
-            RuleSet.id == rule_set_id,
-            RuleSet.owner_user_id == user.id,
-            RuleSet.is_seed.is_(False),
-            RuleSet.deleted_at.is_(None),
-        )
-    ).scalar_one_or_none()
-    if target is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Library RuleSet not found",
-        )
-    rules_library.soft_delete_rule_set(
-        db,
-        rule_set=target,
-        actor=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url="/operator/settings",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+# Wave 5 PR 5.1 — the per-library-RuleSet delete route retired
+# alongside the rest of the operator-library surface. The
+# ``operator_rule_sets`` table itself drops in PR 5.2.

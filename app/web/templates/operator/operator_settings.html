@@ -205,53 +205,11 @@
     </form>
   </div>
 
-  {# 15C Slice 5 — operator library management. Segment 18J Wave 2
-     PR iii-b3 retired the RTD half of the library tier; only the
-     RuleSet library card survives here until Wave 4 Gap 7 retires
-     that too. Layout: single full-width card at the bottom of the
-     page, after the SMTP / danger-zone cards. #}
-  <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch;"
-       id="library-cards-row">
-    <div class="card card-half" id="library-rule-sets"
-         style="margin-bottom: 0; flex: 1; min-width: 0;">
-      <h2 style="margin-top: 0;">RuleSets (library)</h2>
-      <p class="muted">
-        Per-operator library of assignment RuleSets. Auto-copied into
-        every newly-created session; reach session copies via the Rule
-        Builder on each session.
-      </p>
-      {% if library_rule_sets %}
-        <table style="width: 100%;">
-          <tr>
-            <th style="text-align: left;">Name</th>
-            <th style="text-align: left;">Description</th>
-            <th style="text-align: right;">Sessions using</th>
-            <th></th>
-          </tr>
-          {% for rs in library_rule_sets %}
-            <tr>
-              <td><code>{{ rs.name }}</code></td>
-              <td>{{ rs.description or "—" }}</td>
-              <td style="text-align: right;">{{ rule_set_session_copy_counts[rs.id] }}</td>
-              <td style="text-align: right;">
-                <form method="post"
-                      action="/operator/settings/library/rule-set/{{ rs.id }}/delete"
-                      onsubmit="return confirm('Delete library RuleSet {{ rs.name }}? {{ rule_set_session_copy_counts[rs.id] }} session(s) hold a copy — those copies will survive.');"
-                      style="display: inline; margin: 0;">
-                  <button class="btn destructive" type="submit">Delete</button>
-                </form>
-              </td>
-            </tr>
-          {% endfor %}
-        </table>
-      {% else %}
-        <p class="muted">
-          No RuleSets in your library yet. Add some via the
-          <em>Save to library</em> action on a session's Rule Builder.
-        </p>
-      {% endif %}
-    </div>
-  </div>
+  {# Wave 5 PR 5.1 — the operator-library cards row retired
+     alongside the Rule Builder + RuleSet library tier. The earlier
+     15C Slice 5 RTD half retired in Wave 2 PR iii-b3; this PR
+     retires the RuleSet half. PR 5.2 drops the underlying
+     ``operator_rule_sets`` table. #}
 
   <script>
     (function () {
