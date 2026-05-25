@@ -1320,30 +1320,44 @@
               <div class="card rs-instrument-card"
                    style="position: relative;">
                 <h2 data-intro-short-label-block
-                    style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                    style="display: flex; align-items: baseline; gap: 8px;">
                   <span>Page #{{ loop.index }}:</span>
                   <span data-intro-short-label-view
                         style="font-weight: inherit;">{{ _intro_title }}</span>
-                  <input type="text"
-                         data-intro-short-label-input
-                         maxlength="32"
-                         value="{{ instrument.short_label or '' }}"
-                         placeholder="(optional short label, e.g. Skills)"
-                         hidden
-                         style="font: inherit; padding: 2px 6px; flex: 1 1 auto; min-width: 120px;">
-                  {% if is_editing %}
-                    <button type="button" class="btn-icon"
-                            data-intro-short-label-edit
-                            onclick="newModelIntroShortLabelEdit(this)"
-                            title="Edit short label"
-                            aria-label="Edit short label">✎</button>
-                    <button type="button" class="btn-icon"
-                            data-intro-short-label-save
-                            onclick="newModelIntroShortLabelSave(this)"
-                            title="Save short label"
-                            aria-label="Save short label"
-                            hidden>✓</button>
-                  {% endif %}
+                  {# Edit-input wrapper mirrors the description block —
+                     ``position: relative; padding-right: 28px;`` reserves
+                     a right-side gutter so the ✎ / ✓ buttons sit to the
+                     right of the input instead of wrapping below it on
+                     narrow viewports. ``min-width: 0`` lets the wrapper
+                     shrink within the flex h2 (otherwise the input's
+                     intrinsic width would block flex shrinking). #}
+                  <span data-intro-short-label-edit-wrap
+                        style="flex: 1 1 auto; min-width: 0;
+                               {% if is_editing %}position: relative; padding-right: 28px;{% endif %}">
+                    <input type="text"
+                           data-intro-short-label-input
+                           maxlength="32"
+                           value="{{ instrument.short_label or '' }}"
+                           placeholder="(optional short label, e.g. Skills)"
+                           hidden
+                           style="font: inherit; padding: 2px 6px;
+                                  width: 100%; box-sizing: border-box;">
+                    {% if is_editing %}
+                      <button type="button" class="btn-icon"
+                              data-intro-short-label-edit
+                              onclick="newModelIntroShortLabelEdit(this)"
+                              title="Edit short label"
+                              aria-label="Edit short label"
+                              style="position: absolute; top: 0; right: 0;">✎</button>
+                      <button type="button" class="btn-icon"
+                              data-intro-short-label-save
+                              onclick="newModelIntroShortLabelSave(this)"
+                              title="Save short label"
+                              aria-label="Save short label"
+                              hidden
+                              style="position: absolute; top: 0; right: 0;">✓</button>
+                    {% endif %}
+                  </span>
                 </h2>
                 {# ``padding-right: 28px`` reserves a gutter on the
                    right of the description block so the ✎ / ✓
