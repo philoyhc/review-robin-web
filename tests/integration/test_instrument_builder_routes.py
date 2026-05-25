@@ -5124,15 +5124,16 @@ def test_new_model_untouched_band1_activates_and_accepts_responses(
 # --------------------------------------------------------------------------- #
 
 
-def test_band2_intro_progress_pills_render_outside_intro_card(
+def test_band2_intro_progress_pills_render_inside_preview_row(
     client: TestClient, db: Session
 ) -> None:
-    """The progress pills (Required / All items completed) sit
-    just above the Band 2 preview table, flush left — outside the
-    intro card itself. Mirrors the reviewer-surface layout so the
-    operator sees the same eye path the reviewer will."""
+    """The progress pills sit inside the Band 2 preview div, wrapped
+    in a flex row alongside the per-field min/max/step reminders
+    (rs-progress-row). Mirrors the reviewer-surface layout: the
+    pills + constraints share a single right-aligned line just
+    above the preview table."""
     review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-pills-outside"
+        client, db, code="band2-pills-row"
     )
     new_model.short_label = "Sanity"
     db.commit()
@@ -5143,18 +5144,16 @@ def test_band2_intro_progress_pills_render_outside_intro_card(
 
     intro_idx = flat.find("data-new-model-band2-intro-card")
     assert intro_idx != -1
-    # The intro card's closing </div></div> (card + grid wrappers)
-    # must precede the progress paragraph.
-    progress_idx = flat.find("data-new-model-intro-progress", intro_idx)
-    assert progress_idx != -1
-    between = flat[intro_idx:progress_idx]
-    # The progress pill sits AFTER the intro card's closing tags
-    # — there's at least one ``</div> </div>`` between the intro
-    # card opening attribute and the progress paragraph.
-    assert "</div> </div>" in between or "</div></div>" in between
-    # And the progress paragraph precedes the preview table div.
-    preview_idx = flat.find("data-new-model-band2-preview", progress_idx)
+    # Preview div comes after the intro card's closing tags.
+    preview_idx = flat.find("data-new-model-band2-preview", intro_idx)
     assert preview_idx != -1
+    # Progress pill lives INSIDE the preview div, wrapped in the
+    # rs-progress-row flex container (justify-content: flex-end).
+    progress_idx = flat.find("data-new-model-intro-progress", preview_idx)
+    assert progress_idx != -1
+    between = flat[preview_idx:progress_idx]
+    assert "rs-progress-row" in between
+    assert "justify-content: flex-end" in between
 
 
 def test_band2_description_button_does_not_overlap_textarea(
@@ -5187,16 +5186,19 @@ def test_band2_description_button_does_not_overlap_textarea(
     assert "right: 4px" in save_tag
 
 
-def test_reviewer_surface_progress_pills_render_outside_intro_card(
+def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     client: TestClient,
     db: Session,
     alice: AuthenticatedUser,
     reviewer_user: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The reviewer surface's per-instrument progress pills sit
-    flush-left just above the review table, not inside the
-    ``.rs-instrument-card``."""
+    """The reviewer surface's progress pills sit in a single right-
+    aligned flex row (``rs-progress-row``) just above the review
+    table — sharing the row with any per-field min/max/step
+    reminders (the ``rs-constraints muted`` block). The pills are
+    outside the ``.rs-instrument-card`` and inline before the
+    constraints text."""
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rs-pills-outside")
     db.add_all(
@@ -5224,13 +5226,17 @@ def test_reviewer_surface_progress_pills_render_outside_intro_card(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
     flat = " ".join(body.split())
-    # The progress paragraph appears after the intro card's closing
-    # tags and before the table wrapper.
+    # The flex row appears after the intro card's closing tags and
+    # before the table wrapper, and it wraps the pills.
     card_idx = flat.find("rs-instrument-card")
-    progress_idx = flat.find("rs-instrument-progress", card_idx)
+    row_idx = flat.find("rs-progress-row", card_idx)
+    progress_idx = flat.find("rs-instrument-progress", row_idx)
     table_idx = flat.find("table-scroll", progress_idx)
-    assert card_idx != -1 and progress_idx != -1 and table_idx != -1
+    assert card_idx != -1 and row_idx != -1 and progress_idx != -1 and table_idx != -1
     # The card's closing </div></div> sits between the card opening
-    # and the progress paragraph.
-    between = flat[card_idx:progress_idx]
+    # and the flex row.
+    between = flat[card_idx:row_idx]
     assert "</div> </div>" in between or "</div></div>" in between
+    # The flex row is right-aligned.
+    row_tag = flat[row_idx : flat.find(">", row_idx)]
+    assert "justify-content: flex-end" in row_tag
