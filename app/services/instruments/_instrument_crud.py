@@ -578,6 +578,67 @@ def update_short_label(
     return instrument
 
 
+def is_configured(db: Session, instrument: Instrument) -> bool:
+    """True iff this instrument has the minimum setup needed to
+    function in an activated session.
+
+    Legacy instruments (``is_new_model=False``) require a pinned
+    :class:`SessionRuleSet`. Without one, Generate skips them and
+    the reviewer surface renders empty (Segment 13C invariant).
+
+    New-model instruments default to Full Matrix when Band 1 is
+    untouched (Wave 4 PR 1), so they don't require a pinned rule.
+    They do need at least one ``visible=True``
+    :class:`InstrumentResponseField` — without one, the reviewer
+    page renders zero rows even though assignments exist.
+    """
+    if not instrument.is_new_model:
+        return instrument.rule_set_id is not None
+    visible_count = db.scalar(
+        select(func.count(InstrumentResponseField.id))
+        .where(InstrumentResponseField.instrument_id == instrument.id)
+        .where(InstrumentResponseField.visible.is_(True))
+    ) or 0
+    return visible_count > 0
+
+
+def has_unconfigured(db: Session, session_id: int) -> bool:
+    """True iff the session has zero instruments, or any instrument
+    fails :func:`is_configured`. Drives the Next Action card's
+    "Empty Setup" state (Wave 4 PR 2) — replaces the rule-set-
+    centric :func:`has_unpinned` predicate now that new-model
+    instruments no longer require a pinned rule.
+    """
+    instruments = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == session_id)
+        ).scalars()
+    )
+    if not instruments:
+        return True
+    # Legacy fast path — any NULL ``rule_set_id`` on a legacy
+    # instrument is unconfigured without a DB roundtrip.
+    if any(
+        not inst.is_new_model and inst.rule_set_id is None
+        for inst in instruments
+    ):
+        return True
+    new_model_ids = [inst.id for inst in instruments if inst.is_new_model]
+    if new_model_ids:
+        # Batched: which new-model instruments have at least one
+        # visible response field?
+        rows = db.execute(
+            select(InstrumentResponseField.instrument_id)
+            .where(InstrumentResponseField.instrument_id.in_(new_model_ids))
+            .where(InstrumentResponseField.visible.is_(True))
+            .distinct()
+        ).all()
+        configured_ids = {row[0] for row in rows}
+        if any(nid not in configured_ids for nid in new_model_ids):
+            return True
+    return False
+
+
 def has_unpinned(db: Session, session_id: int) -> bool:
     """True iff the session has zero instruments, or any instrument
     has a NULL ``rule_set_id``. Drives the Next Action card's

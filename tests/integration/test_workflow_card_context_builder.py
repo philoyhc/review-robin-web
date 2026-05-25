@@ -120,7 +120,7 @@ def test_builder_state_1_setup_empty_carries_checklist_falses(
     assert ctx["setup_checklist"] == {
         "reviewers_ok": False,
         "reviewees_ok": False,
-        "instruments_pinned_ok": False,
+        "instruments_configured_ok": False,
     }
     assert ctx["validation_summary"] is None
     assert ctx["super_failure"] is None
@@ -141,7 +141,7 @@ def test_builder_state_1a_flips_when_rosters_and_rule_pinned(
     assert ctx["setup_checklist"] == {
         "reviewers_ok": True,
         "reviewees_ok": True,
-        "instruments_pinned_ok": True,
+        "instruments_configured_ok": True,
     }
 
 

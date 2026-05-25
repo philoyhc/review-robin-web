@@ -25,11 +25,13 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
     Instrument,
+    InstrumentResponseField,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -192,6 +194,92 @@ def test_no_rule_pinned_fires_per_unpinned_instrument(db: Session) -> None:
     assert len(fired) == 1
     assert "Peer survey" in fired[0].message
     assert fired[0].fix_anchor == f"#instrument-{instrument_b.id}"
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 PR 2 — new-model carve-out on instruments.no_rule_pinned
+# --------------------------------------------------------------------------- #
+
+
+def test_no_rule_pinned_skips_new_model_instruments(db: Session) -> None:
+    """Wave 4 PR 2 — a new-model instrument with NULL ``rule_set_id``
+    no longer trips ``instruments.no_rule_pinned`` (the rule's pre-
+    PR-2 message is wrong for new-model — Generate now produces a
+    Full Matrix instead of skipping). The seeded default response
+    fields (Rating + Comments) are ``visible=True`` out of the box,
+    so the parallel ``no_visible_response_fields`` rule stays
+    silent too."""
+    _user, review_session, instrument, _rs = _seed(db, code="nrp-newmodel")
+    instrument.is_new_model = True
+    db.flush()
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    assert _issues_with_key(issues, "instruments.no_rule_pinned") == []
+
+
+# --------------------------------------------------------------------------- #
+# instruments.no_visible_response_fields (Wave 4 PR 2)
+# --------------------------------------------------------------------------- #
+
+
+def test_no_visible_response_fields_silent_for_legacy(db: Session) -> None:
+    """Legacy instrument with all response fields hidden → silent
+    (the rule only fires for ``is_new_model=True``). The
+    legacy-flavoured ``instruments.no_rule_pinned`` covers the
+    legacy "not set up" gap."""
+    _user, review_session, instrument, _rs = _seed(db, code="nvrf-legacy")
+    db.execute(
+        update(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == instrument.id)
+        .values(visible=False)
+    )
+    db.flush()
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    assert (
+        _issues_with_key(issues, "instruments.no_visible_response_fields")
+        == []
+    )
+
+
+def test_no_visible_response_fields_fires_when_none_visible(
+    db: Session,
+) -> None:
+    """New-model instrument with zero ``visible=True`` response fields
+    → warning per instrument."""
+    _user, review_session, instrument, _rs = _seed(db, code="nvrf-fire")
+    instrument.is_new_model = True
+    # Hide all seeded response fields.
+    db.execute(
+        update(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == instrument.id)
+        .values(visible=False)
+    )
+    db.flush()
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    fired = _issues_with_key(
+        issues, "instruments.no_visible_response_fields"
+    )
+    assert len(fired) == 1
+    assert fired[0].severity is Severity.warning
+    assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
+
+
+def test_no_visible_response_fields_silent_when_at_least_one_visible(
+    db: Session,
+) -> None:
+    """Seeded defaults (Rating + Comments) are ``visible=True``, so
+    a freshly-created new-model instrument is configured."""
+    _user, review_session, instrument, _rs = _seed(db, code="nvrf-ok")
+    instrument.is_new_model = True
+    db.flush()
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    assert (
+        _issues_with_key(issues, "instruments.no_visible_response_fields")
+        == []
+    )
 
 
 # --------------------------------------------------------------------------- #

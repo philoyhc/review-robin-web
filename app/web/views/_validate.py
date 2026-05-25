@@ -63,6 +63,7 @@ _RULE_KEY_GATE: dict[str, Gate] = {
     "instruments.no_display_fields": "setup",
     "email_template.no_help_contact": "setup",
     "instruments.no_rule_pinned": "operations",
+    "instruments.no_visible_response_fields": "operations",
     "instruments.stale_generated": "operations",
     "instruments.zero_included": "operations",
     "assignments.no_included_pairs": "operations",

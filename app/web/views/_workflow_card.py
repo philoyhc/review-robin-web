@@ -97,7 +97,13 @@ def build_workflow_card_context(
     reviewee_count = csv_imports.existing_reviewee_count(
         db, review_session.id
     )
-    has_unpinned = instruments_service.has_unpinned(db, review_session.id)
+    # Wave 4 PR 2 — switched from rule-set-centric ``has_unpinned``
+    # to ``has_unconfigured``, which knows that new-model instruments
+    # default to Full Matrix (rule_set_id NULL is fine) but require at
+    # least one visible response field instead.
+    has_unconfigured = instruments_service.has_unconfigured(
+        db, review_session.id
+    )
     is_draft = lifecycle.is_draft(review_session)
     is_validated = lifecycle.is_validated(review_session)
     is_ready = lifecycle.is_ready(review_session)
@@ -141,7 +147,7 @@ def build_workflow_card_context(
         }
 
     is_setup_empty = is_draft and (
-        reviewer_count == 0 or reviewee_count == 0 or has_unpinned
+        reviewer_count == 0 or reviewee_count == 0 or has_unconfigured
     )
     is_pre_generate = (
         is_draft
@@ -182,7 +188,7 @@ def build_workflow_card_context(
         "setup_checklist": {
             "reviewers_ok": reviewer_count > 0,
             "reviewees_ok": reviewee_count > 0,
-            "instruments_pinned_ok": not has_unpinned,
+            "instruments_configured_ok": not has_unconfigured,
         },
         "super_failure": super_failure,
         "prepare_confirm": prepare_confirm_ctx,
