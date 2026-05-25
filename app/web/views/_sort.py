@@ -279,7 +279,12 @@ def order_rows_by_sort_spec(
     # Filter out entries pointing at no-longer-existing display
     # fields. Cascade falls through to the next slot, then to
     # insertion order — exactly what stable sort with an empty
-    # spec yields.
+    # spec yields. The Group identity sentinel (-1) is exempt
+    # from the known-id check — it isn't a real
+    # InstrumentDisplayField row; the caller's ``key_resolver``
+    # interprets it.
+    from app.services.instruments import GROUP_IDENTITY_SORT_KEY
+
     effective_spec: list[dict[str, Any]] = []
     for entry in sort_spec:
         field_id = entry.get("display_field_id")
@@ -288,6 +293,7 @@ def order_rows_by_sort_spec(
             continue
         if (
             known_display_field_ids is not None
+            and field_id != GROUP_IDENTITY_SORT_KEY
             and field_id not in known_display_field_ids
         ):
             continue

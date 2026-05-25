@@ -58,6 +58,7 @@ from ._rtds import (
 # Display fields (sliced in PR 2).
 from ._display_fields import (
     DisplaySourceError,
+    GROUP_IDENTITY_SORT_KEY,
     LockedDisplayFieldError,
     SortSpecError,
     add_display_field,
@@ -146,6 +147,7 @@ __all__ = [
     "RTDLockedError",
     "RTDPrecisionError",
     "RTDValidationError",
+    "GROUP_IDENTITY_SORT_KEY",
     "SortSpecError",
     "_instrument_label",
     "add_default_response_field",

@@ -1358,16 +1358,19 @@
                             style="position: absolute; bottom: 0; right: 0;">✓</button>
                   {% endif %}
                 </div>
-                {% if _all_count > 0 %}
-                  <p class="rs-instrument-progress">
-                    <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}">
-                      Required items completed: 0/{{ _required_count }}
-                    </span>
-                    <span class="pill pill-count">
-                      All items completed: 0/{{ _all_count }}
-                    </span>
-                  </p>
-                {% endif %}
+                {# Progress pills are always present in DOM so the
+                   JS toggle handlers (R / chip / Band 3 row add or
+                   delete) can update the counts live without a
+                   page reload. ``hidden`` collapses the row when
+                   the instrument has no response fields at all. #}
+                <p class="rs-instrument-progress"
+                   data-new-model-intro-progress
+                   {% if _all_count == 0 %}hidden{% endif %}>
+                  <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
+                        data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
+                  <span class="pill pill-count"
+                        data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
+                </p>
               </div>
             </div>
             {# Response field details now live as editable rows
@@ -1757,7 +1760,19 @@
               html += '</colgroup><thead><tr>';
               var colIdx = 0;
               if (hasIdentity) {
-                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+                // Sort badge on the identity ("Reviewee") cell —
+                // pins to the Name display field's id (matches the
+                // reviewer surface's ``data-sort-key="reviewee.name"``
+                // semantics). Falls through when Name isn't
+                // selected; deselecting Name typically drops the
+                // identity column entirely anyway.
+                var identitySortBadge = (name && name.displayFieldId)
+                  ? sortBadgeHtml(card, name.displayFieldId)
+                  : '';
+                html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee'
+                  + identitySortBadge
+                  + maybeResizeHandle('identity', colIdx === lastIdx)
+                  + '</th>';
                 colIdx += 1;
               }
               displays.forEach(function (o) {
@@ -1831,7 +1846,15 @@
               });
               html += '</colgroup><thead><tr>';
               var colIdx = 0;
-              html += '<th scope="col" class="rs-group" style="position: relative;">Group' + maybeResizeHandle('identity', colIdx === lastIdx) + '</th>';
+              // Group sort badge pins to the
+              // ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel — the
+              // reviewer surface group branch reverses the
+              // default group-key order on ``dir=desc``.
+              var groupSortBadge = sortBadgeHtml(card, '-1');
+              html += '<th scope="col" class="rs-group" style="position: relative;">Group'
+                + groupSortBadge
+                + maybeResizeHandle('identity', colIdx === lastIdx)
+                + '</th>';
               colIdx += 1;
               responses.forEach(function (r) {
                 html += '<th scope="col" style="position: relative;">'
@@ -2108,6 +2131,63 @@
               pill.setAttribute('data-help-edit-mode', 'false');
               rebuildPreview(band2);
               saveBand2State(band2);
+            };
+            // Refresh the intro card's "Required items completed"
+            // and "All items completed" pill counts in place. Reads
+            // the current state from Band 3 rows (the source of
+            // truth — the R button's data-required attr says
+            // whether each field is required; the row count gives
+            // the All total). Hides the progress row when there
+            // are no rows. Called from R toggle, Band 3 row save,
+            // Band 3 row delete.
+            window.newModelUpdateIntroProgress = window.newModelUpdateIntroProgress || function (band2) {
+              if (!band2) { return; }
+              var instrumentCard = band2.closest('[id^="instrument-"]');
+              if (!instrumentCard) { return; }
+              var intro = instrumentCard.querySelector(
+                '[data-new-model-band2-intro-card]'
+              );
+              if (!intro) { return; }
+              // Count Band 3 rows that have a saved paired pill —
+              // the trailing empty starter row has no pill and
+              // shouldn't contribute to the counts.
+              var pills = band2.querySelectorAll(
+                '[data-new-model-band2-pill][data-source-type="response"]'
+              );
+              var allCount = pills.length;
+              var requiredCount = 0;
+              pills.forEach(function (p) {
+                if (p.getAttribute('data-required') === 'true') {
+                  requiredCount += 1;
+                }
+              });
+              var progress = intro.querySelector(
+                '[data-new-model-intro-progress]'
+              );
+              if (!progress) { return; }
+              if (allCount === 0) {
+                progress.hidden = true;
+                return;
+              }
+              progress.hidden = false;
+              var reqCountEl = progress.querySelector(
+                '[data-new-model-intro-required-count]'
+              );
+              var allCountEl = progress.querySelector(
+                '[data-new-model-intro-all-count]'
+              );
+              if (reqCountEl) { reqCountEl.textContent = String(requiredCount); }
+              if (allCountEl) { allCountEl.textContent = String(allCount); }
+              // Required pill class flips between pill-success
+              // (vacuously complete when 0 required) and
+              // pill-warning (zero done out of N>0 required).
+              var reqPill = progress.querySelector(
+                '[data-new-model-intro-required-pill]'
+              );
+              if (reqPill) {
+                reqPill.classList.toggle('pill-success', requiredCount === 0);
+                reqPill.classList.toggle('pill-warning', requiredCount > 0);
+              }
             };
             window.newModelHelpCardInput = window.newModelHelpCardInput || function (ta) {
               var key = ta.getAttribute('data-help-card-key');
@@ -2936,6 +3016,22 @@
             if (window.newModelRefreshBand2) {
               window.newModelRefreshBand2(band2);
             }
+            // Refresh the intro-card "Required items completed"
+            // pill so the count reflects the new state without a
+            // page reload.
+            if (window.newModelUpdateIntroProgress) {
+              window.newModelUpdateIntroProgress(band2);
+            }
+            // Wave 3 PR i — auto-persist on toggle. R was metadata-
+            // only in Wave 1; the dual-write helper now flips the
+            // matching InstrumentResponseField.required column on
+            // every saveBand2State, so toggling R should round-trip
+            // immediately rather than wait for the row's ✓ button.
+            // No-op for an unsaved row (no paired pill → not
+            // included in the payload).
+            if (pill && typeof saveBand2State === 'function') {
+              saveBand2State(band2);
+            }
           };
           // Help-text visibility toggle on a Band 3 response field
           // row. Toggles the row button's primary/secondary style,
@@ -3110,6 +3206,9 @@
             // preview row), rebuild the preview so the new label
             // surfaces immediately as the column header.
             if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+            if (window.newModelUpdateIntroProgress) {
+              window.newModelUpdateIntroProgress(band2);
+            }
             saveBand2State(band2);
           };
           // X on a row: remove the row + its paired pill if saved.
@@ -3134,6 +3233,9 @@
                 if (divider) { divider.remove(); }
               }
               if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+              if (window.newModelUpdateIntroProgress) {
+                window.newModelUpdateIntroProgress(band2);
+              }
               saveBand2State(band2);
             }
             // If this was the last row, leave a clean empty row in

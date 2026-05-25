@@ -519,9 +519,21 @@ def _surface_context(
         # (insertion order). Display fields no longer on the
         # instrument silently drop from the sort cascade — see
         # ``views.order_rows_by_sort_spec`` for the render-time
-        # defense. A group-scoped instrument skips the per-reviewee
-        # sort entirely — its rows are already collapsed to one per
-        # group and ordered by group key.
+        # defense. A group-scoped instrument's rows are already
+        # collapsed to one per group and ordered by composed
+        # group key; the only operator-controllable knob on a
+        # group instrument is the Group sort sentinel
+        # ``display_field_id == GROUP_IDENTITY_SORT_KEY`` (-1)
+        # which lets the operator flip the order (asc keeps the
+        # default; desc reverses).
+        if is_group:
+            from app.services.instruments import GROUP_IDENTITY_SORT_KEY
+
+            for entry in (instrument.sort_display_fields or []):
+                if entry.get("display_field_id") == GROUP_IDENTITY_SORT_KEY:
+                    if entry.get("dir") == "desc":
+                        group_rows = list(reversed(group_rows))
+                    break
         if not is_group:
             # The full set — including identity-column display
             # fields the visible-cells filter excludes — so the
