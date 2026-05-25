@@ -1387,29 +1387,36 @@
                 </div>
               </div>
             </div>
-            {# Progress pills are always present in DOM so the JS
-               toggle handlers (R / chip / Band 3 row add or
-               delete) can update the counts live without a page
-               reload. ``hidden`` collapses the row when the
-               instrument has no response fields at all. Sits
-               flush-left just above the Band 2 preview table —
-               mirrors the reviewer-surface layout so the
-               operator sees the same eye path the reviewer will. #}
-            <p class="rs-instrument-progress"
-               data-new-model-intro-progress
-               style="margin: 12px 0 8px 0; text-align: left;"
-               {% if _all_count == 0 %}hidden{% endif %}>
-              <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
-                    data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
-              <span class="pill pill-count"
-                    data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
-            </p>
             {# Response field details now live as editable rows
                inside Band 3's "Response fields" section — the
                operator views + edits each field there rather than
-               in a separate card above the preview. #}
+               in a separate card above the preview.
+
+               The preview div hosts JS-built help cards, a
+               flex-right row combining the progress pills with
+               the per-field min/max/step reminders (mirrors the
+               reviewer surface), and the preview table itself.
+               The initial server render seeds the progress pills
+               only — JS rebuildPreview replaces all of it on
+               DOMContentLoaded + on every R / chip / Band 3 row
+               toggle, picking up the help cards + constraints. #}
             <div data-new-model-band2-preview
-                 style="margin-top: 16px;"></div>
+                 style="margin-top: 16px;">
+              <div class="rs-progress-row"
+                   style="display: flex; flex-wrap: wrap;
+                          justify-content: flex-end; align-items: baseline;
+                          gap: 12px; margin: 0 0 8px 0;">
+                <p class="rs-instrument-progress"
+                   data-new-model-intro-progress
+                   style="margin: 0;"
+                   {% if _all_count == 0 %}hidden{% endif %}>
+                  <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
+                        data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
+                  <span class="pill pill-count"
+                        data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
+                </p>
+              </div>
+            </div>
             {# Selector-chip row, moved to the bottom of Band 2 and
                flush-right. Display-field chips first, then a ``||``
                divider, then response-field chips (one per Band 3
@@ -2195,12 +2202,11 @@
             // Band 3 row delete.
             window.newModelUpdateIntroProgress = window.newModelUpdateIntroProgress || function (band2) {
               if (!band2) { return; }
-              var instrumentCard = band2.closest('[id^="instrument-"]');
-              if (!instrumentCard) { return; }
-              var intro = instrumentCard.querySelector(
-                '[data-new-model-band2-intro-card]'
-              );
-              if (!intro) { return; }
+              // Progress pills moved out of the intro card and into
+              // the preview row above the table (so they share a
+              // line with the per-field min/max/step reminders).
+              // Scope the lookup to the band2 card so it covers both
+              // the JS-rebuilt and the initial server-rendered DOM.
               // Count Band 3 rows that have a saved paired pill —
               // the trailing empty starter row has no pill and
               // shouldn't contribute to the counts.
@@ -2214,7 +2220,7 @@
                   requiredCount += 1;
                 }
               });
-              var progress = intro.querySelector(
+              var progress = band2.querySelector(
                 '[data-new-model-intro-progress]'
               );
               if (!progress) { return; }
@@ -2484,7 +2490,58 @@
                 parts.push('<strong>' + esc(label) + '</strong> (' + esc(summary) + ')');
               });
               if (parts.length === 0) { return ''; }
-              return '<p class="rs-constraints muted">' + parts.join(', ') + '</p>';
+              return '<p class="rs-constraints muted" style="margin: 0;">' + parts.join(', ') + '</p>';
+            }
+            // Build the progress-pill ``<p>`` from the current Band 3
+            // row state — counts mirror what
+            // ``newModelUpdateIntroProgress`` would compute. Returns
+            // a hidden ``<p>`` (still in the DOM, so the live-update
+            // path can find it) when the instrument has zero
+            // response-field rows; the surrounding flex row then
+            // collapses to just constraints if any exist.
+            function buildProgressPills(card) {
+              var pills = card.querySelectorAll(
+                '[data-new-model-band2-pill][data-source-type="response"]'
+              );
+              var allCount = pills.length;
+              var requiredCount = 0;
+              pills.forEach(function (p) {
+                if (p.getAttribute('data-required') === 'true') {
+                  requiredCount += 1;
+                }
+              });
+              var reqClass = requiredCount === 0 ? 'pill-success' : 'pill-warning';
+              var hiddenAttr = allCount === 0 ? ' hidden' : '';
+              return '<p class="rs-instrument-progress"'
+                + ' data-new-model-intro-progress'
+                + ' style="margin: 0;"'
+                + hiddenAttr + '>'
+                + '<span class="pill ' + reqClass + '"'
+                +   ' data-new-model-intro-required-pill>'
+                +   'Required items completed: 0/'
+                +   '<span data-new-model-intro-required-count>' + requiredCount + '</span>'
+                + '</span>'
+                + '<span class="pill pill-count"'
+                +   ' data-new-model-intro-all-pill>'
+                +   'All items completed: 0/'
+                +   '<span data-new-model-intro-all-count>' + allCount + '</span>'
+                + '</span>'
+              + '</p>';
+            }
+            // Pills + constraints share a single right-aligned flex
+            // row just above the preview table — mirrors the
+            // reviewer-surface layout. Pills go first so they sit
+            // to the left of the constraints when both render.
+            function buildProgressAndConstraintsRow(card) {
+              var pillsHtml = buildProgressPills(card);
+              var constraintsHtml = buildConstraints(card);
+              return '<div class="rs-progress-row"'
+                + ' style="display: flex; flex-wrap: wrap;'
+                + ' justify-content: flex-end; align-items: baseline;'
+                + ' gap: 12px; margin: 0 0 8px 0;">'
+                + pillsHtml
+                + constraintsHtml
+                + '</div>';
             }
             function rebuildPreview(card) {
               var container = card.querySelector('[data-new-model-band2-preview]');
@@ -2497,7 +2554,7 @@
                 tableHtml = buildIndividualPreview(card, selected);
               }
               container.innerHTML = buildResponseFieldHelpCards(card)
-                + buildConstraints(card)
+                + buildProgressAndConstraintsRow(card)
                 + tableHtml;
             }
             window.newModelToggleBand2Pill = function (pill) {

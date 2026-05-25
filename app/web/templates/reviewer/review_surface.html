@@ -187,25 +187,32 @@
             {% endfor %}
           </div>
         {% endif %}
-        {% if group.constraints %}
-          <p class="rs-constraints muted">
-            {% for c in group.constraints %}<strong>{{ c.label }}</strong> ({{ c.summary }}){% if not loop.last %}, {% endif %}{% endfor %}
-          </p>
-        {% endif %}
-        {# Per-instrument progress pills — completed vs total
-           response cells ("items"), required-only and overall.
-           Sits flush-left just above the review table so the
-           reviewer's eye lands on completion status before the
-           table itself. #}
-        {% if group.completion %}
-          <p class="rs-instrument-progress" style="margin: 0 0 8px 0; text-align: left;">
-            <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
-              Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
-            </span>
-            <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
-              All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}
-            </span>
-          </p>
+        {# Progress pills + per-field min/max/step reminders share
+           a single flush-right row just above the review table —
+           pills inline before the constraints text so the
+           reviewer's eye lands on completion status alongside the
+           formatting reminders. #}
+        {% if group.completion or group.constraints %}
+          <div class="rs-progress-row"
+               style="display: flex; flex-wrap: wrap;
+                      justify-content: flex-end; align-items: baseline;
+                      gap: 12px; margin: 0 0 8px 0;">
+            {% if group.completion %}
+              <p class="rs-instrument-progress" style="margin: 0;">
+                <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
+                  Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
+                </span>
+                <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
+                  All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}
+                </span>
+              </p>
+            {% endif %}
+            {% if group.constraints %}
+              <p class="rs-constraints muted" style="margin: 0;">
+                {% for c in group.constraints %}<strong>{{ c.label }}</strong> ({{ c.summary }}){% if not loop.last %}, {% endif %}{% endfor %}
+              </p>
+            {% endif %}
+          </div>
         {% endif %}
         <div class="table-scroll">
           {# When the operator has set any per-column widths in Band 2
