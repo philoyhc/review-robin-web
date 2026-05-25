@@ -5256,3 +5256,86 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     # The flex row is right-aligned.
     row_tag = flat[row_idx : flat.find(">", row_idx)]
     assert "justify-content: flex-end" in row_tag
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 — Lock / Unlock toggle replaces per-instrument Edit / Cancel
+# --------------------------------------------------------------------------- #
+
+
+def test_lock_unlock_replaces_edit_button_in_view_mode(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument card in view mode (no ``?editing=`` param) carries
+    an ``Unlock`` button at the end of the action row (after
+    +New model) — the previous ``Edit`` button retires. Clicking
+    Unlock takes the operator to ``?editing=<id>``, the same URL
+    state Edit used to reach. The toggle button carries
+    ``data-instrument-lock-toggle=<id>`` for test + JS scoping."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-lock-toggle-view"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    # Edit / Cancel button text retires.
+    assert ">Edit</a>" not in flat
+    assert ">Cancel</a>" not in flat
+
+    # The Unlock toggle exists on the new-model instrument's row
+    # and links to the editing URL.
+    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
+    toggle_idx = flat.find(toggle_marker)
+    assert toggle_idx != -1
+    toggle_tag = flat[
+        flat.rfind("<a", 0, toggle_idx) : flat.find(">", toggle_idx) + 1
+    ]
+    assert "Unlock" in flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
+    assert f"editing={new_model.id}" in toggle_tag
+
+    # The toggle sits AFTER the +New model button in the row (the
+    # last action before the toggle is +New model).
+    new_model_btn_idx = flat.rfind("+New model", 0, toggle_idx)
+    assert new_model_btn_idx != -1, "Unlock toggle must come after +New model"
+
+
+def test_lock_unlock_replaces_cancel_button_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """An instrument card in edit mode (``?editing=<id>``) carries a
+    ``Lock`` button — clicking takes the operator back to view mode
+    (``/instruments`` without the editing param). The Save button
+    sits beside it (mirrors Quick Setup card's Submit + Lock
+    footer). ``Edit`` / ``Cancel`` retire."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-lock-toggle-edit"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    assert ">Edit</a>" not in flat
+    assert ">Cancel</a>" not in flat
+
+    # Lock button on the editing instrument's row.
+    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
+    toggle_idx = flat.find(toggle_marker)
+    assert toggle_idx != -1
+    label = flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
+    assert "Lock" in label and "Unlock" not in label
+    toggle_tag = flat[
+        flat.rfind("<a", 0, toggle_idx) : flat.find(">", toggle_idx) + 1
+    ]
+    # The Lock href clears the editing param.
+    assert "editing=" not in toggle_tag
+
+    # Save button is present (still scoped to ``form=dfsave-<id>``)
+    # and sits beside Lock.
+    save_form_attr = f'form="dfsave-{new_model.id}"'
+    save_idx = flat.find(save_form_attr)
+    assert save_idx != -1
+    # Save comes before Lock in the row.
+    assert save_idx < toggle_idx
