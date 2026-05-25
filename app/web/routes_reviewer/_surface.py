@@ -337,6 +337,7 @@ def _surface_context(
         stmt = (
             select(InstrumentResponseField)
             .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
+            .where(InstrumentResponseField.visible.is_(True))
             .order_by(InstrumentResponseField.order)
         )
         for field in db.execute(stmt).scalars():

@@ -324,3 +324,73 @@ def test_reviewer_session_state_session_pill_projection(db: Session) -> None:
     assert pill.state == state.pill_state
     assert pill.total_assignments == state.total_assignments
     assert pill.completed_rows == state.completed_count
+
+
+def _hide_field(db: Session, instrument_id: int, field_key: str) -> None:
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument_id,
+            InstrumentResponseField.field_key == field_key,
+        )
+    ).scalar_one()
+    field.visible = False
+    db.flush()
+
+
+def test_compute_row_completion_excludes_hidden_required_field(
+    db: Session,
+) -> None:
+    """Wave 3 PR ii — a hidden required field doesn't block completion:
+    if the operator deselects it via the Band 2 pill, reviewers can't
+    see / fill it, so it must not count as "missing required"."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "rating")
+
+    is_complete, missing, _ = responses_service.compute_row_completion(
+        db, assignment
+    )
+    assert is_complete is True
+    assert missing == 0
+
+
+def test_submit_skips_hidden_required_field(db: Session) -> None:
+    """Wave 3 PR ii — submit's missing-required gate ignores hidden
+    fields. Mirrors the row-completion behaviour."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "rating")
+
+    result = responses_service.submit(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[],
+        correlation_id="c1",
+    )
+
+    assert result.submitted is True
+    assert result.missing == []
+
+
+def test_save_draft_drops_upsert_to_hidden_field(db: Session) -> None:
+    """Wave 3 PR ii — save path's field index filters by visible=true,
+    so a value posted against a now-hidden field is silently dropped
+    rather than written to DB. Matches the read-path contract: the
+    reviewer surface never rendered the field in the first place."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _hide_field(db, assignment.instrument_id, "comments")
+
+    result = responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(
+                assignment_id=assignment.id, field_key="comments", value="hi"
+            ),
+        ],
+        correlation_id="c1",
+    )
+
+    assert result.upsert_count == 0

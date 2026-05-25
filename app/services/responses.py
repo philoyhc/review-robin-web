@@ -141,6 +141,7 @@ def _instrument_fields_by_id(
     stmt = (
         select(InstrumentResponseField)
         .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
+        .where(InstrumentResponseField.visible.is_(True))
         .order_by(InstrumentResponseField.order)
     )
     by_instrument: dict[int, list[InstrumentResponseField]] = {}
@@ -266,6 +267,7 @@ def compute_row_completion(
         db.execute(
             select(InstrumentResponseField)
             .where(InstrumentResponseField.instrument_id == assignment.instrument_id)
+            .where(InstrumentResponseField.visible.is_(True))
             .order_by(InstrumentResponseField.order)
         ).scalars()
     )
