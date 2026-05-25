@@ -2909,10 +2909,17 @@
                  data-new-model-rf-row-counter="{{ _next_idx + 1 }}">
               {% for rf in _rfs %}
                 {% set _rkey = 'rf_' ~ loop.index0 %}
+                {# Wave 3 PR ii — data_type select + bound inputs lock
+                   when the row already has saved responses, so an
+                   operator can't silently re-shape stored data
+                   (Integer → String, tighten max below saved values,
+                   etc). Label / Required / Help stay editable.
+                   ``data-new-model-rf-shape-locked="true"`` flags the
+                   row for the recompute helper. #}
                 <div data-new-model-rf-row
                      data-row-key="{{ _rkey }}"
                      {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
-                     {% if rf.has_responses %}data-has-responses="true"{% endif %}
+                     {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}
                      style="display: flex; flex-wrap: nowrap; gap: 8px;
                             align-items: center; width: 100%;
                             margin-bottom: 8px;">
@@ -2920,9 +2927,11 @@
                          data-new-model-rf-name
                          placeholder="Response field"
                          value="{{ rf.name }}"
+                         oninput="newModelRfFieldChanged(this)"
                          style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <select data-new-model-rf-data-type
                           onchange="newModelRfSyncBounds(this)"
+                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                           style="flex: 0 0 15%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                     <option value="string" {% if rf.data_type == 'string' %}selected{% endif %}>String</option>
                     <option value="integer" {% if rf.data_type == 'integer' %}selected{% endif %}>Integer</option>
@@ -2938,21 +2947,29 @@
                            data-new-model-rf-bound="min"
                            placeholder="Min"
                            value="{{ rf.min }}"
+                           oninput="newModelRfFieldChanged(this)"
+                           {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                            style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                     <input type="text"
                            data-new-model-rf-bound="max"
                            placeholder="Max"
                            value="{{ rf.max }}"
+                           oninput="newModelRfFieldChanged(this)"
+                           {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                            style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                     <input type="text"
                            data-new-model-rf-bound="step"
                            placeholder="Step"
                            value="{{ rf.step }}"
+                           oninput="newModelRfFieldChanged(this)"
+                           {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                            style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type not in ('integer', 'decimal') %} display: none;{% endif %}">
                     <input type="text"
                            data-new-model-rf-bound="list"
                            placeholder="List (comma-separated)"
                            value="{{ rf.list_options }}"
+                           oninput="newModelRfFieldChanged(this)"
+                           {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                            style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                   </div>
                   <button type="button"
@@ -2973,10 +2990,12 @@
                           title="Show a help-text card for this field above the preview table"
                           aria-label="Help text visibility">≡</button>
                   <button type="button" class="btn secondary"
+                          data-new-model-rf-save
                           style="flex: 0 0 auto; padding: 4px 10px;"
                           onclick="newModelRfSaveRow(this)"
                           title="Save this response field to the pills + preview">✓</button>
                   <button type="button" class="btn secondary"
+                          data-new-model-rf-delete
                           {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
                           style="flex: 0 0 auto; padding: 4px 10px;"
                           {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
@@ -2994,6 +3013,7 @@
                 <input type="text"
                        data-new-model-rf-name
                        placeholder="Response field"
+                       oninput="newModelRfFieldChanged(this)"
                        style="flex: 0 0 20%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <select data-new-model-rf-data-type
                         onchange="newModelRfSyncBounds(this)"
@@ -3011,18 +3031,22 @@
                   <input type="text"
                          data-new-model-rf-bound="min"
                          placeholder="Min"
+                         oninput="newModelRfFieldChanged(this)"
                          style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <input type="text"
                          data-new-model-rf-bound="max"
                          placeholder="Max"
+                         oninput="newModelRfFieldChanged(this)"
                          style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <input type="text"
                          data-new-model-rf-bound="step"
                          placeholder="Step"
+                         oninput="newModelRfFieldChanged(this)"
                          style="min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
                   <input type="text"
                          data-new-model-rf-bound="list"
                          placeholder="List (comma-separated)"
+                         oninput="newModelRfFieldChanged(this)"
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
                 </div>
                 <button type="button"
@@ -3043,10 +3067,12 @@
                         title="Show a help-text card for this field above the preview table"
                         aria-label="Help text visibility">≡</button>
                 <button type="button" class="btn secondary"
+                        data-new-model-rf-save
                         style="flex: 0 0 auto; padding: 4px 10px;"
                         onclick="newModelRfSaveRow(this)"
                         title="Save this response field to the pills + preview">✓</button>
                 <button type="button" class="btn secondary"
+                        data-new-model-rf-delete
                         style="flex: 0 0 auto; padding: 4px 10px;"
                         onclick="newModelRfDeleteRow(this)"
                         title="Delete this row (and its paired pill, if saved)">X</button>
@@ -3159,11 +3185,138 @@
               var key = input.getAttribute('data-new-model-rf-bound');
               input.style.display = show.indexOf(key) >= 0 ? '' : 'none';
             });
+            // Re-check whether the row's ✓ / X are eligible — a
+            // data-type swap may render previously-valid bounds
+            // (e.g. min=10, max=5 for String, where only max is
+            // relevant) invalid for the new type, or vice versa.
+            window.newModelRfRecomputeActionStates(row);
+          };
+          // Wave 3 PR ii — client-side validation mirroring
+          // ``_validate_response_field_shape`` in
+          // app/services/instruments/_instrument_crud.py. Returns
+          // null if the row's authoring shape is valid, an operator-
+          // facing reason string otherwise. Empty bounds (Min/Max/
+          // Step on numeric) are accepted as "no bound" — matches
+          // the server (``_band2_parse_float`` of "" → None).
+          window.newModelRfValidateShape = window.newModelRfValidateShape || function (row) {
+            var sel = row.querySelector('[data-new-model-rf-data-type]');
+            var dataType = (sel && sel.value) || 'string';
+            function val(key) {
+              var input = row.querySelector(
+                '[data-new-model-rf-bound="' + key + '"]'
+              );
+              return (input && input.value || '').trim();
+            }
+            function parseNum(text) {
+              if (text === '') { return null; }
+              var v = parseFloat(text);
+              return isNaN(v) ? NaN : v;
+            }
+            if (dataType === 'integer' || dataType === 'decimal') {
+              var mn = parseNum(val('min'));
+              var mx = parseNum(val('max'));
+              var st = parseNum(val('step'));
+              if (mn !== null && isNaN(mn)) { return 'Min must be a number.'; }
+              if (mx !== null && isNaN(mx)) { return 'Max must be a number.'; }
+              if (st !== null && isNaN(st)) { return 'Step must be a number.'; }
+              if (mn !== null && mx !== null && mx < mn) {
+                return 'Max must be at least Min.';
+              }
+              if (st !== null && st <= 0) {
+                return 'Step must be greater than zero.';
+              }
+              return null;
+            }
+            if (dataType === 'string') {
+              var ml = parseNum(val('max'));
+              if (ml !== null && isNaN(ml)) { return 'Max length must be a number.'; }
+              if (ml !== null && ml <= 0) {
+                return 'Max length must be greater than zero.';
+              }
+              return null;
+            }
+            if (dataType === 'list') {
+              var raw = val('list');
+              var options = raw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+              if (options.length === 0) {
+                return 'List options must include at least one entry.';
+              }
+              return null;
+            }
+            return null;
+          };
+          // Wave 3 PR ii — recompute the ✓ / X enabled state on a
+          // Band 3 row. Mirrors the requirement: both buttons
+          // disabled when there's no eligible action.
+          //
+          //   ✓ disabled when: name is empty, OR bounds are invalid
+          //     for the picked data_type.
+          //   X disabled when: name is empty (empty awaiting-fill
+          //     row — nothing to delete), OR the server-side
+          //     has_responses flag is set (template renders the
+          //     ``disabled`` attribute on initial load; JS preserves
+          //     that state since has_responses can only change on
+          //     a page reload anyway).
+          window.newModelRfRecomputeActionStates = window.newModelRfRecomputeActionStates || function (row) {
+            if (!row) { return; }
+            var nameInput = row.querySelector('[data-new-model-rf-name]');
+            var name = (nameInput && nameInput.value || '').trim();
+            var saveBtn = row.querySelector('[data-new-model-rf-save]');
+            var deleteBtn = row.querySelector('[data-new-model-rf-delete]');
+            var hasResponses = row.getAttribute('data-has-responses') === 'true';
+            if (saveBtn) {
+              var reason = null;
+              if (!name) {
+                reason = 'Enter a field name to save.';
+              } else {
+                reason = window.newModelRfValidateShape(row);
+              }
+              if (reason) {
+                saveBtn.setAttribute('disabled', '');
+                saveBtn.setAttribute('aria-disabled', 'true');
+                saveBtn.setAttribute('title', reason);
+              } else {
+                saveBtn.removeAttribute('disabled');
+                saveBtn.removeAttribute('aria-disabled');
+                saveBtn.setAttribute(
+                  'title',
+                  'Save this response field to the pills + preview'
+                );
+              }
+            }
+            if (deleteBtn && !hasResponses) {
+              if (!name) {
+                deleteBtn.setAttribute('disabled', '');
+                deleteBtn.setAttribute('aria-disabled', 'true');
+                deleteBtn.setAttribute(
+                  'title',
+                  'Empty row — nothing to delete.'
+                );
+              } else {
+                deleteBtn.removeAttribute('disabled');
+                deleteBtn.removeAttribute('aria-disabled');
+                deleteBtn.setAttribute(
+                  'title',
+                  'Delete this row (and its paired pill, if saved)'
+                );
+              }
+            }
+          };
+          // ``oninput`` on every editable name / bound input — fires
+          // recompute on each keystroke so the ✓ / X buttons reflect
+          // the live state without waiting for blur.
+          window.newModelRfFieldChanged = window.newModelRfFieldChanged || function (input) {
+            var row = input.closest('[data-new-model-rf-row]');
+            window.newModelRfRecomputeActionStates(row);
           };
           // Sync each row on page load so the initial data-type pick
           // shows the right bounds. (Default is String → min, max.)
           document.querySelectorAll('[data-new-model-rf-data-type]').forEach(function (sel) {
             window.newModelRfSyncBounds(sel);
+          });
+          // Initial recompute for every row's action-button state.
+          document.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
+            window.newModelRfRecomputeActionStates(row);
           });
           // ---- Add response field rows (Band 3) ----------------
           // The "+" below the rows clones the first row's DOM,
@@ -3195,6 +3348,10 @@
             // (its default is "string" → Min + Max).
             var sel = clone.querySelector('[data-new-model-rf-data-type]');
             if (sel) { window.newModelRfSyncBounds(sel); }
+            // Re-evaluate action-button enabled state on the clone —
+            // a freshly-added empty row should have ✓ + X disabled
+            // until the operator types a name.
+            window.newModelRfRecomputeActionStates(clone);
             var nameInput = clone.querySelector('[data-new-model-rf-name]');
             if (nameInput) { nameInput.focus(); }
           };

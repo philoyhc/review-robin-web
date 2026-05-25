@@ -3720,9 +3720,11 @@ def test_wave3_pri_disabled_x_when_responses_present(
     # The X button on the rating row renders disabled (no onclick).
     flat = " ".join(body.split())
     rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
-    # Find the X button after this row marker. The button is
-    # within ~2500 chars of the row start.
-    rating_block = flat[rating_row_idx : rating_row_idx + 3000]
+    # Find the X button after this row marker. Wave 3 PR ii's
+    # template addition (oninput handlers + disabled/title on the
+    # type+bounds widgets + data-new-model-rf-save/-delete attrs)
+    # widens the per-row markup, so the search window grew to 6000.
+    rating_block = flat[rating_row_idx : rating_row_idx + 6000]
     x_idx = rating_block.find(">X</button>")
     assert x_idx != -1
     # Walk back to the <button to read its attrs.
@@ -3730,6 +3732,102 @@ def test_wave3_pri_disabled_x_when_responses_present(
     x_tag = rating_block[x_open : x_idx]
     assert "disabled" in x_tag
     assert "newModelRfDeleteRow" not in x_tag
+
+
+def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR ii — the Band 3 row's data_type select + bound
+    inputs render ``disabled`` when the field has saved responses,
+    mirroring the X button's existing has_responses gate. The
+    operator must clear responses before re-shaping the field;
+    server-side ResponseFieldShapeChangeError is the defence-in-
+    depth for direct API hits."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-prii-shape-disabled"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=rating.id,
+            value="4",
+        )
+    )
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
+    assert rating_row_idx != -1
+    rating_block = flat[rating_row_idx : rating_row_idx + 6000]
+    assert 'data-new-model-rf-shape-locked="true"' in rating_block
+
+    # data_type select disabled.
+    sel_idx = rating_block.find("data-new-model-rf-data-type")
+    assert sel_idx != -1
+    # Slice from the <select that opens this attribute to its closing >.
+    sel_open = rating_block.rfind("<select", 0, sel_idx)
+    sel_close = rating_block.find(">", sel_idx)
+    sel_tag = rating_block[sel_open : sel_close]
+    assert "disabled" in sel_tag
+
+    # Each of min / max / step / list bound inputs disabled.
+    for bound in ("min", "max", "step", "list"):
+        marker = f'data-new-model-rf-bound="{bound}"'
+        b_idx = rating_block.find(marker)
+        assert b_idx != -1, f"{bound} input missing from rating row"
+        b_open = rating_block.rfind("<input", 0, b_idx)
+        b_close = rating_block.find(">", b_idx)
+        b_tag = rating_block[b_open : b_close]
+        assert "disabled" in b_tag, f"{bound} input not disabled when has_responses"
+
+
+def test_wave3_prii_no_shape_lock_when_no_responses(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 3 PR ii — the shape-lock attributes don't render on a
+    fresh row with no responses. The data_type select + bound
+    inputs stay editable so the operator can author the field."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w3-prii-no-lock"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    rating_row_idx = flat.find(f'data-rf-id="{rating.id}"')
+    rating_block = flat[rating_row_idx : rating_row_idx + 6000]
+    assert 'data-new-model-rf-shape-locked' not in rating_block
+    # data_type select is editable.
+    sel_idx = rating_block.find("data-new-model-rf-data-type")
+    sel_open = rating_block.rfind("<select", 0, sel_idx)
+    sel_close = rating_block.find(">", sel_idx)
+    sel_tag = rating_block[sel_open : sel_close]
+    assert "disabled" not in sel_tag
 
 
 def test_wave3_pri_cascade_blocked_delete_returns_409(
