@@ -3288,6 +3288,195 @@ def test_wave3_pri_id_match_updates_existing_row(
     assert rows[0]._inline_max == 10.0
 
 
+def test_full_flow_r_toggle_then_bottom_save_preserves_state(
+    client: TestClient, db: Session
+) -> None:
+    """End-to-end repro for the operator's report that R toggle
+    state reverts after clicking the bottom Save button. Confirms:
+
+    1. POST /band2-state (mimicking the R-toggle JS) persists.
+    2. POST /fields/save (the bottom Save form) does NOT clobber
+       band2_state.response_fields.
+    3. Re-rendering the page shows the persisted R state, not
+       the seeded default.
+
+    If this test fails, there's a server-side regression. If it
+    passes, the bug the operator's seeing is client-side
+    (cache, fetch abort, JS error)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="full-flow-r-save"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    comments = next(
+        rf for rf in new_model.response_fields if rf.label == "Comments"
+    )
+
+    # Step 1 — simulate R-toggle saveBand2State (Rating's required
+    # flipped from True to False, Comments unchanged).
+    band2_resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [],
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": False,
+                },
+                {
+                    "id": comments.id,
+                    "name": "Comments",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": True,
+                    "required": False,
+                },
+            ],
+        },
+    )
+    assert band2_resp.status_code == 200
+    db.expire_all()
+    new_model = db.get(type(new_model), new_model.id)
+    rating_row = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    assert rating_row.required is False
+    assert new_model.band2_state["response_fields"][0]["required"] is False
+
+    # Step 2 — simulate the bottom Save (POST /fields/save with
+    # the dfsave form payload — Band 1 + sort spec). This MUST
+    # NOT clobber band2_state.response_fields.
+    save_resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link3_mode": "individual",
+        },
+        follow_redirects=False,
+    )
+    # 303 redirect on success.
+    assert save_resp.status_code in (200, 303)
+    db.expire_all()
+    new_model = db.get(type(new_model), new_model.id)
+
+    # Step 3 — band2_state.response_fields still has the toggled
+    # state; DB row's required still False; the seeded default
+    # has NOT crept back in.
+    rating_row = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    assert rating_row.required is False, (
+        "Bottom Save reverted Rating.required back to seeded default"
+    )
+    assert (
+        new_model.band2_state is not None
+        and "response_fields" in new_model.band2_state
+    ), "Bottom Save cleared band2_state.response_fields"
+    rating_json = next(
+        r for r in new_model.band2_state["response_fields"]
+        if r.get("id") == rating_row.id
+    )
+    assert rating_json["required"] is False
+
+
+def test_full_flow_add_new_response_field_persists_through_save(
+    client: TestClient, db: Session
+) -> None:
+    """End-to-end repro for the operator's report that newly-added
+    response fields don't persist through the bottom Save. Same
+    structure as the R-toggle test — POST a saveBand2State with a
+    new field alongside the seeded rows, then POST the bottom Save,
+    then verify the new field is still there."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="full-flow-new-rf"
+    )
+    rating = next(
+        rf for rf in new_model.response_fields if rf.label == "Rating"
+    )
+    comments = next(
+        rf for rf in new_model.response_fields if rf.label == "Comments"
+    )
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "selected_display_keys": [],
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                    "selected": True,
+                    "required": True,
+                },
+                {
+                    "id": comments.id,
+                    "name": "Comments",
+                    "data_type": "string",
+                    "max": "2000",
+                    "selected": True,
+                    "required": False,
+                },
+                {
+                    "name": "Bonus",  # no id — new entry
+                    "data_type": "integer",
+                    "min": "0",
+                    "max": "100",
+                    "step": "1",
+                    "selected": True,
+                    "required": False,
+                },
+            ],
+        },
+    )
+    db.expire_all()
+    new_model = db.get(type(new_model), new_model.id)
+    labels = {rf.label for rf in new_model.response_fields}
+    assert "Bonus" in labels
+
+    # Bottom Save — must not clobber the new field.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link3_mode": "individual",
+        },
+        follow_redirects=False,
+    )
+    db.expire_all()
+    new_model = db.get(type(new_model), new_model.id)
+    labels = {rf.label for rf in new_model.response_fields}
+    assert "Bonus" in labels, (
+        "Bottom Save removed the operator-added Bonus row"
+    )
+    json_labels = {
+        r["name"] for r in (new_model.band2_state or {}).get(
+            "response_fields", []
+        )
+    }
+    assert "Bonus" in json_labels
+
+
 def test_r_toggle_persists_required_flag_via_dual_write(
     client: TestClient, db: Session
 ) -> None:
