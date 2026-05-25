@@ -2785,14 +2785,12 @@
                 title="Fixed (placeholder)">{{ label }}</span>
         {% endmacro %}
         {% macro new_model_audience_chip(label, selected=false) %}
-          {# Match Band 2's pill style — ``pill-count`` + ``is-selected``
-             only when the chip is on, so the off-state matches the
-             rest of the chip family (outline, no fill). Without this
-             the unselected Reviewees / Observers chips inherited
-             pill-count's filled-style font/background and looked out
-             of place next to the off-state of the Operator /
-             Reviewers chips. #}
-          <span class="pill tag-chip{% if selected %} pill-count is-selected{% endif %}"
+          {# ``pill-count`` is always on so the unselected state reads
+             as a pill-style chip (light blue background, light font)
+             matching the What / When cycle chips in the same row —
+             the operator's mental model is "chips everywhere".
+             ``is-selected`` adds the on-state fill. #}
+          <span class="pill pill-count tag-chip{% if selected %} is-selected{% endif %}"
                 role="button" tabindex="0"
                 aria-pressed="{{ 'true' if selected else 'false' }}"
                 data-new-model-chip-selected="{{ 'true' if selected else 'false' }}"
@@ -3317,10 +3315,8 @@
             var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
             btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
             btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            // ``pill-count`` + ``is-selected`` move together so the
-            // chip matches Band 2's "outline when off, filled when
-            // on" pattern.
-            btn.classList.toggle('pill-count', selected);
+            // ``pill-count`` is always on (the off-state still reads
+            // as a pill-style chip); only ``is-selected`` toggles.
             btn.classList.toggle('is-selected', selected);
             var row = btn.closest('[data-new-model-audience]');
             row.querySelectorAll('[data-new-model-audience-other-cell]').forEach(function (cell) {
