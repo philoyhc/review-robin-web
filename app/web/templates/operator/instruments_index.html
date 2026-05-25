@@ -57,6 +57,16 @@
       padding: var(--space-1) var(--space-2);
       font-size: var(--fs-small);
     }
+    /* Band 3 Visibility — Reviewees + Observers audience chips
+       carry white font in their unselected state so the text
+       still reads cleanly against the pill-count light-blue
+       background (the only audience rows that default to off).
+       Cycle chips in the same rows always have ``is-selected``
+       so the selector doesn't bite them. */
+    body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
+    body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
+      color: #ffffff;
+    }
   </style>
 {% endblock %}
 
