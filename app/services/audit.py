@@ -518,44 +518,25 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "assignments.bulk_include_set": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
-    # Segment 13A PR 5a — RuleSet library mutation events. Workspace-
-    # scoped (no session identity), so the schema omits ``session_id``
-    # / ``session_code`` from the allowed slot set.
-    "rule_set.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
-    # Segment 13A PR 6 — in-place Save / Rename / Delete.
-    "rule_set.updated": EventSchema(frozenset({"changes", "refs", "context"})),
-    "rule_set.deleted": EventSchema(frozenset({"snapshot", "refs", "context"})),
-    # Segment 15C Slice 1 — workspace-seed materialisation into the
-    # per-session ``session_rule_sets`` table at session-create time.
-    # Fired once per ``create_session`` call that actually inserted
-    # rows; ``counts.materialised`` carries the number of rows added.
+    # Wave 5 PR 5.1 — RuleSet library tier retired. The schemas for
+    # ``rule_set.created`` / ``.updated`` / ``.deleted`` and the
+    # cross-tier ``session_rule_sets.materialised_from_library`` /
+    # ``.saved_to_library`` / ``.added_from_library`` events no
+    # longer accept new writes. Historical audit_events rows with
+    # those event_type strings remain readable — strict-mode
+    # validation only fires on write. Segment 18J Wave 2 PR iii-b3
+    # similarly retired the parallel RTD library family
+    # (operator_response_type_definitions table + its UI).
+
+    # Workspace-seed materialisation into the per-session
+    # ``session_rule_sets`` table at session-create time. Stays for
+    # PR 5.1; retires in PR 5.2 when seeding stops.
     "session_rule_sets.materialised_from_seed": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
-    # Segment 15C Slice 2 — auto-copy from operator libraries into the
-    # per-session tables at session-create time. Each emitter fires
-    # at most once per ``create_session`` and only when its tier
-    # actually inserted rows; ``counts.materialised`` carries the
-    # row count.
-    "session_rule_sets.materialised_from_library": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
-    # Segment 18J Wave 2 PR iii-b3 retired the RTD library tier
-    # (operator_response_type_definitions table + its UI). The
-    # ``response_type_definitions.materialised_from_library``,
-    # ``operator_rtd.created`` / ``.deleted``,
-    # ``response_type_definitions.saved_to_library``, and
-    # ``.added_from_library`` event types are no longer emitted.
-    # Historical rows in audit_events with those event_type strings
-    # remain readable — strict-mode validation only fires on write.
-    # Segment 15C Slice 4 — session-tier RuleSet mutations + the
-    # paired Save-to-library / Add-from-library transitions. The
-    # session-tier `.created` / `.updated` / `.deleted` events
-    # mirror the library-side rule_set.* family but carry
-    # session_id (per the ``_IDENTITY`` slot pair). The
-    # `saved_to_library` / `added_from_library` emitters record
-    # cross-tier transitions; `rule_set.created` on the library
-    # side stays unchanged (reused for the Save-to-library write).
+    # Session-tier RuleSet mutations from Band 1's inline editor.
+    # ``session_rule_set.*`` (singular) is the per-row family that
+    # stays — Band 1 writes through to ``session_rule_sets.rules_json``.
     "session_rule_set.created": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),
@@ -564,12 +545,6 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "session_rule_set.deleted": EventSchema(
         _IDENTITY | {"snapshot", "refs"}
-    ),
-    "session_rule_sets.saved_to_library": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
-    "session_rule_sets.added_from_library": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
     ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),

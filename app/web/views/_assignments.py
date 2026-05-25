@@ -125,7 +125,15 @@ def build_assignments_page_context(
     """
     from app.services import assignments as assignments_service
     from app.services import responses as responses_service
-    from app.services.rules import session_library
+
+    # Wave 5 PR 5.1 — ``session_library.evaluate_session_rule_eligibility``
+    # retired with the operator-library tier. The Assignments page
+    # status blocks no longer surface a per-rule eligible count;
+    # ``eligible_count`` reads 0 for pinned instruments (and the
+    # downstream ``compute_staleness`` predicate falls back to "not
+    # stale" once eligible is unknown). PR 5.3 retires the page's
+    # legacy-pinning context entirely.
+    eligibility_by_rule: dict[int, int] = {}
 
     instruments = list(
         db.execute(
@@ -177,9 +185,6 @@ def build_assignments_page_context(
             )
         ).scalars()
     }
-    eligibility_by_rule = session_library.evaluate_session_rule_eligibility(
-        db, review_session
-    )
     generated_by_instrument = assignments_service.existing_count_per_instrument(
         db, review_session.id
     )
@@ -207,11 +212,12 @@ def build_assignments_page_context(
             eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
         included_count = included_by_instrument.get(instrument.id, 0)
-        is_stale = assignments_service.compute_staleness(
-            rule_id, eligible_count, generated_count
-        )
-        if is_stale:
-            any_stale = True
+        # Wave 5 PR 5.1 — staleness comparison retired with the
+        # session_library helper that supplied per-rule eligibility.
+        # Without an eligible count, ``compute_staleness`` would
+        # false-positive every pinned instrument. Force False here
+        # until PR 5.3 retires the legacy pinning path entirely.
+        is_stale = False
         sr_active, sr_deactivated = self_review_breakdown.get(
             instrument.id, (0, 0)
         )

@@ -87,10 +87,7 @@ from ._setup import (
 # helpers (sliced in PR 6).
 from ._instruments import (
     InstrumentHeading,
-    InstrumentRulePickerContext,
-    InstrumentRulePickerOption,
     PageButton,
-    build_instrument_rule_picker_contexts,
     build_instruments_context,
     constraint_summary_for_field,
     instrument_heading,
@@ -153,18 +150,9 @@ from ._previews import (
     resolve_email_preview_tab,
 )
 
-# Rule Builder + Rule Based card on Setup → Assignments
-# (sliced in PR 10 — the final slice).
-from ._rule_builder import (
-    RULE_BUILDER_BLANK_SENTINEL_ID,
-    RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
-    AvailableRuleSetEntry,
-    EditableRule,
-    RuleBuilderContext,
-    RuleBuilderOption,
-    RuleLine,
-    build_rule_builder_context,
-)
+# Wave 5 PR 5.1 — ``_rule_builder`` view module retired alongside
+# the Rule Builder page itself. No replacement; Band 1's inline
+# editor is the canonical authoring surface for new-model rules.
 
 # Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
 from ._sort import (
@@ -202,19 +190,13 @@ __all__ = [
     "REVIEWEES_STATUS_OPTIONS",
     "REVIEWERS_DATALIST_CAP",
     "REVIEWERS_STATUS_OPTIONS",
-    "RULE_BUILDER_BLANK_SENTINEL_ID",
-    "RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION",
     # Dataclasses / context shapes.
-    "AvailableRuleSetEntry",
-    "EditableRule",
     "EmailBody",
     "AssignmentsPageContext",
     "EmailPreviewTab",
     "ExtractDataContext",
     "ExtractDataRow",
     "InstrumentHeading",
-    "InstrumentRulePickerContext",
-    "InstrumentRulePickerOption",
     "InstrumentStatusBlock",
     "InvitationsRow",
     "IssueSourceGroup",
@@ -225,9 +207,6 @@ __all__ = [
     "QuickSetupContext",
     "QuickSetupSlot",
     "ResponsesRow",
-    "RuleBuilderContext",
-    "RuleBuilderOption",
-    "RuleLine",
     "SessionStatusPills",
     "SetupCoverageRow",
     "SetupRow",
@@ -239,14 +218,12 @@ __all__ = [
     "build_assignments_page_context",
     "build_email_preview_body",
     "build_extract_data_context",
-    "build_instrument_rule_picker_contexts",
     "build_instruments_context",
     "build_invitations_rows",
     "build_new_session_quick_setup_context",
     "build_preview_picker_context",
     "build_quick_setup_context",
     "build_responses_rows",
-    "build_rule_builder_context",
     "build_setup_rows",
     "build_surface_preview_context",
     "build_validate_context",

@@ -523,51 +523,19 @@ def _check_new_model_no_visible_response_fields(
 def _check_instruments_stale_generated(
     db: Session, review_session: ReviewSession
 ) -> Iterable[ValidationIssue]:
-    """Warning per pinned instrument whose materialised pair count
-    diverges from its current eligible count.
-
-    Catches: never-generated pinned instruments, instruments whose
-    rule changed post-Generate, instruments whose roster /
-    relationships changed post-Generate. Shares the staleness
-    predicate with the Assignments-page view-shape via
-    :func:`app.services.assignments.compute_staleness`.
+    """Wave 5 PR 5.1 — retired. The rule used
+    ``session_library.evaluate_session_rule_eligibility`` to
+    compare per-rule eligible-pair counts against materialised
+    counts. That helper retired with the operator-library tier.
+    The Workflow card + Generate button already cover the
+    "operator pinned a rule but never generated" case the rule
+    was catching, so no replacement is needed. The
+    ``instruments.stale_generated`` rule key stays in
+    ``ValidationRule`` registry as a no-op check so the rule key
+    remains addressable from audit history.
     """
-    from app.services import assignments as assignments_service
-    from app.services.rules import session_library
-
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    pinned = [i for i in instruments if i.rule_set_id is not None]
-    if not pinned:
-        return
-    eligibility_by_rule = session_library.evaluate_session_rule_eligibility(
-        db, review_session
-    )
-    generated_by_instrument = assignments_service.existing_count_per_instrument(
-        db, review_session.id
-    )
-    for instrument in pinned:
-        eligible = eligibility_by_rule.get(instrument.rule_set_id, 0)
-        generated = generated_by_instrument.get(instrument.id, 0)
-        if not assignments_service.compute_staleness(
-            instrument.rule_set_id, eligible, generated
-        ):
-            continue
-        yield ValidationIssue(
-            severity=Severity.warning,
-            source="instruments",
-            message=(
-                f"Instrument {_instrument_label(instrument)!r} pairs "
-                f"may be stale (eligible {eligible}, generated "
-                f"{generated}) — re-Generate to refresh"
-            ),
-            fix_anchor=f"#instrument-{instrument.id}",
-        )
+    return
+    yield  # pragma: no cover — make this an Iterable
 
 
 def _check_instruments_zero_included(

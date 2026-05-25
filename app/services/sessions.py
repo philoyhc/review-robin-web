@@ -8,7 +8,6 @@ from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
 from app.services import audit, operator_settings, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
-from app.services.library_materialise import materialise_operator_libraries
 from app.services.rules.seeds import materialise_seed_rule_sets
 
 log = get_logger(__name__)
@@ -74,13 +73,11 @@ def create_session(
     # this pool.
     seed_rows = materialise_seed_rule_sets(db, review_session)
 
-    # 15C Slice 2: auto-copy the operator's library (RTDs + Personal
-    # RuleSets) into the per-session tables. Seeds-first order means
-    # any (rare) name collision goes to the seed; library entries
-    # with colliding names are skipped silently.
-    library_result = materialise_operator_libraries(
-        db, review_session, owner_user=user
-    )
+    # Wave 5 PR 5.1 — the operator-library auto-copy
+    # (``materialise_operator_libraries`` / ``operator_rule_sets``
+    # tier) retired alongside the Rule Builder + library UI. Only
+    # the workspace-seeded RuleSets above are materialised on
+    # session create; PR 5.2 will retire the seeded set too.
 
     audit.write_event(
         db,
@@ -112,25 +109,6 @@ def create_session(
             ),
             correlation_id=correlation_id,
         )
-    # Segment 18J Wave 2 PR iii-b3 — the RTD library tier is gone;
-    # ``library_result.rtds_copied`` is always 0 post-iii-b3 and the
-    # paired audit event is no longer emitted.
-    if library_result.rule_sets_copied:
-        audit.write_event(
-            db,
-            event_type="session_rule_sets.materialised_from_library",
-            summary=(
-                f"Copied {library_result.rule_sets_copied} library "
-                f"RuleSet(s) into session {review_session.code}"
-            ),
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.counts(
-                materialised=library_result.rule_sets_copied,
-            ),
-            correlation_id=correlation_id,
-        )
-
     db.commit()
     db.refresh(review_session)
     return review_session

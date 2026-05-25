@@ -386,14 +386,10 @@ def _session_rule_set_rows(
                 "json",
             )
         )
-        # 15C library provenance — see _rtd_rows. Export leg only.
-        rows.append(
-            Row(
-                f"{prefix}.library_name",
-                _str(snap.library_origin.name if snap.library_origin else None),
-                "string",
-            )
-        )
+        # Wave 5 PR 5.1 — the 15C ``library_name`` provenance cell
+        # retired alongside the operator-library tier. The
+        # ``library_origin_id`` column on session_rule_sets stays
+        # for now (drops in PR 5.2); no export cell.
     return rows
 
 
