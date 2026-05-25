@@ -901,14 +901,15 @@ bottom of this file.
 
 
 - **18J — New-model takeover mopping-up** *(stub created
-  2026-05-24; Waves 1 + 2 + 2½ shipped 2026-05-24)*. Five-wave
-  sequencing plan that completes the Segment 18I work: closes
-  the parity gaps that still keep the legacy individual + group
-  instrument cards alive, lands the perf wins that bite as
-  new-model card volume grows, and ends with a cleanup PR that
-  drops the `instruments.is_new_model` flag. Adopts the Gap /
-  Rec catalogue from `guide/new_model_instruments_outstanding.md`
-  verbatim and decides only the order.
+  2026-05-24; Waves 1 + 2 + 2½ + 3 + 4 shipped 2026-05-24 →
+  2026-05-25)*. Six-wave sequencing plan that completes the
+  Segment 18I work: closes the parity gaps that still keep the
+  legacy individual + group instrument cards alive, lands the
+  perf wins that bite as new-model card volume grows, and ends
+  with a cleanup PR that drops the `instruments.is_new_model`
+  flag. Adopts the Gap / Rec catalogue from
+  `guide/new_model_instruments_outstanding.md` verbatim and
+  decides only the order.
 
   **Wave 1 shipped** (PRs **#1393 → #1397**): Rec A + Rec D1
   (perf double-tap), Gap 10 (rule-constrained preview group
@@ -926,7 +927,7 @@ bottom of this file.
   session library tier (UI, routes, services, audit events)
   all retired. The `response_type_definitions` table + the
   per-instrument RTD card still exist for operator-authored
-  standalone RTDs; both retire alongside Gaps 8 + 9 in Wave 5.
+  standalone RTDs; both retire alongside Gaps 8 + 9 in Wave 6.
 
   **Wave 2½ shipped** (PRs **#1408 → #1416**, nine UX-only
   slices): Band 2 reviewer-surface parity polish. The
@@ -947,11 +948,66 @@ bottom of this file.
   heading-area short_label `<input>` + right-column
   description editor / display card retired.
 
-  **Waves 3-5 open**: Gap 2 (response fields → real DB rows)
-  + Gap 4 UX decision (currently tabled) → Rec B + D2/D3 +
-  Gap 7 (perf followers + RuleSet library retirement) →
-  Gap 8 + 9 (cleanup; also retires the per-instrument RTD
-  card + the `response_type_definitions` table). **Plan:**
+  **Wave 3 shipped** (PRs **#1418, #1431, #1432**): Gap 2 —
+  response fields become real DB rows. `InstrumentResponseField.
+  visible` column added; `set_band2_state` dual-writes JSON
+  entries through to real DB rows (id-match update / create
+  with id back-fill / delete via cascade check); reviewer-
+  surface readers filter by `visible=true`; `validate_value`
+  reads `_inline_*` directly with new `InvalidResponseFieldShape
+  Error` (422 — bad bounds) and `ResponseFieldShapeChangeError`
+  (409 — shape change with attached responses). Band 3 row
+  template renders `disabled` on `data_type` + bound inputs
+  when responses are attached; ✓ live-disables on empty name /
+  invalid bounds. Required flag is now load-bearing. PR iii
+  retires the JSON write side entirely: DB rows are the sole
+  source of truth; response-column widths migrate to
+  `instrument.column_widths["rf_<id>"]` and reviewer surface
+  emits matching `<col style="width: Npx">`. Alembic migration
+  `c3a7e9d8b154` back-fills any instrument that didn't re-save
+  between PR i and PR iii.
+
+  **Wave 4 shipped** (PRs **#1434, #1435, #1436, #1437, #1438,
+  #1439, #1440, #1441, #1442, #1443**, 10 PRs across three
+  topic clusters): readiness gating + Lock/Unlock refactor +
+  UI polish. Not on the original plan — emerged from pilot
+  feedback and slid the original Wave 4 (perf + Gap 7) to
+  Wave 5.
+
+  - **4a — Readiness predicate alignment** (#1434, #1435).
+    `replace_assignments` synthesises Full Matrix for new-
+    model instruments with NULL `rule_set_id` instead of
+    silently skipping them. New per-model
+    `instruments_service.is_configured(instrument)`
+    predicate retires the rule-set-centric `has_unpinned`;
+    workflow card + validation rule rewired. Decouples
+    new-model instruments from the `RuleSet` construct,
+    paving the way for Wave 5's Gap 7 retirement.
+  - **4b — Lock/Unlock + Save-when-dirty** (#1440, #1441,
+    #1442). Per-card Edit / Save / Cancel buttons retire in
+    favour of a Lock / Unlock toggle modelled on the Quick
+    Setup card. Save preserves `?editing=<id>` on redirect
+    (no more re-lock on save); Save starts disabled and
+    activates on the first dirty event. Lock prompts a
+    confirm dialog when Save is dirty; Band 3 rows whose
+    inputs the operator has typed into get a subtle amber-
+    accent visual until ✓ commits the row.
+  - **4c — UI polish** (#1433, #1436, #1437, #1438, #1439,
+    #1443). Step validation relaxed to `step ≤ (max − min)`.
+    Progress pills + min/max/step reminders share a single
+    right-flushed row above the table on both reviewer
+    surface and Band 2. Description / short_label edit boxes
+    fixed (tick stays inline; description gets right-side
+    gutter; unified ✎/✓ at intro card's bottom-right).
+    Bottom action row restructured: legacy `Add instrument`
+    / `Add group instrument` buttons retired; `+New model`
+    renamed to `+Instrument`; Cancel button added (dirty-
+    aware, separate from Lock).
+
+  **Waves 5-6 open**: Rec B + D2/D3 + Gap 7 (perf followers
+  + RuleSet library retirement) → Gap 8 + 9 (cleanup; also
+  retires the per-instrument RTD card + the
+  `response_type_definitions` table). **Plan:**
   `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.

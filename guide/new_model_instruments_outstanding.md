@@ -60,14 +60,25 @@ Name + Email locked-row guard at lines 308-315). One small
 wiring change in `set_band2_state` (or a paired call in the
 route).
 
-### Gap 2 — Response fields → real `InstrumentResponseField` rows (M-L)
+### Gap 2 — Response fields → real `InstrumentResponseField` rows (M-L) — shipped 2026-05-25 (PRs #1418, #1431, #1432)
 
-**Today.** Band 3's Response Fields editor persists rows to
-`band2_state.response_fields` JSON. No `InstrumentResponseField`
-rows are created; no `ResponseTypeDefinition` rows referenced.
-The reviewer surface sees only the default response fields
-seeded by `create_instrument`, not the operator's authored
-fields.
+> Shipped end-to-end via the three-PR Wave 3 ladder. The DB is
+> now the sole source of truth: `set_band2_state` dual-writes
+> JSON entries to real `InstrumentResponseField` rows (PR i),
+> reviewer-surface readers filter by `visible=true` (PR ii),
+> the JSON write side retires entirely with response-column
+> widths migrating to `instrument.column_widths["rf_<id>"]`
+> (PR iii). Alembic migration `c3a7e9d8b154` back-fills any
+> instrument that didn't re-save between PR i and PR iii.
+> Reviewer surface ships matching `<col style="width: Npx">`
+> so operator-set widths persist all the way through.
+
+**Today (pre-Wave-3).** Band 3's Response Fields editor persists
+rows to `band2_state.response_fields` JSON. No
+`InstrumentResponseField` rows are created; no
+`ResponseTypeDefinition` rows referenced. The reviewer surface
+sees only the default response fields seeded by
+`create_instrument`, not the operator's authored fields.
 
 **Close.** Each Band 3 ✓ creates / updates a real
 `InstrumentResponseField` pointing at an RTD. Two flavours of
@@ -187,7 +198,19 @@ Migration: backfill bounds inline onto every referencing
 `instrument_response_fields` row, then drop the numerical /
 string seeded RTDs.
 
-### Gap 7 — RuleSet library retirement (M)
+### Gap 7 — RuleSet library retirement (M) — partial progress 2026-05-25 (PRs #1434, #1435)
+
+> **Foundation laid by Wave 4a.** PR #1434 makes
+> `replace_assignments` synthesise Full Matrix for new-model
+> instruments with NULL `rule_set_id` instead of skipping them,
+> and PR #1435 introduces `instruments_service.is_configured()`
+> which retires the rule-set-centric `has_unpinned` predicate
+> for new-model rows. New-model instruments are now functionally
+> decoupled from the `RuleSet` construct — retiring the library
+> + Rule Builder page no longer requires migrating new-model
+> data. Full retirement (seeded RuleSets, library tier,
+> Rule Builder page, sidebar, `library_origin_id`) is queued
+> for Wave 5.
 
 **Today.** Two tiers — `operator_rule_sets` (library) +
 `session_rule_sets` (per-session copies, 5 seeded RuleSets per
@@ -214,23 +237,32 @@ The new-model card already authors rules inline through
 `session_rule_sets.rules_json`, so the engine path is unchanged
 — what retires is the library tier + the separate editor page.
 
-### Gap 8 — "+Group instrument" button becomes redundant (T)
+### Gap 8 — "+Group instrument" button becomes redundant (T) — partially shipped 2026-05-25 (PR #1443)
 
-**Legacy.** The Instruments index has a dedicated "+Group
-instrument" button that creates an instrument with
+> **UI half shipped.** PR #1443 retired the `+Group instrument`
+> button from the per-instrument action row (also retired
+> `Add instrument` in the same PR, and renamed `+New model` →
+> `+Instrument`). The `/instruments/add-group` POST route still
+> exists server-side; that and the legacy template branches
+> retire alongside Gap 9 in Wave 6.
+
+**Legacy.** The Instruments index had a dedicated `+Group
+instrument` button that created an instrument with
 `group_kind=GROUP_KIND_SENTINEL` so the per-instrument card
-renders the group-scoped variant.
+rendered the group-scoped variant.
 
 **New-model.** Band 1 Link 3's Individual ↔ Grouped toggle
-already covers this. The "+Group instrument" button retires once
-new-model is the default.
+covers this. The button retired in Wave 4c; route retirement is
+Wave 6.
 
 ### Gap 9 — Drop the `is_new_model` flag (T, last step)
 
 Once new-model is the only flavour, the column is dead. Final
-Alembic revision drops `is_new_model` and the `+New model`
-button. Template branches on `is_new_model` collapse to a single
-shape.
+Alembic revision drops `is_new_model` and collapses every
+template branch on it to a single shape. (The `+New model`
+button retired ahead of Gap 9 in Wave 4c — PR #1443 renamed it
+to `+Instrument` — so this gap's remaining UI work is just
+collapsing the branches, not retiring a button.)
 
 ### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug) — shipped 2026-05-24 (PR #1394)
 
