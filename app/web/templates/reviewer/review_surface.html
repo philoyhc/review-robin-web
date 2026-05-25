@@ -170,26 +170,12 @@
            sits alone in its own half-width slot. Help text cards
            start in their own 2-col grid below — they don't share a
            row with the heading. #}
-        {% if group.heading.title or group.completion %}
+        {% if group.heading.title %}
           <div class="rs-intro-grid">
             <div class="card rs-instrument-card">
-              {% if group.heading.title %}
-                <h2>{{ group.heading.title }}</h2>
-                {% if group.heading.subtitle %}
-                  <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
-                {% endif %}
-              {% endif %}
-              {# Per-instrument progress pills — completed vs total
-                 response cells ("items"), required-only and overall. #}
-              {% if group.completion %}
-                <p class="rs-instrument-progress">
-                  <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
-                    Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
-                  </span>
-                  <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
-                    All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}
-                  </span>
-                </p>
+              <h2>{{ group.heading.title }}</h2>
+              {% if group.heading.subtitle %}
+                <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
               {% endif %}
             </div>
           </div>
@@ -204,6 +190,21 @@
         {% if group.constraints %}
           <p class="rs-constraints muted">
             {% for c in group.constraints %}<strong>{{ c.label }}</strong> ({{ c.summary }}){% if not loop.last %}, {% endif %}{% endfor %}
+          </p>
+        {% endif %}
+        {# Per-instrument progress pills — completed vs total
+           response cells ("items"), required-only and overall.
+           Sits flush-left just above the review table so the
+           reviewer's eye lands on completion status before the
+           table itself. #}
+        {% if group.completion %}
+          <p class="rs-instrument-progress" style="margin: 0 0 8px 0; text-align: left;">
+            <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
+              Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
+            </span>
+            <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
+              All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}
+            </span>
           </p>
         {% endif %}
         <div class="table-scroll">

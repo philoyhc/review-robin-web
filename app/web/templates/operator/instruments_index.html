@@ -1345,8 +1345,13 @@
                             hidden>✓</button>
                   {% endif %}
                 </h2>
+                {# ``padding-right: 28px`` reserves a gutter on the
+                   right of the description block so the ✎ / ✓
+                   button can sit to the right of the textarea
+                   instead of overlapping it — same pattern the
+                   help-text card uses (see ``buildResponseFieldHelpCards``). #}
                 <div data-intro-description-block
-                     style="position: relative;">
+                     style="position: relative; padding-right: 28px;">
                   <p class="rs-instrument-subtitle muted"
                      data-intro-description-view
                      style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
@@ -1370,31 +1375,35 @@
                             onclick="newModelIntroDescriptionEdit(this)"
                             title="Edit description"
                             aria-label="Edit description"
-                            style="position: absolute; bottom: 0; right: 0;">✎</button>
+                            style="position: absolute; bottom: 4px; right: 4px;">✎</button>
                     <button type="button" class="btn-icon"
                             data-intro-description-save
                             onclick="newModelIntroDescriptionSave(this)"
                             title="Save description"
                             aria-label="Save description"
                             hidden
-                            style="position: absolute; bottom: 0; right: 0;">✓</button>
+                            style="position: absolute; bottom: 4px; right: 4px;">✓</button>
                   {% endif %}
                 </div>
-                {# Progress pills are always present in DOM so the
-                   JS toggle handlers (R / chip / Band 3 row add or
-                   delete) can update the counts live without a
-                   page reload. ``hidden`` collapses the row when
-                   the instrument has no response fields at all. #}
-                <p class="rs-instrument-progress"
-                   data-new-model-intro-progress
-                   {% if _all_count == 0 %}hidden{% endif %}>
-                  <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
-                        data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
-                  <span class="pill pill-count"
-                        data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
-                </p>
               </div>
             </div>
+            {# Progress pills are always present in DOM so the JS
+               toggle handlers (R / chip / Band 3 row add or
+               delete) can update the counts live without a page
+               reload. ``hidden`` collapses the row when the
+               instrument has no response fields at all. Sits
+               flush-left just above the Band 2 preview table —
+               mirrors the reviewer-surface layout so the
+               operator sees the same eye path the reviewer will. #}
+            <p class="rs-instrument-progress"
+               data-new-model-intro-progress
+               style="margin: 12px 0 8px 0; text-align: left;"
+               {% if _all_count == 0 %}hidden{% endif %}>
+              <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
+                    data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
+              <span class="pill pill-count"
+                    data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
+            </p>
             {# Response field details now live as editable rows
                inside Band 3's "Response fields" section — the
                operator views + edits each field there rather than
