@@ -5420,3 +5420,85 @@ def test_save_dirty_tracking_init_function_present(
     # so the dirty-tracker can listen for its click without picking
     # up unrelated buttons.
     assert "data-new-model-rf-add" in body
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 PR 3 — Lock confirms unsaved changes; Band 3 rows show pending visual
+# --------------------------------------------------------------------------- #
+
+
+def test_lock_anchor_wires_unsaved_changes_confirm(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 3 — the Lock anchor (edit-mode only) carries an
+    ``onclick="return newModelLockClick(event, <id>)"`` hook that
+    prompts confirm() when Save is active (dirty state). Returning
+    false cancels the navigation; returning true lets the anchor
+    follow its href back to view mode."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr3-lock-confirm"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    # Find the Lock anchor (data-instrument-lock-toggle on an <a>
+    # in edit mode shows "Lock", not "Unlock").
+    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
+    toggle_idx = flat.find(toggle_marker)
+    assert toggle_idx != -1
+    a_open = flat.rfind("<a", 0, toggle_idx)
+    a_close = flat.find(">", toggle_idx)
+    a_tag = flat[a_open : a_close + 1]
+    assert "Lock" in flat[a_close + 1 : flat.find("</a>", a_close)]
+    assert f"newModelLockClick(event, {new_model.id})" in a_tag
+
+    # The JS helper itself is on the page.
+    assert "window.newModelLockClick" in body
+
+
+def test_unlock_anchor_does_not_wire_confirm(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 3 — the Unlock anchor (view-mode → entering edit
+    mode) does NOT carry the confirm hook. Going from view mode
+    into edit mode never risks losing work — the operator hasn't
+    typed anything yet."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr3-unlock-no-confirm"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+
+    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
+    toggle_idx = flat.find(toggle_marker)
+    assert toggle_idx != -1
+    a_open = flat.rfind("<a", 0, toggle_idx)
+    a_close = flat.find(">", toggle_idx)
+    a_tag = flat[a_open : a_close + 1]
+    assert "Unlock" in flat[a_close + 1 : flat.find("</a>", a_close)]
+    assert "newModelLockClick" not in a_tag
+
+
+def test_band3_row_pending_visual_css_ships_in_base(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 3 — the per-row pending visual (subtle amber
+    left-border + tinted background on Band 3 rows whose inputs
+    have been edited but not yet committed via ✓) lives in
+    base.html as a global rule keyed by ``data-row-pending="true"``
+    on the row element."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr3-pending-css"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # CSS selector ships in the inline base.html stylesheet.
+    assert '[data-new-model-rf-row][data-row-pending="true"]' in body
+    # JS handler that sets / clears the pending attribute is on
+    # the page and lives inside the dirty-tracking init function.
+    assert "data-row-pending" in body

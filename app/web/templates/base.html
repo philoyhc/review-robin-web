@@ -275,6 +275,17 @@
         box-shadow: -3px 0 0 0 var(--text-secondary, #475569);
       }
       /*
+       * Wave 4 PR 3 — pending visual for Band 3 response-field
+       * rows whose inputs the operator has edited but not yet
+       * committed via the ✓ button. A subtle amber left border
+       * flags the row without dominating the row's existing chrome;
+       * clears when ✓ is clicked.
+       */
+      [data-new-model-rf-row][data-row-pending="true"] {
+        box-shadow: inset 3px 0 0 0 #f59e0b;
+        background: rgba(254, 243, 199, 0.5);
+      }
+      /*
        * Six-dot grip glyph (⠿) rendered as the first child of every
        * reorderable Band 2 pill. Muted by default so it doesn't
        * dominate the label; darkens to match the pill text on hover

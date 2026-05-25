@@ -264,9 +264,15 @@
                   data-instrument-lock-toggle="{{ instrument.id }}"
                   title="Save or cancel the Response Type Definitions edit before unlocking an instrument.">{% if is_editing %}Lock{% else %}Unlock{% endif %}</button>
         {% elif is_editing %}
+          {# Wave 4 PR 3 — Lock prompts an "unsaved changes" confirm
+             when the Save button is active (dirty). The handler
+             returns false to cancel the navigation if the operator
+             declines, matching the user's expectation that Lock
+             should not silently discard work. #}
           <a class="btn secondary{% if is_ready %} disabled{% endif %}"
              data-instrument-lock-toggle="{{ instrument.id }}"
              href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+             onclick="return newModelLockClick(event, {{ instrument.id }})"
              {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
         {% else %}
           <a class="btn secondary{% if is_ready %} disabled{% endif %}"
@@ -2945,6 +2951,47 @@
                   markDirty();
                 }
               });
+              // Wave 4 PR 3 — per-row pending visual. When the
+              // operator types into any input inside a Band 3 row,
+              // flag the row with ``data-row-pending="true"``. The ✓
+              // click clears it (assumes-optimistic — the
+              // saveBand2State fetch the click triggers is
+              // fire-and-forget). The X click removes the row, so
+              // the flag dies with it.
+              instrumentCard.addEventListener('input', function (ev) {
+                var row = ev.target && ev.target.closest
+                  ? ev.target.closest('[data-new-model-rf-row]')
+                  : null;
+                if (row) { row.setAttribute('data-row-pending', 'true'); }
+              });
+              instrumentCard.addEventListener('click', function (ev) {
+                var t = ev.target;
+                if (!t || !t.closest) { return; }
+                if (t.closest('[data-new-model-rf-save]')) {
+                  var row = t.closest('[data-new-model-rf-row]');
+                  if (row) { row.removeAttribute('data-row-pending'); }
+                }
+              });
+            };
+            // Wave 4 PR 3 — Lock click handler. If Save is active
+            // (something is dirty), confirm before navigating away.
+            // Returns false to cancel the navigation. Bound as
+            // ``onclick="return newModelLockClick(event, <id>)"`` on
+            // the Lock anchor (edit-mode only — Unlock doesn't risk
+            // losing work).
+            window.newModelLockClick = window.newModelLockClick || function (ev, instrumentId) {
+              var card = document.getElementById('instrument-' + instrumentId);
+              if (!card) { return true; }
+              var saveBtn = card.querySelector('[data-new-model-save]');
+              if (!saveBtn || saveBtn.disabled) { return true; }
+              var ok = window.confirm(
+                'You have unsaved changes. Lock anyway? Your changes will be lost.'
+              );
+              if (!ok) {
+                if (ev && ev.preventDefault) { ev.preventDefault(); }
+                return false;
+              }
+              return true;
             };
             // Belt-and-suspenders flush: intercept every dfsave
             // form's submit (the bottom Save button) and fire
