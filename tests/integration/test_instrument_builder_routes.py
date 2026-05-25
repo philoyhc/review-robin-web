@@ -3659,8 +3659,8 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     # just the chips currently toggled on in the preview. All 3
     # fields contribute to "All items"; the 2 marked
     # ``required=True`` (Rating + Bonus) contribute to "Required".
-    assert "Required items completed: 0/2" in flat
-    assert "All items completed: 0/3" in flat
+    assert "Required items completed: 0/<span data-new-model-intro-required-count>2</span>" in flat
+    assert "All items completed: 0/<span data-new-model-intro-all-count>3</span>" in flat
     # Required pill is warning (2 required, 0 done). All pill is
     # neutral count.
     assert 'class="pill pill-warning"' in intro_block
@@ -3707,9 +3707,15 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
         '<span data-intro-short-label-view style="font-weight: inherit;">Reflection</span>'
         in intro_block
     )
-    # Progress pills do not.
-    assert "Required items completed" not in intro_block
-    assert "All items completed" not in intro_block
+    # Progress row is rendered (always present so JS can update
+    # counts live without a page reload) but ``hidden`` collapses
+    # it when the instrument has zero response fields.
+    assert "data-new-model-intro-progress" in intro_block
+    progress_idx = intro_block.find("data-new-model-intro-progress")
+    progress_tag = intro_block[
+        intro_block.rfind("<p", 0, progress_idx) : intro_block.find(">", progress_idx) + 1
+    ]
+    assert "hidden" in progress_tag
 
 
 def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
@@ -3742,7 +3748,7 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    assert "Required items completed: 0/0" in flat
+    assert "Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
     intro_idx = flat.find("data-new-model-band2-intro-card")
     intro_block = flat[intro_idx : intro_idx + 2500]
     assert 'class="pill pill-success"' in intro_block
