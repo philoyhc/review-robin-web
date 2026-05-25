@@ -68,33 +68,38 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Page status info — single full-width info card. All status
-     reporting (deadline + accepting + visibility counts) sits on
-     one row; the bulk visibility toggle sits on its own row
-     beneath, right-aligned. #}
-  <div class="card">
+  {# Page status info — split into a half-width info card on the
+     left (deadline + accepting counts on row 1; Visibility-when-
+     closed + showing/not-showing counts on row 2) and a
+     half-width companion card on the right that hosts the bulk
+     show-all toggle bottom-right. ``page-grid`` (1fr 1fr,
+     stretched alignment) keeps both cards the same height. #}
+  <div class="page-grid">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
     {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
     {% set not_showing_count = instruments | length - showing_count %}
-    <p style="margin: 0;">
-      Session deadline (auto-close):
-      {% if session.deadline %}
-        <span class="pill pill-count">{{ session.deadline | format_datetime }}</span>
-      {% else %}
-        <span class="pill pill-empty">not set</span>
-      {% endif %}
-      &middot;
-      <span class="pill pill-count">{{ accepting_count }} accepting</span>
-      &middot;
-      <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
-      &middot;
-      Visibility when closed:
-      <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
-      &middot;
-      <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
-    </p>
-    <div style="margin: 8px 0 0 0; display: flex; justify-content: flex-end;">
+    <div class="card">
+      <p style="margin: 0;">
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-count">{{ session.deadline | format_datetime }}</span>
+        {% else %}
+          <span class="pill pill-empty">not set</span>
+        {% endif %}
+        &middot;
+        <span class="pill pill-count">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
+      </p>
+      <p style="margin: 8px 0 0 0;">
+        Visibility when closed:
+        <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
+      </p>
+    </div>
+    <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end;">
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
