@@ -330,8 +330,8 @@
             <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
             {% if setup_checklist.reviewees_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
             <a href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-            {% if setup_checklist.instruments_pinned_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
-            <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all rules pinned)</a>
+            {% if setup_checklist.instruments_configured_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
+            <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all set up)</a>
           </span>
         </p>
       {% elif is_draft and validation_summary %}
