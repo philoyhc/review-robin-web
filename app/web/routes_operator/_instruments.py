@@ -687,9 +687,14 @@ async def instrument_bulk_save_fields(
                     detail=str(exc),
                 ) from exc
         db.commit()
+        # Wave 4 PR 2 — preserve ``?editing=<id>`` so Save doesn't
+        # re-lock the new-model card. Lock/Unlock owns the gating;
+        # Save owns persistence. ``?saved=<id>`` triggers the flash
+        # confirmation banner on the next render.
         return RedirectResponse(
             url=(
                 f"/operator/sessions/{review_session.id}/instruments"
+                f"?editing={instrument.id}&saved={instrument.id}"
                 f"#instrument-{instrument.id}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
@@ -1062,12 +1067,15 @@ async def instrument_bulk_save_fields(
                 detail=str(exc),
             ) from exc
     # Redirect with ``?saved={iid}`` so the page renders a flash
-    # confirmation. The ``?editing`` param is intentionally cleared —
-    # per spec, a successful Save locks the tables.
+    # confirmation. Wave 4 PR 2 — the ``?editing`` param is now
+    # PRESERVED on a successful Save so the operator stays in edit
+    # mode and can keep working without clicking Unlock again.
+    # Lock/Unlock owns the gating; Save owns persistence.
     return RedirectResponse(
         url=(
             f"/operator/sessions/{review_session.id}/instruments"
-            f"?saved={instrument.id}#instrument-{instrument.id}"
+            f"?editing={instrument.id}&saved={instrument.id}"
+            f"#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

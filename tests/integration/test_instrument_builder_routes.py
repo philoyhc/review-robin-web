@@ -5339,3 +5339,84 @@ def test_lock_unlock_replaces_cancel_button_in_edit_mode(
     assert save_idx != -1
     # Save comes before Lock in the row.
     assert save_idx < toggle_idx
+
+
+# --------------------------------------------------------------------------- #
+# Wave 4 PR 2 — Save starts disabled; preserves editing param on success
+# --------------------------------------------------------------------------- #
+
+
+def test_save_button_initial_state_is_disabled_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 2 — Save starts ``disabled`` when the operator
+    opens an instrument for editing. The JS dirty-tracking helper
+    enables it on the first input change / Band 3 row action; the
+    server-side redirect after a successful Save re-renders with
+    Save fresh-disabled."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr2-save-disabled"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    # The Save button carries the data-new-model-save marker on
+    # its tag. Find the literal Save button via its trailing
+    # ``>Save</button>`` text — the JS code that mentions the
+    # marker as a selector lives elsewhere and uses different
+    # quoting / context.
+    save_btn_end = flat.find(">Save</button>")
+    assert save_btn_end != -1
+    btn_open = flat.rfind("<button", 0, save_btn_end)
+    btn_tag = flat[btn_open : save_btn_end + 1]
+    assert "data-new-model-save" in btn_tag
+    assert "disabled" in btn_tag
+    assert f'form="dfsave-{new_model.id}"' in btn_tag
+
+
+def test_fields_save_redirect_preserves_editing_param(
+    client: TestClient, db: Session
+) -> None:
+    """Wave 4 PR 2 — A successful Save redirects with both
+    ``editing=<id>`` AND ``saved=<id>``, so the operator stays in
+    edit mode (Lock owns the gate; Save owns persistence)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr2-save-redirect"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link3_mode": "individual",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert f"editing={new_model.id}" in location
+    assert f"saved={new_model.id}" in location
+    assert f"#instrument-{new_model.id}" in location
+
+
+def test_save_dirty_tracking_init_function_present(
+    client: TestClient, db: Session
+) -> None:
+    """The page ships the ``newModelInitSaveDirtyTracking`` helper
+    and wires it into the new-model card's DOMContentLoaded init
+    pass alongside ``newModelRefreshBand2``."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-pr2-dirty-init"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    assert "newModelInitSaveDirtyTracking" in body
+    # The + add-row button carries the data-new-model-rf-add marker
+    # so the dirty-tracker can listen for its click without picking
+    # up unrelated buttons.
+    assert "data-new-model-rf-add" in body
