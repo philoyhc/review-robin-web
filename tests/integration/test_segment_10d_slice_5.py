@@ -382,14 +382,12 @@ def test_add_group_instrument_sets_group_kind_and_renders_stub(
 
     # The group-scoped card renders with a "Group-scoped" chip in
     # its heading and the shared action row (Replicate, etc.).
+    # Wave 4 retired the "Add group instrument" button from the
+    # row — only the POST route remains. Replicate stays.
     page = client.get(f"/operator/sessions/{session.id}/instruments")
     assert page.status_code == 200
     body = page.text
     assert "Group-scoped" in body
-    assert (
-        f'action="/operator/sessions/{session.id}/instruments/add-group"'
-        in body
-    )
     assert ">Replicate</button>" in body
 
 
@@ -805,15 +803,22 @@ def test_delete_instrument_returns_409_when_session_ready(
 # --------------------------------------------------------------------------- #
 
 
-def test_action_row_renders_add_and_delete_enabled_in_normal_state(
+def test_action_row_renders_delete_enabled_in_normal_state(
     client: TestClient, db: Session
 ) -> None:
+    """Wave 4 — the Delete form action is wired on the per-instrument
+    action row. (``Add instrument`` / ``Add group instrument``
+    buttons retired in Wave 4; the only "create" affordance left
+    on the row is ``+Instrument``, which posts to
+    ``/instruments/add-new-model``. The ``/instruments/add`` POST
+    route still exists but is no longer reachable from the UI.)"""
     session = _create_session(client, db, code="render-ok")
     [default] = _instruments(db, session.id)
-    # Add a second so Delete is enabled (the only-instrument gate
-    # otherwise disables it).
+    # Seed a second instrument so Delete is enabled (the only-
+    # instrument gate otherwise disables it). Use the +Instrument
+    # endpoint since the legacy ``add`` button is gone from the row.
     client.post(
-        f"/operator/sessions/{session.id}/instruments/add",
+        f"/operator/sessions/{session.id}/instruments/add-new-model",
         data={"after": str(default.id)},
         follow_redirects=False,
     )
@@ -826,12 +831,14 @@ def test_action_row_renders_add_and_delete_enabled_in_normal_state(
     assert "Multi-instrument support is still in progress" not in body
     assert "Wiring lands in Slice 5" not in body
 
-    # Form actions are wired.
-    assert (
-        f'action="/operator/sessions/{session.id}/instruments/add"' in body
-    )
+    # Delete form action + the +Instrument (add-new-model) form
+    # action are both wired.
     assert (
         f"/operator/sessions/{session.id}/instruments/{default.id}/delete"
+        in body
+    )
+    assert (
+        f'action="/operator/sessions/{session.id}/instruments/add-new-model"'
         in body
     )
 

@@ -190,63 +190,15 @@
   {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/add"
-              style="display: inline; margin: 0;">
-          <input type="hidden" name="after" value="{{ instrument.id }}">
-          <button class="btn secondary" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add instrument</button>
-        </form>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/add-group"
-              style="display: inline; margin: 0;">
-          <input type="hidden" name="after" value="{{ instrument.id }}">
-          <button class="btn secondary" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add group instrument</button>
-        </form>
-        {# Replicate — clone this instrument's content into a new
-           card slotted immediately after it (Segment 13C PR 3). #}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/replicate"
-              style="display: inline; margin: 0;">
-          <button class="btn secondary" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Replicate</button>
-        </form>
-        {# Delete — last in the row. Posts the standalone delete
-           form (whose confirm checkbox sits below the row); the
-           checkbox-gates-the-button standard keeps it disabled
-           until the operator ticks confirm. #}
-        {% if delete_disabled %}
-          <button class="btn destructive" type="button" disabled
-                  aria-disabled="true" title="{{ delete_title }}">Delete</button>
-        {% else %}
-          <button class="btn destructive" type="submit"
-                  form="instrument-delete-{{ instrument.id }}"
-                  data-delete-btn="{{ instrument.id }}"
-                  disabled aria-disabled="true">Delete</button>
-        {% endif %}
-        {# +New model — concept-test affordance for the Instrument
-           Builder vertical-bands card. Spawns a real new-model
-           instrument immediately after this one (same pattern as
-           Add instrument / Add group instrument); the template
-           renders new-model rows with the bands placeholder layout.
-           See guide/instrument_builder.md. #}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/add-new-model"
-              style="display: inline; margin: 0;">
-          <input type="hidden" name="after" value="{{ instrument.id }}">
-          <button class="btn primary-outline" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+New model</button>
-        </form>
-        {# Save + Lock / Unlock — Wave 4 takeover. Save persists the
-           pending batch (Band 1 form fields + Band 3 row tick/X);
-           Lock toggles between view and edit modes by adding or
-           removing ``?editing=<id>`` from the URL. Save and Lock
-           are independent — Save does not lock the card, so the
-           operator can keep editing after a Save without
-           re-entering edit mode. Both disabled when the session
-           is past setup phase (``is_ready``) or when the
-           RTD-library editor holds the edit token. #}
+        {# Wave 4 — bottom action row order:
+           Save (edit only) | Cancel (edit only) | Replicate | Delete
+           | +Instrument | Lock/Unlock.
+
+           "Add instrument" / "Add group instrument" buttons retired —
+           Wave 5 makes every new instrument a new-model one, so
+           "+Instrument" (renamed from +New model) is the sole add
+           affordance. The legacy /add and /add-group POST routes
+           still exist; only the buttons are gone. #}
         {% if is_editing %}
           {# Wave 4 PR 2 — Save starts disabled. The
              ``newModelInitSaveDirtyTracking`` JS helper enables it
@@ -258,7 +210,57 @@
                   class="btn secondary"
                   data-new-model-save
                   disabled>Save</button>
+          {# Cancel — discards pending unsaved edits by reloading
+             the edit-mode page so the form re-renders from the
+             persisted state. Mirrors Save's dirty-aware enabled
+             state: when nothing is dirty there's nothing to
+             discard, so the button is disabled. #}
+          <button type="button"
+                  class="btn secondary"
+                  data-new-model-cancel="{{ instrument.id }}"
+                  onclick="newModelCancelEdits(this)"
+                  disabled>Cancel</button>
         {% endif %}
+        {# Replicate — clone this instrument's content into a new
+           card slotted immediately after it (Segment 13C PR 3). #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/replicate"
+              style="display: inline; margin: 0;">
+          <button class="btn secondary" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Replicate</button>
+        </form>
+        {# Delete — the standalone delete form (whose confirm
+           checkbox sits below the row); the checkbox-gates-the-
+           button standard keeps it disabled until the operator
+           ticks confirm. #}
+        {% if delete_disabled %}
+          <button class="btn destructive" type="button" disabled
+                  aria-disabled="true" title="{{ delete_title }}">Delete</button>
+        {% else %}
+          <button class="btn destructive" type="submit"
+                  form="instrument-delete-{{ instrument.id }}"
+                  data-delete-btn="{{ instrument.id }}"
+                  disabled aria-disabled="true">Delete</button>
+        {% endif %}
+        {# +Instrument (renamed from +New model). Spawns a new-model
+           instrument immediately after this one. With legacy add
+           buttons retired this is the sole "create" affordance. #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/add-new-model"
+              style="display: inline; margin: 0;">
+          <input type="hidden" name="after" value="{{ instrument.id }}">
+          <button class="btn primary-outline" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+Instrument</button>
+        </form>
+        {# Save / Lock semantics — Wave 4 takeover. Save persists the
+           pending batch (Band 1 form fields + Band 3 row tick/X);
+           Lock toggles between view and edit modes by adding or
+           removing ``?editing=<id>`` from the URL. Save and Lock
+           are independent — Save does not lock the card, so the
+           operator can keep editing after a Save without
+           re-entering edit mode. Both disabled when the session
+           is past setup phase (``is_ready``) or when the
+           RTD-library editor holds the edit token. #}
         {% if is_some_rtd_unlocked %}
           <button class="btn secondary" type="button" disabled aria-disabled="true"
                   data-instrument-lock-toggle="{{ instrument.id }}"
@@ -2927,8 +2929,18 @@
                 '[data-new-model-save]'
               );
               if (!saveBtn) { return; }
+              // Wave 4 — Cancel mirrors Save's enabled state. When
+              // there's nothing to save, there's nothing to cancel
+              // either, so the button stays disabled. May be absent
+              // (older render of the macro / non-edit-mode rendering).
+              var cancelBtn = instrumentCard.querySelector(
+                '[data-new-model-cancel]'
+              );
               function markDirty() {
                 if (saveBtn.disabled) { saveBtn.disabled = false; }
+                if (cancelBtn && cancelBtn.disabled) {
+                  cancelBtn.disabled = false;
+                }
               }
               // Band 1 form inputs ride the dfsave form via
               // ``form="dfsave-<id>"``. Their input / change events
@@ -2972,6 +2984,18 @@
                   if (row) { row.removeAttribute('data-row-pending'); }
                 }
               });
+            };
+            // Wave 4 — Cancel click handler. Discards pending unsaved
+            // edits by reloading the edit-mode page so the form re-
+            // renders from the persisted state. Confirms first since
+            // a click is destructive. Hand-rolled instead of a
+            // simple ``<a href="...">`` so the confirm can guard the
+            // navigation.
+            window.newModelCancelEdits = window.newModelCancelEdits || function (btn) {
+              if (!btn || btn.disabled) { return; }
+              var ok = window.confirm('Discard unsaved changes?');
+              if (!ok) { return; }
+              window.location.reload();
             };
             // Wave 4 PR 3 — Lock click handler. If Save is active
             // (something is dirty), confirm before navigating away.
