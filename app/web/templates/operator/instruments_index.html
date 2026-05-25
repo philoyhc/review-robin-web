@@ -2036,23 +2036,37 @@
                 if (widthAttr > 0) { rf.width_px = widthAttr; }
                 responseFields.push(rf);
               });
-              // ``keepalive: true`` lets the request complete even
-              // when the operator immediately clicks the bottom Save
-              // (or otherwise navigates) before the fetch lands.
-              // Without it, the browser aborts in-flight requests
-              // on navigation — the most likely reason a chip /
-              // R-button / help-toggle change "doesn't persist"
-              // when the operator quickly hits Save next. Payload
-              // is well under the 64 KB keepalive limit.
-              fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/band2-state', {
+              // Use ``navigator.sendBeacon`` first — designed
+              // exactly for the "POST that must reach the server
+              // even if the page navigates immediately afterward"
+              // case. The keepalive fetch we use as the fallback
+              // works in modern browsers but is still subject to
+              // some abort paths on navigation; sendBeacon is the
+              // bulletproof primitive. The server's /band2-state
+              // route doesn't return data the JS uses, so the
+              // fire-and-forget shape is fine. ``sendBeacon``
+              // sends credentials (cookies) automatically per
+              // spec, matching fetch's ``credentials: same-origin``.
+              var url = '/operator/sessions/' + sessionId
+                + '/instruments/' + instrumentId + '/band2-state';
+              var body = JSON.stringify({
+                selected_display_keys: selectedDisplayKeys,
+                response_fields: responseFields,
+              });
+              if (navigator && navigator.sendBeacon) {
+                try {
+                  var blob = new Blob(
+                    [body], {type: 'application/json'}
+                  );
+                  if (navigator.sendBeacon(url, blob)) { return; }
+                } catch (_) { /* fall through to fetch */ }
+              }
+              fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'same-origin',
                 keepalive: true,
-                body: JSON.stringify({
-                  selected_display_keys: selectedDisplayKeys,
-                  response_fields: responseFields,
-                }),
+                body: body,
               }).catch(function (err) {
                 if (window.console) { console.warn('Band 2 state save failed', err); }
               });
@@ -2709,10 +2723,36 @@
                 window.newModelRefreshBand2(card);
               });
             }
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', _newModelInitialRefresh);
-            } else {
+            // Belt-and-suspenders flush: intercept every dfsave
+            // form's submit (the bottom Save button) and fire
+            // saveBand2State one more time before navigation, so
+            // any DOM-only state that didn't fire a save (or
+            // whose save was still in flight) gets dispatched.
+            // saveBand2State uses navigator.sendBeacon which is
+            // designed to survive page navigation, so the
+            // sequence is safe to do synchronously here.
+            function _newModelWireSaveFlushers() {
+              document.querySelectorAll('form[id^="dfsave-"]').forEach(function (form) {
+                if (form._newModelFlushWired) { return; }
+                form._newModelFlushWired = true;
+                form.addEventListener('submit', function () {
+                  var instrumentCard = form.closest('[id^="instrument-"]');
+                  if (!instrumentCard) { return; }
+                  var band2 = instrumentCard.querySelector(
+                    '[data-new-model-band2]'
+                  );
+                  if (band2) { saveBand2State(band2); }
+                });
+              });
+            }
+            function _newModelOnReady() {
               _newModelInitialRefresh();
+              _newModelWireSaveFlushers();
+            }
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', _newModelOnReady);
+            } else {
+              _newModelOnReady();
             }
           })();
         </script>
