@@ -357,7 +357,7 @@ below). The remaining Gap 2 work (bridging JSON entries to real
 `InstrumentResponseField` rows) is untouched and lands as the
 three-PR Wave 3 ladder.
 
-### Wave 3 — Response fields become real (M-L)
+### Wave 3 — Response fields become real (M-L) — PR i shipped 2026-05-24; PRs ii + iii pending
 
 **Scope.** Gap 2 (bridge `band2_state.response_fields` JSON
 to real `InstrumentResponseField` rows) + Gap 5 enforcement
@@ -371,6 +371,12 @@ deferred pending an operator-side design call.
 At the end of Wave 3 the new-model card reaches functional
 parity with the legacy individual + group cards on the
 reviewer-surface read path. Operators can switch pilots over.
+
+**Shipped so far.**
+
+| PR | Slice | Lift | Summary |
+|---|---|---|---|
+| #1418 | i — additive schema + dual-write | M | `InstrumentResponseField.visible` column added (Boolean, default true). `set_band2_state` dual-writes JSON entries through to real `InstrumentResponseField` rows via id-match (`_sync_response_fields_to_db` in `app/services/instruments/_instrument_crud.py:1194`): entries with `id` update; entries without get a new row with `id` back-filled; absent ids delete (raising `ResponsesPresentError` when responses are attached so the route surfaces the error rather than cascading silently). Reviewer surface unchanged — still seeds the `DEFAULT_RESPONSE_FIELDS`-only rows; the read flip is PR ii. |
 
 #### Locked design decisions
 
@@ -472,7 +478,7 @@ Three PRs, additive-first (same shape as Wave 2). Each
 slice keeps the system functional end-to-end at HEAD —
 reviewer surface behaviour only changes at PR ii.
 
-##### PR i — Additive schema + dual-write (M)
+##### PR i — Additive schema + dual-write (M) — shipped 2026-05-24 (PR #1418)
 
 - **Schema.** Add `InstrumentResponseField.visible`
   (Boolean, default true) via Alembic migration with
