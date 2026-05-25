@@ -848,18 +848,35 @@ def set_column_widths(
     No-op saves (the merged widths are byte-equal to the stored
     value) skip the audit + lifecycle side effects.
     """
-    valid_field_ids = {f.id for f in instrument.display_fields}
+    valid_display_field_ids = {f.id for f in instrument.display_fields}
+    valid_response_field_ids = {f.id for f in instrument.response_fields}
     sanitised: dict[str, int] = {}
     for raw_key, raw_value in (widths or {}).items():
         key = str(raw_key).strip()
-        if key != "identity" and not key.startswith("df_"):
+        if (
+            key != "identity"
+            and not key.startswith("df_")
+            and not key.startswith("rf_")
+        ):
             continue
         if key.startswith("df_"):
             try:
                 field_id = int(key[len("df_"):])
             except (TypeError, ValueError):
                 continue
-            if field_id not in valid_field_ids:
+            if field_id not in valid_display_field_ids:
+                continue
+        elif key.startswith("rf_"):
+            # Wave 3 PR iii — response-field column widths migrated from
+            # band2_state.response_fields[i].width_px into column_widths.
+            # Validate against the instrument's actual response field
+            # ids the same way df_ keys validate against display field
+            # ids.
+            try:
+                field_id = int(key[len("rf_"):])
+            except (TypeError, ValueError):
+                continue
+            if field_id not in valid_response_field_ids:
                 continue
         try:
             value = int(raw_value)
@@ -987,10 +1004,19 @@ def set_band2_state(
         existing_keys = existing.get("selected_display_keys")
         if isinstance(existing_keys, list) and existing_keys:
             sanitised["selected_display_keys"] = list(existing_keys)
+    # Wave 3 PR iii — sanitised response_fields is no longer
+    # persisted into band2_state JSON. It still gets built as a
+    # local list, sent through ``_sync_response_fields_to_db`` to
+    # land on real ``InstrumentResponseField`` rows, then dropped.
+    # Per-response-field width_px values (if any) get peeled off
+    # into the parallel ``column_widths`` update below.
+    incoming_rfs: list[dict[str, Any]] | None = None
+    rf_widths_by_id: dict[int, int] = {}
+    rf_widths_by_name: dict[str, int] = {}
     if isinstance(state, dict) and "response_fields" in state:
         raw_rfs = state.get("response_fields")
         if isinstance(raw_rfs, list):
-            sanitised_rfs: list[dict[str, Any]] = []
+            incoming_rfs = []
             for raw in raw_rfs:
                 if not isinstance(raw, dict):
                     continue
@@ -1001,13 +1027,6 @@ def set_band2_state(
                 if data_type not in _BAND2_ALLOWED_DATA_TYPES:
                     data_type = "string"
                 rf: dict[str, Any] = {"name": name, "data_type": data_type}
-                # Wave 3 PR i — optional ``id`` round-trips the
-                # matching InstrumentResponseField.id back through
-                # the JSON so subsequent saves can id-match the
-                # existing row rather than creating a duplicate.
-                # Operator-forged ids that don't belong to this
-                # instrument fall through to "create new row"
-                # in :func:`_sync_response_fields_to_db`.
                 raw_id = raw.get("id")
                 if isinstance(raw_id, int) and raw_id > 0:
                     rf["id"] = raw_id
@@ -1017,36 +1036,19 @@ def set_band2_state(
                     value = raw.get(bound_key)
                     rf[bound_key] = str(value).strip()[:255] if value is not None else ""
                 rf["selected"] = bool(raw.get("selected"))
-                # Gap 5 (18J Wave 1) — required flag persists into
-                # band2_state JSON. Reviewer-surface enforcement
-                # arrives with Wave 3 when Gap 2 bridges these JSON
-                # rows to real InstrumentResponseField rows; the
-                # bridge code will preserve this flag across the
-                # migration.
                 rf["required"] = bool(raw.get("required"))
-                # Help-text visibility toggle (Band 3 "≡" button).
-                # When true, the operator surface renders a
-                # half-width help-text card above the Band 2
-                # preview table for this field. Reviewer-surface
-                # rendering reads ``InstrumentResponseField.help_text_visible``
-                # post-Wave-3; the JSON shape carries the flag
-                # in the interim.
                 rf["help_text_visible"] = bool(raw.get("help_text_visible"))
-                # Help-text body. Plain text, HTML-escaped on render
-                # by both the operator-surface help card and (once
-                # Gap 4 lands) the reviewer surface. UI cap is 1000
-                # chars per the Wave 3 doc; we clamp here as a
-                # defence-in-depth even though the textarea's
-                # maxlength already enforces it on the client.
                 help_text_raw = raw.get("help_text")
                 rf["help_text"] = (
                     str(help_text_raw)[:1000] if help_text_raw is not None else ""
                 )
-                # Per-response-field column width (px). Carried on
-                # the entry itself so the width travels with the
-                # field across drag-reorder. Clamped to the same
-                # [40, 1200] range as the display-field column
-                # widths on ``instruments.column_widths``.
+                # Wave 3 PR iii — per-response-field column width (px)
+                # moves out of band2_state JSON into the canonical
+                # ``column_widths`` dict on the instrument under
+                # ``rf_<id>`` keys, alongside ``df_<id>`` and
+                # ``identity``. Captured here keyed by id when we know
+                # one, by name otherwise; the dual-write below
+                # back-fills the id and we re-key by id afterwards.
                 raw_width = raw.get("width_px")
                 if raw_width not in (None, ""):
                     try:
@@ -1054,16 +1056,13 @@ def set_band2_state(
                     except (TypeError, ValueError):
                         width_int = 0
                     if width_int >= _COLUMN_WIDTH_MIN_PX:
-                        rf["width_px"] = min(
-                            width_int, _COLUMN_WIDTH_MAX_PX
-                        )
-                sanitised_rfs.append(rf)
-            if sanitised_rfs:
-                sanitised["response_fields"] = sanitised_rfs
-    else:
-        existing_rfs = existing.get("response_fields")
-        if isinstance(existing_rfs, list) and existing_rfs:
-            sanitised["response_fields"] = list(existing_rfs)
+                        clamped = min(width_int, _COLUMN_WIDTH_MAX_PX)
+                        rf_id = rf.get("id")
+                        if isinstance(rf_id, int):
+                            rf_widths_by_id[rf_id] = clamped
+                        else:
+                            rf_widths_by_name[name] = clamped
+                incoming_rfs.append(rf)
     if isinstance(state, dict) and "sample_reviewee_name" in state:
         candidate = str(state.get("sample_reviewee_name") or "").strip()[:255]
         if candidate:
@@ -1094,32 +1093,57 @@ def set_band2_state(
         existing_ids = existing.get("sample_group_member_ids")
         if isinstance(existing_ids, list) and existing_ids:
             sanitised["sample_group_member_ids"] = list(existing_ids)
-    # Wave 3 PR i — dual-write sanitised response_fields into real
-    # InstrumentResponseField rows. The helper mutates the entries
-    # in place to back-fill ``id`` for newly-created rows, so the
-    # band2_state JSON we write below stays in sync with the DB.
-    # Pre-existing rows whose ids appear in the previous JSON but
-    # not in the new payload get deleted; rows that were never in
-    # JSON (seeded defaults on a fresh new-model instrument) are
-    # left alone — matches the (b) contract where Band 3 surfaces
-    # those rows on first render and the JS payload picks them up
-    # on the operator's next save.
-    if "response_fields" in sanitised and isinstance(
-        sanitised.get("response_fields"), list
-    ):
-        previous_json_ids: set[int] = set()
-        for prev_rf in (existing.get("response_fields") or []):
-            if isinstance(prev_rf, dict):
-                prev_id = prev_rf.get("id")
-                if isinstance(prev_id, int):
-                    previous_json_ids.add(prev_id)
+    # Wave 3 PR iii — DB rows are now authoritative for response
+    # fields; JSON ``response_fields`` retired. The dual-write helper
+    # still runs but the previous-state reference switches from "ids
+    # in the old JSON" to "ids of all current InstrumentResponseField
+    # rows" so the delete contract becomes "any DB row not in the
+    # incoming payload by id gets deleted." The (b) contract in
+    # ``_new_model_band2_state`` (view layer) guarantees the first
+    # render populates the payload from DB rows, so the JS always
+    # round-trips the full id set on the next save — no row ever
+    # surprises the delete check.
+    if incoming_rfs is not None:
+        previous_ids: set[int] = {f.id for f in instrument.response_fields}
         _sync_response_fields_to_db(
             db,
             instrument=instrument,
-            sanitised_rfs=sanitised["response_fields"],
-            previous_json_ids=previous_json_ids,
+            sanitised_rfs=incoming_rfs,
+            previous_json_ids=previous_ids,
             actor=actor,
         )
+        # Now that ``_sync_response_fields_to_db`` has back-filled
+        # ids on newly-created rows, re-key any name-bound widths
+        # we set aside above and merge with the id-keyed widths.
+        if rf_widths_by_name:
+            name_to_id: dict[str, int] = {}
+            for rf in incoming_rfs:
+                rf_id = rf.get("id")
+                if isinstance(rf_id, int):
+                    name_to_id.setdefault(rf["name"], rf_id)
+            for name, width in rf_widths_by_name.items():
+                rf_id = name_to_id.get(name)
+                if rf_id is not None:
+                    rf_widths_by_id.setdefault(rf_id, width)
+        # Merge incoming response-column widths into ``column_widths``.
+        # Display-field widths + identity stay untouched. Refresh the
+        # response_fields relationship first: ``_sync_response_fields_to_db``
+        # ``db.add()``'d newly-created rows + flushed them, but the
+        # relationship-loaded list on the instrument is stale, and
+        # ``set_column_widths``'s validator (which builds the valid-
+        # id set from that list) would otherwise drop ``rf_<new_id>``
+        # keys as unknown.
+        if rf_widths_by_id:
+            db.refresh(instrument, attribute_names=["response_fields"])
+            existing_widths = dict(instrument.column_widths or {})
+            for rf_id, width in rf_widths_by_id.items():
+                existing_widths[f"rf_{rf_id}"] = width
+            set_column_widths(
+                db,
+                instrument=instrument,
+                widths=existing_widths,
+                actor=actor,
+            )
 
     new_value: dict[str, Any] | None = sanitised or None
     if (instrument.band2_state or None) == new_value:

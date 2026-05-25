@@ -611,6 +611,14 @@ def _surface_context(
                 for df in display_fields_by_instrument.get(instrument_id, [])
             ]
         )
+        # Wave 3 PR iii — response-column widths migrated from
+        # band2_state.response_fields[i].width_px into column_widths
+        # under "rf_<id>" keys, mirroring the "df_<id>" pattern.
+        response_field_width_by_id: dict[int, int] = {
+            f.id: widths_by_col_key[f"rf_{f.id}"]
+            for f in fields
+            if f"rf_{f.id}" in widths_by_col_key
+        }
         constraints = []
         for f in fields:
             summary = views.constraint_summary_for_field(f)
@@ -627,6 +635,7 @@ def _surface_context(
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
                 "identity_width_px": identity_width_px,
+                "response_field_width_by_id": response_field_width_by_id,
                 "has_custom_widths": bool(widths_by_col_key),
                 "constraints": constraints,
                 "show_status_col": show_incomplete_marks
