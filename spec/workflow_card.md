@@ -56,9 +56,14 @@ returns:
   from `lifecycle.is_*`.
 - `is_setup_empty` — `True` iff the session is in draft AND any of:
   reviewer count is 0, reviewee count is 0, or at least one
-  instrument has no assignment rule pinned (checked via
-  `instruments.has_unpinned`, which also returns `True` when the
-  session has zero instruments).
+  instrument is not configured (checked via
+  `instruments.has_unconfigured`, which returns `True` when the
+  session has zero instruments OR any instrument fails the
+  per-model `is_configured(instrument)` predicate). Legacy
+  instruments are configured iff `rule_set_id IS NOT NULL`;
+  new-model instruments are configured iff they have at least
+  one `visible=True` response field (Wave 4 PR 2 — replaces
+  the previous rule-set-centric `has_unpinned` predicate).
 - `is_pre_generate` — retained for external consumers; the card's
   state cascade no longer branches on it.
 - `invitations_generated` — `True` iff at least one `Invitation`

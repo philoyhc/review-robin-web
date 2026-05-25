@@ -389,14 +389,18 @@ class InstrumentHeading:
 ```
 
 The template renders the H2 heading row only when `heading.title`
-is truthy. The instrument card (`.rs-instrument-card`) that hosts
-it renders whenever there is a heading title **or** per-instrument
-progress pills to show — so a bare single-instrument session with
-no title still gets the card for its progress pills.
+is truthy. The instrument card (`.rs-instrument-card`) hosts the
+heading + description only — Wave 4 PR 1437 moved the progress
+pills out of the card.
 
-**Per-instrument progress pills.** Inside the instrument card, two
-`.pill` spans report response-cell completion for that instrument,
-where an *item* is one response cell (one field for one reviewee):
+**Per-instrument progress pills.** Two `.pill` spans sit in a
+single right-flushed flex row (`.rs-progress-row`,
+`justify-content: flex-end`) **just above the review table**,
+not inside the instrument card. They share the row with the
+per-field min/max/step "constraints" reminders
+(`.rs-constraints muted`) so the reviewer's eye lands on
+completion status alongside the formatting reminders. An *item*
+is one response cell (one field for one reviewee):
 
 - `Required items completed: {N}/{M}` — required field-cells filled
   vs total (`.pill-success` when `N == M`, else `.pill-warning`).
@@ -406,7 +410,10 @@ where an *item* is one response cell (one field for one reviewee):
 `_surface_context` adds a `completion` dict per instrument group
 (`required_done` / `required_total` / `all_done` / `all_total`);
 `required_done` is DB-accurate, derived from each row's
-`missing_count`.
+`missing_count`. The same layout is mirrored on the operator's
+Band 2 preview (see `spec/instrument_builder.md` — pills + the
+JS-built `buildConstraints` block share the row and rebuild
+together on every Band 3 / R toggle).
 
 - **Help block** above the table (below the heading row), listing each
   response field that has both `help_text` set and

@@ -187,7 +187,8 @@ first duplicate row's `#reviewer-row-{id}`).
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
-| `instruments.no_rule_pinned` | instruments | warning | At least one instrument has `rule_set_id IS NULL` once the session has reviewers + reviewees (Generate would silently skip it; reviewer page empty). |
+| `instruments.no_rule_pinned` | instruments | warning | At least one **legacy** instrument (`is_new_model=False`) has `rule_set_id IS NULL` once the session has reviewers + reviewees (Generate would silently skip it; reviewer page empty). New-model instruments default to Full Matrix on untouched Band 1 and are not affected by this rule (Wave 4 PR 1). |
+| `instruments.no_visible_response_fields` | instruments | warning | A new-model instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. (Wave 4 PR 2.) |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
 | `assignments.reviewer_missing` | assignments | warning | A reviewer has no assignment rows at all (pinned rule excluded them, or they joined the roster after the last Generate). |
 | `assignments.reviewer_missing_for_instrument` | assignments | warning | A reviewer is present on some instruments but missing on others — a partial review surface on a multi-instrument session. |

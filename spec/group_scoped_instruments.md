@@ -248,20 +248,25 @@ group identity is composed from tags instead.
 Two creation entrypoints on the action row of
 `/operator/sessions/{id}/instruments`:
 
-- **Add an instrument** — today's button. Creates a per-reviewee
-  instrument (`group_kind = NULL`).
-- **Add group instrument** — new button. Creates a group-scoped
-  instrument (`group_kind` non-null — the `add-group` route
-  writes the inert marker `"both"`). Inserted immediately after
-  the current card, like "Add instrument".
+- **`+Instrument`** — the sole "create new instrument" button
+  on the bottom action row (renamed from `+New model` in PR
+  #1443). Creates a new-model instrument (`is_new_model=True`).
+  Per-reviewee vs group-scoped is now chosen via Band 1 Link 3's
+  Individual ↔ Grouped toggle on the new instrument's card,
+  not at creation. The legacy `Add instrument` (`group_kind=NULL`)
+  and `Add group instrument` (`group_kind="both"`) buttons
+  retired in Wave 4 PR 4c (PR #1443); their POST routes still
+  exist server-side and retire in Wave 6 (Gap 8 + 9).
 
-**Mode is set at creation and is not toggleable.** An operator who
-wants to change an instrument's mode deletes it and recreates it.
-A toggle would have to either silently rewrite the instrument's
-display configuration or refuse — both worse than delete-and-
-recreate, and a separate creation button surfaces the affordance
-directly. This follows the existing editor idiom (shape is set at
-creation; Lock / Unlock governs visibility, not data shape).
+**Mode is now toggleable via Band 1 Link 3** on new-model
+instruments — pre-Wave-4 the mode was set at creation and a
+toggle would have required either silently rewriting the
+instrument's display configuration or refusing. Band 1 Link 3
+makes the toggle explicit (the operator's Individual ↔ Grouped
+choice rebuilds the preview live). The legacy
+per-reviewee / group-scoped split persists in code as the
+`group_kind` column + the `is_new_model` carve-out — both
+retire in Wave 6.
 
 ### Editor surface for a group-scoped instrument
 
@@ -313,10 +318,12 @@ operator wants to convey something the tags do not, they use the
 instrument.
 
 Response Fields, Response Fields Help, descriptions,
-accepting-responses / visibility toggles, and the Save / Edit /
-Delete affordances are all unchanged. A small chip near the
-instrument-card heading reads **Group-scoped** so the operator
-never wonders which mode they are editing.
+accepting-responses / visibility toggles, and the
+Save / Cancel / Lock / Unlock / Delete affordances (the Wave 4
+PR 4c restructure that retired the pre-Wave-4 Edit button) are
+all unchanged. A small chip near the instrument-card heading
+reads **Group-scoped** so the operator never wonders which
+mode they are editing.
 
 ### Rule is required
 

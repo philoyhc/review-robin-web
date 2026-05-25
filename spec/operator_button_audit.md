@@ -274,16 +274,14 @@ per instrument card.
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 50 | Section A — Identity (locked, Edit affordance) | Edit | `<a>` | `btn secondary` (or `btn secondary disabled` while another instrument is in edit mode) | Secondary (Disabled when conflicting edit lock active) | Per `spec/instruments.md` |
-| 51 | Section C — Action row (editing) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Bulk-save covers description, Display Fields, Response Fields, Response Fields Help |
-| 52 | Section C — Action row (editing) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to locked state |
-| 53 | Section C — Action row (locked) | Edit | `<a>` | `btn secondary` | Secondary | Mirrors button #50; same state machine |
-| 54 | Section A right card | Open this Instrument / Close this instrument | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `accepting_responses` |
-| 55 | Section A right card | Show when closed / Don't show when closed | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `responses_visible_when_closed` |
-| 56 | Section E — per-instrument action row | Add instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add` with `after={iid}`; disabled while an edit lock is active |
-| 56a | Section E — per-instrument action row | Add group instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add-group` (Segment 13C group-scoped instruments); same edit-lock gating |
-| 56b | Section E — per-instrument action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it (Segment 13C PR 3); same edit-lock gating |
-| 57 | Section E — per-instrument action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Last button in the per-instrument action row (Danger Zone sub-card retired). Ships `disabled`; a paired confirm checkbox flush-right below the row (`data-delete-confirm` / `data-delete-btn`) gates it. Disabled outright when it is the only instrument or an edit lock is active. |
+| 50 | Section A right card | Open this Instrument / Close this instrument | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `accepting_responses` (post-activation only) |
+| 51 | Section A right card | Show when closed / Don't show when closed | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `responses_visible_when_closed` |
+| 52 | Bottom action row (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Bulk-save covers Band 1 form fields + Band 3 row state. Starts `disabled`; activates on first dirty event. Preserves `?editing=<id>` on redirect (Wave 4 PR 2). |
+| 53 | Bottom action row (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Confirms then reloads to discard unsaved client-side state. Mirrors Save's dirty-aware enabled state (Wave 4 PR 4c, PR #1443). |
+| 54 | Bottom action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it (Segment 13C PR 3); same edit-lock gating |
+| 55 | Bottom action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Ships `disabled`; a paired confirm checkbox flush-right below the row (`data-delete-confirm` / `data-delete-btn`) gates it. Disabled outright when it is the only instrument or an edit lock is active. |
+| 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn primary-outline` | Primary Outline | Renamed from `+New model` in PR #1443; posts `/instruments/add-new-model` with `after={iid}`. With the legacy `Add instrument` / `Add group instrument` buttons retired in the same PR, this is the sole "create new instrument" affordance on the row. |
+| 57 | Bottom action row | Lock / Unlock | `<a>` (or disabled `<button>`) | `btn secondary` | Secondary | The gating toggle. Unlocked = `?editing=<id>` in URL; locked = no editing param. Clicking Lock with a dirty Save prompts `confirm()` (Wave 4 PR 3). Renders as a disabled `<button>` (not `<a>`) when an RTD edit lock is active. Modelled on the Quick Setup card's footer. Replaces the pre-Wave-4 `Edit` button (Wave 4 PR 1, PR #1440). |
 
 ### 9c — RTD card (page-bottom, "Response Type Definitions")
 
