@@ -58,14 +58,18 @@
       font-size: var(--fs-small);
     }
     /* Band 3 Visibility — Reviewees + Observers audience chips
-       carry white font in their unselected state so the text
-       still reads cleanly against the pill-count light-blue
-       background (the only audience rows that default to off).
-       Cycle chips in the same rows always have ``is-selected``
-       so the selector doesn't bite them. */
+       in their unselected state are styled to match the
+       greyed-out What / When cycle chips in the same row (filled
+       accent-blue background, white text, opacity 0.4). Cycle
+       chips in those rows always have ``is-selected`` so the
+       ``:not(.is-selected)`` selector doesn't bite them. The
+       audience chip itself stays clickable — the opacity is
+       cosmetic, not ``pointer-events: none``. */
     body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
     body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
+      background: var(--accent-blue);
       color: #ffffff;
+      opacity: 0.4;
     }
   </style>
 {% endblock %}
