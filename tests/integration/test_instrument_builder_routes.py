@@ -5186,6 +5186,40 @@ def test_band2_description_button_does_not_overlap_textarea(
     assert "right: 4px" in save_tag
 
 
+def test_band2_short_label_save_button_does_not_wrap_below_input(
+    client: TestClient, db: Session
+) -> None:
+    """The ✎ / ✓ buttons on the short_label edit block sit absolute-
+    positioned in a 28px right-side gutter (mirroring the description
+    edit block) instead of as inline flex siblings of the input.
+    Without this, ``flex: 1 1 auto`` on the input + ``flex-wrap: wrap``
+    on the parent ``<h2>`` would push the save button below the
+    edit box on narrow viewports."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-short-label-gutter"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    # The wrapper span carries the right-side gutter (only when in
+    # edit lock — the buttons render only then).
+    wrap_idx = flat.find("data-intro-short-label-edit-wrap")
+    assert wrap_idx != -1
+    wrap_tag = flat[wrap_idx : flat.find(">", wrap_idx) + 1]
+    assert "padding-right: 28px" in wrap_tag
+    assert "position: relative" in wrap_tag
+    # The save (✓) button is absolute-positioned in the gutter, not
+    # an inline flex sibling.
+    save_btn_idx = flat.find("data-intro-short-label-save", wrap_idx)
+    assert save_btn_idx != -1
+    save_tag = flat[
+        flat.rfind("<button", 0, save_btn_idx) : flat.find(">", save_btn_idx) + 1
+    ]
+    assert "position: absolute" in save_tag
+    assert "right: 0" in save_tag
+
+
 def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     client: TestClient,
     db: Session,
