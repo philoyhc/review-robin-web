@@ -883,19 +883,13 @@
             {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
                 "Pool of reviewers", _link1_tags,
                 on_label="Filter using reviewer attributes") }}
-            {# "Refresh preview" — runs the rule engine against the
-               current Link 1 + Link 2 form state on the server,
-               then re-picks the Band 2 preview's sample reviewee
-               from the first in-scope (reviewer, reviewee) pair.
-               Only fires on explicit click — keystroke / dropdown
-               edits don't trigger the engine, which can be heavy
-               on large rosters. #}
-            <div style="margin-top: 12px; text-align: left;">
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
-                      onclick="newModelBand2RefreshSample(this)"
-                      title="Pick a new preview sample reviewee using the current Link 1 + Link 2 rules">↻ Refresh preview</button>
-            </div>
+            {# "Refresh sample" was previously rendered as a row
+               beneath Link 1; moved inline beside the Band 2
+               "Preview review instrument" heading per operator
+               request — same ``.btn.secondary`` styling, same
+               click handler ``newModelBand2RefreshSample``,
+               same ``padding: 4px 10px``. Gated on ``is_editing``
+               (used to be gated by Band 1's ``inert`` wrapper). #}
           </div>
           <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
             {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
@@ -1222,7 +1216,16 @@
              data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
              data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
              data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
-          <h3 style="margin: 0 0 12px 0;">Preview review instrument</h3>
+          <div style="display: flex; align-items: center; gap: 12px;
+                      margin: 0 0 12px 0;">
+            <h3 style="margin: 0;">Preview review instrument</h3>
+            {% if is_editing %}
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 10px;"
+                      onclick="newModelBand2RefreshSample(this)"
+                      title="Pick a new preview sample reviewee using the current Link 1 + Link 2 rules">↻ Refresh sample</button>
+            {% endif %}
+          </div>
           {# Hidden form field that snapshots the current column
              widths as JSON. The drag-resize JS POSTs to
              /column-widths AND mirrors the widths into this input
