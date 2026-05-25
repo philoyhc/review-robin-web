@@ -49,8 +49,14 @@ catalogue verbatim and decides only **what order to ship in**.
 
 ## Sequence (sketch)
 
-Five waves, each independently shippable. The PR ladder inside
-each wave is drafted when the wave is picked up.
+Six waves, each independently shippable. The PR ladder inside
+each wave is drafted when the wave is picked up. **Waves 1-4
+shipped 2026-05-24 → 2026-05-25; Waves 5-6 open.**
+
+Wave 4 was unplanned — it emerged from pilot feedback on the
+post-Wave-3 surface (readiness gates, Lock/Unlock UX, intro-
+card layout) and slid the original perf + Gap 7 wave to Wave 5,
+cleanup to Wave 6.
 
 ### Wave 1 — Quick wins (T-S, no schema) — shipped 2026-05-24
 
@@ -580,11 +586,64 @@ reviewer surface behaviour only changes at PR ii.
   entries on instruments untouched since PR ii are
   back-filled correctly by PR ii's last Save.
 
-### Wave 4 — Perf followers + RuleSet library retirement
+### Wave 4 — Readiness gating + UI polish (M) — shipped 2026-05-25
+
+Three independent threads landed in this wave, each driven by
+operator feedback as Wave 3 made the new-model card the default
+in pilot use. **None of these were on the original Wave 4 plan**
+(which was perf + Gap 7); that plan slid to Wave 5 below.
+
+#### 4a — Readiness predicate alignment (S × 2)
+
+Closes the gap where the new-model card couldn't satisfy the
+operator's "is this instrument set up?" check because the
+legacy `has_unpinned` predicate still required an explicit
+`SessionRuleSet`. New-model instruments with untouched Band 1
+(Link 1+2 in `"all"` mode) now produce Full Matrix at generate
+time instead of being silently skipped, and the workflow card's
+readiness check honours the new-model contract.
+
+| PR | Slice | Summary |
+|---|---|---|
+| #1434 | New-model NULL rule_set → Full Matrix | `replace_assignments` synthesises an empty-rules schema (`_full_matrix_schema()`) for new-model instruments with NULL `rule_set_id`; `_load_reconcile_inputs` keeps them as targets instead of filtering them out; `session_lifecycle` activation + `open_instrument` gates loosened for the same case. Legacy `is_new_model=False` instruments with NULL rule_set continue to be skipped / blocked. |
+| #1435 | `is_configured()` readiness predicate | New per-model `instruments_service.is_configured(instrument)` retires the rule-set-centric `has_unpinned`. `instruments.no_rule_pinned` warning replaced with `instruments.not_configured` that branches on `is_new_model` (new-model: at least one visible response field + boundary if grouped; legacy: still requires explicit rule pin). Sets the stage cleanly for retiring `RuleSet` as a construct. |
+
+#### 4b — Lock/Unlock + Save-when-dirty gating refactor (S × 3)
+
+Splits two concerns that were entangled in the original Edit /
+Save / Cancel UI: **Lock** owns gating, **Save** owns
+persistence. The mental model is now spec-aligned — a
+successful Save no longer re-locks the card, so operators can
+keep working after each save without re-entering edit mode.
+
+| PR | Slice | Summary |
+|---|---|---|
+| #1440 | Lock/Unlock toggle retires per-instrument Edit | Replaces the per-card Edit / Save / Cancel buttons with a single Lock / Unlock toggle at the end of the bottom action row, modelled on the Quick Setup card's footer (`_quick_setup_card.html`). Unlocked = `?editing=<id>` in the URL; locked = no editing param. |
+| #1441 | Save preserves edit mode + dirty-tracking | The `fields/save` route redirect preserves `?editing=<id>` (no more re-lock on save). Save button starts `disabled` and activates on the first dirty event (Band 1 input change or Band 3 row tick / X / + click) via the new `newModelInitSaveDirtyTracking` JS helper. |
+| #1442 | Lock-confirm on dirty + per-row pending visual | Clicking Lock with a dirty Save prompts a `confirm()` dialog (only on the Lock anchor; Unlock skips it). Band 3 rows whose inputs the operator has typed into but not yet committed get a subtle amber-accent visual (`[data-row-pending="true"]`) that clears the moment ✓ is clicked. |
+
+#### 4c — UI polish (S × 6)
+
+Smaller layout + microcopy adjustments operators flagged during
+pilot use of the new-model card.
+
+| PR | Slice | Summary |
+|---|---|---|
+| #1433 | Step validation: `step ≤ (max − min)` | Boolean-like shapes (`min=0, max=1, step=1`) now pass authoring-shape validation. Original stricter rule (`step ≤ (max − min) / 2`) shipped briefly and was relaxed mid-PR per operator feedback. |
+| #1436 | Progress pills flush-left above review table | Moved the Required / All items completed pills out of the per-instrument intro card into a row above the review table on both reviewer surface and Band 2; description edit-box gets a right-side gutter for its ✎/✓. |
+| #1437 | Progress pills inline with min/max/step reminders | Pills + constraints share a single right-flushed row above the table. |
+| #1438 | Band 2 short_label tick stays inline | Mirrors the description-block's right-side gutter so the tick doesn't wrap below the input on narrow viewports. |
+| #1439 | Band 2 intro card unified ✎/✓ | Consolidated short_label + description edits into one ✎/✓ pair at the card's bottom-right (matching the help-text card's `bottom: 4px; right: 4px` placement). |
+| #1443 | Bottom action row restructure | Retired the `Add instrument` / `Add group instrument` buttons; renamed `+New model` → `+Instrument`; added a Cancel button (dirty-aware, separate from Lock — confirms then reloads to discard). Row order: `Save | Cancel | Replicate | Delete | +Instrument | Lock/Unlock`. |
+
+### Wave 5 — Perf followers + RuleSet library retirement
+
+> Originally labelled Wave 4. Slid to Wave 5 when the readiness
+> + Lock/Unlock work above turned out to need its own wave.
 
 Now that operators are adding new-model cards in volume
-(post-Wave 3), the per-card costs that grow with `K` start
-to bite. Land in parallel with Gap 7.
+(post-Wave 3), the per-card costs that grow with `K` start to
+bite. Land in parallel with Gap 7.
 
 - **Rec D2** — single page-level
   `<script type="application/json" id="new-model-roster-data">`
@@ -599,19 +658,29 @@ to bite. Land in parallel with Gap 7.
   Refresh on 1k × 1k from 1-3s to typically <100ms.
 - **Gap 7** — retire the RuleSet library + Rule Builder
   child page. Band 1's inline editor (already shipped on
-  new-model) becomes the canonical authoring surface.
+  new-model) becomes the canonical authoring surface. Wave
+  4a's `is_configured()` predicate decoupled new-model
+  instruments from the rule-set construct, so retiring the
+  library no longer requires migrating new-model rows.
 
 D2 + D3 belong in one PR (they touch the same template + JS).
 B is its own PR. Gap 7 is independent of the perf work but
 naturally lands here.
 
-### Wave 5 — Cleanup
+### Wave 6 — Cleanup
+
+> Originally labelled Wave 5.
 
 - **Gap 8** — retire the `+Group instrument` button (Band 1
-  Link 3's Individual ↔ Grouped toggle replaces it).
+  Link 3's Individual ↔ Grouped toggle replaces it). Wave
+  4c (PR #1443) already retired the button from the
+  per-instrument action row; Gap 8's remaining work is the
+  service / route plumbing.
 - **Gap 9** — drop the `instruments.is_new_model` column +
-  the `+New model` button. Template branches on
-  `is_new_model` collapse to a single shape.
+  the `+Instrument` button's new-model-only behaviour
+  (the button stays; it just becomes "create an instrument"
+  full stop). Template branches on `is_new_model` collapse
+  to a single shape.
 
 Both gaps + the legacy template branches + routes + buttons
 retire in one PR. After this wave the legacy individual /
