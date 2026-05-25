@@ -394,3 +394,68 @@ def test_save_draft_drops_upsert_to_hidden_field(db: Session) -> None:
     )
 
     assert result.upsert_count == 0
+
+
+def test_validate_value_integer_reads_inline_bounds(db: Session) -> None:
+    """Wave 3 PR ii — ``validate_value`` reads ``_inline_min`` /
+    ``_inline_max`` / ``_inline_step`` directly per locked decision
+    11. A new-model integer field with bounds 1-5 rejects "999"
+    (previously silent-pass when ``validation`` JSON was None)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    # Simulate a new-model authored row: drop the cached validation
+    # JSON to prove the validator no longer depends on it.
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "3") is None
+    assert "at least 1" in (responses_service.validate_value(field, "0") or "")
+    assert "at most 5" in (responses_service.validate_value(field, "999") or "")
+    assert "whole number" in (responses_service.validate_value(field, "abc") or "")
+
+
+def test_validate_value_string_max_length(db: Session) -> None:
+    """Wave 3 PR ii — String fields enforce ``_inline_max`` as the
+    char-length cap (per the model column comment + decision 11)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    field._inline_max = 5.0
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "okay") is None
+    assert "at most 5" in (
+        responses_service.validate_value(field, "too long") or ""
+    )
+
+
+def test_validate_value_list_option_membership(db: Session) -> None:
+    """Wave 3 PR ii — List fields reject values that aren't in the
+    inline option set (parsed from ``_inline_list_csv``)."""
+    op, reviewer, review_session, assignment = _seed(db)
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    field._inline_data_type = "List"
+    field._inline_list_csv = "Yes, No, Maybe"
+    field.validation = None
+    db.flush()
+
+    assert responses_service.validate_value(field, "Yes") is None
+    assert responses_service.validate_value(field, "Maybe") is None
+    assert "one of the listed" in (
+        responses_service.validate_value(field, "Sometimes") or ""
+    )
