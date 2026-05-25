@@ -24,21 +24,24 @@ from ._display_field_helpers import (
     _populate_rosters,
 )
 
-def test_state_machine_editing_param_renders_save_cancel(
+def test_state_machine_editing_param_renders_save_lock(
     client: TestClient, db: Session
 ) -> None:
     """``?editing={iid}`` opens the per-instrument card for editing —
-    the Section E ``Save`` button (form="dfsave-{iid}") is rendered."""
+    the ``Save`` button (form="dfsave-{iid}") is rendered alongside
+    a ``Lock`` toggle (Wave 4 — Cancel anchor retired in favour of
+    Lock / Unlock; see ``instrument_action_row`` macro)."""
     review_session = _make_session(client, db, code="state-edit")
     instrument = _instrument(db, review_session.id)
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
     ).text
-    # Section E Save is identified by ``form="dfsave-{iid}"``.
+    # Save is identified by ``form="dfsave-{iid}"``.
     assert f'form="dfsave-{instrument.id}"' in body
     assert ">Save</button>" in body
-    # Section E Cancel is the only Cancel anchor on the page.
-    assert ">Cancel</a>" in body
+    # Lock toggle renders in place of the previous Cancel anchor.
+    assert f'data-instrument-lock-toggle="{instrument.id}"' in body
+    assert ">Lock</a>" in body
 
 
 
@@ -171,7 +174,11 @@ def test_rtd_edit_locks_instrument_card_affordances(
     client: TestClient, db: Session
 ) -> None:
     """Slice 4d Gap 1 — when ``?editing_rtd_id={id}`` is set, every
-    per-instrument card's Edit anchors render disabled."""
+    per-instrument card's Lock / Unlock toggle renders as a disabled
+    button (the affordance for opening an instrument's edit mode
+    is blocked while the RTD library editor holds the edit token).
+    Wave 4 replaced the Edit anchor with the Lock / Unlock toggle;
+    the disabled state + tooltip still convey the same constraint."""
     review_session = _make_session(client, db, code="mx-rtd")
     client.post(
         f"/operator/sessions/{review_session.id}/response-types",
@@ -193,9 +200,12 @@ def test_rtd_edit_locks_instrument_card_affordances(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing_rtd_id={custom.id}"
     ).text
+    # The disabled Lock / Unlock toggle carries the explanatory title.
     assert (
-        "Save or cancel the Response Type Definitions edit before editing an instrument"
+        "Save or cancel the Response Type Definitions edit before unlocking an instrument"
         in body
     )
+    # Disabled-button markup (type=button + disabled + aria-disabled).
+    assert "data-instrument-lock-toggle" in body
 
 

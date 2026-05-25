@@ -181,27 +181,14 @@
 
   {# Per-instrument action row. Shared by the ordinary instrument card
      and the Segment 13C group-scoped placeholder card so both carry
-     the same button set: Edit / (Save, Cancel), Add instrument,
-     Add group instrument, Replicate. #}
+     the same button set. Wave 4 — Edit / Cancel retired in favour of
+     a Lock / Unlock toggle at the end of the row, modelled on the
+     Quick Setup card's footer. Unlocked = edit mode (``?editing=<id>``
+     in the URL); locked = view mode. Save sits beside Lock/Unlock so
+     they share a visual group (mirrors Quick Setup's Submit + Lock /
+     Unlock footer). #}
   {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-      <div style="display: flex; gap: 8px;">
-        {% if is_editing %}
-          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
-                  {% if is_ready %}disabled{% endif %}>Save</button>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
-        {% elif is_some_rtd_unlocked %}
-          <a class="btn secondary disabled"
-             aria-disabled="true"
-             title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-        {% else %}
-          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
-        {% endif %}
-      </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/add"
@@ -251,6 +238,34 @@
           <button class="btn primary-outline" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+New model</button>
         </form>
+        {# Save + Lock / Unlock — Wave 4 takeover. Save persists the
+           pending batch (Band 1 form fields + Band 3 row tick/X);
+           Lock toggles between view and edit modes by adding or
+           removing ``?editing=<id>`` from the URL. Save and Lock
+           are independent — Save does not lock the card, so the
+           operator can keep editing after a Save without
+           re-entering edit mode. Both disabled when the session
+           is past setup phase (``is_ready``) or when the
+           RTD-library editor holds the edit token. #}
+        {% if is_editing %}
+          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
+                  {% if is_ready %}disabled{% endif %}>Save</button>
+        {% endif %}
+        {% if is_some_rtd_unlocked %}
+          <button class="btn secondary" type="button" disabled aria-disabled="true"
+                  data-instrument-lock-toggle="{{ instrument.id }}"
+                  title="Save or cancel the Response Type Definitions edit before unlocking an instrument.">{% if is_editing %}Lock{% else %}Unlock{% endif %}</button>
+        {% elif is_editing %}
+          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+             data-instrument-lock-toggle="{{ instrument.id }}"
+             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
+        {% else %}
+          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+             data-instrument-lock-toggle="{{ instrument.id }}"
+             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
+        {% endif %}
       </div>
     </div>
   {% endmacro %}
@@ -345,19 +360,12 @@
         {% endif %}
         <p class="description-text">{{ instrument.description or "(no description)" }}</p>
       {% endif %}
+      {# Wave 4 — Edit / Save / Cancel retired from this header row;
+         Save + Lock / Unlock now live in the bottom action row only
+         (see ``instrument_action_row`` macro). Lifecycle buttons
+         (Open / Close / Show when closed) stay here since they
+         only render after activation. #}
       <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
-        {% if is_editing %}
-          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary">Save</button>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}">Cancel</a>
-        {% elif is_some_rtd_unlocked %}
-          <a class="btn secondary disabled" aria-disabled="true"
-             title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-        {% else %}
-          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
-        {% endif %}
         {% if is_ready and not instrument.accepting_responses %}
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
@@ -696,19 +704,10 @@
               <span class="pill pill-empty">not showing when closed</span>
             {% endif %}
           </h2>
+          {# Wave 4 — Edit / Save / Cancel retired from this header
+             row; Save + Lock / Unlock now live in the bottom action
+             row only (see ``instrument_action_row`` macro). #}
           <div style="display: flex; gap: 8px; justify-content: flex-start; padding-top: 12px; flex-wrap: wrap;">
-              {% if is_editing %}
-                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary">Save</button>
-                <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}">Cancel</a>
-              {% elif is_some_rtd_unlocked %}
-                <a class="btn secondary disabled" aria-disabled="true"
-                   title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-              {% else %}
-                <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-                   href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-                   {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
-              {% endif %}
               {% if is_ready and not instrument.accepting_responses %}
                 <form method="post"
                       action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
