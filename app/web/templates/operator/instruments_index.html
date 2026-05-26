@@ -1267,7 +1267,6 @@
            data-new-model-band2-roster='{{ _band2.roster | tojson }}'
            data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}"
            data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
-           data-new-model-band2-sample-member-ids="{{ _band2.sample_group_member_ids | join(',') }}"
            data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
            data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
         <div style="display: flex; align-items: center; gap: 12px;
@@ -1641,24 +1640,6 @@
               };
               var sampleKey = keyOf(sample);
               members = roster.filter(function (r) { return keyOf(r) === sampleKey; });
-            }
-            // Gap 10: intersect with the rule-surviving member-ID
-            // set from the last Refresh (persisted in
-            // ``band2_state.sample_group_member_ids`` and surfaced
-            // on the wrapper as a comma-joined attr). Skipped when
-            // the set is empty / absent — render falls back to the
-            // boundary-only partition, matching the server-side
-            // render path's fallback in views/_instruments.py.
-            var allowedRaw = (card.getAttribute('data-new-model-band2-sample-member-ids') || '').trim();
-            if (allowedRaw) {
-              var allowed = {};
-              allowedRaw.split(',').forEach(function (s) {
-                var n = parseInt(s, 10);
-                if (!isNaN(n)) { allowed[n] = true; }
-              });
-              if (Object.keys(allowed).length > 0) {
-                members = members.filter(function (r) { return allowed[r.id]; });
-              }
             }
             var allNames = members.map(function (r) { return r.name; });
             var shown = allNames.slice(0, LIMIT);
@@ -2823,17 +2804,6 @@
               if (sample.name) {
                 band2.setAttribute('data-new-model-band2-sample-name', sample.name);
               }
-              // Gap 10: mirror the rule-surviving member-ID set
-              // onto the wrapper so the next ``partitionedSampleNames``
-              // call (triggered by ``newModelRefreshBand2`` below)
-              // intersects against it. Empty list = "no
-              // constraint" — render falls back to the boundary-
-              // only partition.
-              var memberIds = (data && data.sample_group_member_ids) || [];
-              band2.setAttribute(
-                'data-new-model-band2-sample-member-ids',
-                Array.isArray(memberIds) ? memberIds.join(',') : ''
-              );
               window.newModelRefreshBand2(band2);
               btn.textContent = '↻ Refreshed';
               setTimeout(function () { btn.textContent = '↻ Refresh preview'; btn.disabled = false; }, 1000);

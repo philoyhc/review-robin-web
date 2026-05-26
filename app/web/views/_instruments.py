@@ -512,19 +512,6 @@ def _new_model_band2_state(
         "response_fields": response_fields,
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",
-        # Gap 10 (Wave 1) — rule-surviving group-member IDs from
-        # the last Refresh. Persisted in band2_state.
-        # ``partitionedSampleNames`` (in instruments_index.html)
-        # intersects its boundary-key partition against this set
-        # so the client-side rebuild honours Links 1+2 too. Empty
-        # list means "no constraint" (fallback to the boundary-
-        # only partition, matching the server-side render-path's
-        # fallback at views/_instruments.py).
-        "sample_group_member_ids": list(
-            (instrument.band2_state or {}).get(
-                "sample_group_member_ids"
-            ) or []
-        ),
         # Comma-joined list of reviewee-side boundary field names
         # (``tag_1`` / ``tag_2`` / ``tag_3``) so the preview JS can
         # partition in view mode, where the live ``link3_boundary``
