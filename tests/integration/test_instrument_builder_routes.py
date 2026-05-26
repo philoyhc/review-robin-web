@@ -5186,19 +5186,42 @@ def test_save_dirty_tracking_catches_band1_pill_clicks(
     init_idx = body.find("newModelInitSaveDirtyTracking = window.newModelInitSaveDirtyTracking")
     assert init_idx != -1
     # The function ends at the matching closing brace; conservatively
-    # grab a 4000-char window — long enough to contain the click
+    # grab a 6000-char window — long enough to contain the click
     # handler and not long enough to leak into the next helper.
-    init_block = body[init_idx : init_idx + 4000]
+    init_block = body[init_idx : init_idx + 6000]
     for selector in (
         "[data-new-model-rule-mode]",
         "[data-new-model-unit-mode]",
         "[data-new-model-combinator-toggle]",
         "[data-new-model-operator-cycle]",
+        # Band 1 rule + / X (newModelAddRule / newModelRemoveRule)
+        # and Link 3 boundary + / X (newModelAddUnitCell /
+        # newModelRemoveUnitCell) mutate the dfsave payload by
+        # cloning / removing rule and boundary cells. The click is
+        # the only event they emit — no input/change fires from
+        # the cell itself.
+        "[data-new-model-rule-add]",
+        "[data-new-model-rule-remove]",
+        "[data-new-model-unit-add]",
+        "[data-new-model-unit-remove]",
+        # Band 2 sort badge (``.sort-btn``, ``toggleSort``) rebuilds
+        # the dfsave-bound ``sort_display_field_id`` / ``sort_dir``
+        # hidden inputs in ``#sort-spec-inputs-<id>`` but doesn't
+        # dispatch input/change. Without this, sort-order edits
+        # silently fail to persist because Save stays disabled.
+        ".sort-btn",
     ):
         assert selector in init_block, (
             f"dirty-tracker click handler is missing selector {selector}; "
             "clicking that control will not enable Save."
         )
+
+    # And confirm the markers actually reach the rendered buttons
+    # (the click handler is harmless without something to match).
+    assert "data-new-model-rule-add" in body
+    assert "data-new-model-rule-remove" in body
+    assert "data-new-model-unit-add" in body
+    assert "data-new-model-unit-remove" in body
 
 
 # --------------------------------------------------------------------------- #

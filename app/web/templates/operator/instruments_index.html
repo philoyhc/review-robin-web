@@ -752,6 +752,7 @@
                         align-items: center; justify-content: center; gap: 4px;">
               <button type="button" class="btn secondary"
                       style="padding: 4px 10px;"
+                      data-new-model-rule-add
                       onclick="newModelAddRule(this)"
                       title="Add rule">+</button>
               <button type="button" class="btn secondary"
@@ -810,6 +811,7 @@
                            {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value"{% endif %}>
                     <button type="button" class="btn destructive"
                             style="padding: 4px 8px; flex-shrink: 0;"
+                            data-new-model-rule-remove
                             onclick="newModelRemoveRule(this)"
                             {% if _is_first %}disabled aria-disabled="true"
                             title="Cannot remove the first rule"
@@ -908,6 +910,7 @@
                           align-items: center; justify-content: center; gap: 8px;">
                 <button type="button" class="btn secondary"
                         style="padding: 4px 10px;"
+                        data-new-model-unit-add
                         onclick="newModelAddUnitCell(this)"
                         title="Add boundary tag">+</button>
                 <button type="button" class="btn secondary"
@@ -931,6 +934,7 @@
                       {% endfor %}
                     </select>
                     <button type="button" class="btn destructive" data-new-model-cell-action
+                            data-new-model-unit-remove
                             style="padding: 4px 8px; flex-shrink: 0;"
                             onclick="newModelRemoveUnitCell(this)"
                             {% if _is_first %}disabled aria-disabled="true"
@@ -3020,6 +3024,21 @@
             // Link 3 → Individual leaves Save disabled even though
             // the dfsave payload now differs from the persisted
             // state. Catch those clicks here too.
+            //
+            // Additional dfsave-riding clicks that don't dispatch
+            // input/change:
+            //   - Band 1 rule + / X (``newModelAddRule`` /
+            //     ``newModelRemoveRule``) — add / remove rule cells
+            //     within Link 1 / Link 2.
+            //   - Band 1 Link 3 boundary + / X
+            //     (``newModelAddUnitCell`` /
+            //     ``newModelRemoveUnitCell``) — add / remove
+            //     boundary tag dropdowns.
+            //   - Band 2 sort badge (``.sort-btn``,
+            //     ``toggleSort``) — cycles unsorted → asc → desc,
+            //     rebuilding the dfsave-bound
+            //     ``sort_display_field_id`` / ``sort_dir`` hidden
+            //     inputs in ``#sort-spec-inputs-<id>``.
             instrumentCard.addEventListener('click', function (ev) {
               var t = ev.target;
               if (!t || !t.closest) { return; }
@@ -3029,7 +3048,12 @@
                 || t.closest('[data-new-model-rule-mode]')
                 || t.closest('[data-new-model-unit-mode]')
                 || t.closest('[data-new-model-combinator-toggle]')
-                || t.closest('[data-new-model-operator-cycle]')) {
+                || t.closest('[data-new-model-operator-cycle]')
+                || t.closest('[data-new-model-rule-add]')
+                || t.closest('[data-new-model-rule-remove]')
+                || t.closest('[data-new-model-unit-add]')
+                || t.closest('[data-new-model-unit-remove]')
+                || t.closest('.sort-btn')) {
                 markDirty();
               }
             });
