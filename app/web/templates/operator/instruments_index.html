@@ -686,7 +686,7 @@
          cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
          Hydrated from ``state`` (a dict with mode / combinator /
          rules — see views._instruments.build_band1_state). #}
-      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules") %}
+      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None) %}
         {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
         {% set _is_active = tag_options | length > 0 %}
         {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
@@ -770,6 +770,23 @@
                 {% set _is_first = loop.first %}
                 <div data-new-model-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
+                  {# Optional small caption above the field
+                     dropdown — set per-link via ``field_helper``
+                     so e.g. Link 1 can hint "Reviewer tag". The
+                     50%-flex matches the dropdown width below so
+                     the caption aligns with the select. Lives
+                     inside the rule cell so ``newModelAddRule``'s
+                     ``cloneNode(true)`` carries it onto every new
+                     cell added via the ``+`` button. #}
+                  {% if field_helper %}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span data-new-model-rule-field-helper
+                            style="flex: 0 0 50%; min-width: 0;
+                                   font-size: 0.75rem;
+                                   color: var(--text-muted, #64748b);
+                                   padding-left: 2px;">{{ field_helper }}</span>
+                    </div>
+                  {% endif %}
                   <div style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
                             {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"{% endif %}>
@@ -851,7 +868,8 @@
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
               "Pool of reviewers", _link1_tags,
-              on_label="Filter using reviewer attributes") }}
+              on_label="Filter using reviewer attributes",
+              field_helper="Reviewer tag") }}
           {# "Refresh sample" was previously rendered as a row
              beneath Link 1; moved inline beside the Band 2
              "Preview review instrument" heading per operator
