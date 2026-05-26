@@ -7,7 +7,7 @@ instruments at the route / service / model level; the template
 renders them with the vertical-bands placeholder layout instead of
 the standard Display / Response Fields tables.
 
-See ``guide/instrument_builder.md`` for the concept the column tests.
+See ``guide/instrument_builder_project.md`` for the concept the column tests.
 
 Revision ID: b8f4e2a6c1d3
 Revises: a7e3c5b1d9f8

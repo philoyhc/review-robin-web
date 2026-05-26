@@ -107,7 +107,7 @@ RTD wiring:
   per-instrument `ResponseTypeDefinition` row on each ✓ save,
   carrying the bounds (`min` / `max` / `step` / `max_length`).
   Per-instrument RTD bloat is the cost.
-- **Post-RTD-retirement** (see Gap 6 below + `guide/instrument_builder.md`
+- **Post-RTD-retirement** (see Gap 6 below + `guide/instrument_builder_project.md`
   §D-RTD + §1d): inline `data_type` + bounds directly onto
   `instrument_response_fields`. No per-instrument RTD rows at
   all for numerical / string types; List types stay as
@@ -201,7 +201,7 @@ copies, 10 seeded RTDs per session). Per-session card lets the
 operator Edit / Delete / Save-to-library / Add-from-library
 (template lines 2888-3240).
 
-**Plan.** `guide/instrument_builder.md` §D-RTD + §1d sketches
+**Plan.** `guide/instrument_builder_project.md` §D-RTD + §1d sketches
 the retirement:
 
 - **Inline** numerical + string types' bounds onto
@@ -240,7 +240,7 @@ session: `Full Matrix` / `Intra-group peer review` /
 per-instrument card's Assignment Rule section pins a session
 copy via `instrument.rule_set_id`.
 
-**Plan.** `guide/instrument_builder.md` Part 1b sketches the
+**Plan.** `guide/instrument_builder_project.md` Part 1b sketches the
 retirement:
 
 - Band 1's inline rule editor (already shipped on new-model)

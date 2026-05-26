@@ -10,7 +10,7 @@ auto-sized default". When at least one width is set, the
 reviewer-surface table opts into ``table-layout: fixed`` so the
 widths take hold.
 
-See ``guide/instrument_builder.md`` for the Band 2 design.
+See ``guide/instrument_builder_project.md`` for the Band 2 design.
 
 Revision ID: d3b8e9a5f721
 Revises: c9a5f3e7b240

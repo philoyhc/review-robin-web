@@ -139,7 +139,7 @@ class Instrument(Base, TimestampMixin):
     ``instrument_response_fields`` / ``response_type_definitions``,
     so the reviewer surface still doesn't render input controls
     for new-model instruments. That integration is a separate
-    slice. See ``guide/instrument_builder.md``."""
+    slice. See ``guide/instrument_builder_project.md``."""
 
     cached_group_pair_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True
