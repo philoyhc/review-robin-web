@@ -844,7 +844,8 @@ group-partition sample), Band 3 (response-field editable rows),
 plus persistence wiring (`band2_state` / `column_widths` JSON
 columns; `set_band2_state` service; the `_new_model_band2_state`
 view-shape adapter). Gap inventory + perf cost model captured in
-`guide/new_model_instruments_outstanding.md`. The card reaches
+`guide/archive/new_model_instruments_outstanding.md` (archived
+2026-05-26). The card reaches
 "usable end-to-end for design feedback" — not yet at parity with
 the legacy individual + group cards. The remaining parity work
 + perf follow-on are tracked under **Segment 18J** (mopping up).
@@ -858,10 +859,10 @@ Six-wave sequencing that completes Segment 18I: closes the parity
 gaps that kept the legacy individual + group cards alive, retires
 the RuleSet library + Rule Builder, drops the
 `instruments.is_new_model` flag, and lands a long pilot-feedback
-polish tail. Plan: `guide/segment_18J_new_model_takeover.md`.
-Gap catalog: `guide/new_model_instruments_outstanding.md`. Spec:
-`spec/instruments.md` + `spec/assignments.md` (consolidated in
-PR #1453).
+polish tail. Plan: `guide/archive/segment_18J_new_model_takeover.md`.
+Gap catalog: `guide/archive/new_model_instruments_outstanding.md`
+(both archived 2026-05-26). Spec: `spec/instruments.md` +
+`spec/assignments.md` (consolidated in PR #1453).
 
 - **Wave 1** (PRs **#1393 → #1397**, 2026-05-24) — perf double-tap
   (Rec A + Rec D1) + Gaps 1 / 3 / 5 / 10.
@@ -905,9 +906,10 @@ PR #1453).
 
 After Wave 6 the legacy individual + group instrument cards no
 longer exist anywhere in the codebase; every instrument flows
-through the new-model card. `guide/new_model_instruments_outstanding.md`
-remains as the historical Gap catalog (its entries cross-link to
-the shipping PRs).
+through the (former "new-model") card.
+`guide/archive/new_model_instruments_outstanding.md` is the
+historical Gap catalog (its entries cross-link to the shipping
+PRs).
 
 ---
 
@@ -958,20 +960,6 @@ bottom of this file.
   **Plan:** `guide/archive/segment_17B_reviewer_surface_refinements.md`.
 
 
-
-- **18J — New-model takeover mopping-up** *(retired 2026-05-26;
-  all six waves shipped 2026-05-24 → 2026-05-26)*. Six-wave
-  sequencing plan that completed Segment 18I — closed every
-  parity gap that kept the legacy individual + group cards
-  alive, retired the RuleSet library + Rule Builder, dropped
-  the `instruments.is_new_model` flag, and landed a long
-  pilot-feedback polish tail (Cluster A → E in Wave 6). Pilot-
-  scale perf followers (Rec B / D2 / D3) carved to
-  `deferred_until_pilot_feedback.md`. The legacy individual +
-  group cards no longer exist anywhere in the codebase.
-  **Done summary:** see the Done section above
-  (PRs **#1393 → #1475**).
-  **Plan:** `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial

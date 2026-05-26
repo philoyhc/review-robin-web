@@ -133,7 +133,7 @@ unchanged.
 > and the help-text body via the in-card ✎/✓ editor pattern.
 > What remains is the broader Band 3 UX decision (accordion vs
 > dedicated pane vs always-visible — see Wave 3 design decision
-> 13 in `guide/segment_18J_new_model_takeover.md`). The
+> 13 in `guide/archive/segment_18J_new_model_takeover.md`). The
 > underlying columns + persistence are in place; once the
 > remaining Band 3 UX choice is made, that work is the only
 > piece left.

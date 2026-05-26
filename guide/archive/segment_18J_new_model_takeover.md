@@ -3,7 +3,7 @@
 > **Stub created 2026-05-24.** Sketch-level scope only — detailed
 > PR breakdowns get drafted when each Part is picked up. The
 > per-item Gap / Rec definitions and rationale live in
-> `guide/new_model_instruments_outstanding.md`; this file's job
+> `guide/archive/new_model_instruments_outstanding.md`; this file's job
 > is purely to sequence them.
 >
 > **Antecedent.** Segment 18I shipped the new-model
@@ -25,7 +25,7 @@ number of new-model cards on the Instruments index.
 
 The gap inventory (Gaps 1-9) and the perf cost model + lift
 sketches (Recs A-E) are already inventoried in
-`guide/new_model_instruments_outstanding.md`. 18J adopts that
+`guide/archive/new_model_instruments_outstanding.md`. 18J adopts that
 catalogue verbatim and decides only **what order to ship in**.
 
 ## Why now / why a segment
@@ -140,7 +140,7 @@ Tests:
   (monkeypatch / spy).
 
 Doc impact: annotate Recs A + D1 as shipped in
-`guide/new_model_instruments_outstanding.md`.
+`guide/archive/new_model_instruments_outstanding.md`.
 
 #### PR β — Gap 1 (pill → `InstrumentDisplayField.visible`) *(T-S)*
 
@@ -232,7 +232,7 @@ Tests:
 Make the Grouped-mode preview's member list honest about
 which reviewees Links 1+2 actually admit. Today the sample
 **reviewee** is rule-constrained but the sample **group**
-is not (see `guide/new_model_instruments_outstanding.md`
+is not (see `guide/archive/new_model_instruments_outstanding.md`
 Gap 10).
 
 - **Server-side.** Extend the sample-pick path
@@ -744,7 +744,7 @@ When Waves ship:
 
 - `docs/status.md` timeline entry per Wave.
 - `guide/todo_master.md` updated (Wave-by-Wave).
-- `guide/new_model_instruments_outstanding.md` annotated as
+- `guide/archive/new_model_instruments_outstanding.md` annotated as
   Gaps / Recs close; the doc retires when Gap 9 lands and
   there's nothing left to track.
 - `spec/instrument_builder.md` updated as Gaps 1-7 land
