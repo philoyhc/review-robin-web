@@ -569,8 +569,21 @@ def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
         scope=RuleSetScope.personal,
         combinator=Combinator(row.combinator),
         rules=[rule_adapter.validate_python(payload) for payload in row.rules_json],
+        # Project-wide policy: assignments generation NEVER excludes
+        # self-reviews at the rule-engine layer. The
+        # ``session_rule_sets.exclude_self_reviews`` column is
+        # already backfilled / kept at ``False`` by the Band 1
+        # save path (see migration ``d2e4f6a8c1b3`` +
+        # ``_create_band1_rule_set``); hardcoding here is
+        # defence-in-depth so an out-of-band row tweak can't
+        # silently re-enable the desugar. Operators who want
+        # self-reviews suppressed should either add a Link 2 rule
+        # (e.g. ``reviewee.email_or_identifier IS DIFFERENT FROM
+        # reviewer.email``) or mark the ``(R, R)`` row inactive on
+        # the Assignments page. Spec: ``spec/assignments.md``
+        # "Self-review policy".
         options=RuleSetOptions(
-            excludeSelfReviews=row.exclude_self_reviews,
+            excludeSelfReviews=False,
             seed=row.seed,
         ),
     )

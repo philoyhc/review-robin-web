@@ -605,7 +605,17 @@ def find_sample_in_scope_reviewee(
         name="_band1_preview",
         combinator=Combinator.ALL_OF,
         rules=rules,
-        options=RuleSetOptions(excludeSelfReviews=True),
+        # Project-wide policy: ``excludeSelfReviews`` is ALWAYS
+        # ``False`` for assignments generation AND for the
+        # Band 2 instrument preview. If the operator wants to
+        # suppress self-reviews they should either add a Link 2
+        # rule (e.g. ``reviewee.email_or_identifier IS DIFFERENT
+        # FROM reviewer.email``) or mark the (R, R) row
+        # ``inactive`` on the Assignments page. Excluding them
+        # automatically here used to silently undercount the
+        # team's composition by 1 on every symmetric session —
+        # see ``spec/assignments.md`` "Self-review policy".
+        options=RuleSetOptions(excludeSelfReviews=False),
     )
     try:
         result = engine.evaluate(
@@ -666,6 +676,12 @@ def find_sample_in_scope_reviewee(
     # group same as Reviewer group), each reviewer's reviewee pool
     # is different, and unioning across reviewers silently widens
     # the preview past what the sample's reviewer actually sees.
+    #
+    # The rule engine runs with ``excludeSelfReviews=False`` (the
+    # project-wide policy — see ``spec/assignments.md`` "Self-
+    # review policy"), so the sample reviewer's reviewee-side twin
+    # (when one exists, matched by email) lands in ``result.pairs``
+    # naturally as ``(sample_reviewer, twin)`` and is counted here.
     member_ids: set[int] = set()
     for r, e in result.pairs:
         if r.id != sample_reviewer.id:
@@ -675,34 +691,4 @@ def find_sample_in_scope_reviewee(
             == sample_key
         ):
             member_ids.add(e.id)
-    # In symmetric reviewer / reviewee setups (every person is both
-    # a reviewer and a reviewee), the sample reviewer is themselves
-    # a member of their group, but the rule engine's
-    # ``excludeSelfReviews=True`` strips the ``(R, R)`` self-pair so
-    # ``R``-as-reviewee never appears in the per-reviewer scan
-    # above. The preview displays the team's composition (not just
-    # who one reviewer can review), so re-include the sample
-    # reviewer's reviewee-side twin when one exists and shares the
-    # boundary key. Twin match is by ``email`` <-> ``email_or_identifier``
-    # because Reviewer and Reviewee live in separate tables with no
-    # cross-FK; if no twin exists (asymmetric session), nothing
-    # gets added.
-    sample_reviewer_email = (
-        getattr(sample_reviewer, "email", "") or ""
-    ).strip().lower()
-    if sample_reviewer_email:
-        for e in reviewees:
-            if e.id in member_ids:
-                continue
-            twin_email = (
-                getattr(e, "email_or_identifier", "") or ""
-            ).strip().lower()
-            if twin_email != sample_reviewer_email:
-                continue
-            if (
-                tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
-                == sample_key
-            ):
-                member_ids.add(e.id)
-                break
     return reviewee, sorted(member_ids)

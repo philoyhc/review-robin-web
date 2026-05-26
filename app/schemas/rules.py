@@ -300,11 +300,20 @@ CompositeRule.model_rebuild()
 
 
 class RuleSetOptions(BaseModel):
-    """RuleSet-level options. Spec §4.9."""
+    """RuleSet-level options. Spec §4.9.
+
+    Project-wide policy on ``excludeSelfReviews``: it is ALWAYS
+    ``False`` for assignments generation and for the Band 2
+    instrument preview tables (see ``spec/assignments.md``
+    "Self-review policy"). Operators who want to suppress
+    self-reviews should either add a Link 2 rule (e.g.
+    ``reviewee.email_or_identifier IS DIFFERENT FROM reviewer.email``)
+    or mark the ``(R, R)`` row inactive on the Assignments page.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    excludeSelfReviews: bool = True
+    excludeSelfReviews: bool = False
     seed: int | None = None
 
 

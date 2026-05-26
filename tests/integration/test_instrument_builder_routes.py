@@ -2631,15 +2631,15 @@ def test_preview_route_includes_sample_reviewers_reviewee_twin(
     client: TestClient, db: Session
 ) -> None:
     """Symmetric reviewer/reviewee setups (every person is both a
-    reviewer and a reviewee) saw the team's name list undercount
-    by 1 on the Band 2 preview: the rule engine's
-    ``excludeSelfReviews=True`` strips the ``(R, R)`` self-pair,
-    so the sample reviewer never appeared in their own team's
-    member-ID set after PR #1474's per-reviewer scoping. The
-    preview shows the team's composition (not just who the
-    sample reviewer can review), so the sample reviewer's
-    reviewee-side twin must be re-included by twin-matching
-    ``Reviewer.email`` <-> ``Reviewee.email_or_identifier``.
+    reviewer and a reviewee): the team's name list must NOT
+    undercount by 1 on the Band 2 preview. Pre-policy this took a
+    twin-lookup hack because the engine ran with
+    ``excludeSelfReviews=True``; the project-wide policy
+    (``spec/assignments.md`` "Self-review policy") flipped that
+    bit to False everywhere, so the ``(R, R)`` pair now lands in
+    ``result.pairs`` naturally and the sample reviewer's reviewee
+    twin appears in ``sample_group_member_ids`` without special
+    handling.
 
     Set-up: a symmetric session with Alice, Bob, Carol — each is
     both a reviewer and a reviewee under the matching email, all
