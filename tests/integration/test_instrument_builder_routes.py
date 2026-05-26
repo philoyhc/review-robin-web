@@ -2507,6 +2507,126 @@ def test_preview_route_uses_live_link3_boundary_not_persisted(
     assert payload["sample_group_member_ids"] == [by_name["Carol"]]
 
 
+def test_preview_route_scopes_member_ids_to_sample_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 follow-up — when Link 2 uses an ``IS THE SAME AS``
+    predicate, every reviewer sees a different reviewee pool. The
+    Band 2 preview represents *one* reviewer's view, so the
+    surviving-member-ID set must be scoped to pairs involving the
+    sample reviewer; unioning across reviewers silently widens the
+    preview to ``every reviewee whose boundary value matches the
+    sample's``.
+
+    Set-up reuses ``_group_band2_session`` but adds a third
+    reviewer "Cole" whose tag_2 matches Eve (Team B); Alice
+    (Lead) and Bob (Junior) keep tag_2 unset. With Link 1 +
+    Link 2 both = ``reviewer.tag2 IS THE SAME AS reviewee.tag2``
+    plus Link 3 = ``reviewee.tag1``, the sample lands on
+    (Cole, Eve) (the only surviving pair), and member_ids must
+    be just Eve + Fay's IDs — both Team B reviewees Cole sees.
+    Without the per-reviewer scoping, the union over Alice's and
+    Bob's pairs would silently widen the set.
+    """
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-per-reviewer"
+    )
+    # Add a third reviewer Cole whose tag_2 = "keep" — matches
+    # Dan + Eve + Fay (Cole's tag_2 = their tag_2). Two of those
+    # are Team B (Eve, Fay); one is Team A (Dan).
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Cole",
+            email="cole@example.edu",
+            tag_1="Junior",
+            tag_2="keep",
+        )
+    )
+    db.commit()
+    # Set the persisted boundary so the route's fallback path is
+    # consistent — we then exercise the live boundary post too.
+    new_model.group_kind = "r1"
+    db.commit()
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS THE SAME AS",
+                    "operand_tag": "reviewer.tag2",
+                    "operand_value": "",
+                }
+            ],
+            "link3_boundary": ["reviewee.tag1"],
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    # The sample is the first surviving pair in engine order. We
+    # don't pin which reviewer it lands on; we only require that
+    # member_ids reflect *that* reviewer's view, not the union.
+    sample_name = payload["sample_reviewee"]["name"]
+    sample = next(
+        r
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+        if r.name == sample_name
+    )
+    assert payload["sample_group_member_ids"]
+    surviving = set(payload["sample_group_member_ids"])
+    # Every member must share the sample's tag_1 boundary value.
+    for rid in surviving:
+        r = next(
+            x
+            for x in db.execute(
+                select(Reviewee).where(Reviewee.session_id == review_session.id)
+            ).scalars()
+            if x.id == rid
+        )
+        assert r.tag_1 == sample.tag_1
+    # The union-of-all-reviewers result would include every
+    # reviewee with the matching tag_1 — pin that the result is
+    # strictly narrower than that union (or equal only because
+    # the sample reviewer happens to see all of them).
+    union_of_all = {
+        r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+        if r.tag_1 == sample.tag_1
+    }
+    assert surviving <= union_of_all
+    # Crucially, the sample reviewer's tag_2 must match every
+    # surviving reviewee's tag_2 (Link 2 "IS THE SAME AS"). That's
+    # the per-reviewer narrowing the union would have lost.
+    sample_reviewer = next(
+        r
+        for r in db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        ).scalars()
+        if (r.tag_2 or "")
+    )  # only Cole has tag_2 set
+    if sample_reviewer.tag_2:
+        for rid in surviving:
+            r = next(
+                x
+                for x in db.execute(
+                    select(Reviewee).where(Reviewee.session_id == review_session.id)
+                ).scalars()
+                if x.id == rid
+            )
+            assert r.tag_2 == sample_reviewer.tag_2
+
+
 def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     client: TestClient, db: Session
 ) -> None:

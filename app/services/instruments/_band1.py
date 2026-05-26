@@ -618,7 +618,7 @@ def find_sample_in_scope_reviewee(
         return None
     if not result.pairs:
         return None
-    _reviewer, reviewee = result.pairs[0]
+    sample_reviewer, reviewee = result.pairs[0]
     # Gap 10: compute rule-surviving group member IDs for the
     # sample's reviewee-side boundary key. Skipped when there's no
     # reviewee-side boundary (per-reviewee mode or grouped-by-
@@ -659,8 +659,17 @@ def find_sample_in_scope_reviewee(
         getattr(reviewee, field, "") or ""
         for field in reviewee_boundary_fields
     )
+    # Scope member-IDs to pairs involving the SAMPLE REVIEWER, not
+    # every reviewer in the surviving set. The Band 2 preview
+    # represents what *one* reviewer sees on their review surface;
+    # if Link 2 uses an "IS THE SAME AS" predicate (e.g. Reviewee
+    # group same as Reviewer group), each reviewer's reviewee pool
+    # is different, and unioning across reviewers silently widens
+    # the preview past what the sample's reviewer actually sees.
     member_ids: set[int] = set()
-    for _r, e in result.pairs:
+    for r, e in result.pairs:
+        if r.id != sample_reviewer.id:
+            continue
         if (
             tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
             == sample_key
