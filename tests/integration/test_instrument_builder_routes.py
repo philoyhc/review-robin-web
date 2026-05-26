@@ -2359,6 +2359,87 @@ def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     assert attr in body
 
 
+def test_gap_10_member_ids_scoped_to_one_reviewer_when_boundary_repeats(
+    client: TestClient, db: Session
+) -> None:
+    """When the Link 3 boundary tag value repeats across reviewer
+    pools — e.g. tutorial group → team setup where "Team 1" exists
+    in every tutorial group — the rule-surviving member-IDs set
+    must scope to a single sample reviewer's pairs, not collect
+    every "Team 1" reviewee across every pool. Pre-fix this set
+    widened to N tutorial-groups × team-size; the reviewer surface
+    correctly narrows per-reviewer at render time, so the operator
+    preview's wider set was a parity bug."""
+    review_session = _make_session(client, db, code="repeat-teams")
+    # 3 tutorial groups, each with 2 teams of 2 reviewees + 1 reviewer.
+    # Total: 12 reviewees, 3 reviewers. Team names repeat (Team 1
+    # exists in every tutorial group).
+    for tut_i in range(3):
+        tutorial = f"T{tut_i + 1}"
+        db.add(
+            Reviewer(
+                session_id=review_session.id,
+                name=f"R-{tutorial}",
+                email=f"r-{tutorial}@x.edu",
+                tag_1=tutorial,
+            )
+        )
+        for team_i in range(2):
+            team = f"Team{team_i + 1}"
+            for member_i in range(2):
+                db.add(
+                    Reviewee(
+                        session_id=review_session.id,
+                        name=f"{tutorial}-{team}-r{member_i + 1}",
+                        email_or_identifier=f"{tutorial}-{team}-r{member_i + 1}@x.edu",
+                        tag_1=tutorial,
+                        tag_2=team,
+                        status="active",
+                    )
+                )
+    db.commit()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    # Set Link 2 = same tutorial group, Link 3 = grouped by team tag.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{instrument.id}/fields/save",
+        data={
+            "link1_mode": "all", "link1_combinator": "AND", "link1_touched": "true",
+            "link2_mode": "filter", "link2_combinator": "AND",
+            "link2_field": "reviewee.tag1",
+            "link2_op": "IS THE SAME AS",
+            "link2_operand_value": "",
+            "link2_operand_tag": "reviewer.tag1",
+            "link2_touched": "true",
+            "link3_mode": "grouped",
+            "link3_boundary": "reviewee.tag2",
+            "link3_touched": "true",
+        },
+        follow_redirects=False,
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{instrument.id}/preview-sample",
+        json={
+            "link1_mode": "all", "link1_combinator": "AND", "link1_rules": [],
+            "link2_mode": "filter", "link2_combinator": "AND",
+            "link2_rules": [{
+                "field": "reviewee.tag1",
+                "op": "IS THE SAME AS",
+                "operand_value": "",
+                "operand_tag": "reviewer.tag1",
+            }],
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    # 2 members per (reviewer, team) cell — NOT 6 (= 2 per team × 3
+    # tutorial groups). The pre-fix bug returned 6.
+    assert len(payload["sample_group_member_ids"]) == 2
+
+
 def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     client: TestClient, db: Session
 ) -> None:
