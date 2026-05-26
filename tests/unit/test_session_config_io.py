@@ -22,29 +22,29 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
-    ResponseTypeDefinition,
     ReviewSession,
     SessionFieldLabel,
     SessionRuleSet,
     User,
 )
-from app.services.instruments import ensure_default_response_type_definitions
 from app.services.session_config_io import (
     HEADER,
     Row,
     serialize_session_config,
 )
 from app.services.session_config_io import _ParseError, _parse_group_kind
-from _legacy_rtd_helpers import (
-    inline_kwargs_legacy as _inline_kwargs_legacy,
-)
 
 
 # Segment 18J Wave 2 PR iii-b4 — the FK from
 # ``instrument_response_fields`` to ``response_type_definitions``
-# retired. The Likert5 inline shape is used by field fixtures
-# below.
-_LIKERT_INLINE = _inline_kwargs_legacy("Likert5")
+# retired. The Likert5 inline shape used by field fixtures below.
+_LIKERT_INLINE: dict[str, object] = {
+    "_inline_data_type": "Integer",
+    "_inline_response_type": "Likert5",
+    "_inline_min": 1.0,
+    "_inline_max": 5.0,
+    "_inline_step": 1.0,
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -73,8 +73,6 @@ def _bare_session(db: Session, *, code: str = "spring") -> ReviewSession:
         created_by_user_id=user.id,
     )
     db.add(review_session)
-    db.flush()
-    ensure_default_response_type_definitions(db, review_session)
     db.flush()
     return review_session
 
@@ -201,62 +199,6 @@ def test_email_overrides_round_trip_set_values(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_seeded_rtds_are_not_emitted(db: Session) -> None:
-    """Seeded RTDs auto-regenerate from
-    ``SEED_RESPONSE_TYPE_DEFINITIONS`` on session create on the
-    destination side; re-emitting them would either be a no-op or
-    a name conflict (``uq_rtd_session_name``)."""
-
-    review_session = _bare_session(db, code="seededrtds")
-    rows = serialize_session_config(db, review_session)
-    assert all(not r.field.startswith("rtds[") for r in rows)
-
-
-def test_operator_defined_rtds_emit_full_row_block(db: Session) -> None:
-    review_session = _bare_session(db, code="custrtds")
-    db.add(
-        ResponseTypeDefinition(
-            session_id=review_session.id,
-            response_type="GPA4",
-            data_type="decimal",
-            min=0.0,
-            max=4.0,
-            step=0.1,
-            list_csv=None,
-        )
-    )
-    db.flush()
-
-    by_field = _row_dict(serialize_session_config(db, review_session))
-    assert by_field["rtds[GPA4].data_type"] == Row(
-        "rtds[GPA4].data_type", "decimal", "enum"
-    )
-    assert by_field["rtds[GPA4].min"] == Row(
-        "rtds[GPA4].min", "0", "decimal"
-    )
-    assert by_field["rtds[GPA4].max"] == Row(
-        "rtds[GPA4].max", "4", "decimal"
-    )
-    assert by_field["rtds[GPA4].step"] == Row(
-        "rtds[GPA4].step", "0.1", "decimal"
-    )
-    assert by_field["rtds[GPA4].list_csv"] == Row(
-        "rtds[GPA4].list_csv", "", "csv_list"
-    )
-    # Segment 18J Wave 2 PR iii-b3 retired the
-    # ``rtds[N].library_name`` cell alongside the operator-library
-    # tier. It no longer appears in the serialized output.
-    assert "rtds[GPA4].library_name" not in by_field
-
-
-@pytest.mark.skip(
-    reason="Segment 18J Wave 2 PR iii-b3 retired the RTD library "
-    "tier; the rtds[N].library_name cell is gone from the export."
-)
-def test_rtd_library_name_resolves_through_origin(db: Session) -> None:
-    """Retired alongside the RTD library tier in iii-b3."""
-
-
 def test_session_emits_display_timezone_and_self_reviews(
     db: Session,
 ) -> None:
@@ -279,20 +221,6 @@ def test_session_emits_display_timezone_and_self_reviews(
 # --------------------------------------------------------------------------- #
 # Section 4 — instruments + display fields + response fields
 # --------------------------------------------------------------------------- #
-
-
-def _likert_id(db: Session, review_session: ReviewSession) -> int:
-    return (
-        db.query(ResponseTypeDefinition)
-        .filter(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "Likert5",
-        )
-        .one()
-        .id
-    )
-
-
 
 
 def test_instrument_block_emits_canonical_fields(db: Session) -> None:
@@ -402,7 +330,6 @@ def test_multiple_instruments_indexed_by_order_position(db: Session) -> None:
     determines the index for fields within an instrument."""
 
     review_session = _bare_session(db, code="multi")
-    _likert_id(db, review_session)  # ensure seeded RTDs exist
     for n, name in enumerate(["First", "Second"]):
         instr = Instrument(
             session_id=review_session.id,

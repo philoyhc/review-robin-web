@@ -37,7 +37,6 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
-from app.services import instruments as instruments_service
 
 
 @pytest.fixture
@@ -255,11 +254,6 @@ def test_sub_row_state_pulls_from_per_instrument_projection(
         review_session=review_session,
         name="Peer survey",
         short_label="peer",
-    )
-    # Make sure each instrument has a response field so "submitted"
-    # has a meaning beyond "any row exists".
-    instruments_service.ensure_default_response_type_definitions(
-        db, review_session
     )
     from app.services.instruments import (
         DEFAULT_INSTRUMENT_NAME,  # noqa: F401

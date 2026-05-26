@@ -1660,13 +1660,9 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     from app.db.models import (
         InstrumentResponseField,
         Relationship,
-        ResponseTypeDefinition,
         User,
     )
     from app.services import relationships as relationships_service
-    from app.services.instruments import (
-        ensure_default_response_type_definitions,
-    )
 
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
@@ -1679,16 +1675,6 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     )
     db.add(review_session)
     db.flush()
-    ensure_default_response_type_definitions(db, review_session)
-    db.flush()
-    likert = (
-        db.query(ResponseTypeDefinition)
-        .filter(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "Likert5",
-        )
-        .one()
-    )
     # Group-scoped instrument grouped by pair-context tag 1.
     instrument = Instrument(
         session_id=review_session.id,
@@ -1702,7 +1688,8 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
         instrument_id=instrument.id,
         field_key="rating",
         label="Rating",
-        response_type_id=likert.id,
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
         order=0,
     )
     db.add(field)
@@ -1780,13 +1767,9 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
     from app.db.models import (
         InstrumentResponseField,
         Relationship,
-        ResponseTypeDefinition,
         User,
     )
     from app.services import relationships as relationships_service
-    from app.services.instruments import (
-        ensure_default_response_type_definitions,
-    )
 
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
@@ -1799,16 +1782,6 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
     )
     db.add(review_session)
     db.flush()
-    ensure_default_response_type_definitions(db, review_session)
-    db.flush()
-    likert = (
-        db.query(ResponseTypeDefinition)
-        .filter(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "Likert5",
-        )
-        .one()
-    )
     # Group-scoped instrument grouped by pair-context tag 1.
     instrument = Instrument(
         session_id=review_session.id,
@@ -1822,7 +1795,8 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
         instrument_id=instrument.id,
         field_key="rating",
         label="Rating",
-        response_type_id=likert.id,
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
         order=0,
     )
     db.add(field)

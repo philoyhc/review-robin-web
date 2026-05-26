@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Instrument,
-    ResponseTypeDefinition,
     ReviewSession,
     SessionFieldLabel,
     SessionRuleSet,
@@ -29,7 +28,6 @@ from app.services.sessions import resolve_session_timezone
 from app.services.session_config_io._rows import (
     Row,
     _bool,
-    _decimal,
     _int,
     _json,
     _str,
@@ -73,7 +71,6 @@ def serialize_session_config(
     rows: list[Row] = []
     rows.extend(_session_rows(review_session))
     rows.extend(_email_override_rows(review_session))
-    rows.extend(_rtd_rows(db, review_session))
     rows.extend(_instrument_blocks(db, review_session))
     rows.extend(_session_rule_set_rows(db, review_session))
     rows.extend(_field_label_rows(db, review_session))
@@ -168,36 +165,11 @@ def _email_override_rows(review_session: ReviewSession) -> list[Row]:
 # --------------------------------------------------------------------------- #
 
 
-def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
-    rtds = (
-        db.execute(
-            select(ResponseTypeDefinition)
-            .where(
-                ResponseTypeDefinition.session_id == review_session.id,
-                ResponseTypeDefinition.is_seeded.is_(False),
-            )
-            .order_by(
-                ResponseTypeDefinition.seed_order,
-                ResponseTypeDefinition.response_type,
-            )
-        )
-        .scalars()
-        .all()
-    )
-    rows: list[Row] = []
-    for rtd in rtds:
-        prefix = f"rtds[{rtd.response_type}]"
-        rows.append(Row(f"{prefix}.data_type", rtd.data_type, "enum"))
-        rows.append(Row(f"{prefix}.min", _decimal(rtd.min), "decimal"))
-        rows.append(Row(f"{prefix}.max", _decimal(rtd.max), "decimal"))
-        rows.append(Row(f"{prefix}.step", _decimal(rtd.step), "decimal"))
-        rows.append(
-            Row(f"{prefix}.list_csv", _str(rtd.list_csv), "csv_list")
-        )
-        # Segment 18J Wave 2 PR iii-b3 — the per-RTD library_name
-        # cell retired with the operator library tier. The importer
-        # still ignores it for back-compat with pre-iii-b3 CSVs.
-    return rows
+# Per-session ``response_type_definitions`` table retired
+# 2026-05-26 — the previous ``_rtd_rows`` exporter is gone.
+# Imports of pre-retirement bundles silently ignore any ``rtds[...]``
+# rows (see ``_apply.py``). Response field bounds + data_type now
+# round-trip inline on each ``response_field_*`` row.
 
 
 # --------------------------------------------------------------------------- #

@@ -33,27 +33,13 @@ from __future__ import annotations
 # it in the re-export wall so the test surface stays byte-identical.
 from ._state import _instrument_label, saved_state_for_session
 
-# Response Type Definitions (sliced in PR 1). ``ResponseTypeDefinition``
-# is the model class — re-exported through the RTDs slice (which is
-# its natural home) to preserve the pre-package surface where two
-# route handlers reach it as ``instruments_service.ResponseTypeDefinition``.
-from ._rtds import (
-    SEEDED_RESPONSE_TYPE_DEFINITIONS,
-    ResponseTypeDefinition,
-    RTDDeleteWouldEmptyInstrumentError,
-    RTDInUseError,
-    RTDLockedError,
-    RTDPrecisionError,
-    RTDValidationError,
-    add_response_type_definition,
-    assert_rtd_precision,
-    count_rtd_dependents,
-    delete_response_type_definition,
-    ensure_default_response_type_definitions,
-    get_session_rtds,
-    update_response_type_definition,
-    validation_block_for_rtd,
-)
+# Response Type Definitions slice retired 2026-05-26 — the per-
+# session ``response_type_definitions`` table dropped alongside the
+# per-instrument RTD card. Per-row inline bounds on
+# ``instrument_response_fields`` are the sole source of truth;
+# Band 3's "Type" picker drives ``data_type`` + ``list_options``
+# directly, with quick-fill presets defined in
+# ``app/services/instruments/_field_presets.py``.
 
 # Display fields (sliced in PR 2).
 from ._display_fields import (
@@ -139,43 +125,31 @@ __all__ = [
     "DEFAULT_INSTRUMENT_NAME",
     "DEFAULT_RESPONSE_FIELDS",
     "GROUP_KIND_SENTINEL",
-    "SEEDED_RESPONSE_TYPE_DEFINITIONS",
     "DisplaySourceError",
     "FieldKeyError",
     "InstrumentResponseField",
     "InvalidResponseFieldShapeError",
     "LockedDisplayFieldError",
     "ResponseFieldShapeChangeError",
-    "ResponseTypeDefinition",
     "ResponsesPresentError",
-    "RTDDeleteWouldEmptyInstrumentError",
-    "RTDInUseError",
-    "RTDLockedError",
-    "RTDPrecisionError",
-    "RTDValidationError",
     "GROUP_IDENTITY_SORT_KEY",
     "SortSpecError",
     "_instrument_label",
     "add_default_response_field",
     "add_display_field",
     "add_response_field",
-    "add_response_type_definition",
-    "assert_rtd_precision",
     "bulk_save_fields",
     "bulk_set_accepting",
     "bulk_set_visibility",
-    "count_rtd_dependents",
     "create_instrument",
     "decode_group_kind",
     "delete_display_field",
     "delete_instrument",
     "encode_group_kind",
     "delete_response_field",
-    "delete_response_type_definition",
     "display_field_label",
     "display_field_value",
     "ensure_default_instrument",
-    "ensure_default_response_type_definitions",
     "ensure_locked_display_fields",
     "Band1ParseError",
     "decode_band1_state",
@@ -189,7 +163,6 @@ __all__ = [
     "has_unconfigured",
     "has_unpinned",
     "is_configured",
-    "get_session_rtds",
     "is_locked_display_source",
     "move_display_field",
     "reorder_display_fields",
@@ -206,7 +179,5 @@ __all__ = [
     "update_display_field",
     "update_instrument_description",
     "update_response_field",
-    "update_response_type_definition",
     "update_short_label",
-    "validation_block_for_rtd",
 ]

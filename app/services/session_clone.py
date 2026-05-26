@@ -24,7 +24,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Relationship,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -112,18 +111,6 @@ def clone_session(
     db.add(
         SessionOperator(session_id=clone.id, user_id=user.id, role="owner")
     )
-
-    # Response type definitions — copied first so instruments' response
-    # fields can re-point at the clones.
-    rtd_map: dict[int, int] = {}
-    for rtd in source.response_type_definitions:
-        new_rtd = ResponseTypeDefinition(
-            session_id=clone.id,
-            **_column_values(rtd, skip={"id", "session_id"}),
-        )
-        db.add(new_rtd)
-        db.flush()
-        rtd_map[rtd.id] = new_rtd.id
 
     # Session rule sets — copied before instruments (rule_set_id).
     rule_set_map: dict[int, int] = {}

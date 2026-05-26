@@ -19,7 +19,6 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -30,7 +29,6 @@ from app.services.extracts.entity_stats_extract import (
     REVIEWER_STATS_HEADER,
     build_entity_stats,
 )
-from app.services.instruments import ensure_default_response_type_definitions
 
 _SUBMITTED = dt.datetime(2026, 5, 10, tzinfo=dt.timezone.utc)
 
@@ -52,22 +50,33 @@ def _session(db: Session, *, code: str = "stat") -> ReviewSession:
     )
     db.add(review_session)
     db.flush()
-    ensure_default_response_type_definitions(db, review_session)
-    db.flush()
     return review_session
+
+
+# Inline shape specs replacing the RTD seed lookups. Mirrors the
+# Rating-Integer-1-5 / Long-text seeds the retired
+# ``ensure_default_response_type_definitions`` produced.
+_INLINE_SPECS: dict[str, dict[str, object]] = {
+    "Long_text": {
+        "_inline_data_type": "String",
+        "_inline_response_type": "Long_text",
+        "_inline_min": 0.0,
+        "_inline_max": 2000.0,
+    },
+    "100int": {
+        "_inline_data_type": "Integer",
+        "_inline_response_type": "100int",
+        "_inline_min": 0.0,
+        "_inline_max": 100.0,
+        "_inline_step": 1.0,
+    },
+}
 
 
 def _rtd(
     db: Session, review_session: ReviewSession, response_type: str
-) -> ResponseTypeDefinition:
-    return (
-        db.query(ResponseTypeDefinition)
-        .filter(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == response_type,
-        )
-        .one()
-    )
+) -> dict[str, object]:
+    return _INLINE_SPECS[response_type]
 
 
 def _reviewer(
@@ -116,7 +125,7 @@ def _instrument(
 def _field(
     db: Session,
     instrument: Instrument,
-    rtd: ResponseTypeDefinition,
+    rtd: dict[str, object],
     *,
     field_key: str,
     required: bool = False,
@@ -130,12 +139,7 @@ def _field(
         order=order,
         # iii-b4: FK retired; inline columns carry data_type for
         # the extract's "string chars" filter.
-        _inline_data_type=rtd.data_type,
-        _inline_response_type=rtd.response_type,
-        _inline_min=rtd.min,
-        _inline_max=rtd.max,
-        _inline_step=rtd.step,
-        _inline_list_csv=rtd.list_csv,
+        **rtd,
     )
     db.add(f)
     db.flush()

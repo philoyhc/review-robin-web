@@ -42,7 +42,6 @@ triples actually get materialised from the Band 1 rule — see
   - [Band 3 — Response fields](#band-3--response-fields)
   - [Action row](#action-row)
 - [Add / Replicate / Delete](#add--replicate--delete)
-- [Response Type Definitions card](#response-type-definitions-card)
 - [Editing flow](#editing-flow)
 - [Validation surfaces](#validation-surfaces)
 - [Open / deferred](#open--deferred)
@@ -78,8 +77,9 @@ The on-page model maps onto these:
   chips). A preview row renders inline so the operator sees
   what the reviewer will see.
 - **Band 3.** Response fields — typed input controls the
-  reviewer fills in. Each row references a Response Type
-  Definition (RTD) for its type + bounds.
+  reviewer fills in. Each row carries its own inline
+  `data_type` + `min` / `max` / `step` / `list_options` (the
+  per-session RTD catalogue retired 2026-05-26).
 
 The Wave 5 collapse fused the legacy "individual" and "group"
 card flavours into one uniform card; Group vs Individual is now
@@ -97,8 +97,13 @@ Top → bottom, full width:
    by `instruments.order` (the operator's preferred display
    order; insertion order by default, mutable via Replicate +
    `+Instrument` which spawn immediately after a chosen anchor).
-4. **Response Type Definitions card** — the per-session RTD
-   catalogue (the typed-input vocabulary every Band 3 references).
+
+The bottom-of-page **Response Type Definitions card** retired
+2026-05-26 together with the `response_type_definitions` table
+— each Band 3 row now carries its own inline `data_type` +
+bounds + list options, with a small set of pre-filled List
+presets (Boolean / Agreement / Grades) baked into the Band 3
+type picker.
 
 Each card is wrapped in `<div class="card">`; the per-instrument
 card has `id="instrument-{id}"` so deep-links from other surfaces
@@ -419,8 +424,8 @@ Columns in edit mode:
 | Order | yes (drag handle) | `InstrumentResponseField.order`. Reordering is local DOM until Save. |
 | Visible | yes (checkbox) | `visible`. Reviewer surface only shows `visible=True` rows. |
 | Label | yes (text) | The string the reviewer sees as the field's prompt. |
-| Type | yes (dropdown) | An RTD `id` — picks the input control's shape + bounds. |
-| Bounds | conditional | For `Number` / `Rating` types, inline `min` / `max` / `step` inputs. For `SingleSelect` / `MultiSelect`, inline list-options editor. |
+| Type | yes (dropdown) | `String / Integer / Decimal / List` plus three quick-fill List presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. |
+| Bounds | conditional | For `Integer` / `Decimal`, inline `min` / `max` / `step` inputs. For `List`, inline comma-separated `list_options` editor. For `String`, inline `min` / `max` (length) inputs. |
 | Help text | yes (textarea) | Rendered tinted-block under the input on the reviewer surface. |
 | Remove (X) | yes (button) | Soft-delete: hides the row from the save payload. The row vanishes on save. |
 
@@ -444,16 +449,27 @@ A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.
 The page re-renders with the operator's edits intact.
 
-#### RTD reference
+#### Type presets
 
-Each Response Field row's Type dropdown lists every RTD in the
-session (the catalogue rendered in the bottom card). Picking
-an RTD writes `instrument_response_fields.response_type_id`
-(post Wave 3 PR iii.B4 — the FK retired, replaced by a per-row
-`response_type` string + inline bounds; see
-`response_type_definitions` below). Bounds inputs default to
-the RTD's current values when first changed and snap to type
-limits.
+The Band 3 row's "Type" picker is a plain `data_type` dropdown
+with four canonical values (`String / Integer / Decimal /
+List`) plus a `<optgroup>` of pre-filled List presets:
+
+| Preset | Stored `data_type` | Stored `list_options` |
+|---|---|---|
+| Boolean (Yes / No) | `list` | `Yes, No` |
+| Agreement (Likert 5) | `list` | `Strongly agree, Agree, Neutral, Disagree, Strongly disagree` |
+| Grades | `list` | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
+
+Picking a preset writes `data_type=list` and pre-fills the
+`list_options` input from the option's `data-preset-options`
+attribute, then snaps the select back to `List`. The preset's
+identity is not stored — only the resulting `data_type` +
+`list_options`. The operator can edit either after picking.
+
+Adding a preset: append a `(key, label, list_options)` tuple to
+`LIST_PRESETS` in `app/services/instruments/_field_presets.py`.
+No DB migration, no template macro changes.
 
 ### Action row
 
@@ -474,14 +490,13 @@ Bottom row of the card, right-aligned, in this order:
 - **Replicate** — clones this instrument's contents into a new
   card slotted immediately after it. POSTs to
   `/sessions/{sid}/instruments/{iid}/replicate`. Disabled when
-  another instrument is being edited or any RTD is unlocked.
+  another instrument is being edited.
 - **Delete** — destructive. Form-submit button gated on a
   delete-confirm checkbox rendered just below the row:
   *"Yes, delete **Instrument #N** and its associated assignments
   and reviewer responses."* Disabled when:
   - this is the only instrument in the session, or
-  - another instrument is being edited, or
-  - any RTD is unlocked.
+  - another instrument is being edited.
 - **+Instrument** — spawns a new instrument with default
   Identity + empty Bands 1+2+3 immediately after this card.
   POSTs to `/sessions/{sid}/instruments/add-new-model` with
@@ -493,14 +508,13 @@ Bottom row of the card, right-aligned, in this order:
   adding / removing `?editing={iid}` from the URL. Save +
   Lock are independent: Save doesn't lock, so the operator can
   keep editing after a Save. Both disabled past activation
-  (`is_ready`) or while any RTD is unlocked.
+  (`is_ready`).
 
 #### Save / Lock interaction
 
 - An "edit lock" is enforced page-wide: at most one instrument
-  may be unlocked at any time, and the RTD card may not be
-  editing in parallel. `editing_instrument_id` (resolved by
-  the view layer) names the currently unlocked card; if the URL
+  may be unlocked at any time. `editing_instrument_id` (resolved
+  by the view layer) names the currently unlocked card; if the URL
   asks for an instrument that fails the page-wide check, it
   silently falls back to view mode.
 - **Lock-with-unsaved-edits.** When the Lock button is clicked
@@ -570,73 +584,12 @@ The route guards against deleting the **only** instrument
 button + the title "Cannot delete the only instrument on this
 session."
 
-## Response Type Definitions card
-
-The bottom card on the page — the per-session catalogue of
-typed input controls every Band 3 row references.
-
-Each RTD row carries:
-
-- `id` (surrogate key).
-- `session_id` (per-session — every session gets its own copy
-  of the seeded RTDs on creation).
-- `name` (operator-displayed label).
-- `data_type` — `String | Integer | Decimal | Boolean | Rating |
-  SingleSelect | MultiSelect | Date | DateTime`.
-- Bounds — `min`, `max`, `step` (numeric types);
-  `list_options` (select types).
-- `is_seeded` — locked-row marker. The session-create code
-  materialises a stock catalogue of seeded RTDs (Rating 1-5,
-  Comments, etc.) with `is_seeded=True`. Seeded rows are fully
-  read-only: every field is locked, the row cannot be deleted.
-- `description` — operator-facing one-liner.
-
-Wave 5 PR 5.2 + Wave 3 PR iii.B retired the cross-session
-"library" RTD tier — there's no longer a global
-`operator_response_type_definitions` table. Every session's
-RTD catalogue starts from a freshly-cloned seed set and evolves
-independently.
-
-### Editing flow
-
-- **View mode.** Each row renders as a single horizontal strip
-  (name → data type code → bound values). Edit-locked rows
-  (seeded) carry a 🔒 marker.
-- **Edit mode.** One row at a time can be unlocked. Clicking
-  the row-level ✎ flips the row into edit mode; ✓ saves and
-  re-locks; X discards. While an RTD row is unlocked, all
-  Add / Replicate / Delete / Save / Lock buttons on every
-  instrument card disable (the `is_some_rtd_unlocked` page-wide
-  guard).
-- **Bounds editing.** Editable fields per type: `Number /
-  Decimal / Rating` → `min` / `max` / `step`; `SingleSelect /
-  MultiSelect` → list options.
-- **Adding rows.** `+ RTD` button at the bottom of the card
-  spawns a blank row in edit mode. Empty `name` rejects on
-  save (422 + inline banner).
-- **Deleting rows.** ✕ on operator-defined (non-seeded) rows.
-  Lifecycle-aware: blocked when the RTD is referenced by any
-  Band 3 row on any instrument (the operator must repoint or
-  remove the referencing rows first; the banner names them).
-
-### Bounds-as-source-of-truth retired
-
-Pre-Wave-3, every Band 3 row read its bounds from the linked
-RTD ("change the RTD → every instrument referencing it shifts
-together"). Wave 3 PR i replaced this with **per-row inline
-bounds**: each `InstrumentResponseField` carries its own
-`min` / `max` / `step` / `list_options`. The RTD's bounds are
-used only as defaults when a Band 3 row first picks the RTD —
-subsequent RTD edits don't propagate. This decoupling lets one
-RTD serve multiple instruments with different bounds without
-forcing them to fork the RTD itself.
-
 ## Editing flow
 
 The page-wide invariants the lock model enforces:
 
 1. **At most one card unlocked at a time.** Either zero (view
-   mode), one instrument, or one RTD row is unlocked.
+   mode) or exactly one instrument is unlocked.
 2. **Past-activation lock.** When the session is `is_ready`
    (activated), every edit affordance disables. The lifecycle
    spec spells out the revert-to-draft path
@@ -685,17 +638,6 @@ status aside.
 
 ## Open / deferred
 
-- **Cross-instrument response-field share.** When the same RTD
-  is referenced from multiple instruments with the same
-  bounds, the storage is duplicated. A future "share" affordance
-  could collapse this. Not load-bearing — the per-row inline
-  bounds already give the storage flexibility a share table
-  would.
-- **Per-session vs per-workspace RTD libraries.** Wave 5
-  retired the cross-session library tier. If shared RTD
-  evolution across sessions becomes a real ask, the seed-on-create
-  shape leaves an easy reintroduction path (a per-workspace
-  library mapped onto session-create cloning).
 - **Drag-reorder of cards.** Card order today is mutable via
   `+Instrument after=…` and Replicate but not by drag. Out of
   scope for now; the current affordances cover the dominant

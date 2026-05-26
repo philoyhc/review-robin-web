@@ -46,14 +46,7 @@ def _session(db: Session, user: User, *, code: str = "code") -> ReviewSession:
 
 
 def _bare_instrument(db: Session, session: ReviewSession) -> Instrument:
-    """Create an instrument with NO seeded fields. Seeds the RTD
-    catalog on the session so service calls that look up an RTD by
-    name (e.g. ``add_response_field(response_type=...)``) can find
-    it; the catalog is logically per-session, not per-instrument."""
-    from app.services.instruments import (
-        ensure_default_response_type_definitions,
-    )
-    ensure_default_response_type_definitions(db, session)
+    """Create an instrument with NO seeded fields."""
     instrument = Instrument(
         session_id=session.id,
         name="instrument_1",

@@ -42,9 +42,6 @@ from app.db.models import (
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
-from app.services.instruments._rtds import (
-    ensure_default_response_type_definitions,
-)
 from app.services.instruments._state import _instrument_label
 
 DEFAULT_INSTRUMENT_NAME = "Default"
@@ -72,11 +69,6 @@ def ensure_default_instrument(
         )
         db.add(instrument)
         db.flush()
-
-    # iii-b2: kept for List-type operator RTDs + back-compat
-    # fixtures; the return value is no longer indexed by name
-    # because defaults inline their bounds.
-    ensure_default_response_type_definitions(db, review_session)
 
     has_fields = (
         db.execute(

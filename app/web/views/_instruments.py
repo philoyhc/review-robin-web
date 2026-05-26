@@ -40,6 +40,7 @@ from app.services import field_labels
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
 from app.services._queries import slot_has_data
+from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.web import breadcrumbs
 
 from ._setup import session_status_pills
@@ -625,24 +626,14 @@ def build_instruments_context(
     user: User,
     editing: int | None = None,
     saved: int | None = None,
-    rtd_error: str | None = None,
-    rtd_id: int | None = None,
     rf_save_error: str | None = None,
-    editing_rtd_id: int | None = None,
-    rtd_delete_blocked_id: int | None = None,
-    rtd_delete_blocked_rfs: int | None = None,
-    rtd_delete_blocked_instruments: int | None = None,
-    rtd_delete_blocked_responses: int | None = None,
-    rtd_delete_blocked_assignments: int | None = None,
-    rtd_would_empty_id: int | None = None,
-    rtd_would_empty_instruments: str | None = None,
     sort_save_error: str | None = None,
     sort_save_error_instrument_id: int | None = None,
 ) -> dict[str, Any]:
     """Build the template context for the operator instruments index.
 
-    Runs the per-request idempotent display-field / RTD backfills
-    (locked-row safety net + lazy seeds + stale-row prune + RTD seed),
+    Runs the per-request idempotent display-field backfills
+    (locked-row safety net + lazy seeds + stale-row prune),
     derives the editing-state machine, and packages the URL-driven
     error / cascade query params into the dict the template expects.
     Commits the backfill side-effects before returning so subsequent
@@ -678,13 +669,6 @@ def build_instruments_context(
     # there's nothing to seed.
     instruments_service.seed_display_fields_from_reviewees(db, review_session)
     instruments_service.seed_display_fields_from_assignments(db, review_session)
-    # Idempotent per-request backfill of the seeded RTD catalog.
-    # Existing sessions get the rows from the Slice 4a migration; this
-    # call covers any session created without going through
-    # ``ensure_default_instrument`` (e.g. raw fixtures in tests).
-    instruments_service.ensure_default_response_type_definitions(
-        db, review_session
-    )
     db.commit()
     # The session runs ``expire_on_commit=False``, so the commit
     # above leaves any already-loaded ``display_fields`` collections
@@ -699,13 +683,6 @@ def build_instruments_context(
     # editing. The yellow lock card on a ``ready`` session overrides
     # everything — every per-instrument card stays locked.
     editing_instrument_id = None if is_ready else editing
-    # Slice 4d: the per-instrument editing state and the RTD editing
-    # state are mutually exclusive — one editing context on the page
-    # at a time. If both URL params are set (e.g. via a stale link),
-    # the per-instrument card wins; the RTD card stays locked.
-    effective_editing_rtd_id: int | None = None
-    if not is_ready and editing_instrument_id is None:
-        effective_editing_rtd_id = editing_rtd_id
 
     # "Saved" / "not saved" pill on each per-instrument card's status
     # sub-card. An instrument is "saved" if it has at least one audit
@@ -715,37 +692,6 @@ def build_instruments_context(
     # touched — render as "not saved".
     instrument_saved_state = instruments_service.saved_state_for_session(
         db, session_id=review_session.id
-    )
-    rtds = instruments_service.get_session_rtds(
-        db, session_id=review_session.id
-    )
-    # Segment 18J Wave 2 PR iii-b3 — the operator RTD library tier
-    # is retired; the "Add from library" picker is gone alongside
-    # ``list_library_rtds_not_in_session``. Empty list keeps the
-    # template happy until the corresponding template block is
-    # removed below.
-    library_rtds_available: list[Any] = []
-
-    rtd_delete_blocked = (
-        {
-            "id": rtd_delete_blocked_id,
-            "response_field_count": rtd_delete_blocked_rfs or 0,
-            "instrument_count": rtd_delete_blocked_instruments or 0,
-            "response_count": rtd_delete_blocked_responses or 0,
-            "assignment_count": rtd_delete_blocked_assignments or 0,
-        }
-        if rtd_delete_blocked_id is not None
-        else None
-    )
-    rtd_would_empty = (
-        {
-            "id": rtd_would_empty_id,
-            "instrument_numbers": [
-                n for n in (rtd_would_empty_instruments or "").split(",") if n
-            ],
-        }
-        if rtd_would_empty_id is not None
-        else None
     )
 
     return {
@@ -764,16 +710,8 @@ def build_instruments_context(
         "editing_instrument_id": editing_instrument_id,
         "instrument_saved_state": instrument_saved_state,
         "saved_instrument_id": saved,
-        "rtds": rtds,
-        "library_rtds_available": library_rtds_available,
-        "rtd_error": rtd_error,
-        "rtd_error_id": rtd_id,
         "rf_save_error": rf_save_error,
-        "editing_rtd_id": effective_editing_rtd_id,
         "is_some_instrument_editing": editing_instrument_id is not None,
-        "is_some_rtd_unlocked": effective_editing_rtd_id is not None,
-        "rtd_delete_blocked": rtd_delete_blocked,
-        "rtd_would_empty": rtd_would_empty,
         "sort_save_error": sort_save_error,
         "sort_save_error_instrument_id": sort_save_error_instrument_id,
         "breadcrumbs": breadcrumbs.operator_session_child(
@@ -799,6 +737,10 @@ def build_instruments_context(
         "new_model_band2_state": _new_model_band2_states_for(
             db, instruments
         ),
+        # Band 3 type-picker quick-fill presets (each one writes
+        # ``data_type=list`` + a pre-filled comma-separated
+        # ``list_options``; identity-less at storage time).
+        "band3_list_presets": list(_BAND3_LIST_PRESETS),
     }
 
 
