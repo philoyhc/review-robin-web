@@ -89,14 +89,9 @@ class Instrument(Base, TimestampMixin):
     via ``session_rule_sets.library_origin_id`` SET NULL — see
     13D PR 2)."""
 
-    is_new_model: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, server_default="0"
-    )
-    """Concept-test marker for the Instrument Builder vertical-bands
-    card (``guide/instrument_builder.md``). New-model instruments are
-    ordinary instruments at the model / service / route level — the
-    template renders them with the bands placeholder layout instead
-    of the standard Display / Response Fields tables."""
+    # Wave 5 PR 5.3 — ``is_new_model`` column dropped. Every
+    # instrument is implicitly a (former) new-model instrument
+    # post-collapse; legacy individual / group cards retired.
 
     column_widths: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True

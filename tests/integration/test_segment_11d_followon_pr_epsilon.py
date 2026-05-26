@@ -82,7 +82,7 @@ def _setup_two_instrument_session(
         ).scalars()
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add",
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
         data={"after": str(first.id)},
         follow_redirects=False,
     )

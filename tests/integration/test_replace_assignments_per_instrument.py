@@ -98,6 +98,10 @@ def _seed_two_instruments(db: Session) -> tuple[
     return user, review_session, inst_a, inst_b, rule_set
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
+    "on untouched Band 1; legacy unpinned-instrument skip retired."
+)
 def test_only_pinned_instruments_get_rows(db: Session) -> None:
     """Cross-instrument default skips instruments with NULL
     ``rule_set_id`` silently."""
@@ -123,6 +127,10 @@ def test_only_pinned_instruments_get_rows(db: Session) -> None:
     assert (replaced, new) == (0, 4)
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
+    "on untouched Band 1; legacy unpinned-instrument skip retired."
+)
 def test_no_pinned_instruments_is_noop(db: Session) -> None:
     """Zero pinned instruments returns ``(0, 0)`` and writes nothing —
     not an error condition."""
@@ -227,6 +235,10 @@ def test_scoped_replace_only_touches_named_instrument(db: Session) -> None:
     assert inst_b_rows == 4
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
+    "on untouched Band 1; legacy unpinned-instrument skip retired."
+)
 def test_scoped_replace_rejects_unpinned_instrument(db: Session) -> None:
     """``instrument_id=<id>`` against an instrument with NULL
     ``rule_set_id`` raises — the caller named a target that has no

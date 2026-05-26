@@ -151,17 +151,17 @@ def test_no_rule_pinned_silent_without_rosters(db: Session) -> None:
     assert _issues_with_key(issues, "instruments.no_rule_pinned") == []
 
 
-def test_no_rule_pinned_fires_when_rosters_present_but_unpinned(
+def test_no_rule_pinned_silent_after_wave_5(
     db: Session,
 ) -> None:
-    """Reviewers + reviewees imported, default instrument unpinned →
-    error per unpinned instrument."""
-    _user, review_session, instrument, _rs = _seed(db, code="nrp-fire")
+    """Wave 5 PR 5.3 — ``instruments.no_rule_pinned`` retired as a
+    no-op check. Every instrument now defaults to Full Matrix on
+    untouched Band 1 (Wave 4 PR 1), so a NULL ``rule_set_id`` is
+    never "not set up." The rule key stays registered so audit
+    history remains addressable."""
+    _user, review_session, _instrument, _rs = _seed(db, code="nrp-retired")
     issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(issues, "instruments.no_rule_pinned")
-    assert len(fired) == 1
-    assert fired[0].severity is Severity.warning
-    assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
+    assert _issues_with_key(issues, "instruments.no_rule_pinned") == []
 
 
 def test_no_rule_pinned_silent_once_every_instrument_pinned(
@@ -175,9 +175,12 @@ def test_no_rule_pinned_silent_once_every_instrument_pinned(
     assert _issues_with_key(issues, "instruments.no_rule_pinned") == []
 
 
-def test_no_rule_pinned_fires_per_unpinned_instrument(db: Session) -> None:
-    """Multi-instrument session: one pinned, one unpinned → one
-    error for the unpinned one."""
+def test_no_rule_pinned_silent_per_unpinned_instrument_after_wave_5(
+    db: Session,
+) -> None:
+    """Wave 5 PR 5.3 — multi-instrument sessions with some pinned
+    and some unpinned no longer trigger the retired rule. Every
+    instrument defaults to Full Matrix on untouched Band 1."""
     _user, review_session, instrument_a, rule_set = _seed(
         db, code="nrp-multi"
     )
@@ -189,10 +192,7 @@ def test_no_rule_pinned_fires_per_unpinned_instrument(db: Session) -> None:
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(issues, "instruments.no_rule_pinned")
-    assert len(fired) == 1
-    assert "Peer survey" in fired[0].message
-    assert fired[0].fix_anchor == f"#instrument-{instrument_b.id}"
+    assert _issues_with_key(issues, "instruments.no_rule_pinned") == []
 
 
 # --------------------------------------------------------------------------- #
@@ -209,7 +209,6 @@ def test_no_rule_pinned_skips_new_model_instruments(db: Session) -> None:
     so the parallel ``no_visible_response_fields`` rule stays
     silent too."""
     _user, review_session, instrument, _rs = _seed(db, code="nrp-newmodel")
-    instrument.is_new_model = True
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
@@ -221,12 +220,12 @@ def test_no_rule_pinned_skips_new_model_instruments(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_no_visible_response_fields_silent_for_legacy(db: Session) -> None:
-    """Legacy instrument with all response fields hidden → silent
-    (the rule only fires for ``is_new_model=True``). The
-    legacy-flavoured ``instruments.no_rule_pinned`` covers the
-    legacy "not set up" gap."""
-    _user, review_session, instrument, _rs = _seed(db, code="nvrf-legacy")
+def test_no_visible_response_fields_fires_when_all_hidden(db: Session) -> None:
+    """Wave 5 PR 5.3 — every instrument is now subject to the
+    no-visible-response-fields rule (the legacy carve-out
+    retired). An instrument with every response-field row's
+    ``visible=False`` trips the warning."""
+    _user, review_session, instrument, _rs = _seed(db, code="nvrf-hidden")
     db.execute(
         update(InstrumentResponseField)
         .where(InstrumentResponseField.instrument_id == instrument.id)
@@ -235,10 +234,11 @@ def test_no_visible_response_fields_silent_for_legacy(db: Session) -> None:
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
-    assert (
-        _issues_with_key(issues, "instruments.no_visible_response_fields")
-        == []
+    fired = _issues_with_key(
+        issues, "instruments.no_visible_response_fields"
     )
+    assert len(fired) == 1
+    assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
 
 
 def test_no_visible_response_fields_fires_when_none_visible(
@@ -247,7 +247,6 @@ def test_no_visible_response_fields_fires_when_none_visible(
     """New-model instrument with zero ``visible=True`` response fields
     → warning per instrument."""
     _user, review_session, instrument, _rs = _seed(db, code="nvrf-fire")
-    instrument.is_new_model = True
     # Hide all seeded response fields.
     db.execute(
         update(InstrumentResponseField)
@@ -271,7 +270,6 @@ def test_no_visible_response_fields_silent_when_at_least_one_visible(
     """Seeded defaults (Rating + Comments) are ``visible=True``, so
     a freshly-created new-model instrument is configured."""
     _user, review_session, instrument, _rs = _seed(db, code="nvrf-ok")
-    instrument.is_new_model = True
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)

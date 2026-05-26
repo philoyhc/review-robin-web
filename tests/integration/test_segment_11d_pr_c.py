@@ -479,7 +479,7 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
         ).scalars()
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add",
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
         data={"after": str(default_instrument.id)},
         follow_redirects=False,
     )
