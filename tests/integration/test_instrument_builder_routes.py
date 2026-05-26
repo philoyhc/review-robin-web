@@ -5163,6 +5163,44 @@ def test_save_dirty_tracking_init_function_present(
     assert "data-new-model-rf-add" in body
 
 
+def test_save_dirty_tracking_catches_band1_pill_clicks(
+    client: TestClient, db: Session
+) -> None:
+    """Regression: clicking the Band 1 link-mode pills (Link 1 +
+    Link 2 rule mode, Link 3 unit-of-review mode) and the
+    combinator / operator cycle buttons must enable the Save
+    button. Those handlers update hidden inputs via ``.value = ...``
+    which does NOT dispatch input/change events, so the dirty
+    tracker's delegated click handler has to recognize them
+    explicitly. Without this, an operator setting Link 1 = All,
+    Link 2 = All, Link 3 = Individual leaves Save disabled and
+    cannot persist the configuration."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-dirty-pill-clicks"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # Isolate the dirty-tracking init function body. Everything we
+    # care about is the delegated click handler inside it.
+    init_idx = body.find("newModelInitSaveDirtyTracking = window.newModelInitSaveDirtyTracking")
+    assert init_idx != -1
+    # The function ends at the matching closing brace; conservatively
+    # grab a 4000-char window — long enough to contain the click
+    # handler and not long enough to leak into the next helper.
+    init_block = body[init_idx : init_idx + 4000]
+    for selector in (
+        "[data-new-model-rule-mode]",
+        "[data-new-model-unit-mode]",
+        "[data-new-model-combinator-toggle]",
+        "[data-new-model-operator-cycle]",
+    ):
+        assert selector in init_block, (
+            f"dirty-tracker click handler is missing selector {selector}; "
+            "clicking that control will not enable Save."
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Wave 4 PR 3 — Lock confirms unsaved changes; Band 3 rows show pending visual
 # --------------------------------------------------------------------------- #

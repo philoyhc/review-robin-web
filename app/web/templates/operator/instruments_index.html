@@ -2987,12 +2987,26 @@
             // rows live inside the instrument card too, so the
             // delegated click handler catches them no matter how
             // many rows the operator adds.
+            //
+            // Same problem on Band 1: the link-pill toggles (Link 1
+            // and Link 2 rule mode, Link 3 unit-of-review mode) and
+            // the combinator / operator cycle buttons mutate hidden
+            // form inputs via ``input.value = ...``, which does NOT
+            // fire input / change events. Without an explicit click
+            // hook here, clicking e.g. Link 1 → All, Link 2 → All,
+            // Link 3 → Individual leaves Save disabled even though
+            // the dfsave payload now differs from the persisted
+            // state. Catch those clicks here too.
             instrumentCard.addEventListener('click', function (ev) {
               var t = ev.target;
               if (!t || !t.closest) { return; }
               if (t.closest('[data-new-model-rf-save]')
                 || t.closest('[data-new-model-rf-delete]')
-                || t.closest('[data-new-model-rf-add]')) {
+                || t.closest('[data-new-model-rf-add]')
+                || t.closest('[data-new-model-rule-mode]')
+                || t.closest('[data-new-model-unit-mode]')
+                || t.closest('[data-new-model-combinator-toggle]')
+                || t.closest('[data-new-model-operator-cycle]')) {
                 markDirty();
               }
             });
