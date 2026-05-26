@@ -941,23 +941,38 @@
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}
                   {% set _is_first = loop.first %}
+                  {# Column-flex wrapper so a small "Reviewee tag"
+                     caption stacks above the select + X row.
+                     Mirrors Link 1's ``field_helper`` caption
+                     styling. Lives inside ``data-new-model-unit-cell``
+                     so ``newModelAddUnitCell``'s
+                     ``cloneNode(true)`` carries it onto every
+                     boundary cell added via the ``+`` button. #}
                   <div data-new-model-unit-cell
-                       style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
-                            onchange="newModelLink3BoundaryChanged(this)"
-                            {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
-                      <option value="">—</option>
-                      {% for key, label in _link3_tags %}
-                        <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    <button type="button" class="btn destructive" data-new-model-cell-action
-                            data-new-model-unit-remove
-                            style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="newModelRemoveUnitCell(this)"
-                            {% if _is_first %}disabled aria-disabled="true"
-                            title="Cannot remove the first cell"
-                            {% else %}title="Remove cell"{% endif %}>X</button>
+                       style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="flex: 0 0 66.66%; min-width: 0;
+                                   font-size: 0.75rem;
+                                   color: var(--text-primary, #111827);
+                                   padding-left: 2px;">Reviewee tag</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
+                              onchange="newModelLink3BoundaryChanged(this)"
+                              {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
+                        <option value="">—</option>
+                        {% for key, label in _link3_tags %}
+                          <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="button" class="btn destructive" data-new-model-cell-action
+                              data-new-model-unit-remove
+                              style="padding: 4px 8px; flex-shrink: 0;"
+                              onclick="newModelRemoveUnitCell(this)"
+                              {% if _is_first %}disabled aria-disabled="true"
+                              title="Cannot remove the first cell"
+                              {% else %}title="Remove cell"{% endif %}>X</button>
+                    </div>
                   </div>
                 {% endfor %}
               </div>
