@@ -785,7 +785,6 @@ def build_instruments_context(
                 instrument, db
             )
             for instrument in instruments
-            if instrument.is_new_model
         },
         "new_model_link3_state": {
             instrument.id: {
@@ -795,7 +794,6 @@ def build_instruments_context(
                 ),
             }
             for instrument in instruments
-            if instrument.is_new_model
         },
         "new_model_band2_state": _new_model_band2_states_for(
             db, instruments
@@ -810,7 +808,8 @@ def _new_model_band2_states_for(
     instrument on the page, sharing one active-reviewees fetch across
     them (Segment 18J Wave 1 Rec D1).
     """
-    new_model_instruments = [i for i in instruments if i.is_new_model]
+    # Wave 5 PR 5.3 — every instrument is implicitly new-model.
+    new_model_instruments = list(instruments)
     if not new_model_instruments:
         return {}
     review_session = new_model_instruments[0].session

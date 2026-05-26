@@ -169,7 +169,6 @@ def create_instrument(
     after_instrument_id: int | None = None,
     actor: User,
     group_kind: str | None = None,
-    is_new_model: bool = False,
 ) -> Instrument:
     """Create a new instrument seeded with default response and display
     fields. If ``after_instrument_id`` is given, slot the new instrument
@@ -216,7 +215,6 @@ def create_instrument(
         accepting_responses=False,
         responses_visible_when_closed=False,
         group_kind=group_kind,
-        is_new_model=is_new_model,
     )
     db.add(instrument)
     db.flush()
@@ -347,7 +345,6 @@ def replicate_instrument(
         accepting_responses=False,
         responses_visible_when_closed=False,
         group_kind=source.group_kind,
-        is_new_model=source.is_new_model,
         sort_display_fields=(
             [dict(entry) for entry in source.sort_display_fields]
             if source.sort_display_fields
@@ -582,18 +579,13 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
     """True iff this instrument has the minimum setup needed to
     function in an activated session.
 
-    Legacy instruments (``is_new_model=False``) require a pinned
-    :class:`SessionRuleSet`. Without one, Generate skips them and
-    the reviewer surface renders empty (Segment 13C invariant).
-
-    New-model instruments default to Full Matrix when Band 1 is
-    untouched (Wave 4 PR 1), so they don't require a pinned rule.
-    They do need at least one ``visible=True``
-    :class:`InstrumentResponseField` — without one, the reviewer
+    Wave 5 PR 5.3 collapsed the legacy / new-model distinction.
+    Every instrument needs at least one ``visible=True``
+    :class:`InstrumentResponseField`; without one, the reviewer
     page renders zero rows even though assignments exist.
+    Untouched Band 1 (no rule_set_id) is fine — Generate
+    synthesises a Full Matrix at evaluate time (Wave 4 PR 1).
     """
-    if not instrument.is_new_model:
-        return instrument.rule_set_id is not None
     visible_count = db.scalar(
         select(func.count(InstrumentResponseField.id))
         .where(InstrumentResponseField.instrument_id == instrument.id)
@@ -605,9 +597,7 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
 def has_unconfigured(db: Session, session_id: int) -> bool:
     """True iff the session has zero instruments, or any instrument
     fails :func:`is_configured`. Drives the Next Action card's
-    "Empty Setup" state (Wave 4 PR 2) — replaces the rule-set-
-    centric :func:`has_unpinned` predicate now that new-model
-    instruments no longer require a pinned rule.
+    "Empty Setup" state.
     """
     instruments = list(
         db.execute(
@@ -616,27 +606,16 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
     )
     if not instruments:
         return True
-    # Legacy fast path — any NULL ``rule_set_id`` on a legacy
-    # instrument is unconfigured without a DB roundtrip.
-    if any(
-        not inst.is_new_model and inst.rule_set_id is None
-        for inst in instruments
-    ):
-        return True
-    new_model_ids = [inst.id for inst in instruments if inst.is_new_model]
-    if new_model_ids:
-        # Batched: which new-model instruments have at least one
-        # visible response field?
-        rows = db.execute(
-            select(InstrumentResponseField.instrument_id)
-            .where(InstrumentResponseField.instrument_id.in_(new_model_ids))
-            .where(InstrumentResponseField.visible.is_(True))
-            .distinct()
-        ).all()
-        configured_ids = {row[0] for row in rows}
-        if any(nid not in configured_ids for nid in new_model_ids):
-            return True
-    return False
+    instrument_ids = [inst.id for inst in instruments]
+    # Batched: which instruments have at least one visible response field?
+    rows = db.execute(
+        select(InstrumentResponseField.instrument_id)
+        .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
+        .where(InstrumentResponseField.visible.is_(True))
+        .distinct()
+    ).all()
+    configured_ids = {row[0] for row in rows}
+    return any(iid not in configured_ids for iid in instrument_ids)
 
 
 def has_unpinned(db: Session, session_id: int) -> bool:

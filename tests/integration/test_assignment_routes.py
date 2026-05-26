@@ -128,7 +128,7 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         ).scalars()
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add",
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
         data={"after": str(default_instrument.id)},
         follow_redirects=False,
     )

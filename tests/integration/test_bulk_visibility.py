@@ -66,7 +66,7 @@ def _add_instrument(
     client: TestClient, db: Session, session_id: int, after_id: int
 ) -> Instrument:
     client.post(
-        f"/operator/sessions/{session_id}/instruments/add",
+        f"/operator/sessions/{session_id}/instruments/add-new-model",
         data={"after": str(after_id)},
         follow_redirects=False,
     )

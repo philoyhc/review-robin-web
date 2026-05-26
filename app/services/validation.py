@@ -409,57 +409,17 @@ def _check_assignments_instrument_empty(
 def _check_instruments_no_rule_pinned(
     db: Session, review_session: ReviewSession
 ) -> Iterable[ValidationIssue]:
-    """Warning per **legacy** instrument with ``rule_set_id IS NULL``
-    once the session has reviewers + reviewees.
-
-    Without a pinned rule, ``replace_assignments`` silently skips
-    the instrument — reviewers landing on its page see nothing.
-    Gating on rosters being populated prevents the rule from firing
-    on a freshly created session (which always has a default
-    instrument that's unpinned out of the box); the
-    ``reviewers.empty`` / ``reviewees.empty`` errors already cover
-    that case more specifically.
-
-    Wave 4 PR 2 — new-model instruments default to Full Matrix when
-    Band 1 is untouched (PR 1 fix), so a NULL ``rule_set_id`` on
-    a new-model instrument is no longer "not set up." The parallel
-    ``instruments.no_visible_response_fields`` rule covers the
-    new-model readiness gap.
+    """Wave 5 PR 5.3 — retired. Pre-PR-5.3 the rule fired on legacy
+    instruments with NULL ``rule_set_id``. With the legacy /
+    new-model split collapsed, every instrument now defaults to
+    Full Matrix on untouched Band 1 (Wave 4 PR 1), so a NULL
+    ``rule_set_id`` is never "not set up." The
+    ``instruments.no_visible_response_fields`` rule still covers
+    the readiness gap (zero visible response fields). The rule
+    key stays registered so audit history remains addressable.
     """
-    has_reviewer = db.execute(
-        select(Reviewer.id)
-        .where(Reviewer.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    has_reviewee = db.execute(
-        select(Reviewee.id)
-        .where(Reviewee.session_id == review_session.id)
-        .limit(1)
-    ).first()
-    if has_reviewer is None or has_reviewee is None:
-        return
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    for instrument in instruments:
-        if instrument.rule_set_id is not None:
-            continue
-        if instrument.is_new_model:
-            continue
-        yield ValidationIssue(
-            severity=Severity.warning,
-            source="instruments",
-            message=(
-                f"Instrument {_instrument_label(instrument)!r} has no "
-                "rule pinned — Generate will skip it; reviewers see "
-                "an empty page"
-            ),
-            fix_anchor=f"#instrument-{instrument.id}",
-        )
+    return
+    yield  # pragma: no cover — make this an Iterable
 
 
 def _check_new_model_no_visible_response_fields(
@@ -490,16 +450,15 @@ def _check_new_model_no_visible_response_fields(
         db.execute(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
-            .where(Instrument.is_new_model.is_(True))
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
     if not instruments:
         return
-    new_model_ids = [inst.id for inst in instruments]
+    instrument_ids = [inst.id for inst in instruments]
     visible_rows = db.execute(
         select(InstrumentResponseField.instrument_id)
-        .where(InstrumentResponseField.instrument_id.in_(new_model_ids))
+        .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
         .where(InstrumentResponseField.visible.is_(True))
         .distinct()
     ).all()

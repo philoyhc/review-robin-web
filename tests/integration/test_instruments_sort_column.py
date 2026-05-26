@@ -19,6 +19,8 @@ to the operator UI.
 """
 from __future__ import annotations
 
+import pytest
+
 import re
 from urllib.parse import parse_qs, urlparse
 
@@ -175,6 +177,11 @@ def _query_param(url: str, name: str) -> str | None:
 # --- Render --------------------------------------------------------------
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
+    "the legacy card. Sort UI moved to the Band 2 preview header "
+    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
+)
 def test_display_fields_table_renders_sort_column(
     db: Session, client: TestClient
 ) -> None:
@@ -194,6 +201,11 @@ def test_display_fields_table_renders_sort_column(
     assert 'class="sort-btn"' in body
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
+    "the legacy card. Sort UI moved to the Band 2 preview header "
+    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
+)
 def test_existing_sort_spec_renders_as_priority_badges(
     db: Session, client: TestClient
 ) -> None:
@@ -366,6 +378,11 @@ def test_bulk_save_unknown_dir_redirects_with_banner(
     assert "sideways" in msg or "not one of" in msg
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
+    "the legacy card. Sort UI moved to the Band 2 preview header "
+    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
+)
 def test_sort_error_banner_renders_on_redirect_target(
     db: Session, client: TestClient
 ) -> None:

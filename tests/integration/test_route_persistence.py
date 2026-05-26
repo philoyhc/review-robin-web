@@ -13,6 +13,8 @@ silently.
 
 from __future__ import annotations
 
+import pytest
+
 from collections.abc import Iterator
 
 from fastapi.testclient import TestClient
@@ -301,6 +303,11 @@ def test_add_default_response_field_persists(
     assert "rating3" in keys
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — legacy Display Fields / Response Fields "
+    "bulk-save table retired with the legacy card. The new-model "
+    "card uses Band 2 + Band 3 inline editors."
+)
 def test_bulk_save_fields_response_label_persists_display_label_retired(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
@@ -356,6 +363,11 @@ def test_bulk_save_fields_response_label_persists_display_label_retired(
         assert rating.label == "Renamed Rating"
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — legacy Display Fields / Response Fields "
+    "bulk-save table retired with the legacy card. The new-model "
+    "card uses Band 2 + Band 3 inline editors."
+)
 def test_bulk_save_emits_aligned_arrays_when_display_label_input_retired(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:

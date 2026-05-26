@@ -909,26 +909,11 @@ def _load_reconcile_inputs(
             f"instrument {instrument_id} not found in session "
             f"{review_session.id}"
         )
-    if instrument_id is not None:
-        # Single-instrument scope: the caller named the target. Legacy
-        # instruments require an explicit pin (per Segment 13C);
-        # new-model instruments with NULL ``rule_set_id`` are
-        # interpreted as Full Matrix at the diff site.
-        only = all_instruments[0]
-        if only.rule_set_id is None and not only.is_new_model:
-            raise ValueError(
-                f"instrument {instrument_id} has no rule pinned "
-                "(rule_set_id is NULL)"
-            )
-        targets = list(all_instruments)
-    else:
-        # Cross-instrument scope: silently skip legacy unpinned ones;
-        # keep new-model NULL-rule_set instruments (Full Matrix
-        # default — Wave 4).
-        targets = [
-            i for i in all_instruments
-            if i.rule_set_id is not None or i.is_new_model
-        ]
+    # Wave 5 PR 5.3 — every instrument now flows through the same
+    # path: NULL ``rule_set_id`` is interpreted as Full Matrix at
+    # the diff site via the synthetic empty-rules schema. No more
+    # legacy-vs-new-model branching here.
+    targets = list(all_instruments)
 
     reviewers = list_reviewers(db, review_session.id)
     reviewees = list_reviewees(db, review_session.id)

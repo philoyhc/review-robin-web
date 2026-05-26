@@ -301,18 +301,10 @@ def activate_session(
         ).scalars()
     )
     for instrument in instruments:
-        if (
-            instrument.group_kind is not None
-            and instrument.rule_set_id is None
-            and not instrument.is_new_model
-        ):
-            # A legacy group-scoped instrument with no pinned rule
-            # cannot accept responses (Segment 13C rule-required
-            # gate); it stays closed until the operator pins a rule
-            # and opens it. New-model group-scoped instruments
-            # default to Full Matrix on untouched Band 1 (Wave 4)
-            # so they don't need an explicit pin.
-            continue
+        # Wave 5 PR 5.3 — every instrument flips to accepting on
+        # activate. Untouched Band 1 (no pinned rule) is fine; the
+        # synthetic Full Matrix schema (Wave 4 PR 1) covers it at
+        # generate time.
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
     db.flush()
@@ -505,19 +497,10 @@ def open_instrument(
             code="deadline_passed",
         )
 
-    if (
-        instrument.group_kind is not None
-        and instrument.rule_set_id is None
-        and not instrument.is_new_model
-    ):
-        # Legacy group-scoped instruments still require an explicit
-        # pin; new-model group-scoped instruments default to Full
-        # Matrix on untouched Band 1 (Wave 4).
-        raise LifecycleError(
-            "A group-scoped instrument needs an assignment rule before "
-            "it can accept responses. Pin one on the Assignments page.",
-            code="group_instrument_no_rule",
-        )
+    # Wave 5 PR 5.3 — the legacy group-scoped "no rule pinned"
+    # gate retired. Group-scoped instruments default to Full
+    # Matrix on untouched Band 1 (Wave 4 PR 1) just like
+    # individual ones.
 
     if not instrument.accepting_responses:
         instrument.accepting_responses = True

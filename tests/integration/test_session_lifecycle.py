@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -544,6 +545,12 @@ def _add_group_instrument(
     ).scalar_one()
 
 
+@pytest.mark.skip(
+    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
+    "on untouched Band 1 (no longer blocked when rule_set_id IS NULL). "
+    "The legacy 'group instrument needs a rule' gate retired with the "
+    "is_new_model split."
+)
 def test_group_instrument_open_blocked_without_rule(
     client: TestClient, db: Session
 ) -> None:
