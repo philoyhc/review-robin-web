@@ -421,7 +421,14 @@ def _create_band1_rule_set(
             f"#{instrument.id}."
         ),
         combinator="ALL_OF",
-        exclude_self_reviews=True,
+        # Align with the synthetic Full Matrix default
+        # (assignments._full_matrix_schema) so self-review pairs
+        # materialise as assignment rows on every Band 1 instrument.
+        # The per-instrument "Self review" toggle on the Assignments
+        # page is the operator's include / exclude surface; baking
+        # exclusion in at the rule-set level would silently disable
+        # that toggle.
+        exclude_self_reviews=False,
         seed=None,
         rules_json=rules_json,
     )
