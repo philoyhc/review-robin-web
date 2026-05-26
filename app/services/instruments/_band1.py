@@ -617,6 +617,7 @@ def find_sample_in_scope_reviewee(
         return None
     if not result.pairs:
         return None
+    _reviewer, reviewee = result.pairs[0]
     # Gap 10: compute rule-surviving group member IDs for the
     # sample's reviewee-side boundary key. Skipped when there's no
     # reviewee-side boundary (per-reviewee mode or grouped-by-
@@ -631,29 +632,16 @@ def find_sample_in_scope_reviewee(
         if src == "reviewee"
     ]
     if not reviewee_boundary_fields:
-        # Default sample = first surviving pair's reviewee.
-        return result.pairs[0][1], None
-
-    def _key_of(rev: Any) -> tuple[str, ...]:
-        return tuple(
-            (getattr(rev, field, "") or "") for field in reviewee_boundary_fields
-        )
-
-    # Member-ID computation is scoped to one reviewer's pool.
-    # Pre-2026-05-26 ``find_sample_in_scope_reviewee`` walked every
-    # ``(reviewer, reviewee)`` pair the engine produced and collected
-    # reviewees whose boundary key matched the sample. That widened
-    # the set when boundary tag values repeat across reviewer pools
-    # (e.g. tutorial-group → team setup where "Team 1" exists in
-    # every tutorial group). The reviewer surface narrows correctly
-    # because each reviewer's collapse uses only their own pairs;
-    # mirror that here by anchoring on a single sample reviewer.
-    sample_reviewer, sample_reviewee = result.pairs[0]
-    sample_key = _key_of(sample_reviewee)
+        return reviewee, None
+    sample_key = tuple(
+        getattr(reviewee, field, "") or ""
+        for field in reviewee_boundary_fields
+    )
     member_ids: set[int] = set()
-    for r, e in result.pairs:
-        if r.id != sample_reviewer.id:
-            continue
-        if _key_of(e) == sample_key:
+    for _r, e in result.pairs:
+        if (
+            tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
+            == sample_key
+        ):
             member_ids.add(e.id)
-    return sample_reviewee, sorted(member_ids)
+    return reviewee, sorted(member_ids)
