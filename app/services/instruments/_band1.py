@@ -143,7 +143,15 @@ def set_band1_assignment_rules(
         )
         return instrument
 
-    if (rule_set.rules_json or []) == rules_json:
+    # Normalise ``exclude_self_reviews=False`` on every update so
+    # sessions whose SessionRuleSet was materialised before
+    # PR #1452 (which flipped the default) heal the moment the
+    # operator next saves Band 1. The per-instrument Self review
+    # toggle on the Assignments page is the sole include / exclude
+    # surface; baking exclusion in at the rule-set level would
+    # silently disable that toggle.
+    needs_self_review_fix = rule_set.exclude_self_reviews
+    if (rule_set.rules_json or []) == rules_json and not needs_self_review_fix:
         return instrument
 
     prev_count = len(rule_set.rules_json or [])
@@ -155,6 +163,8 @@ def set_band1_assignment_rules(
         reason="instrument_band1_rules_updated",
     )
     rule_set.rules_json = rules_json
+    if needs_self_review_fix:
+        rule_set.exclude_self_reviews = False
     db.flush()
     audit.write_event(
         db,

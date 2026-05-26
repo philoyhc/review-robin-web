@@ -153,6 +153,80 @@ def test_set_band1_assignment_rules_replaces_owned_touched_slice(
     assert instrument.band1_touched_links == ["link3"]
 
 
+def test_set_band1_assignment_rules_heals_pre_pr1452_exclude_self_reviews(
+    client: TestClient, db: Session
+) -> None:
+    """A session whose ``SessionRuleSet`` was materialised before
+    PR #1452 carries ``exclude_self_reviews=True``. The next Band 1
+    save heals the column to ``False`` so self-review pairs
+    materialise as Assignment rows on the next Generate."""
+    from app.db.models import SessionRuleSet
+
+    review_session = _make_session(client, db, code="self-review-heal")
+    instrument = _default_instrument(db, review_session.id)
+    user = review_session.created_by_user
+
+    # Simulate a pre-fix materialisation: create the SessionRuleSet
+    # with the old default and pin it to the instrument.
+    legacy_rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="legacy Band 1",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=True,
+        seed=None,
+        rules_json=[
+            {
+                "id": "link1",
+                "kind": "COMPOSITE",
+                "enabled": True,
+                "op": "AND",
+                "rules": [
+                    {
+                        "id": "link1-r0",
+                        "kind": "MATCH",
+                        "enabled": True,
+                        "predicate": {
+                            "field": "reviewer.tag1",
+                            "operator": "equals",
+                            "operand": "Lead",
+                            "case_sensitive": False,
+                        },
+                    }
+                ],
+            }
+        ],
+    )
+    db.add(legacy_rule_set)
+    db.flush()
+    instrument.rule_set_id = legacy_rule_set.id
+    db.flush()
+
+    # Operator saves Band 1 — the heal kicks in regardless of
+    # whether the rules_json shape changed.
+    instruments_service.set_band1_assignment_rules(
+        db,
+        instrument=instrument,
+        link1_mode="filter",
+        link1_combinator="AND",
+        link1_rules=[
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_value": "Lead",
+                "operand_tag": "",
+            }
+        ],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+        actor=user,
+        touched_links={"link1", "link2"},
+    )
+    db.refresh(legacy_rule_set)
+    assert legacy_rule_set.exclude_self_reviews is False
+
+
 def test_set_band1_assignment_rules_materialises_rule_set_without_self_review_exclusion(
     client: TestClient, db: Session
 ) -> None:
