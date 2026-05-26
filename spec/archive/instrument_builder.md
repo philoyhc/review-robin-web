@@ -9,7 +9,7 @@ card, surfaced on the operator Instruments page
 (`/operator/sessions/{id}/instruments`) as the **New-model
 instrument** flavour. The design intent — vertical-bands layout
 collecting every per-instrument decision in one screen — is
-sketched in `guide/instrument_builder.md`; this file documents
+sketched in `guide/instrument_builder_project.md`; this file documents
 what's currently rendered on the page.
 
 This file describes **what is on the page**. It does not describe
@@ -20,7 +20,7 @@ the slice that wires it lands those pieces later.
 
 > **Status.** The new-model card top section and Band 1 are
 > functionally laid out. Band 2 and Band 3 are not yet specified.
-> See `guide/instrument_builder.md` for the parts plan.
+> See `guide/instrument_builder_project.md` for the parts plan.
 
 ## Page placement
 
@@ -307,11 +307,11 @@ add / remove / toggle behaviour lives in three inline
 / `newModelRemoveUnitCell` / `newModelRefreshUnitButtons` /
 `newModelToggleUnitMode`) defined once on the page; clicks
 manipulate the DOM but no request is sent. The full wiring plan
-sits in `guide/instrument_builder.md`.
+sits in `guide/instrument_builder_project.md`.
 
 ## Related specs
 
-- `guide/instrument_builder.md` — design plan + parts roadmap
+- `guide/instrument_builder_project.md` — design plan + parts roadmap
   for the full builder. The "what comes next" doc this spec
   hangs from.
 - `spec/instruments.md` — the per-instrument card the new-model card

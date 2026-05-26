@@ -749,5 +749,5 @@ When Waves ship:
   there's nothing left to track.
 - `spec/instrument_builder.md` updated as Gaps 1-7 land
   (each one changes the operator surface contract).
-- `guide/instrument_builder.md` cross-references updated as
+- `guide/instrument_builder_project.md` cross-references updated as
   Parts §D-RTD + Part 1b sketches collapse into shipped state.

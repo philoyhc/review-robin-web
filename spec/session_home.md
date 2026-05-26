@@ -359,8 +359,9 @@ heading; the card title *is* the session:
   avoids a mid-card form that competes with the action work in
   the Workflow card above.
 - The Edit sub-page carries a `← Back to Session Home` link
-  above the card (mirroring the Rule Builder page's child-page
-  affordance). Inside the **Edit Session Details** card, the
+  above the card (matching the chrome-detour `.back-link` shape
+  used by Operator Settings / About). Inside the **Edit Session
+  Details** card, the
   form fields sit above a half-width inner grid carrying two
   side-by-side cards: the **Schedule timeline** preview on the
   left and the **Owners** card on the right. The **Danger Zone**

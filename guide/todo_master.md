@@ -835,7 +835,7 @@ Notional segment label for the new-model instrument card work
 that shipped without its own plan doc. **Exploration phase**
 (PRs **#1302 → #1304**, 2026-05-22→23): the chain-builder concept
 retired, the instrument-builder vertical-layout design landed
-(`guide/instrument_builder.md`, `spec/instrument_builder.md`).
+(`guide/instrument_builder_project.md`, `spec/instrument_builder.md`).
 **Main push** (PRs **#1305 → #1386**, 2026-05-23→24): iterative
 UI build-out behind the `instruments.is_pilot` → `is_new_model`
 flag — Band 1 (rule editor + Individual/Grouped toggle), Band 2

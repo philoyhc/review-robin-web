@@ -52,7 +52,7 @@ shorthand:
 | **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
-| **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Used by chrome-detour pages (Operator Settings, About) and session-level child pages (Rule Builder). (See `spec/ui_elements.md` §6.) |
+| **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Used by chrome-detour pages (Operator Settings, About). The Rule Builder child page also used this pattern before its retirement in Wave 5 PR 5.1. (See `spec/ui_elements.md` §6.) |
 | **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / About (`chrome-link`). Defined in `spec/visual_style_rrw.md`, not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
 | **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`. |
@@ -422,23 +422,23 @@ Source: `app/web/templates/operator/operator_settings.html`.
 
 ---
 
-## Section 16 — Rule Builder (`/operator/sessions/{id}/assignments/rule-based-editor`)
+## Section 16 — Rule Builder *(retired 2026-05-25, Wave 5 PR 5.1)*
 
-Source: `app/web/templates/operator/session_rule_builder.html` +
-included `_rule_builder_card.html` and `_available_rulesets_card.html`
-partials. The Rule Builder page itself retired in Wave 5 PR 5.1;
-Band 1 of the instrument card is now the only rule-authoring
-surface. See [`spec/assignments.md`](assignments.md) and
-[`spec/instruments.md`](instruments.md) § Band 1.
-This audit captures the canonical button shapes.
+The Rule Builder child page (formerly
+`/operator/sessions/{id}/assignments/rule-based-editor`) and
+its source templates (`session_rule_builder.html` +
+`_rule_builder_card.html` + `_available_rulesets_card.html`)
+were all retired in Wave 5 PR 5.1. Band 1 of the per-instrument
+card on the Instruments page is now the sole rule-authoring
+surface — see [`spec/assignments.md`](assignments.md) and
+[`spec/instruments.md`](instruments.md) § Band 1 for the
+canonical button shapes there (`+` to add a rule cell, `X` to
+remove, the operator-cycle button, and the AND / OR combinator
+toggle).
 
-| # | Card | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 95 | Rule Builder header | ← Back to Assignments | `<a>` | `back-link` | Return-to (`.back-link`) | Top-of-body navigation; same class as Operator Settings / About |
-| 96 | Rule Builder action row | Copy | `<button type="submit">` | `btn secondary` | Secondary | Forks the selected ruleset into a new Personal draft |
-| 97 | Rule Builder action row | Save | `<button type="submit">` | `btn secondary` | Secondary | Persists the in-progress draft |
-| 98 | Rule Builder action row | Cancel | `<a>` | `btn secondary` | Secondary | Discards in-progress edits and returns to the saved selection |
-| 99 | Rule Builder action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Soft-deletes the selected Personal ruleset |
+The original five-button audit (Back, Copy, Save, Cancel,
+Delete on rows 95–99) is preserved at
+`spec/archive/instrument_builder.md` for historical reference.
 
 ---
 
@@ -558,18 +558,14 @@ pattern:
 - **Chrome-detour pages** — Operator Settings (#104), About
   (#103). Both surfaced from the chrome top-right utility menu
   (#100 / #101), round-trip via `?return_to=<path>`.
-- **Session-level child pages** — Rule Builder (#95). Off the
-  Assignments page, no chrome of its own.
+- ~~**Session-level child pages**~~ — the only example was the
+  Rule Builder (Section 16); page retired in Wave 5 PR 5.1.
 
-These pages now use the canonical **`.back-link`** class — a
-small inline link rendered as
+These pages use the canonical **`.back-link`** class — a small
+inline link rendered as
 `<a class="back-link" href="{{ return_to_url }}">← Back to
 {{ return_to_label }}</a>` at the top of the body, above the
 working cards. Documented in `spec/ui_elements.md` §6.
-
-The Rule Builder previously rolled its own plain `<a>` anchor
-inside a card; this PR moves it to `.back-link`, putting it in
-visual line with Operator Settings and About.
 
 **Edit Session (`session_edit.html`)** is a remaining outlier —
 it carries a `Cancel` anchor (#17) instead of a back-link. The
