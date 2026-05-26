@@ -792,6 +792,7 @@ def build_instruments_context(
                 "boundary_pairs": instruments_service.decode_group_kind(
                     instrument.group_kind
                 ),
+                "touched": "link3" in (instrument.band1_touched_links or []),
             }
             for instrument in instruments
         },

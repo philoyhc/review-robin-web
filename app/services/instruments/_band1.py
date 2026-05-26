@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
 from app.services import audit
@@ -68,6 +68,7 @@ def set_band1_assignment_rules(
     link2_combinator: str,
     link2_rules: list[dict[str, str]],
     actor: User,
+    touched_links: set[str] | None = None,
 ) -> Instrument:
     """Persist Band 1's two Link rule lists onto the instrument's
     pinned :class:`SessionRuleSet`. Materialises a fresh per-instrument
@@ -95,6 +96,8 @@ def set_band1_assignment_rules(
         link2_combinator=link2_combinator,
         link2_rules=link2_rules,
     )
+
+    _mark_touched_links(instrument, touched_links, {"link1", "link2"})
 
     rule_set = (
         db.get(SessionRuleSet, instrument.rule_set_id)
@@ -179,11 +182,17 @@ def set_band1_assignment_rules(
 def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
     """Read the instrument's stored Band 1 state back into the same
     shape the UI submits. Returns ``{"link1": {...}, "link2": {...}}``
-    with each link's ``mode`` / ``combinator`` / ``rules`` populated.
+    with each link's ``mode`` / ``combinator`` / ``rules`` / ``touched``
+    populated.
+
+    ``touched`` is True iff the operator has previously clicked the
+    link's pill into a set state (see ``instrument.band1_touched_links``).
+    Untouched links render as the ``"Not set"`` pill state in the UI.
     """
+    touched = set(instrument.band1_touched_links or [])
     state: dict[str, Any] = {
-        "link1": _empty_link_state(),
-        "link2": _empty_link_state(),
+        "link1": _empty_link_state(touched=("link1" in touched)),
+        "link2": _empty_link_state(touched=("link2" in touched)),
     }
     if instrument.rule_set_id is None:
         return state
@@ -223,21 +232,27 @@ def parse_band1_form(form: Any) -> dict[str, Any]:
         "link2_mode": _form_mode(form, "link2_mode"),
         "link2_combinator": _form_combinator(form, "link2_combinator"),
         "link2_rules": _form_rules(form, "link2"),
+        "touched_links": _form_touched_links(form, ("link1", "link2")),
     }
 
 
-def parse_link3_form(form: Any) -> tuple[str, list[tuple[str, str]]]:
+def parse_link3_form(
+    form: Any,
+) -> tuple[str, list[tuple[str, str]], bool]:
     """Parse Link 3 (Unit of review) from the form payload. Returns
-    ``(mode, boundary_pairs)`` where ``mode`` is ``"individual"`` or
-    ``"grouped"`` and ``boundary_pairs`` is the decoded list of
-    ``(source_type, source_field)`` pairs (empty when mode is
-    ``"individual"`` or grouped-with-no-boundary).
+    ``(mode, boundary_pairs, touched)`` where ``mode`` is
+    ``"individual"`` or ``"grouped"``, ``boundary_pairs`` is the
+    decoded list of ``(source_type, source_field)`` pairs (empty when
+    mode is ``"individual"`` or grouped-with-no-boundary), and
+    ``touched`` is True iff the operator clicked the Link 3 pill in
+    this submit (carried via the ``link3_touched`` hidden input).
     """
     mode = str(form.get("link3_mode") or "individual").strip()
     if mode not in ("individual", "grouped"):
         mode = "individual"
+    touched = _form_touched_links(form, ("link3",)) == {"link3"}
     if mode == "individual":
-        return mode, []
+        return mode, [], touched
     pairs: list[tuple[str, str]] = []
     for raw in form.getlist("link3_boundary"):
         s = str(raw).strip()
@@ -256,7 +271,7 @@ def parse_link3_form(form: Any) -> tuple[str, list[tuple[str, str]]]:
         pair = (source, f"tag_{tag_num}")
         if pair not in pairs:
             pairs.append(pair)
-    return mode, pairs
+    return mode, pairs, touched
 
 
 # ---------------------------------------------------------------------------
@@ -264,8 +279,42 @@ def parse_link3_form(form: Any) -> tuple[str, list[tuple[str, str]]]:
 # ---------------------------------------------------------------------------
 
 
-def _empty_link_state() -> dict[str, Any]:
-    return {"mode": "all", "combinator": "AND", "rules": []}
+def _empty_link_state(*, touched: bool = False) -> dict[str, Any]:
+    return {
+        "mode": "all",
+        "combinator": "AND",
+        "rules": [],
+        "touched": touched,
+    }
+
+
+def _mark_touched_links(
+    instrument: Instrument,
+    touched_links: set[str] | None,
+    allowed: set[str],
+) -> None:
+    """Union ``touched_links`` (intersected with ``allowed``) into
+    ``instrument.band1_touched_links``. Sticky — never removes."""
+    if not touched_links:
+        return
+    incoming = {link for link in touched_links if link in allowed}
+    if not incoming:
+        return
+    existing = set(instrument.band1_touched_links or [])
+    merged = existing | incoming
+    if merged == existing:
+        return
+    instrument.band1_touched_links = sorted(merged)
+    object_session(instrument).flush()
+
+
+def _form_touched_links(form: Any, keys: tuple[str, ...]) -> set[str]:
+    touched: set[str] = set()
+    for key in keys:
+        raw = str(form.get(f"{key}_touched") or "").strip().lower()
+        if raw in ("true", "1", "yes", "on"):
+            touched.add(key)
+    return touched
 
 
 def _build_rules_json(

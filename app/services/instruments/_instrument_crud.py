@@ -575,23 +575,36 @@ def update_short_label(
     return instrument
 
 
+_BAND1_REQUIRED_LINKS: frozenset[str] = frozenset({"link1", "link2", "link3"})
+
+
 def is_configured(db: Session, instrument: Instrument) -> bool:
     """True iff this instrument has the minimum setup needed to
     function in an activated session.
 
     Wave 5 PR 5.3 collapsed the legacy / new-model distinction.
-    Every instrument needs at least one ``visible=True``
-    :class:`InstrumentResponseField`; without one, the reviewer
-    page renders zero rows even though assignments exist.
-    Untouched Band 1 (no rule_set_id) is fine — Generate
-    synthesises a Full Matrix at evaluate time (Wave 4 PR 1).
+    Every instrument needs:
+
+    - at least one ``visible=True``
+      :class:`InstrumentResponseField` (without one, the reviewer
+      page renders zero rows even though assignments exist); and
+    - all three Band 1 link pills (Pool of reviewers / Pool of
+      those reviewed / Unit of review) deliberately clicked into
+      a set state — see ``Instrument.band1_touched_links`` for
+      the "Not set" pill safety gate. Untouched links still default
+      to Full Matrix at evaluate time (Wave 4 PR 1); the gate
+      forces the operator to acknowledge them on the card before
+      the workflow card lights up as ready.
     """
     visible_count = db.scalar(
         select(func.count(InstrumentResponseField.id))
         .where(InstrumentResponseField.instrument_id == instrument.id)
         .where(InstrumentResponseField.visible.is_(True))
     ) or 0
-    return visible_count > 0
+    if visible_count <= 0:
+        return False
+    touched = set(instrument.band1_touched_links or [])
+    return _BAND1_REQUIRED_LINKS.issubset(touched)
 
 
 def has_unconfigured(db: Session, session_id: int) -> bool:
@@ -615,7 +628,14 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
         .distinct()
     ).all()
     configured_ids = {row[0] for row in rows}
-    return any(iid not in configured_ids for iid in instrument_ids)
+    for inst in instruments:
+        if inst.id not in configured_ids:
+            return True
+        if not _BAND1_REQUIRED_LINKS.issubset(
+            set(inst.band1_touched_links or [])
+        ):
+            return True
+    return False
 
 
 def has_unpinned(db: Session, session_id: int) -> bool:
@@ -814,6 +834,7 @@ def set_unit_of_review(
     mode: str,
     boundary_pairs: list[tuple[str, str]],
     actor: User,
+    touched: bool = False,
 ) -> Instrument:
     """Set the instrument's unit-of-review (Link 3 of the new-model
     instrument builder).
@@ -837,6 +858,11 @@ def set_unit_of_review(
             f"unit_of_review mode must be 'individual' or 'grouped'; "
             f"got {mode!r}"
         )
+    if touched and "link3" not in (instrument.band1_touched_links or []):
+        instrument.band1_touched_links = sorted(
+            set(instrument.band1_touched_links or []) | {"link3"}
+        )
+        db.flush()
     if instrument.group_kind == new_value:
         return instrument
     lifecycle.invalidate_if_validated(

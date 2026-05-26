@@ -719,14 +719,17 @@ def test_new_model_band1_persists_link1_link2_link3_round_trip(
             "link1_op": "IS",
             "link1_operand_value": "Lead",
             "link1_operand_tag": "",
+            "link1_touched": "true",
             "link2_mode": "filter",
             "link2_combinator": "OR",
             "link2_field": "reviewee.tag1",
             "link2_op": "IS THE SAME AS",
             "link2_operand_value": "",
             "link2_operand_tag": "reviewer.tag1",
+            "link2_touched": "true",
             "link3_mode": "grouped",
             "link3_boundary": "reviewee.tag1",
+            "link3_touched": "true",
         },
         follow_redirects=False,
     )
@@ -756,6 +759,14 @@ def test_new_model_band1_persists_link1_link2_link3_round_trip(
         "operand": "reviewer.tag1",
         "case_sensitive": False,
     }
+    # Wave 5 "Not set" pill safety gate — all three Band 1 link
+    # pills carried ``{link}_touched=true`` in the POST above,
+    # so the sticky touched set now covers Link 1 + 2 + 3.
+    assert sorted(new_model.band1_touched_links or []) == [
+        "link1",
+        "link2",
+        "link3",
+    ]
 
     # Reload the index and confirm the controls hydrate. We check key
     # markers in the rendered HTML; the JS preserves the chip state
