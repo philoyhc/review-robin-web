@@ -686,7 +686,7 @@
          cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
          Hydrated from ``state`` (a dict with mode / combinator /
          rules — see views._instruments.build_band1_state). #}
-      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None) %}
+      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None) %}
         {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
         {% set _is_active = tag_options | length > 0 %}
         {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
@@ -783,7 +783,7 @@
                       <span data-new-model-rule-field-helper
                             style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-muted, #64748b);
+                                   color: var(--text-primary, #111827);
                                    padding-left: 2px;">{{ field_helper }}</span>
                     </div>
                   {% endif %}
@@ -806,6 +806,25 @@
                              value="{{ _r.op if _r.op in _ops else _ops[0] }}">
                     {% endif %}
                   </div>
+                  {# Optional caption above the operand-tag
+                     dropdown (Link 2 only — Link 1 has no tag
+                     operand because its operators are IS / IS
+                     NOT only). Shown only when the operator
+                     selected is IS THE SAME AS / IS DIFFERENT
+                     FROM (when the operand-tag select itself is
+                     shown). ``newModelCycleOperator`` toggles
+                     visibility in lockstep with the operand-tag
+                     select. #}
+                  {% if operand_tag_helper and operand_tag_options %}
+                    <div data-new-model-rule-operand-helper-row
+                         style="display: flex; align-items: center; gap: 4px;
+                                {% if not _use_tag_operand %}display: none;{% endif %}">
+                      <span style="flex: 0 0 50%; min-width: 0;
+                                   font-size: 0.75rem;
+                                   color: var(--text-primary, #111827);
+                                   padding-left: 2px;">{{ operand_tag_helper }}</span>
+                    </div>
+                  {% endif %}
                   <div style="display: flex; align-items: center; gap: 4px;">
                     {% if operand_tag_options %}
                       <select data-new-model-operand-tag
@@ -883,7 +902,9 @@
               "Pool of those reviewed", _link2_tags,
               operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
               operand_tag_options=_link2_operand,
-              on_label="Filter using reviewee attributes") }}
+              on_label="Filter using reviewee attributes",
+              field_helper="Reviewee tag",
+              operand_tag_helper="Reviewer tag") }}
         </div>
         <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
           <div data-new-model-link-wrapper>
@@ -941,23 +962,39 @@
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}
                   {% set _is_first = loop.first %}
+                  {# Outer wrapper is column-flex so each cell
+                     stacks a small "Reviewee tag" caption above
+                     the select + X row. The caption mirrors
+                     Link 1 / Link 2's ``field_helper`` styling
+                     and lives inside ``data-new-model-unit-cell``
+                     so ``newModelAddUnitCell``'s
+                     ``cloneNode(true)`` carries it onto every
+                     boundary cell added via the ``+`` button. #}
                   <div data-new-model-unit-cell
-                       style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
-                            onchange="newModelLink3BoundaryChanged(this)"
-                            {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
-                      <option value="">—</option>
-                      {% for key, label in _link3_tags %}
-                        <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    <button type="button" class="btn destructive" data-new-model-cell-action
-                            data-new-model-unit-remove
-                            style="padding: 4px 8px; flex-shrink: 0;"
-                            onclick="newModelRemoveUnitCell(this)"
-                            {% if _is_first %}disabled aria-disabled="true"
-                            title="Cannot remove the first cell"
-                            {% else %}title="Remove cell"{% endif %}>X</button>
+                       style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="flex: 0 0 66.66%; min-width: 0;
+                                   font-size: 0.75rem;
+                                   color: var(--text-primary, #111827);
+                                   padding-left: 2px;">Reviewee tag</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
+                              onchange="newModelLink3BoundaryChanged(this)"
+                              {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
+                        <option value="">—</option>
+                        {% for key, label in _link3_tags %}
+                          <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="button" class="btn destructive" data-new-model-cell-action
+                              data-new-model-unit-remove
+                              style="padding: 4px 8px; flex-shrink: 0;"
+                              onclick="newModelRemoveUnitCell(this)"
+                              {% if _is_first %}disabled aria-disabled="true"
+                              title="Cannot remove the first cell"
+                              {% else %}title="Remove cell"{% endif %}>X</button>
+                    </div>
                   </div>
                 {% endfor %}
               </div>
@@ -991,12 +1028,19 @@
           });
           // Reset operand variants on the cloned cell: value input
           // shown, tag dropdown (if present) hidden — matching the
-          // default operator state (IS).
+          // default operator state (IS). The operand-tag helper row
+          // (if present) follows the tag select's visibility.
           var tagSel = clone.querySelector('[data-new-model-operand-tag]');
           var valInput = clone.querySelector('[data-new-model-operand-value]');
           if (tagSel && valInput) {
             tagSel.style.display = 'none';
             valInput.style.display = '';
+          }
+          var operandHelperRow = clone.querySelector(
+            '[data-new-model-rule-operand-helper-row]'
+          );
+          if (operandHelperRow) {
+            operandHelperRow.style.display = 'none';
           }
           // New cell's X is active (only the first cell's X stays disabled).
           clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
@@ -1025,6 +1069,16 @@
             var useTag = next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM';
             tagSel.style.display = useTag ? '' : 'none';
             valInput.style.display = useTag ? 'none' : '';
+            // The operand-tag caption row (Link 2 only) follows
+            // the operand-tag select's visibility. The row is a
+            // flex container so toggle to explicit 'flex' rather
+            // than '' which would reset to the default block.
+            var operandHelperRow = cell.querySelector(
+              '[data-new-model-rule-operand-helper-row]'
+            );
+            if (operandHelperRow) {
+              operandHelperRow.style.display = useTag ? 'flex' : 'none';
+            }
           }
         };
         window.newModelRemoveRule = window.newModelRemoveRule || function (btn) {
