@@ -7,9 +7,16 @@
 > cards no longer exist; every instrument flows through the
 > single (formerly "new-model") card. The Gap entries below
 > cross-link to the shipping PRs; the Roadmap section at the
-> bottom describes the path that was actually walked. Pilot-
-> scale perf followers (Rec B / D2 / D3) live in
-> `guide/deferred_until_pilot_feedback.md`.
+> bottom describes the path that was actually walked.
+>
+> **Recs status.** Two of seven shipped — Rec A + Rec D1 (both
+> in PR #1393, the Wave 1 perf double-tap). The remaining five
+> (Rec B, Rec C, Rec D2, Rec D3, Rec E) parked in
+> `guide/deferred_until_pilot_feedback.md` under "18J Rec B" /
+> "18J Rec C" / "18J Rec D2 + D3" / "18J Rec E" — each with a
+> lift trigger keyed to pilot-scale observations. Pilot rosters
+> have not surfaced the latency that motivated them; they
+> re-activate when a real deployment does.
 
 The new-model instrument card (the flavour formerly gated on
 `instruments.is_new_model`) has grown from a concept-test shell

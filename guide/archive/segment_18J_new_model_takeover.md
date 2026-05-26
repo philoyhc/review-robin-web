@@ -640,11 +640,12 @@ pilot use of the new-model card.
 
 > Originally labelled Wave 4. Slid to Wave 5 when the readiness
 > + Lock/Unlock work above turned out to need its own wave.
-> Reordered again before landing: perf followers (Rec B / D2 /
-> D3) carved out to `guide/deferred_until_pilot_feedback.md`
-> because pilot-scale rosters were nowhere near the latency
-> threshold that motivated them. The wave shipped as the
-> RuleSet-library retirement only.
+> Reordered again before landing: perf followers (Rec B / C /
+> D2 / D3 / E) carved out to
+> `guide/deferred_until_pilot_feedback.md` because pilot-scale
+> rosters were nowhere near the latency threshold that
+> motivated them. The wave shipped as the RuleSet-library
+> retirement only.
 
 Gap 7's full retirement in three sequential PRs:
 
@@ -721,21 +722,20 @@ missed.
 
 ## Deferred until needed
 
-- **Rec B** — `find_first_n_pairs` engine fast path. Pilot rosters
-  haven't surfaced the 1k × 1k latency that motivated it. Carved
-  out of Wave 5; relevant once a deployment scales past mid-three-
-  digit reviewer / reviewee counts. Tracked in
-  `guide/deferred_until_pilot_feedback.md`.
-- **Rec D2 + D3** — single page-level roster JSON blob + skip on-
-  load preview rebuild in view mode. Wave 5 perf doublet that the
-  pilot didn't need; deferred alongside Rec B. Same deferred-
-  ledger entry.
-- **Rec C** — single-side predicate indexes (+ roster-upload
-  cache). Defer until Rec B's worst case is observed on a
-  real pilot roster. For broad-rule cases (the likely default)
-  Rec B alone should hold latency well under 100ms.
+All five outstanding perf-followup Recs now have entries in
+`guide/deferred_until_pilot_feedback.md` (added 2026-05-26):
+
+- **Rec B** — `find_first_n_pairs` engine fast path. Cures
+  Refresh-preview latency on 1k × 1k from 1-3s to typically
+  <100ms. Pilot rosters haven't surfaced it.
+- **Rec C** — single-side predicate indexes (+ optional
+  roster-upload cache). Layered on Rec B for the narrow-rule
+  worst case; conditional.
+- **Rec D2 + D3** — single page-level roster JSON blob + skip
+  on-load preview rebuild in view mode. Cuts the per-card
+  payload duplication and the view-mode JS rebuild.
 - **Rec E** — verify Band 1 no-op Save stays cache-warm.
-  Tiny safety-net commit; can land any time after Wave 1.
+  Tiny safety-net + observability follow-on to Rec A.
   Not blocking.
 
 ## Doc impact
