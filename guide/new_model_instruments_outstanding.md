@@ -1,13 +1,23 @@
 # New-model instruments — outstanding work for full takeover
 
-The new-model instrument card (the flavour gated on
-`instruments.is_new_model`) has grown from a concept-test shell
-into a near-complete operator surface. This doc tracks **how far
-it is from replacing the legacy individual + group instrument
-cards outright**, and what would need to retire / consolidate
-once it does.
+> **Status: all Gaps shipped 2026-05-26.** This doc is now a
+> historical record of the Gap / Rec catalogue Segment 18J
+> consumed verbatim. The `instruments.is_new_model` flag is gone
+> (Wave 5 PR 5.3 / PR #1448); the legacy individual + group
+> cards no longer exist; every instrument flows through the
+> single (formerly "new-model") card. The Gap entries below
+> cross-link to the shipping PRs; the Roadmap section at the
+> bottom describes the path that was actually walked. Pilot-
+> scale perf followers (Rec B / D2 / D3) live in
+> `guide/deferred_until_pilot_feedback.md`.
 
-Scope of "full takeover":
+The new-model instrument card (the flavour formerly gated on
+`instruments.is_new_model`) has grown from a concept-test shell
+into the sole operator surface. This doc tracks **how far it had
+to come to replace the legacy individual + group instrument
+cards outright**, and what retired / consolidated along the way.
+
+Scope of "full takeover" (all achieved):
 
 1. Every operator-facing affordance on the legacy individual +
    group cards exists on the new-model card (or is consciously
@@ -17,8 +27,10 @@ Scope of "full takeover":
 3. The RuleSet library (`operator_rule_sets` +
    `rule_set_revisions`) and RTD library
    (`operator_response_type_definitions`) are either retired or
-   coexist intentionally.
-4. The `is_new_model` flag column can be dropped.
+   coexist intentionally. **Both retired** — Gap 6 (Wave 2) +
+   Gap 7 (Wave 5) respectively.
+4. The `is_new_model` flag column can be dropped. **Dropped**
+   in Wave 5 PR 5.3 (PR #1448).
 
 ## What the new-model card already does (parity)
 
@@ -198,19 +210,19 @@ Migration: backfill bounds inline onto every referencing
 `instrument_response_fields` row, then drop the numerical /
 string seeded RTDs.
 
-### Gap 7 — RuleSet library retirement (M) — partial progress 2026-05-25 (PRs #1434, #1435)
+### Gap 7 — RuleSet library retirement (M) — shipped 2026-05-25 (PRs #1434, #1435, #1446, #1447, #1448)
 
-> **Foundation laid by Wave 4a.** PR #1434 makes
-> `replace_assignments` synthesise Full Matrix for new-model
-> instruments with NULL `rule_set_id` instead of skipping them,
-> and PR #1435 introduces `instruments_service.is_configured()`
-> which retires the rule-set-centric `has_unpinned` predicate
-> for new-model rows. New-model instruments are now functionally
-> decoupled from the `RuleSet` construct — retiring the library
-> + Rule Builder page no longer requires migrating new-model
-> data. Full retirement (seeded RuleSets, library tier,
-> Rule Builder page, sidebar, `library_origin_id`) is queued
-> for Wave 5.
+> **Done.** Wave 4a (PRs #1434, #1435) decoupled new-model
+> instruments from the `RuleSet` construct. Wave 5 (PRs #1446,
+> #1447, #1448) then retired the library tier UI, dropped the
+> `operator_rule_sets` + `operator_rule_set_versions` +
+> `session_rule_set_library_origins` tables, removed the
+> 5-seeded-RuleSets default seed, and collapsed every template
+> branch on `instruments.is_new_model`. Band 1's inline editor
+> is the sole authoring surface; the Rule Builder child page
+> is gone; `session_rule_sets` is the only remaining tier
+> (auto-managed by Band 1 saves). Alembic revisions:
+> `8d6f4a9c7e2b` (drop library tier) + `c7d9e1f3b5a8` (drop seed).
 
 **Today.** Two tiers — `operator_rule_sets` (library) +
 `session_rule_sets` (per-session copies, 5 seeded RuleSets per
@@ -237,14 +249,15 @@ The new-model card already authors rules inline through
 `session_rule_sets.rules_json`, so the engine path is unchanged
 — what retires is the library tier + the separate editor page.
 
-### Gap 8 — "+Group instrument" button becomes redundant (T) — partially shipped 2026-05-25 (PR #1443)
+### Gap 8 — "+Group instrument" button becomes redundant (T) — shipped 2026-05-25 (PRs #1443, #1448)
 
-> **UI half shipped.** PR #1443 retired the `+Group instrument`
-> button from the per-instrument action row (also retired
-> `Add instrument` in the same PR, and renamed `+New model` →
-> `+Instrument`). The `/instruments/add-group` POST route still
-> exists server-side; that and the legacy template branches
-> retire alongside Gap 9 in Wave 6.
+> **Done.** PR #1443 (Wave 4c) retired the `+Group instrument`
+> button from the per-instrument action row. PR #1448 (Wave 5
+> PR 5.3) then dropped the `add_group_instrument` route + the
+> legacy template branches when it collapsed the legacy /
+> new-model split. The button + route + service plumbing are
+> all gone; Band 1 Link 3's Individual ↔ Grouped toggle is the
+> only path.
 
 **Legacy.** The Instruments index had a dedicated `+Group
 instrument` button that created an instrument with
@@ -255,7 +268,14 @@ rendered the group-scoped variant.
 covers this. The button retired in Wave 4c; route retirement is
 Wave 6.
 
-### Gap 9 — Drop the `is_new_model` flag (T, last step)
+### Gap 9 — Drop the `is_new_model` flag (T, last step) — shipped 2026-05-25 (PR #1448)
+
+> **Done.** Wave 5 PR 5.3 (PR #1448) dropped the
+> `instruments.is_new_model` column and the `is_pilot` legacy
+> alias, and collapsed every template / view-shape / route
+> branch on it to a single shape. The `+Instrument` button (the
+> renamed-in-Wave-4c `+New model`) keeps its shape; it's just
+> not flagged anymore.
 
 Once new-model is the only flavour, the column is dead. Final
 Alembic revision drops `is_new_model` and collapses every
@@ -264,7 +284,35 @@ button retired ahead of Gap 9 in Wave 4c — PR #1443 renamed it
 to `+Instrument` — so this gap's remaining UI work is just
 collapsing the branches, not retiring a button.)
 
-### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug) — shipped 2026-05-24 (PR #1394)
+### Gap 10 — Preview group expansion is rule-unconstrained (T-S, correctness bug) — shipped 2026-05-24 (PR #1394); follow-on fixes 2026-05-26 (PRs #1472 → #1475)
+
+> **Initial fix (PR #1394, Wave 1).** Server-side render path
+> intersects the boundary partition against
+> `band2_state.sample_group_member_ids` (the rule-surviving
+> reviewee IDs the Refresh route persists).
+>
+> **Follow-on (PRs #1472 → #1475, Wave 6 Cluster E).** Pilot
+> reports surfaced four scenarios where the preview member list
+> was still wrong after Refresh:
+>
+> - **#1472** mirrored the server-side intersection into the JS
+>   rebuild (the JS-side `partitionedSampleNames` now reads the
+>   `data-new-model-band2-sample-member-ids` attribute and
+>   intersects).
+> - **#1473** made the Refresh route honour the live Link 3
+>   boundary instead of the persisted `instrument.group_kind`
+>   (so changing the boundary mid-edit doesn't yield stale
+>   member IDs).
+> - **#1474** scoped the surviving-member-ID set to pairs
+>   involving the **sample reviewer** rather than unioning across
+>   reviewers. Under `IS THE SAME AS` Link 2 each reviewer sees a
+>   different reviewee pool; unioning silently widened the preview.
+> - **#1475** flipped the project-wide policy to
+>   `excludeSelfReviews=False` everywhere (assignments generation
+>   + preview). The off-by-one in symmetric reviewer/reviewee
+>   sessions disappears because the `(R, R)` pair lands in
+>   `result.pairs` naturally — see `spec/assignments.md`
+>   "Self-review policy".
 
 **Today.** In Grouped mode, the Band 2 preview shows a sample
 group's member names — but the **sample reviewee pick** is
