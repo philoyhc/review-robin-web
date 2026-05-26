@@ -485,3 +485,174 @@ read/write helper for `retention_overrides`; one
 (added alongside).
 
 ---
+
+## 18J Rec B — Engine fast path: `find_first_n_pairs` (~150 LOC)
+
+> Carved from `guide/archive/new_model_instruments_outstanding.md`
+> 2026-05-26 alongside the Wave 5 + Wave 6 closeout. Recs A
+> + D1 shipped as PR #1393; Recs B / C / D2 / D3 / E parked
+> here because pilot rosters haven't surfaced the latency
+> the cost model anticipates.
+
+**Ships.** A new `find_first_n_pairs(rule_set, *, reviewers,
+reviewees, limit, pair_context_lookup)` entry point next to
+`engine.evaluate` in `app/services/rules/engine.py`. Same
+predicate vocabulary, but iterates `(reviewer, reviewee)`
+pairs lazily (generator), short-circuits the moment `limit`
+matches accumulate, and skips the candidates sort + quota
+assignment (preview doesn't need a deterministic ordering of
+the full result). `find_sample_in_scope_reviewee` swaps over
+to `find_first_n_pairs(limit=1)` for Individual mode and a
+small `limit` for Group mode. Refresh-preview latency on a
+1k × 1k roster drops from 1-3s to typically <100ms; only
+narrow / no-match rules hit the worst case.
+
+**Why deferred.** Pilot rosters haven't exceeded a few
+hundred reviewers × reviewees; the 1-3s Refresh latency the
+cost model anticipates on 1k × 1k just doesn't show up at
+those scales. Operators have not flagged the existing
+Refresh path as slow.
+
+**Lift trigger.** A pilot deployment scales past mid-three-
+digit reviewer / reviewee counts and the operator reports
+the Refresh button feeling sluggish (~>1s), or a synthetic
+benchmark on a representative roster confirms the cost
+model's projection.
+
+**Wire-up.** New module function in
+`app/services/rules/engine.py`; `find_sample_in_scope_reviewee`
+in `app/services/instruments/_band1.py` switches over (currently
+calls `engine.evaluate(...)` and takes `result.pairs[0]`).
+No schema change; no template change. Unit test covers (a) the
+fast-path return for typical rules, (b) parity with
+`engine.evaluate` on edge cases (narrow rules, group-mode
+boundary).
+
+---
+
+## 18J Rec C — Single-side predicate indexes + roster-upload cache (~400 LOC)
+
+> Carved from `guide/archive/new_model_instruments_outstanding.md`
+> 2026-05-26. Layered on top of Rec B; only worth landing
+> if Rec B's worst case still bites real pilot rosters.
+
+**Ships.** Pre-compute a `(side, tag_slot, value) → id_set`
+dict at evaluation start (cheap, `O(N + M)`). For single-side
+`equals` / `not_equals` / `in` / `not_in` / `is_empty` /
+`is_not_empty` rules, intersect / subtract id sets before
+materialising any pair. Cross-side `same_as` / `different_from`
+still iterate per pair but over a much smaller surviving set.
+Optionally persist the index on a new `sessions.roster_index_json`
+column populated at import (or lazily on first eval and
+invalidated on roster edit, mirroring the existing
+`cached_eligibility_stamp` pattern).
+
+**Why deferred.** Conditional on Rec B's worst case being
+observed in practice. For the broad-rule cases pilot operators
+are likely to author, Rec B alone should keep latencies well
+under 100ms on 1k × 1k.
+
+**Lift trigger.** Rec B has shipped, but a Refresh on a narrow
+rule (e.g. `reviewer.tag1 = "Lead"` against a roster with only
+a handful of Leads) still runs past ~500ms, or a synthetic
+benchmark shows the worst case is realistic.
+
+**Wire-up.** Index builder in
+`app/services/rules/engine.py` (or a sibling
+`_roster_index.py`); engine evaluator consumes the index when
+present, falls back to today's brute walk otherwise. If
+persisted, a new column on `sessions` + a roster-upload hook
+that updates / invalidates it.
+
+---
+
+## 18J Rec D2 + D3 — Single roster JSON blob + skip on-load preview rebuild in view mode (~200 LOC)
+
+> Carved from `guide/archive/new_model_instruments_outstanding.md`
+> 2026-05-26. D1 (single roster query per render) shipped as
+> part of PR #1393; D2 + D3 stayed parked together because
+> they touch the same template + JS surface.
+
+**Ships.**
+
+- **D2.** Lift the per-card `data-new-model-band2-roster='…'`
+  JSON attribute onto a single page-level
+  `<script type="application/json" id="new-model-roster-data">`
+  block keyed by session id; rewrite the on-load JS in
+  `instruments_index.html` to read from that single block when
+  rebuilding each card's preview. HTML payload drops from
+  `K × 100KB` to `1 × 100KB` (where K = number of instruments
+  on the page).
+- **D3.** Add `data-edit-mode="{{ 1 if is_editing else 0 }}"`
+  on the per-instrument card root (or read the existing
+  `[data-new-model-band2-editable]` `inert` flag — the card
+  root doesn't currently expose an edit-mode signal). Have
+  the on-load preview-rebuild loop in `instruments_index.html`
+  skip cards in view mode. In view mode the server already
+  rendered the correct preview table HTML; the JS rebuild is
+  a no-op that re-runs filter logic only to produce the same
+  DOM. Skipping it removes `K` JS rebuilds + the JSON parse
+  on the view-mode hot path.
+
+**Why deferred.** Same as Rec B — pilot rosters / instrument
+counts haven't pushed the page-load time into operator-
+visible territory. Today the per-card JSON blob and the
+view-mode rebuild are both noise next to the engine cost
+that Rec A already addressed.
+
+**Lift trigger.** A pilot deployment carries enough
+instruments per session (`K` ≥ ~12) that the duplicated
+roster payload becomes measurable, or page-load profiling
+shows the on-load preview rebuild blocking interactivity for
+long enough that operators notice.
+
+**Wire-up.** Both sub-recs touch
+`app/web/templates/operator/instruments_index.html` and its
+inline JS (the `data-new-model-band2-roster` attribute +
+the `newModelRefreshBand2` loop). D2 also touches
+`app/web/views/_instruments.py` to thread the
+session-level roster into the page context once instead of
+per-card. No schema change.
+
+---
+
+## 18J Rec E — Verify Band 1 no-op Save stays cache-warm (~50 LOC)
+
+> Carved from `guide/archive/new_model_instruments_outstanding.md`
+> 2026-05-26. Tiny safety-net follow-on to Rec A — never
+> blocking, but worth doing once someone is in
+> `evaluate_session_rule_eligibility` for another reason.
+
+**Ships.**
+
+- Observability: a counter / log line in
+  `evaluate_session_rule_eligibility`
+  (`app/services/session_library.py`) distinguishing cache
+  hit vs miss. Confirms post-deploy whether no-op Saves on a
+  per-instrument card actually hit the
+  `session_rule_sets.cached_eligibility_stamp` cache. If they
+  don't, the rules serialiser is drifting — fix the
+  comparison rather than the cache.
+- Drift check: a regression test that opens + closes the lock
+  with no field changes and asserts the stamp value is
+  unchanged. Cheap insurance against future edits to the
+  rule-serialise path silently invalidating every no-op Save.
+
+**Why deferred.** Doesn't fix a user-visible problem — Rec A
+already removed the engine cost from the Save redirect, so a
+stale-cache miss costs nothing today either. The check
+mainly protects against future regressions.
+
+**Lift trigger.** Someone is editing the rule-serialiser path
+for another reason and wants the regression test in place
+first, or a routine perf-audit benchmarks the no-op Save and
+finds the cache is missing.
+
+**Wire-up.** Touch `evaluate_session_rule_eligibility` for the
+log / counter; new test in
+`tests/integration/test_instrument_builder_routes.py` (or a
+new `test_band1_no_op_save_cache.py`) that opens the lock,
+posts an unmodified Band 1 form, and asserts
+`SessionRuleSet.cached_eligibility_stamp` is unchanged.
+
+---

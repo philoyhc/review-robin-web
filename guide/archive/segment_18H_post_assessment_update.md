@@ -177,8 +177,8 @@ authoring surface; the personal library, seeded RuleSets, the
 "Save to / Add from library" affordances, the Available
 RuleSets sidebar on the Instruments page, `library_origin_id`
 provenance, and the Rule Builder child page itself all retire
-together (`guide/new_model_instruments_outstanding.md` Gap 7;
-`guide/instrument_builder.md` Part 1b).
+together (`guide/archive/new_model_instruments_outstanding.md`
+Gap 7; `guide/instrument_builder.md` Part 1b).
 
 - ~~Seeded-vs-personal library affordances~~ — defunct (no
   library tier to distinguish).

@@ -3,52 +3,58 @@
 > **Stub created 2026-05-22, centered as the canonical design 2026-05-22.** Sketch-level scope only.
 > Detailed PR breakdowns get drafted when this work is picked up.
 
-> **Shipped-state snapshot (2026-05-23).** A concept-test
-> "New model" instrument flavour gated by a new
-> `Instrument.is_new_model` flag (`app/db/models/instrument.py:92-99`)
-> renders the three-band layout (Identity + Band 1 + Band 2 +
-> Band 3) on the Instruments page
-> (`app/web/templates/operator/instruments_index.html:617+`).
-> See `spec/instrument_builder.md` for what's on the page today.
+> **Shipped-state snapshot (2026-05-26).** **Parts 0, 1, 1b, 1c,
+> 1d, 2 are all done.** The three-band per-instrument card
+> shipped under Segment 18I (PRs #1302 → #1386) and Segment 18J
+> Waves 1 → 6 (PRs #1393 → #1475). The legacy individual + group
+> instrument cards no longer exist; every instrument flows
+> through the (former "new-model") card. `Instrument.is_new_model`
+> was dropped in Wave 5 PR 5.3 (PR #1448). See `spec/instruments.md`
+> for the current operator-surface contract (Bands 1 + 2 + 3 +
+> Per-instrument card).
 >
-> Concretely shipped:
-> - The full-width `is_new_model` card with the three-band frame, a
->   `+New model` action button, and the cross-flavour Edit / Save /
->   Cancel / Delete / Replicate / Open / Close action row.
-> - **Band 1 layout** — three equal-width columns (Pool of
->   reviewers / Pool of those reviewed / Unit of review) with
->   placeholder rule rows, tag-chip dropdowns, mode-toggle pills,
->   and view-only fading gated on the instrument's edit mode.
->   None of the controls persist yet (placeholders, no service
->   wiring, no autosave).
-> - **Band 3 layout** — a two-column card carrying a Visibility
->   table with fixed (Operator / Reviewers) + toggleable
->   (Reviewees / Observers) audience rows and Who / What / When
->   columns. No persistence, no read-path guards.
-> - **Band 2** — header placeholder only; no preview row yet.
+> What landed end-to-end across those waves:
 >
-> Nothing else from this doc has shipped:
-> - **No schema deltas** — none of the proposed columns exist
->   (`unit_of_review`, `group_boundary_tags`, `visibility_audiences`,
->   `read_shapes`, `release_timing`, inline `data_type` / bounds
->   on `instrument_response_fields`, `instrument_releases`
->   table). `group_kind` flag is still in place. Part 0 not done.
-> - **No library retirement** — `OperatorResponseTypeDefinition`
->   still exists; `library_origin_id` still on `session_rule_sets`;
->   the 5 seeded RuleSets (`app/services/rules/seeds.py`) and 10
->   seeded RTDs (`app/services/instruments/_rtds.py:45-56`) still
->   ship on every new session; the operator-Settings Library
->   RuleSets + Library RTDs cards still render
->   (`app/web/routes_operator/_settings.py:69-86, 104-105`); the
->   Rule Builder child page and its Save-to / Add-from library
->   affordances are intact (`app/web/routes_operator/_rule_builder.py`).
-> - **No live preview, no inline assignment rule editor, no
->   inline type editor, no per-audience access controls wired,
->   no reconciler work for Link 3 mode switching.**
+> - **Identity + the three-band frame** — Bands 1 + 2 + 3 each
+>   wired to real persistence; the cross-flavour action row is
+>   reframed around a Lock / Unlock toggle (Wave 4b) plus dirty-
+>   aware Save / Cancel; per-card `+Instrument` button.
+> - **Band 1** — inline rule editor for Link 1 + Link 2 (Pool of
+>   reviewers / Pool of those reviewed), Individual ↔ Grouped
+>   toggle for Link 3 (Unit of review) with multi-tag boundary
+>   support, "Not set" safety gate on all three link pills, and
+>   per-dropdown "Reviewer tag" / "Reviewee tag" captions
+>   (Wave 6 Cluster D).
+> - **Band 2** — live preview row mirrors the reviewer surface
+>   (intro card, constraint summary, sort badges, group-mode
+>   member list with rule-surviving member-ID intersection,
+>   help-text editor inline).
+> - **Band 3** — response-field rows with inline type presets
+>   (Likert / Numeric / Single-line / Multi-line / List); the
+>   `response_type_definitions` table + per-instrument RTD card
+>   retired in Wave 6 Cluster A (PR #1454).
+> - **Schema deltas (D-RTD + the persistence surface for Bands
+>   1-2)** — inline `data_type` + `min` / `max` / `step` /
+>   `min_length` / `max_length` columns on
+>   `instrument_response_fields` (Wave 2 / 3), JSON
+>   `band2_state` + `column_widths` on `instruments`, and
+>   `instrument.group_kind` carrying the Link 3 boundary
+>   encoding.
+> - **Library retirement** — `operator_response_type_definitions`
+>   table retired (Wave 2), `operator_rule_sets` +
+>   `operator_rule_set_versions` + `session_rule_set_library_origins`
+>   retired (Wave 5), the 5 seeded RuleSets + 10 seeded RTDs
+>   stripped from session-create. The Rule Builder child page is
+>   gone. Band 1's inline editor is the sole authoring surface.
+> - **`excludeSelfReviews=False` everywhere** — project-wide
+>   policy codified in PR #1475 (`spec/assignments.md` "Self-
+>   review policy").
 >
-> The shipped New-model card is a UI-shell concept test (a partial
-> Part 1) — every wired behaviour from the parts plan below is
-> still ahead.
+> What's left in this doc — **Parts 3 → 9 (Links 4, 5, 6)** —
+> remains future work: per-audience Visibility (Link 4), Read
+> shape (Link 5), and Release timing (Link 6). Band 3's
+> response-field rows are wired today; the per-audience access
+> layer the "six links" model calls for is not.
 
 The per-instrument editor's UI shape and conceptual model.
 One full-width card per instrument carrying every decision the
@@ -739,12 +745,12 @@ A sequence of independently-shippable parts:
 
 | Part | Status | Scope | Depends on |
 |---|---|---|---|
-| **0 — Schema pre-positioning** | **Not started** | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
-| **1 — UI shell (vertical bands)** | **Partial (concept-test only)** — shipped behind a new `is_new_model` flag as a parallel instrument flavour, not yet replacing the standard per-instrument card. Identity section + Band 1 layout + Band 3 Visibility-table layout are in place as placeholders; Band 2 is a heading-only stub. Nothing in Bands 1 or 3 persists; no Unit-of-review picker reading `group_kind` yet. | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
-| **1b — Inline Assignment rule editor** | **Not started** — Rule Builder child page, seeded RuleSets, personal library, Save-to / Add-from library affordances, and `library_origin_id` are all still in place. | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
-| **1c — Live-preview row** | **Not started** | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
-| **1d — RTD-library retirement** | **Not started** — `OperatorResponseTypeDefinition` model, 10 seeded RTDs per session, and the Library RTDs operator-Settings card are all still in place. | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |
-| **2 — Link 3 (unit of review)** | **Not started** | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
+| **0 — Schema pre-positioning** | **Shipped** as part of Segment 18I (`band2_state` / `column_widths` on `instruments`) + Segment 18J Wave 2 (the six `_inline_*` columns on `instrument_response_fields`). Link 4 / 5 / 6 columns + the `instrument_releases` table — deferred with Parts 3-9. | Inert columns + tables on `instruments` (D3, D4, D5, D6) plus the inline-type columns on `instrument_response_fields` (D-RTD's `data_type` / `max_length` / `min` / `max` / `step`, all nullable, no backfill yet). No behaviour change. | nothing |
+| **1 — UI shell (vertical bands)** | **Shipped** under Segment 18I (PRs #1302 → #1386) — the three-band card with real rule / preview / response-field plumbing, not just a placeholder shell. | Replace the per-instrument card with the three-band layout. Band 1 shows the existing Rule Builder card on its left and a Unit-of-review picker on its right (the picker reflects today's `group_kind` flag read-only). Band 2 renders the existing Display Fields + Response Fields tables in a transitional state (not yet collapsed into the preview row). Band 3 shows placeholder summary blocks for Links 4-6 (Edit buttons inert). | Part 0 |
+| **1b — Inline Assignment rule editor** | **Shipped** — initial editor in Segment 18I; library tier (operator + session) retired in Segment 18J Wave 5 (PRs #1446 / #1447 / #1448). | Replace Band 1's Rule Builder card with the inline editor described above. Retire the Rule Builder child page. Retire seeded RuleSets, personal-library, "Save to / Add from library" affordances, the Available RuleSets sidebar, and `library_origin_id`. Add the "Insert starter ▾" templates menu. | Part 1 |
+| **1c — Live-preview row** | **Shipped** — Bands 2 + 3 wire to real persistence, the preview mirrors the reviewer surface (Wave 2½), and Band 2 carries the sample-reviewer + group-mode member list under Wave 6 Cluster E's correctness fixes. | Replace Band 2's selector tables with the live-preview row + inline column-header editing. Sample-reviewee selector. The response-column type editor presents the inline numerical / string / list type form described above. List types continue to pick from session-level RTD rows; numerical + string types render the inline bounds form but the underlying response field still references a `response_type_definitions` row (the data inlining is deferred to Part 1d). | Part 1 |
+| **1d — RTD-library retirement** | **Shipped** — Wave 2 retired the cross-session library tier (`operator_response_type_definitions` + the 10 seeded RTDs + the Library RTDs operator-Settings card); Wave 3 made `instrument_response_fields` rows source-of-truth; Wave 6 Cluster A retired the `response_type_definitions` table itself + the per-instrument RTD card (PR #1454). | D-RTD schema delta: add inline data_type / bounds columns to `instrument_response_fields`, backfill from referenced RTDs, drop the numerical + string seeded RTDs from the seeding path, retire the personal-library RTD copy-in, retire `OperatorResponseTypeDefinition`, narrow `response_type_definitions` to List-only rows. Update Band 2's response-column editor to write inline bounds for numerical + string types and reference `response_type_definitions` only for List. The Instruments-page Response Type Definitions card narrows to List entries only (or is folded entirely into Band 2's inline List picker). | Part 1c |
+| **2 — Link 3 (unit of review)** | **Shipped** — Individual ↔ Grouped pill on Band 1 reads / writes `instrument.group_kind` (multi-tag boundary encoding); the reconciler reconciles assignments on mode-switch; the Display-Fields-table boundary-tag column is gone. | Promote the existing `group_kind` flag + boundary-tag checkboxes into Band 1's Unit-of-review picker. Add post-creation mode-switching backed by the reconciler. Display Fields table loses its boundary-tag column. | Parts 0 + 1 |
 | **3 — Link 4 (visibility, operator + reviewee audiences)** | **Not started** | Light up the Visibility summary block in Band 3. Per-reviewee read path on a new `/reviewer/sessions/{id}/{position}/about-me` surface. | Parts 0 + 1 |
 | **4 — Link 5 (read shape, summarised + anonymised for reviewee audience)** | **Not started** | Light up the Read-shape summary block in Band 3. Aggregator service, anonymisation transformer, k-anonymity floor. | Part 3 |
 | **5 — Link 6 (release timing, operator + reviewee audiences)** | **Not started** | Light up the Release-timing summary block in Band 3 + per-instrument-per-audience Release / Un-release affordance. Read-path guard consults `instrument_releases`. | Part 3 |
@@ -753,10 +759,11 @@ A sequence of independently-shippable parts:
 | **8 — Link 6 (release timing for observer audiences)** | **Not started** | Per-observer-audience release timing. | Parts 5 + 6 |
 | **9 — Band 3 table collapse (optional)** | **Not started** | Replace the three-summary-blocks layout with the single-row-per-audience table. | Parts 5 + 6 + 7 + 8 |
 
-Parts 0 + 1 must land in that order. Parts 1b and 1c are
-independent once Part 1 ships. Parts 2 / 3 are independent
-once Part 1 ships. Parts 4 / 5 / 6 / 7 / 8 cascade per the
-dependency column.
+Parts 0 + 1 + 1b + 1c + 1d + 2 all shipped 2026-05-23 →
+2026-05-26 across Segments 18I + 18J. Parts 3 → 9 (the Link 4
+/ 5 / 6 work — Visibility / Read shape / Release timing
+including observer audiences) remain future work; they cascade
+per the dependency column above.
 
 ---
 
