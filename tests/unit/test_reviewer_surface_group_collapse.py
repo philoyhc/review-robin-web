@@ -23,8 +23,6 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-
 from app.web.routes_reviewer._surface import _collapse_group_rows
 
 
