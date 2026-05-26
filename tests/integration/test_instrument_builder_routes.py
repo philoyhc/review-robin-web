@@ -2414,6 +2414,91 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     assert names == ["Dan"]
 
 
+def test_gap_10_preview_route_json_response_returns_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 follow-up — the Refresh route's JSON response also
+    returns ``sample_group_member_ids`` so the client-side preview
+    rebuild can intersect its boundary partition against the
+    engine's actual survivors without waiting for a page reload to
+    pick up the persisted DB value."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-json"
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_value": "Lead",
+                    "operand_tag": "",
+                }
+            ],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert "sample_group_member_ids" in payload
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    assert sorted(payload["sample_group_member_ids"]) == sorted(
+        [by_name["Carol"], by_name["Dan"]]
+    )
+
+
+def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 follow-up — after a Refresh persists the surviving
+    member IDs, the next page render emits them as a
+    ``data-new-model-band2-sample-member-ids`` attribute on the
+    Band 2 wrapper so the client-side ``partitionedSampleNames``
+    JS intersects against them. Without this attr the JS rebuild
+    silently widens the preview member list past Links 1+2."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-wrapper"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "filter",
+            "link1_combinator": "AND",
+            "link1_rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_value": "Lead",
+                    "operand_tag": "",
+                }
+            ],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    db.refresh(new_model)
+    persisted = new_model.band2_state.get("sample_group_member_ids") or []
+    assert len(persisted) > 0
+    attr = f'data-new-model-band2-sample-member-ids="{",".join(str(i) for i in persisted)}"'
+    assert attr in body
+
+
 @pytest.mark.skip(
     reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
     "Underlying behaviour still works; scope-rewrite deferred."
