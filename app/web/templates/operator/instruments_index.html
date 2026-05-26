@@ -624,6 +624,24 @@
                 <button class="btn secondary" type="submit">Close this instrument</button>
               </form>
             {% endif %}
+            {# Lock / Unlock mirror of the bottom action row's
+               toggle (same ``data-instrument-lock-toggle`` data
+               attribute so the dirty-state confirm fires from
+               either button). Sits up here so the operator
+               doesn't have to scroll past Bands 1+2+3 to flip
+               edit mode on a long card. #}
+            {% if is_editing %}
+              <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+                 data-instrument-lock-toggle="{{ instrument.id }}"
+                 href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+                 onclick="return newModelLockClick(event, {{ instrument.id }})"
+                 {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
+            {% else %}
+              <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+                 data-instrument-lock-toggle="{{ instrument.id }}"
+                 href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+                 {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
+            {% endif %}
             {% if not instrument.responses_visible_when_closed %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
