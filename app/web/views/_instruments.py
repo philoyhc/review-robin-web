@@ -512,6 +512,21 @@ def _new_model_band2_state(
         "response_fields": response_fields,
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",
+        # Rule-surviving group-member IDs from the last Refresh
+        # (Gap 10). ``partitionedSampleNames`` in
+        # instruments_index.html intersects its boundary-key
+        # partition against this set so the client-side rebuild
+        # honours Links 1+2 too — without it the JS preview lists
+        # every reviewee with the matching boundary tag value,
+        # even ones the rule engine actually excluded. Empty list
+        # = "no constraint" (legacy band2_state from before the
+        # field shipped, or a session whose only boundary is
+        # pair-context-side).
+        "sample_group_member_ids": list(
+            (instrument.band2_state or {}).get(
+                "sample_group_member_ids"
+            ) or []
+        ),
         # Comma-joined list of reviewee-side boundary field names
         # (``tag_1`` / ``tag_2`` / ``tag_3``) so the preview JS can
         # partition in view mode, where the live ``link3_boundary``

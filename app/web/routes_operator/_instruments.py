@@ -1259,7 +1259,19 @@ async def instrument_preview_sample(
                 "tag_1": reviewee.tag_1 or "",
                 "tag_2": reviewee.tag_2 or "",
                 "tag_3": reviewee.tag_3 or "",
-            }
+            },
+            # Gap 10 — the rule-surviving group-member IDs so the
+            # client-side preview rebuild can intersect its
+            # boundary partition against the engine's actual
+            # survivors. Empty list when there's no reviewee-side
+            # boundary (per-reviewee mode, or grouped-by-pair-
+            # context-only); render falls back to the
+            # unconstrained partition for those cases.
+            "sample_group_member_ids": (
+                sample_group_member_ids
+                if sample_group_member_ids is not None
+                else []
+            ),
         },
         status_code=status.HTTP_200_OK,
     )
