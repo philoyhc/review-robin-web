@@ -5262,6 +5262,91 @@ def test_unlock_anchor_does_not_wire_confirm(
     assert "newModelLockClick" not in a_tag
 
 
+def test_heading_row_ships_save_and_cancel_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """In edit mode the heading row mirrors the bottom action row's
+    Save + Cancel buttons, placed immediately after the heading-row
+    Lock anchor so the operator doesn't have to scroll past
+    Bands 1+2+3 to persist. Both share the bottom-row's
+    ``data-new-model-save`` / ``data-new-model-cancel`` markers so
+    the dirty tracker enables / disables them in lockstep."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="heading-save-cancel-edit"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+
+    # Two rendered Save buttons + two Cancel buttons per card. Use
+    # ``>Save</button>`` / ``>Cancel</button>`` to count the actual
+    # rendered buttons — the ``data-new-model-save`` /
+    # ``data-new-model-cancel`` strings also appear in inline JS
+    # source (as selector arguments), so a bare substring count
+    # would over-count.
+    assert flat.count(">Save</button>") == 2
+    assert flat.count(">Cancel</button>") == 2
+    # The attribute-syntax marker (with the instrument id) for
+    # Cancel is unique to rendered buttons.
+    assert flat.count(f'data-new-model-cancel="{new_model.id}"') == 2
+
+    # The heading-row Lock anchor is the first ``data-instrument-
+    # lock-toggle`` occurrence; the bottom-row Lock anchor is the
+    # second. Save + Cancel sit between the heading Lock and the
+    # bottom-row Lock — i.e. the heading-row Save/Cancel come
+    # after the first Lock anchor and before the second Lock anchor.
+    first_lock = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    second_lock = flat.find(
+        f'data-instrument-lock-toggle="{new_model.id}"', first_lock + 1
+    )
+    assert first_lock != -1 and second_lock != -1
+
+    heading_save = flat.find(">Save</button>")
+    heading_cancel = flat.find(">Cancel</button>")
+    assert first_lock < heading_save < second_lock
+    assert first_lock < heading_cancel < second_lock
+
+    # The heading-row Save carries the same form + marker + disabled
+    # attributes as the bottom-row one (mirrored contract).
+    save_open = flat.rfind("<button", 0, heading_save)
+    save_tag = flat[save_open : heading_save + 1]
+    assert "data-new-model-save" in save_tag
+    assert "disabled" in save_tag
+    assert f'form="dfsave-{new_model.id}"' in save_tag
+
+    cancel_open = flat.rfind("<button", 0, heading_cancel)
+    cancel_tag = flat[cancel_open : heading_cancel + 1]
+    assert f'data-new-model-cancel="{new_model.id}"' in cancel_tag
+    assert "disabled" in cancel_tag
+    assert "newModelCancelEdits(this)" in cancel_tag
+
+
+def test_heading_row_omits_save_and_cancel_in_view_mode(
+    client: TestClient, db: Session
+) -> None:
+    """View mode never shows Save + Cancel — there's no dfsave
+    form to submit, and the heading row only carries the Unlock
+    anchor + Open/Close + visibility toggles. The marker strings
+    appear in inline JS source (the dirty tracker references them
+    as selectors); check the actual rendered button-attribute
+    syntax instead."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="heading-save-cancel-view"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    # The ``data-new-model-cancel="<id>"`` attribute is unique to
+    # rendered Cancel buttons (the JS selector uses the bare
+    # ``[data-new-model-cancel]`` form, no ``="``).
+    assert f'data-new-model-cancel="{new_model.id}"' not in flat
+    # ``form="dfsave-<id>"`` is unique to the Save button (the
+    # dfsave form definition only renders in edit mode).
+    assert f'form="dfsave-{new_model.id}"' not in flat
+
+
 def test_band3_row_pending_visual_css_ships_in_base(
     client: TestClient, db: Session
 ) -> None:
