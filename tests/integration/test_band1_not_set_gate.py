@@ -86,12 +86,22 @@ def test_is_configured_requires_all_three_band1_links_touched(
 # --------------------------------------------------------------------------- #
 
 
-def test_set_band1_assignment_rules_unions_touched_links_stickily(
+def test_set_band1_assignment_rules_replaces_owned_touched_slice(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="sticky-touch")
+    """``set_band1_assignment_rules`` owns Link 1 + Link 2 — each
+    submit is authoritative for those two bits (the operator can
+    cycle a pill back to ``"Not set"``), but Link 3's bit must
+    survive unchanged so the sibling ``set_unit_of_review`` writer
+    isn't clobbered."""
+    review_session = _make_session(client, db, code="touch-replace")
     instrument = _default_instrument(db, review_session.id)
     user = review_session.created_by_user
+
+    # Pre-stamp link3 (the unit-of-review writer's slot) to confirm
+    # the band1 writer leaves it alone.
+    instrument.band1_touched_links = ["link3"]
+    db.flush()
 
     instruments_service.set_band1_assignment_rules(
         db,
@@ -106,9 +116,10 @@ def test_set_band1_assignment_rules_unions_touched_links_stickily(
         touched_links={"link1"},
     )
     db.refresh(instrument)
-    assert instrument.band1_touched_links == ["link1"]
+    assert instrument.band1_touched_links == ["link1", "link3"]
 
-    # A second call that only re-touches link2 must NOT un-touch link1.
+    # Subsequent submit with link2 only — link1 drops off because
+    # the operator cycled it back to "Not set"; link3 stays.
     instruments_service.set_band1_assignment_rules(
         db,
         instrument=instrument,
@@ -122,15 +133,39 @@ def test_set_band1_assignment_rules_unions_touched_links_stickily(
         touched_links={"link2"},
     )
     db.refresh(instrument)
-    assert instrument.band1_touched_links == ["link1", "link2"]
+    assert instrument.band1_touched_links == ["link2", "link3"]
+
+    # And submit with no touched bits at all — both link1 + link2
+    # clear; link3 still survives.
+    instruments_service.set_band1_assignment_rules(
+        db,
+        instrument=instrument,
+        link1_mode="all",
+        link1_combinator="AND",
+        link1_rules=[],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+        actor=user,
+        touched_links=set(),
+    )
+    db.refresh(instrument)
+    assert instrument.band1_touched_links == ["link3"]
 
 
-def test_set_unit_of_review_marks_link3_touched(
+def test_set_unit_of_review_toggles_link3_touched_bit(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="link3-touch")
+    """Link 3's writer (``set_unit_of_review``) owns just the
+    ``link3`` bit and flips it both ways — ``touched=True`` adds,
+    ``touched=False`` removes — without touching the Link 1 / 2
+    slice."""
+    review_session = _make_session(client, db, code="link3-toggle")
     instrument = _default_instrument(db, review_session.id)
     user = review_session.created_by_user
+
+    instrument.band1_touched_links = ["link1"]
+    db.flush()
 
     instruments_service.set_unit_of_review(
         db,
@@ -141,7 +176,20 @@ def test_set_unit_of_review_marks_link3_touched(
         touched=True,
     )
     db.refresh(instrument)
-    assert "link3" in (instrument.band1_touched_links or [])
+    assert instrument.band1_touched_links == ["link1", "link3"]
+
+    # Operator cycled the Link 3 pill back to "Not set" — touched
+    # flips to False and link3 drops off, link1 survives.
+    instruments_service.set_unit_of_review(
+        db,
+        instrument=instrument,
+        mode="individual",
+        boundary_pairs=[],
+        actor=user,
+        touched=False,
+    )
+    db.refresh(instrument)
+    assert instrument.band1_touched_links == ["link1"]
 
 
 # --------------------------------------------------------------------------- #

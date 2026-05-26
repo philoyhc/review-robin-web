@@ -763,7 +763,7 @@
                   data-new-model-rule-mode="{{ _pill_state }}"
                   data-new-model-mode-on-label="{{ on_label }}"
                   {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
-                  title="{{ 'Click to set; pill cycles Not set → All → ' ~ on_label if _is_active else 'No usable tags for this link' }}">{{ _pill_label }}</span>
+                  title="{{ 'Click to cycle: Not set → All → ' ~ on_label ~ ' → Not set' if _is_active else 'No usable tags for this link' }}">{{ _pill_label }}</span>
           </h3>
           {% if is_editing %}
             {# Hidden inputs that carry mode + combinator state
@@ -928,7 +928,7 @@
                     data-new-model-unit-mode="{{ _link3_pill_state }}"
                     data-new-model-mode-on-label="Group using reviewee attributes"
                     {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
-                    title="{{ 'Click to set; pill cycles Not set → Individual → Group using reviewee attributes' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
+                    title="{{ 'Click to cycle: Not set → Individual → Group using reviewee attributes → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
             </h3>
             {% if is_editing %}
               <input form="dfsave-{{ instrument.id }}" type="hidden"
@@ -1053,12 +1053,12 @@
           }
         };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
-          // 3-state cycle: not_set → all → filter → all → filter → …
-          // First click out of "not_set" is sticky-touched (the
-          // hidden ``{link}_touched`` input flips to "true" and
-          // never flips back). The workflow card's "Empty Setup"
-          // gate keys off the touched bits, so the operator must
-          // click each pill at least once.
+          // 3-state cycle: not_set → all → filter → not_set → …
+          // Each click advances one step; the cycle wraps so the
+          // operator can return a pill to "Not set" and surface
+          // the instrument as unconfigured again on the workflow
+          // card. The hidden ``{link}_touched`` input mirrors the
+          // visible state (false at "Not set", true otherwise).
           var wrap = btn.closest('[data-new-model-link-wrapper]');
           var builder = wrap.querySelector('[data-new-model-rule-builder]');
           var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Filter using rules';
@@ -1071,7 +1071,7 @@
           } else if (current === 'all') {
             next = 'filter';
           } else {
-            next = 'all';
+            next = 'not_set';
           }
           btn.setAttribute('data-new-model-rule-mode', next);
           if (next === 'filter') {
@@ -1080,18 +1080,30 @@
             builder.style.opacity = '';
             builder.style.pointerEvents = '';
             if (modeInput) { modeInput.value = 'filter'; }
-          } else {
+          } else if (next === 'all') {
             btn.setAttribute('aria-pressed', 'false');
             btn.textContent = 'All';
             builder.style.opacity = '0.5';
             builder.style.pointerEvents = 'none';
             if (modeInput) { modeInput.value = 'all'; }
+          } else {
+            btn.setAttribute('aria-pressed', 'mixed');
+            btn.textContent = 'Not set';
+            builder.style.opacity = '0.5';
+            builder.style.pointerEvents = 'none';
+            // Reset the mode input back to "all" so a stray
+            // not_set submit doesn't carry over a stale "filter".
+            if (modeInput) { modeInput.value = 'all'; }
           }
-          // Touched is sticky once flipped — clear "is-unset"
-          // styling on the pill in case the page CSS keys off it.
-          btn.classList.remove('is-unset');
-          btn.classList.add('is-selected');
-          if (touchedInput) { touchedInput.value = 'true'; }
+          if (next === 'not_set') {
+            btn.classList.add('is-unset');
+            btn.classList.remove('is-selected');
+            if (touchedInput) { touchedInput.value = 'false'; }
+          } else {
+            btn.classList.remove('is-unset');
+            btn.classList.add('is-selected');
+            if (touchedInput) { touchedInput.value = 'true'; }
+          }
         };
         window.newModelToggleCombinator = window.newModelToggleCombinator || function (btn) {
           var wrap = btn.closest('[data-new-model-link-wrapper]');
@@ -1102,8 +1114,8 @@
         };
         window.newModelToggleUnitMode = window.newModelToggleUnitMode || function (btn) {
           // 3-state cycle: not_set → individual → group →
-          // individual → group → … . Same sticky-touched contract
-          // as the Link 1 + Link 2 pills (see newModelToggleRuleMode).
+          // not_set → … . Same wrap-back-to-Not-set contract as
+          // the Link 1 + Link 2 pills (see newModelToggleRuleMode).
           var wrap = btn.closest('[data-new-model-link-wrapper]');
           var builder = wrap.querySelector('[data-new-model-unit-builder]');
           var onLabel = btn.getAttribute('data-new-model-mode-on-label') || 'Group';
@@ -1116,7 +1128,7 @@
           } else if (current === 'individual') {
             next = 'group';
           } else {
-            next = 'individual';
+            next = 'not_set';
           }
           btn.setAttribute('data-new-model-unit-mode', next);
           if (next === 'group') {
@@ -1125,16 +1137,28 @@
             builder.style.opacity = '';
             builder.style.pointerEvents = '';
             if (modeInput) { modeInput.value = 'grouped'; }
-          } else {
+          } else if (next === 'individual') {
             btn.setAttribute('aria-pressed', 'false');
             btn.textContent = 'Individual';
             builder.style.opacity = '0.5';
             builder.style.pointerEvents = 'none';
             if (modeInput) { modeInput.value = 'individual'; }
+          } else {
+            btn.setAttribute('aria-pressed', 'mixed');
+            btn.textContent = 'Not set';
+            builder.style.opacity = '0.5';
+            builder.style.pointerEvents = 'none';
+            if (modeInput) { modeInput.value = 'individual'; }
           }
-          btn.classList.remove('is-unset');
-          btn.classList.add('is-selected');
-          if (touchedInput) { touchedInput.value = 'true'; }
+          if (next === 'not_set') {
+            btn.classList.add('is-unset');
+            btn.classList.remove('is-selected');
+            if (touchedInput) { touchedInput.value = 'false'; }
+          } else {
+            btn.classList.remove('is-unset');
+            btn.classList.add('is-selected');
+            if (touchedInput) { touchedInput.value = 'true'; }
+          }
           // Band 2's preview depends on the unit-of-review mode —
           // refresh its pill enabled-state and rebuild the preview
           // row state is mirrored onto each Band 2 wrapper's

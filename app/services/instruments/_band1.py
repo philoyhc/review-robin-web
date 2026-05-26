@@ -293,15 +293,23 @@ def _mark_touched_links(
     touched_links: set[str] | None,
     allowed: set[str],
 ) -> None:
-    """Union ``touched_links`` (intersected with ``allowed``) into
-    ``instrument.band1_touched_links``. Sticky — never removes."""
-    if not touched_links:
-        return
-    incoming = {link for link in touched_links if link in allowed}
-    if not incoming:
-        return
+    """Replace the ``allowed`` slice of
+    ``instrument.band1_touched_links`` with ``touched_links`` (which
+    must be a subset of ``allowed``). Links outside ``allowed`` —
+    e.g. ``link3`` when this is called from ``set_band1_assignment_rules``
+    (which only owns Link 1 + 2) — are left untouched so the two
+    Band 1 writers don't clobber each other.
+
+    ``touched_links=None`` is treated as the empty set (the operator
+    cycled every owned pill back to "Not set"). The pill UI cycles
+    "Not set" → "All" → "Filter using …" → "Not set" → …; once the
+    operator returns a pill to "Not set" the link drops off the
+    stored touched list, so the workflow card can re-surface the
+    instrument as unconfigured.
+    """
+    incoming = {link for link in (touched_links or set()) if link in allowed}
     existing = set(instrument.band1_touched_links or [])
-    merged = existing | incoming
+    merged = (existing - allowed) | incoming
     if merged == existing:
         return
     instrument.band1_touched_links = sorted(merged)
