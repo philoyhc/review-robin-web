@@ -369,21 +369,13 @@ def _seed_validated_with_warnings(
     # instrument to any existing seeded SessionRuleSet so only the
     # assignments.no_included_pairs warning remains, keeping the
     # activate-warns detour reachable.
-    from app.db.models import Instrument, SessionRuleSet
 
     # Pick the Full Matrix seed explicitly — multiple seeded
     # RuleSets per session, .first() ordering isn't deterministic
     # on Postgres.
-    rule_set = db.query(SessionRuleSet).filter(
-        SessionRuleSet.session_id == review_session.id,
-        SessionRuleSet.name == "Full Matrix",
-    ).first()
-    instrument = db.query(Instrument).filter(
-        Instrument.session_id == review_session.id
-    ).first()
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     # ?validated=1 marks the session validated when can_activate
     # (no errors). Warnings don't block.
     client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")

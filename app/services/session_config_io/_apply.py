@@ -48,10 +48,8 @@ from app.services.instruments._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
     validation_block_for_rtd,
 )
-from app.services.rules.seeds import (
-    SEEDED_RULE_SETS as _SEEDED_RULE_SETS,
-    materialise_seed_rule_sets,
-)
+# Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
+# module deleted entirely.
 
 from app.services.session_config_io._rows import Row
 
@@ -61,9 +59,8 @@ from app.services.session_config_io._rows import Row
 _SEEDED_RTD_NAMES: frozenset[str] = frozenset(
     spec["response_type"] for spec in SEEDED_RESPONSE_TYPE_DEFINITIONS
 )
-_SEEDED_RULE_SET_NAMES: frozenset[str] = frozenset(
-    rs.name for rs in _SEEDED_RULE_SETS
-)
+# Wave 5 PR 5.2 — ``_SEEDED_RULE_SET_NAMES`` retired alongside
+# the RuleSet seeding helper.
 
 
 @dataclass(frozen=True)
@@ -418,11 +415,6 @@ def _apply_rtd_kv(
     if attr == "list_csv":
         spec.list_csv = value or None
         return
-    if attr == "library_name":
-        # 15C library-provenance cell — export leg only (18D
-        # export part). Recognise and skip; the link-to-library
-        # logic is the 18D import part.
-        return
     raise _ParseError(f"unknown rtds[] attribute {attr!r}")
     del data_type  # unused
 
@@ -544,10 +536,6 @@ def _apply_rule_set_kv(
         spec.seed = _parse_int(value)
     elif attr == "rules_json":
         spec.rules_json = _parse_json(value, default=[])
-    elif attr == "library_name":
-        # 15C library-provenance cell — export leg only; recognise
-        # and skip (see _apply_rtd_kv).
-        pass
     else:
         raise _ParseError(f"unknown session_rule_sets[] attribute {attr!r}")
     del data_type  # unused
@@ -612,12 +600,11 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
         else:
             seen_names[spec.name] = n
     # Per-instrument ``rule_set_name`` resolves against either a
-    # seeded RuleSet (auto-materialised on session create) or a
-    # ``session_rule_sets[N]`` block in the same CSV. Pre-15B,
-    # this is a validate-only check: the apply step leaves
-    # ``Instrument.rule_set_id`` NULL regardless. Once 15B wires
-    # the column, the resolved id will be written through.
-    valid_rule_set_names = _SEEDED_RULE_SET_NAMES | set(seen_names)
+    # ``session_rule_sets[N]`` block in the same CSV.
+    # Wave 5 PR 5.2 retired the seeded set, so seeded names no
+    # longer auto-resolve — every referenced rule_set_name must
+    # appear as a session_rule_sets[N] block in the CSV.
+    valid_rule_set_names = set(seen_names)
     for n, instrument in sorted(plan.instruments.items()):
         if (
             instrument.rule_set_name
@@ -1033,10 +1020,9 @@ _RTD_TYPE_LOWER_TO_MODEL = {
 def _apply_session_rule_sets(
     db: Session, review_session: ReviewSession, plan: _ParsedConfig
 ) -> int:
-    """Upsert non-seeded ``session_rule_sets`` rows by ``name``;
-    delete existing non-seeded rows not in the CSV. Seeded rows
-    are untouched (they auto-materialise from the seed catalogue
-    on session create)."""
+    """Upsert ``session_rule_sets`` rows by ``name``; delete
+    existing rows not in the CSV. (Wave 5 PR 5.2 retired the
+    seeded set, so all rows are operator-authored.)"""
 
     existing = {
         snap.name: snap
@@ -1045,7 +1031,6 @@ def _apply_session_rule_sets(
                 SessionRuleSet.session_id == review_session.id
             )
         ).scalars()
-        if snap.name not in _SEEDED_RULE_SET_NAMES
     }
 
     written = 0
@@ -1102,13 +1087,10 @@ def _apply_instruments(
         ).scalars()
     }
     # Per-instrument rule pin (Segment 15B Slice 2b). The session-tier
-    # ``session_rule_sets`` rows have been upserted by
-    # ``_apply_session_rule_sets`` earlier in the apply pipeline. The
-    # idempotent seed materialiser here covers any session that
-    # bypassed ``sessions.create_session`` (test fixtures, raw
-    # constructors) — mirrors the per-request safety net in
-    # ``views.build_instruments_context``.
-    materialise_seed_rule_sets(db, review_session)
+    # ``session_rule_sets`` rows are upserted by
+    # ``_apply_session_rule_sets`` earlier in the apply pipeline.
+    # Wave 5 PR 5.2 retired the seed-materialiser safety net here —
+    # seeded RuleSets no longer ship on new sessions.
     rule_set_id_by_name = {
         snap.name: snap.id
         for snap in db.execute(

@@ -106,7 +106,6 @@ def _populate_session_with_realistic_config(
         max=4.0,
         step=0.1,
         list_csv=None,
-        is_seeded=False,
     )
     db.add(gpa)
     seeded_likert = db.execute(
@@ -260,11 +259,12 @@ def test_unknown_rule_set_name_rejected(db: Session) -> None:
     assert any("no such RuleSet" in e.message for e in result.errors)
 
 
-def test_seeded_rule_set_name_resolves(db: Session) -> None:
-    """An ``instruments[N].rule_set_name`` referencing a seeded
-    RuleSet (auto-materialised on session create) resolves to the
-    matching ``session_rule_sets.id`` and pins it on the instrument
-    (Segment 15B Slice 2b — pre-15B left ``rule_set_id`` NULL)."""
+def test_seeded_rule_set_name_no_longer_auto_resolves(db: Session) -> None:
+    """Wave 5 PR 5.2 — seeded RuleSets retired (no
+    ``materialise_seed_rule_sets`` on session create). A bare
+    ``rule_set_name`` reference (no ``session_rule_sets[N]``
+    block authoring it) now fails validation rather than
+    silently resolving to a seed."""
 
     review_session = _bare_session(db, code="seed-rs")
     rows = [
@@ -272,17 +272,11 @@ def test_seeded_rule_set_name_resolves(db: Session) -> None:
         Row("instruments[1].rule_set_name", "Full Matrix", "string"),
     ]
     result = apply_session_config(db, review_session, rows)
-    assert result.ok, result.errors
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    full_matrix = db.execute(
-        select(SessionRuleSet).where(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-    ).scalar_one()
-    assert instrument.rule_set_id == full_matrix.id
+    assert not result.ok
+    assert any(
+        "no such RuleSet" in str(e.message) or "Full Matrix" in str(e.message)
+        for e in result.errors
+    )
 
 
 def test_csv_rule_set_name_resolves_to_authored_block(db: Session) -> None:
@@ -444,12 +438,13 @@ def test_apply_force_applies_display_timezone_and_self_reviews(
     assert review_session.self_reviews_active is False
 
 
-def test_apply_library_name_cells_always_clone(db: Session) -> None:
-    """18D import part — the ``…library_name`` provenance cell is
-    still tolerated on import for back-compat with pre-iii-b3 CSVs
-    (it's silently ignored). Segment 18J Wave 2 PR iii-b3 retired
-    the RTD library tier; the imported RTD has no library-origin
-    link anymore (the column is dropped)."""
+def test_apply_library_name_cells_now_rejected(db: Session) -> None:
+    """Wave 5 PR 5.2 — the ``…library_name`` back-compat skip
+    retired with the rest of the library tier. Older CSVs that
+    still carry the cell now fail import with "unknown rtds[]
+    attribute library_name". Operators must strip the cell before
+    re-importing, or just re-export from the post-PR-5.1 server
+    (which no longer emits it)."""
 
     review_session = _bare_session(db, code="libname")
     rows = [
@@ -457,17 +452,8 @@ def test_apply_library_name_cells_always_clone(db: Session) -> None:
         Row("rtds[GPA4].library_name", "GPA4 (library)", "string"),
     ]
     result = apply_session_config(db, review_session, rows)
-    assert result.ok, result.errors
-
-    rtd = db.execute(
-        select(ResponseTypeDefinition).where(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "GPA4",
-        )
-    ).scalar_one()
-    # ``library_origin_id`` column dropped by iii-b3 migration; the
-    # imported row has no provenance pointer.
-    assert not hasattr(rtd, "library_origin_id")
+    assert not result.ok
+    assert any("library_name" in str(e.message) for e in result.errors)
 
 
 def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
@@ -510,7 +496,6 @@ def test_apply_upserts_rtds_and_deletes_orphans(db: Session) -> None:
             max=10,
             step=1,
             list_csv=None,
-            is_seeded=False,
         )
     )
     db.flush()

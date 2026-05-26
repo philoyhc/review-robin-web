@@ -15,8 +15,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession, SessionRuleSet
+from app.db.models import ReviewSession
 from app.services import session_lifecycle as lifecycle
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 def _make_session(
@@ -59,16 +60,9 @@ def _seed_pair_plus_pinned(
         },
         follow_redirects=False,
     )
-    rule_set = db.query(SessionRuleSet).filter(
-        SessionRuleSet.session_id == review_session.id,
-        SessionRuleSet.name == "Full Matrix",
-    ).first()
-    instrument = db.query(Instrument).filter(
-        Instrument.session_id == review_session.id
-    ).first()
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
     return review_session
 

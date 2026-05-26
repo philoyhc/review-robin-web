@@ -37,17 +37,16 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     AuditEvent,
-    Instrument,
     Reviewee,
     Reviewer,
     ReviewSession,
-    SessionRuleSet,
     User,
 )
 from app.schemas.sessions import SessionCreate
 from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 # --------------------------------------------------------------------------- #
@@ -91,16 +90,9 @@ def _make_validated_session(db: Session, code: str) -> ReviewSession:
     db.add_all([reviewer, reviewee])
     db.flush()
 
-    rule_set = db.execute(
-        select(SessionRuleSet).where(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-    ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    instrument.rule_set_id = rule_set.id
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    pin_full_matrix_on_all_instruments(db, review_session.id)
 
     review_session.status = lifecycle.SessionStatus.validated.value
     db.flush()

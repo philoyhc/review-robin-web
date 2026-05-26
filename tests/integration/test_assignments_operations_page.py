@@ -19,7 +19,6 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
-    RuleSet,
 )
 from ._full_matrix import (
     generate_via_page_button,
@@ -79,12 +78,9 @@ def _seed_population_with_self_review(
     )
 
 
-def _full_matrix_seed_id(db: Session) -> int:
-    return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
-        )
-    ).scalar_one()
+# Wave 5 PR 5.2 — ``_full_matrix_seed_id`` retired with the
+# ``RuleSet`` operator-library model. Unused locally; was a
+# legacy helper from the pre-15B test surface.
 
 
 def _generate_with_self_reviews(

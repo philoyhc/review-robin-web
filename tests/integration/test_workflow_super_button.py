@@ -17,16 +17,15 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     AuditEvent,
-    Instrument,
     InstrumentResponseField,
     Response,
     ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
-    SessionRuleSet,
 )
 from app.services import session_lifecycle as lifecycle
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 def _make_session(
@@ -69,22 +68,9 @@ def _seed_pair_plus_pinned(
         },
         follow_redirects=False,
     )
-    rule_set = (
-        db.query(SessionRuleSet)
-        .filter(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-        .first()
-    )
-    instrument = (
-        db.query(Instrument)
-        .filter(Instrument.session_id == review_session.id)
-        .first()
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — the auto-seeded "Full Matrix" SessionRuleSet
+    # retired; lazily materialise one via the shared helper.
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
     return review_session
 
@@ -225,22 +211,7 @@ def _seed_session_with_droppable_response(
         },
         follow_redirects=False,
     )
-    rule_set = (
-        db.query(SessionRuleSet)
-        .filter(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-        .first()
-    )
-    instrument = (
-        db.query(Instrument)
-        .filter(Instrument.session_id == review_session.id)
-        .first()
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
 
     _full_activation(client, review_session.id)
     db.refresh(review_session)
@@ -270,7 +241,14 @@ def _seed_session_with_droppable_response(
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
 
-    db.refresh(rule_set)
+    # Tweak the pinned RuleSet so re-Generate would re-fan a
+    # different pair set (Detours covers the response-loss flow).
+    from app.db.models import SessionRuleSet
+    rule_set = db.execute(
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id
+        )
+    ).scalar_one()
     rule_set.exclude_self_reviews = True
     db.flush()
     db.commit()
@@ -392,22 +370,7 @@ def test_prepare_validate_failure_lands_in_draft_and_audits(
     surfaces errors → Prepare stays in draft and 303s with
     super_status=failed&super_button=prepare&super_step=validate."""
     review_session = _make_session(client, db, code="fail-validate")
-    rule_set = (
-        db.query(SessionRuleSet)
-        .filter(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-        .first()
-    )
-    instrument = (
-        db.query(Instrument)
-        .filter(Instrument.session_id == review_session.id)
-        .first()
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
 
     response = client.post(

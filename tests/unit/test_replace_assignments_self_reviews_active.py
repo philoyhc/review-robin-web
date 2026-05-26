@@ -75,7 +75,6 @@ def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
         exclude_self_reviews=False,
         seed=None,
         rules_json=[],
-        is_seeded=True,
     )
     db.add(full_matrix)
     db.flush()

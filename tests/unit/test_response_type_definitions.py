@@ -127,7 +127,6 @@ def test_get_session_rtds_orders_seeded_first_in_seed_order(
         max=10,
         step=1,
         list_csv=None,
-        is_seeded=False,
         seed_order=0,
     )
     db.add(operator_added)
@@ -178,7 +177,6 @@ def test_seeded_rows_have_unique_names_per_session(db: Session) -> None:
         data_type="String",
         min=0,
         max=42,
-        is_seeded=False,
         seed_order=0,
     )
     db.add(dup)

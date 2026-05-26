@@ -36,10 +36,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Local import keeps the migration's dependency graph explicit and
-    # avoids paying the import cost on chains that don't reach this
-    # revision.
-    from app.services.rules.seeds import SEEDS
+    # Wave 5 PR 5.2 — ``app.services.rules.seeds`` retired. The
+    # operator-library tier this migration installed seeds for
+    # drops entirely in PR 5.2's migration (d8f4a92c1e6b), so the
+    # seed install here is a no-op forwards. The body below stays
+    # for forward-chain replay compat (write nothing; the table
+    # exists but stays empty).
+    return
+    from app.services.rules.seeds import SEEDS  # noqa: F401  (unreachable)
 
     bind = op.get_bind()
     now = datetime.now(timezone.utc)

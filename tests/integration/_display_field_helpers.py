@@ -25,7 +25,6 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     ReviewSession,
-    RuleSet,
 )
 from ._full_matrix import (
     generate_via_page_button,
@@ -72,12 +71,11 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     )
 
 
-def _full_matrix_seed_id(db: Session) -> int:
-    return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
-        )
-    ).scalar_one()
+# Wave 5 PR 5.2 — ``_full_matrix_seed_id`` retired with the
+# ``RuleSet`` operator-library model. Tests now use
+# ``pin_full_matrix_on_all_instruments`` (which lazily materialises
+# a ``Full Matrix`` ``session_rule_sets`` row) and read that row's
+# id from the returned value when needed.
 
 
 def _generate_full_matrix(

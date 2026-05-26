@@ -367,8 +367,6 @@ def _create_band1_rule_set(
         exclude_self_reviews=True,
         seed=None,
         rules_json=rules_json,
-        is_seeded=False,
-        library_origin_id=None,
     )
     db.add(rule_set)
     db.flush()

@@ -601,7 +601,6 @@ def test_response_type_resolves_for_seeded_and_operator_defined_rtds(
         data_type="decimal",
         min=0.0,
         max=4.0,
-        is_seeded=False,
     )
     db.add(custom)
     db.flush()
@@ -644,7 +643,6 @@ def test_list_response_value_round_trips_as_stored(db: Session) -> None:
         response_type="Topics",
         data_type="list",
         list_csv="design,research,ops",
-        is_seeded=False,
     )
     db.add(list_rtd)
     db.flush()

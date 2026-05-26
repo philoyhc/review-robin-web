@@ -56,7 +56,6 @@ def _make_session_rule_set(
         combinator="ALL_OF",
         exclude_self_reviews=True,
         rules_json=[],
-        library_origin_id=None,
     )
     db.add(row)
     db.flush()

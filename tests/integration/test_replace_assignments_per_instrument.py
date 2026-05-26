@@ -92,7 +92,6 @@ def _seed_two_instruments(db: Session) -> tuple[
         exclude_self_reviews=False,
         seed=None,
         rules_json=[],
-        is_seeded=True,
     )
     db.add(rule_set)
     db.flush()
@@ -331,7 +330,6 @@ def _seed_self_review_session(
         exclude_self_reviews=False,
         seed=None,
         rules_json=[],
-        is_seeded=True,
     )
     db.add(rule_set)
     db.flush()

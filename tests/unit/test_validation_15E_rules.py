@@ -93,7 +93,6 @@ def _seed(
         exclude_self_reviews=False,
         seed=None,
         rules_json=[],
-        is_seeded=True,
     )
     db.add(rule_set)
     db.flush()

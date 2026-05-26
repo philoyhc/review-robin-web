@@ -11,11 +11,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    AuditEvent,
     Instrument,
     ResponseTypeDefinition,
     ReviewSession,
-    RuleSet,
     SessionFieldLabel,
     SessionRuleSet,
 )
@@ -24,7 +22,8 @@ from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
-from app.services.rules.seeds import SEEDED_RULE_SETS as _SEEDED_RULE_SETS
+# Wave 5 PR 5.2 — RuleSet seeding retired; ``_SEEDED_RULE_SETS``
+# import retired.
 from app.services.sessions import resolve_session_timezone
 
 from app.services.session_config_io._rows import (
@@ -37,14 +36,9 @@ from app.services.session_config_io._rows import (
 )
 
 
-# Names of seeded RuleSets — used to filter ``session_rule_sets``
-# rows on export. Seeded copies auto-materialise on the
-# destination session from this same list, so re-emitting them
-# would be a no-op or a name conflict (per
-# ``uq_session_rule_set_session_name``).
-_SEEDED_RULE_SET_NAMES: frozenset[str] = frozenset(
-    rs.name for rs in _SEEDED_RULE_SETS
-)
+# Wave 5 PR 5.2 — ``_SEEDED_RULE_SET_NAMES`` retired alongside
+# the RuleSet seeding helper. The session_rule_sets export
+# emits every row unconditionally.
 
 
 # --------------------------------------------------------------------------- #
@@ -224,9 +218,11 @@ def _instrument_blocks(
         .all()
     )
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
-    # Un-pinned-instrument fallback. Resolved once per export so a
-    # multi-instrument session hits the audit table once.
-    audit_log_rule_set_name = _audit_log_rule_set_name(db, review_session)
+    # Wave 5 PR 5.2 — the un-pinned-instrument audit-log fallback
+    # (``_audit_log_rule_set_name``) retired with the
+    # ``operator_rule_sets`` table. Unpinned instruments export
+    # with an empty rule_set_name cell — matches the behaviour for
+    # sessions that never ran rule-based Generate.
 
     rows: list[Row] = []
     for n, instrument in enumerate(instruments, start=1):
@@ -235,7 +231,6 @@ def _instrument_blocks(
                 instrument,
                 n,
                 rule_set_name_by_id,
-                audit_log_rule_set_name,
             )
         )
         rows.extend(_display_field_rows(instrument, n))
@@ -247,19 +242,17 @@ def _instrument_rows(
     instrument: Instrument,
     n: int,
     rule_set_name_by_id: dict[int, str],
-    audit_log_rule_set_name: str | None,
 ) -> list[Row]:
     prefix = f"instruments[{n}]"
     # Per-instrument selection (``Instrument.rule_set_id``, 15B)
-    # wins. An un-pinned instrument (NULL ``rule_set_id``) falls
-    # back to the seeded-RuleSet name resolved from the latest
-    # ``assignments.generated`` audit row. When neither source
-    # resolves, the cell stays empty — matches behaviour for
-    # sessions that never ran rule-based Generate.
-    if instrument.rule_set_id is not None:
-        rule_set_name_value = rule_set_name_by_id.get(instrument.rule_set_id)
-    else:
-        rule_set_name_value = audit_log_rule_set_name
+    # wins. An un-pinned instrument exports with an empty
+    # rule_set_name cell (Wave 5 PR 5.2 retired the audit-log
+    # fallback that used to resolve seeded names).
+    rule_set_name_value = (
+        rule_set_name_by_id.get(instrument.rule_set_id)
+        if instrument.rule_set_id is not None
+        else None
+    )
     rows = [
         Row(f"{prefix}.name", _str(instrument.name), "string"),
         Row(
@@ -396,66 +389,23 @@ def _session_rule_set_rows(
 def _non_seeded_session_rule_sets(
     db: Session, review_session: ReviewSession
 ) -> list[SessionRuleSet]:
-    return [
-        snap
-        for snap in db.execute(
+    # Wave 5 PR 5.2 — every session_rule_sets row emits now (the
+    # seeded-name exclusion retired with the seeding helper).
+    # Function kept by name so callers don't churn; it's effectively
+    # "every session_rule_sets row for the session."
+    return list(
+        db.execute(
             select(SessionRuleSet)
             .where(SessionRuleSet.session_id == review_session.id)
             .order_by(SessionRuleSet.id)
         )
         .scalars()
         .all()
-        if snap.name not in _SEEDED_RULE_SET_NAMES
-    ]
+    )
 
 
-def _audit_log_rule_set_name(
-    db: Session, review_session: ReviewSession
-) -> str | None:
-    """Un-pinned-instrument fallback for ``instruments[N].rule_set_name``.
-
-    Post-15B ``Instrument.rule_set_id`` is the source of truth for
-    a pinned instrument; this fallback only fires for an instrument
-    whose ``rule_set_id`` is still NULL (never pinned). It reads the
-    latest ``assignments.generated`` audit row for ``review_session``,
-    resolves ``detail.refs.rule_set_id`` against ``operator_rule_sets``
-    (the workspace-tier ``RuleSet`` model), and returns the row's
-    ``name`` **only when it's a seed** (``is_seed=True``).
-
-    Returns ``None`` when:
-
-    - the session has no ``assignments.generated`` audit row
-      (operator never ran a rule-based Generate);
-    - the audit row has no ``refs.rule_set_id`` (e.g. a manual-mode
-      generation that wrote the same event_type without a RuleSet
-      reference);
-    - the referenced ``operator_rule_sets`` row no longer exists;
-    - the referenced row is a Personal-library RuleSet
-      (``is_seed=False``) — Personal-library portability is
-      out of scope here.
-    """
-
-    audit_row = db.execute(
-        select(AuditEvent)
-        .where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "assignments.generated",
-        )
-        .order_by(AuditEvent.id.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    if audit_row is None or not audit_row.detail:
-        return None
-    refs = audit_row.detail.get("refs") or {}
-    rule_set_id = refs.get("rule_set_id")
-    if rule_set_id is None:
-        return None
-    rule_set = db.execute(
-        select(RuleSet).where(RuleSet.id == rule_set_id)
-    ).scalar_one_or_none()
-    if rule_set is None or not rule_set.is_seed:
-        return None
-    return rule_set.name
+# Wave 5 PR 5.2 — ``_audit_log_rule_set_name`` retired with the
+# ``operator_rule_sets`` table it queried for the seed-name fallback.
 
 
 def _rule_set_name_lookup(

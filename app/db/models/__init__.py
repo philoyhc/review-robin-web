@@ -10,7 +10,10 @@ from app.db.models.response_type_definition import ResponseTypeDefinition
 from app.db.models.review_session import ReviewSession
 from app.db.models.reviewee import Reviewee
 from app.db.models.reviewer import Reviewer
-from app.db.models.rule_set import RuleSet, RuleSetRevision
+# Wave 5 PR 5.2 — ``RuleSet`` + ``RuleSetRevision`` (operator-library
+# tier) retired. ``app.db.models.rule_set`` module deleted; the
+# ``operator_rule_sets`` + ``rule_set_revisions`` tables drop in
+# the paired alembic migration.
 from app.db.models.session_field_label import SessionFieldLabel
 from app.db.models.session_operator import SessionOperator
 from app.db.models.session_rule_set import SessionRuleSet
@@ -31,8 +34,6 @@ __all__ = [
     "ReviewSession",
     "Reviewee",
     "Reviewer",
-    "RuleSet",
-    "RuleSetRevision",
     "SessionFieldLabel",
     "SessionOperator",
     "SessionRuleSet",
