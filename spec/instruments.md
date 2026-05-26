@@ -348,6 +348,15 @@ Band 2 declares **what reviewee context** the reviewer sees
 alongside each row of their answer surface, and renders a
 live preview of one sample row inline.
 
+> **Self-review policy.** The preview's sample-picker engine runs
+> with `excludeSelfReviews=False` — same project-wide rule as
+> assignments generation. The preview shows the team's actual
+> composition; if the sample reviewer is themselves a team member,
+> they appear in their own group. See `spec/assignments.md`
+> "Self-review policy" for the rationale and the supported ways to
+> suppress self-reviews (Link rule, or the Self-review toggle on
+> the Assignments page).
+
 #### Intro card (left of Band 2's preview row)
 
 Top-of-band intro card carrying:

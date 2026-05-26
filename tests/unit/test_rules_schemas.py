@@ -341,7 +341,12 @@ def test_ruleset_defaults_to_personal_scope_with_excluded_self_reviews() -> None
         combinator=Combinator.ALL_OF,
     )
     assert ruleset.scope == RuleSetScope.personal
-    assert ruleset.options.excludeSelfReviews is True
+    # Project-wide policy (2026-05-26): the default flipped to
+    # ``False`` — assignments generation and the Band 2 preview
+    # never auto-exclude self-reviews. Operators suppress them via
+    # a Link rule or by marking the row inactive on the Assignments
+    # page. See ``spec/assignments.md`` "Self-review policy".
+    assert ruleset.options.excludeSelfReviews is False
     assert ruleset.metadata.isSeed is False
     assert ruleset.rules == []
 

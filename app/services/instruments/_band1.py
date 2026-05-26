@@ -605,7 +605,17 @@ def find_sample_in_scope_reviewee(
         name="_band1_preview",
         combinator=Combinator.ALL_OF,
         rules=rules,
-        options=RuleSetOptions(excludeSelfReviews=True),
+        # Project-wide policy: ``excludeSelfReviews`` is ALWAYS
+        # ``False`` for assignments generation AND for the
+        # Band 2 instrument preview. If the operator wants to
+        # suppress self-reviews they should either add a Link 2
+        # rule (e.g. ``reviewee.email_or_identifier IS DIFFERENT
+        # FROM reviewer.email``) or mark the (R, R) row
+        # ``inactive`` on the Assignments page. Excluding them
+        # automatically here used to silently undercount the
+        # team's composition by 1 on every symmetric session —
+        # see ``spec/assignments.md`` "Self-review policy".
+        options=RuleSetOptions(excludeSelfReviews=False),
     )
     try:
         result = engine.evaluate(
@@ -666,6 +676,12 @@ def find_sample_in_scope_reviewee(
     # group same as Reviewer group), each reviewer's reviewee pool
     # is different, and unioning across reviewers silently widens
     # the preview past what the sample's reviewer actually sees.
+    #
+    # The rule engine runs with ``excludeSelfReviews=False`` (the
+    # project-wide policy — see ``spec/assignments.md`` "Self-
+    # review policy"), so the sample reviewer's reviewee-side twin
+    # (when one exists, matched by email) lands in ``result.pairs``
+    # naturally as ``(sample_reviewer, twin)`` and is counted here.
     member_ids: set[int] = set()
     for r, e in result.pairs:
         if r.id != sample_reviewer.id:

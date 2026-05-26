@@ -2627,6 +2627,113 @@ def test_preview_route_scopes_member_ids_to_sample_reviewer(
             assert r.tag_2 == sample_reviewer.tag_2
 
 
+def test_preview_route_includes_sample_reviewers_reviewee_twin(
+    client: TestClient, db: Session
+) -> None:
+    """Symmetric reviewer/reviewee setups (every person is both a
+    reviewer and a reviewee): the team's name list must NOT
+    undercount by 1 on the Band 2 preview. Pre-policy this took a
+    twin-lookup hack because the engine ran with
+    ``excludeSelfReviews=True``; the project-wide policy
+    (``spec/assignments.md`` "Self-review policy") flipped that
+    bit to False everywhere, so the ``(R, R)`` pair now lands in
+    ``result.pairs`` naturally and the sample reviewer's reviewee
+    twin appears in ``sample_group_member_ids`` without special
+    handling.
+
+    Set-up: a symmetric session with Alice, Bob, Carol — each is
+    both a reviewer and a reviewee under the matching email, all
+    sharing ``tag_1 = "Team A"``. With Link 1 / Link 2 = All and
+    Link 3 = ``reviewee.tag1``, the surviving member IDs must
+    include all three reviewee twins (not just the two non-self
+    pairs).
+    """
+    review_session = _make_session(client, db, code="preview-symmetric-twin")
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Alice",
+                email="alice@example.edu",
+                tag_1="Team A",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Bob",
+                email="bob@example.edu",
+                tag_1="Team A",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Carol",
+                email="carol@example.edu",
+                tag_1="Team A",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Alice",
+                email_or_identifier="alice@example.edu",
+                tag_1="Team A",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Bob",
+                email_or_identifier="bob@example.edu",
+                tag_1="Team A",
+                status="active",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@example.edu",
+                tag_1="Team A",
+                status="active",
+            ),
+        ]
+    )
+    db.commit()
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    new_model.group_kind = "r1"
+    db.commit()
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+            "link3_boundary": ["reviewee.tag1"],
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    # All three reviewee twins must be present — including the
+    # sample reviewer's own twin (the off-by-one this test pins).
+    assert sorted(payload["sample_group_member_ids"]) == sorted(
+        [by_name["Alice"], by_name["Bob"], by_name["Carol"]]
+    )
+
+
 def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     client: TestClient, db: Session
 ) -> None:

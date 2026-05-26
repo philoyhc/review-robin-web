@@ -172,9 +172,15 @@ def _seed_session_with_droppable_response(
 
     Reviewer ``Sam`` and reviewee ``Sam`` share an email; Full
     Matrix pairs them as a self-review. After activating, recording
-    a response on that self-pair, and reverting to draft, the rule
-    set is flipped to exclude self-reviews — so the next reconcile
-    drops the self-pair and deletes its response.
+    a response on that self-pair, and reverting to draft, ``Sam``-
+    as-a-reviewee is marked ``inactive`` — so the next reconcile
+    drops the (Sam, Sam) pair and would delete its response.
+
+    Pre-2026-05-26 this seed flipped
+    ``session_rule_sets.exclude_self_reviews`` to ``True`` to
+    achieve the same drop; that path is gone now that the project-
+    wide policy keeps ``excludeSelfReviews=False`` everywhere
+    (``spec/assignments.md`` "Self-review policy").
 
     Reviewee ``Dan`` is along for the ride so every reviewer /
     reviewee keeps ≥1 assignment after the drop — validation stays
@@ -234,15 +240,42 @@ def _seed_session_with_droppable_response(
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
 
-    # Tweak the pinned RuleSet so re-Generate would re-fan a
-    # different pair set (Detours covers the response-loss flow).
+    # Add a Link 1 / 2 filter rule that excludes self-pairs
+    # (``reviewee.email IS DIFFERENT FROM reviewer.email``). The
+    # next reconcile drops the (Sam, Sam) pair and orphans its
+    # response — exercising the response-loss detour without
+    # depending on the retired ``exclude_self_reviews`` desugar
+    # (project-wide policy: ``excludeSelfReviews`` is always
+    # False at the engine layer — see ``spec/assignments.md``
+    # "Self-review policy"). This is the recommended operator
+    # path for suppressing self-reviews.
     from app.db.models import SessionRuleSet
     rule_set = db.execute(
         select(SessionRuleSet).where(
             SessionRuleSet.session_id == review_session.id
         )
     ).scalar_one()
-    rule_set.exclude_self_reviews = True
+    rule_set.rules_json = [
+        {
+            "id": "no-self",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "no-self-r0",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewee.email",
+                        "operator": "different_from",
+                        "operand": "reviewer.email",
+                        "case_sensitive": False,
+                    },
+                }
+            ],
+        }
+    ]
     db.flush()
     db.commit()
     return review_session

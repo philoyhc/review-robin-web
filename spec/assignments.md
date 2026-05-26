@@ -289,39 +289,61 @@ indistinguishable from the generator's point of view.
 
 ## Self-review policy
 
-A **self review** is a pair where the reviewer and reviewee are
-the same person. Two attributes drive whether they appear in
-the materialised set + with what `include` value:
+**`excludeSelfReviews` is ALWAYS `False`.** The rule engine never
+drops self-review pairs at the desugar stage — neither during
+assignments generation nor during the Band 2 instrument-preview
+sample pick. This is project-wide policy and is enforced in three
+layers so it can't be silently re-enabled:
+
+1. The `RuleSetOptions.excludeSelfReviews` Pydantic default is
+   `False`.
+2. `assignments._schema_from_row` hard-codes
+   `excludeSelfReviews=False` when wrapping a `SessionRuleSet`
+   row into a schema — the row's `exclude_self_reviews` column is
+   ignored (it stays `False` on every Band-1 materialisation
+   anyway, but the hardcode is defence-in-depth).
+3. `instruments._band1.find_sample_in_scope_reviewee` (the
+   `/preview-sample` workhorse) constructs its schema with
+   `excludeSelfReviews=False`.
+
+If an operator wants to **suppress** self-reviews, the two
+supported affordances are:
+
+- **Link rules.** Add a Link 2 (or Link 1) rule like `reviewee.email
+  IS DIFFERENT FROM reviewer.email`. The engine evaluates these as
+  ordinary filter logic, so the (R, R) pair never reaches
+  materialisation. (Other tag-pair predicates also work — anything
+  the operator wants to control.)
+- **Per-instrument Self-review toggle.** Self-review pairs *are*
+  materialised; flip the toggle on the Assignments page to set
+  `Assignment.include=False` on every `(R, R)` row in that
+  instrument. The session-level `ReviewSession.self_reviews_active`
+  (default True) seeds this on first generation.
+
+Reasoning: silently dropping self-pairs at the desugar stage
+(a) is invisible to the operator — the row doesn't show up to be
+inspected or toggled, and (b) under-counted group composition by
+one whenever the sample reviewer was themselves a member of the
+group (symmetric reviewer/reviewee sessions). The toggle path is
+explicit, reversible without re-Generate, and inspectable on the
+Assignments page.
+
+Two attributes still drive whether self-review rows appear as
+*active*:
 
 1. **`SessionRuleSet.exclude_self_reviews`** (rule-set level).
-   When True, the engine drops self-review pairs before
-   materialising — they never become `Assignment` rows. When
-   False, the pairs are materialised; their `include` is set
-   from the session-level flag.
+   Vestigial column — the engine layer hardcodes False regardless
+   of its value. Migration `d2e4f6a8c1b3` backfilled every row to
+   `False` so the column matches behaviour, and
+   `_create_band1_rule_set` writes `False` on every save.
 2. **`ReviewSession.self_reviews_active`** (session level,
    defaults True). When a self-review pair is materialised, its
    `Assignment.include` is `True if self_reviews_active else False`.
 
-**Post-PR-#1452 contract:**
-
-- Every Band-1-materialised `SessionRuleSet` carries
-  `exclude_self_reviews=False`.
-- The synthetic Full Matrix has `excludeSelfReviews=False`.
-- The **per-instrument Self-review toggle** on the Assignments
-  page is the sole include / exclude surface; flipping it bulk-
-  sets `Assignment.include` on every self-review row in that
-  instrument.
-
 In other words: self-review rows are always materialised. Whether
-they're "active" is a post-generation toggle, not a pre-generation
-filter. This is the user-facing affordance — the operator can
-flip self-review inclusion at any time without re-running Generate.
-
-The legacy pre-Wave-5 contract (rule-set level
-`exclude_self_reviews=True`) is preserved on any
-pre-existing `SessionRuleSet` rows that still carry it; the
-service layer reads the bit honestly. Only new Band-1
-materialisations follow the post-PR-#1452 default.
+they're "active" is a post-generation toggle. This is the
+user-facing affordance — the operator can flip self-review
+inclusion at any time without re-running Generate.
 
 ## Group-scoped fan-out
 
