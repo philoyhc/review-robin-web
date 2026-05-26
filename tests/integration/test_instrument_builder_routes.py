@@ -5000,6 +5000,45 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
     assert add_btn_idx != -1, "Unlock toggle must come after +Instrument"
 
 
+def test_lock_unlock_renders_twice_top_and_bottom(
+    client: TestClient, db: Session
+) -> None:
+    """Each per-instrument card renders the Lock/Unlock anchor
+    twice — a convenience one inline at the top of the card next
+    to the visibility-when-closed form, and the canonical one in
+    the bottom action row. Both carry the same
+    ``data-instrument-lock-toggle`` data attribute so the
+    dirty-state confirm fires from either."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="w4-lock-twice-view"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(body.split())
+    marker = f'data-instrument-lock-toggle="{new_model.id}"'
+    assert flat.count(marker) == 2
+
+    # The top instance sits before the "Show when closed" /
+    # "Don't show when closed" form.
+    top_idx = flat.find(marker)
+    visibility_idx = flat.find(
+        f'action="/operator/sessions/{review_session.id}'
+        f'/instruments/{new_model.id}/visibility"',
+        top_idx,
+    )
+    assert visibility_idx != -1
+    assert top_idx < visibility_idx
+
+    # Both render the same label (Unlock in view mode, Lock in
+    # edit mode); both navigate to the same edit-mode URL.
+    edit_url = (
+        f'/operator/sessions/{review_session.id}/instruments'
+        f'?editing={new_model.id}'
+    )
+    assert flat.count(edit_url) >= 2
+
+
 def test_lock_unlock_replaces_cancel_button_in_edit_mode(
     client: TestClient, db: Session
 ) -> None:
@@ -5019,9 +5058,12 @@ def test_lock_unlock_replaces_cancel_button_in_edit_mode(
     assert ">Edit</a>" not in flat
     assert ">Cancel</a>" not in flat
 
-    # Lock button on the editing instrument's row.
+    # Lock button on the editing instrument's row. ``rfind``
+    # because a convenience Lock/Unlock also renders at the top
+    # of the card; the canonical action-row Lock sits at the
+    # bottom (after Save / Cancel / etc.).
     toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
-    toggle_idx = flat.find(toggle_marker)
+    toggle_idx = flat.rfind(toggle_marker)
     assert toggle_idx != -1
     label = flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
     assert "Lock" in label and "Unlock" not in label
@@ -5032,11 +5074,11 @@ def test_lock_unlock_replaces_cancel_button_in_edit_mode(
     assert "editing=" not in toggle_tag
 
     # Save button is present (still scoped to ``form=dfsave-<id>``)
-    # and sits beside Lock.
+    # and sits beside Lock in the action row.
     save_form_attr = f'form="dfsave-{new_model.id}"'
     save_idx = flat.find(save_form_attr)
     assert save_idx != -1
-    # Save comes before Lock in the row.
+    # Save comes before the action-row Lock.
     assert save_idx < toggle_idx
 
 
@@ -5245,14 +5287,12 @@ def test_action_row_button_order_in_edit_mode(
     ).text
     flat = " ".join(body.split())
 
-    # Anchor on the Lock toggle (uniquely scoped per instrument by
-    # the data attribute), then constrain other markers to the
-    # window of HTML that ends with Lock — that's the editing
-    # instrument's action row. Note: Delete renders as a disabled
-    # static button when ``is_editing`` (add_delete_disabled gate),
-    # so the test searches for the literal ``>Delete</button>``
-    # rather than the ``data-delete-btn`` marker.
-    lock_idx = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    # Anchor on the action-row Lock toggle (uniquely scoped per
+    # instrument by the data attribute). Two Lock/Unlock anchors
+    # render per card now — a convenience one at the top of the
+    # card and the canonical one in the bottom action row — so
+    # ``rfind`` lands on the action-row instance.
+    lock_idx = flat.rfind(f'data-instrument-lock-toggle="{new_model.id}"')
     assert lock_idx != -1
     save_idx = flat.rfind("data-new-model-save", 0, lock_idx)
     cancel_idx = flat.rfind(f'data-new-model-cancel="{new_model.id}"', 0, lock_idx)
@@ -5301,8 +5341,10 @@ def test_action_row_button_order_in_view_mode(
     # the only thing that targets dfsave-<id>).
     assert f'form="dfsave-{new_model.id}"' not in flat
 
-    # Anchor on the Unlock toggle for this instrument; walk back.
-    unlock_idx = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    # Anchor on the action-row Unlock toggle for this instrument
+    # (rfind because the heading row now renders a convenience
+    # Lock/Unlock too — the canonical one sits at the bottom).
+    unlock_idx = flat.rfind(f'data-instrument-lock-toggle="{new_model.id}"')
     assert unlock_idx != -1
     replicate_idx = flat.rfind(
         f'action="/operator/sessions/{review_session.id}'
