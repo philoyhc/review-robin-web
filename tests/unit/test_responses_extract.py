@@ -20,7 +20,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -30,9 +29,6 @@ from app.services.extracts.responses_extract import (
     HEADER,
     serialize_responses,
     serialize_responses_for_instrument,
-)
-from app.services.instruments import (
-    ensure_default_response_type_definitions,
 )
 
 
@@ -58,20 +54,23 @@ def _session(db: Session, *, code: str = "rsp") -> ReviewSession:
     )
     db.add(review_session)
     db.flush()
-    ensure_default_response_type_definitions(db, review_session)
-    db.flush()
     return review_session
 
 
-def _likert(db: Session, review_session: ReviewSession) -> ResponseTypeDefinition:
-    return (
-        db.query(ResponseTypeDefinition)
-        .filter(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "Likert5",
-        )
-        .one()
-    )
+# RTD seed retired 2026-05-26 — tests that need a Likert5 inline
+# spec get it from this dict and splat it into the field
+# constructor below.
+_LIKERT5_SPEC: dict[str, object] = {
+    "_inline_data_type": "Integer",
+    "_inline_response_type": "Likert5",
+    "_inline_min": 1.0,
+    "_inline_max": 5.0,
+    "_inline_step": 1.0,
+}
+
+
+def _likert(db: Session, review_session: ReviewSession) -> dict[str, object]:
+    return _LIKERT5_SPEC
 
 
 def _add_reviewer(
@@ -145,7 +144,7 @@ def _add_field(
     *,
     field_key: str,
     label: str,
-    rtd: ResponseTypeDefinition,
+    rtd: dict[str, object],
     order: int = 0,
     help_text: str | None = None,
 ) -> InstrumentResponseField:
@@ -158,12 +157,7 @@ def _add_field(
         # iii-b4: FK retired; populate inline columns directly so
         # downstream readers (extracts, properties) see the right
         # data_type / response_type.
-        _inline_data_type=rtd.data_type,
-        _inline_response_type=rtd.response_type,
-        _inline_min=rtd.min,
-        _inline_max=rtd.max,
-        _inline_step=rtd.step,
-        _inline_list_csv=rtd.list_csv,
+        **rtd,
     )
     db.add(f)
     db.flush()
@@ -595,15 +589,12 @@ def test_response_type_resolves_for_seeded_and_operator_defined_rtds(
 ) -> None:
     review_session = _session(db, code="rtd")
     likert = _likert(db, review_session)
-    custom = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="GPA4",
-        data_type="decimal",
-        min=0.0,
-        max=4.0,
-    )
-    db.add(custom)
-    db.flush()
+    custom: dict[str, object] = {
+        "_inline_data_type": "decimal",
+        "_inline_response_type": "GPA4",
+        "_inline_min": 0.0,
+        "_inline_max": 4.0,
+    }
 
     reviewer = _add_reviewer(
         db, review_session, email="r@example.edu", name="R"
@@ -638,14 +629,11 @@ def test_list_response_value_round_trips_as_stored(db: Session) -> None:
     literal the database stores."""
 
     review_session = _session(db, code="listval")
-    list_rtd = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="Topics",
-        data_type="list",
-        list_csv="design,research,ops",
-    )
-    db.add(list_rtd)
-    db.flush()
+    list_rtd: dict[str, object] = {
+        "_inline_data_type": "list",
+        "_inline_response_type": "Topics",
+        "_inline_list_csv": "design,research,ops",
+    }
 
     reviewer = _add_reviewer(
         db, review_session, email="r@example.edu", name="R"

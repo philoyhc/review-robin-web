@@ -19,7 +19,6 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -269,18 +268,12 @@ def _attach_response(
     ``Response`` row needs; ``key`` makes both unique per session /
     instrument.
     """
-    rtd = ResponseTypeDefinition(
-        session_id=assignment.session_id,
-        response_type=f"RT-{key}",
-        data_type="number",
-    )
-    db.add(rtd)
-    db.flush()
     field = InstrumentResponseField(
         instrument_id=instrument_id,
         field_key=key,
         label="Score",
-        response_type_id=rtd.id,
+        _inline_data_type="Integer",
+        _inline_response_type=f"RT-{key}",
     )
     db.add(field)
     db.flush()

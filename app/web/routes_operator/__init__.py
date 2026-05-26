@@ -29,7 +29,6 @@ from . import (
     _lobby,
     _operations,
     _quick_setup,
-    _response_types,
     _session_home,
     _settings,
     _setup_invite,
@@ -56,7 +55,6 @@ router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
 router.include_router(_operations.router)
 router.include_router(_instruments.router)
-router.include_router(_response_types.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
 router.include_router(_workflow.router)

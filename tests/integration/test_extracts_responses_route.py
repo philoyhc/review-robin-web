@@ -27,7 +27,6 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     ReviewSession,
 )
 from ._full_matrix import (
@@ -85,21 +84,15 @@ def _seed_pair_with_response(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    likert = db.execute(
-        select(ResponseTypeDefinition).where(
-            ResponseTypeDefinition.session_id == review_session.id,
-            ResponseTypeDefinition.response_type == "Likert5",
-        )
-    ).scalar_one()
     field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key="overall",
         label="Overall",
         order=0,
         # iii-b4: FK retired; inline columns carry the data.
-        _inline_data_type=likert.data_type,
-        _inline_response_type=likert.response_type,
-        _inline_list_csv=likert.list_csv,
+        _inline_data_type="integer",
+        _inline_response_type="Likert5",
+        _inline_list_csv="1,2,3,4,5",
     )
     db.add(field)
     db.flush()

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from app.db.models.email_outbox import EmailOutbox
     from app.db.models.instrument import Instrument
     from app.db.models.invitation import Invitation
-    from app.db.models.response_type_definition import ResponseTypeDefinition
     from app.db.models.reviewee import Reviewee
     from app.db.models.reviewer import Reviewer
     from app.db.models.session_field_label import SessionFieldLabel
@@ -146,10 +145,6 @@ class ReviewSession(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     invitations: Mapped[list[Invitation]] = relationship(
-        back_populates="session",
-        cascade="all, delete-orphan",
-    )
-    response_type_definitions: Mapped[list[ResponseTypeDefinition]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
     )

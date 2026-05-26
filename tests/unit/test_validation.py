@@ -172,9 +172,6 @@ def test_no_display_fields_warning_fires_when_response_fields_exist(
     """The new warning-severity rule fires only on instruments that
     have response fields but no display fields."""
     from app.db.models import Instrument, InstrumentResponseField
-    from app.services.instruments import (
-        ensure_default_response_type_definitions,
-    )
 
     user = _user(db)
     session = _session(db, user)
@@ -191,13 +188,13 @@ def test_no_display_fields_warning_fires_when_response_fields_exist(
     )
     db.add(instrument)
     db.flush()
-    rtds = ensure_default_response_type_definitions(db, session)
     db.add(
         InstrumentResponseField(
             instrument_id=instrument.id,
             field_key="rating",
             label="Rating",
-            response_type_id=rtds["1-to-5int"].id,
+            _inline_data_type="Integer",
+            _inline_response_type="1-to-5int",
             required=False,
             order=0,
         )

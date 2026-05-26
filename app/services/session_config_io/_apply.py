@@ -27,7 +27,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     ReviewSession,
     SessionFieldLabel,
     SessionRuleSet,
@@ -44,23 +43,19 @@ from app.services.instruments import (
     decode_group_kind,
     encode_group_kind,
 )
-from app.services.instruments._rtds import (
-    SEEDED_RESPONSE_TYPE_DEFINITIONS,
-    validation_block_for_rtd,
+from app.services.instruments._response_fields import (
+    DEFAULT_RESPONSE_FIELDS,
+    _inline_kwargs_from_default_spec,
+    _validation_block_from_default_spec,
 )
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely.
 
 from app.services.session_config_io._rows import Row
 
-# Names of seeded RTDs / RuleSets — both auto-materialise on the
-# destination session, so they are valid cross-row reference
-# targets even when no CSV row defines them.
-_SEEDED_RTD_NAMES: frozenset[str] = frozenset(
-    spec["response_type"] for spec in SEEDED_RESPONSE_TYPE_DEFINITIONS
-)
 # Wave 5 PR 5.2 — ``_SEEDED_RULE_SET_NAMES`` retired alongside
-# the RuleSet seeding helper.
+# the RuleSet seeding helper. ``_SEEDED_RTD_NAMES`` retired
+# 2026-05-26 alongside the per-session RTD table.
 
 
 @dataclass(frozen=True)
@@ -99,14 +94,6 @@ class ApplyResult:
 # --------------------------------------------------------------------------- #
 
 
-@dataclass
-class _RtdSpec:
-    response_type: str
-    data_type: str | None = None
-    min: float | None = None
-    max: float | None = None
-    step: float | None = None
-    list_csv: str | None = None
 
 
 @dataclass
@@ -163,7 +150,6 @@ class _FieldLabelSpec:
 class _ParsedConfig:
     session_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
     email_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
-    rtds: dict[str, _RtdSpec] = _dataclass_field(default_factory=dict)
     instruments: dict[int, _InstrumentSpec] = _dataclass_field(default_factory=dict)
     session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(default_factory=dict)
     field_labels: list[_FieldLabelSpec] = _dataclass_field(default_factory=list)
@@ -180,24 +166,6 @@ _VALID_DATA_TYPES = {
     "json",
 }
 _VALID_COMBINATORS = frozenset({"ALL_OF", "ANY_OF", "PIPELINE"})
-# Documented import vocabulary (per the 12A-2 plan) plus the
-# model's capitalized values that today's export emits directly
-# (``ResponseTypeDefinition.data_type`` carries ``Integer`` /
-# ``Decimal`` / ``String`` / ``List``). Accepting both shapes
-# keeps round-trip byte-stable without flipping the export.
-_VALID_RTD_DATA_TYPES = frozenset(
-    {
-        "int",
-        "decimal",
-        "short_text",
-        "long_text",
-        "list",
-        "Integer",
-        "Decimal",
-        "String",
-        "List",
-    }
-)
 _VALID_DF_SOURCE_TYPES = frozenset({"reviewee", "pair_context"})
 _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 
@@ -230,7 +198,6 @@ _RX_INSTRUMENT_RF = re.compile(
     r"^instruments\[(\d+)\]\.response_fields\[(\d+)\]\.(\w+)$"
 )
 _RX_INSTRUMENT = re.compile(r"^instruments\[(\d+)\]\.(\w+)$")
-_RX_RTD = re.compile(r"^rtds\[([^\]]+)\]\.(\w+)$")
 _RX_RULE_SET = re.compile(r"^session_rule_sets\[(\d+)\]\.(\w+)$")
 _RX_EMAIL = re.compile(r"^email_overrides\.(\w+)\.(\w+)$")
 _RX_FIELD_LABEL = re.compile(r"^field_labels\.(\w+)\.([^.]+)$")
@@ -328,7 +295,10 @@ def _route_row(
         _apply_email_kv(plan, field_path, value, data_type)
         return
     if field_path.startswith("rtds["):
-        _apply_rtd_kv(plan, field_path, value, data_type)
+        # Per-session ``response_type_definitions`` table retired
+        # 2026-05-26 — old bundles may carry these rows. Silently
+        # accept and drop; the response field bounds + data_type now
+        # round-trip inline on the response_field_* rows.
         return
     if field_path.startswith("instruments["):
         _apply_instrument_kv(plan, field_path, value, data_type)
@@ -390,33 +360,6 @@ def _apply_email_kv(
         plan.email_overrides[legacy_key] = value
     # Empty cell ⇒ key absent ⇒ "use default" (matches resolver).
     del data_type  # unused; cell is always string here
-
-
-def _apply_rtd_kv(
-    plan: _ParsedConfig, field_path: str, value: str, data_type: str
-) -> None:
-    match = _RX_RTD.match(field_path)
-    if match is None:
-        raise _ParseError(f"unrecognised rtds[] key {field_path!r}")
-    rtd_name = match.group(1)
-    attr = match.group(2)
-    spec = plan.rtds.setdefault(rtd_name, _RtdSpec(response_type=rtd_name))
-    if attr == "data_type":
-        if value and value not in _VALID_RTD_DATA_TYPES:
-            raise _ParseError(
-                f"unknown RTD data_type {value!r}; expected one of "
-                f"{sorted(_VALID_RTD_DATA_TYPES)}"
-            )
-        spec.data_type = value or None
-        return
-    if attr in {"min", "max", "step"}:
-        setattr(spec, attr, _parse_decimal(value))
-        return
-    if attr == "list_csv":
-        spec.list_csv = value or None
-        return
-    raise _ParseError(f"unknown rtds[] attribute {attr!r}")
-    del data_type  # unused
 
 
 def _apply_instrument_kv(
@@ -620,26 +563,10 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     ),
                 )
             )
-    # Per-response-field ``response_type`` resolves against either
-    # a seeded RTD (in ``SEEDED_RESPONSE_TYPE_DEFINITIONS``) or an
-    # operator-defined RTD authored earlier in the same CSV.
-    valid_rtd_names = set(plan.rtds) | _SEEDED_RTD_NAMES
-    for n, instrument in sorted(plan.instruments.items()):
-        for m, rf in sorted(instrument.response_fields.items()):
-            if rf.response_type and rf.response_type not in valid_rtd_names:
-                errors.append(
-                    ApplyError(
-                        row_number=0,
-                        field=(
-                            f"instruments[{n}].response_fields[{m}]"
-                            ".response_type"
-                        ),
-                        message=(
-                            f"no such RTD on this session: "
-                            f"{rf.response_type!r}"
-                        ),
-                    )
-                )
+    # Per-response-field ``response_type`` was a per-session RTD
+    # name lookup pre-2026-05-26; the table retired and the value
+    # now stores verbatim into ``_inline_response_type``. Any
+    # non-empty string is accepted.
     # Instrument required fields + display-/response-field required
     # fields.
     for n, instrument in sorted(plan.instruments.items()):
@@ -807,7 +734,13 @@ def _apply_plan(
 
     counts["session"] = _apply_session_metadata(review_session, plan)
     counts["email_overrides"] = _apply_email_overrides(review_session, plan)
-    counts["rtds"] = _apply_rtds(db, review_session, plan)
+    # Per-session RTD table retired 2026-05-26 — ``rtds[*]`` rows
+    # in old bundles are silently dropped at parse time. Instrument
+    # response fields still wipe-and-replace below; that step also
+    # clears the Assignments + Responses that pre-existed the
+    # re-import. The pre-2026-05-26 ``_apply_rtds`` helper did the
+    # same instrument wipe; we hoist it inline here.
+    _wipe_instruments_and_dependents(db, review_session)
     db.flush()
     counts["session_rule_sets"] = _apply_session_rule_sets(
         db, review_session, plan
@@ -893,27 +826,18 @@ def _apply_email_overrides(
     return len(plan.email_overrides)
 
 
-def _apply_rtds(
-    db: Session, review_session: ReviewSession, plan: _ParsedConfig
-) -> int:
-    """Upsert operator-defined RTDs by ``response_type``; delete
-    existing operator-defined rows not in the CSV. Seeded rows
-    are untouched.
+def _wipe_instruments_and_dependents(
+    db: Session, review_session: ReviewSession
+) -> None:
+    """Wipe-and-replace prelude for the settings re-import.
 
-    Operator-defined RTD rows can be referenced by
-    ``InstrumentResponseField.response_type_id`` — but the
-    instruments wipe-and-replace happens after this step, so
-    by-then there are no FK references to worry about. We delete
-    instruments first to be safe."""
-
-    # Need to delete instruments (and their response fields)
-    # *before* deleting operator-defined RTDs the response fields
-    # reference. We do that here by deferring RTD deletes until
-    # after instruments are wiped — call this method twice:
-    # first pass returns the spec, second pass after instruments
-    # are wiped does the upsert + delete. Instead, simpler:
-    # delete instruments here first, then process RTDs, then
-    # re-create instruments downstream.
+    Drops the session's Responses + Assignments + Instrument rows
+    so the downstream apply step can rebuild the instrument tree
+    from scratch. The pre-2026-05-26 ``_apply_rtds`` did the same
+    instrument wipe as a prelude to RTD upsert; the RTD table
+    retired but the wipe-and-replace shape is still load-bearing
+    for instrument re-import.
+    """
     # Responses FK ``assignments``; the bulk Core delete below would
     # trip that constraint on a session reverted from ``ready`` (which
     # keeps its responses) unless they go first. The settings
@@ -944,77 +868,6 @@ def _apply_rtds(
     for instrument in instruments_to_delete:
         db.delete(instrument)
     db.flush()
-
-    existing = {
-        rtd.response_type: rtd
-        for rtd in db.execute(
-            select(ResponseTypeDefinition).where(
-                ResponseTypeDefinition.session_id == review_session.id,
-                ResponseTypeDefinition.is_seeded.is_(False),
-            )
-        ).scalars()
-    }
-
-    written = 0
-    for name, spec in plan.rtds.items():
-        if not spec.data_type:
-            # Defensive: a row that only set min/max with no
-            # data_type was malformed; cross-row check should
-            # have flagged it. Skip silently to avoid a NULL
-            # write.
-            continue
-        rtd = existing.get(name)
-        # Map the CSV's ``int`` / ``decimal`` / ``short_text`` /
-        # ``long_text`` / ``list`` lowercase tokens to the model's
-        # capitalized ``Integer`` / ``Decimal`` / ``String`` /
-        # ``List`` data_type values. The export emits the lowercase
-        # tokens to match the documented vocabulary.
-        model_data_type = _RTD_TYPE_LOWER_TO_MODEL[spec.data_type]
-        if rtd is None:
-            rtd = ResponseTypeDefinition(
-                session_id=review_session.id,
-                response_type=name,
-                data_type=model_data_type,
-                min=spec.min,
-                max=spec.max,
-                step=spec.step,
-                list_csv=spec.list_csv,
-                is_seeded=False,
-            )
-            db.add(rtd)
-        else:
-            rtd.data_type = model_data_type
-            rtd.min = spec.min
-            rtd.max = spec.max
-            rtd.step = spec.step
-            rtd.list_csv = spec.list_csv
-            del existing[name]
-        written += 1
-
-    # Anything left in ``existing`` was not in the CSV → delete.
-    for orphan in existing.values():
-        db.delete(orphan)
-    db.flush()
-
-    return written
-
-
-# Map every token the importer accepts to the model's
-# canonical capitalized values used by
-# ``ResponseTypeDefinition.data_type``. Lowercase tokens follow
-# the documented import vocabulary; capitalized tokens match
-# what today's export emits directly.
-_RTD_TYPE_LOWER_TO_MODEL = {
-    "int": "Integer",
-    "decimal": "Decimal",
-    "short_text": "String",
-    "long_text": "String",
-    "list": "List",
-    "Integer": "Integer",
-    "Decimal": "Decimal",
-    "String": "String",
-    "List": "List",
-}
 
 
 def _apply_session_rule_sets(
@@ -1078,14 +931,6 @@ def _apply_instruments(
         "display_fields": 0,
         "response_fields": 0,
     }
-    rtd_by_name = {
-        rtd.response_type: rtd
-        for rtd in db.execute(
-            select(ResponseTypeDefinition).where(
-                ResponseTypeDefinition.session_id == review_session.id
-            )
-        ).scalars()
-    }
     # Per-instrument rule pin (Segment 15B Slice 2b). The session-tier
     # ``session_rule_sets`` rows are upserted by
     # ``_apply_session_rule_sets`` earlier in the apply pipeline.
@@ -1144,19 +989,19 @@ def _apply_instruments(
             )
             counts["display_fields"] += 1
 
+        # Per-session ``response_type_definitions`` table retired
+        # 2026-05-26. ``response_type`` is now an opaque label
+        # stored verbatim into ``_inline_response_type``; bounds
+        # default to the Rating Integer 1-5 shape (operators edit
+        # inline post-import via the Band 3 row UI).
+        default_spec = DEFAULT_RESPONSE_FIELDS[0]
+        default_inline = _inline_kwargs_from_default_spec(default_spec)
+        default_validation = _validation_block_from_default_spec(default_spec)
         for m in sorted(spec.response_fields.keys()):
             rf_spec = spec.response_fields[m]
-            assert rf_spec.response_type is not None
-            rtd = rtd_by_name.get(rf_spec.response_type)
-            if rtd is None:
-                raise _ApplyConflict(
-                    f"unknown RTD {rf_spec.response_type!r} on this session "
-                    f"(instruments[{n}].response_fields[{m}].response_type)"
-                )
-            from app.services.instruments._response_fields import (
-                inline_kwargs_from_rtd,
-            )
-
+            inline_kwargs = dict(default_inline)
+            if rf_spec.response_type:
+                inline_kwargs["_inline_response_type"] = rf_spec.response_type
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
@@ -1164,10 +1009,10 @@ def _apply_instruments(
                     label=rf_spec.label or "",
                     required=rf_spec.required,
                     order=m,
-                    validation=validation_block_for_rtd(rtd),
+                    validation=default_validation,
                     help_text=rf_spec.help_text,
                     help_text_visible=rf_spec.help_text_visible,
-                    **inline_kwargs_from_rtd(rtd),
+                    **inline_kwargs,
                 )
             )
             counts["response_fields"] += 1

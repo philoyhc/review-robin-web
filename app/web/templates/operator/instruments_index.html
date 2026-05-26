@@ -187,7 +187,7 @@
      in the URL); locked = view mode. Save sits beside Lock/Unlock so
      they share a visual group (mirrors Quick Setup's Submit + Lock /
      Unlock footer). #}
-  {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
+  {% macro instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         {# Wave 4 — bottom action row order:
@@ -259,13 +259,8 @@
            are independent — Save does not lock the card, so the
            operator can keep editing after a Save without
            re-entering edit mode. Both disabled when the session
-           is past setup phase (``is_ready``) or when the
-           RTD-library editor holds the edit token. #}
-        {% if is_some_rtd_unlocked %}
-          <button class="btn secondary" type="button" disabled aria-disabled="true"
-                  data-instrument-lock-toggle="{{ instrument.id }}"
-                  title="Save or cancel the Response Type Definitions edit before unlocking an instrument.">{% if is_editing %}Lock{% else %}Unlock{% endif %}</button>
-        {% elif is_editing %}
+           is past setup phase (``is_ready``). #}
+        {% if is_editing %}
           {# Wave 4 PR 3 — Lock prompts an "unsaved changes" confirm
              when the Save button is active (dirty). The handler
              returns false to cancel the navigation if the operator
@@ -300,7 +295,7 @@
      Edit; there is no separate status card (its grid slot holds
      the Assignment Rule card instead). ``is_group`` adds the
      "Group-scoped" chip. #}
-  {% macro instrument_identity(session, instrument, index, is_editing, is_ready, is_some_rtd_unlocked, is_group) %}
+  {% macro instrument_identity(session, instrument, index, is_editing, is_ready, is_group) %}
     <div class="card instrument-edit"
          style="border-color: transparent; background: transparent; padding: 0;
                 display: flex; flex-direction: column;">
@@ -560,73 +555,6 @@
     </div>
   {% endmacro %}
 
-  {# Hidden <template> rows cloned by ``addRow`` JS. Caller renders
-     these only in edit mode. #}
-  {% macro response_field_templates(instrument, rtds) %}
-    <template id="rf-template-{{ instrument.id }}">
-      <tr class="rf-row" data-rf-id="__TEMP_ID__" data-rf-new="1">
-        <td><code class="muted">(new)</code></td>
-        <td>
-          <input form="dfsave-{{ instrument.id }}" type="text" name="label"
-                 value="__DEFAULT_LABEL__" style="width: 100%;">
-          <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
-          <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="__TEMP_ID__">
-          <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
-        </td>
-        <td>
-          <input form="dfsave-{{ instrument.id }}" type="hidden"
-                 name="new_rtd_target" value="__TEMP_ID__">
-          <select form="dfsave-{{ instrument.id }}"
-                  name="new_rtd_id"
-                  title="Pick the Response Type for this new field. Locks once saved.">
-            {% for rtd in rtds %}
-              <option value="{{ rtd.id }}"{% if rtd.response_type == "1-to-5int" %} selected{% endif %}>{{ rtd.response_type }}</option>
-            {% endfor %}
-          </select>
-        </td>
-        <td>
-          <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                 name="required_ids" value="__TEMP_ID__" checked>
-        </td>
-        <td>
-          <div class="order-cell">
-            <span class="order-num">0</span>
-            <span class="order-arrows">
-              <button type="button" onclick="moveRow(this, 'up')"
-                      class="btn-icon move-up" title="Move up">&#9650;</button>
-              <button type="button" onclick="moveRow(this, 'down')"
-                      class="btn-icon move-down" title="Move down">&#9660;</button>
-            </span>
-          </div>
-        </td>
-        <td style="white-space: nowrap; width: 1%;">
-          <div style="display: inline-flex; gap: 0; align-items: center;">
-            <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                    class="btn-icon danger rf-delete"
-                    title="Delete row (applied on Save)">&#10007;</button>
-            <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                    class="btn-icon action rf-add"
-                    title="Add row after (applied on Save)">&#10133;</button>
-          </div>
-        </td>
-      </tr>
-    </template>
-    <template id="rfhelp-template-{{ instrument.id }}">
-      <tr class="rfhelp-row" data-rfhelp-for="__TEMP_ID__" data-rfhelp-new="1">
-        <td><code class="muted">(new)</code></td>
-        <td>
-          <input form="dfsave-{{ instrument.id }}" type="hidden"
-                 name="help_text_id" value="__TEMP_ID__">
-          <textarea form="dfsave-{{ instrument.id }}" name="help_text"
-                    rows="2" style="width: 100%;"></textarea>
-        </td>
-        <td>
-          <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                 name="help_text_visible_ids" value="__TEMP_ID__" checked>
-        </td>
-      </tr>
-    </template>
-  {% endmacro %}
 
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
@@ -3241,6 +3169,11 @@
                   <option value="integer" {% if rf.data_type == 'integer' %}selected{% endif %}>Integer</option>
                   <option value="decimal" {% if rf.data_type == 'decimal' %}selected{% endif %}>Decimal</option>
                   <option value="list" {% if rf.data_type == 'list' %}selected{% endif %}>List</option>
+                  <optgroup label="Quick fill (List)">
+                    {% for key, label, _options in band3_list_presets %}
+                      <option value="{{ key }}" data-preset-options="{{ _options }}">{{ label }}</option>
+                    {% endfor %}
+                  </optgroup>
                 </select>
                 <div data-new-model-rf-bounds-wrap
                      style="flex: 1 1 auto; min-width: 0;
@@ -3326,6 +3259,11 @@
                 <option value="integer">Integer</option>
                 <option value="decimal">Decimal</option>
                 <option value="list">List</option>
+                <optgroup label="Quick fill (List)">
+                  {% for key, label, _options in band3_list_presets %}
+                    <option value="{{ key }}" data-preset-options="{{ _options }}">{{ label }}</option>
+                  {% endfor %}
+                </optgroup>
               </select>
               <div data-new-model-rf-bounds-wrap
                    style="flex: 1 1 auto; min-width: 0;
@@ -3477,6 +3415,26 @@
           //   integer → min, max
           //   decimal → min, max, step
           //   list    → list
+          //
+          // Quick-fill presets (value starts with "preset:") set
+          // data_type=list, pre-fill the list-options input from
+          // the picked option's ``data-preset-options`` attribute,
+          // then snap the select back to "list". The preset
+          // identity isn't stored — only the resulting list_options.
+          if (select.value && select.value.indexOf('preset:') === 0) {
+            var picked = select.options[select.selectedIndex];
+            var presetOptions = picked
+              ? picked.getAttribute('data-preset-options') || ''
+              : '';
+            var listInput = select
+              .closest('[data-new-model-rf-row]')
+              .querySelector('[data-new-model-rf-bound="list"]');
+            if (listInput) {
+              listInput.value = presetOptions;
+              listInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            select.value = 'list';
+          }
           var dataType = select.value;
           var show = {
             string:  ['min', 'max'],
@@ -3822,15 +3780,13 @@
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
 
       {# Section E — action row + delete-confirm checkbox. #}
-      {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
+      {% set add_delete_disabled = is_ready or is_some_instrument_editing %}
       {% if is_ready %}
         {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
       {% elif is_some_instrument_editing and not is_editing %}
         {% set add_delete_disabled_title = "Save or cancel the open instrument edit first." %}
       {% elif is_editing %}
         {% set add_delete_disabled_title = "Save or cancel this instrument's edits first." %}
-      {% elif is_some_rtd_unlocked %}
-        {% set add_delete_disabled_title = "Save or cancel the Response Type Definitions edit first." %}
       {% else %}
         {% set add_delete_disabled_title = "" %}
       {% endif %}
@@ -3839,7 +3795,7 @@
       {% set delete_title = "Cannot delete the only instrument on this session." if is_only_instrument else add_delete_disabled_title %}
       <form id="instrument-delete-{{ instrument.id }}" method="post"
             action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"></form>
-      {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
+      {{ instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
       <p style="text-align: right; margin: -12px 0 20px 0;">
         <label style="font-weight: normal;">
           <input type="checkbox" name="confirm" value="true" required
@@ -3851,315 +3807,6 @@
     </div>
   {% endfor %}
 
-  {# Response Type Definitions card. Slice 4a shipped read-only;
-     Slice 4b adds operator-add / -edit / -delete on operator-defined
-     rows. Seeded rows stay fully locked (name + Data Type + every
-     parameter; cannot be deleted). Per-row Edit form: Min / Max /
-     Step / List editable; name + Data Type rendered as <code>. #}
-  {% macro fmt_num(value, dt) -%}
-    {%- if value is none -%}—
-    {%- elif dt == "Decimal" -%}{{ '%.1f' | format(value) }}
-    {%- else -%}{{ value | int }}
-    {%- endif -%}
-  {%- endmacro %}
-  <div class="card" id="rtd-card">
-    <h2>Response Type Definitions</h2>
-    <p class="form-help">
-      Catalog of Response Types referenced by every instrument's
-      Response Fields. Seeded rows are locked. Operator-added rows
-      can be edited or deleted; the Response Type name and Data Type
-      lock once added. The Decimal Data Type takes at most up to one
-      decimal place.
-    </p>
-
-    {% if rtd_error %}
-      <div class="banner banner-error banner-scroll-target" id="rtd-error-banner">
-        <p style="margin: 0 0 8px 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
-        <div style="display: flex; justify-content: flex-end;">
-          {% if rtd_error_id %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd_error_id }}#rtd-row-{{ rtd_error_id }}">Cancel</a>
-          {% else %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
-          {% endif %}
-        </div>
-      </div>
-    {% endif %}
-
-    {% if rtd_would_empty %}
-      <div class="banner banner-error banner-scroll-target" id="rtd-would-empty-banner">
-        <p style="margin: 0 0 8px 0;">
-          <strong>Cannot delete this Response Type.</strong>
-          {% set count = rtd_would_empty.instrument_numbers | length %}
-          Doing so would leave instrument{{ "" if count == 1 else "s" }}
-          {% for num in rtd_would_empty.instrument_numbers -%}
-            <strong>#{{ num }}</strong>{% if not loop.last %}{% if loop.revindex == 2 %} and {% else %}, {% endif %}{% endif %}
-          {%- endfor %}
-          with no Response Fields. Add or change a row on
-          {{ "that instrument" if count == 1 else "those instruments" }}
-          first, then come back.
-        </p>
-        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_would_empty.id }}">Cancel</a>
-        </div>
-      </div>
-    {% endif %}
-
-    {% if rtd_delete_blocked %}
-      <div class="banner banner-warning banner-scroll-target" id="rtd-delete-blocked-banner">
-        <p style="margin: 0 0 8px 0;">
-          Deleting this Response Type will drop
-          <strong>{{ rtd_delete_blocked.response_field_count }}</strong>
-          response field row{{ "" if rtd_delete_blocked.response_field_count == 1 else "s" }} on
-          <strong>{{ rtd_delete_blocked.instrument_count }}</strong>
-          instrument{{ "" if rtd_delete_blocked.instrument_count == 1 else "s" }} and
-          <strong>{{ rtd_delete_blocked.response_count }}</strong>
-          recorded response{{ "" if rtd_delete_blocked.response_count == 1 else "s" }} across
-          <strong>{{ rtd_delete_blocked.assignment_count }}</strong>
-          reviewer assignment{{ "" if rtd_delete_blocked.assignment_count == 1 else "s" }}.
-          Continue?
-        </p>
-        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_delete_blocked.id }}">Cancel</a>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/response-types/{{ rtd_delete_blocked.id }}/delete"
-                style="margin: 0;">
-            <input type="hidden" name="confirm" value="true">
-            <button class="btn destructive" type="submit">Delete + cascade</button>
-          </form>
-        </div>
-      </div>
-    {% endif %}
-
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Response Type</th>
-            <th>Data Type</th>
-            <th>Min</th>
-            <th>Max</th>
-            <th>Step</th>
-            <th>List</th>
-            <th style="width: 1%;">Action</th>
-          </tr>
-        </thead>
-        <tbody data-rtd-tbody>
-          {% set _rtd_btn_style = "width: 6em; box-sizing: border-box;" %}
-          {% set is_some_row_unlocked = (editing_rtd_id is not none) and not is_ready %}
-          {% for rtd in rtds %}
-            {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
-            <tr id="rtd-row-{{ rtd.id }}" class="muted">
-              <td>
-                <code>{{ rtd.response_type }}</code>
-                {# Segment 18J Wave 2 PR iii-b3 retired the operator
-                   RTD library tier; the per-row "in library" /
-                   "personal" pills retired with it. #}
-              </td>
-              <td>{{ rtd.data_type }}</td>
-              {% if is_editing_this %}
-                {# Unlocked state: per-row form, Min / Max / Step / List
-                   editable per Data Type. Save + Cancel + Delete
-                   inline (equal-width). #}
-                <form method="post"
-                      action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/edit"
-                      id="rtd-edit-{{ rtd.id }}"
-                      style="display: contents; margin: 0;"></form>
-                <td>
-                  {% if rtd.data_type in ("Integer", "Decimal", "String") %}
-                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="min"
-                           value="{{ fmt_num(rtd.min, rtd.data_type) if rtd.min is not none else '' }}"
-                           style="width: 6em;">
-                  {% else %}NA{% endif %}
-                </td>
-                <td>
-                  {% if rtd.data_type in ("Integer", "Decimal", "String") %}
-                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="max"
-                           value="{{ fmt_num(rtd.max, rtd.data_type) if rtd.max is not none else '' }}"
-                           style="width: 6em;">
-                  {% else %}NA{% endif %}
-                </td>
-                <td>
-                  {% if rtd.data_type in ("Integer", "Decimal") %}
-                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="step"
-                           value="{{ fmt_num(rtd.step, rtd.data_type) if rtd.step is not none else '' }}"
-                           style="width: 6em;">
-                  {% else %}NA{% endif %}
-                </td>
-                <td>
-                  {% if rtd.data_type == "List" %}
-                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="list_csv"
-                           value="{{ rtd.list_csv or '' }}"
-                           style="width: 100%;">
-                  {% else %}NA{% endif %}
-                </td>
-                <td style="white-space: nowrap; text-align: right;">
-                  <div style="display: inline-flex; gap: 6px;">
-                    <button form="rtd-edit-{{ rtd.id }}" type="submit"
-                            class="btn secondary" style="{{ _rtd_btn_style }}">Save</button>
-                    <a class="btn secondary" style="{{ _rtd_btn_style }}"
-                       href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd.id }}">Cancel</a>
-                    <form method="post"
-                          action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
-                          onsubmit="return confirm('Delete Response Type {{ rtd.response_type }}? This cannot be undone.');"
-                          style="display: inline; margin: 0;">
-                      <button class="btn destructive" type="submit"
-                              style="{{ _rtd_btn_style }}">Delete</button>
-                    </form>
-                  </div>
-                </td>
-              {% else %}
-                {# Locked state — read-only parameter cells. Action
-                   column carries the Edit button on operator-defined
-                   rows, greyed out when another row is currently
-                   unlocked. Seeded rows have an empty Action cell. #}
-                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
-                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
-                <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
-                <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
-                <td style="white-space: nowrap; text-align: right;">
-                  <div style="display: inline-flex; gap: 6px;">
-                  {% if rtd.is_seeded or is_ready %}
-                    {# Seeded rows: no buttons. Ready-session lock:
-                       no buttons either (mirrors instrument cards). #}
-                  {% elif is_some_row_unlocked %}
-                    <a class="btn secondary disabled"
-                       aria-disabled="true"
-                       style="{{ _rtd_btn_style }}"
-                       title="Save or cancel the row in progress before editing another.">Edit</a>
-                  {% elif is_some_instrument_editing %}
-                    {# Slice 4d mutual-exclusion: a per-instrument card
-                       is currently in edit mode. Lock RTD edits so
-                       cascade-deletes can't silently rewrite the RF
-                       rows the operator's browser still has open. #}
-                    <a class="btn secondary disabled"
-                       aria-disabled="true"
-                       style="{{ _rtd_btn_style }}"
-                       title="Save or cancel the instrument edit before editing a Response Type.">Edit</a>
-                  {% else %}
-                    <a class="btn secondary" style="{{ _rtd_btn_style }}"
-                       href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
-                  {% endif %}
-                  {# Segment 18J Wave 2 PR iii-b3 retired the
-                     Save-to-library button + the operator RTD
-                     library tier. #}
-                  </div>
-                </td>
-              {% endif %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    {% if not is_ready %}
-      {# "Add a Response Type" — only Name + Data Type. Click ``Add``
-         runs JS that inserts a draft row into the main table (above)
-         in the editable state; Save POSTs the full row,
-         Cancel removes the draft from the DOM (no DB write). #}
-      {# Add Response Type. Disabled while any operator-defined row is
-         unsaved — either because a saved row is in editing mode
-         (``editing_rtd_id`` query param matches) or because a draft
-         row was added via the JS button below and not yet saved /
-         canceled. The disabled-on-render branch handles editing mode;
-         ``_updateRtdAddButtonState`` toggles the disabled flag when
-         drafts come and go. #}
-      {# Slice 4d: also lock the Add card while a per-instrument
-         card is being edited (mutual exclusion). #}
-      {% set add_disabled = (editing_rtd_id is not none) or is_some_instrument_editing %}
-      {# 15C Slice 3 (alignment fix): the Add from library card +
-         Add a new Response Type card share one flex row so they sit
-         side by side. When the library-not-in-session pool is empty
-         the left card doesn't render and the right card flows alone
-         to the right edge (justify-content: flex-end on the outer
-         row preserves the pre-15C layout for operators who haven't
-         saved anything to their library yet). #}
-      <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch; justify-content: flex-end;"
-           id="rtd-add-row">
-        {# Segment 18J Wave 2 PR iii-b3 retired the
-           Add-from-library card alongside the operator RTD
-           library tier. #}
-        <div class="card card-half" style="margin-bottom: 0; flex: 1;"
-             id="rtd-add-card">
-          <h2 style="margin-top: 0;">Add a new Response Type</h2>
-          <p class="form-help">
-            Click <strong>Add</strong> to start a new row in the table
-            above after choosing a name and selecting the data type.
-            Note that the data type of an added row cannot be changed,
-            though the row can be deleted.
-          </p>
-          <div style="display: flex; gap: 16px; align-items: center; justify-content: flex-end;">
-            <label for="new-rtd-name" style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
-              Name
-              <input type="text" id="new-rtd-name" style="width: 12em; position: relative; top: 2px;"
-                     {% if add_disabled %}disabled{% endif %}>
-            </label>
-            <label for="new-rtd-data-type" style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
-              Data Type
-              <select id="new-rtd-data-type" style="position: relative; top: 2px;"
-                      {% if add_disabled %}disabled{% endif %}>
-                <option value="String">String</option>
-                <option value="Integer">Integer</option>
-                <option value="Decimal">Decimal</option>
-                <option value="List">List</option>
-              </select>
-            </label>
-            <button id="rtd-add-button"
-                    type="button" class="btn secondary"
-                    style="width: 6em; box-sizing: border-box;"
-                    onclick="addRtdDraft()"
-                    {% if add_disabled %}disabled data-server-disabled="1"
-                    title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
-          </div>
-        </div>
-      </div>
-
-      {# Hidden draft-row template cloned by ``addRtdDraft`` JS. The
-         row's inputs reference the matching draft <form> element
-         (rendered by the form-template below) via HTML5 ``form="..."``
-         so they submit together when the operator clicks Save. #}
-      <template id="rtd-draft-row-template">
-        <tr class="muted rtd-draft-row" data-draft-id="__DRAFT_ID__">
-          <td><code>__NAME__</code></td>
-          <td>__DATA_TYPE__</td>
-          <td class="rtd-draft-cell-min">
-            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="min" style="width: 6em;">
-          </td>
-          <td class="rtd-draft-cell-max">
-            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="max" style="width: 6em;">
-          </td>
-          <td class="rtd-draft-cell-step">
-            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="step" style="width: 6em;">
-          </td>
-          <td class="rtd-draft-cell-list">
-            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="list_csv" style="width: 100%;">
-          </td>
-          <td style="white-space: nowrap;">
-            <div style="display: inline-flex; gap: 6px;">
-              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn secondary"
-                      style="width: 6em; box-sizing: border-box;">Save</button>
-              <button type="button" class="btn secondary"
-                      style="width: 6em; box-sizing: border-box;"
-                      onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
-            </div>
-          </td>
-        </tr>
-      </template>
-      <template id="rtd-draft-form-template">
-        <form id="rtd-draft-form-__DRAFT_ID__" method="post"
-              action="/operator/sessions/{{ session.id }}/response-types"
-              class="rtd-draft-form"
-              data-draft-id="__DRAFT_ID__"
-              style="display: none;">
-          <input type="hidden" name="response_type" value="__NAME__">
-          <input type="hidden" name="data_type" value="__DATA_TYPE__">
-        </form>
-      </template>
-    {% endif %}
-  </div>
 
   <script>
     // Segment 13B PR 2 — tri-state Sort column on the
@@ -4477,108 +4124,6 @@
       }
     }
 
-    // ``Add a Response Type`` clones a draft row + its matching <form>
-    // into the RTD card. The row's parameter inputs reference the
-    // hidden form via HTML5 ``form="..."`` so they submit together
-    // when the operator clicks Save. Cancel removes both. Cells not
-    // applicable to the chosen Data Type render ``NA``.
-    var _rtdDraftCounter = 0;
-    var _RTD_APPLICABLE_CELLS = {
-      Integer: ['min', 'max', 'step'],
-      Decimal: ['min', 'max', 'step'],
-      String: ['min', 'max'],
-      List: ['list']
-    };
-    function addRtdDraft() {
-      var nameInput = document.getElementById('new-rtd-name');
-      var dataTypeInput = document.getElementById('new-rtd-data-type');
-      if (!nameInput || !dataTypeInput) return;
-      var name = nameInput.value.trim();
-      var dataType = dataTypeInput.value;
-      if (!name) {
-        alert('Name is required.');
-        nameInput.focus();
-        return;
-      }
-      _rtdDraftCounter += 1;
-      var draftId = 'd' + _rtdDraftCounter;
-
-      var rowTemplate = document.getElementById('rtd-draft-row-template');
-      var formTemplate = document.getElementById('rtd-draft-form-template');
-      if (!rowTemplate || !formTemplate) return;
-
-      var rowHtml = rowTemplate.innerHTML
-        .split('__DRAFT_ID__').join(draftId)
-        .split('__NAME__').join(name)
-        .split('__DATA_TYPE__').join(dataType);
-      var formHtml = formTemplate.innerHTML
-        .split('__DRAFT_ID__').join(draftId)
-        .split('__NAME__').join(name)
-        .split('__DATA_TYPE__').join(dataType);
-
-      var rowWrap = document.createElement('tbody');
-      rowWrap.innerHTML = rowHtml;
-      var newRow = rowWrap.firstElementChild;
-
-      // Hide the parameter cells that don't apply to the chosen Data
-      // Type. Replace the input with ``NA`` so the row reads as a
-      // fully-formed catalog row even when the cell is inert.
-      var applicable = _RTD_APPLICABLE_CELLS[dataType] || [];
-      var cells = ['min', 'max', 'step', 'list'];
-      cells.forEach(function (cell) {
-        var td = newRow.querySelector('.rtd-draft-cell-' + cell);
-        if (!td) return;
-        if (applicable.indexOf(cell) === -1) {
-          td.textContent = 'NA';
-        }
-      });
-
-      var tbody = document.querySelector('[data-rtd-tbody]');
-      if (tbody) tbody.appendChild(newRow);
-
-      var formWrap = document.createElement('div');
-      formWrap.innerHTML = formHtml;
-      var newForm = formWrap.firstElementChild;
-      var card = document.getElementById('rtd-card');
-      if (card) card.appendChild(newForm);
-
-      // Reset Add inputs and lock the Add button until the draft is
-      // saved or canceled.
-      nameInput.value = '';
-      dataTypeInput.selectedIndex = 0;
-      _updateRtdAddButtonState();
-    }
-    function cancelRtdDraft(draftId) {
-      var row = document.querySelector(
-        '[data-draft-id="' + draftId + '"].rtd-draft-row'
-      );
-      var form = document.querySelector(
-        'form.rtd-draft-form[data-draft-id="' + draftId + '"]'
-      );
-      if (row && row.parentNode) row.parentNode.removeChild(row);
-      if (form && form.parentNode) form.parentNode.removeChild(form);
-      _updateRtdAddButtonState();
-    }
-    function _updateRtdAddButtonState() {
-      var anyDraft = document.querySelector('.rtd-draft-row') !== null;
-      var btn = document.getElementById('rtd-add-button');
-      var nameInput = document.getElementById('new-rtd-name');
-      var dataTypeInput = document.getElementById('new-rtd-data-type');
-      if (!btn) return;
-      // Don't fight the server-rendered disabled state when an
-      // existing saved row is in editing mode (``editing_rtd_id``).
-      // The page reload after Save / Cancel will clear that.
-      var serverDisabled = btn.hasAttribute('data-server-disabled');
-      var disable = anyDraft || serverDisabled;
-      btn.disabled = disable;
-      if (nameInput) nameInput.disabled = disable;
-      if (dataTypeInput) dataTypeInput.disabled = disable;
-      if (disable) {
-        btn.title = 'Save or cancel the row in progress before adding another.';
-      } else {
-        btn.removeAttribute('title');
-      }
-    }
   </script>
   <script>
     /*

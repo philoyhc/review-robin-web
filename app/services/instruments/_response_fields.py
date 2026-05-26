@@ -34,7 +34,6 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
-    ResponseTypeDefinition,
     User,
 )
 from app.services import audit
@@ -44,11 +43,6 @@ from app.services.instruments._display_fields import (
     _ordered_display_fields,
     _repack_display_orders,
     is_locked_display_source,
-)
-from app.services.instruments._rtds import (
-    _rtd_by_id,
-    _rtd_by_name,
-    validation_block_for_rtd,
 )
 from app.services.instruments._state import _instrument_label
 
@@ -133,25 +127,6 @@ def _validation_block_from_default_spec(
 
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
-
-
-def inline_kwargs_from_rtd(
-    rtd: ResponseTypeDefinition,
-) -> dict[str, Any]:
-    """Return the ``InstrumentResponseField`` inline-column kwargs
-    populated from ``rtd``'s data_type + bounds (Segment 18J Wave 2
-    PR iii-b1). Every creator passes these alongside the existing
-    ``response_type_id`` so reads land in the inline shape without
-    relying on the before_insert listener (now retired).
-    """
-    return {
-        "_inline_data_type": rtd.data_type,
-        "_inline_response_type": rtd.response_type,
-        "_inline_min": rtd.min,
-        "_inline_max": rtd.max,
-        "_inline_step": rtd.step,
-        "_inline_list_csv": rtd.list_csv,
-    }
 
 
 class FieldKeyError(ValueError):
@@ -511,11 +486,16 @@ def add_response_field(
     if not label or not label.strip():
         raise ValueError("Label is required.")
 
-    rtd = _rtd_by_name(
-        db, session_id=instrument.session_id, name=response_type
-    )
-    if rtd is None:
-        raise ValueError(f"Unknown response_type: {response_type}")
+    # The per-session ``response_type_definitions`` table retired
+    # 2026-05-26 — ``response_type`` is now an opaque label stored
+    # verbatim into ``_inline_response_type``. New rows default to
+    # the Rating Integer 1-5 shape (matching ``DEFAULT_RESPONSE_FIELDS[0]``);
+    # the operator edits the inline data_type / bounds via the Band 3
+    # row UI after creation if a different shape is wanted.
+    default_spec = DEFAULT_RESPONSE_FIELDS[0]
+    inline_kwargs = _inline_kwargs_from_default_spec(default_spec)
+    inline_kwargs["_inline_response_type"] = response_type
+    validation_block = _validation_block_from_default_spec(default_spec)
 
     fields = _ordered_fields(db, instrument)
     if any(existing.field_key == field_key for existing in fields):
@@ -536,10 +516,10 @@ def add_response_field(
         label=label.strip(),
         required=required,
         order=len(fields),
-        validation=validation_block_for_rtd(rtd),
+        validation=validation_block,
         help_text=(help_text or None),
         help_text_visible=help_text_visible,
-        **inline_kwargs_from_rtd(rtd),
+        **inline_kwargs,
     )
     db.add(new_field)
     db.flush()
@@ -569,7 +549,7 @@ def add_response_field(
             }
         ),
         refs={"instrument_id": instrument.id},
-        context={"response_type": rtd.response_type},
+        context={"response_type": response_type},
     )
     db.commit()
 
@@ -581,7 +561,6 @@ def add_default_response_field(
     *,
     instrument: Instrument,
     after_field_id: int | None = None,
-    rtd_id: int | None = None,
     label: str | None = None,
     field_key: str | None = None,
     required: bool | None = None,
@@ -589,14 +568,12 @@ def add_default_response_field(
 ) -> InstrumentResponseField:
     """Append a fresh response field to an instrument.
 
-    Default behaviour (no overrides) preserves the Slice 2 contract:
-    auto-generated ``Rating{N}`` label, ``rating{N}`` field_key,
-    ``required=True``, pointing at the seeded ``1-to-5int`` RTD.
+    Auto-generates ``Rating{N}`` label + ``rating{N}`` field_key,
+    ``required=True``, with the Rating-Integer-1-5 inline shape
+    (matching ``DEFAULT_RESPONSE_FIELDS[0]``). Operator edits the
+    Type / bounds via the Band 3 row UI after creation.
 
-    Slice 4c overrides:
-    - ``rtd_id`` — operator-picked RTD from the session catalog. Must
-      belong to ``instrument.session``; falls back to ``1-to-5int`` if
-      the id is unknown.
+    Overrides:
     - ``label`` — operator-typed Friendly Label. Stripped of leading /
       trailing whitespace; non-empty wins over the auto default.
     - ``field_key`` — explicit key. When omitted, derives via
@@ -615,18 +592,6 @@ def add_default_response_field(
         reason="instrument_field_added",
     )
     fields = _ordered_fields(db, instrument)
-
-    # iii-b2: the seeded RTD set is now empty. The default fallback
-    # (when no rtd_id is passed) used to point at the seeded
-    # ``1-to-5int`` RTD, which no longer exists. Fall back to
-    # constructing the row from DEFAULT_RESPONSE_FIELDS[0]'s inline
-    # spec ("rating" 1-to-5 Integer). Operator-authored custom RTDs
-    # (not seeded) are still pickable via rtd_id until iii-b3 / iii-b4.
-    chosen_rtd: ResponseTypeDefinition | None = None
-    if rtd_id is not None:
-        chosen_rtd = _rtd_by_id(
-            db, session_id=instrument.session_id, rtd_id=rtd_id
-        )
 
     cleaned_label = (label or "").strip()
     base_num = len(fields) + 1
@@ -666,19 +631,12 @@ def add_default_response_field(
 
     is_required = True if required is None else bool(required)
 
-    if chosen_rtd is not None:
-        field_kwargs: dict[str, Any] = {
-            "validation": validation_block_for_rtd(chosen_rtd),
-            **inline_kwargs_from_rtd(chosen_rtd),
-        }
-        audit_response_type: str = chosen_rtd.response_type
-    else:
-        default_spec = DEFAULT_RESPONSE_FIELDS[0]
-        field_kwargs = {
-            "validation": _validation_block_from_default_spec(default_spec),
-            **_inline_kwargs_from_default_spec(default_spec),
-        }
-        audit_response_type = default_spec["response_type"]
+    default_spec = DEFAULT_RESPONSE_FIELDS[0]
+    field_kwargs: dict[str, Any] = {
+        "validation": _validation_block_from_default_spec(default_spec),
+        **_inline_kwargs_from_default_spec(default_spec),
+    }
+    audit_response_type: str = default_spec["response_type"]
 
     new_field = InstrumentResponseField(
         instrument_id=instrument.id,

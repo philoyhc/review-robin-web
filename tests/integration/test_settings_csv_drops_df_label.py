@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Instrument,
     InstrumentDisplayField,
-    ResponseTypeDefinition,
     ReviewSession,
     User,
 )
@@ -48,13 +47,6 @@ def _make_session_with_df(
     db: Session, code: str, *, df_label: str = ""
 ) -> tuple[ReviewSession, User, Instrument, InstrumentDisplayField]:
     review_session, op = _make_session(db, code)
-    rtd = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="Rating",
-        data_type="String",
-    )
-    db.add(rtd)
-    db.flush()
     instrument = Instrument(
         session_id=review_session.id, name="Survey", order=0
     )

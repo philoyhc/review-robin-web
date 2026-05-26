@@ -6,7 +6,10 @@ from app.db.models.instrument_field import InstrumentDisplayField, InstrumentRes
 from app.db.models.invitation import Invitation
 from app.db.models.relationship import Relationship
 from app.db.models.response import Response
-from app.db.models.response_type_definition import ResponseTypeDefinition
+# Per-session ``response_type_definitions`` table retired 2026-05-26.
+# Bounds + data_type live inline on ``instrument_response_fields``;
+# the per-instrument RTD card on the Instruments page retired in the
+# same PR.
 from app.db.models.review_session import ReviewSession
 from app.db.models.reviewee import Reviewee
 from app.db.models.reviewer import Reviewer
@@ -30,7 +33,6 @@ __all__ = [
     "Invitation",
     "Relationship",
     "Response",
-    "ResponseTypeDefinition",
     "ReviewSession",
     "Reviewee",
     "Reviewer",

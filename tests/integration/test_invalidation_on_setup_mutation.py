@@ -266,28 +266,6 @@ def test_response_field_add_invalidates(
     assert review_session.status == "draft"
 
 
-def test_response_type_add_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
-    db: Session,
-) -> None:
-    op, review_session, *_ = setup
-
-    instruments_service.add_response_type_definition(
-        db,
-        review_session=review_session,
-        response_type="Custom",
-        data_type="Integer",
-        min=1,
-        max=10,
-        step=1,
-        list_csv=None,
-        actor=op,
-    )
-
-    db.refresh(review_session)
-    assert review_session.status == "draft"
-
-
 # -- #16: visibility services must NOT invalidate ---------------------------
 
 

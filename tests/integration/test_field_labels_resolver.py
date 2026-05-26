@@ -19,7 +19,6 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Instrument,
     InstrumentDisplayField,
-    ResponseTypeDefinition,
     ReviewSession,
     SessionFieldLabel,
     User,
@@ -163,13 +162,6 @@ def test_resolve_does_not_consult_instrument_display_field_label(
     review_session, _ = _make_session(db, "fl-no-pi")
     # Minimal instrument + display field with a per-instrument
     # label that would have won under the pre-15A chain.
-    rtd = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="Test",
-        data_type="String",
-    )
-    db.add(rtd)
-    db.flush()
     instrument = Instrument(
         session_id=review_session.id,
         name="Test Instrument",

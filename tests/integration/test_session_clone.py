@@ -9,9 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     AuditEvent,
     Instrument,
-    InstrumentResponseField,
     Relationship,
-    ResponseTypeDefinition,
     ReviewSession,
     Reviewee,
     Reviewer,
@@ -92,44 +90,6 @@ def test_clone_all_copies_full_graph(db: Session) -> None:
     assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == [
         "pilot"
     ]
-
-
-def test_clone_remaps_response_field_rtd(db: Session) -> None:
-    """A cloned instrument's response fields point at the clone's own
-    response type definitions, not the source's."""
-    source, op = _source_session(db, "clone-rtd")
-
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
-
-    clone_rtd_ids = {
-        rtd.id
-        for rtd in db.execute(
-            select(ResponseTypeDefinition).where(
-                ResponseTypeDefinition.session_id == clone.id
-            )
-        ).scalars()
-    }
-    clone_instrument_ids = [
-        i.id
-        for i in db.execute(
-            select(Instrument).where(Instrument.session_id == clone.id)
-        ).scalars()
-    ]
-    response_fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id.in_(clone_instrument_ids)
-        )
-    ).scalars().all()
-    assert response_fields
-    for field in response_fields:
-        # iii-b2: default response fields land with response_type_id
-        # = NULL (bounds inline). List-typed operator-authored RTDs
-        # still point at a clone-tier RTD.
-        assert field.response_type_id is None or (
-            field.response_type_id in clone_rtd_ids
-        )
 
 
 def test_clone_config_skips_roster(db: Session) -> None:
