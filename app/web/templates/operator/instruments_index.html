@@ -1050,6 +1050,7 @@
             btn.classList.add('is-selected');
             if (touchedInput) { touchedInput.value = 'true'; }
           }
+          window.newModelRefreshBand1TouchedRefreshGate(btn);
         };
         window.newModelToggleCombinator = window.newModelToggleCombinator || function (btn) {
           var wrap = btn.closest('[data-new-model-link-wrapper]');
@@ -1121,6 +1122,46 @@
             instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
               b2.setAttribute('data-new-model-band2-unit-mode', newMode);
             });
+          }
+          window.newModelRefreshBand1TouchedRefreshGate(btn);
+        };
+        // Toggle the Band 2 ↻ Refresh sample button's disabled
+        // state in lockstep with the Band 1 link-pill touched bits.
+        // Refresh only makes sense once every link is out of "Not
+        // set" — running the engine on an untouched link silently
+        // uses an empty filter and misleads the operator. The
+        // server-side render gates on ``band1_touched_links`` at
+        // page render; this JS keeps the button in sync with the
+        // operator's live pill clicks before they save.
+        window.newModelRefreshBand1TouchedRefreshGate = window.newModelRefreshBand1TouchedRefreshGate || function (anyEl) {
+          var card = anyEl && anyEl.closest && anyEl.closest('[id^="instrument-"]');
+          if (!card) { return; }
+          var touchedInputs = card.querySelectorAll(
+            '[data-new-model-touched-input], [data-new-model-link3-touched-input]'
+          );
+          if (touchedInputs.length === 0) { return; }
+          var anyUntouched = false;
+          touchedInputs.forEach(function (inp) {
+            if ((inp.value || '').toLowerCase() !== 'true') {
+              anyUntouched = true;
+            }
+          });
+          var refresh = card.querySelector('[data-new-model-band2-refresh]');
+          if (!refresh) { return; }
+          if (anyUntouched) {
+            refresh.setAttribute('disabled', '');
+            refresh.setAttribute('aria-disabled', 'true');
+            refresh.setAttribute(
+              'title',
+              'Set every Band 1 link before refreshing — running on a Not-set link uses an empty filter'
+            );
+          } else {
+            refresh.removeAttribute('disabled');
+            refresh.removeAttribute('aria-disabled');
+            refresh.setAttribute(
+              'title',
+              'Pick a new preview sample reviewee using the current Link 1 + Link 2 rules'
+            );
           }
         };
         window.newModelAddUnitCell = window.newModelAddUnitCell || function (btn) {
@@ -1233,10 +1274,24 @@
                     margin: 0 0 12px 0;">
           <h3 style="margin: 0;">Preview review instrument</h3>
           {% if is_editing %}
+            {# Refresh only makes sense once the operator has
+               deliberately set every Band 1 link — running the
+               engine on a "Not set" link silently uses an empty
+               filter and can mislead. Gate on the same touched
+               set the workflow card's ``is_configured`` predicate
+               keys off. #}
+            {% set _band1_all_touched = (
+              instrument.band1_touched_links is not none
+              and "link1" in instrument.band1_touched_links
+              and "link2" in instrument.band1_touched_links
+              and "link3" in instrument.band1_touched_links
+            ) %}
             <button type="button" class="btn secondary"
+                    data-new-model-band2-refresh
                     style="padding: 4px 10px;"
+                    {% if not _band1_all_touched %}disabled aria-disabled="true"{% endif %}
                     onclick="newModelBand2RefreshSample(this)"
-                    title="Pick a new preview sample reviewee using the current Link 1 + Link 2 rules">↻ Refresh sample</button>
+                    title="{% if _band1_all_touched %}Pick a new preview sample reviewee using the current Link 1 + Link 2 rules{% else %}Set every Band 1 link before refreshing — running on a Not-set link uses an empty filter{% endif %}">↻ Refresh sample</button>
           {% endif %}
         </div>
         {# Hidden form field that snapshots the current column

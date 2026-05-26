@@ -377,6 +377,13 @@ def _new_model_band2_state(
     # reflects the SAVED group_kind, not the in-progress edit).
     roster = [
         {
+            # ``id`` is consumed by ``partitionedSampleNames`` in
+            # instruments_index.html to intersect the boundary
+            # partition against the rule-surviving member-ID set
+            # (Gap 10). Without it the intersection silently
+            # rejects every reviewee and the preview falls back to
+            # the unintersected boundary partition.
+            "id": r.id,
             "name": r.name,
             "tag_1": r.tag_1 or "",
             "tag_2": r.tag_2 or "",
