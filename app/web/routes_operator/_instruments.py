@@ -563,7 +563,9 @@ async def instrument_bulk_save_fields(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
-    link3_mode, link3_pairs = instruments_service.parse_link3_form(form)
+    link3_mode, link3_pairs, link3_touched = (
+        instruments_service.parse_link3_form(form)
+    )
     instruments_service.set_band1_assignment_rules(
         db, instrument=instrument, actor=user, **band1
     )
@@ -573,6 +575,7 @@ async def instrument_bulk_save_fields(
         mode=link3_mode,
         boundary_pairs=link3_pairs,
         actor=user,
+        touched=link3_touched,
     )
     # Column-widths race fix: the drag-resize handler POSTs to
     # /column-widths asynchronously. A fast Save click can win

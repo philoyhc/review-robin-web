@@ -93,6 +93,25 @@ class Instrument(Base, TimestampMixin):
     # instrument is implicitly a (former) new-model instrument
     # post-collapse; legacy individual / group cards retired.
 
+    band1_touched_links: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    """Sticky per-link set of Band 1 link pills the operator has
+    deliberately clicked into a set state. Each Band 1 link
+    (Link 1 / Link 2 / Link 3 = Pool of reviewers / Pool of those
+    reviewed / Unit of review) starts at ``"Not set"`` on a fresh
+    instrument; clicking the pill once flips the link into its
+    default set state (``"All"`` for Link 1 + 2, ``"Individual"``
+    for Link 3) and the link id is unioned into this column.
+
+    Until all three link ids appear here, ``is_configured`` reports
+    False — the workflow card surfaces the instrument as not yet
+    set up, forcing the operator to make a deliberate choice
+    instead of silently shipping the default Full Matrix
+    (Wave 5 follow-up "Not set" pill safety gate). Stored values
+    are a subset of ``{"link1", "link2", "link3"}``; NULL reads
+    as the empty set."""
+
     column_widths: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )

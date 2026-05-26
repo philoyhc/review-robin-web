@@ -57,7 +57,10 @@ def _seed_pair_plus_pinned(
         follow_redirects=False,
     )
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
-    # ``session_rule_sets`` row (auto-seed retired).
+    # ``session_rule_sets`` row (auto-seed retired). The helper
+    # also marks every instrument's Band 1 link pills as touched
+    # so the Wave 5 "Not set" pill safety gate sees the bypass
+    # as fully configured.
     from ._full_matrix import pin_full_matrix_on_all_instruments
     pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
@@ -105,14 +108,16 @@ def test_builder_state_1_setup_empty_carries_checklist_falses(
     assert ctx["is_draft"] is True
     assert ctx["is_setup_empty"] is True
     assert ctx["is_pre_generate"] is False
-    # Wave 5 PR 5.3 — the default instrument ships with visible
-    # Rating + Comments response fields out of the box, so
-    # ``instruments_configured_ok`` is True even on a bare session.
-    # The Empty Setup state now triggers on missing rosters only.
+    # Wave 5 follow-up — the "Not set" pill safety gate forces
+    # every Band 1 link to be deliberately clicked before
+    # ``instruments_configured_ok`` flips True. A bare session's
+    # default instrument has Rating + Comments visible response
+    # fields out of the box but no Band 1 link pills touched yet,
+    # so it surfaces as not configured.
     assert ctx["setup_checklist"] == {
         "reviewers_ok": False,
         "reviewees_ok": False,
-        "instruments_configured_ok": True,
+        "instruments_configured_ok": False,
     }
     assert ctx["validation_summary"] is None
     assert ctx["super_failure"] is None

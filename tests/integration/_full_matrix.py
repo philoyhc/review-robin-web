@@ -23,8 +23,38 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, SessionRuleSet
 
 
+_BAND1_LINKS_ALL = ["link1", "link2", "link3"]
+
+
+def mark_band1_touched_on_all_instruments(
+    db: Session, session_id: int, *, links: list[str] | None = None
+) -> None:
+    """Mark every instrument's Band 1 link pills as deliberately
+    clicked (``Instrument.band1_touched_links``). Fixture-time
+    helper for tests that need to bypass the Wave 5 "Not set"
+    pill safety gate — the gate forces operators to click each
+    of the three Band 1 link pills before ``is_configured``
+    flips True, which most setup-bypass tests aren't trying to
+    exercise.
+    """
+    target = sorted(set(links or _BAND1_LINKS_ALL))
+    instruments = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == session_id)
+        ).scalars()
+    )
+    for instrument in instruments:
+        instrument.band1_touched_links = list(target)
+    db.flush()
+    db.commit()
+
+
 def pin_full_matrix_on_all_instruments(
-    db: Session, session_id: int, *, name: str = "Full Matrix"
+    db: Session,
+    session_id: int,
+    *,
+    name: str = "Full Matrix",
+    mark_band1_touched: bool = True,
 ) -> int:
     """Pin a ``Full Matrix``-equivalent ``session_rule_sets`` row
     on every instrument in the session and return that row's id.
@@ -32,6 +62,12 @@ def pin_full_matrix_on_all_instruments(
     the auto-seed). The helper writes the column directly (no
     audit emission) — fixture-time setup for tests that need a
     known materialisation input on legacy instruments.
+
+    ``mark_band1_touched`` (default True) also stamps each
+    instrument's ``band1_touched_links`` with all three link ids
+    so the Wave 5 "Not set" pill safety gate sees the instrument
+    as configured. Pass ``False`` to leave the touched set
+    untouched (used by tests that exercise the gate itself).
     """
     rule_set_id = db.execute(
         select(SessionRuleSet.id).where(
@@ -63,6 +99,8 @@ def pin_full_matrix_on_all_instruments(
     )
     for instrument in instruments:
         instrument.rule_set_id = rule_set_id
+        if mark_band1_touched:
+            instrument.band1_touched_links = list(_BAND1_LINKS_ALL)
     db.flush()
     db.commit()
     return rule_set_id
