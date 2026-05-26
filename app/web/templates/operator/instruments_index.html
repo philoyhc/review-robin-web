@@ -610,20 +610,6 @@
            row; Save + Lock / Unlock now live in the bottom action
            row only (see ``instrument_action_row`` macro). #}
         <div style="display: flex; gap: 8px; justify-content: flex-start; padding-top: 12px; flex-wrap: wrap;">
-            {% if is_ready and not instrument.accepting_responses %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
-                    style="margin: 0;">
-                <button class="btn secondary" type="submit">Open this Instrument</button>
-              </form>
-            {% endif %}
-            {% if is_ready and instrument.accepting_responses %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
-                    style="margin: 0;">
-                <button class="btn secondary" type="submit">Close this instrument</button>
-              </form>
-            {% endif %}
             {# Lock / Unlock mirror of the bottom action row's
                toggle (same ``data-instrument-lock-toggle`` data
                attribute so the dirty-state confirm fires from
@@ -641,6 +627,20 @@
                  data-instrument-lock-toggle="{{ instrument.id }}"
                  href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
                  {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
+            {% endif %}
+            {% if is_ready and not instrument.accepting_responses %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
+                    style="margin: 0;">
+                <button class="btn secondary" type="submit">Open this Instrument</button>
+              </form>
+            {% endif %}
+            {% if is_ready and instrument.accepting_responses %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
+                    style="margin: 0;">
+                <button class="btn secondary" type="submit">Close this instrument</button>
+              </form>
             {% endif %}
             {% if not instrument.responses_visible_when_closed %}
               <form method="post"
