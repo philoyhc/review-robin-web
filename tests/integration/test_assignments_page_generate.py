@@ -73,13 +73,13 @@ def _seed_pair(client: TestClient, session_id: int) -> None:
     )
 
 
-def test_status_block_reports_pinned_rule(
+def test_status_block_reports_type_individual(
     client: TestClient, db: Session
 ) -> None:
-    """Pinning a rule on every instrument lights up the status
-    block with the rule name. (The standalone Eligible-pairs column
-    was dropped in Segment 13C — the engine pass still feeds the
-    block's staleness check, it's just no longer a column.)"""
+    """The per-reviewee instrument reports its Type ("Individual")
+    in the per-instrument status table. (The Rule column retired —
+    the engine pass still feeds the block's staleness check, the
+    rule name just isn't a column anymore.)"""
 
     review_session = _make_session(client, db, code="page-pin")
     _seed_pair(client, review_session.id)
@@ -89,8 +89,6 @@ def test_status_block_reports_pinned_rule(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     status_section = body.split('id="assignments-status-blocks"', 1)[1]
-    assert "Full Matrix" in status_section
-    # The per-reviewee instrument reports its Type.
     assert "Individual" in status_section
 
 
@@ -310,36 +308,6 @@ def test_generate_materialises_per_instrument(
     # Generated-count pill renders with the actual row count (1
     # alice→carol pair in this fixture).
     assert ">1</span>" in body.split('id="assignments-status-blocks"', 1)[1]
-
-
-def test_status_block_renders_no_rule_pinned_state(
-    client: TestClient, db: Session
-) -> None:
-    """Instrument with NULL ``rule_set_id`` shows the "— No rule
-    pinned —" placeholder + an "Edit on Instruments page" deep
-    link, no eligible / generated counts."""
-
-    review_session = _make_session(client, db, code="page-norule")
-    _seed_pair(client, review_session.id)
-    [instrument] = list(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars()
-    )
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    section = body.split('id="assignments-status-blocks"', 1)[1].split(
-        "</section>", 1
-    )[0]
-    assert "— No rule pinned —" in section
-    assert (
-        f'href="/operator/sessions/{review_session.id}'
-        f'/instruments#instrument-{instrument.id}"'
-    ) in section
 
 
 def test_generate_with_existing_pairs_requires_confirm(

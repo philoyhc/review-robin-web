@@ -34,7 +34,6 @@
         <tr>
           <th>Instrument</th>
           <th>Type</th>
-          <th>Rule</th>
           <th>Generated</th>
           <th>Groups</th>
           <th>Self review</th>
@@ -54,13 +53,6 @@
               {% if block.is_stale %}class="status-block-stale"{% endif %}>
             <td>{{ block.instrument_label }}</td>
             <td>{{ "Group" if block.is_group else "Individual" }}</td>
-            <td>
-              {% if block.rule_name %}
-                <span class="pill pill-info">{{ block.rule_name }}</span>
-              {% else %}
-                <span class="muted">— No rule pinned —</span>
-              {% endif %}
-            </td>
             <td>
               {% if block.generated_count %}
                 <span class="pill pill-count">{{ block.generated_count }}</span>

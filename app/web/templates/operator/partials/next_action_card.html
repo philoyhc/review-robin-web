@@ -320,9 +320,15 @@
        message follow below as inline icon-prefixed signal lines
        (no banner / card chrome). #}
     <aside class="next-action-status" id="next-action-status">
-      {% if is_setup_empty %}
-        {# State 1: setup checklist. Label runs inline; the three
-           checklist entries flow after the em dash. #}
+      {% if is_draft %}
+        {# Setup checklist runs through the whole draft phase, not
+           just the State 1 Empty Setup state: once the three
+           items are ticked the operator sees the all-✓ confirmation
+           that they're ready to Prepare, and any ✗ acts as the
+           on-page punch list. When State 3's validation issues
+           also fire (validated_just_ran with errors → still
+           draft), both blocks render — checklist first, issues
+           below. #}
         <p class="next-action-status-line">
           <strong>Setup checklist</strong> —
           <span class="next-action-checklist-inline">
@@ -331,10 +337,11 @@
             {% if setup_checklist.reviewees_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
             <a href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
             {% if setup_checklist.instruments_configured_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
-            <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all set up)</a>
+            <a href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
           </span>
         </p>
-      {% elif is_draft and validation_summary %}
+      {% endif %}
+      {% if is_draft and validation_summary %}
         {# State 3: validation issues. Label + count pills inline,
            the per-issue list follows below. #}
         <p class="next-action-status-line">
