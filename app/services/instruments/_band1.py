@@ -675,4 +675,34 @@ def find_sample_in_scope_reviewee(
             == sample_key
         ):
             member_ids.add(e.id)
+    # In symmetric reviewer / reviewee setups (every person is both
+    # a reviewer and a reviewee), the sample reviewer is themselves
+    # a member of their group, but the rule engine's
+    # ``excludeSelfReviews=True`` strips the ``(R, R)`` self-pair so
+    # ``R``-as-reviewee never appears in the per-reviewer scan
+    # above. The preview displays the team's composition (not just
+    # who one reviewer can review), so re-include the sample
+    # reviewer's reviewee-side twin when one exists and shares the
+    # boundary key. Twin match is by ``email`` <-> ``email_or_identifier``
+    # because Reviewer and Reviewee live in separate tables with no
+    # cross-FK; if no twin exists (asymmetric session), nothing
+    # gets added.
+    sample_reviewer_email = (
+        getattr(sample_reviewer, "email", "") or ""
+    ).strip().lower()
+    if sample_reviewer_email:
+        for e in reviewees:
+            if e.id in member_ids:
+                continue
+            twin_email = (
+                getattr(e, "email_or_identifier", "") or ""
+            ).strip().lower()
+            if twin_email != sample_reviewer_email:
+                continue
+            if (
+                tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
+                == sample_key
+            ):
+                member_ids.add(e.id)
+                break
     return reviewee, sorted(member_ids)
