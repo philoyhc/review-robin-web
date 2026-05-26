@@ -858,10 +858,13 @@ def set_unit_of_review(
             f"unit_of_review mode must be 'individual' or 'grouped'; "
             f"got {mode!r}"
         )
-    if touched and "link3" not in (instrument.band1_touched_links or []):
-        instrument.band1_touched_links = sorted(
-            set(instrument.band1_touched_links or []) | {"link3"}
-        )
+    existing_touched = set(instrument.band1_touched_links or [])
+    desired_touched = (
+        (existing_touched | {"link3"}) if touched
+        else (existing_touched - {"link3"})
+    )
+    if desired_touched != existing_touched:
+        instrument.band1_touched_links = sorted(desired_touched)
         db.flush()
     if instrument.group_kind == new_value:
         return instrument
