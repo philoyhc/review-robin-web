@@ -163,10 +163,10 @@ stay canonical-only on their header rows so importers that key
 on `RevieweeTag1` etc. continue to work.
 
 **Logic vs display layer:** friendly labels are a
-display-layer concern only. The underlying logic (Rule Builder
-operand sentences, CSV-import header validation + error copy,
-validation error messages, audit-event payloads) keeps the
-canonical machine name. On operator-facing display surfaces
+display-layer concern only. The underlying logic (Band 1
+rule-cell operand sentences, CSV-import header validation +
+error copy, validation error messages, audit-event payloads)
+keeps the canonical machine name. On operator-facing display surfaces
 the canonical name renders below the friendly label as `.muted`
 subtext when an override is in effect, so operators stay
 oriented to the underlying field.
@@ -234,32 +234,25 @@ a per-instrument Danger sub-card.
 
 ---
 
-## 4.5. Per-session Response Type Definitions
+## 4.5. Per-session Response Type Definitions — *retired 2026-05-26*
 
-Stored on the `response_type_definitions` table — one row per RTD,
-scoped to a session. Per-session RTDs are the source of truth for
-`instrument_response_fields.response_type_id`; the operator-library
-tier (`operator_response_type_definitions`, see §9) auto-copies into
-this table on session create.
+The `response_type_definitions` table — the per-session source of
+truth for `instrument_response_fields.response_type_id` — was
+dropped in PR #1454 alongside the per-instrument RTD card.
+Numeric / string / List bounds now live inline on
+`instrument_response_fields` as the `_inline_data_type` /
+`_inline_min` / `_inline_max` / `_inline_step` /
+`_inline_min_length` / `_inline_max_length` / `_inline_list_csv`
+columns; Band 3's response-field rows write them directly.
+Type-preset chips (Likert / Numeric / Single-line / Multi-line /
+List) replace the previous "pick an RTD" dropdown.
 
-**Surface:** Instruments page > "Response Types" card (per-session
-list with add / edit / delete actions; deletes are blocked when the
-RTD is referenced by any response field).
-
-| Field | Type | Notes |
-|---|---|---|
-| `response_type` | `String(64)` | Operator-chosen name (e.g. `"Likert5"`, `"GPA4"`). Unique per session via `uq_rtd_session_name`. |
-| `data_type` | `String(16)` | `int` / `decimal` / `short_text` / `long_text` / `list`. |
-| `min` | `Float` | Lower bound for numeric types; NULL for text / list. |
-| `max` | `Float` | Upper bound for numeric types; NULL for text / list. |
-| `step` | `Float` | Discrete step; NULL when unbounded. |
-| `list_csv` | `Text` | Comma-separated option list for `list`-type RTDs; NULL otherwise. |
-| `is_seeded` | `Boolean` | `True` for RTDs auto-materialised from the seed catalogue at session create; `False` for operator-authored. |
-| `seed_order` | `Integer` | Sort key for seeded rows in their canonical install order. |
-| `library_origin_id` | `Integer` (FK → `operator_response_type_definitions.id` ON DELETE SET NULL) | Provenance pointer to the operator-library row this per-session copy was cloned from (Segment 15C). NULL when seeded, authored directly in the session, or when its library origin has since been deleted. **Provenance only** — never read for resolution; the per-session row is the source of truth. **Inert** until 15C wires Save-to-library / Add-from-library (landed in 13D PR 3). |
-
-**Canonical spec:** `spec/instruments.md` (Response Types card);
-`app/services/instruments/_rtds.py` (CRUD + seed materialisation).
+The pre-retirement section is preserved at
+`spec/archive/instruments.md` for historical reference. The
+companion operator-library tier
+(`operator_response_type_definitions`) is described under §9
+below — also retired (never shipped to UI; Wave 2 retired the
+auto-copy seed mechanism in PR #1405).
 
 ---
 
@@ -319,46 +312,29 @@ orders).
 
 ---
 
-## 6. Per-user RuleSets (rule-based assignment)
+## 6. Per-user RuleSets — *retired 2026-05-25*
 
-Stored on `operator_rule_sets` + `rule_set_revisions`. Each user can
-save **Personal** RuleSets visible only to them; seeded RuleSets are
-read-only and shared. (The table was renamed from `rule_sets` →
-`operator_rule_sets` in Segment 13D PR 0 to mirror the upcoming
-library tier added in 13D PR 2 — see `session_rule_sets` in §9.)
+The cross-session operator-library RuleSet tier
+(`operator_rule_sets` + `rule_set_revisions`) and its Rule
+Builder editor page (`/operator/sessions/{id}/assignments/rule-based-editor`)
+both retired in Segment 18J Wave 5:
 
-**Surface:** Rule Builder — `/operator/sessions/{id}/assignments/rule-based-editor`.
+- **PR #1446 (Wave 5 PR 5.1)** retired the UI: Rule Builder
+  child page, "Save to library" / "Add from library"
+  affordances, the Available RuleSets sidebar.
+- **PR #1447 (Wave 5 PR 5.2)** dropped the
+  `operator_rule_sets` + `operator_rule_set_versions` +
+  `session_rule_set_library_origins` tables and the 5-seeded-
+  RuleSets default-seed flow.
 
-### `operator_rule_sets`
-
-| Field | Type | Notes |
-|---|---|---|
-| `name` | `String(255)` | Editable on Personal rows; carried by the Name input next to the selector. |
-| `description` | `Text` | Editable on Personal rows. |
-| `scope` | `String(16)` | `seed` (read-only) / `personal` (caller-owned). |
-| `owner_user_id` | `Integer` | NULL on seeds; FK to `users` on Personal. |
-| `is_seed` | `Boolean` | Mirror of `scope == "seed"`. |
-| `current_revision_id` | `Integer` | Pointer into `rule_set_revisions`. |
-| `deleted_at` | `DateTime` | Soft-delete timestamp; past audit refs still resolve. |
-
-### `rule_set_revisions` (per Save / Copy / Delete)
-
-| Field | Type | Notes |
-|---|---|---|
-| `revision_no` | `Integer` | Monotonic per RuleSet. |
-| `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE` — see `app/schemas/rules.py::Combinator`. |
-| `exclude_self_reviews` | `Boolean` | Default for runs against this revision. The override on the main Assignments page wins when present. |
-| `seed` | `Integer` | Global RNG seed for any RANDOM-strategy quota rule whose own selection seed is unset. |
-| `rules_json` | `JSON` | The full rule list. Schema validated against `RuleSetSchema` in `app/schemas/rules.py`. |
-| `created_at` | `DateTime(timezone=True)` | When this revision was committed. Distinct from the `TimestampMixin` pair on `operator_rule_sets` because `rule_set_revisions` is append-only. |
-| `created_by_user_id` | `Integer` (FK → `users.id`, nullable) | Who committed this revision. NULL on seeded revisions inserted by migrations / fixtures. |
-
-**Canonical spec:** `spec/assignments.md` covers the engine + the
-Assignments page; `spec/instruments.md` § Band 1 covers the
-per-instrument rule-authoring surface (the only one post-Wave-5).
-The legacy Rule Builder page retired in Wave 5 PR 5.1; the
-operator-side `operator_rule_sets` library tier retired in
-Wave 5 PR 5.2 (the table itself dropped).
+The sole remaining tier is `session_rule_sets` — per-session
+rows auto-managed by Band 1's inline rule editor on the
+per-instrument card. See §4 (Per-instrument) for the link to
+`instrument.rule_set_id`, and `spec/assignments.md` /
+`spec/instruments.md` Band 1 for the authoring surface. The
+pre-retirement section is preserved at
+`spec/archive/rule_based_assignment.md` for historical
+reference.
 
 ---
 
@@ -394,7 +370,7 @@ preference stored?" finds the answer quickly.
 
 | Param | Surface | Purpose |
 |---|---|---|
-| `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) and Rule Builder | Round-trip target for the `← Back to {{ return_to_label }}` back-link. |
+| `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. Rule Builder also used this param before its retirement in Wave 5 PR 5.1 (see §6). |
 | `?validated=1` | Session Home | Triggers a fresh validation run on this render. |
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
 | `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
@@ -404,8 +380,7 @@ preference stored?" finds the answer quickly.
 | `?selected=<id>` (repeatable) | Reviewers / Reviewees / Relationships Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked (Segment 15F). |
 | `?status=…` / `?search_by=…` / `?q=…` | Reviewers / Reviewees / Relationships Setup pages | Operator-actions search / status filter (`status` on Reviewers / Reviewees; `search_by` reviewer/reviewee dimension on Relationships; `q` the search term). Preserved through Edit / bulk actions via hidden `filter_*` form fields (Segment 15F). |
 | `?template={invitation\|reminder\|responses_received}` | Email Template page (`/operator/sessions/{id}/setup-invite`) | Selects which of the three template tabs is active. Defaults to `invitation`. |
-| `?rule_set_id=…&new=…&draft_from=…&previous_id=…&saved=…&error=…` | Rule Builder | Round-trip state for the picker / Save flow — which RuleSet the page opened with, whether this is a fresh draft, the draft's source row, the prior selection (so Cancel returns), the just-saved id (drives the success flash), and a slot-scoped error token. |
-| `?editing=…&saved=…` plus `?rtd_*=…` and `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus a family of flash params for RTD / response-field errors and would-empty / delete-blocked confirmation flows. |
+| `?editing=…&saved=…` plus `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field errors and would-empty / delete-blocked confirmation flows. The `?rtd_*` family retired alongside the per-instrument RTD card in PR #1454. |
 
 **Canonical specs:** `spec/setup_pages.md` (visibility-toggle
 pattern), `spec/quick_setup_card_spec.md` (cookie + lock semantics),
@@ -454,63 +429,34 @@ framework.
 
 ---
 
-## 9. Pre-positioned (inert) schema for upcoming surfaces
+## 9. `session_rule_sets` — backing store for Band 1's inline rule editor
 
-Tables / columns that landed in Segment 13D as schema-only
-scaffolding ahead of Segments 15B / 15C. **Inert today** — no
-service module reads or writes them and no UI surfaces them yet —
-but listed here so a developer auditing "where will this setting
-live?" finds the answer without reading the segment plans.
+> **History.** Originally landed inert in Segment 13D PR 2 as
+> pre-positioning for what was then-imagined as a library /
+> per-session-copy split. Wired by 15B (`instruments.rule_set_id`
+> points into this table). The companion operator-library tier
+> + the Rule Builder editor page retired in Segment 18J Wave 5
+> (see §6); ``session_rule_sets`` is now the sole tier.
+> Band 1's inline editor on the per-instrument card is the sole
+> authoring surface; rows are auto-managed by `set_band1_*`
+> service calls.
 
-When the wiring lands, the corresponding row should move out of
-this section into the appropriate per-feature section above. The
-13D PR 1 `session_field_labels` table moved out under §2.5 once
-**Segment 15A shipped 2026-05-12**.
-
-### `session_rule_sets` (Segment 15B + 15C target)
-
-Per-session snapshot copies of RuleSets. Each row carries a
-complete snapshot of the rule tree at copy / edit time;
-`library_origin_id` links back to the operator-library row it
-was cloned from (provenance only).
+Per-session rule rows. Each row carries a complete snapshot of
+the rule tree.
 
 | Field | Type | Notes |
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
-| `name` | `String(255)` | Snapshot name. Unique per session via `uq_session_rule_set_session_name` (Segment 13A-2). |
+| `name` | `String(255)` | Snapshot name. Unique per session via `uq_session_rule_set_session_name`. |
 | `description` | `Text` | Snapshot description. |
-| `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE`. |
-| `exclude_self_reviews` | `Boolean` | Snapshot flag. |
-| `seed` | `Integer` | Global RNG seed. |
-| `rules_json` | `JSON` | Serialised rule tree — same shape as `rule_set_revisions.rules_json`. |
-| `library_origin_id` | `Integer` (FK → `operator_rule_sets.id` ON DELETE SET NULL) | Provenance pointer; never read for resolution. NULL when the row was authored directly in the session, materialised from a workspace seed, or the library origin has been deleted. |
-| `is_seeded` | `Boolean` | `True` for SessionRuleSets materialised from `SEEDED_RULE_SETS` at session-create time (mirror of the RTD pattern in `response_type_definitions.is_seeded`). Spec-locked: the service-tier `session_library.update_session_rule_set_in_place` / `rename` / `delete` / `save_to_library` all refuse on `is_seeded=True`. Operators customise a seed via Copy → Save-As, which writes a fresh row with `is_seeded=False`. Added by the post-15C polish PR #916. |
+| `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE` — see `app/schemas/rules.py::Combinator`. |
+| `exclude_self_reviews` | `Boolean` | Vestigial — the engine layer hardcodes `excludeSelfReviews=False` regardless (project-wide policy; see `spec/assignments.md` "Self-review policy"). Backfill migration `d2e4f6a8c1b3` keeps every existing row at `False`; `_create_band1_rule_set` writes `False` on every save. |
+| `seed` | `Integer` | Global RNG seed for any RANDOM-strategy quota rule whose own selection seed is unset. |
+| `rules_json` | `JSON` | Serialised rule tree. Schema validated against `RuleSetSchema` in `app/schemas/rules.py`. Empty list = Full Matrix. |
 
-Wired by 15B Slice 2 (`instruments.rule_set_id` points into this
-table) and 15C (auto-copy from operator library on session
-create + Save-to-library flow).
-
-**Canonical spec:** `guide/archive/segment_15B_per_instrument_assignments.md`,
-`guide/segment_15C_operator_libraries.md`.
-
-### `operator_response_type_definitions` (Segment 15C target)
-
-Operator-library tier for Response Type Definitions — RTDs visible
-across all of an operator's sessions. Auto-copied into a
-session's `response_type_definitions` rows on session create.
-
-| Field | Type | Notes |
-|---|---|---|
-| `owner_user_id` | `Integer` (FK → `users.id` ON DELETE CASCADE) | Owning operator. |
-| `response_type` | `String(64)` | Operator-chosen name (e.g. `"Likert5"`). Unique per owner via `uq_operator_rtd_owner_name`. |
-| `data_type` | `String(16)` | `int` / `decimal` / `short_text` / `long_text` / `list`. Same value-set as `response_type_definitions.data_type`. |
-| `min`, `max`, `step` | `Float` | Numeric bounds; NULL for non-numeric types. |
-| `list_csv` | `Text` | Comma-separated option list for `list`-type RTDs. |
-
-Wired by 15C (auto-copy on session create + Add-from-library /
-Save-to-library actions on the per-session RTD card).
-
-**Canonical spec:** `guide/segment_15C_operator_libraries.md`.
+**Canonical spec:** `spec/assignments.md` (engine + Assignments
+page); `spec/instruments.md` § Band 1 (per-instrument authoring
+surface). Backing model: `app/db/models/session_rule_set.py`.
 
 ---
 
@@ -566,15 +512,14 @@ The five CSVs split the work three ways:
 | §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
 | §2 | Per-session metadata | Partial | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active` → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); `display_timezone` and `self_reviews_active` are **force-applied** — they are session config, not operator-typed identity, and the fallback rule would never fire (a created session always has both set). Added to the export by Segment 18D PR E2. |
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
-| §4 | Per-instrument | Partial | All operator-typed columns → Settings CSV, including `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`). `deadline_closed_at` is machine-derived (excluded). Post-15B `rule_set_id` is the source of truth for a pinned instrument; an un-pinned instrument (NULL `rule_set_id`) falls back to the latest `assignments.generated` audit row's `refs.rule_set_id` for **seeded** RuleSets only. |
-| §4.5 | Per-session RTDs | Partial | Operator-defined (`is_seeded=False`) rows → Settings CSV. Seeded RTDs are excluded — they auto-regenerate from `SEED_RESPONSE_TYPE_DEFINITIONS` on session create. The `library_name` provenance cell carries the library origin's name (export leg, 18D PR E2); the importer recognises-and-skips it (link/clone is the 18D import part). |
+| §4 | Per-instrument | Partial | All operator-typed columns → Settings CSV, including `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`). `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the source of truth for a pinned instrument; the legacy fallback to the latest `assignments.generated` audit row's `refs.rule_set_id` retired alongside seeded RuleSets in Wave 5 PR 5.2. |
+| §4.5 | Per-session RTDs (retired) | — | Section retired with the `response_type_definitions` table in PR #1454. Numeric / string / List bounds are now inline columns on `instrument_response_fields` (covered under §4). |
 | §5 | Reviewers / Reviewees / Relationships | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` audit-event paths). Relationships shipped in 12A-3 PR 1 (importer was already shipped in 15D PR 1). |
-| §6 | Operator-library RuleSets (`operator_rule_sets`) | ❌ | Workspace-scoped (per-operator across sessions), not per-session. Portability is deferred to its own segment; travels as JSON, not CSV. |
+| §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
 | §2.5 | `session_field_labels` (per-session friendly labels) | ✅ All | All listed columns → Settings CSV. 12-slot allowlist enforced by `_VALID_FL_SOURCE_FIELDS` on import. Per-entity CSVs intentionally stay canonical-only on their header rows. |
-| §9 | `session_rule_sets` | Partial | Non-seeded rows → Settings CSV. Seeded copies are excluded — they auto-materialise from `app/services/rules/seeds.py` via `materialise_seed_rule_sets` on session create. The `library_name` provenance cell carries the library origin's name (export leg, 18D PR E2); the importer recognises-and-skips it. |
-| §9 | `operator_response_type_definitions` (inert, 15C target) | ❌ | Workspace-scoped, parallel to §6. |
+| §9 | `session_rule_sets` | Partial | All rows → Settings CSV (the seeded-vs-authored distinction retired alongside the 5-seeded-RuleSets default-seed in Wave 5 PR 5.2). The `library_name` provenance column also retired in the same wave; the importer recognises-and-skips legacy CSVs that still carry it. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
 | n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` (Segment 12B PR 1) — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route ships live but **without an Extract Data tile** — operator-facing surface relocates to the Sys Admin page when Segment 16A ships, per industry best practice for audit-data downloads. |
 | n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
@@ -585,11 +530,13 @@ The five CSVs split the work three ways:
   one click. Deferred follow-on of the 12A-1 export track;
   orthogonal to the import side, which always reads a single
   Settings CSV per upload.
-- **Operator-library RTD / RuleSet portability** — workspace-
-  scoped (per-operator across sessions). Anchored on Operator
-  Settings + Rule Builder; lives on a separate import / export
-  surface and travels as JSON. Excluded from the per-session
-  Settings CSV by design.
+- ~~**Operator-library RTD / RuleSet portability**~~ —
+  retired 2026-05-25 alongside the operator-library tier (Wave
+  5 PR 5.2). Workspace-scoped portability was meant to anchor
+  on Operator Settings + Rule Builder; both surfaces are gone.
+  Per-session rule rows now travel as part of the Settings CSV
+  via §9 above; numeric / string / List bounds travel with
+  their `instrument_response_fields` rows via §4.
 
 **Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
 CSV shapes + inclusion rule),

@@ -950,10 +950,12 @@ on the Operations row of the chrome. It carries:
   toggles.
 
 Assignments are not edited row by row. The operator changes
-which pairs exist by changing the rule (in the Rule Builder
-sub-page) or the rosters and **regenerating** via the
-Workflow card's Prepare action. See [§14](#14-reconciling-
-regeneration) for what regeneration preserves.
+which pairs exist by changing the rule (in Band 1 of an
+instrument card on the Instruments page; the standalone Rule
+Builder sub-page retired in Wave 5 PR 5.1) or the rosters and
+**regenerating** via the Workflow card's Prepare action. See
+[§14](#14-reconciling-regeneration) for what regeneration
+preserves.
 
 ### 9.8 Validation and activation
 

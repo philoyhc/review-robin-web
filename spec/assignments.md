@@ -438,12 +438,12 @@ Steps:
 2. **Run the rule list.** Each rule in `rule_set_schema.rules`
    contributes a per-pair predicate; the top-level `combinator`
    wraps them.
-3. **Apply self-review exclusion.** If
-   `exclude_self_reviews=True` (or the override is True), drop
-   pairs where `reviewer.id == reviewee.id` (Individual) or
-   where the reviewer is a member of the (reviewer, group_key)
-   bucket (Group). On Group instruments, the **entire group**
-   is dropped if the reviewer is in it.
+3. ~~**Apply self-review exclusion.**~~ **Retired in Wave 5 /
+   PR #1475 — project-wide policy is now `excludeSelfReviews=False`
+   everywhere; the engine never drops `(R, R)` pairs at the
+   desugar stage.** See the "Self-review policy" section above
+   for rationale and the two supported suppression paths (Link
+   rule + per-instrument Self-review toggle).
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**
    - Individual: one row per surviving pair.
