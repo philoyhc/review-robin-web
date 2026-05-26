@@ -210,7 +210,7 @@ for Links 1 + 2 (`not_set | all | filter`) and
 |---|---|---|---|
 | `not_set` | "Not set" | dimmed, `pointer-events: none` | `mixed` |
 | `all` / `individual` | "All" / "Individual" | dimmed | `false` |
-| `filter` / `group` | "Filter using reviewer attributes" (Link 1) / "Filter using reviewee attributes" (Link 2) / "Group using reviewee attributes" (Link 3) | active | `true` |
+| `filter` / `group` | "Filter using tags" (Link 1 + Link 2) / "Group using tags" (Link 3) | active | `true` |
 
 **Cycle.** Each click advances one step and wraps:
 `not_set → all → filter → not_set → all → filter → …` (and the

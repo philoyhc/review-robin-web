@@ -589,13 +589,11 @@ def _new_model_usable_tags(
         "reviewee": [],
         "pair_context": [],
     }
-    # Per-namespace disambiguation prefix on the friendly label so
-    # operators can tell which side of a relationship a tag belongs
-    # to when a dropdown mixes namespaces (notably Pool of those
-    # reviewed's "IS THE SAME AS" / "IS DIFFERENT FROM" operand).
-    # Pair-context tags carry no prefix — they're inherently
-    # relationship-level.
-    label_prefix = {"reviewer": "R-", "reviewee": "E-", "pair_context": ""}
+    # The dropdown option label is just the operator's friendly
+    # name for the tag — no per-namespace prefix. The per-dropdown
+    # caption above each select ("Reviewer tag" / "Reviewee tag")
+    # carries the namespace hint now, so the in-option ``R-`` /
+    # ``E-`` prefixes are retired.
     namespace_specs = [
         ("reviewer", Reviewer, "reviewer.tag", False),
         ("reviewee", Reviewee, "reviewee.tag", False),
@@ -621,7 +619,7 @@ def _new_model_usable_tags(
                 review_session, namespace, label_field
             )
             result[namespace].append(
-                (f"{canonical_prefix}{slot}", label_prefix[namespace] + friendly)
+                (f"{canonical_prefix}{slot}", friendly)
             )
     return result
 
