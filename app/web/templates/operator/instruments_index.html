@@ -886,7 +886,7 @@
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
               "Pool of reviewers", _link1_tags,
-              on_label="Filter using reviewer attributes",
+              on_label="Filter using tags",
               field_helper="Reviewer tag") }}
           {# "Refresh sample" was previously rendered as a row
              beneath Link 1; moved inline beside the Band 2
@@ -901,7 +901,7 @@
               "Pool of those reviewed", _link2_tags,
               operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
               operand_tag_options=_link2_operand,
-              on_label="Filter using reviewee attributes",
+              on_label="Filter using tags",
               field_helper="Reviewee tag",
               operand_tag_helper="Reviewer tag") }}
         </div>
@@ -911,12 +911,12 @@
             {% set _link3_grouped = _link3_state.mode == "grouped" %}
             {% set _link3_touched = _link3_state.touched if _link3_state.touched else False %}
             {% set _link3_pill_state = "group" if (_link3_touched and _link3_grouped) else ("individual" if _link3_touched else "not_set") %}
-            {% set _link3_pill_label = "Group using reviewee attributes" if _link3_pill_state == "group" else ("Individual" if _link3_pill_state == "individual" else "Not set") %}
+            {% set _link3_pill_label = "Group using tags" if _link3_pill_state == "group" else ("Individual" if _link3_pill_state == "individual" else "Not set") %}
             {% set _link3_builder_active = _link3_touched and _link3_grouped %}
             <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
               Unit of review
               {# Mode-toggle pill: 3-state cycle "Not set" →
-                 "Individual" → "Group using reviewee attributes"
+                 "Individual" → "Group using tags"
                  → "Individual" → … . "Not set" is the initial
                  state for an untouched link (Wave 5 "Not set"
                  safety gate); the workflow card only considers
@@ -926,9 +926,9 @@
                  pair_context tags exist for the session. #}
               <span class="pill {% if _link3_active %}{% if _link3_pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
                     data-new-model-unit-mode="{{ _link3_pill_state }}"
-                    data-new-model-mode-on-label="Group using reviewee attributes"
+                    data-new-model-mode-on-label="Group using tags"
                     {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
-                    title="{{ 'Click to cycle: Not set → Individual → Group using reviewee attributes → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
+                    title="{{ 'Click to cycle: Not set → Individual → Group using tags → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
             </h3>
             {% if is_editing %}
               <input form="dfsave-{{ instrument.id }}" type="hidden"
