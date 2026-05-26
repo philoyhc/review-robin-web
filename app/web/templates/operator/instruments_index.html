@@ -622,6 +622,20 @@
                  href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
                  onclick="return newModelLockClick(event, {{ instrument.id }})"
                  {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
+              {# Heading-row mirror of the bottom action row's
+                 Save + Cancel. Share the same ``data-new-model-save``
+                 / ``data-new-model-cancel`` markers so the dirty-
+                 tracker enables / disables them in lockstep with
+                 their bottom-row counterparts. #}
+              <button form="dfsave-{{ instrument.id }}" type="submit"
+                      class="btn secondary"
+                      data-new-model-save
+                      disabled>Save</button>
+              <button type="button"
+                      class="btn secondary"
+                      data-new-model-cancel="{{ instrument.id }}"
+                      onclick="newModelCancelEdits(this)"
+                      disabled>Cancel</button>
             {% else %}
               <a class="btn secondary{% if is_ready %} disabled{% endif %}"
                  data-instrument-lock-toggle="{{ instrument.id }}"
@@ -2958,22 +2972,31 @@
           window.newModelInitSaveDirtyTracking = window.newModelInitSaveDirtyTracking || function (band2) {
             if (!band2) { return; }
             var instrumentCard = band2.closest('[id^="instrument-"]') || band2;
-            var saveBtn = instrumentCard.querySelector(
+            // Each card renders two Save buttons (heading row +
+            // bottom action row) so the operator doesn't have to
+            // scroll past Bands 1+2+3 to persist. They share the
+            // ``data-new-model-save`` marker and flip enabled
+            // state in lockstep — keep them in sync via
+            // querySelectorAll.
+            var saveBtns = instrumentCard.querySelectorAll(
               '[data-new-model-save]'
             );
-            if (!saveBtn) { return; }
+            if (saveBtns.length === 0) { return; }
             // Wave 4 — Cancel mirrors Save's enabled state. When
             // there's nothing to save, there's nothing to cancel
             // either, so the button stays disabled. May be absent
             // (older render of the macro / non-edit-mode rendering).
-            var cancelBtn = instrumentCard.querySelector(
+            // Same heading/bottom duplication as Save.
+            var cancelBtns = instrumentCard.querySelectorAll(
               '[data-new-model-cancel]'
             );
             function markDirty() {
-              if (saveBtn.disabled) { saveBtn.disabled = false; }
-              if (cancelBtn && cancelBtn.disabled) {
-                cancelBtn.disabled = false;
-              }
+              saveBtns.forEach(function (b) {
+                if (b.disabled) { b.disabled = false; }
+              });
+              cancelBtns.forEach(function (b) {
+                if (b.disabled) { b.disabled = false; }
+              });
             }
             // Band 1 form inputs ride the dfsave form via
             // ``form="dfsave-<id>"``. Their input / change events
