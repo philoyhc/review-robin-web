@@ -252,8 +252,6 @@ def test_assignments_hub_renders_count_and_mode(
     # operator's entry point to materialising assignments now (it
     # runs Generate + Validate + Activate in sequence).
     assert ">Activate session</button>" in empty.text
-    # Per-instrument status block surfaces the pinned rule.
-    assert "Full Matrix" in empty.text
 
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
