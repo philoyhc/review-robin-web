@@ -153,6 +153,47 @@ def test_set_band1_assignment_rules_replaces_owned_touched_slice(
     assert instrument.band1_touched_links == ["link3"]
 
 
+def test_set_band1_assignment_rules_materialises_rule_set_without_self_review_exclusion(
+    client: TestClient, db: Session
+) -> None:
+    """When the operator's first Band 1 filter rule materialises a
+    ``SessionRuleSet``, ``exclude_self_reviews`` lands as False so
+    self-review pairs flow through to ``assignments`` rows at
+    generate time. The per-instrument Self review toggle on the
+    Assignments page owns include / exclude; baking exclusion in
+    at the rule-set level would silently disable that toggle."""
+    from app.db.models import SessionRuleSet
+
+    review_session = _make_session(client, db, code="self-review-allow")
+    instrument = _default_instrument(db, review_session.id)
+    user = review_session.created_by_user
+
+    instruments_service.set_band1_assignment_rules(
+        db,
+        instrument=instrument,
+        link1_mode="filter",
+        link1_combinator="AND",
+        link1_rules=[
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_value": "Lead",
+                "operand_tag": "",
+            }
+        ],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+        actor=user,
+        touched_links={"link1", "link2"},
+    )
+    db.refresh(instrument)
+    assert instrument.rule_set_id is not None
+    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    assert rule_set is not None
+    assert rule_set.exclude_self_reviews is False
+
+
 def test_set_unit_of_review_toggles_link3_touched_bit(
     client: TestClient, db: Session
 ) -> None:
