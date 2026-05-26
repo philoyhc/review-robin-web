@@ -1,3 +1,12 @@
+> **Archived 2026-05-26.** Split between the rewritten
+> `spec/instruments.md` (operator-card / model-side: `group_kind`
+> column, Unit-of-review = Group, group-boundary picker, group
+> identity on the card preview) and `spec/assignments.md`
+> (fan-out / aggregation: one assignment row per
+> `(reviewer, group_key)`, write fan-out + collapse-on-read,
+> reviewer-group pair count, extraction contract). Kept here for
+> historical reference; the current specs are authoritative.
+
 # Enhanced instruments — group-scoped review
 
 **Status.** Implemented — Segment 13C shipped 2026-05-19: the

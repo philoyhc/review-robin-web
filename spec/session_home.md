@@ -450,7 +450,7 @@ Cards that have graduated out of the placeholder pattern:
 - **Rule Based Assignment** (on the Assignments page, not Home)
   graduated across Segments 13A → 13A-1 — now ships as a wired
   card via `_rule_based_card.html` with a live RuleSet dropdown
-  and a Generate submit. See `spec/rule_based_assignment.md`.
+  and a Generate submit. See `spec/assignments.md`.
 
 ## Lifecycle behavior summary
 

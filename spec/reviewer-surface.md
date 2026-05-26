@@ -411,7 +411,7 @@ is one response cell (one field for one reviewee):
 (`required_done` / `required_total` / `all_done` / `all_total`);
 `required_done` is DB-accurate, derived from each row's
 `missing_count`. The same layout is mirrored on the operator's
-Band 2 preview (see `spec/instrument_builder.md` — pills + the
+Band 2 preview (see `spec/instruments.md` § Band 2 — pills + the
 JS-built `buildConstraints` block share the row and rebuild
 together on every Band 3 / R toggle).
 
@@ -533,8 +533,10 @@ unchanged should one ever be adopted.
 
 A **group-scoped instrument** (`Instrument.group_kind` non-null —
 Segment 13C) renders differently. Its canonical design lives in
-[`spec/group_scoped_instruments.md`](group_scoped_instruments.md);
-the reviewer-surface specifics:
+[`spec/instruments.md`](instruments.md) § Band 1 (the operator-
+authoring side) and [`spec/assignments.md`](assignments.md) §
+group-scoped fan-out (the storage + collapse-on-read side); the
+reviewer-surface specifics:
 
 - **One row per group, not per reviewee.** The reviewer's
   rule-eligible assignments for the instrument are partitioned

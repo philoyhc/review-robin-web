@@ -353,9 +353,12 @@ library tier added in 13D PR 2 — see `session_rule_sets` in §9.)
 | `created_at` | `DateTime(timezone=True)` | When this revision was committed. Distinct from the `TimestampMixin` pair on `operator_rule_sets` because `rule_set_revisions` is append-only. |
 | `created_by_user_id` | `Integer` (FK → `users.id`, nullable) | Who committed this revision. NULL on seeded revisions inserted by migrations / fixtures. |
 
-**Canonical spec:** `spec/rule_based_assignment.md` (§7.2 covers
-the Rule Builder page; §7.1 covers the Rule Based card on the
-Assignments page).
+**Canonical spec:** `spec/assignments.md` covers the engine + the
+Assignments page; `spec/instruments.md` § Band 1 covers the
+per-instrument rule-authoring surface (the only one post-Wave-5).
+The legacy Rule Builder page retired in Wave 5 PR 5.1; the
+operator-side `operator_rule_sets` library tier retired in
+Wave 5 PR 5.2 (the table itself dropped).
 
 ---
 

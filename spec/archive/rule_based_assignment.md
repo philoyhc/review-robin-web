@@ -1,3 +1,11 @@
+> **Archived 2026-05-26.** Renamed / rewritten as
+> `spec/assignments.md` (the assignment engine and the Assignments
+> operator page), with the post-Wave-5 contract: no separate Rule
+> Builder page (retired in PR 5.1), no library tier (retired in PR
+> 5.2), Band 1 of the instrument card owns the rule, and the
+> synthetic Full Matrix backs untouched-Band-1 instruments. Kept
+> here for historical reference; the current spec is authoritative.
+
 # Functional Specification
 
 ## Advanced Mode for Reviewer–Reviewee Assignment Generation
