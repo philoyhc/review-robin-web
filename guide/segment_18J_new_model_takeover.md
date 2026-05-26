@@ -636,58 +636,100 @@ pilot use of the new-model card.
 | #1439 | Band 2 intro card unified ✎/✓ | Consolidated short_label + description edits into one ✎/✓ pair at the card's bottom-right (matching the help-text card's `bottom: 4px; right: 4px` placement). |
 | #1443 | Bottom action row restructure | Retired the `Add instrument` / `Add group instrument` buttons; renamed `+New model` → `+Instrument`; added a Cancel button (dirty-aware, separate from Lock — confirms then reloads to discard). Row order: `Save | Cancel | Replicate | Delete | +Instrument | Lock/Unlock`. |
 
-### Wave 5 — Perf followers + RuleSet library retirement
+### Wave 5 — RuleSet library retirement — shipped 2026-05-25
 
 > Originally labelled Wave 4. Slid to Wave 5 when the readiness
 > + Lock/Unlock work above turned out to need its own wave.
+> Reordered again before landing: perf followers (Rec B / D2 /
+> D3) carved out to `guide/deferred_until_pilot_feedback.md`
+> because pilot-scale rosters were nowhere near the latency
+> threshold that motivated them. The wave shipped as the
+> RuleSet-library retirement only.
 
-Now that operators are adding new-model cards in volume
-(post-Wave 3), the per-card costs that grow with `K` start to
-bite. Land in parallel with Gap 7.
+Gap 7's full retirement in three sequential PRs:
 
-- **Rec D2** — single page-level
-  `<script type="application/json" id="new-model-roster-data">`
-  blob; HTML payload `K × 100KB` → `1 × 100KB`.
-- **Rec D3** — skip on-load preview rebuild in view mode
-  (requires either a new `data-edit-mode` data attribute on
-  the card root, or reading the inner
-  `[data-new-model-band2-editable]` `inert` flag — the card
-  root does **not** currently expose an edit-mode signal;
-  see Rec D3 in the outstanding doc).
-- **Rec B** — `find_first_n_pairs` engine fast path. Cures
-  Refresh on 1k × 1k from 1-3s to typically <100ms.
-- **Gap 7** — retire the RuleSet library + Rule Builder
-  child page. Band 1's inline editor (already shipped on
-  new-model) becomes the canonical authoring surface. Wave
-  4a's `is_configured()` predicate decoupled new-model
-  instruments from the rule-set construct, so retiring the
-  library no longer requires migrating new-model rows.
+| PR | Slice | Summary |
+|---|---|---|
+| #1446 | 5.1 — surface | Retired the RuleSet library tier UI: Rule Builder child page, "Save to library" / "Add from library" affordances on the Instruments page, the Available RuleSets sidebar, and the per-instrument card's Assignment Rule section. Band 1's inline editor is now the sole authoring surface. |
+| #1447 | 5.2 — schema | Dropped `operator_rule_sets`, `operator_rule_set_versions`, `session_rule_set_library_origins`. Retired the 5-seeded-RuleSets default-seed flow. `session_rule_sets.library_origin_id` provenance column dropped. Alembic revisions: `8d6f4a9c7e2b` (drop library tier) + `c7d9e1f3b5a8` (drop seed). |
+| #1448 | 5.3 — collapse legacy / new-model split | Dropped `instruments.is_new_model`. Collapsed every template / view-shape / route branch on it to a single shape. `+New model` → `+Instrument` had already happened in Wave 4c; the column itself + `is_pilot` legacy alias + the `add_group_instrument` route retire in this PR. The "+Group instrument" UI was already gone (Wave 4c PR #1443); the route + service plumbing retires here. **Closes Gap 7, Gap 8, Gap 9 in one PR.** |
 
-D2 + D3 belong in one PR (they touch the same template + JS).
-B is its own PR. Gap 7 is independent of the perf work but
-naturally lands here.
+### Wave 6 — Post-takeover polish + Band 3 type presets — shipped 2026-05-25 → 2026-05-26
 
-### Wave 6 — Cleanup
+Pilot feedback after Wave 5 made the new-model card the sole
+authoring surface. The wave is a long tail of polish + bug-fix
+PRs, organised here by cluster.
 
-> Originally labelled Wave 5.
+#### Cluster A — Wave 5 fallout + RTD card retirement
 
-- **Gap 8** — retire the `+Group instrument` button (Band 1
-  Link 3's Individual ↔ Grouped toggle replaces it). Wave
-  4c (PR #1443) already retired the button from the
-  per-instrument action row; Gap 8's remaining work is the
-  service / route plumbing.
-- **Gap 9** — drop the `instruments.is_new_model` column +
-  the `+Instrument` button's new-model-only behaviour
-  (the button stays; it just becomes "create an instrument"
-  full stop). Template branches on `is_new_model` collapse
-  to a single shape.
+| PR | Slice |
+|---|---|
+| #1449 | Band 1 "Not set" pill safety gate (`workflow_card.no_unlocked_instruments` warns until all three link pills have been clicked out of "Not set"). |
+| #1450 | Pill cycle now wraps back to "Not set" — operator can re-surface the unconfigured state. |
+| #1451 | Workflow card + Assignments status table + delete-confirm copy polish (multi-PR fallout from the Wave 5 page restructure). |
+| #1452 | Per-instrument SessionRuleSet now creates / re-writes with `exclude_self_reviews=False` — the desugar layer no longer drops `(R, R)` pairs at generate time. Operator suppresses self-reviews via the per-instrument Self-review toggle on the Assignments page. |
+| #1453 | Consolidated `spec/instruments.md` + `spec/assignments.md` from the old segment-specific drafts; archive pre-2026-05-26 versions. |
+| #1454 | Retired the `response_type_definitions` table + the per-instrument RTD card; Band 3 rows now carry inline type presets (Likert / Numeric / Single-line / Multi-line / List). Closes the last bit of Gap 6's "RTD library retirement" work. |
+| #1455 | Added a second Lock/Unlock anchor to each instrument card's heading row so the operator doesn't have to scroll past Bands 1+2+3 to flip edit mode. |
+| #1456 | Healed `SessionRuleSet` rows that pre-dated PR #1452's `exclude_self_reviews=False` write; moved heading Lock/Unlock first in the action row. |
 
-Both gaps + the legacy template branches + routes + buttons
-retire in one PR. After this wave the legacy individual /
-group cards no longer exist.
+#### Cluster B — Operator preview ↔ reviewer surface parity (rolled back, then re-applied)
+
+| PR | Outcome |
+|---|---|
+| #1457 + #1458 | Reviewer surface group identity now joins all visible `reviewee.tag_*` cells (not just the boundary key); Refresh button gates on Band 1 fully touched + adds `roster.id` for the Gap-10 intersection. |
+| #1459 | Scope Gap-10 member-ID set to one reviewer when the boundary repeats. |
+| #1460 + #1461 | Reverts of #1457 + #1459 — the bundle introduced staleness bugs on multi-cell unit boundaries. |
+| #1464 | Re-applied the reviewer-surface half of #1457 as a standalone change (the operator-preview half re-landed later under Cluster D below). |
+
+#### Cluster C — Save dirty-tracking + heading-row Save mirror
+
+| PR | Slice |
+|---|---|
+| #1462 | Enable Save when Band 1 link pills are clicked — the pill toggles update hidden inputs via `.value=` (no input/change event), so the dirty-tracker needs a delegated click hook. |
+| #1463 | Mirror Save + Cancel into the heading-row action group so they sit next to the heading Lock/Unlock too. |
+| #1465 | Audited every Band 1/2/3 click that mutates the `dfsave-<id>` payload and added click delegation for all five missed cases (rule add/remove, Link 3 boundary add/remove, sort badge). |
+
+#### Cluster D — Band 1 caption affordance + `R-`/`E-` prefix retirement
+
+A new "Reviewer tag" / "Reviewee tag" caption sits above each
+Band 1 dropdown, so the operator can read the dropdown's scope
+without parsing the option label. Once captions landed on every
+dropdown, the `R-` / `E-` prefix inside each option became
+redundant and was retired in the same wave.
+
+| PR | Slice |
+|---|---|
+| #1466 | Link 1 "Reviewer tag" caption above each rule dropdown (trial). |
+| #1468 | Darken the caption to `--text-primary` so it matches the dropdown option text. |
+| #1469 | Link 3 Unit-of-review "Reviewee tag" caption above each boundary dropdown. |
+| #1470 | Link 2 "Pool of those reviewed" — `Reviewee tag` on the field dropdown, `Reviewer tag` on the operand-tag dropdown (visible only on `IS THE SAME AS` / `IS DIFFERENT FROM`). |
+| #1471 | Tighten the pill labels (`Filter using tags` for Link 1 + Link 2; `Group using tags` for Link 3) and drop the `R-` / `E-` prefixes from the dropdown options now that the captions carry the namespace hint. |
+
+#### Cluster E — Band 2 preview member-list accuracy
+
+Re-applies the operator-preview half of the rolled-back Cluster
+B work plus a series of additional narrowings the original PR
+missed.
+
+| PR | Slice |
+|---|---|
+| #1472 | Intersect the JS-side partition with `band2_state.sample_group_member_ids` (the rule-surviving member-ID set the Refresh route persists). Pre-fix the JS rebuild silently widened the preview past Links 1+2. |
+| #1473 | Honour in-progress Link 3 boundary edits — the Refresh route was using the persisted `instrument.group_kind` to compute member IDs; now it accepts the live `link3_boundary` from the form. |
+| #1474 | Scope member-IDs to pairs involving the SAMPLE reviewer, not every reviewer. Under "IS THE SAME AS" Link 2, each reviewer's reviewee pool is different and the union widens the preview past what the sample's reviewer actually sees. |
+| #1475 | Project-wide policy: `excludeSelfReviews=False` everywhere (assignments generation + preview). Removes the off-by-one symmetric-team undercount because the `(R, R)` pair lands in `result.pairs` naturally; suppression is via Link rule or the Assignments-page Self-review toggle. `spec/assignments.md` "Self-review policy" carries the rationale. |
 
 ## Deferred until needed
 
+- **Rec B** — `find_first_n_pairs` engine fast path. Pilot rosters
+  haven't surfaced the 1k × 1k latency that motivated it. Carved
+  out of Wave 5; relevant once a deployment scales past mid-three-
+  digit reviewer / reviewee counts. Tracked in
+  `guide/deferred_until_pilot_feedback.md`.
+- **Rec D2 + D3** — single page-level roster JSON blob + skip on-
+  load preview rebuild in view mode. Wave 5 perf doublet that the
+  pilot didn't need; deferred alongside Rec B. Same deferred-
+  ledger entry.
 - **Rec C** — single-side predicate indexes (+ roster-upload
   cache). Defer until Rec B's worst case is observed on a
   real pilot roster. For broad-rule cases (the likely default)

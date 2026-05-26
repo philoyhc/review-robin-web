@@ -852,6 +852,65 @@ No segment-plan doc; this entry is the canonical record.
 
 ---
 
+### Segment 18J — New-model takeover mopping-up — done 2026-05-24 → 2026-05-26 (PRs #1393 → #1475)
+
+Six-wave sequencing that completes Segment 18I: closes the parity
+gaps that kept the legacy individual + group cards alive, retires
+the RuleSet library + Rule Builder, drops the
+`instruments.is_new_model` flag, and lands a long pilot-feedback
+polish tail. Plan: `guide/segment_18J_new_model_takeover.md`.
+Gap catalog: `guide/new_model_instruments_outstanding.md`. Spec:
+`spec/instruments.md` + `spec/assignments.md` (consolidated in
+PR #1453).
+
+- **Wave 1** (PRs **#1393 → #1397**, 2026-05-24) — perf double-tap
+  (Rec A + Rec D1) + Gaps 1 / 3 / 5 / 10.
+- **Wave 2** (PRs **#1399 → #1405**, 2026-05-24) — Gap 6: RTD
+  library retirement; numerical / string / List bounds inline on
+  `instrument_response_fields` (six `_inline_*` columns).
+- **Wave 2½** (PRs **#1408 → #1416**, 2026-05-24) — Band 2
+  reviewer-surface parity polish: intro card, constraint summary
+  row, disabled-input placeholder cells, in-card help-text editor.
+- **Wave 3** (PRs **#1418, #1431, #1432**, 2026-05-25) — Gap 2:
+  response fields become real DB rows. `validate_value` reads
+  `_inline_*` directly; column widths migrate to
+  `instrument.column_widths["rf_<id>"]`; the JSON write side
+  retires.
+- **Wave 4** (PRs **#1434 → #1443**, 2026-05-25, 10 PRs across
+  three clusters) — readiness predicate alignment
+  (`is_configured()` retires `has_unpinned`), Lock/Unlock + Save-
+  when-dirty refactor, UI polish (step validation, progress pills
+  alignment, intro-card ✎/✓ unification, bottom action row).
+- **Wave 5** (PRs **#1446, #1447, #1448**, 2026-05-25) — RuleSet
+  library retirement: Rule Builder page + library tier + 5 seeded
+  rule sets retired; `instruments.is_new_model` column + every
+  template branch on it collapsed. **Closes Gap 7 / 8 / 9** in
+  one wave. Perf followers (Rec B / D2 / D3) carved to
+  `guide/deferred_until_pilot_feedback.md` because pilot rosters
+  haven't surfaced the latency that motivated them.
+- **Wave 6** (PRs **#1449 → #1475**, 2026-05-25 → 2026-05-26) —
+  post-takeover polish in five clusters. (A) Wave 5 fallout +
+  `response_type_definitions` table retirement (`#1449 → #1456`).
+  (B) Operator preview ↔ reviewer surface parity — first attempt
+  rolled back, reviewer-surface half re-applied (`#1457` → `#1461`
+  + `#1464`). (C) Save dirty-tracking + heading-row Save / Cancel
+  mirror (`#1462`, `#1463`, `#1465`). (D) Band 1 caption affordance
+  + `R-` / `E-` prefix retirement (`#1466`, `#1468 → #1471`); pill
+  labels now read "Filter using tags" / "Group using tags". (E)
+  Band 2 preview member-list accuracy (`#1472 → #1475`) — JS-side
+  Gap 10 intersection; route honours live Link 3 boundary; member
+  IDs scoped to the sample reviewer's pairs; project-wide
+  `excludeSelfReviews=False` policy with `spec/assignments.md`
+  "Self-review policy" callout.
+
+After Wave 6 the legacy individual + group instrument cards no
+longer exist anywhere in the codebase; every instrument flows
+through the new-model card. `guide/new_model_instruments_outstanding.md`
+remains as the historical Gap catalog (its entries cross-link to
+the shipping PRs).
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -865,7 +924,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 18J, 19, 20**. No global ordering
+**14B, 19, 20** (18J retired 2026-05-26). No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -900,115 +959,19 @@ bottom of this file.
 
 
 
-- **18J — New-model takeover mopping-up** *(stub created
-  2026-05-24; Waves 1 + 2 + 2½ + 3 + 4 shipped 2026-05-24 →
-  2026-05-25)*. Six-wave sequencing plan that completes the
-  Segment 18I work: closes the parity gaps that still keep the
-  legacy individual + group instrument cards alive, lands the
-  perf wins that bite as new-model card volume grows, and ends
-  with a cleanup PR that drops the `instruments.is_new_model`
-  flag. Adopts the Gap / Rec catalogue from
-  `guide/new_model_instruments_outstanding.md` verbatim and
-  decides only the order.
-
-  **Wave 1 shipped** (PRs **#1393 → #1397**): Rec A + Rec D1
-  (perf double-tap), Gap 10 (rule-constrained preview group
-  expansion), Gap 1 (pill → InstrumentDisplayField.visible),
-  Gap 3 (sort badges on preview table header), Gap 5
-  (required-flag checkbox; reviewer-surface enforcement
-  deferred to Wave 3).
-
-  **Wave 2 shipped** (PRs **#1399 → #1405**, eight slices):
-  Gap 6 — RTD library retirement. Numerical + string + List
-  bounds now live inline on `instrument_response_fields`
-  (six `_inline_*` columns); `response_type_id` FK +
-  `before_insert` listener + property fallback + seeded RTD
-  set + `operator_response_type_definitions` table + cross-
-  session library tier (UI, routes, services, audit events)
-  all retired. The `response_type_definitions` table + the
-  per-instrument RTD card still exist for operator-authored
-  standalone RTDs; both retire alongside Gaps 8 + 9 in Wave 6.
-
-  **Wave 2½ shipped** (PRs **#1408 → #1416**, nine UX-only
-  slices): Band 2 reviewer-surface parity polish. The
-  new-model card's Band 2 preview now mirrors the reviewer
-  surface — same intro card ("Page #N: <short_label>" +
-  description + completion-progress pills), same constraint
-  summary line, same disabled-input placeholder cells per
-  response field, compact sort buttons, chips moved to the
-  flush-right bottom row, etc. Gap 4's underlying plumbing
-  (help-text body editing, visibility toggle, persistence in
-  `band2_state.response_fields[*].help_text` /
-  `.help_text_visible`) is shipped via the in-card ✎/✓ help
-  card editor; the broader Band 3 help-text UX (accordion
-  vs dedicated pane vs always-visible) remains tabled as
-  the deferred Gap 4 decision. One new JSON endpoint:
-  `POST /instruments/{id}/identity` accepts
-  `{short_label?, description?}` independently. Legacy
-  heading-area short_label `<input>` + right-column
-  description editor / display card retired.
-
-  **Wave 3 shipped** (PRs **#1418, #1431, #1432**): Gap 2 —
-  response fields become real DB rows. `InstrumentResponseField.
-  visible` column added; `set_band2_state` dual-writes JSON
-  entries through to real DB rows (id-match update / create
-  with id back-fill / delete via cascade check); reviewer-
-  surface readers filter by `visible=true`; `validate_value`
-  reads `_inline_*` directly with new `InvalidResponseFieldShape
-  Error` (422 — bad bounds) and `ResponseFieldShapeChangeError`
-  (409 — shape change with attached responses). Band 3 row
-  template renders `disabled` on `data_type` + bound inputs
-  when responses are attached; ✓ live-disables on empty name /
-  invalid bounds. Required flag is now load-bearing. PR iii
-  retires the JSON write side entirely: DB rows are the sole
-  source of truth; response-column widths migrate to
-  `instrument.column_widths["rf_<id>"]` and reviewer surface
-  emits matching `<col style="width: Npx">`. Alembic migration
-  `c3a7e9d8b154` back-fills any instrument that didn't re-save
-  between PR i and PR iii.
-
-  **Wave 4 shipped** (PRs **#1434, #1435, #1436, #1437, #1438,
-  #1439, #1440, #1441, #1442, #1443**, 10 PRs across three
-  topic clusters): readiness gating + Lock/Unlock refactor +
-  UI polish. Not on the original plan — emerged from pilot
-  feedback and slid the original Wave 4 (perf + Gap 7) to
-  Wave 5.
-
-  - **4a — Readiness predicate alignment** (#1434, #1435).
-    `replace_assignments` synthesises Full Matrix for new-
-    model instruments with NULL `rule_set_id` instead of
-    silently skipping them. New per-model
-    `instruments_service.is_configured(instrument)`
-    predicate retires the rule-set-centric `has_unpinned`;
-    workflow card + validation rule rewired. Decouples
-    new-model instruments from the `RuleSet` construct,
-    paving the way for Wave 5's Gap 7 retirement.
-  - **4b — Lock/Unlock + Save-when-dirty** (#1440, #1441,
-    #1442). Per-card Edit / Save / Cancel buttons retire in
-    favour of a Lock / Unlock toggle modelled on the Quick
-    Setup card. Save preserves `?editing=<id>` on redirect
-    (no more re-lock on save); Save starts disabled and
-    activates on the first dirty event. Lock prompts a
-    confirm dialog when Save is dirty; Band 3 rows whose
-    inputs the operator has typed into get a subtle amber-
-    accent visual until ✓ commits the row.
-  - **4c — UI polish** (#1433, #1436, #1437, #1438, #1439,
-    #1443). Step validation relaxed to `step ≤ (max − min)`.
-    Progress pills + min/max/step reminders share a single
-    right-flushed row above the table on both reviewer
-    surface and Band 2. Description / short_label edit boxes
-    fixed (tick stays inline; description gets right-side
-    gutter; unified ✎/✓ at intro card's bottom-right).
-    Bottom action row restructured: legacy `Add instrument`
-    / `Add group instrument` buttons retired; `+New model`
-    renamed to `+Instrument`; Cancel button added (dirty-
-    aware, separate from Lock).
-
-  **Waves 5-6 open**: Rec B + D2/D3 + Gap 7 (perf followers
-  + RuleSet library retirement) → Gap 8 + 9 (cleanup; also
-  retires the per-instrument RTD card + the
-  `response_type_definitions` table). **Plan:**
-  `guide/segment_18J_new_model_takeover.md`.
+- **18J — New-model takeover mopping-up** *(retired 2026-05-26;
+  all six waves shipped 2026-05-24 → 2026-05-26)*. Six-wave
+  sequencing plan that completed Segment 18I — closed every
+  parity gap that kept the legacy individual + group cards
+  alive, retired the RuleSet library + Rule Builder, dropped
+  the `instruments.is_new_model` flag, and landed a long
+  pilot-feedback polish tail (Cluster A → E in Wave 6). Pilot-
+  scale perf followers (Rec B / D2 / D3) carved to
+  `deferred_until_pilot_feedback.md`. The legacy individual +
+  group cards no longer exist anywhere in the codebase.
+  **Done summary:** see the Done section above
+  (PRs **#1393 → #1475**).
+  **Plan:** `guide/segment_18J_new_model_takeover.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
@@ -1044,6 +1007,6 @@ bottom of this file.
 - **Within 14B**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps. **18G Part 3 (reminders)** shipped 2026-05-21 and layered on
   top of 14B Parts A / B / C.
-- **18J, 19, 20** are
+- **19, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
