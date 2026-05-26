@@ -1,3 +1,7 @@
+> **Archived 2026-05-26.** Folded into the rewritten
+> `spec/instruments.md`. Kept here for historical reference;
+> the current spec is the authoritative source.
+
 # Instrument Builder
 
 Surface specification for the **Instrument Builder** concept-test

@@ -426,10 +426,10 @@ Source: `app/web/templates/operator/operator_settings.html`.
 
 Source: `app/web/templates/operator/session_rule_builder.html` +
 included `_rule_builder_card.html` and `_available_rulesets_card.html`
-partials. The Rule Builder card is documented in detail in
-[`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md)
-§7 — most of its action buttons render conditionally per render
-branch (seeded read-only / saved Personal / unsaved draft / blank).
+partials. The Rule Builder page itself retired in Wave 5 PR 5.1;
+Band 1 of the instrument card is now the only rule-authoring
+surface. See [`spec/assignments.md`](assignments.md) and
+[`spec/instruments.md`](instruments.md) § Band 1.
 This audit captures the canonical button shapes.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |

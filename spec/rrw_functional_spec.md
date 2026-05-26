@@ -1853,7 +1853,7 @@ references:
 | CSV import / export contracts | `spec/csv_contracts.md` |
 | UI vocabulary (button styles, layout) | `spec/domain_assumptions.md` |
 | Email backend options | `spec/email_infra_options.md` |
-| Group-scoped instruments | `spec/group_scoped_instruments.md` |
+| Group-scoped instruments | `spec/instruments.md` (operator-card / model side); `spec/assignments.md` (fan-out / aggregation) |
 | Instruments page contract | `spec/instruments.md` |
 | Lifecycle states and transitions | `spec/lifecycle.md` |
 | Operations-row pages (Validate / Previews / Invitations / Responses) | `spec/operations_pages.md` |
@@ -1863,7 +1863,7 @@ references:
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
 | Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |
 | Reviewer surface — full contract | `spec/reviewer-surface.md` |
-| Rule Builder + Assignment Rule | `spec/rule_based_assignment.md` |
+| Assignment engine + Assignments page | `spec/assignments.md` |
 | Session Home page contract | `spec/session_home.md` |
 | Sessions lobby page contract | `spec/sessions_overview.md` |
 | Settings inventory (every persisted setting) | `spec/settings_inventory.md` |

@@ -114,7 +114,7 @@ Assignments moved Setup → Operations in Segment 15D PR 6a: pair-level context 
 
 When the session is `ready`, the status card remains visible (operators inspect mid-cycle), but the per-instrument Self review checkbox renders `disabled` — review is ongoing and flipping include flags would silently change live invitation eligibility. Show + Edit + the inline filter JS stay interactive.
 
-The row pairs are deliberate: pre-flight (Validate, Assignments, Previews), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts; `spec/rule_based_assignment.md` §7.1 covers the Rule Based card.
+The row pairs are deliberate: pre-flight (Validate, Assignments, Previews), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts; `spec/assignments.md` covers the Assignments page and the per-instrument status table.
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
@@ -241,7 +241,7 @@ All three setup-roster pages share an identical chrome shape:
 
 Per-row inline **Edit**, **Add new row**, and bulk **Inactivate / Reactivate** on these three pages shipped in Segment 15F (2026-05-15) — the Operator actions card is the surface; CSV Upload stays the bulk-create path. See `spec/setup_pages.md`.
 
-The Operations Assignments page (§5 above) carries the wired **Rule Based Assignment** card. It exposes a RuleSet dropdown listing every visible RuleSet — seeded RuleSets first, then caller-owned Personal RuleSets — plus a Generate button and an inline link to the Rule Builder page (`/operator/sessions/{id}/assignments/rule-based-editor`). Shipped in Segment 13A, revamped in Segment 13A-1, and moved with the page to the Operations row in Segment 15D PR 6a; see `spec/rule_based_assignment.md` for the engine and Rule Builder UI contract.
+The Operations Assignments page (§5 above) used to carry a wired **Rule Based Assignment** card with a RuleSet dropdown + Generate button + inline link to a standalone **Rule Builder** page. That card and the Rule Builder page retired in Wave 5 PR 5.1; Band 1 of each instrument card now owns the rule, and the Assignments page focuses on materialisation + reconciliation. See `spec/assignments.md` for the engine contract and the post-Wave-5 page, and `spec/instruments.md` § Band 1 for the rule-authoring surface.
 
 ### `/operator/sessions/{id}/instruments` — Instruments
 

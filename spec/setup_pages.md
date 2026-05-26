@@ -25,8 +25,8 @@ Setup primitive — pair-level context (formerly the
 on the first-class `relationships` table now, and the Operations
 Assignments page is the materialised-derivative surface where the
 operator runs the rule engine. See `spec/operator_ui_concept.md`
-§5 and `spec/rule_based_assignment.md` §7.1 for the post-15D
-Operations Assignments page contract.
+§5 and `spec/assignments.md` for the post-15D Operations
+Assignments page contract.
 
 For the cross-page chrome contract (two-row navigation, status
 strip, lock cards, principles P1–P4), see
