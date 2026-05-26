@@ -261,7 +261,6 @@ def test_issue_groups_carry_gate_field(db: Session) -> None:
         exclude_self_reviews=False,
         seed=None,
         rules_json=[],
-        is_seeded=True,
     )
     db.add(rule_set)
     db.flush()

@@ -18,7 +18,6 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
-    SessionRuleSet,
     User,
 )
 from app.schemas.sessions import SessionCreate
@@ -28,6 +27,7 @@ from app.services import (
     session_lifecycle as lifecycle,
     sessions as sessions_service,
 )
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 # --------------------------------------------------------------------------- #
@@ -75,18 +75,9 @@ def _seed_session_with_reviewers(
     )
     db.flush()
 
-    rule_set = db.execute(
-        select(SessionRuleSet).where(
-            SessionRuleSet.session_id == rs.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-    ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    pin_full_matrix_on_all_instruments(db, rs.id)
     db.refresh(rs)
     return rs
 

@@ -528,12 +528,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # similarly retired the parallel RTD library family
     # (operator_response_type_definitions table + its UI).
 
-    # Workspace-seed materialisation into the per-session
-    # ``session_rule_sets`` table at session-create time. Stays for
-    # PR 5.1; retires in PR 5.2 when seeding stops.
-    "session_rule_sets.materialised_from_seed": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
+    # Wave 5 PR 5.2 — RuleSet seeding retired, so
+    # ``session_rule_sets.materialised_from_seed`` is no longer
+    # emitted. Historical rows with this event_type remain
+    # readable; strict-mode validation only fires on write.
+
     # Session-tier RuleSet mutations from Band 1's inline editor.
     # ``session_rule_set.*`` (singular) is the per-row family that
     # stays — Band 1 writes through to ``session_rule_sets.rules_json``.

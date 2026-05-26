@@ -1,21 +1,16 @@
 """Shared helpers for tests that exercise the page-level
 "Generate assignments" flow on the Assignments page.
 
-Post-15B Slice 3a, materialisation flows through:
+Wave 5 PR 5.2 retired the RuleSet seeding helper. The 5 seeded
+``session_rule_sets`` rows (``Full Matrix`` + friends) are no
+longer auto-materialised on session create. Tests that need a
+``Full Matrix`` SessionRuleSet to pin against now lazily
+synthesise one on-demand via :func:`pin_full_matrix_on_all_instruments`.
 
-1. The operator pins a ``session_rule_sets`` row on each instrument
-   (``instruments.rule_set_id``) — Slice 2a per-card picker, or via
-   the Settings CSV apply path (Slice 2b), or directly through
-   :func:`pin_full_matrix_on_all_instruments` in tests.
-2. The operator clicks the page-level **Generate assignments**
-   button on ``/operator/sessions/{id}/assignments`` — Slice 3a
-   POST to ``/assignments/generate`` calling
-   ``replace_assignments(instrument_id=None)``.
-
-The pre-15B operator-tier ``operator_rule_sets`` library still
-seeds a ``Full Matrix`` row on every deployment; tests look that
-up via :func:`full_matrix_seed_id` for legacy-shape assertions
-that haven't migrated yet.
+New-model instruments default to Full Matrix via the synthetic
+empty-rules schema (Wave 4 PR 1) whenever ``rule_set_id`` is
+NULL — so tests that exclusively use new-model instruments can
+skip the pin entirely.
 """
 
 from __future__ import annotations
@@ -25,31 +20,42 @@ from httpx import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, RuleSet, SessionRuleSet
-
-
-def full_matrix_seed_id(db: Session) -> int:
-    return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
-        )
-    ).scalar_one()
+from app.db.models import Instrument, SessionRuleSet
 
 
 def pin_full_matrix_on_all_instruments(
     db: Session, session_id: int, *, name: str = "Full Matrix"
 ) -> int:
-    """Pin the named ``session_rule_sets`` row on every instrument
-    in the session and return that row's id. The helper writes the
-    column directly (no audit emission) — fixture-time setup for
-    tests that need a known materialisation input.
+    """Pin a ``Full Matrix``-equivalent ``session_rule_sets`` row
+    on every instrument in the session and return that row's id.
+    Lazily materialises the row if absent (Wave 5 PR 5.2 retired
+    the auto-seed). The helper writes the column directly (no
+    audit emission) — fixture-time setup for tests that need a
+    known materialisation input on legacy instruments.
     """
     rule_set_id = db.execute(
         select(SessionRuleSet.id).where(
             SessionRuleSet.session_id == session_id,
             SessionRuleSet.name == name,
         )
-    ).scalar_one()
+    ).scalar_one_or_none()
+    if rule_set_id is None:
+        rs = SessionRuleSet(
+            session_id=session_id,
+            name=name,
+            description="",
+            combinator="ALL_OF",
+            # ``exclude_self_reviews=False`` matches the pre-Wave-5
+            # ``SEED_FULL_MATRIX`` seed (every reviewer × every
+            # reviewee including self). Per-session toggles can
+            # override at generate time.
+            exclude_self_reviews=False,
+            seed=None,
+            rules_json=[],
+        )
+        db.add(rs)
+        db.flush()
+        rule_set_id = rs.id
     instruments = list(
         db.execute(
             select(Instrument).where(Instrument.session_id == session_id)

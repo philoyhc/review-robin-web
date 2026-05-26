@@ -8,7 +8,10 @@ from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
 from app.services import audit, operator_settings, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
-from app.services.rules.seeds import materialise_seed_rule_sets
+# Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
+# module deleted entirely. New sessions land with no rows in
+# ``session_rule_sets``. Band 1's inline editor lazily materialises
+# rows when the operator authors rules.
 
 log = get_logger(__name__)
 
@@ -67,17 +70,12 @@ def create_session(
     # rename / extend / replace them.
     ensure_default_instrument(db, review_session)
 
-    # 15C Slice 1: copy workspace-shipped seed RuleSets into the
-    # session's ``session_rule_sets`` pool. The 15B per-instrument
-    # picker (and the Rule Builder, post-15C Slice 4) read from
-    # this pool.
-    seed_rows = materialise_seed_rule_sets(db, review_session)
-
-    # Wave 5 PR 5.1 — the operator-library auto-copy
-    # (``materialise_operator_libraries`` / ``operator_rule_sets``
-    # tier) retired alongside the Rule Builder + library UI. Only
-    # the workspace-seeded RuleSets above are materialised on
-    # session create; PR 5.2 will retire the seeded set too.
+    # Wave 5 PR 5.2 — RuleSet seeding retired entirely. New
+    # sessions land with no rows in ``session_rule_sets``;
+    # Band 1's inline editor lazily materialises rows on first
+    # save. New-model instruments default to Full Matrix via
+    # the synthetic schema (Wave 4 PR 1) when no rule_set_id
+    # is pinned.
 
     audit.write_event(
         db,
@@ -94,21 +92,6 @@ def create_session(
         ),
         correlation_id=correlation_id,
     )
-    if seed_rows:
-        audit.write_event(
-            db,
-            event_type="session_rule_sets.materialised_from_seed",
-            summary=(
-                f"Materialised {len(seed_rows)} seeded RuleSet(s) "
-                f"into session {review_session.code}"
-            ),
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.counts(
-                materialised=len(seed_rows),
-            ),
-            correlation_id=correlation_id,
-        )
     db.commit()
     db.refresh(review_session)
     return review_session

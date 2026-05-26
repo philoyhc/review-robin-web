@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Instrument, ReviewSession, SessionRuleSet
+from app.db.models import Assignment, ReviewSession
 
 
 @pytest.fixture
@@ -70,20 +70,10 @@ def _make_ready_session(
         },
         follow_redirects=False,
     )
-    rule_set = (
-        db.query(SessionRuleSet)
-        .filter(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-        .first()
-    )
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    from ._full_matrix import pin_full_matrix_on_all_instruments
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     # Workflow card's Prepare + Activate flow (post-18F Part 1).
     operator.post(
         f"/operator/sessions/{review_session.id}/workflow/prepare",

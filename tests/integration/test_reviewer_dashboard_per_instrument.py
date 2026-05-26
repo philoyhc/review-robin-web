@@ -427,18 +427,10 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
         db, review_session=review_session, instrument=instrument
     )
     # Pin a rule + activate so the session reaches ``ready``.
-    from app.db.models import SessionRuleSet
-    rule_set = (
-        db.query(SessionRuleSet)
-        .filter(
-            SessionRuleSet.session_id == review_session.id,
-            SessionRuleSet.name == "Full Matrix",
-        )
-        .first()
-    )
-    instrument.rule_set_id = rule_set.id
-    db.flush()
-    db.commit()
+    # Wave 5 PR 5.2 — lazily materialise the Full Matrix
+    # ``session_rule_sets`` row (auto-seed retired).
+    from ._full_matrix import pin_full_matrix_on_all_instruments
+    pin_full_matrix_on_all_instruments(db, review_session.id)
     _activate(operator, review_session)
     db.refresh(review_session)
 
