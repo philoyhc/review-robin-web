@@ -2876,6 +2876,24 @@
             var sessionId = band2.getAttribute('data-new-model-band2-session-id');
             var instrumentId = band2.getAttribute('data-new-model-band2-instrument-id');
             if (!sessionId || !instrumentId) { return; }
+            // Live Link 3 boundary list — canonical keys (e.g.
+            // ``"reviewee.tag3"``) from every populated
+            // ``link3_boundary`` <select> in the instrument card.
+            // Pre-fix the route silently used the persisted
+            // ``instrument.group_kind`` and computed against the
+            // saved boundary, even when the operator had changed
+            // the boundary cells in-progress. Posting them here
+            // lets the route honour the live edit.
+            var link3Selects = instrumentCard.querySelectorAll(
+              'select[name="link3_boundary"]'
+            );
+            var link3Boundary = [];
+            link3Selects.forEach(function (sel) {
+              var v = (sel.value || '').trim();
+              if (v && link3Boundary.indexOf(v) < 0) {
+                link3Boundary.push(v);
+              }
+            });
             var body = {
               link1_mode: collectLinkMode(instrumentCard, 'link1'),
               link1_combinator: collectLinkCombinator(instrumentCard, 'link1'),
@@ -2883,6 +2901,7 @@
               link2_mode: collectLinkMode(instrumentCard, 'link2'),
               link2_combinator: collectLinkCombinator(instrumentCard, 'link2'),
               link2_rules: collectLinkRules(instrumentCard, 'link2'),
+              link3_boundary: link3Boundary,
             };
             btn.disabled = true;
             btn.textContent = '↻ Refreshing...';

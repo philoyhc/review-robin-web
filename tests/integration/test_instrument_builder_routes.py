@@ -2458,6 +2458,55 @@ def test_gap_10_preview_route_json_response_returns_member_ids(
     )
 
 
+def test_preview_route_uses_live_link3_boundary_not_persisted(
+    client: TestClient, db: Session
+) -> None:
+    """Gap 10 follow-up — the Refresh route now honours the operator's
+    in-progress Link 3 boundary by accepting ``link3_boundary`` in
+    the JSON body. Without this, the route silently used the
+    persisted ``instrument.group_kind`` and computed the surviving
+    member IDs against the OLD boundary, so a Refresh after
+    swapping the boundary tag mid-edit returned stale results.
+
+    Set-up has Carol (tag_1=Team A, tag_2=exclude) and Dan
+    (tag_1=Team A, tag_2=keep). Persisted boundary on the
+    instrument is ``r1`` (= reviewee.tag1). Posting
+    ``link3_boundary=["reviewee.tag2"]`` should narrow the group
+    member IDs to just the sample's tag_2 group — not the whole
+    tag_1 set.
+    """
+    review_session, new_model = _group_band2_session(
+        client, db, code="gap-10-live-link3"
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+            "link3_boundary": ["reviewee.tag2"],
+        },
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    # Sample is alphabetically first → Carol (tag_2="exclude").
+    # Under the live boundary tag_2 the only surviving member with
+    # the same tag_2 value is Carol herself. Under the persisted
+    # boundary tag_1 it would have been {Carol, Dan} (both Team A).
+    assert payload["sample_reviewee"]["name"] == "Carol"
+    assert payload["sample_group_member_ids"] == [by_name["Carol"]]
+
+
 def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     client: TestClient, db: Session
 ) -> None:

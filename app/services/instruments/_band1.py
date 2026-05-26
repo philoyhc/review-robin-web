@@ -520,6 +520,7 @@ def find_sample_in_scope_reviewee(
     link2_mode: str,
     link2_combinator: str,
     link2_rules: list[dict[str, str]],
+    link3_boundary: list[str] | None = None,
 ) -> tuple[Any, list[int] | None] | None:
     """Run the rule engine with the given Band 1 + Link 2 inputs and
     return both the sample reviewee and the rule-surviving group
@@ -624,13 +625,34 @@ def find_sample_in_scope_reviewee(
     # pair-context-only) — render falls back to its existing
     # unconstrained partition. Iterates result.pairs the engine
     # already produced; no second engine call.
+    #
+    # ``link3_boundary`` is the live Band 1 boundary list (canonical
+    # keys like ``"reviewee.tag3"``) — the operator's in-progress
+    # edit, posted by the Refresh handler. Falls back to the
+    # persisted ``instrument.group_kind`` when None so callers that
+    # don't supply it (older / non-Refresh paths) keep their old
+    # behaviour.
     from app.services.instruments._instrument_crud import decode_group_kind
 
-    reviewee_boundary_fields = [
-        field
-        for (src, field) in decode_group_kind(instrument.group_kind)
-        if src == "reviewee"
-    ]
+    if link3_boundary is not None:
+        reviewee_boundary_fields = []
+        for raw in link3_boundary:
+            if not isinstance(raw, str):
+                continue
+            v = raw.strip()
+            if not v.startswith("reviewee.tag"):
+                continue
+            num = v[len("reviewee.tag") :]
+            if num in {"1", "2", "3"}:
+                field = f"tag_{num}"
+                if field not in reviewee_boundary_fields:
+                    reviewee_boundary_fields.append(field)
+    else:
+        reviewee_boundary_fields = [
+            field
+            for (src, field) in decode_group_kind(instrument.group_kind)
+            if src == "reviewee"
+        ]
     if not reviewee_boundary_fields:
         return reviewee, None
     sample_key = tuple(

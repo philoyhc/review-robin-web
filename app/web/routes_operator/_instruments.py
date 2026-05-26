@@ -1212,6 +1212,16 @@ async def instrument_preview_sample(
                 }
             )
         return out
+    # Live Link 3 boundary list (canonical keys like
+    # ``"reviewee.tag3"``) — the operator's in-progress boundary
+    # selection. Pre-Gap-10 the route silently used the persisted
+    # ``instrument.group_kind`` so a Refresh under a changed
+    # boundary computed against the OLD boundary. ``None`` (key
+    # absent) preserves that fallback for older callers.
+    raw_boundary = body.get("link3_boundary")
+    link3_boundary = (
+        _str_list(raw_boundary) if raw_boundary is not None else None
+    )
     sample_pick = instruments_service.find_sample_in_scope_reviewee(
         db,
         instrument=instrument,
@@ -1221,6 +1231,7 @@ async def instrument_preview_sample(
         link2_mode=str(body.get("link2_mode") or "all"),
         link2_combinator=str(body.get("link2_combinator") or "AND"),
         link2_rules=_rule_list(body.get("link2_rules")),
+        link3_boundary=link3_boundary,
     )
     if sample_pick is None:
         return JSONResponse(
