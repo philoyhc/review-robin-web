@@ -238,7 +238,31 @@ def _collapse_group_rows(
         representative = dict(members[0])
         names = sorted(r["assignment"].reviewee.name for r in members)
         shown = names[:GROUP_MEMBER_NAME_LIMIT]
-        tag_line = ", ".join(v for v in group_key if v)
+        # Compose the group's tag line from every visible
+        # ``reviewee.tag_*`` display field — matching the operator's
+        # Band 2 preview, which joins each selected tag-pill value
+        # with commas above the member names. Reading only the
+        # boundary tags (via ``group_key``) silently drops any
+        # non-boundary tag display field the operator chose. Falls
+        # back to the boundary-key composition when there are zero
+        # visible reviewee.tag_* display fields, so the line is
+        # never blank when a boundary tag value exists.
+        tag_values: list[str] = []
+        for cell in members[0].get("display_cells", []) or []:
+            field = cell.get("field")
+            if field is None:
+                continue
+            source_type = getattr(field, "source_type", "")
+            source_field = getattr(field, "source_field", "") or ""
+            if source_type != "reviewee" or not source_field.startswith("tag_"):
+                continue
+            value = (cell.get("value") or "").strip()
+            if value:
+                tag_values.append(value)
+        if tag_values:
+            tag_line = ", ".join(tag_values)
+        else:
+            tag_line = ", ".join(v for v in group_key if v)
         representative["display_cells"] = []
         representative["sort_values"] = {}
         representative["group_identity"] = {
