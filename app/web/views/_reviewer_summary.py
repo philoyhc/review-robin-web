@@ -245,21 +245,58 @@ def build_reviewer_summary_context(
     def _identity_for_group(
         instrument_id: int, group_key: tuple[str, ...]
     ) -> SummaryGroupIdentity:
-        """Compose a group-row's identity block — boundary tag
-        values joined by ", " above the member-name list,
-        capped at GROUP_MEMBER_NAME_LIMIT with a ``+N more``
-        suffix. ``show_members`` honours the operator's
-        Include toggle on the RevieweeName display field
-        (matches the surface)."""
-        member_names = sorted(
-            assignment.reviewee.name
+        """Compose a group-row's identity block — reviewee-tag
+        values joined by ", " above the member-name list, capped
+        at GROUP_MEMBER_NAME_LIMIT with a ``+N more`` suffix.
+
+        ``tag_line`` mirrors the reviewer surface's
+        ``_collapse_group_rows`` composition: walk every visible
+        ``reviewee.tag_*`` display field on the instrument (NOT
+        just the boundary tags) and pick the representative
+        member's value for each, joined comma-separated in
+        display-field order. Falls back to the boundary-key
+        composition when no ``reviewee.tag_*`` display field is
+        visible — keeps the cell from going blank when the
+        operator picked a non-tag boundary or hid every tag.
+        ``show_members`` honours the operator's Include toggle
+        on the RevieweeName display field (same source as the
+        surface)."""
+        group_members = [
+            assignment
             for assignment in assignments
             if assignment.instrument_id == instrument_id
             and group_key_by_assignment.get(assignment.id) == group_key
-        )
+        ]
+        member_names = sorted(a.reviewee.name for a in group_members)
         shown = member_names[:GROUP_MEMBER_NAME_LIMIT]
         extra = len(member_names) - len(shown)
-        tag_line = ", ".join(v for v in group_key if v)
+
+        # Walk every visible reviewee.tag_* display field on the
+        # instrument and pull the representative member's value
+        # for each. The reviewer surface does the same so the
+        # two tables agree on the identity composition.
+        tag_values: list[str] = []
+        representative = (
+            min(group_members, key=lambda a: a.id) if group_members else None
+        )
+        if representative is not None:
+            for df in display_fields_by_instrument.get(instrument_id, []):
+                if (
+                    df.source_type != "reviewee"
+                    or not (df.source_field or "").startswith("tag_")
+                ):
+                    continue
+                value = instruments_service.display_field_value(
+                    df, representative, pair_context_lookup=pair_context
+                )
+                value = (value or "").strip()
+                if value:
+                    tag_values.append(value)
+        if tag_values:
+            tag_line = ", ".join(tag_values)
+        else:
+            tag_line = ", ".join(v for v in group_key if v)
+
         name_visible = any(
             df.source_type == "reviewee"
             and df.source_field == "name"
