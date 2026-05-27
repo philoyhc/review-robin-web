@@ -681,7 +681,16 @@ def session_status_for_reviewer(
     :func:`session_accepts_responses` directly, so a past
     deadline reads as ``closed`` even on instruments whose
     ``accepting_responses=True`` flag hasn't been flipped yet.
+
+    The post-Close-session ``expired`` state reports as
+    ``"closed"`` (not ``"not opened"``) so the reviewer
+    dashboard keeps the link to the session live — without that,
+    reviewers couldn't reach ``/summary`` (or the per-instrument
+    surface with ``responses_visible_when_closed=True``) after
+    the operator closed the session.
     """
+    if is_expired(review_session):
+        return "closed"
     if not is_ready(review_session):
         return "not opened"
     assignment_rows = db.execute(
