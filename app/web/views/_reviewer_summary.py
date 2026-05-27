@@ -39,6 +39,11 @@ class SummaryFieldCol:
 
     field_key: str
     label: str
+    # Operator-set pixel width from
+    # ``Instrument.column_widths["rf_<id>"]``. ``None`` when the
+    # operator hasn't drag-resized this column on the Band 2
+    # editor; the template then lets it auto-distribute.
+    width_px: int | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +76,16 @@ class SummarySection:
     position: int
     field_cols: list[SummaryFieldCol]
     rows: list[SummaryRow]
+    # Identity column ("Reviewee") width, from
+    # ``Instrument.column_widths["identity"]``. ``None`` when the
+    # operator hasn't drag-resized it.
+    identity_width_px: int | None = None
+    # ``True`` iff the operator drag-resized at least one column
+    # on this instrument (identity or any response field). When
+    # ``True`` the template renders a ``<colgroup>`` + sets
+    # ``table-layout: fixed`` on the table so the explicit
+    # widths take effect.
+    has_custom_widths: bool = False
 
 
 @dataclass(frozen=True)
@@ -204,10 +219,29 @@ def build_reviewer_summary_context(
         fields = sorted(
             instrument.response_fields, key=lambda f: (f.order, f.id)
         )
+        # Operator-set per-column pixel widths from the Band 2
+        # editor live on ``instrument.column_widths``. Keys:
+        # ``"identity"`` for the Reviewee / Group column,
+        # ``"rf_<id>"`` for each response-field column. (The
+        # ``"df_<id>"`` keys also live in the dict but display
+        # fields don't appear on the summary table, so we
+        # ignore them.) Mirrors the reviewer-surface render
+        # path in ``routes_reviewer/_surface.py``.
+        widths_by_col_key: dict[str, int] = dict(
+            instrument.column_widths or {}
+        )
+        identity_width_px = widths_by_col_key.get("identity")
         field_cols = [
-            SummaryFieldCol(field_key=f.field_key, label=f.label)
+            SummaryFieldCol(
+                field_key=f.field_key,
+                label=f.label,
+                width_px=widths_by_col_key.get(f"rf_{f.id}"),
+            )
             for f in fields
         ]
+        has_custom_widths = identity_width_px is not None or any(
+            col.width_px is not None for col in field_cols
+        )
         # Stable display order: reviewee name (or composed group
         # identity), then natural insertion order as a tiebreak.
         ordered_keys = sorted(
@@ -233,6 +267,8 @@ def build_reviewer_summary_context(
                 position=position,
                 field_cols=field_cols,
                 rows=section_rows,
+                identity_width_px=identity_width_px,
+                has_custom_widths=has_custom_widths,
             )
         )
 

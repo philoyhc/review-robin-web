@@ -52,7 +52,22 @@
         {% endif %}
       </h2>
       {% if section.field_cols and section.rows %}
-        <table>
+        {# Mirror the reviewer-surface column-width contract: when
+           the operator has drag-resized any column on the
+           Instruments-page Band 2 editor, render a <colgroup>
+           with explicit <col> widths and pin the table to
+           ``table-layout: fixed`` so the widths actually take
+           effect. Columns without an explicit width
+           auto-distribute the remaining horizontal space. #}
+        <table{% if section.has_custom_widths %} style="table-layout: fixed;"{% endif %}>
+          {% if section.has_custom_widths %}
+            <colgroup>
+              <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
+              {% for col in section.field_cols %}
+                <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+              {% endfor %}
+            </colgroup>
+          {% endif %}
           <tr>
             <th>Reviewee</th>
             {% for col in section.field_cols %}
