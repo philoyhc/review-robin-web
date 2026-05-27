@@ -327,6 +327,37 @@ def test_parse_band1_form_picks_up_touched_flags() -> None:
     assert parsed["touched_links"] == {"link1"}
 
 
+def test_parse_band1_form_pads_missing_field_when_tag_options_empty() -> None:
+    """Browsers omit empty <select>s from form submissions. When a
+    link's tag_options is empty (no tags configured for that side),
+    the ``{link}_field`` select renders with zero options and isn't
+    posted, while the sibling op / operand_value / operand_tag
+    hidden inputs still submit one entry each. The parser pads
+    ``fields`` so the arrays realign; the service's blank-field
+    guard then treats it as a no-op rule.
+    """
+    from starlette.datastructures import FormData
+
+    form = FormData(
+        [
+            ("link1_mode", "all"),
+            ("link2_mode", "all"),
+            # No link1_field — empty select didn't submit.
+            ("link1_op", "IS"),
+            ("link1_operand_value", ""),
+            ("link1_operand_tag", ""),
+            # link2 fully populated (sanity).
+            ("link2_op", "IS"),
+            ("link2_operand_value", ""),
+            ("link2_operand_tag", ""),
+        ]
+    )
+    parsed = instruments_service.parse_band1_form(form)
+    assert len(parsed["link1_rules"]) == 1
+    assert parsed["link1_rules"][0]["field"] == ""
+    assert parsed["link1_rules"][0]["op"] == "IS"
+
+
 def test_parse_link3_form_returns_touched_bit() -> None:
     from starlette.datastructures import FormData
 

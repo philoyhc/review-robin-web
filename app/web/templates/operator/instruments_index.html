@@ -4452,10 +4452,17 @@
           if (resp.ok) {
             // Persist any other open-state we care about, then
             // reload so the page-break cards + per-card +Page break
-            // button disabled-states reflect the new order. The
-            // restore IIFE below brings the open-state back.
+            // button disabled-states reflect the new order. Strip
+            // the URL hash before navigating — earlier per-card
+            // actions (e.g. +Instrument or Save) leave a
+            // `#instrument-N` anchor on the URL, and the
+            // openHashTarget IIFE would auto-open that card after
+            // reload even when the operator's drag should have
+            // preserved an all-collapsed layout. The restore IIFE
+            // below brings the captured open-state back.
             captureOpenStateForReload();
-            window.location.reload();
+            window.location.href =
+              window.location.pathname + window.location.search;
             return;
           }
           return resp.json().then(function (data) {
