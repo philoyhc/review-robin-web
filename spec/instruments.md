@@ -116,20 +116,75 @@ One-line status row, left-aligned:
 
 > *N instruments — M accepting responses · K showing when closed.*
 
-Right-aligned bulk-action toggle:
+Right-aligned bulk-action toggle stack (Segment 18M PR 0
+added the Expand/Collapse pair above the existing
+visibility row):
 
+- **Expand all instruments / Collapse all instruments**:
+  flip every per-instrument `<details>` open or closed.
+  No state persistence across refresh — operators get a
+  fresh all-collapsed default on each page load.
 - **Open / close all** (when `session.is_ready`): bulk-flip
   `accepting_responses` on every instrument. Lifecycle-aware —
   greyed out before activation.
 - **Show / hide all when closed**: bulk-flip
   `responses_visible_when_closed`. Available in any lifecycle
-  state.
+  state. The per-card mirror retired in Segment 18M
+  follow-up; this is the sole surface for the
+  visibility-when-closed toggle.
 
 Historic context: the Status + bulk-actions card was once a
 two-card row (one card per facet); the bulk toggle was small
 enough to absorb into Status without losing affordance, so the
 right-hand "Visibility-when-closed" card retired (Segment 13C
 harmonisation).
+
+## Instrument data model
+
+Beyond the standard rows (id / session_id / name /
+short_label / description / order /
+accepting_responses / responses_visible_when_closed)
+Segment 18M added a single boolean for the
+operator-controlled page-break layout:
+
+- **`starts_new_page: Boolean NOT NULL`** (Alembic
+  revision `e5c1a3b9d472`). `true` means "this instrument
+  starts a new page on the reviewer surface" — i.e. a
+  page break sits between this instrument and the one
+  before it. **Meaningful only for instruments at position
+  ≥ 2;** the value on the position-1 instrument is
+  ignored at render time.
+
+  The migration backfilled `true` on every existing
+  instrument so today's one-per-page reviewer behaviour
+  was preserved on rollout (locked decision 3 in
+  `guide/segment_18M_instrument_layout.md`); the DB-level
+  `server_default` was then flipped to `false` so new
+  instruments default to "continue current page". The
+  Mapped column declares `default=False` so ORM creates
+  match.
+
+  Mutated only by the three service helpers in
+  `app.services.instruments`:
+  - `reorder_instruments(db, *, review_session,
+    items: list[int | None], actor)` — items is a mixed
+    visual list (`None` = page break). Validates the
+    three reorder invariants (no leading / no trailing
+    / no double-stack) + id membership, re-derives flags
+    from list position, persists order + flags + emits
+    one combined `instruments.reordered` audit event.
+  - `create_page_break_after(db, *, instrument, actor)`
+    — flips the flag on the successor; rejects trailing
+    / double-stack. Emits `instrument.page_break_set`.
+  - `clear_page_break(db, *, instrument, actor)` —
+    flips the flag back to false on an instrument that
+    currently carries it. Emits
+    `instrument.page_break_cleared`.
+
+  All three call `session_lifecycle.invalidate_if_validated`
+  at entry. Routes that call them apply
+  `_require_instrument_editable` so the operations 409
+  once the session is `is_ready`.
 
 ## Per-instrument card
 
@@ -162,29 +217,156 @@ doesn't carry them.
 
 ### Identity
 
-The heading row is the only thing rendered in both view and
-edit modes (the rest dims to `opacity: 0.75` and is marked
-`inert` when not editing).
+The whole per-instrument card is wrapped in a native
+`<details class="instrument-card-collapsible">` (Segment
+18M PR 0). The `<summary>` is the only thing rendered when
+collapsed; expanding reveals the Band 1 / Band 2 / Band 3
+stripes below it. Default state on first render of the
+page is **all collapsed**; cards auto-open when
+`is_editing` or `was_saved` is true so an active edit or a
+fresh save never lands hidden. After a drag-and-drop
+reorder the sessionStorage-based restore overrides the
+auto-open so each card preserves its pre-drag collapse
+state exactly.
 
-- **Title.** `"Instrument #{loop.index}"`. The numeric index is
-  the on-page position, not the database id; it shifts when the
-  operator replicates or deletes.
-- **Pills.**
-  - `accepting responses` / `not accepting responses`
-    (mirror of `instrument.accepting_responses`).
-  - `showing when closed` / `not showing when closed`
-    (mirror of `instrument.responses_visible_when_closed`).
-- **Per-instrument flip forms** (only render in lifecycle states
-  where they're meaningful — `is_ready` for the open/close form;
-  any state for the visibility form):
+The `<summary>` carries, in document order:
+
+- **Drag handle.** A small grip-dot icon
+  (`<span class="instrument-card-drag-handle"
+  draggable="true">⋮⋮</span>`) on the left edge. `cursor:
+  grab` on hover, `grabbing` while held. Click on the
+  handle is `preventDefault`-ed in capture phase so it
+  doesn't co-fire the parent `<summary>`'s native toggle.
+- **Title.** `"Instrument #{instrument.id}"` — the
+  numeric is the **database id**, stable across reorders /
+  replicates / deletes (Segment 18M follow-up replaced the
+  earlier `loop.index` numbering once cards became
+  drag-reorderable). Operators identify instruments by
+  their `short_label` in practice; the id sticker is a
+  fallback handle.
+- **Short label.** When `instrument.short_label` is set,
+  it renders inline after the title in a slightly muted
+  weight so the operator can read it without expanding
+  the card.
+- **Status pills:**
+  - **Set up / Not set up** — mirrors the workflow
+    card's `instruments_service.is_configured(db,
+    instrument)` predicate. `pill-info` for set up;
+    `pill-warning` for not set up. Computed in
+    `views.build_instruments_context` as
+    `is_configured_by_instrument[instrument.id]`.
+  - **Locked / Unlocked** — mirrors `is_editing`. The
+    "Unlock" button enters edit mode (pill says
+    "Unlocked", `pill-warning`); "Lock" exits (pill
+    says "Locked", `pill-info`). Makes a card's edit
+    mode visible at a glance without expanding it.
+- **Toggle chevron.** A large `▾` icon on the right edge
+  that rotates 180° via the `details[open] summary
+  .instrument-card-toggle-icon` CSS selector — no JS for
+  the per-card toggle.
+
+The previous two-pill row (`accepting responses` /
+`not accepting responses` + `showing when closed` /
+`not showing when closed`) retired in the Segment 18M
+follow-up: both states are already discoverable at the
+session level via the Status + bulk-actions card, so the
+per-card mirror is redundant.
+
+Beneath the `<summary>` (only visible when the card is
+expanded):
+
+- **Per-instrument flip forms** (only render in lifecycle
+  states where they're meaningful — `is_ready` for the
+  open/close form):
   - **Open this Instrument** / **Close this instrument**
     (`POST /sessions/{sid}/instruments/{iid}/open|close`).
-  - **Show when closed** / **Don't show when closed**
-    (`POST /sessions/{sid}/instruments/{iid}/visibility`).
 
-`short_label` and `description` are **not** rendered here — they
-moved into Band 2's intro card (the inline ✎/✓ pair, separate
-POST to `/identity`) so the heading row stays compact.
+The per-card **Show when closed** /
+**Don't show when closed** flip form retired in the
+Segment 18M follow-up — visibility-when-closed is now an
+exclusively session-level toggle via the bulk
+"Show / hide all when closed" button in the Status +
+bulk-actions card. The route
+`POST /sessions/{sid}/instruments/{iid}/visibility` lives
+on for fixture / programmatic use.
+
+`short_label` and `description` are **not** rendered in
+the Identity heading — they moved into Band 2's intro
+card (the inline ✎/✓ pair, separate POST to `/identity`)
+so the heading row stays compact. The intro card's
+title prefix reads `#{N}:` where N is the on-page
+position (Segment 18M follow-up dropped the leading
+"Page " word; the reviewer surface keeps `Page #N:` so
+the operator's preview matches what the reviewer sees).
+
+#### Card background colour
+
+Each instrument card's background pulls from a 6-colour
+pastel palette keyed by `(instrument.id - 1) % 6`. The
+palette is in `instruments_index.html` (`instrument_palette`
+list). The colour rides with the instrument across
+reorders / replicates / deletes — pre-Segment 18M the
+palette was keyed off `loop.index0` and the colours
+shuffled on every reorder, which proved confusing once
+drag-to-reorder landed.
+
+#### Page break card
+
+A page break renders as a thin horizontal divider with the
+words `Page break` centred and a small `×` delete button
+on the right (`class="page-break-card"` in
+`instruments_index.html`). The `×` POSTs to
+`/instruments/{iid}/page-break/delete` via `fetch` (not a
+form submit) so the delete removes the divider in place
+without reloading the page — preserving every other
+card's collapse state. The previous instrument's
+`+ Page break` button is re-enabled in place when the
+break is cleared.
+
+A break sits between adjacent instrument cards in
+document order; the loop renders the divider just before
+the per-instrument card whose `starts_new_page=true`.
+Locked decisions (see `guide/segment_18M_instrument_layout.md`):
+
+- Page breaks are **non-movable** — create + delete only.
+  Dragging an instrument across a break naturally
+  relocates which two instruments the break sits between
+  (the break is a list item in the operator's mental
+  model, and flags are re-derived from the new list
+  order server-side).
+- Three reorder invariants:
+  - **(a)** No leading page break (no `null` at the start
+    of the items list).
+  - **(b)** No trailing page break (no `null` at the end).
+  - **(c)** No double-stacked breaks (no two consecutive
+    `null` entries).
+  Any reorder that would violate any of (a)-(c) is
+  rejected with a 409 + inline toast.
+
+#### Per-instrument action-row buttons
+
+The bottom action row hosts (in order):
+Save (edit only) | Cancel (edit only) | Replicate |
+Delete | **+Instrument** | **+Page break** | Lock /
+Unlock. The new buttons:
+
+- **+Instrument** — creates a new instrument
+  immediately after this one (existing button; sole
+  add-affordance since Wave 5 retired the legacy add
+  buttons).
+- **+Page break** — sets `starts_new_page=true` on the
+  successor. Disabled (with explanatory tooltip) when:
+  - This is the last instrument (would create a
+    trailing break — invariant (b)).
+  - The successor already carries the flag (would
+    double-stack — invariant (c)).
+  - The session is past the editable lifecycle.
+
+`POST /sessions/{sid}/instruments/{iid}/page-break/create`
+maps the service's `ValueError`s to 409; the
+`+Instrument` form to `/instruments/add-new-model`
+includes the current instrument's id as `after` so the
+new instrument lands immediately below.
 
 ### Band 1 — Assignment rule + Unit of review
 

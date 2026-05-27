@@ -1,21 +1,15 @@
 # Segment 18M — Operator-side instrument ordering + page breaks
 
-> **Status: PRs 0 + 1 shipped (2026-05-27); PR 2 in
-> flight.** Decisions 1–9 locked. PR 0 shipped the
-> collapsible-card chrome (native `<details>` /
-> `<summary>`, all-collapsed default, bulk Expand/Collapse,
-> drag-handle placeholder, short-label on summary). PR 1
-> shipped the data-model + service-layer half: Alembic
-> migration `e5c1a3b9d472` adds `Instrument.starts_new_page`
-> (backfill TRUE on existing rows, default FALSE for new
-> rows); service helpers `reorder_instruments` /
-> `create_page_break_after` / `clear_page_break` enforce
-> the three reorder invariants and emit three new audit
-> event types (`instruments.reordered`,
-> `instrument.page_break_set`, `instrument.page_break_cleared`).
-> PR 2 (operator UI — drag-and-drop reorder + page-break
-> cards + per-card +Instrument / +Page break buttons) is
-> the current focus.
+> **Status: PRs 0 + 1 + 2 shipped (2026-05-27); PR 3
+> remaining and blocked on 18L starting.** Decisions 1–9
+> locked. The operator-side surface — collapsible
+> instrument cards, drag-and-drop reorder, page-break
+> cards, +Page break / +Instrument per-card buttons, full
+> collapse-state preservation on reorder + reload — is
+> live on the Setup → Instruments page. PR 3 (operator
+> preview honours the break flag) deferred until 18L's
+> single-page reviewer surface lands, since the preview
+> reuses the reviewer-side render.
 >
 > **Predecessors.** Segment 13D / Wave 5 collapsed the
 > instrument card model into a single new-model card; Segment
@@ -457,38 +451,72 @@ _(none — all locked below; see decisions 2–9.)_
    18-case integration tests at
    `tests/integration/test_instrument_reorder_and_breaks.py`.
    Shipped in PR #1505.
-2. **PR 2 — operator UI: reorder + page-break cards.**
-   Drag-and-drop on the per-instrument `<summary>`
-   handle (the slot PR 0 reserved inside `<summary>`),
-   mirroring `reorder_display_fields` JS shape. Renders
-   page break cards between instruments. Wires per-card
-   `+ Instrument` / `+ Page break` buttons (with their
-   disabled states from decision 4) and the inline `×`
-   on each break card.
-3. **PR 3 — wire the collapse machinery + reviewer
-   preview.** Wraps each instrument card in
-   `<details>` / `<summary>` (the markup PR 0 placeholder
-   buttons live in) so the all-collapsed default kicks
-   in; activates the bulk Expand / Collapse buttons via
-   the inline JS from decision 1. Operator preview at
-   `app/web/routes_reviewer/_preview.py` honours the
-   break flag (decision 6) so the operator sees the
-   reviewer layout.
+2. **PR 2 — operator UI (shipped 2026-05-27).** Split
+   into two slices for reviewability.
 
-Sizes TBD for PRs 1-3; aim for ~200–300 LOC per PR. PR 0
-shipped at ~50 LOC (template-only placeholders, no
-behaviour). PR 1 is the largest of the four (migration +
-three service helpers + invariant tests).
+   **PR 2a** (#1507) — static half. Per-instrument
+   `+ Page break` button in the action row (disabled on
+   the last instrument + when the successor already
+   carries a break + when past the editable lifecycle);
+   page-break card rendered between adjacent instruments
+   when the successor has `starts_new_page=true` (thin
+   horizontal divider with "Page break" centred + inline
+   `×` delete button); two new routes
+   `/instruments/{iid}/page-break/create` and
+   `/instruments/{iid}/page-break/delete` mapping
+   ValueErrors to 409. 11-case test coverage at
+   `tests/integration/test_instrument_page_break_routes.py`.
+
+   **AJAX `×` delete** (#1508) — switched the page-break
+   delete from a form POST to a `fetch` POST so the
+   reload didn't collapse every other card. Re-enables
+   the previous instrument's `+ Page break` button in
+   place when the break is cleared.
+
+   **PR 2b** (#1509) — drag half. Vanilla HTML5
+   drag-and-drop on the per-instrument
+   `.instrument-card-drag-handle`; JSON endpoint
+   `POST /instruments/order` taking
+   `{"items": [int | null, ...]}` (null = page break)
+   and returning `{ok, order, breaks_at}`; live DOM
+   re-order on dragover; snap-back + inline toast on
+   server-side 4xx; sessionStorage-based open-state
+   preservation across the reload-on-success path.
+   15-case test coverage at
+   `tests/integration/test_instruments_reorder_route.py`.
+
+   **Follow-up fixes** (#1510 / #1511 / #1512): drop the
+   oversized drag image (was visually covering cards
+   below); preventDefault dragover on the dragging card
+   itself so drop fires when released on it; strip URL
+   hash before reload-on-success so a leftover
+   `#instrument-N` anchor doesn't auto-open card #1; pad
+   missing `link*_field` form values so bulk Save
+   doesn't 400 on sessions with no tags configured.
+
+   **Out-of-plan polish** (#1499 – #1515): card colour
+   keyed by `instrument.id` (stable across reorders);
+   title `Instrument #{instrument.id}` instead of
+   `#{position}`; description heading `#{N}:` instead
+   of `Page #{N}:`; retire two old status pills
+   (accepting / showing-when-closed) and the per-card
+   visibility toggle; new `Set up` / `Not set up` and
+   `Locked` / `Unlocked` pills on the summary; full
+   collapse-state preservation on reorder reload
+   (overrides the server-side auto-open for editing /
+   just-saved cards).
+
+3. **PR 3 — operator preview honours the break flag
+   (blocked).** Wait for 18L's single-page reviewer
+   surface to land; both the reviewer surface and the
+   operator preview consume the same render path. When
+   18L's surface walks instruments in order and emits
+   `<hr>` separators between pages, the preview will
+   inherit the same behaviour without additional code —
+   only test coverage will need to land here.
 
 ### Sequencing notes
 
-- **PR 1 can land independently of PR 2 and PR 3.** The
-  reviewer surface for 18L can read `starts_new_page`
-  from PR 1 even without operator UI, using test
-  fixtures or programmatic flag setting. Don't block
-  18L on 18M PR 2.
-- **PR 2 depends on PR 1.** No reorder UI without the
-  service helpers + audit emitter.
-- **PR 3 depends on PR 0 (already shipped) and PR 2.**
-  The placeholder buttons need wiring + the operator
-  preview needs the break-flag column to read from.
+- **PR 1 landed independently of PR 2.** ✓
+- **PR 2 depended on PR 1.** ✓
+- **PR 3 depends on 18L's surface, not on 18M PR 2.**
