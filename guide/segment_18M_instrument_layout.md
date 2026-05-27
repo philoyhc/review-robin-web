@@ -96,6 +96,36 @@ boundary keeps each PR set focused.
   primitive is the only schema change in 18M's scope; the
   exact column shape is in "Open decisions" below.
 
+## Locked decisions
+
+1. **Collapsible instrument cards on the Setup →
+   Instruments page** (locked 2026-05-27). Drag-and-drop
+   reordering is much more usable when every card can be
+   shrunk to a header-only handle:
+   - **Mechanism: native `<details>` / `<summary>`.** No
+     JS, no localStorage, no DB column. Free keyboard +
+     screen-reader behaviour. Card chrome (border, padding,
+     spacing) comes from CSS in `base.html`; the
+     `<summary>` carries the instrument title + the drag
+     handle + the page-break toggle (decision 3 below).
+     The full per-instrument editor card body lives inside
+     the `<details>` and collapses on `<summary>` click.
+   - **Default state: all collapsed.** Encourages a
+     reorder-first / edit-second workflow and keeps the
+     page from being a vertical wall when an operator has
+     5+ instruments. Single-instrument sessions still feel
+     fine — one click to open.
+   - **Bulk controls: "Expand all" / "Collapse all" in the
+     page header.** ~5 lines of inline JS that iterates the
+     `<details>` elements and toggles `open`; per-card
+     toggle stays pure HTML. No state persistence across
+     refresh — a refresh restores the all-collapsed
+     default.
+   - **Drag interaction.** A collapsed card drags by its
+     header (smaller target = less scroll-while-dragging
+     pain). The drag handle lives in the `<summary>` so
+     it's grabbable in both collapsed and expanded states.
+
 ## Open decisions
 
 Lock these in the next decision round before the
@@ -142,30 +172,32 @@ implementation plan is written:
    live sessions shouldn't change layout under the
    operator's feet on deploy.
 
-3. **Setup UI affordances.** How does the operator (a) set
-   / clear the break flag, and (b) reorder instruments?
-   Three approaches that can be picked independently:
-   - **Per-instrument toggle in the card header.**
-     A small "Starts new page" / "Continues page N" pill
-     or checkbox near the instrument title. Click-to-flip.
-   - **Two add buttons at the list footer.**
-     "+ Instrument" (default, continues current page) and
-     "+ Instrument on new page". Doesn't help adjust
-     existing instruments — needs (a) too.
-   - **Drag-and-drop reordering** mirroring the display-
-     field pattern (`reorder_display_fields`). Card grabs
-     a handle, drops between any two siblings, JSON POST
-     persists the new order. The break flag is independent
-     and rides on each card.
-   - **Up/down buttons or position input** as a low-JS
-     fallback.
+3. **Setup UI affordances.** Locked decision 1 fixes the
+   chrome (collapsible `<details>` cards, all-collapsed
+   default, bulk Expand/Collapse). Still to lock inside
+   that chrome:
+   - **Reorder mechanism.** Drag-and-drop on the
+     `<summary>` handle (mirrors the display-field
+     pattern) vs. up/down buttons as a low-JS fallback
+     vs. both.
+   - **Page-break flag UI.** Per-card toggle in the
+     `<summary>` (visible even when the card is
+     collapsed, so the operator can see page structure at
+     a glance) vs. inside the `<details>` body (cleaner
+     summary, but invisible until expanded).
+   - **Add-instrument flow.** Single "+ Instrument" at
+     the list footer (defaults to continues-current-page,
+     operator flips the break on the freshly created
+     card) vs. two buttons ("+ Instrument" /
+     "+ Instrument on new page") for one-click intent
+     capture.
 
-   Recommendation: drag-and-drop for reorder (consistent
-   with display fields), per-instrument card toggle for
-   the break flag, and **no** separate
-   "+ Instrument on new page" button (the toggle on the
-   freshly created card is enough; one fewer button to
-   explain). Open to override.
+   Recommendation: drag-and-drop (consistent with display
+   fields), break toggle in the `<summary>` so page
+   structure is legible without expanding cards, and a
+   single "+ Instrument" button (the toggle on the new
+   card is one extra click and avoids two-button
+   explanation). Open to override.
 
 4. **Page break UI on the reviewer-side preview.** The
    operator preview at
