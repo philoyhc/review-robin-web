@@ -44,13 +44,7 @@
 
   {% for section in summary.sections %}
     <section class="card" style="margin-top: var(--space-4);">
-      <h2 style="margin-top: 0;">
-        {% if section.instrument_short_label %}
-          {{ section.instrument_short_label }} — {{ section.instrument_name }}
-        {% else %}
-          {{ section.instrument_name }}
-        {% endif %}
-      </h2>
+      <h2 style="margin-top: 0;">{{ section.heading_title }}</h2>
       {% if section.field_cols and section.rows %}
         {# Mirror the reviewer-surface table shape: same column
            order (Reviewee / Group → display fields → response
