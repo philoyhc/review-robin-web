@@ -1,8 +1,11 @@
 # Segment 18K — Completing instrument visibility (Band 3) on the reviewer surface
 
-> **Status: drafting (stub created 2026-05-27).** No PRs yet. The
-> scope below is a working sketch — confirm policy choices with the
-> human author before landing PR 1.
+> **Status: in flight.** Stub created 2026-05-27; Parts 1+2
+> shipped same day (PR #1487). Part 3 policy choices confirmed
+> 2026-05-27 — Parts 4–6 below cover the operator-side confirm
+> guard, the reviewer-surface banner, and the replicate test
+> respectively. Part 5 ("show hidden fields on summary") retired
+> by policy — hidden = gone, internally preserved for audit.
 >
 > **Predecessors.** Segment 17B Phase 2 shipped the reviewer
 > summary page; Segment 18J Wave 6 cluster B re-aligned the
@@ -93,24 +96,29 @@ toggled and which surfaces filter on it.
 
 Today the model permits an operator to toggle a Band 2 chip off
 mid-session **even if responses already exist**. The reviewer
-loses the column; the values stay in the DB. Open questions:
+loses the column; the values stay in the DB.
 
-1. Should the operator UX warn before un-pinning a chip whose
-   field already has saved responses, the way the Band 3
-   `data_type` / bounds locks do for `rf.has_responses`?
-2. Should the reviewer surface render a banner ("This instrument
-   was changed by the operator — N of your answers are no longer
-   collected") when the reviewer next loads the form after a
-   visible-flag flip?
-3. What does the operator's "Replicate this instrument" do with
-   hidden RFs — clone them as hidden? (Today: `_instrument_crud.py`
-   replicate path copies `visible` as-is. Likely fine but worth a
-   one-line confirmation.)
+**Decisions (confirmed 2026-05-27).** All three open questions
+land **yes**:
 
-Default recommendation pending discussion: **(1) yes —
-confirm-style guard on un-pinning a chip with responses; (2)
-no banner — the values are preserved and the operator owns the
-change; (3) confirm current replicate semantics with a test.**
+1. **Yes — confirm-style guard on un-pinning a Band 2 response
+   chip whose field has saved responses.** Mirrors the existing
+   Band 3 `data_type` / bounds locks for `rf.has_responses`. The
+   confirm() message names the field and how many responses are
+   currently visible to reviewers, so the operator can't silently
+   strand answered fields.
+2. **Yes — reviewer surface banner on next load after a
+   visible-flag flip.** When a reviewer's saved response on
+   `field` is no longer collected (because the operator hid the
+   field), the next reviewer-side GET surfaces a one-line banner
+   listing the dropped field(s). No action required — informational
+   only. (The reviewer's previously saved answer is preserved
+   internally for audit per Part 5 below; the banner just makes
+   the disappearance visible.)
+3. **Yes — Replicate copies `visible` as-is.** Current behaviour
+   in `_instrument_crud.py` already does this; the segment lands a
+   test pinning it. A cloned card inherits its source's per-field
+   visibility unchanged.
 
 ### Part 4 — Reviewer summary cross-instrument coverage
 
@@ -133,12 +141,20 @@ view:
 Each scenario lands a parametrised test in
 `tests/integration/test_reviewer_summary_visibility.py` (new file).
 
-### Part 5 (optional, pilot-feedback contingent) — UI affordance for "show hidden fields" on summary
+### Part 5 — Hidden = gone, internally preserved for audit
 
-Out of scope for the initial cut. If pilot operators flag the
-silent drop as confusing, a Band 2 "Show hidden response columns"
-toggle on the summary page (operator preview only — reviewers
-never see hidden columns) would be a follow-up.
+**Decision (confirmed 2026-05-27).** No follow-on "show hidden
+fields on summary" affordance. The reviewer-facing contract is
+that **a hidden field is gone**: it disappears from every
+reviewer-facing render (form, summary HTML, reviewer-record
+CSV) and the reviewer has no way to surface it. The underlying
+`Response` rows stay in the DB so the operator-side audit /
+bundle export retains the full history — that's the "internally
+preserved for audit" half.
+
+This pins the operator's mental model: un-pinning a chip is
+**not** a "soft hide" the reviewer might still discover; it's a
+hard drop from the reviewer's view, with the audit trail intact.
 
 ## Out of scope
 
@@ -172,25 +188,30 @@ never see hidden columns) would be a follow-up.
 
 ## Sequencing
 
-Suggested PR sequence, each a small reviewable slice:
+PR sequence, each a small reviewable slice. **PRs 1–3 shipped
+2026-05-27** (commits / PR list captured in the per-Part
+status lines above).
 
-1. **PR 1** — Summary HTML filters response fields by `visible`.
-   New integration test file covering the basic visible /
-   hidden / round-trip cases. (Part 1 HTML half + Part 4 first
-   three scenarios.)
-2. **PR 2** — Reviewer-record CSV filters response fields by
-   `visible`. Mirrors the HTML test cases against the CSV
-   serializer. (Part 1 CSV half + Part 4 remaining scenarios.)
-3. **PR 3** — `spec/instruments.md` Band 3 column-table fix +
-   cross-references. Pure doc. (Part 2.)
-4. **PR 4** — Operator-side confirm guard on un-pinning a Band 2
-   response chip that has saved responses. (Part 3 item 1.)
-5. **PR 5** — Replicate-semantics test. (Part 3 item 3.) Likely
-   a no-op behaviour change — the test pins current behaviour.
-
-Parts 3.2 ("banner on the reviewer surface") and 5 ("show
-hidden fields on summary") stay out of the initial cut; carve
-to `deferred_until_pilot_feedback.md` if they're not chosen.
+1. **PR 1 — shipped (#1487).** Summary HTML + reviewer-record CSV
+   filter response fields by `visible`; new integration test
+   file (`tests/integration/test_reviewer_summary_visibility.py`)
+   pins visible / hidden / round-trip across both surfaces.
+   (Part 1 + Part 4 first three scenarios.)
+2. **PR 2 — shipped (folded into #1487).** CSV branch landed
+   in the same PR as the HTML branch — the diff stayed small
+   enough that splitting would have been busywork.
+3. **PR 3 — shipped (#1487).** `spec/instruments.md` Band 3
+   section rewrite + the new "Per-field visibility lives on the
+   Band 2 pill" cross-reference subsection. (Part 2.)
+4. **PR 4 — pending.** Operator-side confirm guard on un-pinning
+   a Band 2 response chip that has saved responses. (Part 3
+   item 1.)
+5. **PR 5 — pending.** Reviewer-surface banner naming the
+   dropped field(s) on the next load after a visible-flag flip.
+   (Part 3 item 2.)
+6. **PR 6 — pending.** Replicate-semantics test pinning
+   `_instrument_crud.py` clone-with-`visible`-as-is behaviour.
+   (Part 3 item 3.)
 
 ## Cross-refs
 
