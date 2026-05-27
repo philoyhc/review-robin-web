@@ -118,6 +118,60 @@
     body.ui-v2 details.instrument-card-collapsible[open] > summary.instrument-card-summary .instrument-card-toggle-icon {
       transform: rotate(180deg);
     }
+    /* Segment 18M PR 2a — page-break card. Thin horizontal line
+       with the words 'Page break' floating in the middle and a
+       small × on the right (delete inline). Sits between
+       instrument cards in the loop. */
+    body.ui-v2 .page-break-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 16px 0;
+      padding: 0 16px;
+    }
+    body.ui-v2 .page-break-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: var(--border-muted, #cbd5e1);
+      z-index: 0;
+    }
+    body.ui-v2 .page-break-card > * {
+      position: relative;
+      z-index: 1;
+      background: var(--bg, #f8fafc);
+      padding: 4px 8px;
+    }
+    body.ui-v2 .page-break-card-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary, #6b7280);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    body.ui-v2 .page-break-card-delete {
+      cursor: pointer;
+      border: 1px solid var(--border-muted, #cbd5e1);
+      border-radius: 4px;
+      background: var(--bg, #f8fafc);
+      color: var(--text-secondary, #6b7280);
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 2px 8px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    body.ui-v2 .page-break-card-delete:hover:not(:disabled) {
+      color: var(--text-primary, #111827);
+      border-color: var(--text-secondary, #6b7280);
+    }
+    body.ui-v2 .page-break-card-delete:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
   </style>
 {% endblock %}
 
@@ -242,7 +296,7 @@
      in the URL); locked = view mode. Save sits beside Lock/Unlock so
      they share a visual group (mirrors Quick Setup's Submit + Lock /
      Unlock footer). #}
-  {% macro instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) %}
+  {% macro instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title, page_break_disabled=False, page_break_title="") %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         {# Wave 4 — bottom action row order:
@@ -306,6 +360,19 @@
           <input type="hidden" name="after" value="{{ instrument.id }}">
           <button class="btn primary-outline" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+Instrument</button>
+        </form>
+        {# Segment 18M PR 2a — +Page break. Adds a page break
+           immediately after this instrument (sets
+           starts_new_page=true on the successor). Disabled when:
+           this is the last instrument (no successor; trailing
+           break); the successor already carries a break (double-
+           stack); or the session is past the editable window. #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/page-break/create"
+              style="display: inline; margin: 0;">
+          <button class="btn primary-outline" type="submit"
+                  data-instrument-page-break-add="{{ instrument.id }}"
+                  {% if add_delete_disabled or page_break_disabled %}disabled title="{{ page_break_title or add_delete_disabled_title }}"{% endif %}>+Page break</button>
         </form>
         {# Save / Lock semantics — Wave 4 takeover. Save persists the
            pending batch (Band 1 form fields + Band 3 row tick/X);
@@ -615,6 +682,29 @@
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
     {% set sorted_display_fields = instrument.display_fields | sort(attribute='order') %}
+
+    {# Segment 18M PR 2a — page-break card. Renders BEFORE the
+       instrument card when this instrument has starts_new_page=
+       true. Skipped on the first instrument (position-1 flag is
+       meaningless / ignored at render time). The × button POSTs
+       to /page-break/delete with this instrument's id (the one
+       that carries the flag). #}
+    {% if not loop.first and instrument.starts_new_page %}
+      <div class="page-break-card" data-page-break-before="{{ instrument.id }}">
+        <span class="page-break-card-label">Page break</span>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/page-break/delete"
+              style="display: inline; margin: 0;">
+          <button type="submit"
+                  class="page-break-card-delete"
+                  data-instrument-page-break-delete="{{ instrument.id }}"
+                  aria-label="Remove page break"
+                  {% if is_ready or is_some_instrument_editing %}disabled
+                    title="{% if is_ready %}Revert to draft to remove page breaks.{% else %}Save or cancel the open instrument edit first.{% endif %}"
+                  {% endif %}>&times;</button>
+        </form>
+      </div>
+    {% endif %}
 
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
@@ -4120,9 +4210,28 @@
       {% set is_only_instrument = (instruments | length == 1) %}
       {% set delete_disabled = add_delete_disabled or is_only_instrument %}
       {% set delete_title = "Cannot delete the only instrument on this session." if is_only_instrument else add_delete_disabled_title %}
+      {# Segment 18M PR 2a — +Page break disabled-state computation.
+         Disable when this is the last instrument (would create a
+         trailing break — invariant (b)) or when the successor
+         already carries the flag (would double-stack — invariant
+         (c)). Both states map to invariants enforced server-side
+         by `create_page_break_after`. #}
+      {% set is_last_instrument = loop.last %}
+      {% set successor = instruments[loop.index] if not loop.last else None %}
+      {% set successor_has_break = successor.starts_new_page if successor else False %}
+      {% if is_last_instrument %}
+        {% set page_break_disabled = True %}
+        {% set page_break_title = "Add an instrument first — page breaks cannot trail the last instrument." %}
+      {% elif successor_has_break %}
+        {% set page_break_disabled = True %}
+        {% set page_break_title = "A page break already exists after this instrument." %}
+      {% else %}
+        {% set page_break_disabled = False %}
+        {% set page_break_title = "" %}
+      {% endif %}
       <form id="instrument-delete-{{ instrument.id }}" method="post"
             action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"></form>
-      {{ instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title) }}
+      {{ instrument_action_row(session, instrument, is_editing, is_ready, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title, page_break_disabled, page_break_title) }}
       <p style="text-align: right; margin: -12px 0 20px 0;">
         <label style="font-weight: normal;">
           <input type="checkbox" name="confirm" value="true" required
