@@ -52,31 +52,72 @@
         {% endif %}
       </h2>
       {% if section.field_cols and section.rows %}
-        {# Mirror the reviewer-surface column-width contract: when
-           the operator has drag-resized any column on the
-           Instruments-page Band 2 editor, render a <colgroup>
-           with explicit <col> widths and pin the table to
-           ``table-layout: fixed`` so the widths actually take
-           effect. Columns without an explicit width
-           auto-distribute the remaining horizontal space. #}
-        <table{% if section.has_custom_widths %} style="table-layout: fixed;"{% endif %}>
+        {# Mirror the reviewer-surface table shape: same column
+           order (Reviewee / Group → display fields → response
+           fields), same identity-cell composition (Name + email
+           for per-reviewee, tag-line + member-list for group),
+           same column-width contract (``<colgroup>`` + explicit
+           ``<col>`` widths from ``Instrument.column_widths``
+           when any are set; pinned to ``table-layout: fixed``
+           so the widths actually take effect). The summary
+           table omits all editable inputs — values render as
+           plain text. #}
+        <table class="{% if section.is_group %}rs-group-table{% endif %}"{% if section.has_custom_widths and not section.is_group %} style="table-layout: fixed;"{% endif %}>
           {% if section.has_custom_widths %}
             <colgroup>
               <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
+              {% for col in section.display_field_cols %}
+                <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+              {% endfor %}
               {% for col in section.field_cols %}
                 <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
               {% endfor %}
             </colgroup>
           {% endif %}
-          <tr>
-            <th>Reviewee</th>
-            {% for col in section.field_cols %}
-              <th>{{ col.label }}</th>
-            {% endfor %}
-          </tr>
+          <thead>
+            <tr>
+              {% if section.is_group %}
+                <th scope="col" class="rs-group">Group</th>
+              {% else %}
+                <th scope="col" class="rs-reviewee">Reviewee</th>
+              {% endif %}
+              {% for col in section.display_field_cols %}
+                <th scope="col"{% if col.is_profile_link %} class="rs-narrow"{% endif %}>{{ col.label }}</th>
+              {% endfor %}
+              {% for col in section.field_cols %}
+                <th scope="col">{{ col.label }}{% if col.required %} *{% endif %}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
           {% for row in section.rows %}
             <tr>
-              <td>{{ row.reviewee_name }}</td>
+              {% if section.is_group %}
+                <td class="rs-group">
+                  {% if row.group_identity.tag_line %}
+                    <strong>{{ row.group_identity.tag_line }}</strong>
+                  {% endif %}
+                  {% if row.group_identity.show_members and row.group_identity.member_names %}
+                    {% if row.group_identity.tag_line %}<br>{% endif %}
+                    <span class="muted">{{ row.group_identity.member_names | join(", ") }}{% if row.group_identity.extra_count %}, +{{ row.group_identity.extra_count }} more{% endif %}</span>
+                  {% elif not row.group_identity.tag_line %}
+                    <span class="muted">{{ row.group_identity.fallback_label }}</span>
+                  {% endif %}
+                </td>
+              {% else %}
+                <td class="rs-reviewee">
+                  <strong>{{ row.reviewee_name }}</strong>{% if row.reviewee_email %}<br><code>{{ row.reviewee_email }}</code>{% endif %}
+                </td>
+              {% endif %}
+              {% for cell in row.display_cells %}
+                <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
+                  {% if cell.is_profile_link %}
+                    {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
+                  {% else %}
+                    {{ cell.value or "" }}
+                  {% endif %}
+                </td>
+              {% endfor %}
               {% for value in row.values %}
                 <td>
                   {% if value %}
@@ -88,6 +129,7 @@
               {% endfor %}
             </tr>
           {% endfor %}
+          </tbody>
         </table>
       {% else %}
         <p class="muted">No responses on this instrument.</p>

@@ -1,5 +1,6 @@
 """Reviewer summary page — column widths inherited from the
-operator's Band 2 column-resize state.
+operator's Band 2 column-resize state, and the per-reviewee
+identity rendering matching the surface (Name + email).
 
 The summary table is read-only but its column widths should
 match what the operator dragged on the Instruments page (the
@@ -273,3 +274,96 @@ def test_summary_table_partial_widths_only_styles_set_columns(
     assert colgroup_start != -1 and colgroup_end != -1
     colgroup_html = body[colgroup_start : colgroup_end + len("</colgroup>")]
     assert colgroup_html.count('style="width:') == 1
+
+
+def test_summary_per_reviewee_identity_carries_name_and_email(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Per-reviewee identity cell mirrors the surface:
+    ``<strong>Name</strong><br><code>email</code>``."""
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="sum-identity", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/summary"
+    ).text
+    assert "<strong>Carol</strong>" in body
+    assert "<code>carol@example.edu</code>" in body
+    # Required field marker — ``rating`` is required, so the
+    # header reads "Rating *".
+    assert "Rating *" in body
+
+
+def test_summary_includes_visible_display_field_columns(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """If the operator marked a reviewee tag display field
+    visible (alongside Carol's tag value), it renders as a
+    column on the summary table — same column order as the
+    response surface."""
+    from app.db.models import (
+        Instrument,
+        InstrumentDisplayField,
+        Reviewee,
+    )
+
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="sum-disp", reviewer_email=rae.email
+    )
+    carol = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id
+        )
+    ).scalar_one()
+    carol.tag_1 = "Team Alpha"
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id
+        )
+    ).scalar_one()
+    tag1_df = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .where(InstrumentDisplayField.source_type == "reviewee")
+        .where(InstrumentDisplayField.source_field == "tag_1")
+    ).scalar_one_or_none()
+    if tag1_df is None:
+        # Synthesise the row with the friendly label populated;
+        # ``ensure_locked_display_fields`` only auto-creates the
+        # Name + Email identity rows.
+        tag1_df = InstrumentDisplayField(
+            instrument_id=instrument.id,
+            source_type="reviewee",
+            source_field="tag_1",
+            label="Tag 1",
+            order=99,
+            visible=True,
+        )
+        db.add(tag1_df)
+    else:
+        tag1_df.visible = True
+    db.commit()
+
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/summary"
+    ).text
+    # The display column header AND Carol's tag value land
+    # on the summary, same as the surface would render.
+    assert "Tag 1" in body
+    assert "Team Alpha" in body
