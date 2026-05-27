@@ -140,8 +140,13 @@ class SummarySection:
     section heading matches the reviewer's surface navigation.
     """
 
-    instrument_name: str
-    instrument_short_label: str | None
+    # Heading shown on the section card. Mirrors the form's
+    # heading composition (``views._instruments.instrument_heading``):
+    # multi-instrument sessions get ``"Page #{N}: {short}"`` (or
+    # bare ``"Page #{N}"`` when ``short_label`` is unset);
+    # single-instrument sessions get just the short label, falling
+    # back to ``instrument.name`` when no short label exists.
+    heading_title: str
     position: int
     is_group: bool
     display_field_cols: list[SummaryDisplayCol]
@@ -396,10 +401,26 @@ def build_reviewer_summary_context(
             last_submitted_at = response.submitted_at
 
     sections: list[SummarySection] = []
+    total_instrument_count = len(instruments)
     for position, instrument in enumerate(instruments, start=1):
         if instrument.id not in row_order:
             continue
         is_group = instrument.group_kind is not None
+        # Mirror the response form's heading composition
+        # (``views._instruments.instrument_heading``): the
+        # multi-instrument case carries the ``Page #{N}`` prefix
+        # so the reviewer reads the same heading on the summary
+        # they read on the form. Single-instrument sessions drop
+        # the prefix; bare ``instrument.name`` is the fallback
+        # when no short label is set so the summary card always
+        # has *some* heading to render.
+        short_label = (instrument.short_label or "").strip()
+        if total_instrument_count == 1:
+            heading_title = short_label or instrument.name
+        elif short_label:
+            heading_title = f"Page #{position}: {short_label}"
+        else:
+            heading_title = f"Page #{position}"
         # Filter response fields by ``visible`` so the summary
         # table mirrors the reviewer surface form
         # (``routes_reviewer/_surface.py`` filters the same way).
@@ -528,8 +549,7 @@ def build_reviewer_summary_context(
             )
         sections.append(
             SummarySection(
-                instrument_name=instrument.name,
-                instrument_short_label=instrument.short_label,
+                heading_title=heading_title,
                 position=position,
                 is_group=is_group,
                 display_field_cols=display_field_cols,
