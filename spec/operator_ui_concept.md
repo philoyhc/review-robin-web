@@ -249,6 +249,32 @@ A consolidated page for everything per-instrument: session-wide status + bulk to
 
 **Detailed spec: `spec/instruments.md`.** That doc holds the locked surface definition post-Segment-10D rebuild (single bulk-save form, `?editing={iid}` URL state machine, mutual-exclusion edit lock, zero-RF save guard, RTD card with cascade-confirm and would-empty guards). Multi-instrument UI shipped — each instrument card carries an `Add instrument` / `Add group instrument` / `Replicate` button row, and the per-instrument Delete (gated by a confirm checkbox) replaced the per-card Danger Zone sub-card. Group-scoped instruments — one reviewer answer covering a group of reviewees — landed in Segment 13C.
 
+**Collapsible cards + drag-to-reorder + page breaks
+(Segment 18M, 2026-05-27).** Each per-instrument card is
+wrapped in a native `<details>` so cards collapse to a
+single-row `<summary>` carrying a left-edge grip-dot drag
+handle, the title `Instrument #{instrument.id}`, the
+optional `short_label`, two status pills (`Set up` /
+`Not set up` + `Locked` / `Unlocked`), and a right-edge
+chevron toggle. Default state on first render is
+all-collapsed; an `Expand all instruments` /
+`Collapse all instruments` pair lives in the Status +
+bulk-actions card. Vanilla HTML5 drag-and-drop on the
+grip-dot persists a new order via JSON POST to
+`/instruments/order`; rejection snaps the card back with
+an inline toast. Reorder reloads preserve every card's
+exact collapse state via `sessionStorage`. A per-card
+`+Page break` button in the action row inserts a page
+break (rendered between adjacent instruments as a thin
+horizontal divider with `Page break` centred + an inline
+`×` delete). The break flag persists on the next
+instrument's `starts_new_page` column. Locked decisions —
+page breaks are create-+-delete only (never dragged); the
+three reorder invariants (no leading / no trailing / no
+double-stack) are enforced server-side and surfaced to
+the operator via the rejection toast. Full surface
+contract in `spec/instruments.md`.
+
 ### `/operator/sessions/{id}/setupinvite` — Email Template
 
 Per-session email-template editor for the Invitation, Reminder, and Responses-received outbound emails. Reached from the Email Template tab in the chrome's Setup row.
