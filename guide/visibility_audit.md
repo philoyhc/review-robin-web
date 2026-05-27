@@ -188,11 +188,16 @@ project policy (`spec/assignments.md` "Self-review policy").
   submission state: `not started` / `in progress` / `submitted` /
   `no assignments`. Independent of session lifecycle.
 - **Session status badge** (`session_status_for_reviewer` in
-  `_dashboard.py:84`) reports the session's accepting-state from
-  the reviewer's perspective: `not opened` (`not is_ready`) /
-  `open` (`is_ready` + ≥1 instrument accepting + before deadline) /
-  `closed` (`is_ready` but everything's shut, by manual close or
-  deadline).
+  `app/services/session_lifecycle.py:668`) reports the session's
+  accepting-state from the reviewer's perspective: `not opened`
+  (`draft` / `validated`) / `open` (`is_ready` + ≥1 instrument
+  accepting + before deadline) / `closed` (`is_expired`, or
+  `is_ready` but everything's shut by manual close / deadline).
+  The dashboard hides the link to a session whose status reads
+  `not opened`; `closed` keeps it live so reviewers can still
+  reach `/summary` (and the per-instrument surface with
+  `responses_visible_when_closed=True`) after the operator
+  closed the session.
 
 A reviewer can be `submitted` against a session that's now
 `closed`, for example — that's the normal end state.
