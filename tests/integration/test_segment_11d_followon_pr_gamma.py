@@ -148,6 +148,7 @@ def rae() -> AuthenticatedUser:
 # ── Action row order ─────────────────────────────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_action_row_orders_save_discard_submit_divider_pages(
     db: Session,
     alice: AuthenticatedUser,
@@ -177,6 +178,7 @@ def test_action_row_orders_save_discard_submit_divider_pages(
     assert -1 < save_idx < discard_idx < submit_idx < divider_idx < page1_idx < page2_idx
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_action_row_renders_mirrored_top_and_bottom(
     db: Session,
     alice: AuthenticatedUser,
@@ -488,6 +490,7 @@ def test_save_drops_cross_page_assignment_inputs(
 # ── Rendering narrows to current position ────────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_surface_renders_all_groups_marks_current_active(
     db: Session,
     alice: AuthenticatedUser,

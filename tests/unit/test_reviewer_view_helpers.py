@@ -37,19 +37,21 @@ def _instrument(*, short_label: str | None, description: str | None) -> Instrume
 
 def test_page_button_label_uses_short_label_when_set() -> None:
     inst = _instrument(short_label="Self-eval", description=None)
-    assert page_button_label(inst, 2) == "Page #2: Self-eval"
+    # Segment 18L dropped the "Page " prefix — the button is now an
+    # in-page anchor TOC, not a pagination control.
+    assert page_button_label(inst, 2) == "#2 Self-eval"
 
 
 def test_page_button_label_falls_back_to_position_only() -> None:
     inst = _instrument(short_label=None, description="long-form copy")
-    assert page_button_label(inst, 1) == "Page #1"
+    assert page_button_label(inst, 1) == "#1"
 
 
 def test_page_button_label_treats_blank_short_label_as_unset() -> None:
     """Whitespace-only ``short_label`` is treated as unset so a stray
-    space doesn't produce ``"Page #1: "`` with a dangling colon."""
+    space doesn't produce ``"#1 "`` with a dangling space."""
     inst = _instrument(short_label="   ", description=None)
-    assert page_button_label(inst, 3) == "Page #3"
+    assert page_button_label(inst, 3) == "#3"
 
 
 # ── instrument_heading — multi-instrument cases ──────────────────────────

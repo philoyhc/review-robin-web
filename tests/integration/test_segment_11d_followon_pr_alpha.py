@@ -88,6 +88,7 @@ def rae() -> AuthenticatedUser:
 # ── Bare URL → /1 redirect ─────────────────────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_bare_session_url_303s_to_position_1(
     db: Session,
     alice: AuthenticatedUser,
@@ -149,6 +150,7 @@ def test_bare_session_url_redirect_lands_on_surface(
 # ── Position route + 404 on out-of-range ───────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_positioned_url_renders_surface(
     db: Session,
     alice: AuthenticatedUser,
@@ -176,6 +178,7 @@ def test_positioned_url_renders_surface(
     )
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_out_of_range_position_returns_404(
     db: Session,
     alice: AuthenticatedUser,

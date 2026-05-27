@@ -176,6 +176,7 @@ def test_preview_iframe_does_not_observe_deadline_side_effect(
         assert ev.detail.get("reason") != "deadline"
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_reviewer_side_surface_still_renders_write_path(
     db: Session,
     alice: AuthenticatedUser,

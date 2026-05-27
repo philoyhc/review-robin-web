@@ -341,7 +341,7 @@ def _surface_context(
     user: User,
     reviewer: Reviewer,
     review_session: ReviewSession,
-    current_position: int,
+    current_position: int | None = None,
     missing: list[responses_service.MissingPosition] | None = None,
     errors: list[responses_service.ValidationError] | None = None,
     bad_values: dict[tuple[int, str], str] | None = None,
@@ -654,7 +654,7 @@ def _surface_context(
                 "is_group": is_group,
                 "heading": heading,
                 "position": position_by_id[instrument_id],
-                "is_current": position_by_id[instrument_id] == current_position,
+                "anchor_id": f"instrument-{instrument.id}",
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
@@ -669,10 +669,12 @@ def _surface_context(
         )
         flat_rows.extend(group_rows)
 
-    # Per-page status pills for the right-half status panel (PR β).
-    # One entry per instrument the reviewer has assignments on, sorted
-    # by URL position so the panel reads top-to-bottom in the same
-    # order the Page buttons land in.
+    # Per-page status pills for the rollup logic — retained as a
+    # build-only list so ``_session_status`` can derive the rollup
+    # pill (Submitted / Saved-not-submitted / Draft) from the
+    # per-instrument state. The template no longer renders the
+    # per-page pill list itself (Segment 18L retired the
+    # `.rs-status-panel` per-page pill loop alongside pagination).
     page_statuses: list[PageStatus] = []
     instrument_groups_by_id = {
         g["instrument"].id: g for g in instrument_groups
@@ -691,9 +693,14 @@ def _surface_context(
             )
         )
 
-    # Page buttons for the unified action row (PR γ). One per instrument
-    # the reviewer has assignments on, sorted by session-wide position;
-    # the button at ``current_position`` renders disabled.
+    # Quick-jump anchor TOC buttons for the unified action row
+    # (Segment 18L). One per instrument the reviewer has assignments
+    # on, sorted by session-wide position. Buttons render as
+    # in-page anchor links pointing at the matching
+    # ``<section id="instrument-{id}">`` block. No
+    # disabled-when-current state — every instrument is always
+    # visible on the single-page surface so every TOC link is
+    # always clickable.
     page_buttons: list[views.PageButton] = []
     for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
         if inst.id not in instrument_groups_by_id:
@@ -703,19 +710,10 @@ def _surface_context(
             views.PageButton(
                 position=position,
                 label=views.page_button_label(inst, position),
-                href=f"/reviewer/sessions/{review_session.id}/{position}",
-                is_current=(position == current_position),
+                href=f"#instrument-{inst.id}",
             )
         )
 
-    # PR δ — render every instrument group the reviewer is assigned
-    # on; CSS hides the non-active ones via
-    # `.rs-paginated > .rs-instrument-group:not(.rs-active)`. The
-    # active group (matching the URL position) carries the
-    # ``rs-active`` modifier, set per ``group["is_current"]``. PR γ
-    # narrowed rendering server-side so cross-page dirty edits were
-    # discarded on Page click; PR δ flips that to client-side toggle
-    # so dirty edits survive navigation.
     instrument_groups.sort(key=lambda g: g["position"])
 
     return {
@@ -736,7 +734,14 @@ def _surface_context(
         "page_statuses": page_statuses,
         "session_status": _session_status(page_statuses),
         "page_buttons": page_buttons,
-        "current_position": current_position,
+        # ``current_position`` is the URL position the surface was
+        # rendered at — meaningful only for legacy positional render
+        # paths (the canonical Segment 18L handler renders all
+        # instruments at the bare URL and passes None). Defaulted to
+        # 1 here so submit / recall / clear forms in the template
+        # have a valid integer to send back; PR 1c drops those form
+        # reads alongside _read_current_position and this key.
+        "current_position": current_position or 1,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
@@ -780,31 +785,21 @@ def _read_current_position(form: object, default: int = 1) -> int:
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
-def review_surface_default_position(session_id: int) -> RedirectResponse:
-    """Bare-URL fallback. 303s to ``/{id}/1`` so existing invitation
-    links and bookmarks keep working. Auth happens on the destination
-    handler — we don't 401 here because the redirect is harmless and
-    skipping the dependency keeps this handler trivial.
-    """
-    return RedirectResponse(
-        url=f"/reviewer/sessions/{session_id}/1",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.get(
-    "/sessions/{session_id}/{instrument_position}",
-    response_class=HTMLResponse,
-)
 def review_surface(
     request: Request,
-    instrument_position: int,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    """Single-page reviewer surface (Segment 18L). Renders every
+    instrument the reviewer has assignments on, in
+    ``Instrument.order, Instrument.id`` order, in a single scroll
+    column with `<hr>` separators between instruments and the
+    action row (Save / Submit | #N TOC anchors) interleaved above
+    every heading + once at the bottom with the danger zone.
+    """
     reviewer, review_session = reviewer_session
     # Pre-open surface (18F Part 2). A reviewer with a roster row
     # (typically via an invitation sent ahead of activation) may
@@ -875,23 +870,53 @@ def review_surface(
                 "deadline_timezone_label": deadline_timezone_label,
             },
         )
-    instrument_count = len(_instruments_for_session(db, review_session.id))
-    if instrument_position < 1 or instrument_position > instrument_count:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     context = _surface_context(
         db=db,
         user=user,
         reviewer=reviewer,
         review_session=review_session,
-        current_position=instrument_position,
         cookies=dict(request.cookies),
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
-    context["current_position"] = instrument_position
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context
     )
+
+
+@router.get(
+    "/sessions/{session_id}/{instrument_position}",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def review_surface_position_shim(
+    session_id: int,
+    instrument_position: int,
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Legacy positional render — Segment 18L pre-pagination URLs.
+    303s to ``/reviewer/sessions/{session_id}#instrument-{id}`` so
+    bookmarks + invitation links that still point at
+    ``/{position}`` survive transparently. The instrument id is
+    looked up from the per-session sorted instrument list; if the
+    position is out of range, we drop the fragment and just 303 to
+    the bare URL (the canonical handler renders all instruments).
+    Auth deliberately happens on the destination handler — this
+    shim is harmless without it.
+    """
+    sorted_instruments = sorted(
+        _instruments_for_session(db, session_id).values(),
+        key=lambda i: (i.order, i.id),
+    )
+    if 1 <= instrument_position <= len(sorted_instruments):
+        target = sorted_instruments[instrument_position - 1]
+        url = (
+            f"/reviewer/sessions/{session_id}"
+            f"#instrument-{target.id}"
+        )
+    else:
+        url = f"/reviewer/sessions/{session_id}"
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post(

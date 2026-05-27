@@ -93,17 +93,20 @@ class InstrumentHeading:
 
 
 def page_button_label(instrument: Instrument, position: int) -> str:
-    """Label for a Page N button on the reviewer surface's action row.
+    """Label for a quick-jump anchor button on the reviewer surface's
+    action row.
 
-    Returns ``"Page #{N}: {short_label}"`` when the operator has set
+    Returns ``"#{N} {short_label}"`` when the operator has set
     ``Instrument.short_label`` (32-char ceiling enforced at the
-    schema layer per Segment 11L); falls back to bare ``"Page #{N}"``
-    otherwise.
+    schema layer per Segment 11L); falls back to bare ``"#{N}"``
+    otherwise. Segment 18L dropped the ``"Page "`` prefix — the
+    button is no longer a pagination control but an in-page
+    anchor TOC, so the verbose word reads as stale.
     """
     short = (instrument.short_label or "").strip()
     if short:
-        return f"Page #{position}: {short}"
-    return f"Page #{position}"
+        return f"#{position} {short}"
+    return f"#{position}"
 
 
 def instrument_heading(
@@ -130,12 +133,12 @@ def instrument_heading(
 
 @dataclass(frozen=True)
 class PageButton:
-    """View-shape for a Page button on the reviewer-surface action row."""
+    """View-shape for a quick-jump anchor button on the reviewer-surface
+    action row (Segment 18L)."""
 
     position: int
     label: str
     href: str
-    is_current: bool
 
 
 def _format_band2_bound(value: float) -> str:

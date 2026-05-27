@@ -1,45 +1,42 @@
-{# Reviewer-surface unified action row (PR γ; PR δ wires JS;
-   PR ε: collapses to just Page N buttons in operator preview).
-   Mirrored top + bottom on the surface. Order, left-to-right:
+{# Reviewer-surface unified action row.
+   Segment 18L reshaped this partial: the per-instrument Page-N
+   buttons were navigation controls (positional URLs + JS-driven
+   .rs-active toggling); they're now plain in-page anchor links
+   pointing at the matching <section id="instrument-{id}"> block
+   on the all-instruments single-page surface.
 
-       Save / Discard / Submit / divider / Page #N: short_label
+   Order, left-to-right:
+
+       Save / Discard / Submit / divider / #N short_label
 
    The vertical `.rs-action-divider` separates the review-level
-   controls (Save / Discard / Submit) from the per-page navigation
-   (Page #N). Page buttons render as `<button type="button">` with a
-   ``data-rs-page`` attribute carrying the position; the inline JS
-   handler in ``review_surface.html`` toggles ``.rs-active`` on the
-   matching ``.rs-instrument-group`` and updates the URL via
-   ``history.pushState``. With JS disabled the page buttons no-op
-   (the URL remains pinned to the page the surface was rendered at);
-   that's an acceptable graceful-degradation cost since the
-   reviewer surface already requires JS-free form behaviour for
-   Save / Submit and the dirty-edit preservation guarantee is JS-
-   only by design.
+   controls (Save / Discard / Submit) from the per-instrument
+   anchor TOC. Discard reloads the same surface URL (any unsaved
+   form edits get dropped on the reload).
 
-   In ``preview_mode`` (operator preview), Save / Discard / Submit /
-   divider are suppressed so the row collapses to just the Page N
-   buttons — preview is read-only and synthetic, so Save / Submit
-   wouldn't write anything meaningful and Discard has nothing to
-   restore.
+   In ``preview_mode`` (operator preview), Save / Discard / Submit
+   / divider are suppressed so the row collapses to just the
+   anchor TOC — preview is read-only and synthetic, so Save /
+   Submit wouldn't write anything meaningful and Discard has
+   nothing to restore.
 
    Required context:
      - session: ReviewSession
-     - current_position: int (URL position the surface was rendered at)
      - page_buttons: list[views.PageButton]
      - preview_mode: bool
      - action_row_position: "top" or "bottom" (default treated as
-       "bottom"). Top instances are left-aligned with a doubled
-       margin above so they read as the lead-in to the form;
-       bottom instances stay right-aligned and follow the tables.
-   The caller renders the partial whenever there are page buttons to
-   show (live + accepting, or any preview with > 0 instruments).
+       "bottom"). Top instances interleave above each instrument
+       heading and are left-aligned; the lone bottom instance
+       stays right-aligned and follows the last instrument's
+       table.
+   The caller renders the partial inside the instrument loop above
+   every heading + once outside the loop at the bottom.
 #}
 <div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
   {% if not preview_mode %}
     <button class="btn" type="submit" data-rs-save>Save</button>
     <a class="btn secondary"
-       href="/reviewer/sessions/{{ session.id }}/{{ current_position }}"
+       href="/reviewer/sessions/{{ session.id }}"
        data-rs-discard>Discard</a>
     <button class="btn"
             type="submit"
@@ -51,9 +48,6 @@
     {% endif %}
   {% endif %}
   {% for page in page_buttons %}
-    <button type="button"
-            class="btn{% if page.is_current %} disabled{% endif %} rs-page-btn"
-            data-rs-page="{{ page.position }}"
-            {% if page.is_current %}aria-disabled="true"{% endif %}>{{ page.label }}</button>
+    <a class="btn rs-page-btn" href="{{ page.href }}">{{ page.label }}</a>
   {% endfor %}
 </div>

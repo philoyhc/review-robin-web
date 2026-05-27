@@ -390,6 +390,7 @@ def test_review_surface_session_description_renders_in_overview_card(
     assert "Please rate each reviewee on the rubric." in body
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_review_surface_single_instrument_has_no_page_buttons(
     db: Session,
     alice: AuthenticatedUser,
@@ -424,6 +425,7 @@ def test_review_surface_single_instrument_has_no_page_buttons(
     assert 'class="rs-paginated"' in body
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
     db: Session,
     alice: AuthenticatedUser,
