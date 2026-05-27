@@ -4366,7 +4366,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     ).text
     flat = " ".join(body.split())
 
-    # Card scaffolding present. Title is "Page #N: <short_label>"
+    # Card scaffolding present. Title is "#N: <short_label>"
     # (instrument position from the surrounding loop — the
     # helper seeds a source instrument first, so the new model is
     # the 2nd instrument). Wave 5 PR 5.3 — every instrument now
@@ -4375,9 +4375,9 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     intro_idx = flat.find(intro_marker)
     assert intro_idx != -1
     intro_block = flat[intro_idx : intro_idx + 4000]
-    assert "Page #2:" in intro_block
+    assert "#2:" in intro_block
     # short_label renders inside the view span (alongside the
-    # Page # prefix); description renders inside the view paragraph.
+    # # prefix); description renders inside the view paragraph.
     assert (
         '<span data-intro-short-label-view style="font-weight: inherit;">Peer Review</span>'
         in intro_block
@@ -4429,9 +4429,9 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
     intro_block = flat[intro_idx : intro_idx + 3000]
-    # Heading still renders (Page #2: Reflection — source seed
+    # Heading still renders (#2: Reflection — source seed
     # instrument is #1).
-    assert "Page #2:" in intro_block
+    assert "#2:" in intro_block
     assert (
         '<span data-intro-short-label-view style="font-weight: inherit;">Reflection</span>'
         in intro_block
@@ -5380,16 +5380,13 @@ def test_lock_unlock_renders_twice_top_and_bottom(
     marker = f'data-instrument-lock-toggle="{new_model.id}"'
     assert flat.count(marker) == 2
 
-    # The top instance sits before the "Show when closed" /
-    # "Don't show when closed" form.
+    # The top instance sits inside the per-instrument card's
+    # collapsible <summary> + heading region. The bottom instance
+    # sits in the instrument_action_row macro at the bottom of the
+    # card. Verify there are two distinct positions for the marker.
     top_idx = flat.find(marker)
-    visibility_idx = flat.find(
-        f'action="/operator/sessions/{review_session.id}'
-        f'/instruments/{new_model.id}/visibility"',
-        top_idx,
-    )
-    assert visibility_idx != -1
-    assert top_idx < visibility_idx
+    bottom_idx = flat.rfind(marker)
+    assert top_idx != bottom_idx
 
     # Both render the same label (Unlock in view mode, Lock in
     # edit mode); both navigate to the same edit-mode URL.

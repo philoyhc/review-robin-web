@@ -784,16 +784,11 @@
                 draggable="true"
                 aria-hidden="true">&#8942;&#8942;</span>
           <h2 style="margin: 2px 0 0 0; font-size: 1.5rem; flex: 1;">
-            Instrument #{{ loop.index }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
-            {% if instrument.accepting_responses %}
-              <span class="pill pill-count">accepting responses</span>
+            Instrument #{{ instrument.id }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
+            {% if is_configured_by_instrument[instrument.id] %}
+              <span class="pill pill-info">Set up</span>
             {% else %}
-              <span class="pill pill-empty">not accepting responses</span>
-            {% endif %}
-            {% if instrument.responses_visible_when_closed %}
-              <span class="pill pill-count">showing when closed</span>
-            {% else %}
-              <span class="pill pill-empty">not showing when closed</span>
+              <span class="pill pill-warning">Not set up</span>
             {% endif %}
           </h2>
           <span class="instrument-card-toggle-icon" aria-hidden="true">&#9662;</span>
@@ -848,20 +843,10 @@
                 <button class="btn secondary" type="submit">Close this instrument</button>
               </form>
             {% endif %}
-            {% if not instrument.responses_visible_when_closed %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                    style="margin: 0;">
-                <input type="hidden" name="visible_when_closed" value="true">
-                <button class="btn secondary" type="submit">Show when closed</button>
-              </form>
-            {% else %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                    style="margin: 0;">
-                <button class="btn secondary" type="submit">Don't show when closed</button>
-              </form>
-            {% endif %}
+            {# Per-card Show / Don't show when closed retired
+               2026-05-27 — operators flip visibility-when-closed
+               only at the session level via the bulk-actions card
+               at the top of the page. #}
         </div>
 
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
@@ -1650,7 +1635,7 @@
                  style="position: relative;">
               <h2 data-intro-short-label-block
                   style="display: flex; align-items: baseline; gap: 8px;">
-                <span>Page #{{ loop.index }}:</span>
+                <span>#{{ loop.index }}:</span>
                 <span data-intro-short-label-view
                       style="font-weight: inherit;">{{ _intro_title }}</span>
                 {# ``min-width: 0`` lets the wrapper shrink within
