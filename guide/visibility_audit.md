@@ -74,11 +74,11 @@ X?" report.
 | URL | Handler | State check | What it renders |
 |---|---|---|---|
 | `GET /reviewer` | `_dashboard.py:133` | None (lists sessions where the reviewer's row is `status="active"`). Computes a pill + a "session status" badge for each row. | Dashboard listing. Per-session pill = `not started` / `in progress` / `submitted`; per-session status = `not opened` (session not `ready`) / `open` (`ready` + ≥1 accepting instrument before deadline) / `closed` (`ready` but deadline passed or all instruments `accepting=False`). Row link: `→ /summary` if `submitted`, else `→ /1`. |
-| `GET /reviewer/sessions/{id}` | `_surface.py:782` | None — bare-URL convenience redirect. | 303 → `/reviewer/sessions/{id}/1`. |
-| `GET /reviewer/sessions/{id}/{position}` | `_surface.py:795` | `lifecycle.is_ready(session) OR lifecycle.is_expired(session)` (line 823). | If neither → `reviewer/pre_open.html` ("opens later" banner + deadline text if set + back link to dashboard). Else → `reviewer/review_surface.html`: editable form when `ready` + instrument accepting + before deadline, otherwise disabled form with per-cell behaviour governed by `accepting` + `responses_visible_when_closed`. `expired` always renders the disabled-form variant since every instrument is `accepting=False` after close. |
-| `POST /reviewer/sessions/{id}/{position}/save` | `_surface.py:870` | `_require_session_accepting(...)` (line 303) — needs `session_accepts_responses(session, instrument)`. | 200 on success; 403 otherwise. |
-| `POST /reviewer/sessions/{id}/submit` | `_surface.py:962` | `_require_session_accepting(...)` per assignment. | 303 to summary on success; 403 otherwise. |
-| `POST /reviewer/sessions/{id}/clear` | `_surface.py:1032` | Same as `/submit`. | 303 to surface on success; 403 otherwise. |
+| `GET /reviewer/sessions/{id}` | `_surface.py` | None — bare-URL convenience redirect. | 303 → `/reviewer/sessions/{id}/1`. |
+| `GET /reviewer/sessions/{id}/{page_n}` | `_surface.py` | `lifecycle.is_ready(session) OR lifecycle.is_expired(session)`. | If neither → `reviewer/pre_open.html` ("opens later" banner + deadline text if set + back link to dashboard). Else → `reviewer/review_surface.html`: editable form when `ready` + every instrument on the page accepting + before deadline, otherwise disabled form with per-cell behaviour governed by `accepting` + `responses_visible_when_closed`. `expired` always renders the disabled-form variant since every instrument is `accepting=False` after close. Out-of-range `{page_n}` → 404. (Segment 18L multi-page replan: `{page_n}` is the operator-defined page number, derived from `Instrument.starts_new_page`.) |
+| `POST /reviewer/sessions/{id}/{page_n}/save` | `_surface.py` | `_require_session_accepting(...)` — needs `session_accepts_responses(session, instrument)` for every instrument the reviewer would write to. | 303 → `/{page_n}` on success; 403 otherwise. Defense-in-depth filter drops upserts whose assignment doesn't belong to the page. |
+| `POST /reviewer/sessions/{id}/submit` | `_surface.py` | `_require_session_accepting(...)` per assignment. | 303 to summary on full session submit, else 303 to bare URL (which 303s to `/1`); 403 otherwise. |
+| `POST /reviewer/sessions/{id}/clear` | `_surface.py` | Same as `/submit`. | 303 to bare URL (which 303s to `/1`) on success; 403 otherwise. |
 | `GET /reviewer/sessions/{id}/summary` | `_summary.py:56` | `pill_state == "submitted"` (every assignment submitted). | If not fully submitted → 303 to `/reviewer`. If fully submitted → `reviewer/summary.html` with per-instrument breakdown of submitted answers. |
 | `GET /reviewer/sessions/{id}/summary.csv` | `_summary.py:109` | Same as the HTML summary (`pill_state == "submitted"`). | CSV download of own submitted responses, or 303 to `/reviewer`. |
 | `POST /reviewer/sessions/{id}/recall` | `_surface.py` (next to `/submit`) | `lifecycle.is_ready(session)` only (no per-instrument-accepting check — recall is about removing the submitted stamp, not writing new values). | 403 outside `ready`. On `ready`: nulls `submitted_at` on every Response row for this reviewer's assignments, audits `responses.recalled`, 303s to `/1` so the reviewer lands on the editable form. Surfaced by the "Recall my submission" button on `summary.html`, which only renders when `can_recall = lifecycle.is_ready(session)`. |
@@ -88,7 +88,7 @@ X?" report.
 
 ## The visibility matrix
 
-Each row is a realistic state combination. Columns marked "n/a" mean the dimension doesn't materially affect the route's behaviour at that lifecycle. "Surface" = `GET /reviewer/sessions/{id}/{position}`.
+Each row is a realistic state combination. Columns marked "n/a" mean the dimension doesn't materially affect the route's behaviour at that lifecycle. "Surface" = `GET /reviewer/sessions/{id}/{page_n}`.
 
 | # | Session lifecycle | Instrument `accepting` | Deadline | Reviewer has assignments | Has saved responses | All submitted | Surface shows | Write paths | `/summary` shows | Dashboard pill / status |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -140,12 +140,13 @@ session stays `ready` (e.g. "instrument 1 is done, instrument 2
 keeps accepting"). The reviewer-surface render handles them
 per-row:
 
-- Each instrument's form is rendered on its own URL (`/{id}/{position}`).
+- Each operator-defined page is rendered on its own URL
+  (`/{id}/{page_n}`); a page can carry one or many instruments.
 - Inputs on a closed instrument render `disabled` regardless of the
   reviewer's submission state.
 - The "no longer accepting responses" banner is set at the top of
   the page when `not any_accepting` across the visible rows
-  (`review_surface.html:47-58`).
+  (`review_surface.html`).
 
 ### The `responses_visible_when_closed` toggle's two modes
 

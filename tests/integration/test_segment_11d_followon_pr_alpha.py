@@ -118,6 +118,7 @@ def test_bare_session_url_303s_to_position_1(
     )
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1c dropped the current_position hidden input; PR 1d test sweep will delete this assertion.")
 def test_bare_session_url_redirect_lands_on_surface(
     db: Session,
     alice: AuthenticatedUser,
@@ -386,6 +387,7 @@ def test_submit_redirect_falls_back_when_current_position_missing(
 # ── Clear redirect honours `current_position` ──────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1c: Clear no longer reads current_position; redirects to bare URL. PR 1d test sweep will replace this assertion.")
 def test_clear_redirect_honours_current_position(
     db: Session,
     alice: AuthenticatedUser,
