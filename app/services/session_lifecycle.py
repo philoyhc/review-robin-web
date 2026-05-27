@@ -688,6 +688,23 @@ def session_status_for_reviewer(
     reviewers couldn't reach ``/summary`` (or the per-instrument
     surface with ``responses_visible_when_closed=True``) after
     the operator closed the session.
+
+    State → return value mapping:
+
+    =================  =================================
+    Lifecycle state    Returns
+    =================  =================================
+    ``draft``          ``"not opened"``
+    ``validated``      ``"not opened"``
+    ``archived``       ``"not opened"`` (by design — archive
+                       retires a session out of reviewer reach;
+                       the dashboard hides its link)
+    ``expired``        ``"closed"``
+    ``ready``          ``"open"`` if any instrument is
+                       accepting + before deadline + the
+                       reviewer has ≥1 active assignment,
+                       else ``"closed"``
+    =================  =================================
     """
     if is_expired(review_session):
         return "closed"
