@@ -247,7 +247,7 @@ def test_canonical_emit_passes_strict(db: Session) -> None:
         summary="ok",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(saved=1, validation_errors=0),
+        payload=audit.counts(assignments_touched=1, responses_saved=1),
         refs={"reviewer_id": 1},
     )
 

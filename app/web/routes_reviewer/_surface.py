@@ -986,6 +986,88 @@ async def reviewer_save(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Segment 18L PR 1a — consolidated save endpoint.
+#
+# Walks every upsert in the form payload (no per-position filter) and
+# persists in one ``responses_service.save_draft`` call. The new
+# canonical save target for the upcoming single-page render in PR 1b.
+# Audit emit registers ``assignments_touched`` + ``responses_saved``
+# in ``detail.counts`` (PR 1a swapped the keys cleanly; the legacy
+# ``saved`` + ``validation_errors`` retire in the same change).
+#
+# Lands inert: the template's <form action> still points at the
+# legacy positional save endpoint. PR 1b flips the form action,
+# drops the legacy POST + the per-position filter, and wires the
+# inline error re-render. Until then this endpoint is only reachable
+# directly (tests, scripted callers).
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/sessions/{session_id}/save",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def reviewer_save_consolidated(
+    request: Request,
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
+        require_reviewer_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save every upsert in the form payload in one round-trip.
+
+    No per-position filter — the form normally carries inputs for
+    every instrument the reviewer has assignments on (PR 1b's
+    single-page render is the natural source). Server-side value
+    validation rejects per-upsert as before; invalid upserts are not
+    persisted, valid ones in the same batch save through. Errors
+    surface as HTTP 400 with a JSON detail in PR 1a; PR 1b wires the
+    inline single-page re-render that highlights the offending cells
+    on top of the saved values.
+
+    Always redirects on success to the bare session URL — which
+    today 303s on to ``/{id}/1`` (positional render) and after PR 1b
+    will be the single-page render directly. Either way the
+    operator-visible behaviour from this endpoint is "go back to the
+    surface".
+    """
+    reviewer, review_session = reviewer_session
+    _require_session_accepting(db, review_session, reviewer)
+    form = await request.form()
+    upserts = responses_service.parse_form_payload(
+        {k: v for k, v in form.items() if isinstance(v, str)}
+    )
+    result = responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        upserts=upserts,
+        correlation_id=request_correlation_id(),
+    )
+    if result.errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errors": [
+                    {
+                        "assignment_id": e.assignment_id,
+                        "field_key": e.field_key,
+                        "value": e.value,
+                    }
+                    for e in result.errors
+                ],
+            },
+        )
+    return RedirectResponse(
+        url=f"/reviewer/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post(
     "/sessions/{session_id}/submit",
     response_class=HTMLResponse,

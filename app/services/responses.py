@@ -885,7 +885,10 @@ def save_draft(
         summary=f"Saved {written} response{'' if written == 1 else 's'} (draft)",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(saved=written, validation_errors=len(errors)),
+        payload=audit.counts(
+            assignments_touched=len({u.assignment_id for u in upserts}),
+            responses_saved=written,
+        ),
         refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
