@@ -1,12 +1,20 @@
 # Segment 18M — Operator-side instrument ordering + page breaks
 
-> **Status: PR 0 shipped (2026-05-27); PR 1 in flight.**
-> Decisions 1–9 locked (see "Locked decisions" below). PR 0
-> shipped the collapsible-card chrome (native `<details>` /
+> **Status: PRs 0 + 1 shipped (2026-05-27); PR 2 in
+> flight.** Decisions 1–9 locked. PR 0 shipped the
+> collapsible-card chrome (native `<details>` /
 > `<summary>`, all-collapsed default, bulk Expand/Collapse,
-> drag-handle placeholder, short-label on the summary) + a
-> smoke-test file pinning the structural contract for
-> downstream PRs. PR 1 (data model + service helpers) is
+> drag-handle placeholder, short-label on summary). PR 1
+> shipped the data-model + service-layer half: Alembic
+> migration `e5c1a3b9d472` adds `Instrument.starts_new_page`
+> (backfill TRUE on existing rows, default FALSE for new
+> rows); service helpers `reorder_instruments` /
+> `create_page_break_after` / `clear_page_break` enforce
+> the three reorder invariants and emit three new audit
+> event types (`instruments.reordered`,
+> `instrument.page_break_set`, `instrument.page_break_cleared`).
+> PR 2 (operator UI — drag-and-drop reorder + page-break
+> cards + per-card +Instrument / +Page break buttons) is
 > the current focus.
 >
 > **Predecessors.** Segment 13D / Wave 5 collapsed the
@@ -421,22 +429,34 @@ _(none — all locked below; see decisions 2–9.)_
    `tests/integration/test_instruments_index_collapsible.py`
    that lock the structural contract).
 
-1. **PR 1 — data model + service helpers.** Alembic
-   migration adding `instruments.starts_new_page: bool
-   default false, not null`, backfilling **true** on every
-   existing instrument (decision 3). Service helpers:
-   - `reorder_instruments(session, item_list)` — accepts
-     the mixed instrument / break list, runs the reorder
-     algorithm (validate three invariants → re-derive
-     flags → persist).
-   - `create_page_break_after(instrument)` — sets
-     `starts_new_page=true` on the successor; rejects if
-     it would create a double-stack or trailing break.
-   - `clear_page_break(instrument)` — flips the flag to
-     false on the instrument that carries it.
-   Each emits its respective audit event from decision 8.
-   Tests at the service layer (no UI yet): invariant
-   coverage, re-derive-on-delete coverage, lifecycle gate.
+1. **PR 1 — data model + service helpers (shipped
+   2026-05-27).** Alembic revision `e5c1a3b9d472` added
+   `instruments.starts_new_page Boolean NOT NULL`,
+   backfilled every existing instrument to TRUE (locked
+   decision 3) then flipped DB-level `server_default` to
+   FALSE so post-migration inserts default to "continue
+   current page". Model carries `default=False`. Service
+   helpers in `app/services/instruments/_instrument_crud.py`:
+   - `reorder_instruments(db, *, review_session, items:
+     list[int | None], actor)` — items is the mixed
+     visual list (None marks page break). Validates the
+     three invariants + id membership, re-derives flags
+     from list position, persists order + flags + emits
+     one combined `instruments.reordered` audit event,
+     short-circuits on no-op.
+   - `create_page_break_after(db, *, instrument, actor)`
+     — flips successor's flag to True; rejects trailing /
+     double-stack. Emits `instrument.page_break_set` with
+     `anchor_instrument_id` ref.
+   - `clear_page_break(db, *, instrument, actor)` —
+     rejects if no break. Emits
+     `instrument.page_break_cleared`.
+
+   All three call `lifecycle.invalidate_if_validated`.
+   Three event types registered in `EVENT_SCHEMAS`.
+   18-case integration tests at
+   `tests/integration/test_instrument_reorder_and_breaks.py`.
+   Shipped in PR #1505.
 2. **PR 2 — operator UI: reorder + page-break cards.**
    Drag-and-drop on the per-instrument `<summary>`
    handle (the slot PR 0 reserved inside `<summary>`),
