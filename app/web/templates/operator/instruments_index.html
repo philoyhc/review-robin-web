@@ -71,6 +71,30 @@
       color: #ffffff;
       opacity: 0.4;
     }
+    /* Segment 18M PR 0 — collapsible instrument cards. The
+       <summary> is the click target; the chevron rotates via
+       the [open] selector with no JS. */
+    body.ui-v2 details.instrument-card-collapsible > summary.instrument-card-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      list-style: none;
+    }
+    body.ui-v2 details.instrument-card-collapsible > summary.instrument-card-summary::-webkit-details-marker {
+      display: none;
+    }
+    body.ui-v2 .instrument-card-toggle-icon {
+      display: inline-block;
+      font-size: 0.85rem;
+      padding: 4px 10px;
+      line-height: 1;
+      color: var(--color-muted, #475569);
+      transition: transform 0.15s ease-out;
+    }
+    body.ui-v2 details.instrument-card-collapsible[open] > summary.instrument-card-summary .instrument-card-toggle-icon {
+      transform: rotate(180deg);
+    }
   </style>
 {% endblock %}
 
@@ -114,12 +138,13 @@
       </p>
     </div>
     <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 8px;">
-      {# Segment 18M PR 0 placeholders — Expand all / Collapse all instruments.
-         No-op buttons today; bulk-toggle JS lands once each per-instrument
-         card is wrapped in <details>. #}
+      {# Segment 18M PR 0 — Expand all / Collapse all instruments
+         operate on every per-instrument <details.instrument-card-
+         collapsible> on the page. Inline script below the loop wires
+         the click handlers. #}
       <div style="display: flex; gap: 8px; margin: 0;">
-        <button class="btn secondary" type="button" data-instruments-expand-all disabled>Expand all instruments</button>
-        <button class="btn secondary" type="button" data-instruments-collapse-all disabled>Collapse all instruments</button>
+        <button class="btn secondary" type="button" data-instruments-expand-all>Expand all instruments</button>
+        <button class="btn secondary" type="button" data-instruments-collapse-all>Collapse all instruments</button>
       </div>
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"
@@ -596,15 +621,17 @@
          just the "Instrument #N" title pill row + the action
          buttons. The bottom-grid wrapper and the right-column
          description card are gone. #}
-      <div class="card instrument-edit"
-           style="border-color: transparent; background: transparent; padding: 0; margin: 0;
-                  box-sizing: border-box;
-                  display: flex; flex-direction: column;">
-        {# Segment 18M PR 0 placeholder — per-card toggle button in the
-           top-right corner of the heading row. No-op today; collapse
-           wiring (wrap the card body in <details>, chevron rotation
-           via the [open] selector) lands in the follow-up slice. #}
-        <div style="display: flex; align-items: center; gap: 8px;">
+      {# Segment 18M PR 0 — collapsible instrument card. Native
+         <details>/<summary>; the chevron rotates via the
+         details[open] CSS selector (no JS for the per-card toggle).
+         The card is left open when this instrument is being edited
+         or has just been saved so the operator doesn't have to
+         re-expand the card they're acting on. #}
+      <details class="instrument-card-collapsible"{% if is_editing or was_saved %} open{% endif %}
+               style="border-color: transparent; background: transparent; padding: 0; margin: 0;
+                      box-sizing: border-box;
+                      display: flex; flex-direction: column;">
+        <summary class="instrument-card-summary">
           <h2 style="margin-top: 0; font-size: 1.5rem; flex: 1;">
             Instrument #{{ loop.index }}
             {% if instrument.accepting_responses %}
@@ -618,13 +645,8 @@
               <span class="pill pill-empty">not showing when closed</span>
             {% endif %}
           </h2>
-          <button type="button"
-                  class="btn secondary"
-                  data-instrument-toggle
-                  aria-label="Toggle instrument card"
-                  style="font-size: 0.85rem; padding: 4px 10px; line-height: 1;"
-                  disabled>&#9662;</button>
-        </div>
+          <span class="instrument-card-toggle-icon" aria-hidden="true">&#9662;</span>
+        </summary>
         {# Wave 4 — Edit / Save / Cancel retired from this header
            row; Save + Lock / Unlock now live in the bottom action
            row only (see ``instrument_action_row`` macro). #}
@@ -690,7 +712,6 @@
               </form>
             {% endif %}
         </div>
-      </div>
 
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
       {# Band 1 — Links 1 + 2 + 3 (Assignment rule + Unit of
@@ -4079,9 +4100,40 @@
           Yes, delete <strong>Instrument #{{ loop.index }}</strong> and its associated assignments and reviewer responses.
         </label>
       </p>
+      </details>
     </div>
   {% endfor %}
 
+
+  <script>
+    // Segment 18M PR 0 — wire the bulk Expand all / Collapse all
+    // buttons in the Status + bulk-actions card, plus auto-open
+    // the per-card <details> targeted by a #instrument-{id} hash
+    // so deep-links don't land on a collapsed card.
+    (function () {
+      const cards = function () {
+        return document.querySelectorAll('details.instrument-card-collapsible');
+      };
+      document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-instruments-expand-all]')) {
+          cards().forEach(function (d) { d.open = true; });
+        } else if (e.target.closest('[data-instruments-collapse-all]')) {
+          cards().forEach(function (d) { d.open = false; });
+        }
+      });
+      function openHashTarget() {
+        if (!window.location.hash || !window.location.hash.startsWith('#instrument-')) {
+          return;
+        }
+        const target = document.querySelector(window.location.hash);
+        if (!target) { return; }
+        const details = target.querySelector('details.instrument-card-collapsible');
+        if (details) { details.open = true; }
+      }
+      openHashTarget();
+      window.addEventListener('hashchange', openHashTarget);
+    })();
+  </script>
 
   <script>
     // Segment 13B PR 2 — tri-state Sort column on the
