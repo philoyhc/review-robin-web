@@ -204,6 +204,31 @@ def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrume
     return {i.id: i for i in rows}
 
 
+def _pages_for_session(db: Session, session_id: int) -> list[list[Instrument]]:
+    """Walk the session's instruments in ``Instrument.order, Instrument.id``
+    order and group them into operator-defined pages via the
+    ``starts_new_page`` flag (Segment 18M). Each returned sublist is
+    one page's instruments in order. The position-1 instrument's
+    flag is ignored at render time (locked spec) so even if it
+    carries ``starts_new_page=true`` from a stray operator action,
+    it still anchors page 1.
+    """
+    ordered = sorted(
+        _instruments_for_session(db, session_id).values(),
+        key=lambda i: (i.order, i.id),
+    )
+    pages: list[list[Instrument]] = []
+    current: list[Instrument] = []
+    for idx, inst in enumerate(ordered):
+        if idx > 0 and inst.starts_new_page:
+            pages.append(current)
+            current = []
+        current.append(inst)
+    if current:
+        pages.append(current)
+    return pages
+
+
 # A group row's identity cell lists at most this many member names
 # before collapsing the rest to a "+N more" suffix (Segment 13C).
 GROUP_MEMBER_NAME_LIMIT = 10
@@ -342,6 +367,7 @@ def _surface_context(
     reviewer: Reviewer,
     review_session: ReviewSession,
     current_position: int | None = None,
+    page_n: int = 1,
     missing: list[responses_service.MissingPosition] | None = None,
     errors: list[responses_service.ValidationError] | None = None,
     bad_values: dict[tuple[int, str], str] | None = None,
@@ -694,14 +720,34 @@ def _surface_context(
             )
         )
 
-    # Quick-jump anchor TOC buttons for the unified action row
-    # (Segment 18L). One per instrument the reviewer has assignments
-    # on, sorted by session-wide position. Buttons render as
-    # in-page anchor links pointing at the matching
-    # ``<section id="instrument-{id}">`` block. No
-    # disabled-when-current state — every instrument is always
-    # visible on the single-page surface so every TOC link is
-    # always clickable.
+    # Segment 18L multi-page (post-replan): filter ``instrument_groups``
+    # to only the instruments on the operator-defined page being
+    # rendered. Pages are derived from the per-session
+    # ``starts_new_page`` flag via ``_pages_for_session``. ``page_n``
+    # is the 1-based page index from the URL; out-of-range values
+    # clamp to a single-page render (an empty page would be
+    # confusing but never 404 here — the route 404s if the page is
+    # truly missing).
+    pages = _pages_for_session(db, review_session.id)
+    page_count = len(pages) or 1
+    safe_page_n = page_n if 1 <= page_n <= page_count else 1
+    current_page_instrument_ids = {
+        inst.id for inst in pages[safe_page_n - 1]
+    } if pages else set()
+    instrument_groups = [
+        g for g in instrument_groups
+        if g["instrument"].id in current_page_instrument_ids
+    ]
+    instrument_groups_by_id = {
+        g["instrument"].id: g for g in instrument_groups
+    }
+
+    # Quick-jump anchor TOC buttons for the unified action row.
+    # Segment 18L's multi-page replan scopes these to instruments on
+    # the CURRENT page only — cross-page navigation lives in the
+    # Prev/Next nav row instead. Buttons render as in-page anchor
+    # links pointing at the matching ``<section id="instrument-{id}">``
+    # block within the current page.
     page_buttons: list[views.PageButton] = []
     for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
         if inst.id not in instrument_groups_by_id:
@@ -716,6 +762,15 @@ def _surface_context(
         )
 
     instrument_groups.sort(key=lambda g: g["position"])
+
+    prev_page_url = (
+        f"/reviewer/sessions/{review_session.id}/{safe_page_n - 1}"
+        if safe_page_n > 1 else None
+    )
+    next_page_url = (
+        f"/reviewer/sessions/{review_session.id}/{safe_page_n + 1}"
+        if safe_page_n < page_count else None
+    )
 
     return {
         "user": user,
@@ -735,14 +790,15 @@ def _surface_context(
         "page_statuses": page_statuses,
         "session_status": _session_status(page_statuses),
         "page_buttons": page_buttons,
+        "current_page_n": safe_page_n,
+        "page_count": page_count,
+        "prev_page_url": prev_page_url,
+        "next_page_url": next_page_url,
         # ``current_position`` is the URL position the surface was
-        # rendered at — meaningful only for legacy positional render
-        # paths (the canonical Segment 18L handler renders all
-        # instruments at the bare URL and passes None). Defaulted to
-        # 1 here so submit / recall / clear forms in the template
-        # have a valid integer to send back; PR 1c drops those form
-        # reads alongside _read_current_position and this key.
-        "current_position": current_position or 1,
+        # rendered at — historically per-instrument, post-Segment-18L
+        # replan it carries the page number to keep submit / recall /
+        # clear form payloads valid integers. Defaults to 1.
+        "current_position": current_position or safe_page_n,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
@@ -786,60 +842,48 @@ def _read_current_position(form: object, default: int = 1) -> int:
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
+def review_surface_default_position(session_id: int) -> RedirectResponse:
+    """Bare-URL fallback. 303s to ``/{id}/1`` (page 1) per the
+    Segment 18L multi-page replan. Auth happens on the destination
+    handler; the redirect is harmless without it.
+    """
+    return RedirectResponse(
+        url=f"/reviewer/sessions/{session_id}/1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/{page_n}",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 def review_surface(
     request: Request,
+    page_n: int,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """Single-page reviewer surface (Segment 18L). Renders every
-    instrument the reviewer has assignments on, in
-    ``Instrument.order, Instrument.id`` order, in a single scroll
-    column with `<hr>` separators between instruments and the
-    action row (Save / Submit | #N TOC anchors) interleaved above
-    every heading + once at the bottom with the danger zone.
+    """Multi-page reviewer surface (Segment 18L replan). Renders
+    one operator-defined page at a time. Pages are derived from
+    ``Instrument.starts_new_page`` via
+    ``_pages_for_session``; ``page_n`` is the 1-based page index
+    from the URL.
+
+    A "page" can contain one or many instruments — the operator
+    chose the boundaries on the Setup → Instruments page in
+    Segment 18M. Within a page, instruments stack without a
+    horizontal separator; between pages, the reviewer navigates
+    via the Prev / Next links in the page-nav row.
     """
     reviewer, review_session = reviewer_session
-    # Pre-open surface (18F Part 2). A reviewer with a roster row
-    # (typically via an invitation sent ahead of activation) may
-    # land here before the session is activated for responses;
-    # render a dedicated "review opens later" page instead of
-    # 403-ing or dropping them into the response form.
-    #
-    # Five lifecycle states, two render paths:
-    #
-    #   * ``ready`` — live form, write paths open while
-    #     ``session_accepts_responses`` is true per instrument.
-    #   * ``expired`` (post-Close-session) — same template, but
-    #     every instrument is ``accepting=False`` so inputs render
-    #     disabled. The per-instrument
-    #     ``responses_visible_when_closed`` toggle then governs
-    #     whether the disabled inputs are prefilled with the
-    #     reviewer's saved values, giving operators an explicit
-    #     "let reviewers keep reading their submissions" affordance.
-    #     Write paths still 403 via ``_require_session_accepting``.
-    #   * ``draft`` / ``validated`` — pre-activation; render
-    #     ``pre_open.html``.
-    #   * ``archived`` — by design, the reviewer surface treats
-    #     this like pre-activation. Archive is meant to retire a
-    #     session out of reviewer reach; the dashboard hides the
-    #     link via ``session_status_for_reviewer == "not opened"``,
-    #     and a direct URL hit lands on ``pre_open.html``.
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
     )
     db.refresh(review_session)
-    # ``ready`` is the live response window; ``expired`` is the
-    # post-Close-session state where every instrument is
-    # ``accepting_responses=False`` but the surface still renders
-    # so reviewers with ``responses_visible_when_closed=True``
-    # instruments can read their submissions (and reviewers
-    # whose instruments don't have that flag see the disabled
-    # form with empty inputs + the "no longer accepting
-    # responses" banner). Anything else (``draft`` / ``validated``
-    # / ``archived``) gets ``pre_open.html``.
     if not (
         lifecycle.is_ready(review_session)
         or lifecycle.is_expired(review_session)
@@ -871,11 +915,16 @@ def review_surface(
                 "deadline_timezone_label": deadline_timezone_label,
             },
         )
+    pages = _pages_for_session(db, review_session.id)
+    page_count = len(pages) or 1
+    if page_n < 1 or page_n > page_count:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     context = _surface_context(
         db=db,
         user=user,
         reviewer=reviewer,
         review_session=review_session,
+        page_n=page_n,
         cookies=dict(request.cookies),
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
@@ -885,68 +934,34 @@ def review_surface(
     )
 
 
-@router.get(
-    "/sessions/{session_id}/{instrument_position}",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-def review_surface_position_shim(
-    session_id: int,
-    instrument_position: int,
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Legacy positional render — Segment 18L pre-pagination URLs.
-    303s to ``/reviewer/sessions/{session_id}#instrument-{id}`` so
-    bookmarks + invitation links that still point at
-    ``/{position}`` survive transparently. The instrument id is
-    looked up from the per-session sorted instrument list; if the
-    position is out of range, we drop the fragment and just 303 to
-    the bare URL (the canonical handler renders all instruments).
-    Auth deliberately happens on the destination handler — this
-    shim is harmless without it.
-    """
-    sorted_instruments = sorted(
-        _instruments_for_session(db, session_id).values(),
-        key=lambda i: (i.order, i.id),
-    )
-    if 1 <= instrument_position <= len(sorted_instruments):
-        target = sorted_instruments[instrument_position - 1]
-        url = (
-            f"/reviewer/sessions/{session_id}"
-            f"#instrument-{target.id}"
-        )
-    else:
-        url = f"/reviewer/sessions/{session_id}"
-    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
-
-
 @router.post(
-    "/sessions/{session_id}/{instrument_position}/save",
+    "/sessions/{session_id}/{page_n}/save",
     response_class=HTMLResponse,
     response_model=None,
 )
 async def reviewer_save(
     request: Request,
-    instrument_position: int,
+    page_n: int,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    """Save the form's response inputs for the URL position.
+    """Save the form's response inputs for the given operator-defined
+    page (Segment 18L multi-page replan).
 
-    PR γ wires the per-position filter alongside rendering-narrows-
-    to-one-page (the GET surface renders only the URL position's
-    instrument group, so the form body normally contains only its
-    inputs; the filter is defense-in-depth against malformed POSTs
-    that include cross-page assignment_ids).
+    The form on each page carries only that page's assignment inputs
+    (the GET handler filters ``instrument_groups`` to the current
+    page). A defense-in-depth filter still drops cross-page
+    assignment ids so a stale form posting from a previous render
+    can't accidentally write to other pages.
 
-    Server-side value validation rejects per-upsert (Integer / Decimal
-    range and step). Invalid upserts are *not* persisted; the surface
-    re-renders inline with the typed value still in the box plus the
-    Invalid-values warning card. Valid upserts in the same batch save
-    through.
+    Server-side value validation rejects per-upsert (Integer /
+    Decimal range and step). Invalid upserts are not persisted; the
+    surface re-renders inline with the typed value still in the box
+    plus the Invalid-values warning card. Valid upserts in the same
+    batch save through.
     """
     reviewer, review_session = reviewer_session
     _require_session_accepting(db, review_session, reviewer)
@@ -954,23 +969,16 @@ async def reviewer_save(
     upserts = responses_service.parse_form_payload(
         {k: v for k, v in form.items() if isinstance(v, str)}
     )
-    # Filter upserts to assignments whose instrument matches the URL
-    # position. Inputs from other pages (a malformed POST or stale
-    # form from before the rendering-narrows step) are silently
-    # dropped — Save's scope is "this page only".
-    sorted_instruments = sorted(
-        _instruments_for_session(db, review_session.id).values(),
-        key=lambda i: (i.order, i.id),
-    )
-    if not 1 <= instrument_position <= len(sorted_instruments):
+    pages = _pages_for_session(db, review_session.id)
+    if page_n < 1 or page_n > len(pages):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    target_instrument_id = sorted_instruments[instrument_position - 1].id
+    target_instrument_ids = {inst.id for inst in pages[page_n - 1]}
     target_assignment_ids = {
         a.id
         for a in _load_assignments_with_relations(
             db, session_id=review_session.id, reviewer_id=reviewer.id
         )
-        if a.instrument_id == target_instrument_id
+        if a.instrument_id in target_instrument_ids
     }
     upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
     result = responses_service.save_draft(
@@ -990,7 +998,7 @@ async def reviewer_save(
             user=user,
             reviewer=reviewer,
             review_session=review_session,
-            current_position=instrument_position,
+            page_n=page_n,
             errors=result.errors,
             bad_values=bad_values,
             cookies=dict(request.cookies),
@@ -999,7 +1007,6 @@ async def reviewer_save(
         context["reviewer_review_count"] = reviewer_review_count_for_user(
             db, user
         )
-        context["current_position"] = instrument_position
         return _templates.TemplateResponse(
             request,
             "reviewer/review_surface.html",
@@ -1007,7 +1014,7 @@ async def reviewer_save(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}/{instrument_position}",
+        url=f"/reviewer/sessions/{review_session.id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

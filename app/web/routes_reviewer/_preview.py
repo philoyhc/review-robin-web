@@ -372,6 +372,13 @@ def build_preview_context(
         "page_statuses": [],
         "page_buttons": page_buttons,
         "current_position": 1,
+        # Preview is single-render synthetic; multi-page nav doesn't
+        # apply. Provide the post-Segment-18L-replan keys with values
+        # that make the template's page-nav row a no-op.
+        "current_page_n": 1,
+        "page_count": 1,
+        "prev_page_url": None,
+        "next_page_url": None,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
