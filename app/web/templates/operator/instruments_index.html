@@ -736,7 +736,7 @@
     {% endif %}
 
     <div class="card" id="instrument-{{ instrument.id }}"
-         style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
+         style="background: {{ instrument_palette[(instrument.id - 1) % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
       {# New-model card — concept-test layout for the Instrument
          Builder (guide/instrument_builder.md). Identity at the
