@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -35,6 +35,22 @@ class Instrument(Base, TimestampMixin):
     responses_visible_when_closed: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    starts_new_page: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
+    )
+    """Segment 18M page-break flag. ``true`` = "this instrument
+    starts a new page on the reviewer surface" (i.e. there's a
+    page break between this instrument and the previous one in
+    ``Instrument.order`` sequence). Meaningful only for instruments
+    at position ≥ 2; the value on the first instrument is ignored
+    at render time. Backfilled to ``True`` on existing rows by
+    revision ``e5c1a3b9d472`` so today's one-instrument-per-page
+    reviewer behaviour is preserved on deploy; new instruments
+    created post-migration default to ``False`` (continue current
+    page). Manipulated via
+    ``app.services.instruments.create_page_break_after`` /
+    ``clear_page_break`` / ``reorder_instruments`` (Segment 18M
+    PR 1)."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
