@@ -790,6 +790,11 @@
             {% else %}
               <span class="pill pill-warning">Not set up</span>
             {% endif %}
+            {% if is_editing %}
+              <span class="pill pill-warning">Unlocked</span>
+            {% else %}
+              <span class="pill pill-info">Locked</span>
+            {% endif %}
           </h2>
           <span class="instrument-card-toggle-icon" aria-hidden="true">&#9662;</span>
         </summary>
@@ -4492,35 +4497,44 @@
       // reload submitNewOrder triggers on success. We also fire
       // this on +Page break form submits so creates don't snap
       // every card back to collapsed.
+      //
+      // The capture records BOTH open and closed states (as
+      // {card_id: bool}) so the restore can override the
+      // template's auto-open of editing / just-saved cards.
+      // Drag should preserve exactly the pre-drag collapse state
+      // of every card, whether or not is_editing is true.
       const PENDING_OPEN_KEY = 'rrw_instruments_pending_open';
       function captureOpenStateForReload() {
-        const openIds = Array.from(
-          document.querySelectorAll(
-            'details.instrument-card-collapsible[open]'
-          )
-        ).map(function (d) {
+        const states = {};
+        document.querySelectorAll(
+          'details.instrument-card-collapsible'
+        ).forEach(function (d) {
           const card = d.closest(CONTAINER_SELECTOR);
-          return card ? card.id : null;
-        }).filter(function (v) { return v; });
+          if (card) { states[card.id] = d.open; }
+        });
         try {
           sessionStorage.setItem(
-            PENDING_OPEN_KEY, JSON.stringify(openIds)
+            PENDING_OPEN_KEY, JSON.stringify(states)
           );
         } catch (err) {}
       }
 
-      // Restore on page load if there's a pending capture.
+      // Restore on page load if there's a pending capture. Each
+      // captured card's open state is explicitly applied — open
+      // OR closed — to override the server-side is-editing /
+      // was-saved auto-open conditional on the details tag.
       try {
         const raw = sessionStorage.getItem(PENDING_OPEN_KEY);
         if (raw) {
           sessionStorage.removeItem(PENDING_OPEN_KEY);
-          JSON.parse(raw).forEach(function (id) {
+          const states = JSON.parse(raw);
+          Object.keys(states).forEach(function (id) {
             const card = document.getElementById(id);
             if (!card) { return; }
             const d = card.querySelector(
               'details.instrument-card-collapsible'
             );
-            if (d) { d.open = true; }
+            if (d) { d.open = !!states[id]; }
           });
         }
       } catch (err) {}
