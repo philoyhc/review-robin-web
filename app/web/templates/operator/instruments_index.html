@@ -4363,10 +4363,18 @@
         const target = e.target.closest(
           CONTAINER_SELECTOR + ',' + BREAK_SELECTOR
         );
-        if (!target || target === dragging) { return; }
+        if (!target) { return; }
         if (!originalParent.contains(target)) { return; }
+        // Always preventDefault on a valid sibling target so the
+        // browser fires `drop`. We MUST do this even when the
+        // cursor is over the dragging card itself — after the DOM
+        // moves the dragging card under the cursor on a previous
+        // dragover, releasing the mouse fires drop on the dragging
+        // element. Without preventDefault here, that drop never
+        // fires and the dragend handler snaps the card back.
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
+        if (target === dragging) { return; }
         const rect = target.getBoundingClientRect();
         if (e.clientY < rect.top + rect.height / 2) {
           originalParent.insertBefore(dragging, target);
