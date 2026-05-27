@@ -1027,6 +1027,61 @@ def submit(
 
 
 @dataclass
+class RecallResult:
+    recalled_count: int
+
+
+def recall(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    user: User,
+    correlation_id: str,
+) -> RecallResult:
+    """Roll back a fully-submitted session to draft for one reviewer.
+
+    Nulls ``submitted_at`` on every Response row belonging to the
+    reviewer's assignments in this session — saved values are
+    preserved. Pre-conditions are checked by the route layer
+    (session must be ``ready``); this service trusts the caller.
+
+    Idempotent: zero rows-already-submitted is a no-op that
+    still writes an audit event so the operator can see the
+    intent in the log. Driver of the reviewer summary page's
+    "Recall my submission" button.
+    """
+    assignments = _reviewer_assignments(db, reviewer, review_session.id)
+    recalled_count = 0
+    for assignment in assignments:
+        rows = list(
+            db.execute(
+                select(Response).where(Response.assignment_id == assignment.id)
+            ).scalars()
+        )
+        for row in rows:
+            if row.submitted_at is not None:
+                row.submitted_at = None
+                recalled_count += 1
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="responses.recalled",
+        summary=(
+            f"Recalled {recalled_count} submission"
+            f"{'' if recalled_count == 1 else 's'}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(recalled=recalled_count),
+        refs={"reviewer_id": reviewer.id},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return RecallResult(recalled_count=recalled_count)
+
+
+@dataclass
 class ClearResult:
     deleted_count: int
 

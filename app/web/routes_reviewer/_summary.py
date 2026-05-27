@@ -21,6 +21,7 @@ from starlette import status
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services.date_formatting import format_datetime, gmt_offset_zone_label
 from app.services.extracts import filename, stream_csv
@@ -102,6 +103,11 @@ def reviewer_session_summary(
             "reviewer_review_count": reviewer_review_count_for_user(
                 db, user
             ),
+            # ``Recall my submission`` button is shown only while
+            # the session is ``ready`` — recall would have no live
+            # form to land on once the operator closes the session
+            # (``expired``) or reverts it (``draft``).
+            "can_recall": lifecycle.is_ready(review_session),
         },
     )
 

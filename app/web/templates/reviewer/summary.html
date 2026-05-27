@@ -24,6 +24,21 @@
        href="/reviewer/sessions/{{ session.id }}/summary.csv">
       Download my responses (CSV)
     </a>
+    {# "Recall my submission" — only while the session is still
+       ``ready``. Posts to /recall, which nulls submitted_at on
+       every Response row for this reviewer and 303s to /1 so
+       they land on the editable form. Wrapped in a confirm() so
+       a stray click doesn't silently un-submit. #}
+    {% if can_recall %}
+      <form method="post"
+            action="/reviewer/sessions/{{ session.id }}/recall"
+            style="display: inline; margin: 0;"
+            onsubmit="return confirm('Recall your submission and return to the form to edit? Your typed values are preserved.');">
+        <button class="btn secondary" type="submit">
+          Recall my submission
+        </button>
+      </form>
+    {% endif %}
     <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
   </div>
 

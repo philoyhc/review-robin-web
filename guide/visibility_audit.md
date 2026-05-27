@@ -81,6 +81,7 @@ X?" report.
 | `POST /reviewer/sessions/{id}/clear` | `_surface.py:1032` | Same as `/submit`. | 303 to surface on success; 403 otherwise. |
 | `GET /reviewer/sessions/{id}/summary` | `_summary.py:56` | `pill_state == "submitted"` (every assignment submitted). | If not fully submitted → 303 to `/reviewer`. If fully submitted → `reviewer/summary.html` with per-instrument breakdown of submitted answers. |
 | `GET /reviewer/sessions/{id}/summary.csv` | `_summary.py:109` | Same as the HTML summary (`pill_state == "submitted"`). | CSV download of own submitted responses, or 303 to `/reviewer`. |
+| `POST /reviewer/sessions/{id}/recall` | `_surface.py` (next to `/submit`) | `lifecycle.is_ready(session)` only (no per-instrument-accepting check — recall is about removing the submitted stamp, not writing new values). | 403 outside `ready`. On `ready`: nulls `submitted_at` on every Response row for this reviewer's assignments, audits `responses.recalled`, 303s to `/1` so the reviewer lands on the editable form. Surfaced by the "Recall my submission" button on `summary.html`, which only renders when `can_recall = lifecycle.is_ready(session)`. |
 | `GET /reviewer/invite/{token}` | `_invite.py:26` | None (token lookup + email match). | Stamps `opened_at` on the invitation row; 303 to `/reviewer/sessions/{id}`. State of the destination decides what they actually see. |
 
 ---
