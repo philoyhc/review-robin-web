@@ -396,3 +396,59 @@ def workflow_activate(
         url=_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post("/sessions/{session_id}/workflow/close")
+def workflow_close(
+    return_to: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Close the session — Row 2's "Close session" button.
+
+    Flips ``ready → expired`` and closes every instrument
+    (``accepting_responses=False``). Responses (drafts +
+    submitted) are preserved; reviewers with
+    ``responses_visible_when_closed=True`` instruments can still
+    read what they submitted post-close. The session can be
+    reopened by clicking Revert to draft, which goes through the
+    shared ``/sessions/{id}/revert`` route — that path accepts
+    ``expired`` as a valid starting state alongside ``ready``.
+    """
+    correlation_id = request_correlation_id()
+    if not lifecycle.is_ready(review_session):
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="close",
+                super_step="precondition",
+                super_error="Session must be activated before it can be closed.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    try:
+        lifecycle.expire_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    except lifecycle.LifecycleError as exc:
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="close",
+                super_step="close",
+                super_error=str(exc),
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=_redirect_url(review_session.id, return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )

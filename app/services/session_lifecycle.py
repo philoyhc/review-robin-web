@@ -69,6 +69,14 @@ def is_validated(review_session: ReviewSession) -> bool:
     return review_session.status == SessionStatus.validated.value
 
 
+def is_expired(review_session: ReviewSession) -> bool:
+    return review_session.status == SessionStatus.expired.value
+
+
+def is_archived(review_session: ReviewSession) -> bool:
+    return review_session.status == SessionStatus.archived.value
+
+
 def is_editable(review_session: ReviewSession) -> bool:
     """True when setup-mutating routes are allowed (``draft`` or ``validated``)."""
     return is_draft(review_session) or is_validated(review_session)
@@ -343,6 +351,56 @@ def activate_session(
     return review_session
 
 
+def expire_session(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Flip ``ready → expired`` and close every instrument.
+
+    The operator's "Close session" button on the Workflow card.
+    Responses are preserved (drafts + submitted) so reviewers
+    with ``responses_visible_when_closed=True`` instruments can
+    still read what they submitted. From ``expired`` the
+    operator can Revert to draft (see :func:`revert_session_to_draft`)
+    to reopen the session for editing.
+    """
+    if not is_ready(review_session):
+        raise LifecycleError(
+            f"Session is {review_session.status}, can only expire from ready",
+            code="not_ready",
+        )
+    instruments = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars()
+    )
+    closed_instrument_ids: list[int] = []
+    for instrument in instruments:
+        if instrument.accepting_responses:
+            closed_instrument_ids.append(instrument.id)
+        instrument.accepting_responses = False
+    review_session.status = SessionStatus.expired.value
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="session.expired",
+        summary=f"Session {review_session.code} closed (expired)",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            closed_instruments=len(closed_instrument_ids),
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
 def revert_session_to_draft(
     db: Session,
     *,
@@ -351,10 +409,21 @@ def revert_session_to_draft(
     confirm: bool,
     correlation_id: str | None = None,
 ) -> ReviewSession:
-    """Flip ready→draft, close all instruments, preserve responses."""
-    if not is_ready(review_session):
+    """Flip ready→draft (or expired→draft), close all instruments,
+    preserve responses.
+
+    Accepts both ``ready`` and ``expired`` as the starting state:
+    from ``ready`` it's the live "Revert to draft" action mid-
+    session; from ``expired`` it's the recovery path after the
+    operator closed the session and wants to reopen it for
+    editing. Both transitions preserve every ``Response`` row
+    (drafts + submitted) so the operator's choice of "close
+    session" / "revert" never destroys reviewer work — only
+    Generate's reconcile drop ever does.
+    """
+    if not (is_ready(review_session) or is_expired(review_session)):
         raise LifecycleError(
-            f"Session is {review_session.status}, can only revert from ready",
+            f"Session is {review_session.status}, can only revert from ready or expired",
             code="not_ready",
         )
     if not confirm:
@@ -755,12 +824,15 @@ __all__ = [
     "is_draft",
     "is_ready",
     "is_validated",
+    "is_expired",
+    "is_archived",
     "is_editable",
     "build_readiness_report",
     "mark_validated",
     "invalidate_if_validated",
     "invalidate_session",
     "activate_session",
+    "expire_session",
     "revert_session_to_draft",
     "archive_session",
     "unarchive_session",

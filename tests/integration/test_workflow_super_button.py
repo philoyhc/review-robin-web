@@ -627,3 +627,141 @@ def test_prepare_confirm_param_ignored_when_no_responses_lost(
         f"/assignments?prepare_confirm=responses"
     ).text
     assert 'id="next-action-prepare-confirm-banner"' not in body
+
+
+# --------------------------------------------------------------------------- #
+# Close session (ready → expired) + Revert from expired
+# --------------------------------------------------------------------------- #
+
+
+def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
+    client: TestClient, db: Session
+) -> None:
+    """POST ``/workflow/close`` on a ``ready`` session flips it to
+    ``expired`` and sets ``accepting_responses=False`` on every
+    instrument that was open."""
+    review_session = _seed_pair_plus_pinned(client, db, code="close-ready")
+    _full_activation(client, review_session.id)
+    db.refresh(review_session)
+    assert lifecycle.is_ready(review_session)
+
+    from app.db.models import Instrument
+    open_instrument_ids_pre = [
+        i.id
+        for i in db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+        if i.accepting_responses
+    ]
+    assert open_instrument_ids_pre, "test seed should leave ≥1 open instrument"
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/close",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.refresh(review_session)
+    assert lifecycle.is_expired(review_session)
+
+    for instrument in db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id
+        )
+    ).scalars():
+        assert instrument.accepting_responses is False
+
+    audit_rows = list(
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "session.expired",
+            )
+        ).scalars()
+    )
+    assert len(audit_rows) == 1
+    assert (
+        audit_rows[0].detail["counts"]["closed_instruments"]
+        == len(open_instrument_ids_pre)
+    )
+
+
+def test_workflow_close_rejects_when_session_not_ready(
+    client: TestClient, db: Session
+) -> None:
+    """``/workflow/close`` from a non-``ready`` session 303s with a
+    failure-banner redirect rather than mutating state."""
+    review_session = _seed_pair_plus_pinned(client, db, code="close-draft")
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/close",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert "super_status=failed" in resp.headers["location"]
+    assert "super_button=close" in resp.headers["location"]
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+
+def test_revert_from_expired_returns_session_to_draft(
+    client: TestClient, db: Session
+) -> None:
+    """Once the operator closes a session, Revert to draft reopens it
+    for editing — same ``/sessions/{id}/revert`` route, the service
+    accepts ``expired`` alongside ``ready``."""
+    review_session = _seed_pair_plus_pinned(client, db, code="revert-expired")
+    _full_activation(client, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/close",
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_expired(review_session)
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+
+def test_revert_from_expired_preserves_responses(
+    client: TestClient, db: Session
+) -> None:
+    """``expired → draft`` revert keeps every ``Response`` row intact
+    — same contract as ``ready → draft`` revert."""
+    review_session = _seed_pair_plus_pinned(
+        client, db, code="revert-expired-rows"
+    )
+    _full_activation(client, review_session.id)
+    db.refresh(review_session)
+    assignment = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id
+        )
+    ).scalar_one()
+    response_id = _attach_response(db, assignment=assignment, key="kept")
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/close",
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+    surviving = db.execute(
+        select(Response).where(Response.id == response_id)
+    ).scalar_one_or_none()
+    assert surviving is not None, "revert from expired must not drop responses"
