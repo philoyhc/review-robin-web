@@ -113,7 +113,14 @@
         <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
       </p>
     </div>
-    <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end;">
+    <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 8px;">
+      {# Segment 18M PR 0 placeholders — Expand all / Collapse all instruments.
+         No-op buttons today; bulk-toggle JS lands once each per-instrument
+         card is wrapped in <details>. #}
+      <div style="display: flex; gap: 8px; margin: 0;">
+        <button class="btn secondary" type="button" data-instruments-expand-all disabled>Expand all instruments</button>
+        <button class="btn secondary" type="button" data-instruments-collapse-all disabled>Collapse all instruments</button>
+      </div>
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
@@ -593,19 +600,31 @@
            style="border-color: transparent; background: transparent; padding: 0; margin: 0;
                   box-sizing: border-box;
                   display: flex; flex-direction: column;">
-        <h2 style="margin-top: 0; font-size: 1.5rem;">
-          Instrument #{{ loop.index }}
-          {% if instrument.accepting_responses %}
-            <span class="pill pill-count">accepting responses</span>
-          {% else %}
-            <span class="pill pill-empty">not accepting responses</span>
-          {% endif %}
-          {% if instrument.responses_visible_when_closed %}
-            <span class="pill pill-count">showing when closed</span>
-          {% else %}
-            <span class="pill pill-empty">not showing when closed</span>
-          {% endif %}
-        </h2>
+        {# Segment 18M PR 0 placeholder — per-card toggle button in the
+           top-right corner of the heading row. No-op today; collapse
+           wiring (wrap the card body in <details>, chevron rotation
+           via the [open] selector) lands in the follow-up slice. #}
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 style="margin-top: 0; font-size: 1.5rem; flex: 1;">
+            Instrument #{{ loop.index }}
+            {% if instrument.accepting_responses %}
+              <span class="pill pill-count">accepting responses</span>
+            {% else %}
+              <span class="pill pill-empty">not accepting responses</span>
+            {% endif %}
+            {% if instrument.responses_visible_when_closed %}
+              <span class="pill pill-count">showing when closed</span>
+            {% else %}
+              <span class="pill pill-empty">not showing when closed</span>
+            {% endif %}
+          </h2>
+          <button type="button"
+                  class="btn secondary"
+                  data-instrument-toggle
+                  aria-label="Toggle instrument card"
+                  style="font-size: 0.85rem; padding: 4px 10px; line-height: 1;"
+                  disabled>&#9662;</button>
+        </div>
         {# Wave 4 — Edit / Save / Cancel retired from this header
            row; Save + Lock / Unlock now live in the bottom action
            row only (see ``instrument_action_row`` macro). #}
