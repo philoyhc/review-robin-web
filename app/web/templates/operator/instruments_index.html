@@ -86,11 +86,16 @@
     }
     body.ui-v2 .instrument-card-toggle-icon {
       display: inline-block;
-      font-size: 0.85rem;
+      font-size: 1.5rem;
       padding: 4px 10px;
       line-height: 1;
-      color: var(--color-muted, #475569);
+      color: var(--text-primary, #111827);
       transition: transform 0.15s ease-out;
+    }
+    body.ui-v2 .instrument-card-short-label {
+      margin-left: 6px;
+      font-weight: 500;
+      color: var(--text-secondary, #6b7280);
     }
     body.ui-v2 details.instrument-card-collapsible[open] > summary.instrument-card-summary .instrument-card-toggle-icon {
       transform: rotate(180deg);
@@ -633,7 +638,7 @@
                       display: flex; flex-direction: column;">
         <summary class="instrument-card-summary">
           <h2 style="margin-top: 0; font-size: 1.5rem; flex: 1;">
-            Instrument #{{ loop.index }}
+            Instrument #{{ loop.index }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
             {% if instrument.accepting_responses %}
               <span class="pill pill-count">accepting responses</span>
             {% else %}
