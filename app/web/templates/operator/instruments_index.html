@@ -4276,6 +4276,62 @@
   </script>
 
   <script>
+    // Segment 18M PR 2a — page-break × delete intercept.
+    // The form POSTs to /page-break/delete, the server 303s back to
+    // /instruments. A native form submit reloads the whole page,
+    // which collapses every <details> back to the default-closed
+    // state — operators with multiple cards expanded would lose
+    // that state on every delete. Intercept the click, POST via
+    // fetch, and patch the DOM in place: remove the page-break
+    // card, then re-enable the previous instrument's +Page break
+    // button (whose disabled-because-already-exists state goes
+    // stale the moment we clear the flag). Lifecycle-disabled
+    // buttons are left alone — their disabled reason is unrelated
+    // to this break.
+    (function () {
+      document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-instrument-page-break-delete]');
+        if (!btn || btn.disabled) { return; }
+        const form = btn.closest('form');
+        if (!form) { return; }
+        e.preventDefault();
+        btn.disabled = true;
+        fetch(form.action, {
+          method: 'POST',
+          credentials: 'same-origin',
+        }).then(function (resp) {
+          if (!resp.ok) {
+            // Server rejected (409 lifecycle / unknown id). Reload
+            // so the operator sees the authoritative state instead
+            // of a silently-broken UI.
+            window.location.reload();
+            return;
+          }
+          const card = btn.closest('.page-break-card');
+          if (!card) { return; }
+          const prev = card.previousElementSibling;
+          card.remove();
+          // Re-enable the +Page break button on the previous
+          // instrument iff it was disabled because the successor
+          // already carried a break. Lifecycle-disabled buttons
+          // keep their disabled state.
+          if (prev) {
+            const addBtn = prev.querySelector('[data-instrument-page-break-add]');
+            if (addBtn && /already exists/i.test(addBtn.title || '')) {
+              addBtn.disabled = false;
+              addBtn.removeAttribute('disabled');
+              addBtn.removeAttribute('title');
+            }
+          }
+        }).catch(function () {
+          btn.disabled = false;
+          window.location.reload();
+        });
+      });
+    })();
+  </script>
+
+  <script>
     // Segment 13B PR 2 — tri-state Sort column on the
     // per-instrument Display Fields table. Each Sort button
     // carries ``data-priority`` (0 = unsorted, ≥1 = position in
