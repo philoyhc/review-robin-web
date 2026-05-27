@@ -47,7 +47,33 @@ segment is exclusively about the editable surface.
    column 2 becomes the new home for the heading-row pills /
    "Not accepting" banner that today renders page-wide above
    the table. Each instrument carries its own state pair
-   side-by-side with its own heading.
+   side-by-side with its own heading. **Column 2 stays empty
+   when an instrument is fully open (accepting=True, no
+   closed-with-hidden case)** — no neutral pill, no extra
+   chrome on the common path.
+4. **Consolidated Save emits one `responses.saved` audit row
+   per call**, mirroring the Submit envelope:
+   `detail.counts.assignments_touched` +
+   `detail.counts.responses_saved`. Update `EVENT_SCHEMAS` in
+   the same PR that lands the endpoint, or the strict-mode
+   test gate will reject the new shape.
+5. **Submit / Recall / Clear redirect to the top of
+   `/reviewer/sessions/{id}`** with no anchor — the rollup
+   pill at the top of `.rs-status-panel` is the
+   session-level result confirmation. `current_position`
+   stops being read from the form payload.
+6. **Each instrument group emits `id="instrument-{id}"`** so
+   the shim 303s can scroll-restore from a positional URL
+   and future summary "Edit" affordances can deep-link.
+7. **Shim retirement is immediate.** The test-sweep PR drops
+   the legacy positional GET + POST shims in the same change
+   that migrates the tests off them. Reviewer-facing
+   invitation links already 303 to `/sessions/{id}`; no
+   positional URLs are exposed outside our own dashboard.
+8. **`PageButton` retires entirely in PR 1.** Grep + delete
+   the dataclass, helper, and view-shape export — no no-op
+   stub, no soft-deprecation. The operator preview reuses
+   the same template and inherits the change.
 
 ## Where pagination lives today (the diff surface)
 
@@ -200,47 +226,185 @@ segment is exclusively about the editable surface.
 
 ## Risk notes
 
-- **Save-endpoint behaviour change.** A consolidated save
-  endpoint changes the audit shape — today each
-  `/{position}/save` emits one `responses.saved` event
-  scoped to that instrument. The new endpoint emits one
-  per submitted assignment or one per call; pick
-  consistently and document. The simplest is one event
-  with the full counts in `detail.counts`; mirrors the
-  Submit-event shape.
-- **Legacy URL shims.** Invitation tokens 303 to
-  `/sessions/{id}` and forget which page the operator
-  meant. We never expose `/{position}` URLs to reviewers
-  outside our own dashboard, so the blast radius is small;
-  still worth a one-line shim coverage test.
-- **`page_statuses` retirement.** The per-page pills
-  (`Page #1: in progress`, etc.) in the session status
-  panel become redundant once every instrument is on the
-  page (the reviewer can just see the state). Drop them
-  in PR 1; the rollup pill stays.
+- **Save-endpoint audit shape locked.** One
+  `responses.saved` row per call with
+  `detail.counts.assignments_touched` +
+  `detail.counts.responses_saved` (Decision 4). Register
+  the new shape in `EVENT_SCHEMAS` in the same commit or
+  strict-mode tests fail.
+- **Legacy URL shims (PR 1 → PR 3).** Invitation tokens
+  already 303 to `/sessions/{id}`; positional URLs only
+  live in our own dashboard, which PR 1 cuts over. Shim
+  coverage tests in PR 1; shims retired in PR 3
+  alongside the test sweep (Decision 7).
+- **`page_statuses` retirement (PR 1).** The per-page
+  pills (`Page #1: in progress`, etc.) in the session
+  status panel become redundant once every instrument is
+  on the page. Drop them in PR 1; the rollup pill stays.
+- **`current_position` cleanup (PR 1 → PR 3).** PR 1
+  removes the form-payload read on Submit / Recall /
+  Clear (Decision 5) and the GET handler's positional
+  branch. PR 3 finishes the cleanup by removing the
+  helper + any remaining references when the shims
+  retire.
+- **Multi-table sort scope (PR 1).** Sort JS already
+  scopes by `data-rrw-sortable` keyed on instrument id, so
+  N visible tables sort independently. PR 1 adds a smoke
+  test asserting the keys differ across instruments — the
+  contract was unobservable while only one table rendered.
 
 ## Sequencing
 
-Two-PR landing, each small enough for a careful sitting:
+Three-PR landing. PR 1 carries the surface refactor + new
+endpoints + shims (the bulk of the segment), PR 2 isolates
+the per-instrument heading-state card so its layout move is
+reviewable on its own, and PR 3 sweeps tests + retires shims.
 
-1. **PR 1 — single-page surface + new endpoints.**
-   - New `GET /sessions/{id}` + `POST /sessions/{id}/save`.
-   - Template + view-shape refactor (every group visible,
-     action row interleaved, per-instrument heading state
-     card in `.rs-intro-grid` column 2).
-   - Pagination JS retired.
-   - Legacy positional routes shimmed to 303-forward.
-   - Dashboard link updated.
-   - New integration tests covering the visible / save /
-     accepting-state branches.
-   - ~400 LOC delta.
-2. **PR 2 — test sweep + shim retirement.**
-   - Migrate the ~126 existing test lines off `/{position}`
-     URLs.
-   - Retire the legacy positional GET + POST shims.
-   - ~300 LOC test delta + small route cleanup.
+### PR 1 — single-page render + new endpoints + shims (~350 LOC)
 
-After PR 2 the only reviewer surface URL is
+The unit-of-work: replace the positional rendering surface
+with a single-page surface that renders every instrument,
+without yet moving the closed-banner per-instrument. The
+session-wide "no longer accepting" banner stays where it is
+today (`.rs-status-panel`) so this PR's diff is contained to
+the rendering / routing / view-shape layer.
+
+- **Routes.**
+  - New `GET /reviewer/sessions/{id}` renders every
+    instrument in `Instrument.order, Instrument.id` order.
+  - New `POST /reviewer/sessions/{id}/save` walks every
+    assignment in the form payload via the existing
+    `responses_service.save_draft` helper; emits one
+    `responses.saved` audit row per call (Decision 4).
+    Register the new event-shape in `EVENT_SCHEMAS` in the
+    same commit.
+  - Legacy `GET /reviewer/sessions/{id}/{position}` 303s to
+    `/reviewer/sessions/{id}#instrument-{id}` (instrument id
+    looked up by sorted-position).
+  - Legacy `POST /reviewer/sessions/{id}/{position}/save`
+    303s to the new save endpoint (or rebuilds the payload
+    and re-dispatches — pick whichever keeps the shim
+    smaller; redirect is simpler).
+  - `reviewer_submit` / `reviewer_recall` / `reviewer_clear`
+    drop the `current_position` form read; all three
+    redirect to `/reviewer/sessions/{id}` (Decision 5).
+  - The bare `/reviewer/sessions/{id}` handler that today
+    303s to `/1` becomes the canonical render handler.
+- **View shape.**
+  - `_surface_context` drops `current_position` and
+    `is_current`. Every group is always visible.
+  - Add `anchor_id = f"instrument-{inst.id}"` on each
+    `InstrumentGroup` (Decision 6).
+  - Retire `PageButton` dataclass + `page_button_label`
+    helper + the `page_buttons` context key. Grep
+    `app/` + `tests/` + `spec/` + `guide/` for references
+    and delete them (Decision 8).
+  - `page_statuses` retires — drop both the dataclass build
+    + the template loop. The rollup pill
+    (Submitted / Saved-not-submitted / Draft) stays in
+    `.rs-status-panel`.
+- **Template (`review_surface.html`).**
+  - `<form>` action becomes `/reviewer/sessions/{id}/save`;
+    `current_position` hidden input deleted.
+  - `.rs-paginated` wrapper deleted; the `for group in
+    instrument_groups` loop renders every group as
+    `<section id="instrument-{{ group.anchor_id }}"
+     class="rs-instrument-group">`.
+  - `<hr class="rs-instrument-separator">` between adjacent
+    groups (new class — `margin: var(--space-6) 0;
+    border: 0; border-top: 1px solid var(--border)` in
+    `base.html`).
+  - Action row include moves *inside* the loop, rendering
+    above every instrument heading; the bottom instance
+    (with the danger zone) stays outside the loop.
+  - `.rs-status-panel` heading banner stays page-wide for
+    this PR — it's still session-level here. PR 2 splits it
+    per-instrument.
+  - Page-#N button row markup + the per-page status pills
+    list deleted.
+  - Inline pagination JS (~70 lines around lines 484-755 —
+    `rs-paginated` toggling, `pushState`, `popstate`,
+    page-button click handler, dirty-confirm on page
+    switch) deleted. The small dirty-tracker + Save-enable
+    sniffer stay (now scoped to the whole form).
+- **Dashboard.** `app/web/routes_reviewer/_dashboard.py`
+  link for `not started` / `in progress` pills points at
+  `/reviewer/sessions/{id}` instead of `/{id}/1`.
+- **Tests (new integration coverage).**
+  - Single-instrument session: one action row top + one
+    bottom; no `<hr>`; saved values render.
+  - Two-instrument session: every instrument visible,
+    `<hr>` between, action row above each heading, action
+    row + danger zone at the bottom.
+  - `POST /sessions/{id}/save` with a payload spanning both
+    instruments persists every assignment's response and
+    emits a single `responses.saved` audit row with the
+    right `detail.counts`.
+  - Closed-but-visible instruments render saved values
+    inline.
+  - Each instrument group renders with an
+    `id="instrument-{id}"` attribute matching its database
+    id.
+  - Legacy `GET /sessions/{id}/1` 303s to
+    `/sessions/{id}#instrument-{id}`.
+  - Legacy `POST /sessions/{id}/1/save` succeeds via the
+    shim path.
+  - Per-table sort smoke: a two-instrument render emits two
+    `data-rrw-sortable` keys that differ (the keys already
+    embed the instrument id; this just locks the contract).
+- **Spec patches.**
+  - `spec/reviewer-surface.md` — URL contract section
+    (single canonical URL, shims pending) + retirement of
+    the Page-#N pattern.
+  - `guide/visibility_audit.md` — route column on the
+    surface row updated.
+
+### PR 2 — per-instrument heading-state card (~150 LOC)
+
+The unit-of-work: move the heading-row banner state from
+page-wide (`.rs-status-panel`) to per-instrument
+(`.rs-intro-grid` column 2). Decision 3 in isolation.
+
+- **View shape.**
+  - New `InstrumentHeadingState` dataclass on each
+    `InstrumentGroup` carrying
+    `accepting: bool`,
+    `responses_visible_when_closed: bool`, and pre-rendered
+    pill / banner-line strings.
+- **Template.**
+  - `.rs-status-panel` drops the `not any_accepting`
+    banner block (`review_surface.html:47-58`). The session
+    description + rollup pill stay; the panel renders only
+    when there's still something to say.
+  - `.rs-intro-grid` column 2 carries a new
+    `.card.rs-instrument-state-card` showing the
+    accepting-state pill pair + the implication line
+    ("Your saved values remain visible below" vs. "are
+    hidden by the operator"). Card omitted entirely when
+    Decision 3's empty-on-open case applies.
+- **Tests.**
+  - Per-instrument card combos:
+    - accepting=True, visible=True → no card.
+    - accepting=False, visible=True → "no longer accepting"
+      pill + "saved values remain visible" line.
+    - accepting=False, visible=False → "no longer
+      accepting" pill + "saved values hidden" line.
+  - Page-wide banner from PR 1's `.rs-status-panel` no
+    longer fires on `not any_accepting`.
+
+### PR 3 — test sweep + shim retirement (~250 LOC, mostly tests)
+
+- Migrate the ~126 existing test lines that POST / GET
+  positional URLs (`/{position}` / `/{position}/save`) to
+  the new single-URL endpoints.
+- Delete the legacy positional GET + POST shims from
+  `_surface.py`.
+- Delete `_read_current_position` and any remaining
+  `current_position` references in routes / tests / spec.
+- Final spec patch: `spec/reviewer-surface.md` URL
+  contract section drops the "shims pending" note.
+
+After PR 3 the only reviewer surface URL is
 `/reviewer/sessions/{id}`.
 
 ## Cross-refs
