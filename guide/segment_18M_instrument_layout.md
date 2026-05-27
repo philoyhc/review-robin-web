@@ -156,113 +156,195 @@ boundary keeps each PR set focused.
 
 ## Open decisions
 
-Lock these in the next decision round before the
-implementation plan is written:
+_(none — all locked below; see decisions 2–9.)_
 
-1. **Page-break persistence.** Three candidates:
-   - **(a) Boolean `starts_new_page` on `instruments`.**
-     First instrument's flag is ignored / forced True.
-     Cheap migration (backfill False on every existing
-     instrument so 18M's single-page default applies, or
-     backfill True so today's one-page-per-instrument
-     behaviour is preserved — see decision 2). Page N
-     membership = walk in instrument order and accumulate
-     until the next break.
-   - **(b) Integer `page_index` on `instruments`.** Page N
-     membership = all instruments with `page_index = N`.
-     More rigid; re-grouping touches every later
-     instrument's `page_index`.
-   - **(c) Separate `pages` table** with FK from
-     `instruments.page_id`. Most normalised; supports
-     per-page metadata later (title, description). Heaviest
-     migration.
+2. **Page-break persistence: boolean `starts_new_page` on
+   `instruments`** (locked 2026-05-27). Cheapest migration
+   (one boolean column); the constraints from decision 4
+   below fall out as schema invariants without extra
+   validation code. Considered + rejected:
+   - Integer `page_index` per instrument — heavier
+     re-grouping cost on reorder, no real benefit at this
+     scale.
+   - Separate `pages` table with FK from
+     `instruments.page_id` — most normalised but the only
+     thing it buys (per-page metadata: title, description)
+     is explicitly out of scope (see "Out of scope" below);
+     premature.
 
-   Recommendation: **(a)**. The break flag is a single bit
-   of operator intent ("does this start a new page?") and
-   the order column already orders instruments globally;
-   anything heavier is premature.
+   The flag carries the meaning *"this instrument starts a
+   new page"* — i.e. a page break exists between this
+   instrument and the one before it. At render time the
+   flag is **meaningful only for instruments at position
+   ≥ 2**; the value on the first instrument is ignored.
 
-2. **Backfill direction for the new column.** When the
-   migration ships, existing sessions need their break flag
-   set:
-   - **Preserve today's behaviour** — backfill so every
-     existing instrument starts a new page (matches the
-     one-instrument-per-page status quo). 18L's single-page
-     surface then renders existing sessions exactly as
-     today's positional surface did.
-   - **Match 18L's new default** — backfill so no
-     instrument starts a new page (every existing session
-     collapses to one long page). Operators with multi-
-     instrument sessions would need to re-mark their
-     breaks if they wanted today's pagination back.
+3. **Backfill direction: preserve today's behaviour**
+   (locked 2026-05-27). The migration sets
+   `starts_new_page = true` on every existing instrument so
+   today's one-instrument-per-page reviewer surface is
+   visually unchanged on deploy. Operators who later want a
+   single-page layout can delete breaks individually.
+   Existing live sessions don't change layout under the
+   operator's feet on rollout.
 
-   Recommendation: **preserve today's behaviour**. Existing
-   live sessions shouldn't change layout under the
-   operator's feet on deploy.
+4. **Page break = list-item model + three reorder
+   invariants** (locked 2026-05-27). The operator's mental
+   model and the drag-handler algorithm treat the page
+   break card as a real item in an ordered list of mixed
+   instrument-and-break items. Persistence stays the flag
+   from decision 2; the algorithm reconciles the two
+   views.
 
-3. **Setup UI affordances.** Locked decision 1 fixes the
-   chrome (collapsible `<details>` cards, all-collapsed
-   default, bulk Expand/Collapse). Still to lock inside
-   that chrome:
-   - **Reorder mechanism.** Drag-and-drop on the
-     `<summary>` handle (mirrors the display-field
-     pattern) vs. up/down buttons as a low-JS fallback
-     vs. both.
-   - **Page-break flag UI.** Per-card toggle in the
-     `<summary>` (visible even when the card is
-     collapsed, so the operator can see page structure at
-     a glance) vs. inside the `<details>` body (cleaner
-     summary, but invisible until expanded).
-   - **Add-instrument flow.** Single "+ Instrument" at
-     the list footer (defaults to continues-current-page,
-     operator flips the break on the freshly created
-     card) vs. two buttons ("+ Instrument" /
-     "+ Instrument on new page") for one-click intent
-     capture.
+   - **Non-movable breaks.** Page break cards can be
+     created and deleted only — they don't drag. Creating
+     a break is a single button click (set the flag to
+     true); deleting one is an inline `×` on the break
+     card (set the flag to false). Dragging an instrument
+     across a break works fine (see "Reorder algorithm"
+     below) but the break itself stays put visually.
 
-   Recommendation: drag-and-drop (consistent with display
-   fields), break toggle in the `<summary>` so page
-   structure is legible without expanding cards, and a
-   single "+ Instrument" button (the toggle on the new
-   card is one extra click and avoids two-button
-   explanation). Open to override.
+   - **Three invariants on every reorder.** Reordering an
+     instrument is forbidden if the resulting arrangement
+     would violate any of:
+     - (a) **No leading page break** — a break before all
+       instruments.
+     - (b) **No trailing page break** — a break after all
+       instruments.
+     - (c) **No double-stacked breaks** — two breaks
+       adjacent in the rendered list.
 
-4. **Page break UI on the reviewer-side preview.** The
-   operator preview at
-   `app/web/routes_reviewer/_preview.py` reuses the same
-   template as the reviewer surface. Does the operator
-   preview also render page breaks (i.e. 18L's
-   single-page-with-`<hr>` layout), or does it always
-   render every instrument stacked regardless of breaks?
+     The user-facing rule "the first instrument is
+     immovable when followed by a page break" is just
+     (a) — moving it would leave the break with nothing
+     before it.
 
-   Recommendation: render breaks. The preview's value is
-   showing what reviewers see; suppressing breaks defeats
-   that.
+     The drag handler simulates the post-drop arrangement
+     before applying it; invalid drops snap back. UI
+     hints (greyed drop-targets, inline reasons) are an
+     implementation choice for the operator-UI PR.
 
-5. **Lifecycle gate.** Reordering + break-flag edits join
-   the existing instrument-edit lock surface
-   (`_require_instrument_editable`). Confirm both new
-   operations 403 once the session is activated, same as
-   today's instrument adds / deletes / display-field
-   edits.
+   - **Reorder algorithm** (canonical, applied on every
+     reorder + every delete):
+     1. Compute the new rendered list (mixed instruments
+        and breaks) per the drag result.
+     2. Validate (a) + (b) + (c). Reject if any fail.
+     3. **Re-derive flags from the new list order**:
+        walk the list; the instrument *after* each break
+        gets `starts_new_page = true`; every other
+        instrument gets `false`.
+     4. Persist the new instrument `order` values + the
+        re-derived flags in one transaction.
 
-   Recommendation: yes — same lifecycle as today's
-   instrument edits.
+     This guarantees the DB never holds a flag that means
+     a leading break (position-1 flag never set), because
+     step 3 derives flags from a list that already passed
+     step 2.
 
-6. **Audit events.** Two new mutating operations need
-   audit-event registration in `EVENT_SCHEMAS`:
-   - `instruments.reordered` — `detail.changes` with the
-     ordered id list before / after, or
-     `detail.set_changes` per-instrument-position. Match
-     the shape of `display_fields.reordered` if one
-     exists; otherwise pick the closest existing reorder
-     emitter and mirror it.
-   - `instrument.page_break_set` (or `.cleared`) — one
-     event per flip; `detail.changes` with the boolean.
+   - **Per-card add buttons + their disabled states.**
+     Each per-instrument card carries two buttons in its
+     body footer (inside the `<details>`, not the
+     `<summary>`):
+     - `+ Instrument` — creates a new instrument
+       immediately after this card. Always enabled.
+     - `+ Page break` — creates a break immediately after
+       this card (sets `starts_new_page = true` on the
+       next instrument). **Disabled** when:
+       - This is the last instrument (no successor to
+         flag — would create a trailing break, invariant
+         (b)).
+       - The next instrument already has
+         `starts_new_page = true` (would double-stack,
+         invariant (c)).
+     Disabled buttons keep their position so the layout
+     doesn't shuffle; a tooltip / `title` attribute
+     explains why.
 
-   Recommendation: defer the exact envelope choice to the
-   implementation PR; just earmark both event_types here
-   so the strict-mode test gate isn't a surprise.
+   - **Global `+ Instrument` button at the bottom of the
+     list.** Retained — per-card buttons live inside the
+     collapsed `<details>` bodies (from locked decision
+     1) and aren't visible until the card is expanded.
+     The global button is the no-expand-required
+     append-to-end affordance. Per-card buttons handle
+     "insert next to this specific instrument".
+
+   - **First-instrument seed.** Existing Setup flow
+     already seeds one instrument by default on session
+     creation, so the operator never sees a zero-
+     instrument state. No additional bootstrap UI is
+     needed; the global `+ Instrument` button + per-card
+     buttons cover every flow from one instrument onward.
+
+   - **Delete behaviour.** Deleting an instrument removes
+     it + its `starts_new_page` flag. Run the reorder
+     algorithm's step 3 (re-derive flags) afterward so
+     that an instrument elevated to position 1 by the
+     delete doesn't keep a now-meaningless flag.
+     Invariants stay enforced.
+
+5. **Setup UI affordances** (locked 2026-05-27, building
+   on decisions 1 + 4):
+   - **Reorder:** drag-and-drop on the per-instrument
+     card `<summary>` handle, mirroring the
+     `reorder_display_fields` pattern. JSON POST endpoint
+     accepts the new ordered list of (instrument-id |
+     break-marker) items; the service runs the reorder
+     algorithm (decision 4).
+   - **Page-break creation / deletion:** `+ Page break`
+     button in the per-instrument card body (decision 4);
+     `×` button inline on each rendered break card.
+     No drag, no per-card toggle pill in the `<summary>`.
+   - **Page break card visual:** rendered as a thin
+     horizontal divider with `Page break` text centred
+     and a small `×` on the right (delete-in-place).
+     Sits between the cards it separates in document
+     order; visually distinct from instrument cards.
+   - **Add-instrument flow:** per-card `+ Instrument`
+     button creates an instrument immediately after the
+     card it sits on; global `+ Instrument` at the
+     bottom of the list appends to the end. No
+     `+ Instrument on new page` button — operators add
+     an instrument and a page break separately.
+
+6. **Operator preview renders page breaks** (locked
+   2026-05-27). The operator-side preview at
+   `app/web/routes_reviewer/_preview.py` honours the same
+   break flag the reviewer surface does — the preview's
+   value is showing what reviewers see; suppressing
+   breaks defeats that.
+
+7. **Lifecycle gate: same as today's instrument edits**
+   (locked 2026-05-27). Reorder + page-break create /
+   delete operations join `_require_instrument_editable`
+   and 403 once the session is activated, matching adds /
+   deletes / display-field edits today.
+
+8. **Audit events** (event_types locked; envelope shapes
+   deferred to implementation PR):
+   - `instruments.reordered` — emitted once per reorder
+     transaction, after step 4 of the algorithm. Detail
+     payload mirrors the shape of the closest existing
+     reorder emitter (likely `display_fields.reordered`).
+   - `instrument.page_break_set` / `instrument.page_break_cleared`
+     (two event types, or a single
+     `instrument.page_break_changed` carrying the
+     before / after values — implementation PR picks).
+     Emitted on every flag flip, including the implicit
+     flips inside step 3 of the reorder algorithm.
+
+   Both must register in `EVENT_SCHEMAS` in the same PR
+   that adds the emitter or the strict-mode test gate
+   rejects them.
+
+9. **Edit-locked instrument carve-out** (locked
+   2026-05-27). An instrument the operator has locked
+   for editing (Wave 4 Save / Lock state) participates
+   in reorder + create-break operations on the surface
+   but the lock card stays inside the per-instrument
+   `<details>` body and is the only writeable surface
+   for that instrument's own contents. Reorder /
+   break-create move the card around; they don't open
+   it. Symmetrical with how display-field reorder
+   behaves on a locked instrument today.
 
 ## Out of scope
 
@@ -343,19 +425,53 @@ implementation plan is written:
    its own way on the page.
 
 1. **PR 1 — data model + service helpers.** Alembic
-   migration for the page-break column (per decision 1);
-   `reorder_instruments` + `set_page_break` service
-   helpers with audit-event emission; tests at the service
-   layer (no UI yet). Pending the persistence decision.
-2. **PR 2 — operator UI: reorder.** Drag-and-drop on the
-   Instruments page, mirroring the display-field pattern.
-   Inline JS handler, JSON POST endpoint. Drag handle
-   lands in the slot PR 0 reserved inside `<summary>`.
-3. **PR 3 — operator UI: page-break toggle.** Per-card
-   toggle in the instrument `<summary>` (so page
-   structure is legible without expanding cards);
-   operator preview renders the resulting layout.
+   migration adding `instruments.starts_new_page: bool
+   default false, not null`, backfilling **true** on every
+   existing instrument (decision 3). Service helpers:
+   - `reorder_instruments(session, item_list)` — accepts
+     the mixed instrument / break list, runs the reorder
+     algorithm (validate three invariants → re-derive
+     flags → persist).
+   - `create_page_break_after(instrument)` — sets
+     `starts_new_page=true` on the successor; rejects if
+     it would create a double-stack or trailing break.
+   - `clear_page_break(instrument)` — flips the flag to
+     false on the instrument that carries it.
+   Each emits its respective audit event from decision 8.
+   Tests at the service layer (no UI yet): invariant
+   coverage, re-derive-on-delete coverage, lifecycle gate.
+2. **PR 2 — operator UI: reorder + page-break cards.**
+   Drag-and-drop on the per-instrument `<summary>`
+   handle (the slot PR 0 reserved inside `<summary>`),
+   mirroring `reorder_display_fields` JS shape. Renders
+   page break cards between instruments. Wires per-card
+   `+ Instrument` / `+ Page break` buttons (with their
+   disabled states from decision 4) and the inline `×`
+   on each break card.
+3. **PR 3 — wire the collapse machinery + reviewer
+   preview.** Wraps each instrument card in
+   `<details>` / `<summary>` (the markup PR 0 placeholder
+   buttons live in) so the all-collapsed default kicks
+   in; activates the bulk Expand / Collapse buttons via
+   the inline JS from decision 1. Operator preview at
+   `app/web/routes_reviewer/_preview.py` honours the
+   break flag (decision 6) so the operator sees the
+   reviewer layout.
 
 Sizes TBD for PRs 1-3; aim for ~200–300 LOC per PR. PR 0
-is the smallest of the four (template + CSS + ~5 lines of
-JS + a smoke test — probably <150 LOC).
+shipped at ~50 LOC (template-only placeholders, no
+behaviour). PR 1 is the largest of the four (migration +
+three service helpers + invariant tests).
+
+### Sequencing notes
+
+- **PR 1 can land independently of PR 2 and PR 3.** The
+  reviewer surface for 18L can read `starts_new_page`
+  from PR 1 even without operator UI, using test
+  fixtures or programmatic flag setting. Don't block
+  18L on 18M PR 2.
+- **PR 2 depends on PR 1.** No reorder UI without the
+  service helpers + audit emitter.
+- **PR 3 depends on PR 0 (already shipped) and PR 2.**
+  The placeholder buttons need wiring + the operator
+  preview needs the break-flag column to read from.
