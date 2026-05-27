@@ -971,6 +971,18 @@ bottom of this file.
 
 #### Stubs
 
+- **18K — Completing instrument visibility (Band 3) on the
+  reviewer surface** *(stub created 2026-05-27)*. Close the per-
+  field tail of the visibility story 17B / 18F / 18G set up:
+  the reviewer summary HTML + reviewer-record CSV currently
+  walk every `InstrumentResponseField` regardless of `visible`,
+  so a Band 2 chip flipped off mid-session still surfaces the
+  column on the summary even though the surface form drops it.
+  Also patches `spec/instruments.md` to reflect that the Band 2
+  pill — not a Band 3 "Visible" checkbox — is the operator-side
+  visibility control. Likely 4–5 small PRs.
+  **Plan:** `guide/segment_18K_visibility.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
