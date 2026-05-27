@@ -714,6 +714,15 @@ def build_instruments_context(
         db, session_id=review_session.id
     )
 
+    # Per-instrument "Set up" / "Not set up" pill (locked decision in
+    # Segment 18M follow-up). Same predicate the workflow card uses;
+    # rendered on each per-instrument <summary> in place of the
+    # retired accepting / showing-when-closed pills.
+    is_configured_by_instrument = {
+        inst.id: instruments_service.is_configured(db, inst)
+        for inst in instruments
+    }
+
     return {
         "user": user,
         "session": review_session,
@@ -729,6 +738,7 @@ def build_instruments_context(
         ),
         "editing_instrument_id": editing_instrument_id,
         "instrument_saved_state": instrument_saved_state,
+        "is_configured_by_instrument": is_configured_by_instrument,
         "saved_instrument_id": saved,
         "rf_save_error": rf_save_error,
         "is_some_instrument_editing": editing_instrument_id is not None,
