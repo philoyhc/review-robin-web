@@ -92,6 +92,20 @@
       color: var(--text-primary, #111827);
       transition: transform 0.15s ease-out;
     }
+    body.ui-v2 .instrument-card-drag-handle {
+      display: inline-block;
+      font-size: 1.5rem;
+      padding: 4px 10px;
+      margin-right: 6px;
+      line-height: 1;
+      letter-spacing: -2px;
+      color: var(--text-primary, #111827);
+      cursor: grab;
+      user-select: none;
+    }
+    body.ui-v2 .instrument-card-drag-handle:active {
+      cursor: grabbing;
+    }
     body.ui-v2 .instrument-card-short-label {
       margin-left: 6px;
       font-weight: 500;
@@ -637,6 +651,14 @@
                       box-sizing: border-box;
                       display: flex; flex-direction: column;">
         <summary class="instrument-card-summary">
+          {# Segment 18M PR 0 — drag handle placeholder. Reserves
+             the left-edge slot the PR 2 drag-and-drop attaches to;
+             cursor: grab on hover so the affordance is visible
+             today even with no JS wired. data-instrument-drag-
+             handle is the hook PR 2 will bind to. #}
+          <span class="instrument-card-drag-handle"
+                data-instrument-drag-handle
+                aria-hidden="true">&#8942;&#8942;</span>
           <h2 style="margin-top: 0; font-size: 1.5rem; flex: 1;">
             Instrument #{{ loop.index }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
             {% if instrument.accepting_responses %}
