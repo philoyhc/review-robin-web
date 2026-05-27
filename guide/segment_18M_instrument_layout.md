@@ -101,30 +101,58 @@ boundary keeps each PR set focused.
 1. **Collapsible instrument cards on the Setup →
    Instruments page** (locked 2026-05-27). Drag-and-drop
    reordering is much more usable when every card can be
-   shrunk to a header-only handle:
+   shrunk to a header-only handle, and collapsing pays its
+   own way on the page even before reorder / page-breaks
+   land — so collapse ships as **PR 0** of this segment
+   (independent of every other piece of 18M).
    - **Mechanism: native `<details>` / `<summary>`.** No
-     JS, no localStorage, no DB column. Free keyboard +
+     localStorage, no DB column. Free keyboard +
      screen-reader behaviour. Card chrome (border, padding,
      spacing) comes from CSS in `base.html`; the
-     `<summary>` carries the instrument title + the drag
-     handle + the page-break toggle (decision 3 below).
-     The full per-instrument editor card body lives inside
-     the `<details>` and collapses on `<summary>` click.
+     `<summary>` carries the per-card affordances. The full
+     per-instrument editor card body lives inside the
+     `<details>` and collapses on `<summary>` click.
+   - **What renders in the collapsed `<summary>`:**
+     - **Title:** `Instrument #{loop.index}` — same string
+       `spec/instruments.md:169` already specifies for the
+       Identity heading. Numeric index, not DB id; shifts on
+       replicate / delete (and post-PR-2, on reorder).
+     - **Status pills:** the existing
+       `accepting responses` / `not accepting responses`
+       pill and the
+       `showing when closed` / `not showing when closed`
+       pill (per `spec/instruments.md:172-176`).
+       Both visible without expanding the card.
+     - **Per-card expand/collapse affordance:** a small
+       button in the **top-right corner** of the
+       `<summary>`. With native `<details>`, clicking
+       anywhere on `<summary>` toggles open; the explicit
+       button is a discoverability + visual cue, not a
+       second mechanism. CSS rotates the chevron / flips
+       the icon based on the parent `<details>[open]`
+       selector — no JS for the per-card toggle.
    - **Default state: all collapsed.** Encourages a
      reorder-first / edit-second workflow and keeps the
      page from being a vertical wall when an operator has
      5+ instruments. Single-instrument sessions still feel
      fine — one click to open.
-   - **Bulk controls: "Expand all" / "Collapse all" in the
-     page header.** ~5 lines of inline JS that iterates the
-     `<details>` elements and toggles `open`; per-card
-     toggle stays pure HTML. No state persistence across
-     refresh — a refresh restores the all-collapsed
-     default.
-   - **Drag interaction.** A collapsed card drags by its
-     header (smaller target = less scroll-while-dragging
-     pain). The drag handle lives in the `<summary>` so
-     it's grabbable in both collapsed and expanded states.
+   - **Bulk controls: "Expand all instruments" /
+     "Collapse all instruments" in the existing
+     Status + bulk-actions card** — inline, immediately
+     before the existing "Show / hide all when closed"
+     toggle (per `spec/instruments.md:113-126`). ~5 lines
+     of inline JS that iterates the `<details>` elements
+     and toggles `open`; per-card toggle stays pure HTML.
+     No state persistence across refresh — a refresh
+     restores the all-collapsed default.
+   - **Drag interaction (future PR 2, not PR 0).** A
+     collapsed card drags by its `<summary>` header
+     (smaller target = less scroll-while-dragging pain).
+     The drag handle lands inside `<summary>` alongside
+     the title + pills + per-card toggle button. PR 0
+     reserves a stable position for the drag handle in
+     the `<summary>` markup so PR 2 only adds JS + a
+     handle icon, not a layout shuffle.
 
 ## Open decisions
 
@@ -281,20 +309,53 @@ implementation plan is written:
   UI lands. Add the per-card toggle + drag handle to the
   Instruments operator-page surface description.
 
-## Sequencing (skeleton — fill in once decisions lock)
+## Sequencing
 
-Tentative split, pending decisions 1 + 3:
+0. **PR 0 — Collapsible instrument cards (standalone).**
+   Wrap each `<section class="instrument-card">` (or the
+   equivalent host element) in
+   `<details class="instrument-card" open>` / `<summary>`,
+   with the `<summary>` carrying `Instrument #{loop.index}`
+   + the two existing status pills + a top-right corner
+   per-card toggle button (chevron / caret icon, rotates
+   via the `details[open] summary .toggle-icon` CSS
+   selector — no JS). Server-render every card with
+   `<details>` **without** the `open` attribute so the
+   default state is all-collapsed; a single inline
+   `<noscript>`-friendly toggle is enough. Add the bulk
+   "Expand all instruments" / "Collapse all instruments"
+   buttons in the existing Status + bulk-actions card,
+   inline immediately before the "Show / hide all when
+   closed" toggle; ~5 lines of inline JS iterate
+   `document.querySelectorAll('details.instrument-card')`
+   and set `.open = true | false`.
+
+   No data-model change, no migration, no route change, no
+   service helper, no reviewer-side touch. CSS additions
+   live in `base.html`. Tests: integration smoke that
+   asserts the rendered page contains `<details
+   class="instrument-card">` per instrument with the
+   summary holding the title + both pills, and that the
+   bulk-action buttons render with the right labels.
+
+   This PR is **independent** of the rest of 18M — if PRs
+   1-3 below get postponed indefinitely, PR 0 still pays
+   its own way on the page.
 
 1. **PR 1 — data model + service helpers.** Alembic
    migration for the page-break column (per decision 1);
    `reorder_instruments` + `set_page_break` service
    helpers with audit-event emission; tests at the service
-   layer (no UI yet).
+   layer (no UI yet). Pending the persistence decision.
 2. **PR 2 — operator UI: reorder.** Drag-and-drop on the
    Instruments page, mirroring the display-field pattern.
-   Inline JS handler, JSON POST endpoint.
+   Inline JS handler, JSON POST endpoint. Drag handle
+   lands in the slot PR 0 reserved inside `<summary>`.
 3. **PR 3 — operator UI: page-break toggle.** Per-card
-   toggle in the instrument header; operator preview
-   renders the resulting layout.
+   toggle in the instrument `<summary>` (so page
+   structure is legible without expanding cards);
+   operator preview renders the resulting layout.
 
-Sizes TBD; aim for ~200–300 LOC per PR.
+Sizes TBD for PRs 1-3; aim for ~200–300 LOC per PR. PR 0
+is the smallest of the four (template + CSS + ~5 lines of
+JS + a smoke test — probably <150 LOC).
