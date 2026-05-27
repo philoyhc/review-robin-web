@@ -56,6 +56,19 @@ class SummaryFieldCol:
     # operator hasn't drag-resized this column on the Band 2
     # editor; the template then lets it auto-distribute.
     width_px: int | None = None
+    # Column-class hints mirroring the reviewer surface
+    # (``review_surface.html`` lines 271-274 / 331-334).
+    # ``is_narrow``: Integer / Decimal columns — render with
+    # ``class="rs-narrow"`` (``width: 1%; white-space: nowrap``)
+    # so a short header like "Rating *" doesn't wrap.
+    # ``is_textlong``: String columns with ``max_length > 100``
+    # — render with ``class="rs-textlong"`` (``min-width: 14em``)
+    # so long-comment columns claim enough horizontal room.
+    # Skipped for group-scoped instruments (matches the form;
+    # group tables are ``table-layout: fixed`` with bespoke
+    # widths). ``None``-typed fields default to neither.
+    is_narrow: bool = False
+    is_textlong: bool = False
 
 
 @dataclass(frozen=True)
@@ -434,6 +447,15 @@ def build_reviewer_summary_context(
                 label=f.label,
                 required=bool(f.required),
                 width_px=widths_by_col_key.get(f"rf_{f.id}"),
+                is_narrow=(
+                    not is_group
+                    and f.data_type in ("Integer", "Decimal")
+                ),
+                is_textlong=(
+                    not is_group
+                    and f.data_type == "String"
+                    and ((f.validation or {}).get("max_length") or 0) > 100
+                ),
             )
             for f in fields
         ]

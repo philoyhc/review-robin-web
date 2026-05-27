@@ -85,7 +85,7 @@
                 <th scope="col"{% if col.is_profile_link %} class="rs-narrow"{% endif %}>{{ col.label }}</th>
               {% endfor %}
               {% for col in section.field_cols %}
-                <th scope="col">{{ col.label }}{% if col.required %} *{% endif %}</th>
+                <th scope="col"{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %}>{{ col.label }}{% if col.required %} *{% endif %}</th>
               {% endfor %}
             </tr>
           </thead>
@@ -119,7 +119,8 @@
                 </td>
               {% endfor %}
               {% for value in row.values %}
-                <td>
+                {% set col = section.field_cols[loop.index0] %}
+                <td{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %}>
                   {% if value %}
                     {{ value }}
                   {% else %}
