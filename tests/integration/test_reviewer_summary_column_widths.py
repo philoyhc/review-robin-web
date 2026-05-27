@@ -367,3 +367,85 @@ def test_summary_includes_visible_display_field_columns(
     # on the summary, same as the surface would render.
     assert "Tag 1" in body
     assert "Team Alpha" in body
+
+
+def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """On a group-scoped instrument, the summary's group-identity
+    cell must compose its tag line from EVERY visible
+    ``reviewee.tag_*`` display field — not just the boundary
+    tags. Mirrors the reviewer surface's ``_collapse_group_rows``
+    composition; pre-fix the summary's view-builder only used
+    ``group_key`` (the boundary tags), silently dropping the
+    operator's non-boundary tag display fields.
+    """
+    from app.db.models import (
+        Instrument,
+        InstrumentDisplayField,
+        Reviewee,
+    )
+
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="sum-group-tags", reviewer_email=rae.email
+    )
+    carol = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id
+        )
+    ).scalar_one()
+    # Two tag values: tag_1 will be the boundary (lands in
+    # ``group_key``), tag_2 is purely display (must show up
+    # too).
+    carol.tag_1 = "Cohort A"
+    carol.tag_2 = "Senior"
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id
+        )
+    ).scalar_one()
+    # Group by tag_1 only; tag_2 is non-boundary.
+    instrument.group_kind = "r1"
+    # Make tag_1 and tag_2 visible display fields.
+    for slot in ("tag_1", "tag_2"):
+        df = db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .where(InstrumentDisplayField.source_type == "reviewee")
+            .where(InstrumentDisplayField.source_field == slot)
+        ).scalar_one_or_none()
+        if df is None:
+            df = InstrumentDisplayField(
+                instrument_id=instrument.id,
+                source_type="reviewee",
+                source_field=slot,
+                label=slot.replace("_", " ").title(),
+                order=99,
+                visible=True,
+            )
+            db.add(df)
+        else:
+            df.visible = True
+    db.commit()
+
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/summary"
+    ).text
+    # The composed tag line carries BOTH the boundary tag value
+    # ("Cohort A") and the non-boundary one ("Senior"), wrapped
+    # in <strong>...</strong> inside the group-identity cell.
+    # Asserting the full ``<strong>Cohort A, Senior</strong>``
+    # substring pins the composition (vs. just both tokens
+    # appearing somewhere — display-field cells also carry
+    # "Senior" as a plain cell value, so a token-only check
+    # would pass even when the tag line collapses to the
+    # boundary tag).
+    assert "<strong>Cohort A, Senior</strong>" in body
