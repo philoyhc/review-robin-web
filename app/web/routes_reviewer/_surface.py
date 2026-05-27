@@ -820,7 +820,19 @@ def review_surface(
         db, review_session, correlation_id=request_correlation_id()
     )
     db.refresh(review_session)
-    if not lifecycle.is_ready(review_session):
+    # ``ready`` is the live response window; ``expired`` is the
+    # post-Close-session state where every instrument is
+    # ``accepting_responses=False`` but the surface still renders
+    # so reviewers with ``responses_visible_when_closed=True``
+    # instruments can read their submissions (and reviewers
+    # whose instruments don't have that flag see the disabled
+    # form with empty inputs + the "no longer accepting
+    # responses" banner). Anything else (``draft`` / ``validated``
+    # / ``archived``) gets ``pre_open.html``.
+    if not (
+        lifecycle.is_ready(review_session)
+        or lifecycle.is_expired(review_session)
+    ):
         session_zone = sessions_service.resolve_session_timezone(
             review_session
         )

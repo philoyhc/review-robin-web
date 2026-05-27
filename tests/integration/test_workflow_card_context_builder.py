@@ -71,6 +71,7 @@ _EXPECTED_KEYS = {
     "is_draft",
     "is_validated",
     "is_ready",
+    "is_expired",
     "is_setup_empty",
     "is_pre_generate",
     "invitations_generated",

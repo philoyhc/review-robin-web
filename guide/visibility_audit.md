@@ -35,11 +35,22 @@ X?" report.
 - **Reviewers never see `include=False` rows.** The assignment
   query filters them out — no "skipped" rendering, the rows
   simply don't exist for that reviewer.
-- **The `expired` and `archived` lifecycle states are reserved
-  enums; no reviewer-side code-path treats them specially.**
-  Hitting the surface in those states would fall through to the
-  `is_ready()` check and render `pre_open.html` (since `archived
-  != ready`).
+- **`archived` is the post-Segment-18A reach state** (set by
+  `lifecycle.archive_session` from the Sessions lobby's archive
+  action). The reviewer dashboard filters archived sessions out
+  entirely; if a reviewer somehow lands on the surface URL the
+  master gate falls through to `pre_open.html`.
+- **`expired` is the post-2026-05-26 close-session state.**
+  `lifecycle.expire_session` (the Workflow card's Close session
+  button) flips `ready → expired` and closes every instrument
+  (`accepting_responses=False`). The surface route accepts both
+  `ready` AND `expired` as render-the-form states; the closed
+  instruments + the per-instrument
+  `responses_visible_when_closed` toggle then govern what the
+  disabled inputs show. From `expired` the operator can click
+  Revert to draft (shared `/sessions/{id}/revert` route — service
+  accepts both `ready` and `expired` as starting states); the
+  flip back to `draft` preserves every saved response.
 
 ---
 
@@ -48,6 +59,8 @@ X?" report.
 | Predicate | File:line | What it returns True for |
 |---|---|---|
 | `lifecycle.is_ready(session)` | `app/services/session_lifecycle.py:60-61` | Session status is literally `"ready"` (activated). |
+| `lifecycle.is_expired(session)` | `app/services/session_lifecycle.py:72-73` | Session status is `"expired"` (post-Close-session). Set by `expire_session()` and cleared by `revert_session_to_draft()`. |
+| `lifecycle.is_archived(session)` | `app/services/session_lifecycle.py:76-77` | Session status is `"archived"` (post-archive-from-draft). Set by `archive_session()`; reversible via `unarchive_session()`. |
 | `lifecycle.session_accepts_responses(session, instrument)` | `app/services/session_lifecycle.py:582-596` | `is_ready(session)` **AND** `instrument.accepting_responses` **AND** (no deadline OR `now < deadline`). |
 | `lifecycle.observe_deadline(db, session, …)` | `app/services/session_lifecycle.py:640-696` | Called at request time on the reviewer surface + summary routes; flips every `accepting_responses=True` instrument to `False` once `now ≥ deadline`. Stamps `Instrument.deadline_closed_at`; audits with `reason="deadline"`. **Idempotent.** |
 | `Instrument.responses_visible_when_closed` | `app/db/models/instrument.py` | Per-instrument display flag. When `accepting=False`, decides whether the reviewer's *previously-saved values* are still prefilled in the disabled inputs. |
@@ -62,7 +75,7 @@ X?" report.
 |---|---|---|---|
 | `GET /reviewer` | `_dashboard.py:133` | None (lists sessions where the reviewer's row is `status="active"`). Computes a pill + a "session status" badge for each row. | Dashboard listing. Per-session pill = `not started` / `in progress` / `submitted`; per-session status = `not opened` (session not `ready`) / `open` (`ready` + ≥1 accepting instrument before deadline) / `closed` (`ready` but deadline passed or all instruments `accepting=False`). Row link: `→ /summary` if `submitted`, else `→ /1`. |
 | `GET /reviewer/sessions/{id}` | `_surface.py:782` | None — bare-URL convenience redirect. | 303 → `/reviewer/sessions/{id}/1`. |
-| `GET /reviewer/sessions/{id}/{position}` | `_surface.py:795` | `lifecycle.is_ready(session)` (line 823). | If not ready → `reviewer/pre_open.html` ("opens later" banner + deadline text if set + back link to dashboard). If ready → `reviewer/review_surface.html` (the full form, with per-cell behaviour governed by `accepting` + `responses_visible_when_closed`). |
+| `GET /reviewer/sessions/{id}/{position}` | `_surface.py:795` | `lifecycle.is_ready(session) OR lifecycle.is_expired(session)` (line 823). | If neither → `reviewer/pre_open.html` ("opens later" banner + deadline text if set + back link to dashboard). Else → `reviewer/review_surface.html`: editable form when `ready` + instrument accepting + before deadline, otherwise disabled form with per-cell behaviour governed by `accepting` + `responses_visible_when_closed`. `expired` always renders the disabled-form variant since every instrument is `accepting=False` after close. |
 | `POST /reviewer/sessions/{id}/{position}/save` | `_surface.py:870` | `_require_session_accepting(...)` (line 303) — needs `session_accepts_responses(session, instrument)`. | 200 on success; 403 otherwise. |
 | `POST /reviewer/sessions/{id}/submit` | `_surface.py:962` | `_require_session_accepting(...)` per assignment. | 303 to summary on success; 403 otherwise. |
 | `POST /reviewer/sessions/{id}/clear` | `_surface.py:1032` | Same as `/submit`. | 303 to surface on success; 403 otherwise. |
@@ -89,8 +102,9 @@ Each row is a realistic state combination. Columns marked "n/a" mean the dimensi
 | 9 | `ready` | False (operator-closed), `responses_visible_when_closed=True` | future or past | yes | yes | n/a | Disabled inputs, **prefilled** with saved values. Banner. **Read-only view of own work.** | 403 | 303 → `/reviewer` unless fully submitted | per-state / status="closed" if all instruments closed |
 | 10 | `ready` | any | any | **no** (no assignments — e.g. rule filtered them out) | — | — | The surface page still renders for any reviewer in the session, but with zero rows in their table; the reviewer dashboard shows them no link to a per-instrument page either. | n/a | 303 → `/reviewer` (zero assignments → `pill_state ≠ "submitted"`) | "no assignments" if session has 0 active for this reviewer; otherwise per-instrument-row "no assignments" pill |
 | 11 | `ready` | any | any | yes, but **all rows `include=False`** | n/a | — | Assignment query filters them out. Functionally identical to row 10. | n/a | Same as row 10. | Same as row 10. |
-| 12 | `expired` (reserved — no transition exists today) | n/a | n/a | yes | any | any | `pre_open.html` (fails `is_ready`). Same as `draft`. | 403 | 303 → `/reviewer` | "not opened" |
-| 13 | `archived` (reserved — no transition into this exists today from the reviewer's side) | n/a | n/a | yes | any | any | `pre_open.html` (fails `is_ready`). | 403 | 303 → `/reviewer` | "not opened" |
+| 12 | `expired` (post-Close-session) | `False` on every instrument, `responses_visible_when_closed=False` | n/a | yes | yes | n/a | Surface renders disabled inputs, **blank** (saved values hidden). "No longer accepting responses" banner. Same as row 8 but reached via Close session instead of per-instrument close. | 403 | 303 → `/reviewer` unless fully submitted | status="closed" |
+| 13 | `expired` (post-Close-session) | `False` on every instrument, `responses_visible_when_closed=True` | n/a | yes | yes | n/a | Surface renders disabled inputs, **prefilled** with saved values. Read-only view of own work, post-close. Same as row 9 but reached via Close session. | 403 | 303 → `/reviewer` unless fully submitted | status="closed" |
+| 14 | `archived` (post-archive-from-draft) | n/a | n/a | yes (but reviewer dashboard filters this session out) | any | n/a | Reviewer dashboard hides the session. If they hit the URL directly, the surface bails to `pre_open.html` (`archived` is neither `ready` nor `expired`). | 403 | 303 → `/reviewer` | session absent from dashboard |
 
 ---
 

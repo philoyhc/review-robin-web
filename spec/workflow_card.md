@@ -132,8 +132,8 @@ from the step name (`generate` / `validate` → `"prepare"`;
 
 ## State machine
 
-The card has ten states. The body and right column are chosen by
-this cascade in `next_action_card.html`:
+The card has eleven states. The body and right column are
+chosen by this cascade in `next_action_card.html`:
 
 ```
 if is_setup_empty:                              → State 1
@@ -149,6 +149,7 @@ elif is_ready:
     if invitations.none:                        → State 7
     elif invitations.generated_not_sent:        → State 8
     else (invitations.sent):                    → State 9
+elif is_expired:                                → State 10
 ```
 
 State 4Err is defensive — `mark_validated` only flips
@@ -172,6 +173,7 @@ missed).
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses. Create invites and send them so reviewers know they can start." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
+| **10** | `is_expired` (post-Close-session) | "Session is closed. No further responses are being accepted. Revert to draft to reopen for editing — responses are preserved." |
 
 ## Layout
 
@@ -228,10 +230,14 @@ CSS lives in `app/web/templates/base.html` next to the
 The left column hosts two rows of action buttons. **Row 1 (prep
 phase)** carries the actions an operator runs before reviewers
 see anything; **Row 2 (run phase)** carries the actions during
-and after the review window. Close session renders as an inert
-**placeholder** in Row 2 — its behaviour ships alongside the
-`expired` lifecycle status work, but the slot stays in the grid
-so the eventual primary doesn't shift the layout.
+and after the review window. **Close session** is live in
+Row 2 from `ready` onward — clicking it flips the session to
+`expired` and closes every instrument; the per-instrument
+`responses_visible_when_closed` toggle then governs whether
+reviewers can still see what they submitted post-close. From
+`expired` the operator clicks Revert to draft to reopen for
+editing (the shared `/sessions/{id}/revert` route accepts
+both `ready` and `expired` as starting states).
 
 ```
 Row 1 (prep): Revert to draft · Prepare session · Create invites
@@ -248,20 +254,20 @@ never promotes it to Primary.
 
 **Row 1 (prep) — Revert · Prepare · Create invites**
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Revert to draft | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
-| Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | Sec | — | — | — |
-| Create invites | — | — | — | **Pri** | **Pri** | — | Sec | Sec | **Pri** | Sec | Sec |
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | Sec | — | — | — | — |
+| Create invites | — | — | — | **Pri** | **Pri** | — | Sec | Sec | **Pri** | Sec | Sec | — |
 
 **Row 2 (run) — Send invites · Activate · Send reminders · Close session**
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Send invites | — | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec |
-| Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | — | **Pri** | **Pri** | — | — | — |
-| Send reminders | — | — | — | — | — | — | — | — | — | — | **Pri** |
-| Close session | — | — | — | — | — | — | — | — | — | — | — |
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Send invites | — | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec | — |
+| Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | — | **Pri** | **Pri** | — | — | — | — |
+| Send reminders | — | — | — | — | — | — | — | — | — | — | **Pri** | — |
+| Close session | — | — | — | — | — | — | — | — | Sec | Sec | Sec | — |
 
 `Generate assignments` and `Validate setup` don't render as their
 own stepper slots — they live inside **Prepare session**, which

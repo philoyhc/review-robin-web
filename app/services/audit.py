@@ -348,6 +348,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    "session.expired": EventSchema(_IDENTITY | {"counts"}),
     # Segment 18G Part 1 — scheduled activation. The trigger emits
     # ``*_skipped`` on a one-shot precondition miss, ``*_retry`` on
     # a transient transition failure (up to 3 retries from audit-log

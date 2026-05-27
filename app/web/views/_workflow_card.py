@@ -107,6 +107,7 @@ def build_workflow_card_context(
     is_draft = lifecycle.is_draft(review_session)
     is_validated = lifecycle.is_validated(review_session)
     is_ready = lifecycle.is_ready(review_session)
+    is_expired = lifecycle.is_expired(review_session)
 
     validation_summary: dict[str, object] | None = None
     validation_issues_by_severity: dict[str, list] = {
@@ -175,6 +176,7 @@ def build_workflow_card_context(
         "is_draft": is_draft,
         "is_validated": is_validated,
         "is_ready": is_ready,
+        "is_expired": is_expired,
         "is_setup_empty": is_setup_empty,
         "is_pre_generate": is_pre_generate,
         "invitations_generated": invitations.has_invitations(

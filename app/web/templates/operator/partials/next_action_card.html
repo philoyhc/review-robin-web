@@ -41,10 +41,10 @@
    Layout: a 50% / 50% two-column grid. The left column hosts the
    body copy + two rows of buttons (Row 1 prep: Revert · Prepare ·
    Create invites; Row 2 run: Send invites · Activate · Send
-   reminders); the right column hosts the per-state status aside.
-   Below ~720 px the columns stack. Close session is deferred
-   until the `expired` lifecycle status work lands (Segment 18F
-   plan, "Close session — deferred").
+   reminders · Close session); the right column hosts the per-
+   state status aside. Below ~720 px the columns stack.
+   Close session flips ``ready → expired``; from ``expired`` the
+   Revert to draft button re-opens the session for editing.
 #}
 {% set _next_action_return_to = next_action_return_to | default(none) %}
 {% set _activate_warns_href = (
@@ -74,6 +74,14 @@
 {% set _send_invites_live = _invitations_actionable and invitations_generated %}
 {% set _send_invites_primary = _invitations_actionable and invitations_generated and not invitations_sent %}
 {% set _send_reminders_live = is_ready and invitations_sent %}
+{# Close session — live once the session is ready (anywhere in the
+   activated run window). After it fires the session moves to
+   ``expired`` and the button goes inert; Revert to draft becomes
+   the way back. #}
+{% set _close_session_live = is_ready %}
+{# Revert is live from validated through ready, and now also from
+   expired (recovery path after Close session). #}
+{% set _revert_live = is_validated or is_ready or is_expired %}
 <div class="card next-action" id="next-action">
   <h2>Workflow</h2>
   <div class="next-action-grid">
@@ -154,6 +162,15 @@
         {# State 9 #}
         <p>Session is open. Send reminders if reviewers fall behind.</p>
       {% endif %}
+    {% elif is_expired %}
+      {# State 10 — session was closed via the Close session button.
+         Responses are preserved; reviewers with
+         ``responses_visible_when_closed=True`` instruments can still
+         read their submissions. Revert to draft reopens the session
+         for editing. #}
+      <p>Session is closed. No further responses are being accepted.
+        Revert to draft to reopen for editing — responses are
+        preserved.</p>
     {% endif %}
 
     {# Hidden form holders for the stepper-row buttons. #}
@@ -202,7 +219,10 @@
         {% endif %}
       </form>
     {% endif %}
-    {% if is_ready %}
+    {% if is_ready or is_expired %}
+      {# Shared form for ready→draft and expired→draft revert.
+         The service requires confirm=true; the Close-session
+         button posts a separate form below. #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/revert"
             id="next-action-pause-form">
@@ -210,6 +230,15 @@
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
         {% endif %}
         <input type="hidden" name="confirm" value="true">
+      </form>
+    {% endif %}
+    {% if _close_session_live %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/close"
+            id="next-action-close-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
       </form>
     {% endif %}
     {% if _invitations_actionable %}
@@ -239,7 +268,7 @@
   {# Row 1 — prep phase: Revert to draft · Prepare session · Create
      invites. Buttons stretch to fill the left column's width. #}
   <div class="next-action-buttons next-action-buttons-row">
-    {% if is_ready %}
+    {% if is_ready or is_expired %}
       <button class="btn secondary" type="submit"
               form="next-action-pause-form">Revert to draft</button>
     {% elif is_validated %}
@@ -306,12 +335,21 @@
               disabled aria-disabled="true">Send reminders</button>
     {% endif %}
 
-    {# Close session — placeholder. Behaviour ships alongside the
-       `expired` lifecycle status work; inert here so Row 2's slot
-       count is stable and the eventual primary doesn't shift the
-       grid. #}
-    <button class="btn secondary" type="button"
-            disabled aria-disabled="true">Close session</button>
+    {# Close session — live once the session is ``ready`` (the
+       activated run window). POSTs to
+       ``/sessions/{id}/workflow/close`` which flips
+       ``ready → expired`` and closes every instrument; responses
+       are preserved so reviewers with
+       ``responses_visible_when_closed=True`` can still read what
+       they submitted. From ``expired`` the operator clicks Revert
+       to draft to reopen for editing. #}
+    {% if _close_session_live %}
+      <button class="btn secondary" type="submit"
+              form="next-action-close-form">Close session</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Close session</button>
+    {% endif %}
   </div>
     </div>
     {# Right column — per-state status aside. Per-state Setup-
