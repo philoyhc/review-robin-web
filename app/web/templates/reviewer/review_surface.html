@@ -151,14 +151,19 @@
         {% if not loop.first %}
           <hr class="rs-instrument-separator">
         {% endif %}
-        {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
-          {% with action_row_position="top" %}
-            {% include "reviewer/_action_row.html" %}
-          {% endwith %}
-        {% endif %}
-        <section id="{{ group.anchor_id }}"
-                 class="rs-instrument-group"
-                 data-rs-position="{{ group.position }}">
+        {# The anchor id lives on a wrapper around (action row +
+           section) so navigation to ``#instrument-{id}`` scrolls
+           to the action row above the heading — the operator
+           lands with the Save / Submit | #N TOC controls visible
+           at the top of the viewport, not buried just above it. #}
+        <div id="{{ group.anchor_id }}" class="rs-instrument-block">
+          {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
+            {% with action_row_position="top" %}
+              {% include "reviewer/_action_row.html" %}
+            {% endwith %}
+          {% endif %}
+          <section class="rs-instrument-group"
+                   data-rs-position="{{ group.position }}">
         {# Per-instrument intro: heading card (short label + description)
            sits alone in its own half-width slot. Help text cards
            start in their own 2-col grid below — they don't share a
@@ -438,7 +443,8 @@
             </tbody>
           </table>
         </div>
-        </section>{# /.rs-instrument-group #}
+          </section>{# /.rs-instrument-group #}
+        </div>{# /.rs-instrument-block #}
       {% endfor %}
 
       {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
