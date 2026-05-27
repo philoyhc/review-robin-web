@@ -1,11 +1,13 @@
 # Segment 18M — Operator-side instrument ordering + page breaks
 
-> **Status: drafting (stub created 2026-05-27).** No decisions
-> locked yet; no PRs yet. This stub captures the goal and the
-> open decisions that need answering before the implementation
-> plan can be written. Coming out of the strategic-vision
-> section in `guide/segment_18L_single_page_surface.md`
-> (locked 2026-05-27).
+> **Status: PR 0 shipped (2026-05-27); PR 1 in flight.**
+> Decisions 1–9 locked (see "Locked decisions" below). PR 0
+> shipped the collapsible-card chrome (native `<details>` /
+> `<summary>`, all-collapsed default, bulk Expand/Collapse,
+> drag-handle placeholder, short-label on the summary) + a
+> smoke-test file pinning the structural contract for
+> downstream PRs. PR 1 (data model + service helpers) is
+> the current focus.
 >
 > **Predecessors.** Segment 13D / Wave 5 collapsed the
 > instrument card model into a single new-model card; Segment
@@ -393,36 +395,31 @@ _(none — all locked below; see decisions 2–9.)_
 
 ## Sequencing
 
-0. **PR 0 — Collapsible instrument cards (standalone).**
-   Wrap each `<section class="instrument-card">` (or the
-   equivalent host element) in
-   `<details class="instrument-card" open>` / `<summary>`,
-   with the `<summary>` carrying `Instrument #{loop.index}`
-   + the two existing status pills + a top-right corner
-   per-card toggle button (chevron / caret icon, rotates
-   via the `details[open] summary .toggle-icon` CSS
-   selector — no JS). Server-render every card with
-   `<details>` **without** the `open` attribute so the
-   default state is all-collapsed; a single inline
-   `<noscript>`-friendly toggle is enough. Add the bulk
-   "Expand all instruments" / "Collapse all instruments"
-   buttons in the existing Status + bulk-actions card,
-   inline immediately before the "Show / hide all when
-   closed" toggle; ~5 lines of inline JS iterate
-   `document.querySelectorAll('details.instrument-card')`
-   and set `.open = true | false`.
+0. **PR 0 — Collapsible instrument cards (shipped
+   2026-05-27).** Wrapped each per-instrument card body in
+   `<details class="instrument-card-collapsible">` /
+   `<summary class="instrument-card-summary">` (#1498). The
+   `<summary>` carries: drag-handle placeholder (left
+   edge), `Instrument #{loop.index}`, optional
+   `<short_label>`, the two status pills, and the chevron
+   toggle icon. CSS rotates the chevron via
+   `details[open] summary .instrument-card-toggle-icon`
+   (no JS for the per-card toggle). Default state
+   collapsed; auto-opens when `is_editing` or `was_saved`
+   so an active edit / fresh save never lands hidden.
+   Bulk Expand all / Collapse all buttons inline before
+   the existing "Show / hide all when closed" toggle in
+   the Status + bulk-actions card; a single inline IIFE
+   iterates `details.instrument-card-collapsible` and
+   flips `.open`. The same IIFE wires `#instrument-{id}`
+   deep-link auto-open on initial load + `hashchange`.
 
-   No data-model change, no migration, no route change, no
-   service helper, no reviewer-side touch. CSS additions
-   live in `base.html`. Tests: integration smoke that
-   asserts the rendered page contains `<details
-   class="instrument-card">` per instrument with the
-   summary holding the title + both pills, and that the
-   bulk-action buttons render with the right labels.
-
-   This PR is **independent** of the rest of 18M — if PRs
-   1-3 below get postponed indefinitely, PR 0 still pays
-   its own way on the page.
+   Shipped over PRs #1496 (placeholders), #1498 (wiring),
+   #1499 (short_label + chevron polish), #1500 (drag-
+   handle placeholder), #1501–#1503 (vertical alignment
+   passes), #1504 (smoke tests at
+   `tests/integration/test_instruments_index_collapsible.py`
+   that lock the structural contract).
 
 1. **PR 1 — data model + service helpers.** Alembic
    migration adding `instruments.starts_new_page: bool

@@ -496,6 +496,12 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instruments.bulk_visibility_when_closed": EventSchema(
         _IDENTITY | {"set_changes", "context"}
     ),
+    # Segment 18M PR 1 — instrument reorder + per-instrument page break.
+    "instruments.reordered": EventSchema(_IDENTITY | {"changes"}),
+    "instrument.page_break_set": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.page_break_cleared": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
     # PR 3 — invitations
     "invitations.generated": EventSchema(_IDENTITY | {"set_changes"}),
     "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
