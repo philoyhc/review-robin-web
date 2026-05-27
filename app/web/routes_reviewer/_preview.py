@@ -328,6 +328,7 @@ def build_preview_context(
                 "heading": heading,
                 "position": position,
                 "anchor_id": f"instrument-preview-{position}",
+                "starts_new_page": instrument.starts_new_page,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,

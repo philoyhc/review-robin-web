@@ -655,6 +655,7 @@ def _surface_context(
                 "heading": heading,
                 "position": position_by_id[instrument_id],
                 "anchor_id": f"instrument-{instrument.id}",
+                "starts_new_page": instrument.starts_new_page,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
