@@ -423,23 +423,51 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 ### Band 3 — Response fields
 
-Band 3 is a table of Response Fields — the typed input
-controls the reviewer fills in.
+Band 3 is a stack of inline editor rows — one per Response
+Field, plus a trailing empty starter row so the operator can
+keep typing without first clicking `+`. Each row defines one
+typed input control the reviewer fills in on the surface form.
 
-Columns in edit mode:
+Each row is a single horizontal flex strip with the following
+controls (left → right):
 
-| Column | Editable | Notes |
+| Control | Bound to | Notes |
 |---|---|---|
-| Order | yes (drag handle) | `InstrumentResponseField.order`. Reordering is local DOM until Save. |
-| Visible | yes (checkbox) | `visible`. Reviewer surface only shows `visible=True` rows. |
-| Label | yes (text) | The string the reviewer sees as the field's prompt. |
-| Type | yes (dropdown) | `String / Integer / Decimal / List` plus three quick-fill List presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. |
-| Bounds | conditional | For `Integer` / `Decimal`, inline `min` / `max` / `step` inputs. For `List`, inline comma-separated `list_options` editor. For `String`, inline `min` / `max` (length) inputs. |
-| Help text | yes (textarea) | Rendered tinted-block under the input on the reviewer surface. |
-| Remove (X) | yes (button) | Soft-delete: hides the row from the save payload. The row vanishes on save. |
+| Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Drives the paired Band 2 pill's label on save. |
+| Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
+| Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
+| **R** button | `required` | Toggle. Active = required for reviewers to submit (enforced from Wave 3). |
+| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The actual help-text *text* is edited on the help card itself (the ✎ → textarea + ✓ flow next to the card title), not on the Band 3 row. |
+| **✓** button | — | Saves *this row's* current values back into the paired Band 2 pill (creating the pill on first save, updating its label / metadata on subsequent saves). Pure UX — nothing persists across reload until the card-wide bulk Save runs. |
+| **X** button | — | Drops this row and its paired pill. Disabled when the row has saved responses; the title pins the reason. |
 
-Below the table, a `+` button adds a blank row. The full table
-saves with the bulk Save form (`POST /fields/save`).
+Below the row stack, a `+` button spawns another empty row.
+The whole card's bulk Save form
+(`POST /sessions/{sid}/instruments/{iid}/fields/save`,
+form id `dfsave-{iid}`) persists every row in its current
+order; row order on save mirrors the **Band 2 pill order**, so
+drag-reordering the response pills in Band 2 is the
+operator-facing reorder affordance (there is no per-row drag
+handle on Band 3 itself).
+
+#### Per-field visibility lives on the Band 2 pill
+
+`InstrumentResponseField.visible` — the flag that decides
+whether the field renders on the reviewer surface — is
+**toggled from the paired Band 2 pill**, not from Band 3. A
+response field's pill in the Band 2 chip row carries
+`data-source-type="response"`; clicking the pill flips its
+`aria-pressed` / `is-selected` state, and on bulk Save
+`bulk_save_fields` writes the new selected state through to
+`InstrumentResponseField.visible`
+(`app/services/instruments/_instrument_crud.py:1422`).
+
+The reviewer surface form, the reviewer summary HTML, and the
+reviewer-record CSV all filter response fields by
+`visible.is_(True)` — un-pinning a chip drops the column from
+every reviewer-facing render in one step. The Response Field
+row in Band 3 stays present (so its bounds / help text remain
+editable); only the chip + the reviewer-side renders react.
 
 #### Inline bounds
 
