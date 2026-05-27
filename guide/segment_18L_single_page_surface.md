@@ -12,6 +12,84 @@
 > stays the reference for what each route renders in each
 > lifecycle state.
 
+## Strategic vision (locked 2026-05-27)
+
+Today's instrument editing surface is rigid in two ways that
+shape every downstream decision in this segment:
+
+1. **Append-only ordering.** New instruments are created
+   one after another in creation order. Deleting an
+   instrument shifts every later instrument up by one slot;
+   there is no operator-driven way to put instrument B
+   ahead of instrument A once both exist.
+2. **One instrument = one page.** The reviewer surface
+   paginates per instrument with no operator choice — every
+   instrument carries its own URL, its own action row, and
+   its own scroll context, regardless of whether two short
+   instruments would read better stacked.
+
+Segment 18L unblocks both by establishing two strategic
+capabilities the operator gains over the instrument layout:
+
+- **A. Arbitrary reordering.** The operator can move any
+  instrument to any position in the Setup → Instruments
+  list. Deletes still shift later instruments up; the new
+  primitive is *explicit* reordering (drag, up/down
+  buttons, or position input — UI mechanism deferred to
+  the implementation decision in PR scope).
+- **B. Operator-controlled page breaks.** Each instrument
+  carries a flag determining whether it starts a new page
+  on the reviewer surface or stacks onto the previous
+  instrument's page. The default is "stack" — every new
+  instrument lives on the same page as its predecessor
+  unless the operator opts into a break. The 18L baseline
+  ("single-page-all-instruments") is the natural state
+  when no operator has set any breaks; multi-page sessions
+  emerge from explicit break flags.
+
+Together these capabilities turn the instrument list from
+a fixed-order append-only stack into an arrangeable layout
+the operator owns. The reviewer surface inherits whatever
+page structure the operator chose: zero breaks → one long
+page (the 18L default); breaks → operator-defined groups
+of instruments per page.
+
+### Why both belong in the same vision
+
+Reordering without page breaks would still leave every
+instrument on its own page, with operator choice limited to
+"which order do reviewers see them in". Page breaks without
+reordering would let operators carve pages but not arrange
+their contents. Together they cover the full surface
+("what's on each page, in what order"); separately each
+solves half the problem.
+
+### What 18L locks vs. defers
+
+- **Locks (this segment).** The data model carrying the
+  page-break flag; the reviewer surface rendering that
+  honours it; the canonical single-page URL contract
+  (`/reviewer/sessions/{id}` when there's one page;
+  `/reviewer/sessions/{id}/{page_position}` when there's
+  more than one — exact shape pending the URL decision in
+  the next round); the action row + #N anchor nav inside
+  whichever page is currently rendering.
+- **Defers (follow-up segment).** The operator UI for
+  setting / clearing the page-break flag and reordering
+  instruments. 18L's reviewer-side work stands on its own
+  even when the only way to set the break flag is
+  programmatically (test fixtures, future seed scripts);
+  the operator UI is its own slice of work and can ship
+  without forcing the reviewer surface to wait.
+
+This split is deliberate. The reviewer-side refactor (this
+segment's body) is mostly self-contained: routing,
+templating, view-shape, audit, test sweep. The operator-
+side reordering + page-break controls are a sibling effort
+that touches a different surface (Setup → Instruments),
+has its own affordances (drag-and-drop, per-card toggles),
+and is best reviewed on its own merits.
+
 ## Goal
 
 Collapse the reviewer response surface from per-instrument
