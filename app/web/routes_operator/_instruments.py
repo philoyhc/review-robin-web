@@ -1309,3 +1309,75 @@ def instrument_visibility(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Segment 18M PR 2a — page-break create / delete.
+#
+# ``+ Page break`` button on the per-instrument action row POSTs to
+# /page-break/create, anchoring the break BETWEEN the clicked
+# instrument and its successor. ``×`` button on each page-break
+# divider POSTs to /page-break/delete, where {instrument_id}
+# identifies the instrument that currently carries the flag (i.e.
+# the successor).
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/page-break/create"
+)
+def instrument_page_break_create(
+    bundle: tuple[Instrument, ReviewSession] = Depends(
+        _require_instrument_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Add a page break immediately after ``instrument_id`` (sets
+    ``starts_new_page=true`` on its successor). 409 on the two
+    locked-decision-4 invariant rejections (last instrument /
+    successor already flagged) and on the lifecycle gate.
+    """
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    try:
+        instruments_service.create_page_break_after(
+            db, instrument=instrument, actor=user
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/page-break/delete"
+)
+def instrument_page_break_delete(
+    bundle: tuple[Instrument, ReviewSession] = Depends(
+        _require_instrument_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Remove the page break that ``instrument_id`` carries (clears
+    ``starts_new_page`` on this instrument). 409 if the instrument
+    doesn't currently carry a break, or if the lifecycle gate
+    rejects.
+    """
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    try:
+        instruments_service.clear_page_break(
+            db, instrument=instrument, actor=user
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
+    )
+
+
