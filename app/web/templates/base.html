@@ -2189,8 +2189,14 @@
          without losing dirty edits in the hidden groups. With JS
          disabled the surface still pins to the URL position because
          the server-rendered ``rs-active`` modifier matches the URL. */
-      body.ui-v2 .rs-paginated > .rs-instrument-group:not(.rs-active) {
-        display: none;
+      /* Segment 18L — the single-page reviewer surface replaced the
+         old `.rs-paginated > .rs-instrument-group:not(.rs-active)`
+         display:none toggle with always-visible instrument
+         sections separated by a horizontal rule. */
+      body.ui-v2 .rs-instrument-separator {
+        margin: var(--space-6) 0;
+        border: 0;
+        border-top: 1px solid var(--border-default, #d1d5db);
       }
       /* Denser reviewer-table rows (Segment 17B). The reviewer
          response table is one input-per-cell and can run to hundreds

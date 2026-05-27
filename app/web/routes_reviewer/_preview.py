@@ -327,10 +327,7 @@ def build_preview_context(
                 "is_group": False,
                 "heading": heading,
                 "position": position,
-                # Operator preview always treats Page #1 as the active
-                # group; the synthetic surface has no client-side
-                # navigation handler.
-                "is_current": position == 1,
+                "anchor_id": f"instrument-preview-{position}",
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
@@ -354,8 +351,7 @@ def build_preview_context(
         views.PageButton(
             position=group["position"],
             label=views.page_button_label(group["instrument"], group["position"]),
-            href=f"/operator/sessions/{review_session.id}/previews#reviewer-surface",
-            is_current=group["is_current"],
+            href=f"#{group['anchor_id']}",
         )
         for group in instrument_groups
     ]

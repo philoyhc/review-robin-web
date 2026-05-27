@@ -140,32 +140,25 @@
   {% if rows %}
     {# The session-closed banner now renders inline in the overview
        card above, not as a standalone full-width banner here. #}
-    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_position }}/save">
-    <input type="hidden" name="current_position" value="{{ current_position }}">
+    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">
     {% endif %}
-      {# Unified action row, mirrored top + bottom. Order
-         left-to-right: Save / Discard / Submit / vertical divider /
-         Page #N: short_label. The top instance is flush left, the
-         bottom flush right. Save / Discard / Submit are the
-         review-level controls; the divider separates them from the
-         per-page navigation. #}
-      {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
-        {% with action_row_position="top" %}
-          {% include "reviewer/_action_row.html" %}
-        {% endwith %}
-      {% endif %}
-      {# PR δ — every instrument group renders into the DOM. CSS hides
-         the non-active ones via
-         `.rs-paginated > .rs-instrument-group:not(.rs-active)`; the
-         inline JS handler below toggles `.rs-active` on Page #N
-         click + updates the URL via ``history.pushState``. With JS
-         disabled the surface is pinned to the page it was rendered
-         at — the URL still drives initial visibility. #}
-      <div class="rs-paginated"
-           {% if not preview_mode %}data-rs-pushstate-prefix="/reviewer/sessions/{{ session.id }}/"{% endif %}>
+      {# Segment 18L — every instrument group is always visible on
+         the single-page surface. The action row interleaves above
+         every instrument's heading (`action_row_position="top"`
+         inside the loop) and once at the bottom (outside the loop)
+         with the danger zone immediately beneath. #}
       {% for group in instrument_groups %}
-        <div class="rs-instrument-group{% if group.is_current %} rs-active{% endif %}"
-             data-rs-position="{{ group.position }}">
+        {% if not loop.first %}
+          <hr class="rs-instrument-separator">
+        {% endif %}
+        {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
+          {% with action_row_position="top" %}
+            {% include "reviewer/_action_row.html" %}
+          {% endwith %}
+        {% endif %}
+        <section id="{{ group.anchor_id }}"
+                 class="rs-instrument-group"
+                 data-rs-position="{{ group.position }}">
         {# Per-instrument intro: heading card (short label + description)
            sits alone in its own half-width slot. Help text cards
            start in their own 2-col grid below — they don't share a
@@ -445,9 +438,8 @@
             </tbody>
           </table>
         </div>
-        </div>{# /.rs-instrument-group #}
+        </section>{# /.rs-instrument-group #}
       {% endfor %}
-      </div>{# /.rs-paginated #}
 
       {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% include "reviewer/_action_row.html" %}
@@ -481,142 +473,18 @@
     </div>
   {% endif %}
 
-  {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
-    {# PR δ — client-side page navigation + dirty-edit preservation.
-       Every instrument group lives in the DOM at once; this handler
-       toggles `.rs-active` on Page #N click, updates the URL via
-       ``pushState`` (so refresh / share retains position), and
-       preserves typed-but-not-saved edits across pages. The Save
-       button's enabled state tracks the active group's dirty flag;
-       Discard restores each input on the active group from its
-       ``data-rs-saved-value`` baseline and clears the dirty flag.
-       Save / Submit hits the server normally; the per-position Save
-       filter (PR γ) drops cross-page inputs from Save's payload so
-       the route's scope stays "this page only".
-
-       PR ε — also enabled in operator preview so the operator can
-       flip between pages on multi-instrument sessions. The Save /
-       Discard handlers no-op gracefully because the buttons aren't
-       rendered in preview; only Page #N click + popstate + dirty
-       tracking remain reachable. #}
+  {% if any_accepting and not preview_mode %}
+    {# Step validation — for ``type="number"`` inputs that carry a
+       ``data-rs-step``, verify ``(value − anchor) / step`` lands on
+       an integer (with float tolerance). Off-grid values get a
+       ``setCustomValidity`` message which the browser surfaces as
+       the same popup chrome it uses for native min/max violations
+       on submit. Empty / NaN clears the constraint so a partially-
+       typed value doesn't gate Submit. Survives the Segment 18L
+       pagination-JS deletion because step validity is independent
+       of which "page" the operator is on. #}
     <script>
       (function () {
-        var root = document.querySelector(".rs-paginated");
-        if (!root) return;
-        // ``data-rs-pushstate-prefix`` is rendered only on the live
-        // reviewer surface; operator preview omits it so Page #N
-        // clicks toggle visibility without rewriting the URL bar.
-        var pushStatePrefix = root.dataset.rsPushstatePrefix || "";
-        var groups = Array.prototype.slice.call(
-          root.querySelectorAll(".rs-instrument-group")
-        );
-        if (groups.length === 0) return;
-        var pageButtons = Array.prototype.slice.call(
-          document.querySelectorAll("[data-rs-page]")
-        );
-        var saveButtons = Array.prototype.slice.call(
-          document.querySelectorAll("[data-rs-save]")
-        );
-        var discardButtons = Array.prototype.slice.call(
-          document.querySelectorAll("[data-rs-discard]")
-        );
-        // Form whose action carries the URL position. JS-pushed Page #N
-        // navigation has to keep this in sync so Save posts to (and
-        // redirects back to) the page the reviewer is actually on,
-        // rather than the page the surface was first server-rendered
-        // at. The hidden current_position input drives Submit's
-        // post-success redirect via the same channel.
-        var saveForm = root.closest("form");
-        var savePathTemplate = pushStatePrefix
-          ? pushStatePrefix + "POSITION/save"
-          : "";
-        function syncFormToPosition(position) {
-          if (!saveForm) return;
-          if (savePathTemplate) {
-            saveForm.setAttribute(
-              "action",
-              savePathTemplate.replace("POSITION", position)
-            );
-          }
-          var hiddenInputs = saveForm.querySelectorAll(
-            'input[type="hidden"][name="current_position"]'
-          );
-          Array.prototype.forEach.call(hiddenInputs, function (input) {
-            input.value = position;
-          });
-        }
-
-        function activeGroup() {
-          for (var i = 0; i < groups.length; i++) {
-            if (groups[i].classList.contains("rs-active")) return groups[i];
-          }
-          return null;
-        }
-
-        function setSaveEnabled(enabled) {
-          saveButtons.forEach(function (btn) {
-            btn.disabled = !enabled;
-          });
-        }
-
-        function recomputeSaveFromActive() {
-          var g = activeGroup();
-          setSaveEnabled(!!(g && g.dataset.rsDirty === "true"));
-        }
-
-        function activate(position) {
-          var matched = null;
-          groups.forEach(function (g) {
-            if (g.dataset.rsPosition === String(position)) {
-              g.classList.add("rs-active");
-              matched = g;
-            } else {
-              g.classList.remove("rs-active");
-            }
-          });
-          pageButtons.forEach(function (btn) {
-            var isCurrent = btn.dataset.rsPage === String(position);
-            btn.classList.toggle("disabled", isCurrent);
-            if (isCurrent) {
-              btn.setAttribute("aria-disabled", "true");
-            } else {
-              btn.removeAttribute("aria-disabled");
-            }
-          });
-          recomputeSaveFromActive();
-          return matched;
-        }
-
-        // Save initially disabled — markup is clean on first paint
-        // and dirty flags only flip in response to user input.
-        setSaveEnabled(false);
-
-        // Page #N button clicks toggle visibility client-side, sync
-        // the form action / hidden current_position so Save / Submit
-        // target the active page, and pushState the new URL so refresh
-        // / share carries the current position.
-        pageButtons.forEach(function (btn) {
-          btn.addEventListener("click", function (event) {
-            event.preventDefault();
-            var position = btn.dataset.rsPage;
-            if (!position) return;
-            var matched = activate(position);
-            syncFormToPosition(position);
-            if (matched && pushStatePrefix) {
-              window.history.pushState(
-                null, "", pushStatePrefix + position
-              );
-            }
-          });
-        });
-
-        // Step validation — for ``type="number"`` inputs that carry a
-        // ``data-rs-step``, verify ``(value − anchor) / step`` lands on
-        // an integer (with float tolerance). Off-grid values get a
-        // ``setCustomValidity`` message which the browser then surfaces
-        // as the same popup chrome it uses for native min/max
-        // violations on submit. Empty / NaN clears the constraint so a
-        // partially-typed value doesn't gate Submit.
         var STEP_TOLERANCE = 1e-6;
         function recomputeStepValidity(input) {
           var stepRaw = input.dataset.rsStep;
@@ -643,113 +511,15 @@
             input.setCustomValidity("");
           }
         }
-        // Initial pass over server-rendered values so the first Submit
-        // attempt reflects the current state, not a fresh form's clean
-        // state. Covers the re-render-after-validation-error case too.
         Array.prototype.forEach.call(
-          root.querySelectorAll("input[data-rs-step]"),
+          document.querySelectorAll("input[data-rs-step]"),
           recomputeStepValidity
         );
-
-        // Dirty tracking — any input/change in the active group flips
-        // its dirty flag and enables Save. Listening on the root via
-        // event delegation covers dynamically rendered rows too. The
-        // step-validity check piggybacks on the same delegated handler.
-        root.addEventListener("input", function (event) {
-          var group = event.target.closest(".rs-instrument-group");
-          if (!group) return;
-          group.dataset.rsDirty = "true";
-          if (group.classList.contains("rs-active")) {
-            setSaveEnabled(true);
-          }
+        document.addEventListener("input", function (event) {
           if (event.target.dataset && event.target.dataset.rsStep) {
             recomputeStepValidity(event.target);
           }
         });
-        root.addEventListener("change", function (event) {
-          var group = event.target.closest(".rs-instrument-group");
-          if (!group) return;
-          group.dataset.rsDirty = "true";
-          if (group.classList.contains("rs-active")) {
-            setSaveEnabled(true);
-          }
-        });
-
-        // Keyboard navigation — Enter moves focus to the response
-        // cell directly below (Shift+Enter: above), so a reviewer can
-        // work down a column without the mouse. Tab already walks
-        // cells across a row natively. Enter is intercepted
-        // (`preventDefault`) so it no longer submits the form from
-        // inside the table; textareas keep native Enter for newlines
-        // and are left alone.
-        root.addEventListener("keydown", function (event) {
-          if (event.key !== "Enter") return;
-          var target = event.target;
-          if (!target) return;
-          var tag = target.tagName;
-          if (tag === "TEXTAREA") return;
-          if (tag !== "INPUT" && tag !== "SELECT") return;
-          var cell = target.closest("td");
-          var row = target.closest("tr");
-          if (!cell || !row) return;
-          event.preventDefault();
-          var colIndex = cell.cellIndex;
-          function step(r) {
-            return event.shiftKey
-              ? r.previousElementSibling
-              : r.nextElementSibling;
-          }
-          var probe = step(row);
-          while (probe) {
-            var nextCell = probe.cells && probe.cells[colIndex];
-            if (nextCell) {
-              var ctrl = nextCell.querySelector("input, textarea, select");
-              if (ctrl && !ctrl.disabled) {
-                ctrl.focus();
-                if (typeof ctrl.select === "function") ctrl.select();
-                return;
-              }
-            }
-            probe = step(probe);
-          }
-        });
-
-        // Discard — restore each input on the active group from its
-        // ``data-rs-saved-value`` baseline; clear dirty + disable Save.
-        // Falls back to the server-side discard link if there is no
-        // active group (defensive — should never happen in practice).
-        discardButtons.forEach(function (btn) {
-          btn.addEventListener("click", function (event) {
-            var group = activeGroup();
-            if (!group) return;
-            event.preventDefault();
-            var inputs = group.querySelectorAll(
-              "input[data-rs-saved-value], textarea[data-rs-saved-value], select[data-rs-saved-value]"
-            );
-            Array.prototype.forEach.call(inputs, function (input) {
-              input.value = input.dataset.rsSavedValue || "";
-            });
-            group.dataset.rsDirty = "";
-            setSaveEnabled(false);
-          });
-        });
-
-        // popstate (back / forward) — read the position out of the
-        // URL and toggle visibility to match. Dirty edits survive
-        // because every group lives in the DOM continuously.
-        // Skipped in preview (no pushStatePrefix means we never
-        // pushed state in the first place).
-        if (pushStatePrefix) {
-          window.addEventListener("popstate", function () {
-            var match = window.location.pathname.match(
-              /\/reviewer\/sessions\/\d+\/(\d+)/
-            );
-            if (match) {
-              activate(match[1]);
-              syncFormToPosition(match[1]);
-            }
-          });
-        }
       })();
     </script>
   {% endif %}

@@ -129,6 +129,7 @@ def rae() -> AuthenticatedUser:
 # ── Markup scaffold the JS depends on ────────────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_paginated_scaffold_wraps_every_instrument_group(
     db: Session,
     alice: AuthenticatedUser,
@@ -154,6 +155,7 @@ def test_paginated_scaffold_wraps_every_instrument_group(
     assert body.count('rs-instrument-group rs-active') == 1
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_page_buttons_render_as_button_type_button(
     db: Session,
     alice: AuthenticatedUser,
@@ -184,6 +186,7 @@ def test_page_buttons_render_as_button_type_button(
     assert body.count('type="button"') >= 4
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_save_and_discard_carry_data_attributes(
     db: Session,
     alice: AuthenticatedUser,

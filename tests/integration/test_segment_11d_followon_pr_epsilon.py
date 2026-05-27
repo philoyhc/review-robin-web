@@ -341,6 +341,7 @@ def test_missing_required_card_absent_when_no_gaps(
 # ── Operator preview adapts to PR ε chrome ───────────────────────────────
 
 
+@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
 def test_preview_action_row_collapses_to_page_buttons(
     client: TestClient, db: Session
 ) -> None:
