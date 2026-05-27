@@ -387,8 +387,15 @@ def build_reviewer_summary_context(
         if instrument.id not in row_order:
             continue
         is_group = instrument.group_kind is not None
+        # Filter response fields by ``visible`` so the summary
+        # table mirrors the reviewer surface form
+        # (``routes_reviewer/_surface.py`` filters the same way).
+        # A response field whose Band 2 chip is un-pinned is not
+        # rendered to the reviewer on the form, and must not
+        # surface as a summary column either.
         fields = sorted(
-            instrument.response_fields, key=lambda f: (f.order, f.id)
+            (f for f in instrument.response_fields if f.visible),
+            key=lambda f: (f.order, f.id),
         )
         instrument_display_fields = (
             []

@@ -544,8 +544,14 @@ def serialize_reviewer_session_summary(
             continue
         emitted_preamble = True
         yield (label,)
+        # Filter response fields by ``visible`` — the reviewer-
+        # record CSV mirrors what the reviewer saw on the form
+        # (and on the HTML summary). Hidden Band 3 fields are
+        # ones the operator un-pinned from Band 2; they don't
+        # appear on the surface, so they shouldn't appear here.
         fields = sorted(
-            instrument.response_fields, key=lambda f: (f.order, f.id)
+            (f for f in instrument.response_fields if f.visible),
+            key=lambda f: (f.order, f.id),
         )
         for field in fields:
             yield (field.field_key, field.help_text or "")
@@ -580,6 +586,7 @@ def serialize_reviewer_session_summary(
         )
         .where(Assignment.session_id == review_session.id)
         .where(Assignment.reviewer_id == reviewer.id)
+        .where(InstrumentResponseField.visible.is_(True))
         .order_by(
             Instrument.order,
             Instrument.id,

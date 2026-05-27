@@ -55,44 +55,39 @@ hidden-with-saved-responses.
 
 ## Scope (sketch — to be confirmed)
 
-### Part 1 — Filter response fields by `visible` on the reviewer summary
+### Part 1 — Filter response fields by `visible` on the reviewer summary — shipped 2026-05-27
 
-**HTML** — `_reviewer_summary.py` walks
-`instrument.response_fields` in two places (the `field_cols`
-composition around line 390 and the cell-index walk that
-loads responses, around line 320). Both should restrict to
-`visible=True` rows so the summary table matches what the
-reviewer saw on the form.
+**Shipped.** `_reviewer_summary.py` filters
+`instrument.response_fields` by `f.visible` when composing
+`field_cols`; the cell-index lookups gracefully ignore the now-
+unreferenced response rows.
+`serialize_reviewer_session_summary` in `responses_extract.py`
+mirrors the same filter on the preamble walk and the data-row
+query (an explicit `.where(InstrumentResponseField.visible.is_(True))`
+on the response select). Both surfaces now match
+`routes_reviewer/_surface.py`'s long-standing filter.
 
-**CSV** — `serialize_reviewer_session_summary` in
-`responses_extract.py` should mirror the HTML's filter. The
-function is shared with operator bundle exports
-(`serialize_responses` family) — confirm whether the per-bundle
-path *should* keep hidden fields (for audit) or also drop them
-(consistent with the reviewer-facing CSV). Likely answer: the
-**reviewer-record** path filters; the **operator bundle** path
-includes hidden fields with a marker.
+The operator-side bundle export
+(`serialize_responses` / `serialize_responses_for_instrument`)
+is untouched — operators get the full audit view; only the
+**reviewer-record** path filters.
 
-Decision points to confirm before coding:
-- Do we **also** suppress *responses to hidden fields* (i.e.
-  not join them at all), or just hide the columns and silently
-  drop the cell values?
-- For the bundle-export side: do we mark hidden fields with a
-  pill in the preamble (`field_key (hidden)`)?
+Pinned by `tests/integration/test_reviewer_summary_visibility.py`:
+hidden field absent from HTML + CSV; visible field present;
+toggle-back rehydrates the column (responses survive in the
+DB through visibility flips).
 
-### Part 2 — Drop the stale "Visible checkbox" line from `spec/instruments.md`
+### Part 2 — Rewrite "Band 3 — Response fields" in `spec/instruments.md` to match the codebase — shipped 2026-05-27
 
-The Band 3 column table currently lists `Visible | yes
-(checkbox) | "visible". Reviewer surface only shows visible=True
-rows.` That row should rewrite to point at the Band 2 chip as
-the source of truth, with cross-reference to Band 2's
-`response_fields` pill loop. Two sentences max — this is doc
-hygiene, not a behaviour change.
-
-Also confirm the spec's "Visible" prose elsewhere (line ~574 mentions
-`accepting_responses` / `responses_visible_when_closed` but the
-per-RF flag should be called out alongside Band 2 pill
-semantics).
+**Shipped.** The Band 3 section in `spec/instruments.md` is
+rewritten to describe the **actual** inline row layout
+(Name input, Type select with quick-fill List presets, inline
+Bounds, R / ≡ / ✓ / X buttons) instead of the obsolete table
+shape (no Order drag handle on Band 3, no per-row Visible
+checkbox, no per-row Label / Help-text columns). A new
+sub-section "Per-field visibility lives on the Band 2 pill"
+pins where `InstrumentResponseField.visible` is actually
+toggled and which surfaces filter on it.
 
 ### Part 3 — Policy for hidden-with-saved-responses
 
