@@ -810,12 +810,27 @@ def review_surface(
     # (typically via an invitation sent ahead of activation) may
     # land here before the session is activated for responses;
     # render a dedicated "review opens later" page instead of
-    # 403-ing or dropping them into the response form. The closed
-    # case is handled later — the existing surface template
-    # honours the per-instrument
-    # ``responses_visible_when_closed`` toggle so reviewers can
-    # still see their saved responses post-close, with the
-    # "review now closed" banner overlaid via context.
+    # 403-ing or dropping them into the response form.
+    #
+    # Five lifecycle states, two render paths:
+    #
+    #   * ``ready`` — live form, write paths open while
+    #     ``session_accepts_responses`` is true per instrument.
+    #   * ``expired`` (post-Close-session) — same template, but
+    #     every instrument is ``accepting=False`` so inputs render
+    #     disabled. The per-instrument
+    #     ``responses_visible_when_closed`` toggle then governs
+    #     whether the disabled inputs are prefilled with the
+    #     reviewer's saved values, giving operators an explicit
+    #     "let reviewers keep reading their submissions" affordance.
+    #     Write paths still 403 via ``_require_session_accepting``.
+    #   * ``draft`` / ``validated`` — pre-activation; render
+    #     ``pre_open.html``.
+    #   * ``archived`` — by design, the reviewer surface treats
+    #     this like pre-activation. Archive is meant to retire a
+    #     session out of reviewer reach; the dashboard hides the
+    #     link via ``session_status_for_reviewer == "not opened"``,
+    #     and a direct URL hit lands on ``pre_open.html``.
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
     )
