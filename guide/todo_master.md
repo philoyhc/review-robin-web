@@ -638,6 +638,25 @@ session explains why. Specs updated: `spec/quick_setup_card_spec.md`,
 
 ---
 
+### Segment 17B — Reviewer surface refinements — done 2026-05-16 → 2026-05-20
+
+Two-phase polish pass on the reviewer-side surface. **Phase 1**
+shipped 2026-05-16: per-cell `show_values` gating, instrument-level
+`responses_visible_when_closed` toggle, dashboard status labels,
+and assorted markup hygiene. **Phase 2** shipped 2026-05-20: the
+read-only capstone summary page rendered once every assigned row
+is submitted, including the "Recall my submission" return-to-form
+flow (POST `/reviewer/sessions/{id}/recall` nulls `submitted_at`
+on every Response row for the reviewer and 303s back to `/1`),
+column-width parity with `Instrument.column_widths`, and group-row
+identity composition that walks every visible `reviewee.tag_*`
+display field rather than only the boundary tags. Remaining items
+(cell autosave, filter-to-incomplete, return-to-place, chrome
+polish) carved out to `deferred_until_pilot_feedback.md`. Plan
+archived: `guide/archive/segment_17B_reviewer_surface_refinements.md`.
+
+---
+
 ### Segment 18A — Sessions lobby enhancements — done 2026-05-17
 
 The operator Sessions lobby (`/operator/sessions`) rebuilt around a
@@ -952,14 +971,17 @@ bottom of this file.
 
 #### Stubs
 
-- **17B — Reviewer surface refinements** *(retired 2026-05-20;
-  Phase 1 shipped 2026-05-16, Phase 2 shipped 2026-05-20, plan
-  archived)*. Both phases shipped; remaining items (cell
-  autosave, filter-to-incomplete, return-to-place, chrome
-  polish) carved out to `deferred_until_pilot_feedback.md`.
-  **Plan:** `guide/archive/segment_17B_reviewer_surface_refinements.md`.
-
-
+- **18K — Completing instrument visibility (Band 3) on the
+  reviewer surface** *(stub created 2026-05-27)*. Close the per-
+  field tail of the visibility story 17B / 18F / 18G set up:
+  the reviewer summary HTML + reviewer-record CSV currently
+  walk every `InstrumentResponseField` regardless of `visible`,
+  so a Band 2 chip flipped off mid-session still surfaces the
+  column on the summary even though the surface form drops it.
+  Also patches `spec/instruments.md` to reflect that the Band 2
+  pill — not a Band 3 "Visible" checkbox — is the operator-side
+  visibility control. Likely 4–5 small PRs.
+  **Plan:** `guide/segment_18K_visibility.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
