@@ -449,3 +449,35 @@ def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
     # would pass even when the tag line collapses to the
     # boundary tag).
     assert "<strong>Cohort A, Senior</strong>" in body
+
+
+def test_summary_numeric_column_header_carries_rs_narrow(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """The ``Rating`` column is Integer-typed; its summary
+    header must carry ``class="rs-narrow"`` so ``Rating *``
+    doesn't wrap onto a second line — mirrors the reviewer
+    surface, which sets the same class on numeric columns.
+    Pre-fix the summary ``<th>`` carried no class, so the
+    asterisk could wrap even when the column had room.
+    """
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="sum-numeric-class", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/summary"
+    ).text
+    # The Rating header sits inside a ``<th class="rs-narrow">``
+    # cell; the asterisk lives inside the same cell.
+    assert '<th scope="col" class="rs-narrow">Rating *' in body
+    # The Comments column is a plain String (max_length 2000 →
+    # ``rs-textlong``); not ``rs-narrow``.
+    assert '<th scope="col" class="rs-textlong">Comments' in body
