@@ -140,25 +140,34 @@
   {% if rows %}
     {# The session-closed banner now renders inline in the overview
        card above, not as a standalone full-width banner here. #}
-    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">
+    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}/save">
     {% endif %}
-      {# Segment 18L — every instrument group is always visible on
-         the single-page surface. The action row interleaves above
-         every instrument's heading (`action_row_position="top"`
-         inside the loop) and once at the bottom (outside the loop)
-         with the danger zone immediately beneath. #}
+      {# Segment 18L multi-page (post-replan): each render shows ONE
+         operator-defined page. Within a page, instruments stack
+         without a horizontal separator; between pages the reviewer
+         navigates via the Prev / Next links in the page-nav row.
+         The action row interleaves above every instrument heading
+         on this page + once at the bottom (outside the loop) with
+         the danger zone immediately beneath. #}
+      {% if page_count > 1 and not preview_mode %}
+        <nav class="rs-page-nav" aria-label="Page navigation">
+          <div>
+            {% if prev_page_url %}
+              <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
+            {% endif %}
+          </div>
+          <div class="rs-page-nav-counter">
+            Page {{ current_page_n }} of {{ page_count }}
+          </div>
+          <div>
+            {% if next_page_url %}
+              <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
       {% for group in instrument_groups %}
-        {# Page break visual — render the separator only between
-           pages, where the second instrument carries
-           ``starts_new_page=true`` (Segment 18M data model). The
-           first instrument's flag is meaningless (ignored at
-           render time per the locked spec); consecutive
-           instruments on the same operator-defined page stack
-           without a separator. #}
-        {% if not loop.first and group.starts_new_page %}
-          <hr class="rs-instrument-separator">
-        {% endif %}
-        {# The anchor id lives on a wrapper around (action row +
+        {# Anchor id lives on a wrapper around (action row +
            section) so navigation to ``#instrument-{id}`` scrolls
            to the action row above the heading — the operator
            lands with the Save / Submit | #N TOC controls visible
@@ -456,6 +465,23 @@
 
       {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% include "reviewer/_action_row.html" %}
+      {% endif %}
+      {% if page_count > 1 and not preview_mode %}
+        <nav class="rs-page-nav rs-page-nav-bottom" aria-label="Page navigation">
+          <div>
+            {% if prev_page_url %}
+              <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
+            {% endif %}
+          </div>
+          <div class="rs-page-nav-counter">
+            Page {{ current_page_n }} of {{ page_count }}
+          </div>
+          <div>
+            {% if next_page_url %}
+              <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
+            {% endif %}
+          </div>
+        </nav>
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 

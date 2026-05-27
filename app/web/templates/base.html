@@ -2189,14 +2189,34 @@
          without losing dirty edits in the hidden groups. With JS
          disabled the surface still pins to the URL position because
          the server-rendered ``rs-active`` modifier matches the URL. */
-      /* Segment 18L — the single-page reviewer surface replaced the
-         old `.rs-paginated > .rs-instrument-group:not(.rs-active)`
-         display:none toggle with always-visible instrument
-         sections separated by a horizontal rule. */
+      /* Segment 18L — page-break separator within a page render.
+         Post-multi-page-replan, the reviewer surface paginates by
+         operator-defined pages (each rendered at its own URL), so
+         this separator now only renders within a page when... hmm
+         actually it doesn't render at all in the multi-page model
+         since each page is its own render. Kept for forward-compat
+         in case future tweaks reintroduce intra-page breaks. */
       body.ui-v2 .rs-instrument-separator {
         margin: var(--space-6) 0;
         border: 0;
         border-top: 1px solid var(--border-default, #d1d5db);
+      }
+      /* Segment 18L multi-page nav row — Prev / counter / Next */
+      body.ui-v2 .rs-page-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin: var(--space-4) 0;
+      }
+      body.ui-v2 .rs-page-nav-bottom {
+        margin-top: var(--space-6);
+      }
+      body.ui-v2 .rs-page-nav-counter {
+        color: var(--text-secondary, #6b7280);
+        font-size: 0.9rem;
+        text-align: center;
+        flex: 1;
       }
       /* Denser reviewer-table rows (Segment 17B). The reviewer
          response table is one input-per-cell and can run to hundreds

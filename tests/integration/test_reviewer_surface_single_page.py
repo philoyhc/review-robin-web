@@ -1,19 +1,18 @@
-"""Integration tests for Segment 18L PR 1b — the single-page
-reviewer surface at ``GET /reviewer/sessions/{id}``.
+"""Integration tests for Segment 18L PR 1b (post-replan) — the
+multi-page reviewer surface at ``GET /reviewer/sessions/{id}/{N}``.
 
-Locks the new structural contract: every instrument the reviewer
-has assignments on renders into the DOM at once (no
-``.rs-paginated`` toggling), separated by an
-``<hr class="rs-instrument-separator">``; each instrument carries
-``<section id="instrument-{id}">``; the action row interleaves
-above every instrument heading plus once at the bottom with the
-danger zone; the legacy positional GET 303s to the bare URL with
-an ``#instrument-{id}`` fragment.
+The reviewer surface paginates by operator-defined page (one
+boundary per ``Instrument.starts_new_page=true`` from Segment
+18M). Each page renders one or more instruments together. The
+bare URL 303s to page 1; positional URLs render the matching
+page; out-of-range page numbers 404.
 
 Locked decisions tested:
-- (6) Each group emits ``id="instrument-{id}"``.
-- (8) Page-N buttons become in-page anchor TOC with
-  ``href="#instrument-{id}"`` and label ``"#N short_label"``.
+- (6) Each instrument emits ``id="instrument-{id}"`` (intra-page
+  anchor for the in-page TOC).
+- Bare URL redirects to page 1 (post-replan: matches pre-18L).
+- ``POST /sessions/{id}/{N}/save`` saves the page's inputs and
+  303s back to that page.
 """
 
 from __future__ import annotations
@@ -32,11 +31,6 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
-
-# --------------------------------------------------------------------------- #
-# Helpers
-# --------------------------------------------------------------------------- #
 
 
 def _operator_creates_session_with_pair(
@@ -107,23 +101,21 @@ def rae() -> AuthenticatedUser:
 
 
 # --------------------------------------------------------------------------- #
-# Single-page render structure
+# Bare URL → page 1 redirect
 # --------------------------------------------------------------------------- #
 
 
-def test_bare_url_renders_single_page_surface(
+def test_bare_url_303s_to_page_1(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """``GET /reviewer/sessions/{id}`` renders directly (no longer
-    303s to ``/1``)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="sp-1",
+        code="mp-1",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
@@ -132,89 +124,43 @@ def test_bare_url_renders_single_page_surface(
         f"/reviewer/sessions/{review_session.id}",
         follow_redirects=False,
     )
-    assert response.status_code == 200
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/reviewer/sessions/{review_session.id}/1"
+    )
 
 
-def test_multi_instrument_renders_all_groups_with_anchor_ids(
+# --------------------------------------------------------------------------- #
+# Per-page render
+# --------------------------------------------------------------------------- #
+
+
+def test_page_one_renders_first_pages_instruments(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Every instrument the reviewer has assignments on lands in
-    the DOM with its own ``id="instrument-{id}"`` anchor."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="sp-2",
+        code="mp-2",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
-        extra_instruments=2,  # 1 default + 2 added = 3 instruments
+        extra_instruments=2,  # 3 instruments, all on one page (no breaks)
     )
     instruments = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().all()
-    assert len(instruments) == 3
-
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    # All three instrument anchors on page 1 since no break exists.
     for inst in instruments:
         assert f'id="instrument-{inst.id}"' in body
 
 
-def test_hr_separator_renders_only_between_pages(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """``<hr class="rs-instrument-separator">`` is emitted only
-    between instruments where the second carries
-    ``starts_new_page=true`` (the Segment 18M break flag). Default
-    behaviour on a fresh session: no breaks, no separators."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="sp-2b",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        extra_instruments=2,
-    )
-    instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
-        key=lambda i: (i.order, i.id),
-    )
-    rae_client = make_client(rae)
-    # No breaks set yet -> zero separators.
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert body.count('class="rs-instrument-separator"') == 0
-
-    # Set a break before the second instrument via the operator
-    # service helper. One break -> one separator.
-    from app.services import instruments as instruments_service
-
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[0]
-    )
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert body.count('class="rs-instrument-separator"') == 1
-
-    # Set another break (between 2 and 3) -> two separators.
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[1]
-    )
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert body.count('class="rs-instrument-separator"') == 2
-
-
-def test_single_instrument_session_has_no_hr_separator(
+def test_out_of_range_page_returns_404(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
@@ -224,134 +170,7 @@ def test_single_instrument_session_has_no_hr_separator(
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="sp-3",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert 'class="rs-instrument-separator"' not in body
-
-
-def test_action_row_interleaves_above_every_instrument_plus_bottom(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """With N instruments, the action row renders N + 1 times: above
-    each instrument heading (N) + once outside the loop at the
-    bottom (1)."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="sp-4",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        extra_instruments=2,  # 3 instruments total
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert body.count('class="rs-action-row') == 4  # 3 top + 1 bottom
-
-
-# --------------------------------------------------------------------------- #
-# Anchor TOC buttons
-# --------------------------------------------------------------------------- #
-
-
-def test_page_buttons_render_as_anchor_links_to_instrument_ids(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Locked decision 8: page buttons are in-page anchor TOC, not
-    pagination controls. Each button is an ``<a href="#instrument-
-    {id}">`` element."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="sp-5",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        extra_instruments=1,
-    )
-    instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
-        key=lambda i: (i.order, i.id),
-    )
-
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    for inst in instruments:
-        assert f'href="#instrument-{inst.id}"' in body
-    # Labels reflect the new "#N short_label" format (no "Page "
-    # prefix); fall back to bare "#N" when no short_label is set.
-    assert '">#1</a>' in body
-    assert '">#2</a>' in body
-
-
-# --------------------------------------------------------------------------- #
-# Legacy positional shim
-# --------------------------------------------------------------------------- #
-
-
-def test_legacy_positional_url_303s_to_bare_url_with_anchor(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="sp-6",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        extra_instruments=1,
-    )
-    instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
-        key=lambda i: (i.order, i.id),
-    )
-    rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/2",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}"
-        f"#instrument-{instruments[1].id}"
-    )
-
-
-def test_legacy_positional_url_out_of_range_303s_to_bare_url(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Out-of-range position (greater than instrument count) 303s to
-    the bare URL with no fragment instead of 404'ing — the
-    canonical handler renders all instruments anyway."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="sp-7",
+        code="mp-3",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
@@ -360,41 +179,209 @@ def test_legacy_positional_url_out_of_range_303s_to_bare_url(
         f"/reviewer/sessions/{review_session.id}/99",
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}"
-    )
+    assert response.status_code == 404
 
 
 # --------------------------------------------------------------------------- #
-# Form action — bulk save endpoint
+# Page-break carving
 # --------------------------------------------------------------------------- #
 
 
-def test_form_action_targets_consolidated_save_endpoint(
+def test_page_break_carves_session_into_separate_pages(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The bulk-save form now POSTs to ``/sessions/{id}/save`` (the
-    consolidated endpoint from PR 1a) instead of the legacy
-    positional ``/sessions/{id}/{N}/save``."""
+    """An operator-set page break between instrument N and N+1 means
+    instrument N+1 lands on page 2 (no longer rendered on page 1)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="sp-8",
+        code="mp-4",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=1,  # 2 instruments
+    )
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars().all(),
+        key=lambda i: (i.order, i.id),
+    )
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[0]
+    )
+    rae_client = make_client(rae)
+
+    # Page 1 has only the first instrument.
+    page1 = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert f'id="instrument-{instruments[0].id}"' in page1
+    assert f'id="instrument-{instruments[1].id}"' not in page1
+
+    # Page 2 has only the second.
+    page2 = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/2"
+    ).text
+    assert f'id="instrument-{instruments[0].id}"' not in page2
+    assert f'id="instrument-{instruments[1].id}"' in page2
+
+    # Page 3 doesn't exist.
+    response = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/3",
+        follow_redirects=False,
+    )
+    assert response.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Form action + save redirect
+# --------------------------------------------------------------------------- #
+
+
+def test_form_action_targets_per_page_save_endpoint(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-5",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert f'action="/reviewer/sessions/{review_session.id}/save"' in body
-    # current_position hidden input retired on the bulk save form.
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
     assert (
-        'type="hidden" name="current_position"' not in body
-        or '/sessions/{}/save"'.format(review_session.id) in body
-        # The clear form still carries current_position until PR 1c;
-        # search specifically inside the bulk-save form context.
+        f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
     )
+
+
+def test_save_303s_back_to_current_page(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-6",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=1,
+    )
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars().all(),
+        key=lambda i: (i.order, i.id),
+    )
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[0]
+    )
+    rae_client = make_client(rae)
+    # Page 2 save 303s back to /2.
+    response = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/2/save",
+        data={},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/reviewer/sessions/{review_session.id}/2"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Page nav
+# --------------------------------------------------------------------------- #
+
+
+def test_multi_page_renders_prev_next_nav(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-7",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=2,  # 3 instruments
+    )
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars().all(),
+        key=lambda i: (i.order, i.id),
+    )
+    from app.services import instruments as instruments_service
+
+    # Break between #1 and #2 + between #2 and #3 -> 3 pages.
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[0]
+    )
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[1]
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/2"
+    ).text
+    # Page 2 of 3 -> Prev to page 1, Next to page 3.
+    assert "Page 2 of 3" in body
+    assert (
+        f'href="/reviewer/sessions/{review_session.id}/1"' in body
+    )
+    assert (
+        f'href="/reviewer/sessions/{review_session.id}/3"' in body
+    )
+
+
+def test_single_page_session_omits_page_nav(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When there's only one page (no breaks set), the page-nav row
+    is suppressed entirely — no Prev/Next, no 'Page 1 of 1'
+    counter."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-8",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Page 1 of" not in body
+    assert "Previous page" not in body
+    assert "Next page" not in body
