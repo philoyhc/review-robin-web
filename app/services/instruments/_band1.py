@@ -491,7 +491,16 @@ def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
         str(v) for v in form.getlist(f"{link_prefix}_operand_value")
     ]
     operand_tags = [str(v) for v in form.getlist(f"{link_prefix}_operand_tag")]
-    n = len(fields)
+    # When a link's tag_options is empty (no tags configured for that
+    # side), the ``<select name="{link}_field">`` renders with zero
+    # options. Browsers omit empty selects from form submissions, so
+    # ``fields`` arrives shorter than the sibling op / operand_value /
+    # operand_tag arrays. Pad with empty strings to realign; the
+    # downstream ``_build_match_rule`` blank-field guard turns these
+    # into no-op rules.
+    n = len(ops)
+    while len(fields) < n:
+        fields.append("")
     if not (len(ops) == n and len(operand_values) == n and len(operand_tags) == n):
         raise Band1ParseError(
             f"Band 1 {link_prefix} arrays misaligned: "
