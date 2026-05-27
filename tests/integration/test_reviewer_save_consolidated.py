@@ -7,8 +7,7 @@ until PR 1b deletes it. These tests pin the new endpoint's
 contract: walks every upsert in the payload, emits a single
 ``responses.saved`` audit row with the new ``counts`` keys
 (``assignments_touched`` + ``responses_saved``), redirects to the
-bare session URL on success, 400s on validation errors, honors
-the accepting-responses lifecycle gate.
+bare session URL on success, 400s on validation errors.
 """
 
 from __future__ import annotations
@@ -21,13 +20,87 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import (
-    Assignment,
-    AuditEvent,
+from app.db.models import Assignment, AuditEvent, ReviewSession
+
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
 )
-from tests.integration.test_reviewer_response_flow import (
-    _operator_creates_session_with_pair,
-)
+
+
+# --------------------------------------------------------------------------- #
+# Helpers — copied locally so collection works without PYTHONPATH munging.
+# --------------------------------------------------------------------------- #
+
+
+def _operator_creates_session_with_pair(
+    operator_client: TestClient,
+    db: Session,
+    *,
+    code: str,
+    reviewer_email: str,
+    reviewee_ident: str,
+    activate: bool = True,
+) -> ReviewSession:
+    operator_client.post(
+        "/operator/sessions",
+        data={"name": code.title(), "code": code},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    operator_client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                f"ReviewerName,ReviewerEmail\nR,{reviewer_email}\n".encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator_client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                f"RevieweeName,RevieweeEmail\nCarol,{reviewee_ident}\n".encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator_client, review_session.id)
+    if activate:
+        _activate(operator_client, db, review_session)
+    return review_session
+
+
+def _activate(
+    operator_client: TestClient, db: Session, review_session: ReviewSession
+) -> None:
+    operator_client.get(
+        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+    )
+    response = operator_client.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.status == "ready"
+
+
+def _audit_count(db: Session, event_type: str) -> int:
+    return len(
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == event_type)
+        ).scalars().all()
+    )
 
 
 @pytest.fixture
@@ -149,23 +222,9 @@ def test_consolidated_save_handles_multi_instrument_payload(
     operator.post(
         f"/operator/sessions/{review_session.id}/instruments/add-new-model"
     )
-    # Re-pin Full Matrix on the new instrument + regenerate
-    # assignments, then activate.
-    from tests.integration._full_matrix import (
-        generate_via_page_button,
-        pin_full_matrix_on_all_instruments,
-    )
-
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
-    operator.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
-    )
-    operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
-        data={"acknowledge_warnings": "true"},
-        follow_redirects=False,
-    )
+    _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
     assignments = db.execute(
@@ -236,16 +295,3 @@ def test_consolidated_save_returns_400_on_validation_errors(
     # PR 1b will wire the inline single-page re-render that
     # highlights the offending cell on top of the saved values.
     assert response.status_code == 400
-
-
-# --------------------------------------------------------------------------- #
-# Helpers
-# --------------------------------------------------------------------------- #
-
-
-def _audit_count(db: Session, event_type: str) -> int:
-    return len(
-        db.execute(
-            select(AuditEvent).where(AuditEvent.event_type == event_type)
-        ).scalars().all()
-    )
