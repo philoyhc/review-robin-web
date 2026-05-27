@@ -1057,6 +1057,56 @@ async def reviewer_submit(
 
 
 @router.post(
+    "/sessions/{session_id}/recall",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def reviewer_recall(
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
+        require_reviewer_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Roll the reviewer's submission back to draft and land them
+    on the form to edit it. The summary page's "Recall my
+    submission" button posts here.
+
+    Gated on session status ``ready`` only — a session that's
+    been closed (``expired``) or archived has no live form to
+    return to, so recall is meaningless. Per-instrument
+    ``accepting_responses`` flips by the operator don't block
+    recall; the reviewer is putting their values back into the
+    draft pool to keep editing them on whichever instruments
+    are still open.
+    """
+    reviewer, review_session = reviewer_session
+    lifecycle.observe_deadline(
+        db, review_session, correlation_id=request_correlation_id()
+    )
+    db.refresh(review_session)
+    if not lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Recall is only allowed while the session is ready; "
+                f"session status is {review_session.status!r}."
+            ),
+        )
+    responses_service.recall(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/reviewer/sessions/{review_session.id}/1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
     "/sessions/{session_id}/clear",
     response_class=HTMLResponse,
     response_model=None,

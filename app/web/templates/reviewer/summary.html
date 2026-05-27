@@ -24,6 +24,21 @@
        href="/reviewer/sessions/{{ session.id }}/summary.csv">
       Download my responses (CSV)
     </a>
+    {# "Recall my submission" — only while the session is still
+       ``ready``. Posts to /recall, which nulls submitted_at on
+       every Response row for this reviewer and 303s to /1 so
+       they land on the editable form. Wrapped in a confirm() so
+       a stray click doesn't silently un-submit. #}
+    {% if can_recall %}
+      <form method="post"
+            action="/reviewer/sessions/{{ session.id }}/recall"
+            style="display: inline; margin: 0;"
+            onsubmit="return confirm('Recall your submission and return to the form to edit? Your typed values are preserved.');">
+        <button class="btn secondary" type="submit">
+          Recall my submission
+        </button>
+      </form>
+    {% endif %}
     <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
   </div>
 
@@ -37,7 +52,22 @@
         {% endif %}
       </h2>
       {% if section.field_cols and section.rows %}
-        <table>
+        {# Mirror the reviewer-surface column-width contract: when
+           the operator has drag-resized any column on the
+           Instruments-page Band 2 editor, render a <colgroup>
+           with explicit <col> widths and pin the table to
+           ``table-layout: fixed`` so the widths actually take
+           effect. Columns without an explicit width
+           auto-distribute the remaining horizontal space. #}
+        <table{% if section.has_custom_widths %} style="table-layout: fixed;"{% endif %}>
+          {% if section.has_custom_widths %}
+            <colgroup>
+              <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
+              {% for col in section.field_cols %}
+                <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+              {% endfor %}
+            </colgroup>
+          {% endif %}
           <tr>
             <th>Reviewee</th>
             {% for col in section.field_cols %}

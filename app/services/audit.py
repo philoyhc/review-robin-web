@@ -506,6 +506,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # PR 4 — responses
     "responses.saved": EventSchema(_IDENTITY | {"counts", "refs"}),
     "responses.submitted": EventSchema(_IDENTITY | {"counts", "refs"}),
+    "responses.recalled": EventSchema(_IDENTITY | {"counts", "refs"}),
     "responses.cleared": EventSchema(_IDENTITY | {"counts", "refs"}),
     "responses.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # PR 5 — assignments
