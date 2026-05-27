@@ -261,3 +261,25 @@ def test_add_page_break_button_disabled_when_successor_already_flagged(
     window = body[idx:idx + 300]
     assert "disabled" in window
     assert "already exists" in window.lower()
+
+
+# --------------------------------------------------------------------------- #
+# AJAX delete intercept (preserves collapse state)
+# --------------------------------------------------------------------------- #
+
+
+def test_page_break_delete_ajax_handler_renders(
+    client: TestClient, db: Session
+) -> None:
+    """The × delete on a page-break card POSTs via fetch (not a
+    full form submit) so other instrument cards' expand state is
+    preserved across the operation. Smoke-test that the inline JS
+    handler is in the rendered page so a future template refactor
+    doesn't silently drop it."""
+    review_session = _make_session(client, db, code="ui-ajax")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "Segment 18M PR 2a — page-break × delete intercept" in body
+    assert "data-instrument-page-break-delete" in body
+    assert "fetch(form.action" in body
