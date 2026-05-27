@@ -440,85 +440,21 @@
      can no longer be re-pinned from the UI — they retire entirely
      in PR 5.3 when ``is_new_model`` drops. #}
 
-  {# Section A identity card — shared by the ordinary and the
-     group-scoped instrument cards. The status pills sit in the
-     heading and the open/close + visibility buttons sit beside
-     Edit; there is no separate status card (its grid slot holds
-     the Assignment Rule card instead). ``is_group`` adds the
-     "Group-scoped" chip. #}
-  {% macro instrument_identity(session, instrument, index, is_editing, is_ready, is_group) %}
-    <div class="card instrument-edit"
-         style="border-color: transparent; background: transparent; padding: 0;
-                display: flex; flex-direction: column;">
-      <h2 style="margin-top: 0; font-size: 1.5rem;">
-        Instrument #{{ index }}
-        {% if is_group %}<span class="pill pill-info">Group-scoped</span>{% endif %}
-        {% if instrument.accepting_responses %}
-          <span class="pill pill-count">accepting responses</span>
-        {% else %}
-          <span class="pill pill-empty">not accepting responses</span>
-        {% endif %}
-        {% if instrument.responses_visible_when_closed %}
-          <span class="pill pill-count">showing when closed</span>
-        {% else %}
-          <span class="pill pill-empty">not showing when closed</span>
-        {% endif %}
-      </h2>
-      {% if is_editing %}
-        <input form="dfsave-{{ instrument.id }}"
-               type="text"
-               name="short_label"
-               maxlength="32"
-               placeholder="(optional short label, e.g. Skills)"
-               value="{{ instrument.short_label or '' }}"
-               style="width: 100%; margin-bottom: 8px;">
-        <textarea form="dfsave-{{ instrument.id }}" name="description"
-                  placeholder="(no description)"
-                  style="width: 100%;">{{ instrument.description or "" }}</textarea>
-      {% else %}
-        {% if instrument.short_label %}
-          <p class="short-label-text"
-             style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
-        {% endif %}
-        <p class="description-text">{{ instrument.description or "(no description)" }}</p>
-      {% endif %}
-      {# Wave 4 — Edit / Save / Cancel retired from this header row;
-         Save + Lock / Unlock now live in the bottom action row only
-         (see ``instrument_action_row`` macro). Lifecycle buttons
-         (Open / Close / Show when closed) stay here since they
-         only render after activation. #}
-      <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
-        {% if is_ready and not instrument.accepting_responses %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
-                style="margin: 0;">
-            <button class="btn secondary" type="submit">Open this Instrument</button>
-          </form>
-        {% endif %}
-        {% if is_ready and instrument.accepting_responses %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
-                style="margin: 0;">
-            <button class="btn secondary" type="submit">Close this instrument</button>
-          </form>
-        {% endif %}
-        {% if not instrument.responses_visible_when_closed %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                style="margin: 0;">
-            <input type="hidden" name="visible_when_closed" value="true">
-            <button class="btn secondary" type="submit">Show when closed</button>
-          </form>
-        {% else %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                style="margin: 0;">
-            <button class="btn secondary" type="submit">Don't show when closed</button>
-          </form>
-        {% endif %}
-      </div>
-    </div>
-  {% endmacro %}
+  {# Section A identity macro retired 2026-05-27. Used to render
+     the per-instrument card's Identity stripe (title + pills +
+     short_label / description editors + per-card lifecycle
+     buttons). Every piece migrated elsewhere:
+     - title + pills → the <summary> block on each per-instrument
+       <details class="instrument-card-collapsible"> (with Segment
+       18M's new Set up / Locked pills + id-based title).
+     - short_label / description editors → Band 2's intro card
+       (inline ✎/✓ pair POSTing to /identity).
+     - Open / Close lifecycle buttons → inlined directly in the
+       per-instrument loop body.
+     - Show / Don't show when closed → retired entirely; sole
+       surface is now the session-level bulk button in the
+       Status + bulk-actions card. #}
+
 
   {# Display Fields Sort cell (Segment 13B tri-state control). Used by
      the group-scoped card's Display Fields table; ``toggleSort`` and
