@@ -1381,3 +1381,90 @@ def instrument_page_break_delete(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Segment 18M PR 2b — instrument reorder (drag-and-drop endpoint).
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/order",
+    response_class=JSONResponse,
+)
+async def instruments_order(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Apply a reorder of instruments + page breaks driven by the
+    operator-UI drag-and-drop. Accepts JSON
+    ``{"items": [int | null, ...]}`` where each integer is an
+    instrument id and each ``null`` marks a page-break position
+    (Segment 18M locked decision 4).
+
+    Returns ``{"ok": true, "order": [...], "breaks_at": [...]}`` on
+    success so the client can patch the DOM in place. 400 on bad
+    body shape, 409 on any invariant rejection (leading / trailing
+    / double-stack / unknown id / duplicate / missing).
+    """
+    _require_instrument_editable(review_session)
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="instruments/order body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="instruments/order body must be a JSON object",
+        )
+    raw_items = body.get("items")
+    if not isinstance(raw_items, list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="instruments/order.items must be a list",
+        )
+    items: list[int | None] = []
+    for v in raw_items:
+        if v is None:
+            items.append(None)
+        elif isinstance(v, bool):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="instruments/order.items must be integers or null",
+            )
+        elif isinstance(v, int):
+            items.append(v)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="instruments/order.items must be integers or null",
+            )
+    try:
+        instruments_service.reorder_instruments(
+            db, review_session=review_session, items=items, actor=user
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    # Echo the persisted state so the client can patch the DOM (page-
+    # break cards + +Page break button disabled states) without a
+    # full reload.
+    rows = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars().all()
+    )
+    order = [inst.id for inst in rows]
+    breaks_at = [inst.id for inst in rows if inst.starts_new_page]
+    return JSONResponse(
+        {"ok": True, "order": order, "breaks_at": breaks_at},
+        status_code=status.HTTP_200_OK,
+    )
+
+

@@ -172,6 +172,33 @@
       cursor: not-allowed;
       opacity: 0.5;
     }
+    /* Segment 18M PR 2b — drag-and-drop visual state.
+       .instrument-card-dragging fades the source card so the
+       operator sees which card they're moving; .drop-indicator
+       is a 2px-thick blue line inserted between cards to mark
+       where the drop will land. */
+    body.ui-v2 .card.instrument-card-dragging {
+      opacity: 0.4;
+    }
+    body.ui-v2 .instrument-reorder-toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-primary, #111827);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+      z-index: 1000;
+    }
+    body.ui-v2 .instrument-reorder-toast.is-visible {
+      opacity: 1;
+    }
   </style>
 {% endblock %}
 
@@ -752,6 +779,7 @@
              handle is the hook PR 2 will bind to. #}
           <span class="instrument-card-drag-handle"
                 data-instrument-drag-handle
+                draggable="true"
                 aria-hidden="true">&#8942;&#8942;</span>
           <h2 style="margin: 2px 0 0 0; font-size: 1.5rem; flex: 1;">
             Instrument #{{ loop.index }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
@@ -4272,6 +4300,242 @@
       }
       openHashTarget();
       window.addEventListener('hashchange', openHashTarget);
+    })();
+  </script>
+
+  <script>
+    // Segment 18M PR 2b — drag-and-drop instrument reorder.
+    //
+    // Vanilla HTML5 drag-and-drop on the per-card .instrument-
+    // card-drag-handle. The handle is the only draggable element
+    // (text selection inside the card body stays unaffected). On
+    // dragstart we capture the source card + its original position;
+    // dragover live-updates the DOM so the operator sees where the
+    // drop will land; drop POSTs the new mixed instrument/break
+    // list to /instruments/order and patches the page-break card
+    // positions + +Page break button states from the server's
+    // echoed response. Rejection (4xx) snaps the card back and
+    // shows the server's detail message as an inline toast.
+    //
+    // Click on the handle without movement is suppressed via
+    // ``preventDefault`` so the parent <summary>'s native toggle
+    // doesn't fire — clicking the grip dots shouldn't expand the
+    // card on top of starting a drag attempt.
+    (function () {
+      const SESSION_ID = {{ session.id | tojson }};
+      const CONTAINER_SELECTOR = '.card[id^="instrument-"]';
+      const BREAK_SELECTOR = '.page-break-card';
+
+      let dragging = null;
+      let originalNext = null;
+      let originalParent = null;
+      let dropDispatched = false;
+
+      // The handle itself is draggable. Listen at the document
+      // level so dynamically-inserted handles still work.
+      document.addEventListener('dragstart', function (e) {
+        const handle = e.target.closest('[data-instrument-drag-handle]');
+        if (!handle) { return; }
+        const card = handle.closest(CONTAINER_SELECTOR);
+        if (!card) { e.preventDefault(); return; }
+        dragging = card;
+        originalParent = card.parentNode;
+        originalNext = card.nextElementSibling;
+        dropDispatched = false;
+        e.dataTransfer.effectAllowed = 'move';
+        // Some browsers require non-empty data for the drag to
+        // actually start.
+        try { e.dataTransfer.setData('text/plain', card.id); } catch (err) {}
+        // The dragImage defaults to the handle (tiny). Replace it
+        // with the whole card so the operator sees what's moving.
+        try {
+          const rect = card.getBoundingClientRect();
+          e.dataTransfer.setDragImage(
+            card, e.clientX - rect.left, e.clientY - rect.top
+          );
+        } catch (err) {}
+        // Defer the fade class one tick so the dragImage capture
+        // above sees the un-faded card.
+        setTimeout(function () {
+          if (dragging) { dragging.classList.add('instrument-card-dragging'); }
+        }, 0);
+      });
+
+      document.addEventListener('dragover', function (e) {
+        if (!dragging) { return; }
+        const target = e.target.closest(
+          CONTAINER_SELECTOR + ',' + BREAK_SELECTOR
+        );
+        if (!target || target === dragging) { return; }
+        if (!originalParent.contains(target)) { return; }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = target.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) {
+          originalParent.insertBefore(dragging, target);
+        } else {
+          originalParent.insertBefore(dragging, target.nextSibling);
+        }
+      });
+
+      document.addEventListener('drop', function (e) {
+        if (!dragging) { return; }
+        e.preventDefault();
+        dropDispatched = true;
+        submitNewOrder();
+      });
+
+      document.addEventListener('dragend', function () {
+        if (!dragging) { return; }
+        const card = dragging;
+        card.classList.remove('instrument-card-dragging');
+        if (!dropDispatched) {
+          // Cancelled (Esc / drop outside). Snap back.
+          snapBack();
+        }
+        // ``submitNewOrder`` clears state on async completion.
+        if (dropDispatched) { return; }
+        dragging = null;
+        originalParent = null;
+        originalNext = null;
+      });
+
+      // Block the click that follows a quick mousedown+mouseup on
+      // the handle so the native <summary> toggle doesn't fire.
+      document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-instrument-drag-handle]')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+
+      function snapBack() {
+        if (!originalParent || !dragging) { return; }
+        if (originalNext && originalNext.parentNode === originalParent) {
+          originalParent.insertBefore(dragging, originalNext);
+        } else {
+          originalParent.appendChild(dragging);
+        }
+      }
+
+      function currentItems() {
+        const items = [];
+        Array.from(originalParent.children).forEach(function (el) {
+          if (el.matches(BREAK_SELECTOR)) {
+            items.push(null);
+          } else if (el.matches(CONTAINER_SELECTOR)) {
+            const id = parseInt(
+              (el.id || '').replace('instrument-', ''), 10
+            );
+            if (!isNaN(id)) { items.push(id); }
+          }
+        });
+        return items;
+      }
+
+      function submitNewOrder() {
+        const items = currentItems();
+        fetch(
+          '/operator/sessions/' + SESSION_ID + '/instruments/order',
+          {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: items }),
+          }
+        ).then(function (resp) {
+          if (resp.ok) {
+            // Persist any other open-state we care about, then
+            // reload so the page-break cards + per-card +Page break
+            // button disabled-states reflect the new order. The
+            // restore IIFE below brings the open-state back.
+            captureOpenStateForReload();
+            window.location.reload();
+            return;
+          }
+          return resp.json().then(function (data) {
+            snapBack();
+            showToast(
+              (data && data.detail) ||
+                'Reorder rejected (status ' + resp.status + ')'
+            );
+          }).catch(function () {
+            snapBack();
+            showToast('Reorder rejected (status ' + resp.status + ')');
+          });
+        }).catch(function () {
+          snapBack();
+          showToast('Network error — please retry.');
+        }).then(function () {
+          // Clean up state on any path.
+          dragging = null;
+          originalParent = null;
+          originalNext = null;
+          dropDispatched = false;
+        });
+      }
+
+      let toastTimer = null;
+      function showToast(msg) {
+        let toast = document.querySelector('.instrument-reorder-toast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.className = 'instrument-reorder-toast';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('is-visible');
+        if (toastTimer) { clearTimeout(toastTimer); }
+        toastTimer = setTimeout(function () {
+          toast.classList.remove('is-visible');
+        }, 3000);
+      }
+
+      // sessionStorage-based open-state preservation across the
+      // reload submitNewOrder triggers on success. We also fire
+      // this on +Page break form submits so creates don't snap
+      // every card back to collapsed.
+      const PENDING_OPEN_KEY = 'rrw_instruments_pending_open';
+      function captureOpenStateForReload() {
+        const openIds = Array.from(
+          document.querySelectorAll(
+            'details.instrument-card-collapsible[open]'
+          )
+        ).map(function (d) {
+          const card = d.closest(CONTAINER_SELECTOR);
+          return card ? card.id : null;
+        }).filter(function (v) { return v; });
+        try {
+          sessionStorage.setItem(
+            PENDING_OPEN_KEY, JSON.stringify(openIds)
+          );
+        } catch (err) {}
+      }
+
+      // Restore on page load if there's a pending capture.
+      try {
+        const raw = sessionStorage.getItem(PENDING_OPEN_KEY);
+        if (raw) {
+          sessionStorage.removeItem(PENDING_OPEN_KEY);
+          JSON.parse(raw).forEach(function (id) {
+            const card = document.getElementById(id);
+            if (!card) { return; }
+            const d = card.querySelector(
+              'details.instrument-card-collapsible'
+            );
+            if (d) { d.open = true; }
+          });
+        }
+      } catch (err) {}
+
+      // Hook into +Page break form submits so those reloads also
+      // preserve open state.
+      document.addEventListener('submit', function (e) {
+        const btn = e.target && e.target.querySelector(
+          '[data-instrument-page-break-add]'
+        );
+        if (btn) { captureOpenStateForReload(); }
+      });
     })();
   </script>
 
