@@ -19,10 +19,12 @@ pages (`GET /reviewer/sessions/{id}/{position}`) into a
 single-page-all-instruments view at
 `GET /reviewer/sessions/{id}`. Each instrument stacks
 vertically with a horizontal separator between adjacent
-instruments. The existing action row (Save / Submit / Clear)
-renders above **every** instrument heading; the final
-instance at the bottom also carries the danger zone (Clear /
-Recall). The Page-#N navigation row retires.
+instruments. The existing action row (Save / Submit / Clear
+| #1, #2, …) renders above **every** instrument heading; the
+final instance at the bottom also carries the danger zone
+(Clear / Recall). The `#N` buttons in the action row become
+in-page anchor links (Decision 8) instead of pagination
+navigation.
 
 The reviewer-summary page (`/sessions/{id}/summary`) is
 unaffected — it already aggregates across instruments. This
@@ -70,10 +72,28 @@ segment is exclusively about the editable surface.
    that migrates the tests off them. Reviewer-facing
    invitation links already 303 to `/sessions/{id}`; no
    positional URLs are exposed outside our own dashboard.
-8. **`PageButton` retires entirely in PR 1.** Grep + delete
-   the dataclass, helper, and view-shape export — no no-op
-   stub, no soft-deprecation. The operator preview reuses
-   the same template and inherits the change.
+8. **`PageButton` is repurposed as in-page anchor nav, not
+   retired.** With every instrument on the page, the
+   per-instrument buttons stop being pagination controls and
+   become a quick-jump TOC. The dataclass + helper stay; only
+   the semantics shift:
+   - `href` becomes `#instrument-{id}` (matching Decision 6's
+     anchor ids) instead of
+     `/reviewer/sessions/{id}/{position}`.
+   - Label format becomes `#N short_label`
+     (e.g. `#2 Reviewers`) — `"Page"` no longer makes sense
+     once pagination retires, but the positional cue is
+     useful for verbal reference.
+   - `is_current` drops from the dataclass and the template
+     stops rendering any button as disabled. No
+     IntersectionObserver / scroll tracking — the buttons are
+     plain anchor links.
+   - Placement is **unchanged from today**: every action row
+     carries `Save / Discard / Submit | #1 short_label,
+     #2 short_label, …` and the row interleaves above every
+     instrument heading. The bottom action row (flush-right,
+     under the last instrument's table) carries the same set
+     of buttons, followed by the Danger Zone on the next row.
 
 ## Where pagination lives today (the diff surface)
 
@@ -130,9 +150,11 @@ segment is exclusively about the editable surface.
 - `_surface_context` drops the `current_position` argument
   and the `is_current` flag on `InstrumentGroup` — every
   group is always visible.
-- Page-button list retired (`PageButton` dataclass can stay
-  as a no-op return for one release if any operator-preview
-  path still imports it; retire in PR 2).
+- `PageButton` dataclass + `page_button_label` helper stay
+  (Decision 8). The list is rebuilt with `href` pointing at
+  `#instrument-{anchor_id}` and the label relabelled to
+  `#N short_label`. `is_current` drops; no button renders
+  disabled.
 - The per-instrument heading-state pair lands as a new
   dataclass `InstrumentHeadingState` on each group: carries
   the "not accepting" banner text + the closed-with-hidden /
@@ -162,8 +184,10 @@ segment is exclusively about the editable surface.
   - Optional second line spelling out the implication
     ("Your saved values remain visible below" vs. "are
     hidden by the operator").
-- Page-#N button row retired (the markup block around
-  `views.PageButton` references).
+- Page-#N button row stays in the action row, with hrefs
+  now pointing at `#instrument-{anchor_id}` (Decision 8).
+  The disabled-when-current branch in the action row partial
+  drops with `is_current`.
 - The session-level "no longer accepting" / status panel
   (`review_surface.html:47-58`) drops the
   `not any_accepting` banner — its content moves per-
@@ -295,10 +319,11 @@ the rendering / routing / view-shape layer.
     `is_current`. Every group is always visible.
   - Add `anchor_id = f"instrument-{inst.id}"` on each
     `InstrumentGroup` (Decision 6).
-  - Retire `PageButton` dataclass + `page_button_label`
-    helper + the `page_buttons` context key. Grep
-    `app/` + `tests/` + `spec/` + `guide/` for references
-    and delete them (Decision 8).
+  - Keep `PageButton` dataclass + `page_button_label`
+    helper + the `page_buttons` context key (Decision 8).
+    Change the build: `href` becomes `#instrument-{anchor_id}`;
+    label becomes `#N short_label`; `is_current` drops from
+    the dataclass.
   - `page_statuses` retires — drop both the dataclass build
     + the template loop. The rollup pill
     (Submitted / Saved-not-submitted / Draft) stays in
@@ -316,12 +341,17 @@ the rendering / routing / view-shape layer.
     `base.html`).
   - Action row include moves *inside* the loop, rendering
     above every instrument heading; the bottom instance
-    (with the danger zone) stays outside the loop.
+    (with the danger zone on its own row beneath) stays
+    outside the loop. The action-row partial keeps its
+    Save / Discard / Submit | #1, #2, … layout — the `#N`
+    buttons now anchor-link via `href="#instrument-{id}"`
+    (Decision 8).
   - `.rs-status-panel` heading banner stays page-wide for
     this PR — it's still session-level here. PR 2 splits it
     per-instrument.
-  - Page-#N button row markup + the per-page status pills
-    list deleted.
+  - Per-page status pills list deleted (rollup pill stays);
+    the Page-#N button row is **not** deleted — it's kept
+    in the action row as an anchor TOC.
   - Inline pagination JS (~70 lines around lines 484-755 —
     `rs-paginated` toggling, `pushState`, `popstate`,
     page-button click handler, dirty-confirm on page
@@ -345,6 +375,11 @@ the rendering / routing / view-shape layer.
   - Each instrument group renders with an
     `id="instrument-{id}"` attribute matching its database
     id.
+  - Action-row `#N short_label` buttons render with
+    `href="#instrument-{id}"` matching the corresponding
+    group; clicking one (in a test client capturing rendered
+    HTML, not browser scroll) confirms the href targets the
+    right anchor.
   - Legacy `GET /sessions/{id}/1` 303s to
     `/sessions/{id}#instrument-{id}`.
   - Legacy `POST /sessions/{id}/1/save` succeeds via the
@@ -418,8 +453,11 @@ After PR 3 the only reviewer surface URL is
   retired pagination JS, per-instrument heading-state
   card).
 - `app/web/views/_instruments.py` —
-  `instrument_heading` / `PageButton`. The heading helper
-  stays; `PageButton` retires.
+  `instrument_heading` / `PageButton` / `page_button_label`.
+  Both helpers stay; `PageButton` is repurposed as anchor
+  nav (Decision 8) — `href` flips to `#instrument-{id}`,
+  label format flips to `#N short_label`, `is_current`
+  drops.
 - `app/services/responses.py` —
   `save_responses` / `submit` paths; the new consolidated
   save endpoint calls the existing service helper across
