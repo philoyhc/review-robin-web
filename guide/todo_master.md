@@ -983,6 +983,19 @@ bottom of this file.
   visibility control. Likely 4–5 small PRs.
   **Plan:** `guide/segment_18K_visibility.md`.
 
+- **18L — Single-page reviewer surface** *(stub created
+  2026-05-27; decisions locked same day)*. Collapse the
+  reviewer response surface from per-instrument pages
+  (`/reviewer/sessions/{id}/{position}`) into a single-page
+  view at `/reviewer/sessions/{id}`. Instruments stack
+  vertically with an `<hr>` separator; the action row
+  repeats above every instrument heading + once at the
+  bottom with the danger zone. Per-instrument heading-row
+  state moves into a half-width card to the right of each
+  title (Decision 3). Pagination JS retires. Two PRs: surface
+  + endpoint rewrite, then test-sweep + shim retirement.
+  **Plan:** `guide/segment_18L_single_page_surface.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
