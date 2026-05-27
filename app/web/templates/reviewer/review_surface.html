@@ -148,7 +148,14 @@
          inside the loop) and once at the bottom (outside the loop)
          with the danger zone immediately beneath. #}
       {% for group in instrument_groups %}
-        {% if not loop.first %}
+        {# Page break visual — render the separator only between
+           pages, where the second instrument carries
+           ``starts_new_page=true`` (Segment 18M data model). The
+           first instrument's flag is meaningless (ignored at
+           render time per the locked spec); consecutive
+           instruments on the same operator-defined page stack
+           without a separator. #}
+        {% if not loop.first and group.starts_new_page %}
           <hr class="rs-instrument-separator">
         {% endif %}
         {# The anchor id lives on a wrapper around (action row +

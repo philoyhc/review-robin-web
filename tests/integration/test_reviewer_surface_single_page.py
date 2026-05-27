@@ -135,12 +135,14 @@ def test_bare_url_renders_single_page_surface(
     assert response.status_code == 200
 
 
-def test_multi_instrument_renders_all_groups_with_hr_separators(
+def test_multi_instrument_renders_all_groups_with_anchor_ids(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """Every instrument the reviewer has assignments on lands in
+    the DOM with its own ``id="instrument-{id}"`` anchor."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -158,12 +160,57 @@ def test_multi_instrument_renders_all_groups_with_hr_separators(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    # Each instrument carries an anchor id.
     for inst in instruments:
         assert f'id="instrument-{inst.id}"' in body
 
-    # Two `<hr class="rs-instrument-separator">` between three
-    # instruments (none before the first).
+
+def test_hr_separator_renders_only_between_pages(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """``<hr class="rs-instrument-separator">`` is emitted only
+    between instruments where the second carries
+    ``starts_new_page=true`` (the Segment 18M break flag). Default
+    behaviour on a fresh session: no breaks, no separators."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="sp-2b",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=2,
+    )
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars().all(),
+        key=lambda i: (i.order, i.id),
+    )
+    rae_client = make_client(rae)
+    # No breaks set yet -> zero separators.
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    assert body.count('class="rs-instrument-separator"') == 0
+
+    # Set a break before the second instrument via the operator
+    # service helper. One break -> one separator.
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[0]
+    )
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    assert body.count('class="rs-instrument-separator"') == 1
+
+    # Set another break (between 2 and 3) -> two separators.
+    instruments_service.create_page_break_after(
+        db, instrument=instruments[1]
+    )
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
     assert body.count('class="rs-instrument-separator"') == 2
 
 
