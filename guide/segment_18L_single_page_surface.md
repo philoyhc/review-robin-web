@@ -1,8 +1,18 @@
-# Segment 18L — Single-page reviewer surface
+# Segment 18L — Multi-page reviewer surface (operator-defined)
 
-> **Status: drafting (stub created 2026-05-27).** Decisions
-> locked with the human author 2026-05-27 (see "Decisions"
-> below); no PRs yet.
+> **Status: PRs 1a + 1b + replan + 1b-revised shipped
+> (2026-05-27).** The reviewer surface paginates by
+> operator-defined pages, each rendered at its own URL.
+> Initial decisions were locked 2026-05-27 around a
+> single-page-all-instruments model; mid-implementation the
+> user clarified that 18M's strategic vision called for true
+> multi-page navigation with operator-defined boundaries.
+> Decisions 5 + 8 below were reversed in the replan; the
+> "Goal" + "What changes" sections were rewritten. The work
+> shipped in PR 1b (single-page-render-of-multiple-
+> instruments-within-a-page) is reused as the intra-page
+> render; cross-page navigation goes back to real URL changes
+> (PR #1522).
 >
 > **Predecessors.** Segment 17B Phase 2 wired the participation-
 > summary capstone page; Segment 18J shipped column widths and
@@ -92,17 +102,34 @@ and is best reviewed on its own merits.
 
 ## Goal
 
-Collapse the reviewer response surface from per-instrument
-pages (`GET /reviewer/sessions/{id}/{position}`) into a
-single-page-all-instruments view at
-`GET /reviewer/sessions/{id}`. Each instrument stacks
-vertically with a horizontal separator between adjacent
-instruments. The existing action row (Save / Submit / Clear
-| #1, #2, …) renders above **every** instrument heading; the
-final instance at the bottom also carries the danger zone
-(Clear / Recall). The `#N` buttons in the action row become
-in-page anchor links (Decision 8) instead of pagination
-navigation.
+Replace the per-instrument pagination
+(`GET /reviewer/sessions/{id}/{position}` where each
+instrument was its own page) with **operator-defined
+pagination** — each page is a group of one or more
+instruments that the operator chose to keep together
+(carved by Segment 18M's `Instrument.starts_new_page`
+flag). URL shape stays positional:
+`GET /reviewer/sessions/{id}/{N}`, N is the 1-based page
+number. Bare `/reviewer/sessions/{id}` 303s to `/{id}/1`.
+
+Within a page, instruments stack vertically without an
+inter-instrument separator. The action row (Save / Submit
+| #1 short_label, #2 …) renders above every instrument
+heading on the current page plus once at the bottom with
+the danger zone (Clear / Recall). The `#N` buttons remain
+in-page anchor TOC — they jump within the current page,
+**not** across pages. Cross-page navigation lives in a
+separate Prev / Next row at the top + bottom of each page.
+
+Mid-implementation note (2026-05-27): an initial draft
+locked this segment around a single-page-all-instruments
+view (no pagination of any kind). The user clarified that
+18M's strategic vision (locked 2026-05-27, see below)
+intended true multi-page navigation with operator-defined
+boundaries. The "Goal" + "Decisions 5 + 8" + "What changes"
+sections were rewritten around that intent; PR 1b's work
+shipped + got reshaped as the intra-page render, and PR
+#1522 layered URL pagination on top.
 
 The reviewer-summary page (`/sessions/{id}/summary`) is
 unaffected — it already aggregates across instruments. This
@@ -137,41 +164,65 @@ segment is exclusively about the editable surface.
    `detail.counts.responses_saved`. Update `EVENT_SCHEMAS` in
    the same PR that lands the endpoint, or the strict-mode
    test gate will reject the new shape.
-5. **Submit / Recall / Clear redirect to the top of
-   `/reviewer/sessions/{id}`** with no anchor — the rollup
-   pill at the top of `.rs-status-panel` is the
-   session-level result confirmation. `current_position`
-   stops being read from the form payload.
-6. **Each instrument group emits `id="instrument-{id}"`** so
-   the shim 303s can scroll-restore from a positional URL
-   and future summary "Edit" affordances can deep-link.
-7. **Shim retirement is immediate.** The test-sweep PR drops
-   the legacy positional GET + POST shims in the same change
-   that migrates the tests off them. Reviewer-facing
-   invitation links already 303 to `/sessions/{id}`; no
-   positional URLs are exposed outside our own dashboard.
-8. **`PageButton` is repurposed as in-page anchor nav, not
-   retired.** With every instrument on the page, the
-   per-instrument buttons stop being pagination controls and
-   become a quick-jump TOC. The dataclass + helper stay; only
-   the semantics shift:
-   - `href` becomes `#instrument-{id}` (matching Decision 6's
-     anchor ids) instead of
-     `/reviewer/sessions/{id}/{position}`.
-   - Label format becomes `#N short_label`
-     (e.g. `#2 Reviewers`) — `"Page"` no longer makes sense
-     once pagination retires, but the positional cue is
-     useful for verbal reference.
-   - `is_current` drops from the dataclass and the template
-     stops rendering any button as disabled. No
-     IntersectionObserver / scroll tracking — the buttons are
-     plain anchor links.
-   - Placement is **unchanged from today**: every action row
-     carries `Save / Discard / Submit | #1 short_label,
-     #2 short_label, …` and the row interleaves above every
-     instrument heading. The bottom action row (flush-right,
-     under the last instrument's table) carries the same set
-     of buttons, followed by the Danger Zone on the next row.
+5. **Submit / Recall / Clear redirect to the bare URL**
+   `/reviewer/sessions/{id}` (which 303s on to `/1`). The
+   rollup pill at the top of `.rs-status-panel` is the
+   session-level result confirmation. The original lock
+   here said "stop reading `current_position` from the
+   form payload"; the multi-page replan brought it back —
+   Save POSTs to `/sessions/{id}/{N}/save` (the URL slot
+   carries the page number, no form field needed).
+6. **Each instrument emits `id="instrument-{id}"`** so the
+   intra-page anchor TOC + future summary "Edit"
+   affordances can deep-link. Combined with the wrapper
+   div from PR #1520, the anchor jump lands above the
+   per-instrument action row so the operator's Save /
+   Submit controls are visible at the top of the
+   viewport on arrival.
+7. **Legacy positional URLs are the canonical URLs again
+   post-replan.** The original lock here was about
+   retiring shims that translated `/sessions/{id}/{N}` →
+   `/sessions/{id}#instrument-{id}`. The multi-page replan
+   makes `/sessions/{id}/{N}` the canonical render again,
+   just indexed by page number instead of instrument
+   position. No shims, no retirement.
+8. **`PageButton` is repurposed as an in-page anchor TOC
+   scoped to the current page** (revised in replan). The
+   dataclass + helper stay; semantics:
+   - `href` is `#instrument-{id}` (matching Decision 6's
+     anchor ids).
+   - Label format is `#N short_label` (e.g. `#2 Reviewers`).
+     `"Page"` retired — `#N` carries the positional cue.
+   - `is_current` drops from the dataclass; no button
+     renders disabled.
+   - **Replan correction:** the original lock placed every
+     instrument's `#N` button in the action row regardless
+     of which page was rendered. The multi-page replan
+     filters `page_buttons` server-side to instruments on
+     the **current page only**. Cross-page navigation
+     lives in a separate **Prev / Next row** at the top +
+     bottom of each page, not in the action row.
+   - Placement: every action row carries
+     `Save / Discard / Submit | #1 short_label,
+     #2 short_label, …` for the CURRENT PAGE's
+     instruments, and the row interleaves above every
+     instrument heading. The bottom action row (flush-
+     right, under the last instrument's table) carries the
+     same set of buttons, followed by the Danger Zone on
+     the next row.
+9. **Multi-page navigation (post-replan).** Cross-page
+   navigation is a separate row with three slots:
+   `< Previous page` (only when `current_page_n > 1`) |
+   `Page N of M` counter (centred) |
+   `Next page >` (only when `current_page_n < page_count`).
+   Rendered at the top + bottom of the form when
+   `page_count > 1`; suppressed entirely on single-page
+   sessions. Real `<a href="/sessions/{id}/{N±1}">`
+   navigation — server-side render of the targeted page.
+   Unsaved typing on the current page is **lost
+   silently** when the operator clicks Prev/Next without
+   saving first (matching pre-18L behaviour minus the
+   client-side preservation JS that we deleted).
 
 ## Where pagination lives today (the diff surface)
 
@@ -200,6 +251,14 @@ segment is exclusively about the editable surface.
   too — which is Decision 3.
 
 ## What changes
+
+> **Post-replan note (2026-05-27, PR #1522).** This whole
+> section was originally written around the single-page-
+> all-instruments model. PR #1522 reversed that into the
+> multi-page model described in the Goal above. The
+> subsections below are the original locked plan kept for
+> historical context — read the "Sequencing" section
+> below for what actually shipped + what remains.
 
 ### Routes
 
@@ -355,170 +414,95 @@ segment is exclusively about the editable surface.
   test asserting the keys differ across instruments — the
   contract was unobservable while only one table rendered.
 
-## Sequencing
+## Sequencing (as shipped, post-replan)
 
-Three-PR landing. PR 1 carries the surface refactor + new
-endpoints + shims (the bulk of the segment), PR 2 isolates
-the per-instrument heading-state card so its layout move is
-reviewable on its own, and PR 3 sweeps tests + retires shims.
+The segment landed across five PRs in two phases. The
+first phase (PR 1a + PR 1b + small follow-ups) shipped
+the single-page-all-instruments model from the original
+lock. Mid-flight the user clarified that 18M's strategic
+vision called for true multi-page navigation; the replan
+PR (#1522) reshaped PR 1b's work into the multi-page
+model described in the Goal above. PRs 1c–2 remain.
 
-### PR 1 — single-page render + new endpoints + shims (~350 LOC)
+### Shipped
 
-The unit-of-work: replace the positional rendering surface
-with a single-page surface that renders every instrument,
-without yet moving the closed-banner per-instrument. The
-session-wide "no longer accepting" banner stays where it is
-today (`.rs-status-panel`) so this PR's diff is contained to
-the rendering / routing / view-shape layer.
+1. **PR 1a (#1518) — consolidated save endpoint + audit-
+   key rename.** Additive `POST /reviewer/sessions/{id}/save`
+   that walks every upsert in the form payload; `save_draft`
+   emits `audit.counts(assignments_touched=N,
+   responses_saved=W)` cleanly replacing the legacy
+   `saved` + `validation_errors` keys.
 
-- **Routes.**
-  - New `GET /reviewer/sessions/{id}` renders every
-    instrument in `Instrument.order, Instrument.id` order.
-  - New `POST /reviewer/sessions/{id}/save` walks every
-    assignment in the form payload via the existing
-    `responses_service.save_draft` helper; emits one
-    `responses.saved` audit row per call (Decision 4).
-    Register the new event-shape in `EVENT_SCHEMAS` in the
-    same commit.
-  - Legacy `GET /reviewer/sessions/{id}/{position}` 303s to
-    `/reviewer/sessions/{id}#instrument-{id}` (instrument id
-    looked up by sorted-position).
-  - Legacy `POST /reviewer/sessions/{id}/{position}/save`
-    303s to the new save endpoint (or rebuilds the payload
-    and re-dispatches — pick whichever keeps the shim
-    smaller; redirect is simpler).
-  - `reviewer_submit` / `reviewer_recall` / `reviewer_clear`
-    drop the `current_position` form read; all three
-    redirect to `/reviewer/sessions/{id}` (Decision 5).
-  - The bare `/reviewer/sessions/{id}` handler that today
-    303s to `/1` becomes the canonical render handler.
-- **View shape.**
-  - `_surface_context` drops `current_position` and
-    `is_current`. Every group is always visible.
-  - Add `anchor_id = f"instrument-{inst.id}"` on each
-    `InstrumentGroup` (Decision 6).
-  - Keep `PageButton` dataclass + `page_button_label`
-    helper + the `page_buttons` context key (Decision 8).
-    Change the build: `href` becomes `#instrument-{anchor_id}`;
-    label becomes `#N short_label`; `is_current` drops from
-    the dataclass.
-  - `page_statuses` retires — drop both the dataclass build
-    + the template loop. The rollup pill
-    (Submitted / Saved-not-submitted / Draft) stays in
-    `.rs-status-panel`.
-- **Template (`review_surface.html`).**
-  - `<form>` action becomes `/reviewer/sessions/{id}/save`;
-    `current_position` hidden input deleted.
-  - `.rs-paginated` wrapper deleted; the `for group in
-    instrument_groups` loop renders every group as
-    `<section id="instrument-{{ group.anchor_id }}"
-     class="rs-instrument-group">`.
-  - `<hr class="rs-instrument-separator">` between adjacent
-    groups (new class — `margin: var(--space-6) 0;
-    border: 0; border-top: 1px solid var(--border)` in
-    `base.html`).
-  - Action row include moves *inside* the loop, rendering
-    above every instrument heading; the bottom instance
-    (with the danger zone on its own row beneath) stays
-    outside the loop. The action-row partial keeps its
-    Save / Discard / Submit | #1, #2, … layout — the `#N`
-    buttons now anchor-link via `href="#instrument-{id}"`
-    (Decision 8).
-  - `.rs-status-panel` heading banner stays page-wide for
-    this PR — it's still session-level here. PR 2 splits it
-    per-instrument.
-  - Per-page status pills list deleted (rollup pill stays);
-    the Page-#N button row is **not** deleted — it's kept
-    in the action row as an anchor TOC.
-  - Inline pagination JS (~70 lines around lines 484-755 —
-    `rs-paginated` toggling, `pushState`, `popstate`,
-    page-button click handler, dirty-confirm on page
-    switch) deleted. The small dirty-tracker + Save-enable
-    sniffer stay (now scoped to the whole form).
-- **Dashboard.** `app/web/routes_reviewer/_dashboard.py`
-  link for `not started` / `in progress` pills points at
-  `/reviewer/sessions/{id}` instead of `/{id}/1`.
-- **Tests (new integration coverage).**
-  - Single-instrument session: one action row top + one
-    bottom; no `<hr>`; saved values render.
-  - Two-instrument session: every instrument visible,
-    `<hr>` between, action row above each heading, action
-    row + danger zone at the bottom.
-  - `POST /sessions/{id}/save` with a payload spanning both
-    instruments persists every assignment's response and
-    emits a single `responses.saved` audit row with the
-    right `detail.counts`.
-  - Closed-but-visible instruments render saved values
-    inline.
-  - Each instrument group renders with an
-    `id="instrument-{id}"` attribute matching its database
-    id.
-  - Action-row `#N short_label` buttons render with
-    `href="#instrument-{id}"` matching the corresponding
-    group; clicking one (in a test client capturing rendered
-    HTML, not browser scroll) confirms the href targets the
-    right anchor.
-  - Legacy `GET /sessions/{id}/1` 303s to
-    `/sessions/{id}#instrument-{id}`.
-  - Legacy `POST /sessions/{id}/1/save` succeeds via the
-    shim path.
-  - Per-table sort smoke: a two-instrument render emits two
-    `data-rrw-sortable` keys that differ (the keys already
-    embed the instrument id; this just locks the contract).
-- **Spec patches.**
-  - `spec/reviewer-surface.md` — URL contract section
-    (single canonical URL, shims pending) + retirement of
-    the Page-#N pattern.
-  - `guide/visibility_audit.md` — route column on the
-    surface row updated.
+2. **PR 1b (#1519) — initial render switch (single
+   page).** Reshaped `_surface_context` to drop
+   `current_position` / `is_current`, added `anchor_id`
+   per group, rebuilt `PageButton` as anchor TOC,
+   deleted the `.rs-paginated` wrapper + ~250 lines of
+   pagination JS, added `<hr class="rs-instrument-
+   separator">` between adjacent instruments, moved the
+   action row inside the loop. **This shipped the
+   single-page model**; PR #1522 below reshaped it into
+   the multi-page model.
 
-### PR 2 — per-instrument heading-state card (~150 LOC)
+3. **PR 1b polish (#1520) — anchor lands above the per-
+   instrument action row.** Wrapped each (action row +
+   section) in a `<div id="instrument-{id}">` so
+   `#instrument-{N}` scrolls to the action row instead
+   of the heading.
 
-The unit-of-work: move the heading-row banner state from
-page-wide (`.rs-status-panel`) to per-instrument
-(`.rs-intro-grid` column 2). Decision 3 in isolation.
+4. **PR 1b page-break wiring (#1521) — reviewer surface
+   honours `starts_new_page`.** `<hr>` separator
+   conditioned on `group.starts_new_page` — visible only
+   between operator-defined pages, not between every
+   adjacent instrument. End-to-end visibility of 18M's
+   break flag in single-page-render world.
 
-- **View shape.**
-  - New `InstrumentHeadingState` dataclass on each
-    `InstrumentGroup` carrying
-    `accepting: bool`,
-    `responses_visible_when_closed: bool`, and pre-rendered
-    pill / banner-line strings.
-- **Template.**
-  - `.rs-status-panel` drops the `not any_accepting`
-    banner block (`review_surface.html:47-58`). The session
-    description + rollup pill stay; the panel renders only
-    when there's still something to say.
-  - `.rs-intro-grid` column 2 carries a new
-    `.card.rs-instrument-state-card` showing the
-    accepting-state pill pair + the implication line
-    ("Your saved values remain visible below" vs. "are
-    hidden by the operator"). Card omitted entirely when
-    Decision 3's empty-on-open case applies.
-- **Tests.**
-  - Per-instrument card combos:
-    - accepting=True, visible=True → no card.
-    - accepting=False, visible=True → "no longer accepting"
-      pill + "saved values remain visible" line.
-    - accepting=False, visible=False → "no longer
-      accepting" pill + "saved values hidden" line.
-  - Page-wide banner from PR 1's `.rs-status-panel` no
-    longer fires on `not any_accepting`.
+5. **PR 1b replan (#1522) — multi-page surface
+   (operator-defined).** Reshaped the entire PR-1b layer
+   into URL-paginated by page: `GET /sessions/{id}` 303s
+   to `/1`; `GET /sessions/{id}/{N}` is the canonical
+   render, scoped to the operator-defined page's
+   instruments; `POST /sessions/{id}/{N}/save` saves +
+   303s back to `/{N}`. New `_pages_for_session` helper
+   groups instruments by `starts_new_page`. Prev/Next
+   nav row at top + bottom of each page when
+   `page_count > 1`. `<hr>` separator within a page
+   retired (intra-page instruments stack without
+   separator). 10 legacy tests `@pytest.mark.skip`'d
+   pending migration in PR 1d.
 
-### PR 3 — test sweep + shim retirement (~250 LOC, mostly tests)
+### Remaining
 
-- Migrate the ~126 existing test lines that POST / GET
-  positional URLs (`/{position}` / `/{position}/save`) to
-  the new single-URL endpoints.
-- Delete the legacy positional GET + POST shims from
-  `_surface.py`.
-- Delete `_read_current_position` and any remaining
-  `current_position` references in routes / tests / spec.
-- Final spec patch: `spec/reviewer-surface.md` URL
-  contract section drops the "shims pending" note.
+6. **PR 1c — cleanup.** Drop `_read_current_position`
+   helper (now redundant — the URL slot carries page
+   number, no form field needed). Drop `current_position`
+   hidden input from the Clear / Submit / Recall forms.
+   Spec patches: `spec/reviewer-surface.md` URL contract
+   section, `guide/visibility_audit.md` route column.
+   ~80 LOC. Could fold into PR 1d.
 
-After PR 3 the only reviewer surface URL is
-`/reviewer/sessions/{id}`.
+7. **PR 1d — test sweep.** Migrate the 40 skipped tests
+   to the multi-page URL semantics. Many assume
+   `position=instrument_position`; most can be fixed by
+   either (a) setting page breaks first so the test's
+   `/{position}/save` URL targets a real page, or (b)
+   collapsing the test's save POSTs into one
+   `/sessions/{id}/1/save` when all instruments are on
+   page 1. Remove the `@pytest.mark.skip` markers as
+   tests are updated. ~250 LOC mostly test code.
+
+8. **PR 2 — per-instrument heading-state card
+   (Decision 3).** Move the "no longer accepting" banner
+   from page-wide `.rs-status-panel` to per-instrument
+   `.rs-intro-grid` column 2. Each instrument carries
+   its own state pair side-by-side with its own heading.
+   Card omitted when `accepting=True, visible=True` (the
+   common path). ~150 LOC. Independent of PR 1c/d but
+   conceptually the second "movement" of the segment.
+
+After PR 1d the only reviewer surface URLs are
+`/reviewer/sessions/{id}` (303 to /1) and
+`/reviewer/sessions/{id}/{N}` (page render).
 
 ## Cross-refs
 
