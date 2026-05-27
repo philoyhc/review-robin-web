@@ -40,49 +40,47 @@ Cross-references:
 ## URL pattern
 
 ```
-GET  /reviewer/sessions/{session_id}/{instrument_position}
-POST /reviewer/sessions/{session_id}/{instrument_position}/save
+GET  /reviewer/sessions/{session_id}/{page_n}
+POST /reviewer/sessions/{session_id}/{page_n}/save
 POST /reviewer/sessions/{session_id}/submit
 POST /reviewer/sessions/{session_id}/clear
 ```
 
-`{instrument_position}` is the **1-indexed position** of the instrument
-within the session (`Instrument.order`-sorted, then `Instrument.id`).
-Position is preferred over the DB id because:
+`{page_n}` is the **1-indexed operator-defined page number** within the
+session. Pages are derived from `Instrument.starts_new_page` (Segment
+18M): instruments walk in `Instrument.order, Instrument.id` order and a
+new page begins at every instrument whose flag is true. Each page
+contains one or more instruments. (Pre-Segment-18L the URL slot was the
+instrument position; the multi-page replan reuses the slot for page
+number so single-page sessions stay degenerate — `/1` is the only valid
+page.)
 
-- It produces stable, predictable URLs for the reviewer (Page 1 / Page
-  2 / …).
-- The "Page N" framing in the UI matches the URL segment.
-- Operators rarely reorder instruments after activation; if they do,
-  bookmark URLs simply land on whichever instrument now sits at that
-  position, which is reasonable behavior.
-
-Single-instrument sessions still carry the segment: the only valid
-position is `1`. `GET /reviewer/sessions/{id}` (no position) **303s to
+`GET /reviewer/sessions/{id}` (no page) **303s to
 `/reviewer/sessions/{id}/1`** so existing invitation links and dashboard
-rows keep working.
+rows keep working. Out-of-range pages (e.g. `/reviewer/sessions/5/9` when
+the session has only 2 pages) return **404**.
 
-Out-of-range positions (e.g. `/reviewer/sessions/5/9` when the session
-has only 2 instruments) return **404**.
-
-The reviewer dashboard at `/reviewer` always links each row to position
-`1`, since the dashboard summarises the session as a whole and Page 1 is
-a safe default landing.
+The reviewer dashboard at `/reviewer` always links each row to `/1`,
+since the dashboard summarises the session as a whole and page 1 is a
+safe default landing.
 
 **URL semantics across the four routes.**
 
-- The GET route renders the **whole** surface — every instrument the
-  reviewer has assignments on is delivered in one HTML response, with
-  the instrument at `{position}` initially visible. Other instruments
-  are hidden via CSS until the reviewer clicks a Page button (see
-  "Form scope" below).
-- The Save POST is **page-scoped** — `{position}` tells the route
-  which instrument's response fields to persist. Inputs from other
-  pages (which travel in the same form body) are ignored.
-- The Submit POST is **session-wide** — no `{position}` segment;
-  submits the whole review.
-- The Clear POST is **session-wide** — no `{position}` segment;
-  wipes everything.
+- The GET route renders **only the current page's instruments** — every
+  instrument the reviewer has assignments on that belongs to the
+  operator-defined page at `{page_n}`. Cross-page navigation uses the
+  Prev / Next nav row (see "Page anatomy" below); intra-page anchors
+  (`#instrument-{id}`) cover the in-page TOC.
+- The Save POST is **page-scoped** — `{page_n}` tells the route which
+  page's response fields to persist; defense-in-depth filtering drops
+  upserts that don't belong to this page. On success, 303s back to
+  `/{page_n}`.
+- The Submit POST is **session-wide** — no `{page_n}` segment; submits
+  the whole review. On success, 303s to `/reviewer/sessions/{id}`
+  (which 303s on to `/1`) or to the summary page when the submit closed
+  out the whole session.
+- The Clear POST is **session-wide** — no `{page_n}` segment; wipes
+  everything and 303s to the bare session URL.
 
 ---
 

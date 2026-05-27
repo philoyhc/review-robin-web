@@ -14,9 +14,11 @@ Reviewer surface — multi-instrument-aware URL pattern (Segment
 - POST /sessions/{id}/submit                  → session-wide
 - POST /sessions/{id}/clear                   → session-wide
 
-Submit and Clear stay session-wide; their redirect targets read a
-``current_position`` hidden form field so the reviewer lands back
-on the page they were on.
+Submit and Clear stay session-wide; their redirect targets are the
+bare session URL ``/reviewer/sessions/{id}`` which 303s on to
+``/1`` — post-Segment-18L the URL slot is the operator-defined
+page number, so a "go back to where you were" round-trip is no
+longer possible after a session-wide POST.
 """
 
 from __future__ import annotations
@@ -366,7 +368,6 @@ def _surface_context(
     user: User,
     reviewer: Reviewer,
     review_session: ReviewSession,
-    current_position: int | None = None,
     page_n: int = 1,
     missing: list[responses_service.MissingPosition] | None = None,
     errors: list[responses_service.ValidationError] | None = None,
@@ -794,11 +795,6 @@ def _surface_context(
         "page_count": page_count,
         "prev_page_url": prev_page_url,
         "next_page_url": next_page_url,
-        # ``current_position`` is the URL position the surface was
-        # rendered at — historically per-instrument, post-Segment-18L
-        # replan it carries the page number to keep submit / recall /
-        # clear form payloads valid integers. Defaults to 1.
-        "current_position": current_position or safe_page_n,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
@@ -808,7 +804,6 @@ def _surface_context(
 
 def submit_redirect_url(
     review_session: ReviewSession,
-    position: int,
     *,
     fully_submitted: bool = False,
 ) -> str:
@@ -816,29 +811,15 @@ def submit_redirect_url(
 
     Returns the summary page URL (17B Phase 2 PR B) when the
     submit closed out the whole session — i.e. every assigned
-    row now has ``submitted_at`` set — and the surface page
-    otherwise so a per-instrument submit doesn't yank the
-    reviewer off the page they pressed Submit from.
+    row now has ``submitted_at`` set — and the bare session URL
+    otherwise (which 303s on to ``/1``). Post-Segment-18L the URL
+    slot is the operator-defined page number, not the reviewer's
+    last instrument position, so submit no longer attempts to
+    return the reviewer to "the page they were on".
     """
     if fully_submitted:
         return f"/reviewer/sessions/{review_session.id}/summary"
-    return f"/reviewer/sessions/{review_session.id}/{position}"
-
-
-def _read_current_position(form: object, default: int = 1) -> int:
-    """Parse a ``current_position`` hidden field from a reviewer-surface
-    form POST. Falls back to ``default`` (1) when missing or malformed
-    so a stray POST doesn't 500 the route. Out-of-range values still
-    redirect to that position; the GET route 404s if it's truly invalid.
-    """
-    raw = form.get("current_position") if hasattr(form, "get") else None
-    if not isinstance(raw, str):
-        return default
-    try:
-        n = int(raw)
-    except ValueError:
-        return default
-    return n if n >= 1 else default
+    return f"/reviewer/sessions/{review_session.id}"
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
@@ -1118,7 +1099,6 @@ async def reviewer_submit(
     _require_session_accepting(db, review_session, reviewer)
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
-    current_position = _read_current_position(form)
     upserts = responses_service.parse_form_payload(string_form)
     result = responses_service.submit(
         db,
@@ -1137,7 +1117,6 @@ async def reviewer_submit(
             user=user,
             reviewer=reviewer,
             review_session=review_session,
-            current_position=current_position,
             missing=result.missing,
             errors=result.errors,
             bad_values=bad_values,
@@ -1148,7 +1127,6 @@ async def reviewer_submit(
         context["reviewer_review_count"] = reviewer_review_count_for_user(
             db, user
         )
-        context["current_position"] = current_position
         return _templates.TemplateResponse(
             request,
             "reviewer/review_surface.html",
@@ -1161,7 +1139,6 @@ async def reviewer_submit(
     return RedirectResponse(
         url=submit_redirect_url(
             review_session,
-            current_position,
             fully_submitted=(
                 state.total_assignments > 0
                 and state.pill_state == "submitted"
@@ -1242,7 +1219,6 @@ async def reviewer_clear(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
-    current_position = _read_current_position(form)
     responses_service.clear_all(
         db,
         review_session=review_session,
@@ -1251,6 +1227,6 @@ async def reviewer_clear(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}/{current_position}",
+        url=f"/reviewer/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

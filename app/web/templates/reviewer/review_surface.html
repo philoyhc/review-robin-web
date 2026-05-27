@@ -100,7 +100,7 @@
       </ul>
       <div class="rs-missing-card-actions">
         <a class="btn secondary"
-           href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">
+           href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}">
           Cancel
         </a>
       </div>
@@ -130,7 +130,7 @@
       </ul>
       <div class="rs-missing-card-actions">
         <a class="btn secondary" data-rs-missing-dismiss
-           href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">
+           href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}">
           Cancel
         </a>
       </div>
@@ -489,7 +489,6 @@
       <div class="card danger-zone rs-danger-zone">
         <h2>Clear all responses</h2>
         <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
-          <input type="hidden" name="current_position" value="{{ current_position }}">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required

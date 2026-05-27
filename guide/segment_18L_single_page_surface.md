@@ -1,6 +1,6 @@
 # Segment 18L — Multi-page reviewer surface (operator-defined)
 
-> **Status: PRs 1a + 1b + replan + 1b-revised shipped
+> **Status: PRs 1a + 1b + replan + 1b-revised + 1c shipped
 > (2026-05-27).** The reviewer surface paginates by
 > operator-defined pages, each rendered at its own URL.
 > Initial decisions were locked 2026-05-27 around a
@@ -422,7 +422,9 @@ the single-page-all-instruments model from the original
 lock. Mid-flight the user clarified that 18M's strategic
 vision called for true multi-page navigation; the replan
 PR (#1522) reshaped PR 1b's work into the multi-page
-model described in the Goal above. PRs 1c–2 remain.
+model described in the Goal above. PR 1c followed with
+the helper / hidden-field cleanup. PR 1d (test sweep) +
+PR 2 (per-instrument heading-state card) remain.
 
 ### Shipped
 
@@ -471,17 +473,22 @@ model described in the Goal above. PRs 1c–2 remain.
    separator). 10 legacy tests `@pytest.mark.skip`'d
    pending migration in PR 1d.
 
+6. **PR 1c — cleanup.** Dropped `_read_current_position`
+   helper (the URL slot carries page number, no form
+   field needed). Dropped `current_position` hidden input
+   from the Clear form + Cancel-link templating. Submit /
+   Clear now redirect to the bare session URL (which 303s
+   to `/1`); `submit_redirect_url` lost its `position`
+   parameter. Spec patches: `spec/reviewer-surface.md`
+   URL contract section + `guide/visibility_audit.md`
+   route column rewritten around `{page_n}`. 2 legacy
+   tests `@pytest.mark.skip`'d (Bare-URL hidden-input
+   assertion + Clear-redirect-honours-position) pending
+   migration in PR 1d.
+
 ### Remaining
 
-6. **PR 1c — cleanup.** Drop `_read_current_position`
-   helper (now redundant — the URL slot carries page
-   number, no form field needed). Drop `current_position`
-   hidden input from the Clear / Submit / Recall forms.
-   Spec patches: `spec/reviewer-surface.md` URL contract
-   section, `guide/visibility_audit.md` route column.
-   ~80 LOC. Could fold into PR 1d.
-
-7. **PR 1d — test sweep.** Migrate the 40 skipped tests
+7. **PR 1d — test sweep.** Migrate the 42 skipped tests
    to the multi-page URL semantics. Many assume
    `position=instrument_position`; most can be fixed by
    either (a) setting page breaks first so the test's
