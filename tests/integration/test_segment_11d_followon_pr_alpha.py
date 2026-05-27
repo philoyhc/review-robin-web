@@ -2,9 +2,12 @@
 
 Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR α. The new URL pattern
-(`/reviewer/sessions/{id}/{instrument_position}`) lands without
-visible layout change. Save, Submit, and Clear get the
-`current_position` hidden form field plumbing for downstream PRs.
+(`/reviewer/sessions/{id}/{N}`) lands without visible layout change.
+
+Post-Segment-18L the URL slot is the operator-defined page number
+rather than the instrument position; bare URL still 303s to /1.
+Submit and Clear are session-wide and redirect to the bare session
+URL (no per-page round-trip).
 """
 
 from __future__ import annotations
@@ -85,131 +88,7 @@ def rae() -> AuthenticatedUser:
     )
 
 
-# ── Bare URL → /1 redirect ─────────────────────────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_bare_session_url_303s_to_position_1(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """`GET /reviewer/sessions/{id}` (no position) → 303 to
-    `/reviewer/sessions/{id}/1`. Existing invitation links and
-    bookmarks travel through this redirect."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-bare",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    assert (
-        response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1"
-    )
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1c dropped the current_position hidden input; PR 1d test sweep will delete this assertion.")
-def test_bare_session_url_redirect_lands_on_surface(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """The redirect chain bare → /1 → surface lands the reviewer on
-    the same content they'd have seen on the bare URL pre-PR-α."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-bare-follow",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}",
-        follow_redirects=True,
-    )
-    assert response.status_code == 200
-    # The hidden current_position lands at 1 after the redirect.
-    assert (
-        '<input type="hidden" name="current_position" value="1">'
-        in response.text
-    )
-
-
-# ── Position route + 404 on out-of-range ───────────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_positioned_url_renders_surface(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-pos",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}/1")
-    assert response.status_code == 200
-    body = response.text
-    assert (
-        '<input type="hidden" name="current_position" value="1">' in body
-    )
-    # The form action carries the position too.
-    assert (
-        f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
-    )
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_out_of_range_position_returns_404(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Position > instrument count, or 0 / negative, returns 404."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-oob",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    # 1-instrument session: position 1 is valid; 2 is out of range.
-    assert (
-        rae_client.get(f"/reviewer/sessions/{review_session.id}/2").status_code
-        == 404
-    )
-    assert (
-        rae_client.get(f"/reviewer/sessions/{review_session.id}/0").status_code
-        == 404
-    )
-    # Negative numbers fail FastAPI's int parsing → 422.
-    assert (
-        rae_client.get(f"/reviewer/sessions/{review_session.id}/-1").status_code
-        == 404
-    )
+# ── Position route ─────────────────────────────────────────────────────
 
 
 def test_non_integer_position_returns_422(
@@ -294,18 +173,17 @@ def test_save_post_url_carries_position(
     )
 
 
-# ── Submit redirect honours `current_position` ─────────────────────────
+# ── Submit redirect ────────────────────────────────────────────────────
 
 
-def test_submit_redirect_honours_current_position_field(
+def test_submit_redirect_lands_on_summary_when_session_complete(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """A successful Submit 303s to the position the reviewer was on,
-    read from the form's hidden `current_position` field. Falls back
-    to position 1 when the field is missing or malformed."""
+    """A successful Submit that completes the session 303s to the
+    per-session summary page (17B Phase 2 PR B)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -325,14 +203,14 @@ def test_submit_redirect_honours_current_position_field(
     ).scalar_one()
     rae_client = make_client(rae)
 
-    # Submit with current_position=1 (the only valid position for a
-    # single-instrument session). On success, this single-assignment
-    # session is fully submitted, so 17B Phase 2 PR B redirects to
-    # the per-session summary page instead of the surface position.
+    # Single-assignment session: a successful Submit completes the
+    # session, so 17B Phase 2 PR B redirects to the per-session summary
+    # page. Post-Segment-18L the submit handler no longer reads a
+    # ``current_position`` hint — the redirect target is the bare
+    # session URL (which 303s on to /1) or /summary when complete.
     response = rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
@@ -344,58 +222,18 @@ def test_submit_redirect_honours_current_position_field(
     )
 
 
-def test_submit_redirect_falls_back_when_current_position_missing(
+# ── Clear redirect → bare URL ──────────────────────────────────────────
+
+
+def test_clear_redirect_goes_to_bare_url(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """A Submit POST without `current_position` (e.g. a malformed form)
-    redirects to position 1 rather than 500ing."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-submit-fallback",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalar_one()
-    assignment = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.reviewer_id == reviewer.id,
-        )
-    ).scalar_one()
-    rae_client = make_client(rae)
-    response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
-        data={f"response[{assignment.id}][rating]": "4"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    # 17B Phase 2 PR B — single-assignment session ends up fully
-    # submitted on this submit and lands on the summary page.
-    assert (
-        response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/summary"
-    )
-
-
-# ── Clear redirect honours `current_position` ──────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1c: Clear no longer reads current_position; redirects to bare URL. PR 1d test sweep will replace this assertion.")
-def test_clear_redirect_honours_current_position(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Clear lands the reviewer back on the page they were on (read
-    from the hidden `current_position`); falls back to /1 otherwise."""
+    """Post-Segment-18L-PR-1c: Clear no longer reads any position
+    hint; it 303s to the bare session URL, which itself redirects
+    to page 1."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -407,11 +245,11 @@ def test_clear_redirect_honours_current_position(
     rae_client = make_client(rae)
     response = rae_client.post(
         f"/reviewer/sessions/{review_session.id}/clear",
-        data={"confirm": "true", "current_position": "1"},
+        data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1"
+        == f"/reviewer/sessions/{review_session.id}"
     )

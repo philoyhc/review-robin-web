@@ -157,7 +157,6 @@ def test_submit_missing_carries_page_number_for_each_gap(
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 only",
             f"response[{page2_assignment.id}][comments]": "page-2 only",
-            "current_position": "1",
         },
         follow_redirects=False,
     )
@@ -192,7 +191,6 @@ def test_submit_missing_only_on_page_two_still_carries_page_number(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
-            "current_position": "1",
         },
         follow_redirects=False,
     )
@@ -228,7 +226,6 @@ def test_missing_required_renders_in_full_width_card(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
-            "current_position": "1",
         },
         follow_redirects=False,
     ).text
@@ -265,7 +262,6 @@ def test_missing_required_card_uses_two_column_list(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
-            "current_position": "1",
         },
         follow_redirects=False,
     ).text
@@ -300,7 +296,6 @@ def test_missing_required_card_carries_cancel_dismiss_button(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
-            "current_position": "1",
         },
         follow_redirects=False,
     ).text
@@ -339,64 +334,6 @@ def test_missing_required_card_absent_when_no_gaps(
 
 
 # ── Operator preview adapts to PR ε chrome ───────────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_preview_action_row_collapses_to_page_buttons(
-    client: TestClient, db: Session
-) -> None:
-    """Operator preview renders a unified action row that collapses to
-    just Page #N buttons. Save / Discard / divider / Submit are
-    suppressed because preview is read-only and synthetic. After
-    Segment 11F PR C the preview lives inside an iframe srcdoc on
-    the previews hub."""
-    client.post(
-        "/operator/sessions",
-        data={"name": "Prev", "code": "prev-eps-collapse"},
-        follow_redirects=False,
-    )
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "prev-eps-collapse")
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(client, review_session.id)
-    body = get_surface_preview_html(
-        client, review_session.id, "r@example.edu"
-    )
-    # Page #1 button renders even on single-instrument preview.
-    assert 'data-rs-page="1"' in body
-    # No Save / Discard / Submit / divider in preview. ``data-rs-save>``
-    # is a whole-token check that doesn't collide with
-    # ``data-rs-saved-value`` on the synthetic inputs.
-    assert "data-rs-save>" not in body
-    assert "data-rs-discard>" not in body
-    assert 'class="rs-action-divider"' not in body
-    assert (
-        f'formaction="/reviewer/sessions/{review_session.id}/submit"'
-        not in body
-    )
 
 
 def test_preview_status_panel_renders_without_per_page_pills(

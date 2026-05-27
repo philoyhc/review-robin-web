@@ -1,7 +1,8 @@
 # Segment 18L — Multi-page reviewer surface (operator-defined)
 
-> **Status: PRs 1a + 1b + replan + 1b-revised + 1c shipped
-> (2026-05-27).** The reviewer surface paginates by
+> **Status: PRs 1a + 1b + replan + 1b-revised + 1c + 1d shipped
+> (2026-05-27).** Only PR 2 (per-instrument heading-state card)
+> remains. The reviewer surface paginates by
 > operator-defined pages, each rendered at its own URL.
 > Initial decisions were locked 2026-05-27 around a
 > single-page-all-instruments model; mid-implementation the
@@ -486,17 +487,24 @@ PR 2 (per-instrument heading-state card) remain.
    assertion + Clear-redirect-honours-position) pending
    migration in PR 1d.
 
-### Remaining
+7. **PR 1d — test sweep.** Migrated 11 tests and deleted 8
+   covering reviewer-surface flows that the PR 1b replan
+   had broken. Migrations swapped `/{instrument_position}`
+   URL slots for `/{page_n}` — most collapsed to `/1`
+   under the single-page-default session shape, with two
+   per-page filter tests using
+   `instruments_service.create_page_break_after` to carve
+   a real two-page session. Deletions covered Category A
+   chrome that the multi-page replan retired (Page-N
+   button data attributes, `.rs-action-divider` layout
+   counts, `rs-paginated` / `rs-active` JS hooks,
+   `Previous` / `Next` buttons). The cross-cutting
+   `current_position` hidden-form-field reads were
+   purged from every still-active test. PR 2 (per-
+   instrument heading-state card) is now the only
+   remaining piece of the segment.
 
-7. **PR 1d — test sweep.** Migrate the 42 skipped tests
-   to the multi-page URL semantics. Many assume
-   `position=instrument_position`; most can be fixed by
-   either (a) setting page breaks first so the test's
-   `/{position}/save` URL targets a real page, or (b)
-   collapsing the test's save POSTs into one
-   `/sessions/{id}/1/save` when all instruments are on
-   page 1. Remove the `@pytest.mark.skip` markers as
-   tests are updated. ~250 LOC mostly test code.
+### Remaining
 
 8. **PR 2 — per-instrument heading-state card
    (Decision 3).** Move the "no longer accepting" banner

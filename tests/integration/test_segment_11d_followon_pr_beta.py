@@ -270,7 +270,6 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
@@ -321,7 +320,6 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
