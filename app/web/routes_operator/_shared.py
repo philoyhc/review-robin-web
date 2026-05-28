@@ -112,6 +112,14 @@ _templates.env.globals["format_datetime_local"] = (
 _templates.env.globals["numeric_column_ch_width"] = (
     views.numeric_column_ch_width
 )
+# Operator-facing instrument label resolver
+# (``short_label > Instrument_{id}`` per the 2026-05-28 operator-
+# identifier policy in ``spec/instruments.md``). Registered as a
+# Jinja global so operator templates can call ``instrument_label(...)``
+# inline without the view shape having to pre-compute every cell.
+_templates.env.globals["instrument_label"] = (
+    instruments_service._instrument_label
+)
 
 
 # ------------------------------------------------------------------ #

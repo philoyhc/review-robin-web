@@ -37,13 +37,23 @@ _SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
 
 
 def _instrument_label(instrument: Instrument) -> str:
-    """Operator-facing label for audit-event copy.
+    """Operator-facing label for an instrument.
 
-    Prefers ``short_label`` (the operator-set reviewer-facing framing
-    added in Segment 11L) over ``description.strip()`` over the
-    auto-generated ``name`` system handle. Lets ``"Updated description
-    on instrument Skills"`` read better than ``"…on instrument
-    instrument_3"`` once an operator has set a short label.
+    Returns ``short_label`` when the operator has set one, else the
+    ugly fallback ``"Instrument_{id}"`` that nudges the operator to
+    set a proper short label. Used by audit-event copy, validation
+    error messages, and operator-page UI sites that need a stable
+    human-readable handle for an instrument.
+
+    Per the 2026-05-28 operator-identifier policy (see
+    ``spec/instruments.md`` "Identifiers"): the ``#`` prefix is
+    reserved for reviewer-facing position numbering
+    (``#{N}: {short_label}``); operator-facing UI uses short_label
+    with the ``Instrument_{id}`` fallback. ``description`` and the
+    auto-generated ``name`` handle no longer participate in the
+    chain — ``description`` is reviewer-instructional copy and
+    shouldn't silently become an operator label; ``name`` is now
+    a pure internal handle.
 
     Lifted to ``_state.py`` in PR 2 of the §12.A ladder so display-
     fields / response-fields / instrument-CRUD slices can all reach
@@ -52,10 +62,7 @@ def _instrument_label(instrument: Instrument) -> str:
     short = (instrument.short_label or "").strip()
     if short:
         return short
-    desc = (instrument.description or "").strip()
-    if desc:
-        return desc
-    return instrument.name
+    return f"Instrument_{instrument.id}"
 
 
 def saved_state_for_session(

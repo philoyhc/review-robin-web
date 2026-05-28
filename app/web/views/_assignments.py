@@ -33,6 +33,7 @@ from app.db.models import (
     SessionRuleSet,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services.instruments import _instrument_label
 
 
 @dataclass(frozen=True)
@@ -231,7 +232,7 @@ def build_assignments_page_context(
         blocks.append(
             InstrumentStatusBlock(
                 instrument_id=instrument.id,
-                instrument_label=instrument.short_label or instrument.name,
+                instrument_label=_instrument_label(instrument),
                 is_group=instrument.group_kind is not None,
                 rule_name=rule_name,
                 eligible_count=eligible_count,
