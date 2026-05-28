@@ -6135,5 +6135,5 @@ def test_band2_preview_ships_textarea_rows_for_helper(
     # match the Python side; if you tune one, tune both.
     assert "DEFAULT_RESPONSE_COL_WIDTH_PX = 224" in body
     assert "PX_PER_CHAR = 8" in body
-    assert "TYPICAL_RESPONSE_FRACTION = 0.75" in body
+    assert "TYPICAL_RESPONSE_FRACTION = 0.5" in body
     assert "textareaRowsFor(maxLenInt, colPx)" in body

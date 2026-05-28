@@ -222,7 +222,7 @@ def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
 # font stack or default column width changes.
 _DEFAULT_RESPONSE_COL_WIDTH_PX = 224  # 14em @ 16px body font
 _PX_PER_CHAR = 8                       # proportional sans-serif average
-_TYPICAL_RESPONSE_FRACTION = 0.75      # operators rarely use full max_chars
+_TYPICAL_RESPONSE_FRACTION = 0.5       # operators rarely use full max_chars
 _MIN_TEXTAREA_ROWS = 2
 _MAX_TEXTAREA_ROWS = 8
 _MIN_CHARS_PER_ROW = 20                # floor for absurdly narrow columns
@@ -235,7 +235,7 @@ def textarea_rows_for(
     textarea on the reviewer surface.
 
     Sizes the textarea to hold a *typical* response (assumed to
-    cluster around 75% of the configured ``max_chars``, not the
+    cluster around 50% of the configured ``max_chars``, not the
     full cap) at the column's current width — so the operator can
     pre-size the input by tightening / widening the column on
     Band 2 of the new-model card without touching another knob.
