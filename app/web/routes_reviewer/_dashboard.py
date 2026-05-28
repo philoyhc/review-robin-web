@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, Reviewer, ReviewSession, User
+from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import responses as responses_service
@@ -48,83 +48,131 @@ def _to_utc(value: datetime) -> datetime:
 
 
 @dataclass(frozen=True)
-class DashboardInstrumentRow:
-    """One per-instrument sub-row on the reviewer dashboard
-    (Segment 15B Slice 6).
+class DashboardPageRow:
+    """One per-page sub-row on the reviewer dashboard.
 
-    Suppressed entirely when the session has only one instrument
-    so the single-instrument dashboard stays byte-identical to its
-    pre-15B render.
+    Segment 15B Slice 6 introduced per-instrument sub-rows; Segment
+    18L's multi-page reviewer surface (one page per run of
+    instruments between Segment 18M page breaks) repointed the deep
+    link at ``/reviewer/sessions/{id}/{page_n}`` rather than the
+    per-instrument position, so the sub-rows now reflect *pages*
+    rather than individual instruments.
+
+    Suppressed entirely (empty list) for single-page sessions —
+    that covers single-instrument sessions (the pre-15B byte-
+    identical contract) *and* multi-instrument sessions where the
+    operator hasn't added a page break (the sub-row would just
+    restate the parent session row at the same ``/{id}/1`` URL).
 
     Fields:
 
-    - ``label`` — display name (``instrument.short_label`` when
-      set, ``instrument.name`` otherwise).
-    - ``position`` — 1-based position in the reviewer surface URL
-      shape (``/reviewer/sessions/{id}/{position}``). Indexed by
-      ``Instrument.order, Instrument.id`` so it matches the
-      reviewer surface's own page-button ordering.
+    - ``label`` — ``"Page N: #n {short_label}, #m {short_label}, ..."``
+      where N is the 1-based page number and #n / #m are the
+      instrument positions across the whole session (the same
+      ``#N`` convention the reviewer surface's per-instrument
+      heading uses). Bare ``"Page N"`` falls back when an
+      instrument has no ``short_label`` *or* ``name``.
+    - ``page_n`` — 1-based page index. Lands in
+      ``/reviewer/sessions/{id}/{page_n}``.
     - ``state`` — ``"not started"`` / ``"in progress"`` /
-      ``"submitted"`` / ``"no assignments"``. Last value covers
-      the case where the pinned rule excluded this reviewer from
-      this particular instrument (multi-instrument sessions can
-      have per-instrument pin gaps).
-    - ``completed_rows`` / ``total_assignments`` — surfaced in the
-      muted ``(N/M)`` suffix alongside the pill, same shape as
-      the per-session pill row.
+      ``"submitted"`` / ``"no assignments"``. Rolled up from the
+      page's instruments via :func:`_rollup_page_state` — mixed
+      submitted/not-started or any in-progress collapses to
+      ``"in progress"``; a page where every instrument is "no
+      assignments" rolls up to ``"no assignments"``.
+    - ``completed_rows`` / ``total_assignments`` — summed across
+      the page's instruments; surfaced in the muted ``(N/M)``
+      suffix alongside the pill, same shape as the per-session
+      pill row.
     """
 
     label: str
-    position: int
+    page_n: int
     state: str
     completed_rows: int
     total_assignments: int
 
 
-def _build_dashboard_instrument_rows(
-    db: Session, reviewer: Reviewer, review_session: ReviewSession
-) -> list[DashboardInstrumentRow]:
-    """Return one :class:`DashboardInstrumentRow` per session
-    instrument when ``N > 1``; empty list otherwise.
+def _rollup_page_state(per_instrument_states: list[str]) -> str:
+    """Roll up per-instrument pill states to one per-page state.
 
-    The empty-list-on-N==1 contract keeps the single-instrument
-    dashboard byte-identical (invariant #3 from the segment plan).
+    Order of evaluation mirrors :func:`_page_status_for_group` /
+    ``_session_status`` on the surface: ``no assignments`` entries
+    contribute nothing; any ``in progress`` wins; uniform
+    ``submitted`` / ``not started`` carry through; mixed
+    submitted + not started reads as ``in progress`` (some
+    instruments done on this page, others not yet started).
     """
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if len(instruments) <= 1:
+    active = [s for s in per_instrument_states if s != "no assignments"]
+    if not active:
+        return "no assignments"
+    if any(s == "in progress" for s in active):
+        return "in progress"
+    if all(s == "submitted" for s in active):
+        return "submitted"
+    if all(s == "not started" for s in active):
+        return "not started"
+    return "in progress"
+
+
+def _build_dashboard_page_rows(
+    db: Session, reviewer: Reviewer, review_session: ReviewSession
+) -> list[DashboardPageRow]:
+    """Return one :class:`DashboardPageRow` per operator-defined
+    reviewer page when the session has both ``N > 1`` instruments
+    and ``M > 1`` pages; empty list otherwise.
+
+    The empty-list contract keeps single-page sessions (including
+    every single-instrument session — the byte-identical pre-15B
+    invariant) free of redundant sub-rows.
+    """
+    # Defer the import to avoid a slice-level cycle: ``_surface``
+    # imports nothing from ``_dashboard``, but the dashboard reads
+    # the same page-grouping helper the surface route owns.
+    from app.web.routes_reviewer._surface import _pages_for_session
+
+    pages = _pages_for_session(db, review_session.id)
+    instrument_count = sum(len(p) for p in pages)
+    if instrument_count <= 1 or len(pages) <= 1:
         return []
+    # 1-based instrument position across the whole session,
+    # matching the surface's ``#N`` labelling. Pages preserve
+    # ``(Instrument.order, Instrument.id)`` ordering already.
+    position_by_id = {
+        inst.id: idx
+        for idx, inst in enumerate(
+            (inst for page in pages for inst in page), start=1
+        )
+    }
     state_by_instrument = (
         responses_service.reviewer_session_state_per_instrument(
             db, reviewer=reviewer, session_id=review_session.id
         )
     )
-    rows: list[DashboardInstrumentRow] = []
-    for position, instrument in enumerate(instruments, start=1):
-        state = state_by_instrument.get(instrument.id)
-        if state is None:
-            rows.append(
-                DashboardInstrumentRow(
-                    label=instrument.short_label or instrument.name,
-                    position=position,
-                    state="no assignments",
-                    completed_rows=0,
-                    total_assignments=0,
-                )
-            )
-            continue
+    rows: list[DashboardPageRow] = []
+    for page_n, page_instruments in enumerate(pages, start=1):
+        label_parts: list[str] = []
+        per_instrument_states: list[str] = []
+        completed_total = 0
+        assignment_total = 0
+        for inst in page_instruments:
+            pos = position_by_id[inst.id]
+            short = (inst.short_label or inst.name or "").strip()
+            label_parts.append(f"#{pos} {short}" if short else f"#{pos}")
+            state = state_by_instrument.get(inst.id)
+            if state is None:
+                per_instrument_states.append("no assignments")
+                continue
+            per_instrument_states.append(state.pill_state)
+            completed_total += state.completed_count
+            assignment_total += state.total_assignments
         rows.append(
-            DashboardInstrumentRow(
-                label=instrument.short_label or instrument.name,
-                position=position,
-                state=state.pill_state,
-                completed_rows=state.completed_count,
-                total_assignments=state.total_assignments,
+            DashboardPageRow(
+                label=f"Page {page_n}: {', '.join(label_parts)}",
+                page_n=page_n,
+                state=_rollup_page_state(per_instrument_states),
+                completed_rows=completed_total,
+                total_assignments=assignment_total,
             )
         )
     return rows
@@ -203,7 +251,7 @@ def reviewer_dashboard(
                     session_zone, at=review_session.deadline
                 ),
                 "timezone_iana": session_zone,
-                "instrument_rows": _build_dashboard_instrument_rows(
+                "page_rows": _build_dashboard_page_rows(
                     db, reviewer, review_session
                 ),
             }
