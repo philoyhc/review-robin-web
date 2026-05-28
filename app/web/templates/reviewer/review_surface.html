@@ -280,7 +280,7 @@
                     aria-label="Sort by {{ cell.field.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
-              {% if group.show_status_col %}<th scope="col" class="rs-narrow"><span class="visually-hidden">Status</span></th>{% endif %}
+              {% if group.show_status_col %}<th scope="col" class="rs-narrow rs-status-col"><span class="visually-hidden">Status</span></th>{% endif %}
             </tr>
             </thead>
             <tbody class="rrw-rows">
@@ -427,7 +427,7 @@
                   </td>
                 {% endfor %}
                 {% if group.show_status_col %}
-                  <td style="width: 1%; white-space: nowrap; text-align: center;">
+                  <td class="rs-status-col" style="width: 1%; white-space: nowrap; text-align: center;">
                     {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
                         <span class="status-icon-complete" role="img"

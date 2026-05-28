@@ -196,6 +196,22 @@
        * screen.
        */
       th.rs-narrow, td.rs-narrow { width: 1%; white-space: nowrap; }
+      /* Reviewer-surface per-row Status column — lock the width
+         so the column doesn't jump when the first row's
+         submission stamp appears. The cell body renders an
+         optional ``submitted YYYY-MM-DD HH:MM`` line in
+         ``.muted`` at 0.85em; the timestamp is 16 chars on a
+         single line plus 1ch of breathing → 17ch min-width
+         covers it. ``min-width`` composes with the inline
+         ``width: 1%`` on the td: the column still shrinks to
+         content above the floor but never below 17ch. If
+         ``SHOW_ZONE_TOKEN`` in ``app/services/date_formatting.py``
+         ever flips True (appending ``UTC`` / ``+08``), bump
+         this to ~21ch. */
+      body.ui-v2 th.rs-status-col,
+      body.ui-v2 td.rs-status-col {
+        min-width: 17ch;
+      }
       th.rs-reviewee, td.rs-reviewee {
         max-width: 20%;
         min-width: 8em;
