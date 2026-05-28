@@ -1087,21 +1087,29 @@ called out at the bottom of this file.
 
 #### Stubs
 
-- **18N — Housekeeping (file splits + reviewer-surface asymmetry)**
-  *(stub created 2026-05-28)*. Pure structural / consistency
-  cleanup follow-up to the 28may codebase assessment §5 watch
-  items. **Track A** — align the reviewer-surface page-validity
-  check between the GET (`routes_reviewer/_surface.py:784`) and
-  POST save (`:993`) handlers behind one helper; the asymmetry
-  is currently unreachable but inconsistent. **Track B** —
-  split `services/instruments/_instrument_crud.py` (1,928 LOC)
-  into per-concern slices (`_band2.py`, `_pagination.py`,
-  optionally `_bulk_toggles.py`), bringing it from ~1.9k down
-  to ~700; optional PR for `routes_operator/_instruments.py`
-  (1,497 LOC) if it's still oversized after Track B PR 1.
-  Best landed before 14B Part A so split files absorb email-
-  wiring code in the post-split shape. Mirrors the 17A
-  pattern.
+- **18N — Housekeeping (file splits + reviewer-surface
+  asymmetry + settings round-trip)** *(stub created
+  2026-05-28)*. Three-track cleanup. **Track A** — align the
+  reviewer-surface page-validity check between the GET
+  (`routes_reviewer/_surface.py:784`) and POST save (`:993`)
+  handlers behind one helper (28may assessment §5; currently
+  unreachable but inconsistent). **Track B** — split
+  `services/instruments/_instrument_crud.py` (1,928 LOC) into
+  per-concern slices (`_band2.py`, `_pagination.py`, optionally
+  `_bulk_toggles.py`), bringing it from ~1.9k down to ~700;
+  optional PR for `routes_operator/_instruments.py` (1,497 LOC)
+  if still oversized after Track B PR 1 (28may assessment §5).
+  **Track C** — catch-up pass on the session-config export /
+  import surface to cover the eight 18G `ReviewSession` columns
+  the existing `_serialize.py` / `_apply.py` pre-dates
+  (scheduled activation, invite + reminder offsets, archive +
+  release schedule, retention exception + overrides); without
+  it, a Quick Setup → Zip-all → import round-trip silently
+  drops every scheduled-event configuration. Mirrors the 18D
+  pattern. Best landed before 14B Part A so the split files
+  absorb email-wiring code in the post-split shape AND a
+  14B-configured session can already round-trip its email-
+  related settings.
   **Plan:** `guide/segment_18N_housekeeping.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.

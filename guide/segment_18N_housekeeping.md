@@ -1,23 +1,32 @@
-# Segment 18N — Housekeeping (file splits + reviewer-surface asymmetry)
+# Segment 18N — Housekeeping (file splits + reviewer-surface asymmetry + settings round-trip)
 
 **Status:** Stub created 2026-05-28. Sources: the
 [2026-05-28 codebase assessment](codebase_assessment_28may.md) §5
 "Weaknesses" — file-size creep, and the defensive code asymmetry
-between the reviewer surface GET and POST save handlers. Both
-were flagged on the 19may assessment (file-size creep as a watch
-item) and worsened by the 18I → 18J → 18K → 18L → 18M sequence;
-the 28may assessment escalates them as the two open watch items.
+between the reviewer surface GET and POST save handlers — plus a
+2026-05-28 catch-up item the user surfaced after the assessment
+landed: the session-settings export / import round-trip is
+missing every column Segment 18G added (a Zip-all → import
+silently drops scheduled activation, invite + reminder offsets,
+archive / release schedule, retention exception + overrides).
+The file-size creep was flagged on the 19may assessment as a
+watch item; the 28may assessment escalates it. Mirrors the
+[18D](archive/segment_18D_export_and_import_update.md) "catch-up
+pass on the export / import surface" pattern for Track C.
 
 The "18N" number follows the 18-family sequence after 18M; no
-prior 18N existed. It is **not** related to the 17A
-housekeeping segment beyond following the same pattern (pure
-structural cleanup, no behaviour change).
+prior 18N existed. It is **not** related to the 17A housekeeping
+segment beyond following the same pattern (small focused PRs
+under one housekeeping number).
 
 ## Goal
 
-Pure structural / consistency cleanup — **no behaviour change,
-no new features, no new routes or models**. Two independent
-tracks; each PR small and reviewable, each landable on its own.
+Structural / consistency cleanup plus an export / import catch-up
+pass — **no new features, no new routes or models**. Tracks A
+and B are pure structural (no behaviour change); Track C closes
+a real round-trip gap surfaced after 18G shipped its scheduled-
+event columns. Three independent tracks; each PR small and
+reviewable, each landable on its own.
 
 ## Why a separate segment
 
@@ -41,11 +50,13 @@ tracks; each PR small and reviewable, each landable on its own.
 | 1 | A | Align reviewer-surface page-validity check between GET and POST save | — |
 | 2 | B | Split `services/instruments/_instrument_crud.py` into per-concern slices | — |
 | 3 | B | *(optional)* Carve route slices out of `routes_operator/_instruments.py` | — |
+| 4 | C | Settings round-trip: serialise + apply the 18G ``ReviewSession`` columns | — |
+| 5 | C | Round-trip regression test pinning Quick Setup → Zip-all → import | PR 4 |
 
-The two tracks are independent. PR 1 is small enough to land
-first as a warm-up; PR 2 is the substantive item. PR 3 is
-discretionary — land only if `routes_operator/_instruments.py`
-keeps growing through 14B.
+The three tracks are independent. PR 1 is small enough to land
+first as a warm-up; PR 2 is the substantive structural item;
+PR 4 is the substantive functional catch-up. PR 3 is
+discretionary; PR 5 is the test gate for PR 4.
 
 Each PR ships with a passing full `pytest` run on the session
 container, and `ruff check` clean. A split that needs test edits
@@ -186,6 +197,113 @@ Out of Track B's scope:
   move than this segment scopes.
 - Any behaviour change, new feature, new route, or new model.
 
+## Track C — Settings round-trip catch-up
+
+Segment 18G shipped eight new ``ReviewSession`` columns
+covering the scheduled-event story (``scheduled_activate_at`` /
+``responses_release_at`` anchors, ``invite_offsets`` /
+``reminder_offsets`` / ``archive_offset`` /
+``release_until_offset`` offsets, ``retention_exception`` /
+``retention_overrides`` retention). Quick Setup (``_quick_setup.py``)
+and the Edit Session Details form (``_session_home.py``) write
+to them; the schedule-aware UI surfaces (Workflow card,
+Manage-Invitations captions, Schedule timeline preview) read
+them; the lazy-observer dispatch fires off them. But the
+session-config export / import surface
+(``app/services/session_config_io/_serialize.py:_session_rows``
+at lines 85-122, plus the apply path at
+``app/services/session_config_io/_apply.py``) was last touched
+under Segment 18D (2026-05-17) — pre-18G — and emits only seven
+Section-1 rows: ``name`` / ``code`` / ``description`` /
+``display_timezone`` / ``deadline`` / ``help_contact`` /
+``self_reviews_active``. Every 18G column is silently dropped
+on round-trip.
+
+Concrete user-visible loss: an operator who configures a
+session through Quick Setup (or Edit Session Details), then
+clicks "Zip all" to bundle it for a colleague, then has the
+colleague import the bundle into a fresh session, **loses every
+scheduled-event configuration in the round-trip**. The
+imported session boots with all 18G columns NULL — no
+scheduled activation, no auto-send invites or reminders, no
+archive / release schedule, no retention rules. The lazy-
+observer dispatch then doesn't fire because the anchors and
+offsets are gone.
+
+Mirrors the [18D](archive/segment_18D_export_and_import_update.md)
+catch-up pass on the export / import surface, scoped narrowly to
+the 18G slot.
+
+**PR 4 — Serialise + apply the 18G ``ReviewSession`` columns.**
+Extend ``_session_rows`` in ``_serialize.py`` to emit the eight
+18G columns alongside the existing seven. Each row uses the
+typed-cell helper that matches the column shape:
+
+- ``session.scheduled_activate_at`` / ``session.responses_release_at``
+  — ``datetime`` rows, formatted with ``iso_in_zone`` against
+  the resolved session timezone (mirrors ``session.deadline``).
+- ``session.invite_offsets`` / ``session.reminder_offsets`` —
+  ``string`` rows carrying the comma-joined offset list (the
+  same shape the Quick Setup + Edit Session forms accept),
+  empty when the column is NULL.
+- ``session.archive_offset`` / ``session.release_until_offset``
+  — ``string`` rows.
+- ``session.retention_exception`` — ``boolean`` row.
+- ``session.retention_overrides`` — ``json`` row (open-ended
+  key set; the Section-1 reader handles ``json`` via the
+  ``_json`` typed-cell helper).
+
+Extend ``_apply.py``'s session-section reader to round-trip
+each, parsing strings through the same ``parse_and_validate_*``
+helpers in ``app/services/scheduled_events.py`` that Quick Setup
++ Edit Session Details already call (so invalid imported
+offsets fail with the same operator-facing message they'd see
+on a direct edit). Invalid datetime / offset / JSON values fail
+the apply with the existing ``_ParseError`` shape; a partial
+apply rolls back.
+
+Zip-all integration is automatic — ``app/services/extracts/zip_bundle.py``
+calls ``serialize_session_config`` for the settings.csv member,
+so adding the rows on the serialize side lights up the bundle
+without a separate touch.
+
+**PR 5 — Round-trip regression test.** New
+``tests/integration/test_session_config_round_trip_scheduled_events.py``
+that:
+
+1. Boots a fresh session via Quick Setup with every 18G column
+   populated (a scheduled activation in 24h, two invite offsets,
+   three reminder offsets, archive + release offsets, retention
+   exception true, retention overrides with a JSON dict).
+2. Calls ``serialize_session_config`` and asserts every 18G row
+   appears in the expected typed-cell shape.
+3. Calls ``apply_session_config`` against a *fresh* session
+   with the serialised rows and asserts every column matches
+   the original.
+4. Also exercises the Zip-all path
+   (``zip_bundle.build_session_bundle``) to confirm the
+   settings.csv member contains the rows end-to-end.
+
+Pin the test alongside the existing
+``test_session_config_round_trip*`` test files so the doc-trail
+is obvious.
+
+Out of Track C's scope:
+
+- Any change to Quick Setup's editor surface or to Edit Session
+  Details. Both already accept the 18G columns; the gap is
+  only on the export / import side.
+- Any change to the ``scheduled_events.py`` parsers /
+  validators. Track C uses them as-is.
+- The Responses-flavour column + retention CSV columns 18D
+  flagged as consumer-blocked. Those ride with 13C and 18G
+  Part 4 (or the 18G Part 4 carve-out follow-on); not this
+  segment.
+- Reflowing the existing 18D Section-1 row order. Append the
+  new rows after ``self_reviews_active`` so existing exports
+  parse cleanly under the importer's positional-then-keyed
+  contract.
+
 ## Done when
 
 - The reviewer surface's empty-pages handling is consistent
@@ -195,32 +313,47 @@ Out of Track B's scope:
   deliberate reason (PR 2 brings ``_instrument_crud.py`` from
   1,928 → ~700; PR 3 if landed brings
   ``routes_operator/_instruments.py`` to similar).
-- No behaviour change: the test suite passes unchanged across
-  every PR.
+- A Quick Setup → Zip-all → import round-trip preserves every
+  18G ``ReviewSession`` column, pinned by a regression test.
+- No behaviour change on Tracks A and B; the test suite passes
+  unchanged. Track C ships its own regression test; the
+  pre-existing suite still passes unchanged across the apply
+  path (the new rows are additive and the existing readers
+  ignore unknown keys).
 
 ## Sequencing
 
-PRs 1 and 2 are mutually independent and can land in any
+PRs 1, 2, and 4 are mutually independent and can land in any
 order. PR 3 is gated on PR 2's outcome (only land if the
-operator-routes file is still oversized). Best landed before
-14B Part A so the split files absorb the email-wiring code in
-their post-split shape rather than getting absorbed into a
-pre-split monolith.
+operator-routes file is still oversized). PR 5 is the test
+gate for PR 4 and lands paired with it (or immediately after).
+
+Best landed before 14B Part A so the split files absorb the
+email-wiring code in their post-split shape rather than getting
+absorbed into a pre-split monolith, **and** so a 14B-configured
+session can already round-trip its email-related settings cleanly
+(Track C's PR 4 + PR 5 establish the catch-up cadence 14B can
+extend).
 
 The full suite passes on every PR — no behaviour drift, no
-test-shape edits beyond import-path fixes.
+test-shape edits beyond import-path fixes on Tracks A / B.
 
 ## Related context
 
-- ``guide/codebase_assessment_28may.md`` §5 — the source of
-  both watch items.
+- ``guide/codebase_assessment_28may.md`` §5 — source of
+  Tracks A and B watch items.
 - ``guide/archive/codebase_assessment_19may.md`` §5 — flagged
   file-size creep as a watch item; this segment closes the
   follow-up.
 - ``guide/archive/segment_17A_housekeeping.md`` — precedent
   for the file-split shape and the "small focused PRs under
   one housekeeping segment" pattern.
+- ``guide/archive/segment_18D_export_and_import_update.md`` —
+  the prior catch-up pass on the export / import surface; Track
+  C extends its pattern to cover the 18G slot.
+- ``guide/archive/segment_18G_scheduled_events.md`` — defines
+  every column Track C closes the round-trip for.
 - ``guide/archive/major_refactor.md`` — the May 9 package
-  splits this segment extends.
+  splits this segment extends (Track B).
 - ``CLAUDE.md`` — operator-route + service-package
   conventions Track B follows.
