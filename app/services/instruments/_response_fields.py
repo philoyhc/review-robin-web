@@ -125,6 +125,59 @@ def _validation_block_from_default_spec(
         return block or None
     return None
 
+
+def validation_block_from_inline(
+    data_type: str | None,
+    min_: float | None,
+    max_: float | None,
+    step: float | None,
+    list_csv: str | None,
+) -> dict[str, Any] | None:
+    """Build the ``instrument_response_fields.validation`` JSON
+    from the inline-column state an operator-authored Band 3 row
+    persists.
+
+    The reviewer surface reads ``cell.field.validation`` for
+    String ``max_length`` (textarea sizing + browser ``maxlength``
+    cap), Integer / Decimal ``min`` / ``max`` / ``step`` (HTML5
+    number constraints + the step-grid JS), and List ``choices``
+    (``<select>`` options). The Band 3 save path
+    (``_sync_response_fields_to_db``) writes ``_inline_*`` columns
+    directly; without this companion write the ``validation`` JSON
+    drifts away from the inline state, so the reviewer surface
+    silently keeps showing the previously-seeded bounds (or none
+    at all for operator-authored rows).
+
+    Mirrors :func:`_validation_block_from_default_spec` for
+    String / Integer / Decimal and extends it with a List branch
+    that parses the same comma-separated ``list_csv`` storage
+    shape Band 3's "List options" input persists into
+    ``_inline_list_csv``.
+    """
+    if data_type == "String":
+        block: dict[str, Any] = {}
+        if min_ is not None:
+            block["min_length"] = int(min_)
+        if max_ is not None:
+            block["max_length"] = int(max_)
+        return block or None
+    if data_type in ("Integer", "Decimal"):
+        cast = int if data_type == "Integer" else float
+        block = {}
+        if min_ is not None:
+            block["min"] = cast(min_)
+        if max_ is not None:
+            block["max"] = cast(max_)
+        if step is not None:
+            block["step"] = cast(step)
+        return block or None
+    if data_type == "List":
+        if not list_csv:
+            return None
+        choices = [opt.strip() for opt in list_csv.split(",") if opt.strip()]
+        return {"choices": choices} if choices else None
+    return None
+
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
 

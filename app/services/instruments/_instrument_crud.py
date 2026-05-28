@@ -1368,6 +1368,7 @@ def _sync_response_fields_to_db(
         InvalidResponseFieldShapeError,
         ResponseFieldShapeChangeError,
         ResponsesPresentError,
+        validation_block_from_inline,
     )
 
     # Wave 3 PR ii — authoring-shape validation. Reject the whole
@@ -1484,6 +1485,15 @@ def _sync_response_fields_to_db(
         field._inline_max = new_max
         field._inline_step = new_step
         field._inline_list_csv = new_list_csv
+        # The reviewer surface reads ``cell.field.validation`` (JSON
+        # column) for ``max_length`` / numeric ``min`` / ``max`` /
+        # ``step`` / List ``choices`` — separate from the inline
+        # columns. Recompute it from the inline state the operator
+        # just authored so the surface sees the same bounds the
+        # Band 2 preview shows.
+        field.validation = validation_block_from_inline(
+            new_data_type, new_min, new_max, new_step, new_list_csv,
+        )
 
     # Delete rows whose ids were in the *previous* JSON state but
     # not in the new payload — i.e. operator clicked X on a row
