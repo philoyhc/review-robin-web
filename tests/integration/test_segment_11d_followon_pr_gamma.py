@@ -188,11 +188,12 @@ def test_instrument_heading_falls_back_to_position_only(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    # No trailing colon when the short_label is absent.
-    assert "#1:" not in body
-    assert "#2:" not in body
-    assert "#1" in body
-    assert "#2" in body
+    # No trailing colon in the heading itself (the status pills above
+    # carry their own ``#N: <state>`` colon — out of scope here).
+    assert "<h2>#1</h2>" in body
+    assert "<h2>#2</h2>" in body
+    assert "<h2>#1:" not in body
+    assert "<h2>#2:" not in body
 
 
 # ── Per-instrument heading composition ───────────────────────────────────
