@@ -363,7 +363,7 @@
                         <textarea name="{{ field_name }}"
                                   aria-label="{{ cell_aria }}"
                                   rows="{{ textarea_rows_for(max_len, group.response_field_width_by_id.get(cell.field.id)) }}"
-                                  style="min-height: 44px;"
+                                  style="min-height: 44px; resize: vertical;"
                                   data-rs-saved-value="{{ cell.value }}"
                                   {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
                                   {% if max_len %}maxlength="{{ max_len }}"{% endif %}
