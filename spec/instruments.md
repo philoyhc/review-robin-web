@@ -660,7 +660,9 @@ response field's pill in the Band 2 chip row carries
 `aria-pressed` / `is-selected` state, and on bulk Save
 `bulk_save_fields` writes the new selected state through to
 `InstrumentResponseField.visible`
-(`app/services/instruments/_instrument_crud.py:1422`).
+(`app/services/instruments/_band2.py:_sync_response_fields_to_db` —
+the dual-write helper carved out of `_instrument_crud.py` in
+Segment 18N PR 2).
 
 The reviewer surface form, the reviewer summary HTML, and the
 reviewer-record CSV all filter response fields by

@@ -994,6 +994,44 @@ and replaced it with a ``_surface_context``-driven full-preview
 route — page breaks are now honoured end-to-end. Plan archived to
 `guide/archive/segment_18M_instrument_layout.md`.
 
+### Segment 18N — Housekeeping (file splits + reviewer-surface asymmetry + settings round-trip) — done 2026-05-28
+
+Five PRs total. **PR 1** (#1556) — Track A: reviewer-surface
+page-validity check unified behind a ``validate_page_n`` helper
+in ``routes_reviewer/_shared.py``, called by GET surface / POST
+save / operator preview routes (closes the 28may assessment §5
+defensive asymmetry, currently unreachable but inconsistent).
+**PR 2** (#1557) — Track B: split
+``services/instruments/_instrument_crud.py`` (1,928 LOC) into
+``_band2.py`` (Band 2 state save + ``_sync_response_fields_to_db``
++ ``_sync_display_field_visibility``, ~620 LOC) and
+``_pagination.py`` (18M reorder + page-break helpers, ~250 LOC),
+keeping a 1,052-LOC core. **PR 3** (#1558) — Track B follow-up:
+split ``routes_operator/_instruments.py`` (1,497 LOC) into
+``_instruments_band2.py`` (band2-state + column-widths +
+preview-sample routes, ~320 LOC) and ``_instruments_pagination.py``
+(page-break + reorder routes, ~180 LOC); shared helpers
+``_require_instrument_in_session`` + ``_instruments_redirect``
+hoisted to ``routes_operator/_shared.py``. **PR 4** (#1559) —
+Track B follow-up: converted ``services/responses.py`` (1,444
+LOC) to a ``responses/`` package — ``_core.py`` (save / submit /
+state-rollup, 976 LOC) + ``_group_reconciliation.py`` (Segment
+13C / 18H group fan-out + reconcile machinery, ~470 LOC); no
+file over 1,300 LOC anywhere after this. **PR 5** (#1560) —
+Track C: comprehensive settings round-trip catch-up.
+Pre-PR-5 audit found the silent-drop story extended well beyond
+the original 8 18G fields: after 18J Wave 2 PR iii-b4 retired
+the ``response_type_definitions`` table and moved type / bounds
+inline onto ``InstrumentResponseField._inline_*``, the
+serializer wasn't updated to match — every response field had
+been silently losing its data_type, min, max, step, list_options,
+and visible flag on Zip-all → import for ~2 weeks. PR 5 fixes
+all 17 gaps: 8 18G ``ReviewSession`` columns + 6 response-field
+inline fields + ``Instrument.column_widths`` / ``starts_new_page``
+/ ``band2_state``. Six new round-trip regression tests in
+``tests/unit/test_apply_session_config.py``. Plan archived to
+`guide/archive/segment_18N_housekeeping.md`.
+
 ### Operator reviewer-surface preview + identifier policy — done 2026-05-28
 
 A 2026-05-28 polish cluster (PRs **#1530 → #1540**) layered onto
@@ -1060,10 +1098,9 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 18N, 19, 20** (18K + 18L + 18M closed 2026-05-28; 18J
-retired 2026-05-26; 18N is the post-28may-assessment housekeeping
-stub). No global ordering constraints beyond the few dep chains
-called out at the bottom of this file.
+**14B, 19, 20** (18K + 18L + 18M + 18N closed 2026-05-28; 18J
+retired 2026-05-26). No global ordering constraints beyond the
+few dep chains called out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1086,31 +1123,6 @@ called out at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
-
-- **18N — Housekeeping (file splits + reviewer-surface
-  asymmetry + settings round-trip)** *(stub created
-  2026-05-28)*. Three-track cleanup. **Track A** — align the
-  reviewer-surface page-validity check between the GET
-  (`routes_reviewer/_surface.py:784`) and POST save (`:993`)
-  handlers behind one helper (28may assessment §5; currently
-  unreachable but inconsistent). **Track B** — split
-  `services/instruments/_instrument_crud.py` (1,928 LOC) into
-  per-concern slices (`_band2.py`, `_pagination.py`, optionally
-  `_bulk_toggles.py`), bringing it from ~1.9k down to ~700;
-  optional PR for `routes_operator/_instruments.py` (1,497 LOC)
-  if still oversized after Track B PR 1 (28may assessment §5).
-  **Track C** — catch-up pass on the session-config export /
-  import surface to cover the eight 18G `ReviewSession` columns
-  the existing `_serialize.py` / `_apply.py` pre-dates
-  (scheduled activation, invite + reminder offsets, archive +
-  release schedule, retention exception + overrides); without
-  it, a Quick Setup → Zip-all → import round-trip silently
-  drops every scheduled-event configuration. Mirrors the 18D
-  pattern. Best landed before 14B Part A so the split files
-  absorb email-wiring code in the post-split shape AND a
-  14B-configured session can already round-trip its email-
-  related settings.
-  **Plan:** `guide/segment_18N_housekeeping.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial

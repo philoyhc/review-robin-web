@@ -83,16 +83,19 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    `_setup_relationships.py`, `_setup_invite.py`,
    `_assignments.py`, `_rule_builder.py`, `_operations.py`,
    `_preview_surface.py`, `_workflow.py`, `_instruments.py`,
-   `_response_types.py`, `_extracts.py`, `_sys_admin.py`), with
-   shared plumbing (the
-   `Jinja2Templates` instance, lifecycle / edit-lock guards, Quick
-   Setup cookie naming, and the cross-slice Setup-roster import /
-   redirect / field-label helpers) in `_shared.py`. New operator routes belong in their
+   `_instruments_band2.py` + `_instruments_pagination.py`
+   (Segment 18N PR 3 carve — Band 2 routes + 18M page-break /
+   reorder routes), `_extracts.py`, `_sys_admin.py`), with shared
+   plumbing (the `Jinja2Templates` instance, lifecycle / edit-lock
+   guards, Quick Setup cookie naming, the cross-slice Setup-roster
+   import / redirect / field-label helpers, and per-instrument
+   resolver + redirect helpers shared by the three instruments
+   slices) in `_shared.py`. New operator routes belong in their
    feature-area sub-module. Slices import only from `_shared.py`
    and from outside the package — no slice-to-slice imports. See
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
-2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The largest service, `app/services/instruments/`, is split by concern into a package — `_state.py` (cross-slice plumbing including `_instrument_label`), `_rtds.py` (Response Type Definitions), `_display_fields.py`, `_response_fields.py` (incl. `bulk_save_fields`), `_instrument_crud.py` — with `__init__.py` re-exporting the public surface so callers continue to write `from app.services import instruments` unchanged. See `guide/archive/major_refactor.md` §12.A.
+2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The two big service packages are `app/services/instruments/` (split by concern: `_state.py` cross-slice plumbing including `_instrument_label`, `_display_fields.py`, `_response_fields.py` incl. `bulk_save_fields` + `validation_block_from_inline`, `_band1.py` link-rule editor, `_band2.py` Band 2 state save + Band 3 dual-write [Segment 18N PR 2 carve], `_pagination.py` 18M reorder + page-break helpers [Segment 18N PR 2 carve], `_instrument_crud.py` lifecycle + group/unit-of-review + column-widths + bulk toggles, `_field_presets.py`) and `app/services/responses/` (`_core.py` save / submit / state-rollup, `_group_reconciliation.py` Segment 13C / 18H group fan-out + reconcile machinery [Segment 18N PR 4 carve]). Each package's `__init__.py` re-exports the public surface so callers write `from app.services import instruments` / `from app.services import responses` unchanged. The Response Type Definitions slice (`_rtds.py`) retired 2026-05-26 alongside the `response_type_definitions` table. See `guide/archive/major_refactor.md` §12.A.
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred infrastructure (`guide/deferred_infra.md`).
 
 A small but important fourth seam:

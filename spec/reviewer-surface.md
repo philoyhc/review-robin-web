@@ -471,7 +471,7 @@ In rendered order:
    The per-row ``submitted YYYY-MM-DD HH:MM`` subtitle that used
    to render under the icon retired 2026-05-28. Submit stamps a
    single ``now()`` across every Response row for the reviewer in
-   one go (see ``app/services/responses.py`` submit path), so the
+   one go (see ``app/services/responses`` submit path), so the
    per-row timestamp is always either NULL or
    uniform-for-the-reviewer — redundant with the session-level
    submission timestamp shown on the reviewer summary page.
@@ -730,7 +730,7 @@ email equality** (`casefold()` both sides). Only `Reviewer` rows
 with `status == "active"` grant access; inactive / removed reviewers
 are invisible.
 
-Both rules live in `app/services/responses.py` (and the per-session
+Both rules live in `app/services/responses` (and the per-session
 lookup that drives the surface route). The reviewer dashboard, the
 session surface, and the invitation-landing email-match check all
 use the same rule.
@@ -857,7 +857,7 @@ without re-plumbing.
 
 ### Reviewer-status pill vocabulary
 
-Computed by `app/services/responses.py::session_pill_for_reviewer`:
+Computed by `app/services/responses::session_pill_for_reviewer`:
 
 | Pill | Style | Condition |
 |---|---|---|
