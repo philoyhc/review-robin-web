@@ -2143,9 +2143,15 @@
         margin-bottom: var(--space-4);
       }
       body.ui-v2 .rs-page-header h1 { margin: 0; }
-      /* Reviewer-surface unified action row (PR γ). Save / Discard /
-         Page N: short_label / vertical divider / Submit. Mirrored
-         top + bottom; both flush right. */
+      /* Reviewer-surface unified action row. Save / Discard /
+         Submit on one end, the multi-page nav cluster (Prev / Page
+         N of M / Next) on the other, separated by a vertical
+         divider when both clusters render.
+
+         Top instance is flush-left as the lead-in to the form;
+         bottom instance is flush-right under the last instrument
+         and precedes the danger zone. Both render only once per
+         page (no per-instrument interleave). */
       body.ui-v2 .rs-action-row {
         display: flex;
         align-items: center;
@@ -2154,69 +2160,26 @@
         margin: var(--space-4) 0;
         flex-wrap: wrap;
       }
-      /* Top action row variant — left-aligned with a doubled margin
-         above so it reads as the lead-in to the form. The bottom
-         instance stays right-aligned per the default rule above. */
       body.ui-v2 .rs-action-row.rs-action-row-top {
         justify-content: flex-start;
         margin-top: var(--space-8);
       }
-      /* Vertical divider that visually separates the page-level
-         cluster (Save / Discard / Page N) from the review-session-
-         level Submit. 1px wide, full button-height via
-         `align-self: stretch` on the flex parent. */
+      body.ui-v2 .rs-action-row-controls,
+      body.ui-v2 .rs-page-nav-cluster {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+      }
       body.ui-v2 .rs-action-divider {
         width: 1px;
         align-self: stretch;
         background: var(--border-default);
         margin: 0 var(--space-2);
       }
-      /* Page button label may include the operator-set short_label
-         (≤ 32 chars per Segment 11L's schema cap). The CSS truncation
-         is belt-and-suspenders against pre-existing oddities or
-         future migration glitches; `max-width: 16em` ≈ 256px at 16px
-         body font, with room for `Page #99: Final Recommendation`
-         (~30 chars) before truncation kicks in. */
-      body.ui-v2 .rs-action-row .rs-page-btn {
-        max-width: 16em;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      /* Multi-instrument paginated rendering (PR δ). Every instrument
-         group lives in the DOM; CSS hides the non-active ones so the
-         inline JS handler can toggle visibility on Page #N click
-         without losing dirty edits in the hidden groups. With JS
-         disabled the surface still pins to the URL position because
-         the server-rendered ``rs-active`` modifier matches the URL. */
-      /* Segment 18L — page-break separator within a page render.
-         Post-multi-page-replan, the reviewer surface paginates by
-         operator-defined pages (each rendered at its own URL), so
-         this separator now only renders within a page when... hmm
-         actually it doesn't render at all in the multi-page model
-         since each page is its own render. Kept for forward-compat
-         in case future tweaks reintroduce intra-page breaks. */
-      body.ui-v2 .rs-instrument-separator {
-        margin: var(--space-6) 0;
-        border: 0;
-        border-top: 1px solid var(--border-default, #d1d5db);
-      }
-      /* Segment 18L multi-page nav row — Prev / counter / Next */
-      body.ui-v2 .rs-page-nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-3);
-        margin: var(--space-4) 0;
-      }
-      body.ui-v2 .rs-page-nav-bottom {
-        margin-top: var(--space-6);
-      }
       body.ui-v2 .rs-page-nav-counter {
         color: var(--text-secondary, #6b7280);
         font-size: 0.9rem;
-        text-align: center;
-        flex: 1;
       }
       /* Denser reviewer-table rows (Segment 17B). The reviewer
          response table is one input-per-cell and can run to hundreds

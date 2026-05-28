@@ -145,18 +145,17 @@ def rae() -> AuthenticatedUser:
     )
 
 
-# ── Page-button labels ───────────────────────────────────────────────────
+# ── Instrument heading composition ───────────────────────────────────────
 
 
-def test_page_button_label_uses_short_label_when_set(
+def test_instrument_heading_uses_short_label_when_set(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Operators who've set ``Instrument.short_label`` get the friendly
-    ``#N {short_label}`` page-button label and ``#N: {short_label}``
-    instrument heading."""
+    """Operators who've set ``Instrument.short_label`` get the
+    ``#N: {short_label}`` heading on multi-instrument sessions."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
@@ -173,14 +172,14 @@ def test_page_button_label_uses_short_label_when_set(
     assert "#2: Peer review" in body
 
 
-def test_page_button_label_falls_back_to_position_only(
+def test_instrument_heading_falls_back_to_position_only(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When ``short_label`` isn't set, the heading + page button
-    degrade to a bare ``#N`` label with no trailing colon."""
+    """When ``short_label`` isn't set, the heading degrades to a bare
+    ``#N`` label with no trailing colon."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator, db, code="rae-g-noshort"

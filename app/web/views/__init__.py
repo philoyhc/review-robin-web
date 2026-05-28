@@ -83,16 +83,14 @@ from ._setup import (
     session_status_pills,
 )
 
-# Instruments page context + reviewer-surface heading / page-button
-# helpers (sliced in PR 6).
+# Instruments page context + reviewer-surface heading helpers
+# (sliced in PR 6).
 from ._instruments import (
     InstrumentHeading,
-    PageButton,
     build_instruments_context,
     constraint_summary_for_field,
     instrument_heading,
     numeric_column_ch_width,
-    page_button_label,
     placeholder_for_field,
 )
 
@@ -200,7 +198,6 @@ __all__ = [
     "InstrumentStatusBlock",
     "InvitationsRow",
     "IssueSourceGroup",
-    "PageButton",
     "NextActionGenerateState",
     "PreviewPickerContext",
     "PreviewPickerOption",
@@ -264,7 +261,6 @@ __all__ = [
     "decode_cookie_sort_spec_for_reviewer_surface",
     "order_rows_by_sort_spec",
     "parse_audit_log_filters",
-    "page_button_label",
     "placeholder_for_field",
     "resolve_email_preview_tab",
     "relationships_search_options",

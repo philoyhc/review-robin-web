@@ -1,10 +1,9 @@
-"""PR γ unit tests for the reviewer-surface view helpers in
+"""Unit tests for the reviewer-surface view helpers in
 ``app.web.views``.
 
-Pins the composition table on :class:`InstrumentHeading` and the
-``page_button_label`` short-label fallback so future edits to the
-helpers are accompanied by explicit table changes here. Per
-``spec/reviewer-surface.md`` "Above the table — heading + help block".
+Pins the composition table on :class:`InstrumentHeading` so future
+edits to the helpers are accompanied by explicit table changes here.
+Per ``spec/reviewer-surface.md`` "Above the table — heading + help block".
 """
 
 from __future__ import annotations
@@ -18,7 +17,6 @@ from app.web.views import (
     InstrumentHeading,
     constraint_summary_for_field,
     instrument_heading,
-    page_button_label,
     placeholder_for_field,
 )
 
@@ -30,28 +28,6 @@ def _instrument(*, short_label: str | None, description: str | None) -> Instrume
         short_label=short_label,
         description=description,
     )
-
-
-# ── page_button_label ────────────────────────────────────────────────────
-
-
-def test_page_button_label_uses_short_label_when_set() -> None:
-    inst = _instrument(short_label="Self-eval", description=None)
-    # Segment 18L dropped the "Page " prefix — the button is now an
-    # in-page anchor TOC, not a pagination control.
-    assert page_button_label(inst, 2) == "#2 Self-eval"
-
-
-def test_page_button_label_falls_back_to_position_only() -> None:
-    inst = _instrument(short_label=None, description="long-form copy")
-    assert page_button_label(inst, 1) == "#1"
-
-
-def test_page_button_label_treats_blank_short_label_as_unset() -> None:
-    """Whitespace-only ``short_label`` is treated as unset so a stray
-    space doesn't produce ``"#1 "`` with a dangling space."""
-    inst = _instrument(short_label="   ", description=None)
-    assert page_button_label(inst, 3) == "#3"
 
 
 # ── instrument_heading — multi-instrument cases ──────────────────────────
