@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -35,6 +35,7 @@ from app.db.session import get_db
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
+from app.web.routes_reviewer._shared import validate_page_n
 from app.web.routes_reviewer._surface import _pages_for_session, _surface_context
 
 
@@ -125,9 +126,7 @@ def preview_surface(
         )
 
     pages = _pages_for_session(db, review_session.id)
-    page_count = len(pages) or 1
-    if page_n < 1 or page_n > page_count:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    validate_page_n(page_n, pages)
 
     def page_url(n: int) -> str:
         return _preview_url(review_session.id, n, reviewer_email)
