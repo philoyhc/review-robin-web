@@ -1,8 +1,16 @@
 # Segment 18L — Multi-page reviewer surface (operator-defined)
 
-> **Status: PRs 1a + 1b + replan + 1b-revised + 1c + 1d shipped
-> (2026-05-27).** Only PR 2 (per-instrument heading-state card)
-> remains. The reviewer surface paginates by
+> **Status: closed (2026-05-28).** PRs 1a + 1b + replan +
+> 1b-revised + 1c + 1d shipped 2026-05-27, plus three layout
+> polish PRs on 2026-05-28 (drop the ``Page `` prefix on
+> instrument headings, consolidate the action row + page nav,
+> rename per-instrument status pills to ``#N {short_label}``).
+> PR 2 (per-instrument heading-state card, Decision 3) is
+> **dropped** — the operator opens / closes whole sessions
+> rather than individual instruments, so the page-wide
+> "no longer accepting" banner stays correct. The per-
+> instrument ``accepting_responses`` facility remains in
+> the model for future use. The reviewer surface paginates by
 > operator-defined pages, each rendered at its own URL.
 > Initial decisions were locked 2026-05-27 around a
 > single-page-all-instruments model; mid-implementation the
@@ -504,18 +512,45 @@ PR 2 (per-instrument heading-state card) remain.
    instrument heading-state card) is now the only
    remaining piece of the segment.
 
-### Remaining
+### Layout polish (2026-05-28)
 
-8. **PR 2 — per-instrument heading-state card
-   (Decision 3).** Move the "no longer accepting" banner
-   from page-wide `.rs-status-panel` to per-instrument
-   `.rs-intro-grid` column 2. Each instrument carries
-   its own state pair side-by-side with its own heading.
-   Card omitted when `accepting=True, visible=True` (the
-   common path). ~150 LOC. Independent of PR 1c/d but
-   conceptually the second "movement" of the segment.
+8. **Drop ``Page `` prefix from per-instrument headings
+   (#1526).** Multi-instrument headings change from
+   ``Page #N: {short_label}`` to ``#N: {short_label}`` so
+   they read consistently with the action-row #N convention
+   landed in PR 1b.
+9. **Consolidate action row + page nav (#1527).** Retired
+   the per-instrument #N anchor TOC + interleaved top
+   action rows. One action row at the top (flush left) and
+   one at the bottom (flush right) carry Save / Discard /
+   Submit | divider | Prev / Page N of M / Next.
+   Prev / Next render as disabled buttons when no target
+   exists. Single-page sessions collapse to bare
+   Save / Discard / Submit.
+10. **Per-instrument status pills use ``#N short_label``
+    (#1528).** The overview-card pills above the form
+    switched from ``Page N: <state>`` to
+    ``#N {short_label}: <state>`` (or bare ``#N: <state>``
+    when no short label).
+11. **Summary page headings drop ``Page `` prefix.**
+    The reviewer summary page's per-instrument section
+    headings now read ``#N: {short_label}`` matching the
+    form.
 
-After PR 1d the only reviewer surface URLs are
+### Dropped
+
+- **PR 2 — per-instrument heading-state card
+  (Decision 3).** Originally planned to move the
+  "no longer accepting" banner from page-wide
+  `.rs-status-panel` to per-instrument
+  `.rs-intro-grid` column 2. Dropped 2026-05-28: the
+  operator opens / closes whole sessions (not individual
+  instruments), so the page-wide banner stays
+  semantically correct. The per-instrument
+  ``accepting_responses`` facility remains in the model
+  for future use.
+
+The only reviewer surface URLs are
 `/reviewer/sessions/{id}` (303 to /1) and
 `/reviewer/sessions/{id}/{N}` (page render).
 

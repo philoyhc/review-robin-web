@@ -220,7 +220,7 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Single-instrument session: the section heading drops the
-    ``Page #1`` prefix and renders the operator's ``short_label``,
+    ``#1`` prefix and renders the operator's ``short_label``,
     matching the form's heading composition."""
     from app.db.models import Instrument
     from app.services import instruments as instruments_service
@@ -252,8 +252,9 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
         f"/reviewer/sessions/{review_session.id}/summary"
     ).text
     assert "<h2 style=\"margin-top: 0;\">Self-eval</h2>" in body
-    # No Page-# prefix on a single-instrument session.
-    assert "Page #1" not in body
+    # No #1 prefix on a single-instrument session.
+    assert "#1: Self-eval" not in body
+    assert "#1 Self-eval" not in body
 
 
 def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_label(
@@ -304,7 +305,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Multi-instrument session: each section heading carries
-    ``Page #{N}: {short_label}`` exactly the way the form does
+    ``#{N}: {short_label}`` exactly the way the form does
     (``views.instrument_heading`` composition rules).
 
     Seeds the session manually so a second instrument can land
@@ -409,8 +410,8 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         f"/reviewer/sessions/{review_session.id}/summary"
     ).text
     assert (
-        "<h2 style=\"margin-top: 0;\">Page #1: Self-eval</h2>" in body
+        "<h2 style=\"margin-top: 0;\">#1: Self-eval</h2>" in body
     )
     assert (
-        "<h2 style=\"margin-top: 0;\">Page #2: Peer review</h2>" in body
+        "<h2 style=\"margin-top: 0;\">#2: Peer review</h2>" in body
     )

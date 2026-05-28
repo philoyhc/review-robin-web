@@ -142,10 +142,10 @@ class SummarySection:
 
     # Heading shown on the section card. Mirrors the form's
     # heading composition (``views._instruments.instrument_heading``):
-    # multi-instrument sessions get ``"Page #{N}: {short}"`` (or
-    # bare ``"Page #{N}"`` when ``short_label`` is unset);
-    # single-instrument sessions get just the short label, falling
-    # back to ``instrument.name`` when no short label exists.
+    # multi-instrument sessions get ``"#{N}: {short}"`` (or bare
+    # ``"#{N}"`` when ``short_label`` is unset); single-instrument
+    # sessions get just the short label, falling back to
+    # ``instrument.name`` when no short label exists.
     heading_title: str
     position: int
     is_group: bool
@@ -408,7 +408,7 @@ def build_reviewer_summary_context(
         is_group = instrument.group_kind is not None
         # Mirror the response form's heading composition
         # (``views._instruments.instrument_heading``): the
-        # multi-instrument case carries the ``Page #{N}`` prefix
+        # multi-instrument case carries the ``#{N}`` prefix
         # so the reviewer reads the same heading on the summary
         # they read on the form. Single-instrument sessions drop
         # the prefix; bare ``instrument.name`` is the fallback
@@ -418,9 +418,9 @@ def build_reviewer_summary_context(
         if total_instrument_count == 1:
             heading_title = short_label or instrument.name
         elif short_label:
-            heading_title = f"Page #{position}: {short_label}"
+            heading_title = f"#{position}: {short_label}"
         else:
-            heading_title = f"Page #{position}"
+            heading_title = f"#{position}"
         # Filter response fields by ``visible`` so the summary
         # table mirrors the reviewer surface form
         # (``routes_reviewer/_surface.py`` filters the same way).
