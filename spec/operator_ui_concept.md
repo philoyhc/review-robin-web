@@ -94,7 +94,7 @@ The **sort affordance** is the rrw-sort primitive shipped 2026-05-12 in Segment 
 
 Read-only renderings spun off from one or other Setup Page, showing what the configured setup will look like to its audience (reviewers today; future reviewees or other audiences once they exist).
 
-The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) was retired in Segment 11F PR C; the URL is now a permanent (308) redirect to `/operator/sessions/{id}/previews#reviewer-surface` (the surface card on the consolidated hub). The hub bypasses session-status / deadline / acceptance gates.
+The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The reviewer-surface render lives at the satellite route `GET /operator/sessions/{id}/preview-surface/{page_n}` (Segment 18Q follow-on, 2026-05-28) reached from the picker card's "Open full preview" button; it renders the same `reviewer/review_surface.html` template through the same `_surface_context` plumbing the live reviewer route uses. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) is retained as a permanent (308) redirect; its target was 2026-05-28-repointed from `/previews#reviewer-surface` (now-dead anchor) to `/preview-surface/1`. The preview surface bypasses session-status / deadline / acceptance gates.
 
 The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `spec/instruments.md` Section D).
 
@@ -176,7 +176,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 ### Sub-pages and Preview
 
 - **Sub-pages of Home** (Edit Session): chrome renders the two phase rows normally, with no tab active. The sub-page identifies itself via H1 in the page body.
-- **Retired standalone reviewer-surface preview** (`/preview`, singular): retired in Segment 11F PR C as a permanent (308) redirect to `/sessions/{id}/previews#reviewer-surface`. The reviewer-surface render now lives as the Previews hub's surface card.
+- **Operator-side preview-surface route** (`/preview-surface/{page_n}`, Segment 18Q follow-on 2026-05-28): renders the reviewer surface for an operator-selected reviewer in a new tab, reusing the live ``_surface_context`` plumbing. The legacy `/preview` (singular) URL is a permanent (308) redirect to `/preview-surface/1` (was `/previews#reviewer-surface` through 2026-05-28; the iframe surface card on the Previews hub was retired in the same follow-on).
 
 ### What the chrome does not do
 
@@ -253,10 +253,13 @@ A consolidated page for everything per-instrument: session-wide status + bulk to
 (Segment 18M, 2026-05-27).** Each per-instrument card is
 wrapped in a native `<details>` so cards collapse to a
 single-row `<summary>` carrying a left-edge grip-dot drag
-handle, the title `Instrument #{instrument.id}`, the
-optional `short_label`, two status pills (`Set up` /
-`Not set up` + `Locked` / `Unlocked`), and a right-edge
-chevron toggle. Default state on first render is
+handle, the title (operator-facing short label with the
+muted-italic `Instrument_{id}` fallback when no short label
+is set — see `spec/instruments.md` "Title" + the
+2026-05-28 operator-identifier policy), an inline ✎/✓
+editor that posts the rename to `/identity` without a page
+reload, two status pills (`Set up` / `Not set up` +
+`Locked` / `Unlocked`), and a right-edge chevron toggle. Default state on first render is
 all-collapsed; an `Expand all instruments` /
 `Collapse all instruments` pair lives in the Status +
 bulk-actions card. Vanilla HTML5 drag-and-drop on the
@@ -297,7 +300,7 @@ There is no standalone Activate button on this page body; activation fires from 
 
 Operations row tab (label: **Previews**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer. Operator-only; bypasses session-status / deadline / acceptance gates.
 
-The retired standalone `/operator/sessions/{id}/preview` (singular) — the predecessor reviewer-surface preview — is a permanent (308) redirect to `/sessions/{id}/previews#reviewer-surface`. The reviewer-surface render now lives as the hub's surface card.
+The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}` (Segment 18Q follow-on 2026-05-28) reachable from the hub picker card's "Open full preview" button. The legacy `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect; its target was 2026-05-28-repointed from `/sessions/{id}/previews#reviewer-surface` (now-dead anchor) to `/preview-surface/1` after the iframe surface card on the hub retired.
 
 ### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 

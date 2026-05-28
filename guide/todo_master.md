@@ -930,6 +930,115 @@ through the (former "new-model") card.
 historical Gap catalog (its entries cross-link to the shipping
 PRs).
 
+### Segment 18K — Reviewer-surface visibility (Band 3 follow-on) — partially done 2026-05-27 (PR #1487)
+
+Parts 1, 2, and the first three scenarios of Part 4 shipped in PR
+#1487: reviewer summary HTML + reviewer-record CSV now filter
+``InstrumentResponseField`` rows by ``visible``, ``spec/instruments.md``
+Band 3 section rewritten to match the actual operator-side
+chip/pill UI (no per-row Visible checkbox), and parametrised
+visible / hidden / round-trip tests pin both surfaces in
+``tests/integration/test_reviewer_summary_visibility.py``. Part 3
+policy choices (confirm guard on un-pinning chip with saved
+responses; reviewer banner on visible-flag flip; replicate copies
+visible as-is) are locked but the implementation work (PRs 4, 5,
+6) and the two outstanding Part 4 scenarios (operator-toggles-
+after-submit; group-scoped fan-out under visibility flips) are
+still pending. Plan: `guide/segment_18K_visibility.md`.
+
+### Segment 18L — Multi-page reviewer surface (operator-defined) — done 2026-05-27 → 2026-05-28
+
+Closed across PRs **#1518 (1a) → #1519 (1b) → #1520 (polish) →
+#1521 (page-break wiring) → #1522 (multi-page replan) → #1523 (1c
+cleanup) → #1525 (1d test sweep)**, plus a 2026-05-28 layout
+polish sweep **(#1526 / #1527 / #1528 + summary-heading patch)**:
+drop ``Page `` prefix on per-instrument headings, consolidate
+action row + page nav into single top/bottom rows, rename
+per-instrument status pills to ``#N {short_label}``. The reviewer
+surface paginates by operator-defined pages (one page per run of
+instruments between Segment 18M page breaks), each at its own
+URL ``/reviewer/sessions/{id}/{page_n}``. The original lock
+called for a single-page-all-instruments model; PR #1522 reshaped
+mid-flight into the multi-page model. PR 2 (per-instrument
+heading-state card) was dropped — the operator opens/closes whole
+sessions, so the page-wide banner stays correct. Plan archived to
+`guide/archive/segment_18L_single_page_surface.md`.
+
+### Segment 18M — Operator instrument ordering + page breaks — done 2026-05-27 → 2026-05-28
+
+All four PRs shipped. **PR 0** (#1498–#1504) wrapped each
+per-instrument card body in collapsible `<details>` with a
+drag-handle placeholder, bulk Expand/Collapse, smoke tests.
+**PR 1** (#1505) added Alembic e5c1a3b9d472 + the
+``Instrument.starts_new_page`` boolean (backfilled true to
+preserve today's behaviour, server_default false for fresh
+inserts) plus the three service helpers
+(``reorder_instruments``, ``create_page_break_after``,
+``clear_page_break``) with three new audit-event types in
+``EVENT_SCHEMAS``. **PR 2** shipped in two slices: **PR 2a**
+(#1507) added the static per-card ``+ Page break`` button +
+break-card render + create/delete routes (with AJAX delete in
+#1508); **PR 2b** (#1509) added vanilla HTML5 drag-and-drop with
+the JSON ``POST /instruments/order`` endpoint, live DOM reorder,
+snap-back on 4xx, and sessionStorage open-state preservation. A
+follow-up polish run (#1510–#1515) closed the visual rough edges.
+**PR 3** (operator preview honours page breaks) landed indirectly
+when the Segment 18Q follow-on (below) retired the iframe preview
+and replaced it with a ``_surface_context``-driven full-preview
+route — page breaks are now honoured end-to-end. Plan archived to
+`guide/archive/segment_18M_instrument_layout.md`.
+
+### Operator reviewer-surface preview + identifier policy — done 2026-05-28
+
+A 2026-05-28 polish cluster (PRs **#1530 → #1540**) layered onto
+18L + 18M:
+
+- **Operator preview surface (PRs #1530, #1531, #1532).** New
+  dedicated route ``/operator/sessions/{id}/preview-surface/{page_n}``
+  (in ``app/web/routes_operator/_preview_surface.py``) renders the
+  same ``reviewer/review_surface.html`` template through the same
+  ``_surface_context`` the live reviewer route uses — so the operator
+  preview inherits every reviewer-surface behaviour (multi-page nav,
+  page breaks, sort, sized textareas, …) without parallel plumbing.
+  The Segment 11F PR C iframe-embedded surface card on the Previews
+  hub retired; the picker card's action row grows an "Open full
+  preview" button. The legacy ``/operator/sessions/{id}/preview``
+  308-redirect target moved from ``/previews#reviewer-surface`` to
+  ``/preview-surface/1``. Side-fix in #1532: register
+  ``numeric_column_ch_width`` on the operator templates instance so
+  previewing a session whose page-2+ holds a group-scoped instrument
+  no longer 500s on render.
+- **Operator instrument-identifier policy (PRs #1534, #1535, #1536,
+  #1537).** Codified the split: the reviewer-facing surface uses
+  ``#{N}: {short_label}`` via ``views.instrument_heading`` (``#`` is
+  reserved for reviewer-position numbering); the operator-facing
+  Setup → Instruments card title shows ``{short_label}`` with the
+  ugly muted-italic ``Instrument_{id}`` fallback (was ``Instrument
+  #{id}``, which leaked the database-wide autoincrement and
+  surprised operators when ids skipped). ``_instrument_label``
+  helper chain collapsed from ``short_label > description > name``
+  to ``short_label > Instrument_{id}``. New inline ✎/✓ editor on
+  the card title posts to the existing ``/identity`` endpoint with
+  no full page reload; short_label editor moved out of Band 2's
+  intro card (which is the reviewer preview, not the operator's
+  edit surface).
+- **Sized textareas (PRs #1538, #1539, #1540).** String response-
+  field textareas (``max_length > 100``) used to hard-code
+  ``rows="2"``. New ``views/_instruments.py::textarea_rows_for``
+  helper derives ``rows`` from ``max_chars`` and the operator-set
+  column width: ``rows = clamp(ceil(max_chars * 0.75 /
+  max(20, column_width_px / 8)), 2, 8)``. Same JS port in the
+  Band 2 preview cell so the operator's preview matches the
+  reviewer-surface render. Textareas pinned to ``resize: vertical``
+  (horizontal would push the column out of operator-defined
+  width). Reviewer-surface form table + Band 2 preview cells
+  top-aligned so multi-row textareas anchor at the row top.
+
+No standalone segment plan; the cluster runs against the
+operator-experience polish principles documented inline in
+``spec/instruments.md`` ("Identifiers" + Band 1 / Band 2
+sections).
+
 ---
 
 ## Upcoming
@@ -945,8 +1054,9 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 19, 20** (18J retired 2026-05-26). No global ordering
-constraints beyond the few dep chains called out at the
+**14B, 18K (remaining PRs 4–6 + 2 Part 4 scenarios), 19, 20**
+(18L + 18M closed 2026-05-28; 18J retired 2026-05-26). No global
+ordering constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
@@ -972,29 +1082,18 @@ bottom of this file.
 #### Stubs
 
 - **18K — Completing instrument visibility (Band 3) on the
-  reviewer surface** *(stub created 2026-05-27)*. Close the per-
-  field tail of the visibility story 17B / 18F / 18G set up:
-  the reviewer summary HTML + reviewer-record CSV currently
-  walk every `InstrumentResponseField` regardless of `visible`,
-  so a Band 2 chip flipped off mid-session still surfaces the
-  column on the summary even though the surface form drops it.
-  Also patches `spec/instruments.md` to reflect that the Band 2
-  pill — not a Band 3 "Visible" checkbox — is the operator-side
-  visibility control. Likely 4–5 small PRs.
+  reviewer surface** *(in flight; Parts 1-2 + first three Part 4
+  scenarios shipped 2026-05-27 in PR #1487)*. Remaining work:
+  **PR 4** — operator-side confirm guard on un-pinning a Band 2
+  response chip whose field already has saved responses (Part 3
+  decision 1). **PR 5** — reviewer-surface banner naming the
+  dropped field(s) on the next load after a visible-flag flip
+  (Part 3 decision 2). **PR 6** — replicate-semantics test pinning
+  `_instrument_crud.py` clone-with-``visible``-as-is behaviour
+  (Part 3 decision 3). Plus the two outstanding Part 4 scenarios
+  PR 4's flip path will exercise (operator toggles-off after
+  reviewer submit; group-scoped fan-out under visibility flips).
   **Plan:** `guide/segment_18K_visibility.md`.
-
-- **18L — Single-page reviewer surface** *(stub created
-  2026-05-27; decisions locked same day)*. Collapse the
-  reviewer response surface from per-instrument pages
-  (`/reviewer/sessions/{id}/{position}`) into a single-page
-  view at `/reviewer/sessions/{id}`. Instruments stack
-  vertically with an `<hr>` separator; the action row
-  repeats above every instrument heading + once at the
-  bottom with the danger zone. Per-instrument heading-row
-  state moves into a half-width card to the right of each
-  title (Decision 3). Pagination JS retires. Two PRs: surface
-  + endpoint rewrite, then test-sweep + shim retirement.
-  **Plan:** `guide/segment_18L_single_page_surface.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
