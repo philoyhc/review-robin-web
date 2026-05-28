@@ -2174,7 +2174,8 @@
             // / number / list / text) for each response field, not
             // a bare ``—``.
             responses.forEach(function (r) {
-              html += '<td>' + buildResponseFieldPreviewCell(card, r) + '</td>';
+              html += '<td data-col-key="resp_' + esc(r.key) + '">'
+                + buildResponseFieldPreviewCell(card, r) + '</td>';
             });
             html += '</tr></tbody></table>';
             return html;
@@ -2235,7 +2236,8 @@
             }
             html += '</td>';
             responses.forEach(function (r) {
-              html += '<td>' + buildResponseFieldPreviewCell(card, r) + '</td>';
+              html += '<td data-col-key="resp_' + esc(r.key) + '">'
+                + buildResponseFieldPreviewCell(card, r) + '</td>';
             });
             html += '</tr></tbody></table>';
             return html;
@@ -3068,6 +3070,49 @@
             container.innerHTML = buildResponseFieldHelpCards(card)
               + buildProgressAndConstraintsRow(card)
               + tableHtml;
+            // Post-render adjustment: the initial ``rows`` baked into
+            // each textarea by ``buildResponseFieldPreviewCell`` used
+            // the formula's 224px fallback because the ``<col>`` had
+            // no inline width yet. Now that the table is in the DOM,
+            // measure each response column's actual rendered width
+            // and recompute ``rows`` against it. Captures both
+            // operator-resized widths (``<col style="width: Npx">``)
+            // and auto-distributed widths (no inline style).
+            adjustPreviewTextareaRows(container);
+          }
+          // Walk every textarea inside the just-rendered preview
+          // table, measure the actual rendered width of its column
+          // (preferring the ``<col>``'s ``offsetWidth``, falling
+          // back to the cell ``<td>``'s ``getBoundingClientRect``),
+          // and overwrite ``rows`` via ``textareaRowsFor``. The
+          // initial render already wrote a sane fallback value;
+          // this pass tightens it once the layout box exists.
+          function adjustPreviewTextareaRows(container) {
+            container.querySelectorAll(
+              'td[data-col-key] textarea[maxlength]'
+            ).forEach(function (ta) {
+              var maxLenInt = parseInt(ta.getAttribute('maxlength'), 10);
+              if (!maxLenInt || maxLenInt <= 100) { return; }
+              var cell = ta.closest('td[data-col-key]');
+              if (!cell) { return; }
+              var colKey = cell.getAttribute('data-col-key');
+              var table = cell.closest('table');
+              var colPx = null;
+              if (table) {
+                var col = table.querySelector(
+                  'col[data-col-key="' + colKey + '"]'
+                );
+                if (col && col.offsetWidth > 0) {
+                  colPx = col.offsetWidth;
+                }
+              }
+              if (!colPx) {
+                var rect = cell.getBoundingClientRect();
+                if (rect && rect.width > 0) { colPx = rect.width; }
+              }
+              if (!colPx) { return; }
+              ta.rows = textareaRowsFor(maxLenInt, colPx);
+            });
           }
           window.newModelToggleBand2Pill = function (pill) {
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
