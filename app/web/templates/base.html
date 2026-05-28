@@ -225,6 +225,19 @@
         box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
+      /* Top-align cells in the reviewer-surface form table so
+         multi-row textareas (long-text response fields with the
+         derived ``rows="N"`` from
+         ``views/_instruments.py::textarea_rows_for``) anchor at
+         the top of the row rather than centering vertically.
+         Scoped to ``.rs-instrument-group`` so the rule covers
+         both the group-scoped table and the regular per-reviewee
+         table without re-aligning other tables in the
+         operator-side chrome. */
+      .rs-instrument-group td,
+      .rs-instrument-group th {
+        vertical-align: top;
+      }
       /*
        * Band 2 column-resize grippers (operator new-model card).
        * A 6px-wide click target with a centered 2px vertical mark

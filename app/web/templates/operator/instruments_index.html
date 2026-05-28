@@ -50,6 +50,11 @@
     body.ui-v2 [data-new-model-band2-preview] th,
     body.ui-v2 [data-new-model-band2-preview] td {
       padding: var(--space-2) var(--space-3);
+      /* Top-align so multi-row textareas (long-text response
+         fields) anchor at the top of the row rather than
+         centering vertically inside it — matches the reviewer
+         surface contract in base.html. */
+      vertical-align: top;
     }
     body.ui-v2 [data-new-model-band2-preview] input,
     body.ui-v2 [data-new-model-band2-preview] textarea,
