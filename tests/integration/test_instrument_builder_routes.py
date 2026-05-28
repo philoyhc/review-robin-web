@@ -4378,10 +4378,13 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     assert "#2:" in intro_block
     # short_label renders inside the view span (alongside the
     # # prefix); description renders inside the view paragraph.
-    assert (
-        '<span data-intro-short-label-view style="font-weight: inherit;">Peer Review</span>'
-        in intro_block
-    )
+    # 2026-05-28 follow-on: the short_label editor moved to the
+    # card title in the ``<summary>``, so the intro card's span
+    # is now display-only and inherits h2 weight naturally —
+    # the prior explicit ``style="font-weight: inherit;"`` is
+    # gone.
+    assert "data-intro-short-label-view" in intro_block
+    assert ">Peer Review<" in intro_block
     assert "Quick sanity check after milestone 1." in intro_block
 
     # Counts reflect the full authored response-field set, not
@@ -4430,12 +4433,12 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     assert intro_idx != -1
     intro_block = flat[intro_idx : intro_idx + 3000]
     # Heading still renders (#2: Reflection — source seed
-    # instrument is #1).
+    # instrument is #1). 2026-05-28 follow-on dropped the
+    # explicit ``style="font-weight: inherit;"`` on the view
+    # span — see the sibling test's comment.
     assert "#2:" in intro_block
-    assert (
-        '<span data-intro-short-label-view style="font-weight: inherit;">Reflection</span>'
-        in intro_block
-    )
+    assert "data-intro-short-label-view" in intro_block
+    assert ">Reflection<" in intro_block
     # Progress row is rendered (always present so JS can update
     # counts live without a page reload) but ``hidden`` collapses
     # it when the instrument has zero response fields.
@@ -5887,3 +5890,163 @@ def test_cancel_button_starts_disabled_and_carries_marker(
     assert "disabled" in btn_tag
     # The JS handler itself ships on the page.
     assert "window.newModelCancelEdits" in body
+
+
+# ─────────────────────────────────────────────────────────────────
+# 2026-05-28 operator-identifier policy — card title format +
+# inline AJAX editor on the ``<summary>``.
+# ─────────────────────────────────────────────────────────────────
+
+
+def test_card_title_renders_short_label_when_set(
+    client: TestClient, db: Session
+) -> None:
+    """Per the 2026-05-28 operator-identifier policy: the Setup →
+    Instruments card title shows ``{short_label}`` when the
+    operator has set one (no ``#`` prefix — the ``#`` is reserved
+    for the reviewer-facing ``#{N}: …`` heading inside Band 2's
+    preview card)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="card-title-set"
+    )
+    new_model.short_label = "Peer Review"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # The card title view span carries the short_label and the
+    # edit-block carries dedicated id attrs so the AJAX handler
+    # can build the right ``/identity`` URL on save.
+    marker = f'data-card-title-instrument-id="{new_model.id}"'
+    assert marker in body
+    # The view span is NOT marked with the ``card-title-fallback``
+    # class when a short_label exists.
+    fallback_class = 'class="card-title-fallback"'
+    block_start = body.find(marker)
+    block_end = body.find("</h2>", block_start)
+    block = body[block_start:block_end]
+    assert "Peer Review" in block
+    assert fallback_class not in block
+
+
+def test_card_title_falls_back_to_instrument_underscore_id_when_no_short_label(
+    client: TestClient, db: Session
+) -> None:
+    """With no short_label set, the title shows the ugly
+    ``Instrument_{id}`` fallback inside a ``.card-title-fallback``
+    span (styled muted + italic via the inline stylesheet) so it
+    reads as a placeholder nudging the operator to set a proper
+    short label."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="card-title-fallback"
+    )
+    # _new_model_with_tags doesn't set short_label.
+    assert new_model.short_label is None
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    marker = f'data-card-title-instrument-id="{new_model.id}"'
+    block_start = body.find(marker)
+    block_end = body.find("</h2>", block_start)
+    block = body[block_start:block_end]
+    assert f"Instrument_{new_model.id}" in block
+    assert 'class="card-title-fallback"' in block
+
+
+def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
+    client: TestClient, db: Session
+) -> None:
+    """The hidden ``<input>`` that swaps in on ✎ click is pre-
+    populated with the **current** short_label (empty when none
+    set) — NOT the ``Instrument_{id}`` fallback. So an operator
+    opening the edit on an unnamed card starts from a blank slate
+    rather than having to delete the placeholder text."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="card-title-input-empty"
+    )
+    assert new_model.short_label is None
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    marker = f'data-card-title-instrument-id="{new_model.id}"'
+    block_start = body.find(marker)
+    block_end = body.find("</h2>", block_start)
+    block = body[block_start:block_end]
+    # Input present with empty value (NOT the fallback string).
+    assert 'data-card-title-input' in block
+    assert 'value=""' in block
+    assert f'value="Instrument_{new_model.id}"' not in block
+
+
+def test_card_title_edit_icons_only_render_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """The card-title ✎ / ✓ pair only renders when the instrument
+    is in edit mode (matches the existing intro-card edit-icon
+    gate). In view mode the title is read-only."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="card-title-edit-gate"
+    )
+    new_model.short_label = "Gate"
+    db.commit()
+
+    # View mode — no editing= query param.
+    body_view = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    block_view_start = body_view.find(
+        f'data-card-title-instrument-id="{new_model.id}"'
+    )
+    block_view_end = body_view.find("</h2>", block_view_start)
+    block_view = body_view[block_view_start:block_view_end]
+    assert "data-card-title-edit" not in block_view
+    assert "data-card-title-save" not in block_view
+
+    # Edit mode.
+    body_edit = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"?editing={new_model.id}"
+    ).text
+    block_edit_start = body_edit.find(
+        f'data-card-title-instrument-id="{new_model.id}"'
+    )
+    block_edit_end = body_edit.find("</h2>", block_edit_start)
+    block_edit = body_edit[block_edit_start:block_edit_end]
+    assert "data-card-title-edit" in block_edit
+    assert "data-card-title-save" in block_edit
+
+
+def test_card_title_save_endpoint_persists_short_label(
+    client: TestClient, db: Session
+) -> None:
+    """The AJAX handler POSTs to the existing
+    ``/operator/sessions/{sid}/instruments/{iid}/identity``
+    endpoint with ``{short_label: ...}``. This is the same
+    endpoint the intro-card description editor uses; the regression
+    test pins the contract from the client side."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="card-title-persist"
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={"short_label": "Skills"},
+    )
+    assert response.status_code == 200
+
+    db.refresh(new_model)
+    assert new_model.short_label == "Skills"
+
+    # Empty save clears the label (operator can revert the rename).
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/identity",
+        json={"short_label": ""},
+    )
+    assert response.status_code == 200
+    db.refresh(new_model)
+    assert new_model.short_label is None

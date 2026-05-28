@@ -111,6 +111,15 @@
       font-weight: 500;
       color: var(--text-secondary, #6b7280);
     }
+    /* Operator-only ``Instrument_{id}`` fallback on the card
+       title — rendered when no short_label is set. Styled muted
+       + italic so it reads as a placeholder nudging the operator
+       to set a proper short label rather than as a chosen name. */
+    body.ui-v2 .card-title-fallback {
+      color: var(--text-secondary, #6b7280);
+      font-style: italic;
+      font-weight: 500;
+    }
     body.ui-v2 .instrument-card-summary .pill {
       position: relative;
       top: -1px;
@@ -719,8 +728,49 @@
                 data-instrument-drag-handle
                 draggable="true"
                 aria-hidden="true">&#8942;&#8942;</span>
-          <h2 style="margin: 2px 0 0 0; font-size: 1.5rem; flex: 1;">
-            Instrument #{{ instrument.id }}{% if instrument.short_label %} <span class="instrument-card-short-label">{{ instrument.short_label }}</span>{% endif %}
+          {# Card title: per the 2026-05-28 operator-identifier
+             policy, the title shows the operator-facing
+             ``short_label`` with the ugly ``Instrument_{id}``
+             fallback that nudges the operator to set a proper
+             short label. The ``#`` prefix is reserved for the
+             reviewer-facing ``#{N}: …`` heading rendered inside
+             Band 2's "Preview reviewer instrument" card below.
+             Inline ✎/✓ edit affordance posts to the existing
+             ``/identity`` endpoint without a page reload so the
+             card's expand/collapse state survives the save. #}
+          <h2 data-card-title-edit-block
+              data-card-title-session-id="{{ session.id }}"
+              data-card-title-instrument-id="{{ instrument.id }}"
+              style="margin: 2px 0 0 0; font-size: 1.5rem; flex: 1;
+                     display: flex; align-items: center; gap: 8px;
+                     flex-wrap: wrap;">
+            <span data-card-title-view
+                  class="{% if not instrument.short_label %}card-title-fallback{% endif %}"
+                  style="min-width: 0;">{{ instrument.short_label or "Instrument_" ~ instrument.id }}</span>
+            <input type="text"
+                   data-card-title-input
+                   maxlength="32"
+                   value="{{ instrument.short_label or '' }}"
+                   placeholder="Operator-only short label (e.g. Skills)"
+                   hidden
+                   style="font: inherit; padding: 2px 6px;
+                          flex: 1 1 200px; min-width: 0;
+                          box-sizing: border-box;">
+            {% if is_editing %}
+              <button type="button" class="btn-icon"
+                      data-card-title-edit
+                      onclick="cardTitleEdit(event, this)"
+                      title="Edit operator short label"
+                      aria-label="Edit operator short label"
+                      style="font-size: 1rem; padding: 2px 6px;">&#9998;</button>
+              <button type="button" class="btn-icon"
+                      data-card-title-save
+                      onclick="cardTitleSave(event, this)"
+                      title="Save operator short label"
+                      aria-label="Save operator short label"
+                      hidden
+                      style="font-size: 1rem; padding: 2px 6px;">&#10003;</button>
+            {% endif %}
             {% if is_configured_by_instrument[instrument.id] %}
               <span class="pill pill-info">Set up</span>
             {% else %}
@@ -1565,7 +1615,6 @@
           {% set _rf_list = _band2.response_fields or [] %}
           {% set _all_count = (_rf_list | list | length) %}
           {% set _required_count = (_rf_list | selectattr('required') | list | length) %}
-          {% set _intro_title = instrument.short_label or instrument.name %}
           <div class="rs-intro-grid"
                data-new-model-band2-intro-card
                data-instrument-id="{{ instrument.id }}"
@@ -1574,28 +1623,16 @@
             <div class="card rs-instrument-card"
                  data-intro-edit-block
                  style="position: relative;">
+              {# Intro-card heading mirrors the reviewer-surface
+                 ``views.instrument_heading`` contract:
+                 ``#{N}: {short_label}`` when set, just ``#{N}``
+                 otherwise. The short label itself is operator-
+                 editable from the card title in the ``<summary>``
+                 above — see the 2026-05-28 operator-identifier
+                 policy. #}
               <h2 data-intro-short-label-block
                   style="display: flex; align-items: baseline; gap: 8px;">
-                <span>#{{ loop.index }}:</span>
-                <span data-intro-short-label-view
-                      style="font-weight: inherit;">{{ _intro_title }}</span>
-                {# ``min-width: 0`` lets the wrapper shrink within
-                   the flex h2 — otherwise the input's intrinsic
-                   width would block flex shrinking. The unified
-                   ✎ / ✓ pair lives at the card's bottom-right
-                   (matching the help-text card pattern); per-field
-                   buttons no longer crowd this row. #}
-                <span data-intro-short-label-edit-wrap
-                      style="flex: 1 1 auto; min-width: 0;">
-                  <input type="text"
-                         data-intro-short-label-input
-                         maxlength="32"
-                         value="{{ instrument.short_label or '' }}"
-                         placeholder="(optional short label, e.g. Skills)"
-                         hidden
-                         style="font: inherit; padding: 2px 6px;
-                                width: 100%; box-sizing: border-box;">
-                </span>
+                <span>#{{ loop.index }}{% if instrument.short_label %}: <span data-intro-short-label-view>{{ instrument.short_label }}</span>{% endif %}</span>
               </h2>
               <div data-intro-description-block>
                 <p class="rs-instrument-subtitle muted"
@@ -1616,22 +1653,27 @@
                                  min-height: 4em; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
-              {# Single ✎ / ✓ pair at the card's bottom-right —
-                 opens / saves both short_label + description in
-                 one go. Matches the help-text card's
-                 ``bottom: 4px; right: 4px`` placement. #}
+              {# ✎ / ✓ pair at the card's bottom-right edits the
+                 description. short_label edit moved to the card
+                 title in the ``<summary>`` above per the
+                 2026-05-28 operator-identifier policy — the intro
+                 card is the reviewer-preview surface, not the
+                 operator's edit surface for the operator-facing
+                 short label. ``newModelIntroEdit`` / ``Save`` now
+                 only operate on description; they no-op cleanly
+                 when the short_label input isn't present. #}
               {% if is_editing %}
                 <button type="button" class="btn-icon"
                         data-intro-edit
                         onclick="newModelIntroEdit(this)"
-                        title="Edit short label and description"
-                        aria-label="Edit short label and description"
+                        title="Edit description"
+                        aria-label="Edit description"
                         style="position: absolute; bottom: 4px; right: 4px;">✎</button>
                 <button type="button" class="btn-icon"
                         data-intro-save
                         onclick="newModelIntroSave(this)"
-                        title="Save short label and description"
-                        aria-label="Save short label and description"
+                        title="Save description"
+                        aria-label="Save description"
                         hidden
                         style="position: absolute; bottom: 4px; right: 4px;">✓</button>
               {% endif %}
@@ -2648,10 +2690,12 @@
               );
             });
           };
-          // Unified intro edit/save — opens / saves both short_label
-          // and description in one go. ✎ swaps both view → input/textarea
-          // and toggles the icon to ✓; ✓ POSTs both fields in one
-          // identity request and reverts both view modes on success.
+          // Intro-card edit/save — description-only after the
+          // 2026-05-28 operator-identifier policy moved short_label
+          // editing to the card title in the ``<summary>`` above.
+          // ✎ swaps the description paragraph → textarea + toggles
+          // the icon to ✓; ✓ POSTs ``{description: ...}`` and
+          // reverts on success.
           function _introToggleEditUI(card, editing) {
             var editBtn = card.querySelector('[data-intro-edit]');
             var saveBtn = card.querySelector('[data-intro-save]');
@@ -2680,24 +2724,18 @@
             var card = btn.closest('[data-intro-edit-block]');
             var intro = btn.closest('[data-new-model-band2-intro-card]');
             if (!card || !intro) { return; }
-            var labelBlock = card.querySelector('[data-intro-short-label-block]');
             var descBlock = card.querySelector('[data-intro-description-block]');
-            if (!labelBlock || !descBlock) { return; }
-            var labelInput = _introEnterField(labelBlock,
-              '[data-intro-short-label-view]',
-              '[data-intro-short-label-input]');
-            _introEnterField(descBlock,
+            if (!descBlock) { return; }
+            var descInput = _introEnterField(descBlock,
               '[data-intro-description-view]',
               '[data-intro-description-input]');
             _introToggleEditUI(card, true);
-            // Focus short_label first so the operator can type
-            // immediately; tab moves to the description textarea.
-            if (labelInput) {
+            if (descInput) {
               try {
-                labelInput.focus();
-                var len = (labelInput.value || '').length;
-                if (labelInput.setSelectionRange) {
-                  labelInput.setSelectionRange(len, len);
+                descInput.focus();
+                var len = (descInput.value || '').length;
+                if (descInput.setSelectionRange) {
+                  descInput.setSelectionRange(len, len);
                 }
               } catch (_) {}
             }
@@ -2706,29 +2744,18 @@
             var card = btn.closest('[data-intro-edit-block]');
             var intro = btn.closest('[data-new-model-band2-intro-card]');
             if (!card || !intro) { return; }
-            var labelBlock = card.querySelector('[data-intro-short-label-block]');
             var descBlock = card.querySelector('[data-intro-description-block]');
-            if (!labelBlock || !descBlock) { return; }
-            var labelInput = labelBlock.querySelector(
-              '[data-intro-short-label-input]'
-            );
+            if (!descBlock) { return; }
             var descInput = descBlock.querySelector(
               '[data-intro-description-input]'
             );
-            if (!labelInput || !descInput) { return; }
-            var newLabel = (labelInput.value || '').trim().slice(0, 32);
+            if (!descInput) { return; }
             var newDesc = (descInput.value || '').slice(0, 2000);
             _introPostIdentity(
               intro,
-              {short_label: newLabel, description: newDesc},
+              {description: newDesc},
               function () {
-                labelInput.value = newLabel;
                 descInput.value = newDesc;
-                _introExitField(labelBlock,
-                  '[data-intro-short-label-view]',
-                  '[data-intro-short-label-input]',
-                  newLabel
-                );
                 _introExitField(descBlock,
                   '[data-intro-description-view]',
                   '[data-intro-description-input]',
@@ -2737,6 +2764,88 @@
                 _introToggleEditUI(card, false);
               }
             );
+          };
+          // Card-title inline edit (short_label only) — lives in
+          // the ``<summary>`` above. ``event.preventDefault()`` +
+          // ``stopPropagation()`` so the click doesn't bubble up
+          // to the ``<details>`` and toggle the card open/closed.
+          // POSTs to the same ``/identity`` endpoint the intro
+          // description editor uses, with ``{short_label: ...}``.
+          window.cardTitleEdit = window.cardTitleEdit || function (event, btn) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            var block = btn.closest('[data-card-title-edit-block]');
+            if (!block) { return; }
+            var view = block.querySelector('[data-card-title-view]');
+            var input = block.querySelector('[data-card-title-input]');
+            var editBtn = block.querySelector('[data-card-title-edit]');
+            var saveBtn = block.querySelector('[data-card-title-save]');
+            if (!input || !editBtn || !saveBtn) { return; }
+            if (view) { view.hidden = true; }
+            input.hidden = false;
+            editBtn.hidden = true;
+            saveBtn.hidden = false;
+            try {
+              input.focus();
+              var len = (input.value || '').length;
+              if (input.setSelectionRange) { input.setSelectionRange(len, len); }
+            } catch (_) {}
+          };
+          window.cardTitleSave = window.cardTitleSave || function (event, btn) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            var block = btn.closest('[data-card-title-edit-block]');
+            if (!block) { return; }
+            var input = block.querySelector('[data-card-title-input]');
+            var view = block.querySelector('[data-card-title-view]');
+            var editBtn = block.querySelector('[data-card-title-edit]');
+            var saveBtn = block.querySelector('[data-card-title-save]');
+            if (!input || !view || !editBtn || !saveBtn) { return; }
+            var newValue = (input.value || '').trim().slice(0, 32);
+            var sessionId = block.getAttribute('data-card-title-session-id');
+            var instrumentId = block.getAttribute('data-card-title-instrument-id');
+            var url = '/operator/sessions/' + sessionId
+              + '/instruments/' + instrumentId + '/identity';
+            fetch(url, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              credentials: 'same-origin',
+              body: JSON.stringify({short_label: newValue})
+            }).then(function (resp) {
+              if (!resp.ok) {
+                if (window.console) { console.warn('card title save failed', resp.status); }
+                return;
+              }
+              input.value = newValue;
+              var fallback = 'Instrument_' + instrumentId;
+              view.textContent = newValue || fallback;
+              view.classList.toggle('card-title-fallback', !newValue);
+              view.hidden = false;
+              input.hidden = true;
+              editBtn.hidden = false;
+              saveBtn.hidden = true;
+              // Mirror the new value into the intro-card heading
+              // (the reviewer-preview ``#{N}: {short_label}``).
+              var intro = document.querySelector(
+                '[data-new-model-band2-intro-card]'
+                + '[data-instrument-id="' + instrumentId + '"]'
+              );
+              if (intro) {
+                var introView = intro.querySelector('[data-intro-short-label-view]');
+                if (introView) {
+                  if (newValue) {
+                    introView.textContent = newValue;
+                    introView.hidden = false;
+                  } else {
+                    // No span pre-existed (Jinja omits the colon +
+                    // span when short_label was empty on first
+                    // render). Operator gets a full page reload to
+                    // see the heading collapse — uncommon edge case.
+                    introView.textContent = '';
+                  }
+                }
+              }
+            }).catch(function (err) {
+              if (window.console) { console.warn('card title save error', err); }
+            });
           };
           // Render a disabled placeholder input/textarea/select for
           // a selected response-field cell in the preview row. Shape
