@@ -854,7 +854,7 @@ Notional segment label for the new-model instrument card work
 that shipped without its own plan doc. **Exploration phase**
 (PRs **#1302 → #1304**, 2026-05-22→23): the chain-builder concept
 retired, the instrument-builder vertical-layout design landed
-(`guide/instrument_builder_project.md`, `spec/instrument_builder.md`).
+(`guide/archive/instrument_builder_project.md`, `spec/archive/instrument_builder.md`).
 **Main push** (PRs **#1305 → #1386**, 2026-05-23→24): iterative
 UI build-out behind the `instruments.is_pilot` → `is_new_model`
 flag — Band 1 (rule editor + Individual/Grouped toggle), Band 2
@@ -930,21 +930,27 @@ through the (former "new-model") card.
 historical Gap catalog (its entries cross-link to the shipping
 PRs).
 
-### Segment 18K — Reviewer-surface visibility (Band 3 follow-on) — partially done 2026-05-27 (PR #1487)
+### Segment 18K — Reviewer-surface visibility (Band 3 follow-on) — done 2026-05-27 → 2026-05-28
 
-Parts 1, 2, and the first three scenarios of Part 4 shipped in PR
-#1487: reviewer summary HTML + reviewer-record CSV now filter
-``InstrumentResponseField`` rows by ``visible``, ``spec/instruments.md``
-Band 3 section rewritten to match the actual operator-side
-chip/pill UI (no per-row Visible checkbox), and parametrised
-visible / hidden / round-trip tests pin both surfaces in
-``tests/integration/test_reviewer_summary_visibility.py``. Part 3
-policy choices (confirm guard on un-pinning chip with saved
-responses; reviewer banner on visible-flag flip; replicate copies
-visible as-is) are locked but the implementation work (PRs 4, 5,
-6) and the two outstanding Part 4 scenarios (operator-toggles-
-after-submit; group-scoped fan-out under visibility flips) are
-still pending. Plan: `guide/segment_18K_visibility.md`.
+Six PRs total. Parts 1, 2, and the first three scenarios of Part
+4 shipped 2026-05-27 in PR #1487 (reviewer summary HTML +
+reviewer-record CSV filter response fields by ``visible``;
+``spec/instruments.md`` Band 3 section rewritten to match the
+actual operator-side chip/pill UI; parametrised visible / hidden
+/ round-trip tests pin both surfaces). Closing PRs shipped
+2026-05-28: **PR 6** (#1545) — ``replicate_instrument`` now
+copies ``visible`` as-is for response fields (also corrected the
+stale claim that it already did so). **PR 4** (#1549) — Band 2
+chip un-pin confirm guard with the ``acknowledged_drop`` body
+flag + structured 409 + JS ``confirm()`` naming the field and
+response count; folds in both remaining Part 4 scenarios
+(pill_state stays submitted post-flip; group-scoped fan-out
+honours the filter). **PR 5** (#1550) — reviewer-surface
+``banner banner-info`` naming dropped fields on next load after
+a visibility flip; suppressed in ``preview_mode``. Twelve tests
+in ``tests/integration/test_reviewer_summary_visibility.py``
+plus a unit test gate the helper. Plan archived to
+`guide/archive/segment_18K_visibility.md`.
 
 ### Segment 18L — Multi-page reviewer surface (operator-defined) — done 2026-05-27 → 2026-05-28
 
@@ -1054,10 +1060,9 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 18K (remaining PRs 4–6 + 2 Part 4 scenarios), 19, 20**
-(18L + 18M closed 2026-05-28; 18J retired 2026-05-26). No global
-ordering constraints beyond the few dep chains called out at the
-bottom of this file.
+**14B, 19, 20** (18K + 18L + 18M closed 2026-05-28; 18J retired
+2026-05-26). No global ordering constraints beyond the few dep
+chains called out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1080,20 +1085,6 @@ bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
-
-- **18K — Completing instrument visibility (Band 3) on the
-  reviewer surface** *(in flight; Parts 1-2 + first three Part 4
-  scenarios shipped 2026-05-27 in PR #1487)*. Remaining work:
-  **PR 4** — operator-side confirm guard on un-pinning a Band 2
-  response chip whose field already has saved responses (Part 3
-  decision 1). **PR 5** — reviewer-surface banner naming the
-  dropped field(s) on the next load after a visible-flag flip
-  (Part 3 decision 2). **PR 6** — replicate-semantics test pinning
-  `_instrument_crud.py` clone-with-``visible``-as-is behaviour
-  (Part 3 decision 3). Plus the two outstanding Part 4 scenarios
-  PR 4's flip path will exercise (operator toggles-off after
-  reviewer submit; group-scoped fan-out under visibility flips).
-  **Plan:** `guide/segment_18K_visibility.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
