@@ -155,7 +155,8 @@ def test_page_button_label_uses_short_label_when_set(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Operators who've set ``Instrument.short_label`` get the friendly
-    ``Page #N: {short_label}`` button label."""
+    ``#N {short_label}`` page-button label and ``#N: {short_label}``
+    instrument heading."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
@@ -168,8 +169,8 @@ def test_page_button_label_uses_short_label_when_set(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    assert "Page #1: Self-eval" in body
-    assert "Page #2: Peer review" in body
+    assert "#1: Self-eval" in body
+    assert "#2: Peer review" in body
 
 
 def test_page_button_label_falls_back_to_position_only(
@@ -178,8 +179,8 @@ def test_page_button_label_falls_back_to_position_only(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When ``short_label`` isn't set, the page button degrades to a
-    bare ``Page #N`` label with no trailing colon."""
+    """When ``short_label`` isn't set, the heading + page button
+    degrade to a bare ``#N`` label with no trailing colon."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator, db, code="rae-g-noshort"
@@ -189,10 +190,10 @@ def test_page_button_label_falls_back_to_position_only(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
     # No trailing colon when the short_label is absent.
-    assert "Page #1:" not in body
-    assert "Page #2:" not in body
-    assert "Page #1" in body
-    assert "Page #2" in body
+    assert "#1:" not in body
+    assert "#2:" not in body
+    assert "#1" in body
+    assert "#2" in body
 
 
 # ── Per-instrument heading composition ───────────────────────────────────
@@ -205,7 +206,7 @@ def test_instrument_heading_multi_with_short_label_and_description(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Multi-instrument + short_label + description → title is
-    ``Page #N: {short_label}``, subtitle is the description."""
+    ``#N: {short_label}``, subtitle is the description."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
@@ -225,7 +226,7 @@ def test_instrument_heading_multi_with_short_label_and_description(
     # into a half-width `.card.rs-instrument-card` so the heading +
     # first help text card sit side-by-side.
     assert 'class="card rs-instrument-card"' in body
-    assert "<h2>Page #1: Self-eval</h2>" in body
+    assert "<h2>#1: Self-eval</h2>" in body
     assert "Reflect on your own progress." in body
     assert 'class="rs-instrument-subtitle muted"' in body
 
@@ -237,7 +238,7 @@ def test_instrument_heading_multi_short_label_only(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Multi-instrument + short_label, no description → title is
-    ``Page #N: {short_label}`` and no subtitle span renders."""
+    ``#N: {short_label}`` and no subtitle span renders."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
@@ -250,7 +251,7 @@ def test_instrument_heading_multi_short_label_only(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    assert "<h2>Page #1: Self-eval</h2>" in body
+    assert "<h2>#1: Self-eval</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
 
 
@@ -261,7 +262,7 @@ def test_instrument_heading_multi_description_only(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Multi-instrument + description, no short_label → title is bare
-    ``Page #N`` and the description renders as the subtitle."""
+    ``#N`` and the description renders as the subtitle."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
@@ -273,7 +274,7 @@ def test_instrument_heading_multi_description_only(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    assert "<h2>Page #1</h2>" in body
+    assert "<h2>#1</h2>" in body
     assert "Reflect on your own progress." in body
     assert 'class="rs-instrument-subtitle muted"' in body
 
@@ -285,7 +286,7 @@ def test_instrument_heading_multi_neither(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Multi-instrument with neither short_label nor description → bare
-    ``Page #N`` title, no subtitle."""
+    ``#N`` title, no subtitle."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator, db, code="rae-g-h-multi-none"
@@ -294,7 +295,7 @@ def test_instrument_heading_multi_neither(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    assert "<h2>Page #1</h2>" in body
+    assert "<h2>#1</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
 
 
@@ -305,7 +306,7 @@ def test_instrument_heading_single_short_label_only(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Single-instrument + short_label → title is the short_label
-    verbatim (no ``Page #1:`` prefix). Single-instrument sessions
+    verbatim (no ``#1:`` prefix). Single-instrument sessions
     don't need page-numbering."""
     operator = make_client(alice)
     operator.post(
@@ -360,10 +361,9 @@ def test_instrument_heading_single_short_label_only(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
     assert "<h2>Self-eval</h2>" in body
-    # No Page #1 prefix in the *heading* — single-instrument sessions
-    # don't need page-numbering. The page-button anchor still renders
-    # ``Page #1: Self-eval`` in the action row.
-    assert "<h2>Page #1: Self-eval</h2>" not in body
+    # No #1 prefix in the *heading* — single-instrument sessions
+    # don't need page-numbering.
+    assert "<h2>#1: Self-eval</h2>" not in body
 
 
 # ── Per-position Save filter (defense in depth) ──────────────────────────
