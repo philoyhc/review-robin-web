@@ -350,9 +350,19 @@
                        clears the active group's dirty flag. #}
                     {% if data_type == "String" %}
                       {% if max_len > 100 %}
+                        {# ``rows`` derived from ``max_len`` + the
+                           operator-set column width (with a sane
+                           default when unset) per the 2026-05-28
+                           textarea-sizing policy in
+                           ``views/_instruments.py::textarea_rows_for``.
+                           Sizes the initial height to a *typical*
+                           response (75% of max) at the column's
+                           current width; clamped to ``[2, 8]``.
+                           Reviewers can still drag-resize at
+                           runtime. #}
                         <textarea name="{{ field_name }}"
                                   aria-label="{{ cell_aria }}"
-                                  rows="2"
+                                  rows="{{ textarea_rows_for(max_len, group.response_field_width_by_id.get(cell.field.id)) }}"
                                   style="min-height: 44px;"
                                   data-rs-saved-value="{{ cell.value }}"
                                   {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}

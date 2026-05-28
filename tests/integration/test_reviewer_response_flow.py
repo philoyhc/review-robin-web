@@ -384,6 +384,86 @@ def test_surface_applies_column_classes_by_response_type(
     assert '<td class="rs-textlong"' in body
 
 
+def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Regression for the 2026-05-28 textarea-sizing policy
+    (``views/_instruments.py::textarea_rows_for``). The
+    long-text Comments field (max_length=2000) renders with the
+    derivation's cap of ``rows="8"`` at the default column width,
+    NOT the prior static ``rows="2"``. Widening the column via
+    ``Instrument.column_widths["rf_<id>"]`` shrinks the row
+    count — proving the formula is consuming the operator-set
+    width."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-tarows",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    body_default = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    ).text
+
+    # Default seeded Comments is max_length=2000 → at default
+    # 224px column → typical 1500 chars / 28 chars/row → 53 →
+    # clamped to the 8-row cap.
+    assert 'rows="8"' in body_default
+    # Sanity check: the legacy hard-coded ``rows="2"`` is gone.
+    assert 'rows="2"' not in body_default
+
+    # Widen the Comments column to 800px and re-render — the
+    # textarea should shrink toward 4 rows (1500 / (800/8=100
+    # chars/row) = 15 → cap 8 — still 8 here, so let's widen
+    # FURTHER to force a meaningful shrink). At width 1600px,
+    # chars/row = 200 → 1500/200 = 7.5 → ceil 8 → cap stays 8.
+    # The 2000-char field's typical-response is so long it caps
+    # at every realistic width. Switch to a smaller field that
+    # WILL shrink: shorten max_length to 300 and re-render.
+    from app.db.models import Instrument
+
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id
+        )
+    ).scalars().first()
+    assert instrument is not None
+    comments = next(
+        rf for rf in instrument.response_fields if rf.label == "Comments"
+    )
+    # Shrink max_length so the formula has headroom to vary with
+    # column width.
+    validation = dict(comments.validation or {})
+    validation["max_length"] = 300
+    comments.validation = validation
+    db.flush()
+    body_narrow = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    ).text
+    # 300 max → typical 225 / 28 chars/row (default 224px) =
+    # ceil(8.04) = 9 → clamped to 8. Still cap.
+    assert 'rows="8"' in body_narrow
+
+    # Now widen the column for the Comments field to 800px and
+    # re-render — chars/row jumps to 100, typical 225 / 100 =
+    # 3 rows.
+    widths = dict(instrument.column_widths or {})
+    widths[f"rf_{comments.id}"] = 800
+    instrument.column_widths = widths
+    db.flush()
+    body_wide = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    ).text
+    assert 'rows="3"' in body_wide
+
+
 def test_surface_dedupes_reviewee_name_and_email_display_fields(
     db: Session,
     alice: AuthenticatedUser,
