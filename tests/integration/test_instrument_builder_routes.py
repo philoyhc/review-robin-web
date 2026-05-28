@@ -1324,6 +1324,84 @@ def test_new_model_band2_state_round_trip(
     assert 'value="Comments"' in flat
 
 
+def test_band2_state_save_writes_validation_json_for_reviewer_surface(
+    client: TestClient, db: Session
+) -> None:
+    """The reviewer surface reads ``cell.field.validation`` (JSON
+    column) for String ``max_length``, numeric ``min`` / ``max`` /
+    ``step``, and List ``choices``. The Band 3 save path persists
+    those bounds to the ``_inline_*`` columns; before the 2026-05-28
+    fix it left ``field.validation`` stale, so reviewers kept seeing
+    the seeded bounds (or none, for operator-authored rows).
+    Regression guard: after a band2-state POST, every saved
+    response field's ``validation`` JSON reflects the inline state."""
+    review_session = _make_session(
+        client, db, code="band2-validation-roundtrip"
+    )
+    instrument = _instrument(db, review_session.id)
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{instrument.id}/band2-state",
+        json={
+            "selected_display_keys": ["reviewee.name"],
+            "response_fields": [
+                # String field with a non-default max — covers the
+                # original report (operator typed 200, reviewer
+                # surface kept seeing the seed value).
+                {
+                    "name": "Comments",
+                    "data_type": "string",
+                    "min": "",
+                    "max": "200",
+                    "step": "",
+                    "list_options": "",
+                    "selected": True,
+                },
+                # Numeric Decimal with the full triple.
+                {
+                    "name": "Score",
+                    "data_type": "decimal",
+                    "min": "0.5",
+                    "max": "9.5",
+                    "step": "0.25",
+                    "list_options": "",
+                    "selected": True,
+                },
+                # List with CSV options.
+                {
+                    "name": "Recommendation",
+                    "data_type": "list",
+                    "min": "",
+                    "max": "",
+                    "step": "",
+                    "list_options": "Yes, No, Maybe",
+                    "selected": True,
+                },
+            ],
+        },
+    )
+    assert resp.status_code == 200
+
+    db.expire_all()
+    db.refresh(instrument)
+    fields_by_label = {f.label: f for f in instrument.response_fields}
+
+    comments = fields_by_label["Comments"]
+    assert comments._inline_max == 200
+    assert comments.validation == {"max_length": 200}
+
+    score = fields_by_label["Score"]
+    assert score._inline_min == 0.5
+    assert score._inline_max == 9.5
+    assert score._inline_step == 0.25
+    assert score.validation == {"min": 0.5, "max": 9.5, "step": 0.25}
+
+    rec = fields_by_label["Recommendation"]
+    assert rec._inline_list_csv == "Yes, No, Maybe"
+    assert rec.validation == {"choices": ["Yes", "No", "Maybe"]}
+
+
 @pytest.mark.skip(
     reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
     "Underlying behaviour still works; scope-rewrite deferred."

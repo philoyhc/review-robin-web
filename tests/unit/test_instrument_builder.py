@@ -383,3 +383,49 @@ def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> Non
     ]
     assert len(blocking) == 1
     assert "no response fields" in blocking[0].message
+
+
+# ── validation_block_from_inline — Band 3 → JSON shape ──────────────────
+
+
+@pytest.mark.parametrize(
+    "data_type,min_,max_,step,list_csv,expected",
+    [
+        # String — only ``max`` set → ``max_length`` only.
+        ("String", None, 200.0, None, None, {"max_length": 200}),
+        # String — both bounds set → both serialise as ints.
+        ("String", 0.0, 200.0, None, None, {"min_length": 0, "max_length": 200}),
+        # String — no bounds at all → None (rather than ``{}``).
+        ("String", None, None, None, None, None),
+        # Integer — full triple.
+        ("Integer", 1.0, 5.0, 1.0, None, {"min": 1, "max": 5, "step": 1}),
+        # Decimal — preserves float cast.
+        ("Decimal", 0.5, 9.5, 0.25, None, {"min": 0.5, "max": 9.5, "step": 0.25}),
+        # List — CSV → choices array (whitespace trimmed, empties dropped).
+        ("List", None, None, None, "Yes,No, Maybe ,",
+         {"choices": ["Yes", "No", "Maybe"]}),
+        # List — empty CSV → None (no choices to render).
+        ("List", None, None, None, "", None),
+        ("List", None, None, None, None, None),
+        # Unknown / blank data_type → None.
+        (None, 0.0, 100.0, None, None, None),
+        ("", 0.0, 100.0, None, None, None),
+    ],
+)
+def test_validation_block_from_inline_shapes(
+    data_type, min_, max_, step, list_csv, expected
+):
+    """The reviewer surface reads ``cell.field.validation`` for
+    ``max_length`` / numeric bounds / List ``choices``; the inline
+    columns the operator authors via Band 3 must serialise into
+    that exact JSON shape. Regression guard for the 2026-05-28 fix
+    where ``_sync_response_fields_to_db`` was leaving
+    ``field.validation`` stale relative to ``_inline_*``."""
+    from app.services.instruments._response_fields import (
+        validation_block_from_inline,
+    )
+
+    assert (
+        validation_block_from_inline(data_type, min_, max_, step, list_csv)
+        == expected
+    )
