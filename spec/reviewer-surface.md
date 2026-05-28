@@ -2,7 +2,7 @@
 
 Specification of the reviewer-facing app — the pages a signed-in
 reviewer sees when they follow an invitation link or visit `/reviewer`
-directly. The response surface (`/reviewer/sessions/{id}/{position}`)
+directly. The response surface (`/reviewer/sessions/{id}/{page_n}`)
 is the page they spend ~all their time on; the dashboard
 (`/reviewer`) and invitation-landing (`/reviewer/invite/{token}`)
 exist to land them on it.
@@ -185,34 +185,33 @@ on explicit Save or Submit.
 
 ### How the surface works
 
-The server renders **every instrument the reviewer has assignments
-on** in one HTML response. All instrument groups live in the DOM
-simultaneously; CSS hides every group except the one matching the
-URL position. Clicking a Page button:
+Post-Segment-18L replan: each page is its own server-rendered
+HTML response. The GET route at `/reviewer/sessions/{id}/{page_n}`
+filters to **only the current page's instruments** (the run between
+the operator-defined `starts_new_page` boundaries) and renders just
+those. Cross-page navigation is plain HTTP — Prev / Next / `Page N`
+links are `<a href>`s that round-trip the server. The reviewer's
+typed-but-not-yet-saved values on the **other** pages live on the
+server (saved drafts) rather than in the DOM of the current page,
+so a navigation away from a page with dirty inputs surfaces the
+"unsaved changes" guard before letting the navigation complete.
 
-1. Toggles the `.rs-active` class so the chosen instrument's group
-   becomes visible and the rest hide.
-2. Calls `history.pushState(...)` to update the address bar to
-   `/reviewer/sessions/{id}/{n}` — bookmarkable, Back/Forward work,
-   but no HTTP request.
-3. Updates the disabled state on Page / Save / etc. buttons to
-   reflect the new "current page".
-
-Because hidden instrument groups stay in the DOM, a reviewer's
-typed-but-not-saved values **persist as the reviewer moves between
-pages**. They aren't sent to the server until Save or Submit fires.
-Refresh / browser-close / window-close still loses them — the
-`beforeunload` warning (deferred; see "Designed-for-extensibility")
-guards that gap.
+Reviewer-typed values persist across page navigations only after a
+Save round-trip; the cross-page draft store is the database, not
+the DOM. The `beforeunload` warning fires when the reviewer tries
+to navigate (Prev / Next / Page button, address-bar change,
+close-tab) with dirty inputs on the current page, so an accidental
+loss of unsaved typing surfaces a confirm before the navigation
+completes.
 
 ### Save / Discard / Page navigation / Submit / Clear all
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. On success: 303 → `…/{position}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
-| **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' unsaved edits are untouched. |
-| **Page N** | Page | none — JS only | Swap which instrument group is visible (CSS class toggle); update the URL via `pushState`. No HTTP request. Reviewer's typed-but-not-saved values on the previously-visible page stay in the DOM. The button for the current page is disabled. |
-| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{position}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
+| **Save** | Page | POST `…/{page_n}/save` | Persist the **current page's** dirty inputs to the database. Greys out when the current page has no dirty inputs. On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
+| **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' saved state is untouched. |
+| **Page N** | Page | GET `…/{N}` | `<a href>` link — plain HTTP navigation to the target page. Server-side render swaps the response body to that page's instruments. The link for the current page is disabled. Reviewer's typed-but-not-yet-saved values on the current page must be saved first or they are lost on navigation (the `beforeunload` guard fires per the inline JS in the surface). |
+| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
 | **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -246,14 +245,14 @@ deferred `beforeunload` warning (see "Designed-for-extensibility").
 ### Form HTML mechanics
 
 The whole editing surface lives inside a single `<form>` whose
-default `action` is `…/{position}/save` and `method="post"`. Save
+default `action` is `…/{page_n}/save` and `method="post"`. Save
 submits to that default action; Submit overrides via
 `formaction="/reviewer/sessions/{id}/submit"`. Both buttons send
 the **entire** form body — every input across every instrument
 group, since they're all in the DOM. The route distinguishes:
 
 - Save filters the incoming form to inputs whose `name` matches
-  response fields belonging to `{position}`'s instrument and
+  response fields belonging to `{page_n}`'s instrument and
   persists those, ignoring everything else.
 - Submit accepts the entire form body, persists every value, then
   applies the session-wide submission semantics.
@@ -634,7 +633,7 @@ field before the submit lands.
 1. Reviewer hits Submit on any page with at least one required field
    blank anywhere in the session.
 2. Server returns 400 + re-renders the page they were on (whichever
-   `{position}` they submitted from) with the full-width
+   `{page_n}` they submitted from) with the full-width
    `.rs-missing-card` below the overview card, enumerating the gaps as
    `Page N: Reviewee X — field Y` so the reviewer knows where to
    navigate.
@@ -874,16 +873,23 @@ surface itself — hitting Submit once doesn't lock the form.
 Submitting again replays the same logic and re-stamps
 `submitted_at`.
 
-### Per-instrument sub-rows
+### Per-page sub-rows
 
-A multi-instrument session (N > 1) renders one stacked sub-row
-per instrument below its parent row, with the Reviewer Status
-pill scoped to that instrument and a matching counter chip
-following the same colour pairing. The deep link in each
-sub-row points at `/reviewer/sessions/{id}/{position}` so the
-reviewer can jump straight to a specific instrument. Empty for
-single-instrument sessions (the byte-identical contract from
-Segment 15B Slice 6).
+A multi-page session (M > 1, where M is the count of operator-
+defined pages — see "URL pattern" above) renders one stacked
+sub-row per page below its parent row. Each sub-row is labelled
+``"Page N: #n {short_label}, #m {short_label}, …"`` listing the
+instruments on the page (using the per-session ``#N`` heading
+convention), with the Reviewer Status pill scoped to that page
+(rolled up across the page's instruments) and a matching counter
+chip following the same colour pairing. The deep link in each
+sub-row points at ``/reviewer/sessions/{id}/{page_n}`` so the
+reviewer can jump straight to a specific page. Empty for single-
+page sessions, which covers both single-instrument sessions (the
+byte-identical contract from Segment 15B Slice 6) and multi-
+instrument sessions where the operator hasn't added a page break
+(the sub-row would just restate the parent session row at the
+same ``/{id}/1`` URL).
 
 ---
 
@@ -930,7 +936,7 @@ dashboard's Session column once Reviewer Status is
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.
 
-### Pre-open page (`/reviewer/sessions/{id}/{position}` on a not-yet-ready session)
+### Pre-open page (`/reviewer/sessions/{id}/{page_n}` on a not-yet-ready session)
 
 Segment 18F Part 2 added a dedicated **pre-open** rendering
 for a reviewer who follows an invitation token (or a
@@ -1078,13 +1084,13 @@ makes today + the small follow-on the deferred work needs.
 ### Standalone submission-confirmation page
 
 - **Today.** `POST /reviewer/sessions/{id}/submit` 303s to
-  `…/{position}` (no flash). The reviewer reads the post-submit
+  `…/{page_n}` (no flash). The reviewer reads the post-submit
   signal off the per-page `submitted` pill in the overview card
   and the per-row submitted-timestamp in the status column.
 - **Design call.** The submit route's redirect target is computed via
   a small helper (`submit_redirect_url(review_session, position)`)
   rather than inlined. Today the helper returns
-  `f"/reviewer/sessions/{id}/{position}"`. Tomorrow it can return
+  `f"/reviewer/sessions/{id}/{page_n}"`. Tomorrow it can return
   `f"/reviewer/sessions/{id}/submitted"` (session-level thank-you)
   without touching any other code path.
 - **What lands later.** A new template (`reviewer/submitted.html` or
@@ -1155,7 +1161,7 @@ compatible either way:
 ## Migration notes
 
 The URL change from `/reviewer/sessions/{id}` to
-`/reviewer/sessions/{id}/{position}` is a breaking change for:
+`/reviewer/sessions/{id}/{page_n}` is a breaking change for:
 
 - **Existing invitation emails** — already-sent invitation emails
   embed the old token URL (`/reviewer/invite/{token}`), which redirects
@@ -1163,7 +1169,9 @@ The URL change from `/reviewer/sessions/{id}` to
   bare-session URL must 303 to `/reviewer/sessions/{id}/1` to keep old
   invitation links working.
 - **Reviewer dashboard rows** — link generation in
-  `reviewer/dashboard.html` updates to point at position `1`.
+  `reviewer/dashboard.html` updates to point at page `1`; the
+  per-session sub-rows now also index by page (see "Reviewer
+  dashboard" §below).
 - **Bookmarks / returning reviewers** — same 303 covers them.
 
 The 303 fallback covers all known callers; no data migration is

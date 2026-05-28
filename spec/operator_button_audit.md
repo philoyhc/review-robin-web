@@ -283,15 +283,17 @@ per instrument card.
 | 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn primary-outline` | Primary Outline | Renamed from `+New model` in PR #1443; posts `/instruments/add-new-model` with `after={iid}`. With the legacy `Add instrument` / `Add group instrument` buttons retired in the same PR, this is the sole "create new instrument" affordance on the row. |
 | 57 | Bottom action row | Lock / Unlock | `<a>` (or disabled `<button>`) | `btn secondary` | Secondary | The gating toggle. Unlocked = `?editing=<id>` in URL; locked = no editing param. Clicking Lock with a dirty Save prompts `confirm()` (Wave 4 PR 3). Renders as a disabled `<button>` (not `<a>`) when an RTD edit lock is active. Modelled on the Quick Setup card's footer. Replaces the pre-Wave-4 `Edit` button (Wave 4 PR 1, PR #1440). |
 
-### 9c — RTD card (page-bottom, "Response Type Definitions")
+### 9c — RTD card — retired 2026-05-26
 
-| # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 58 | RTD row (locked) | Edit | `<a>` | `btn secondary` (or disabled when an instrument card is unlocked) | Secondary (Disabled when conflicting edit lock) | Per `spec/instruments.md` "One editing context at a time" |
-| 59 | RTD row (editing) | Save | `<button type="submit">` | `btn secondary` | Secondary | |
-| 60 | RTD row (editing) | Cancel | `<a>` | `btn secondary` | Secondary | |
-| 61 | RTD row (operator-defined) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Cascade-confirm dialog gates the destructive call |
-| 62 | "Add a Response Type" row | Add | `<button type="submit">` | `btn secondary` | Secondary | Disabled while any edit context is active |
+The bottom-of-page **Response Type Definitions card** retired
+together with the `response_type_definitions` table in Segment
+18J Wave 5 (PR #1454). Per-field type + bounds + list options
+now live inline on `InstrumentResponseField`'s `_inline_*`
+columns and are edited directly in the Band 3 row (Type select,
+Min / Max / Step inputs, List options text, R / ≡ / ✓ / X
+buttons) — see `spec/instruments.md` "Band 3 — Response fields".
+The Edit / Save / Cancel / Delete / Add buttons that used to
+live on this section (entries #58 — #62) retired with the card.
 
 ---
 
