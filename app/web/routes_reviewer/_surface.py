@@ -97,7 +97,7 @@ class PageStatus:
     """
 
     position: int
-    label: str  # bare "Page N" — short labels live on Page buttons (PR γ)
+    label: str  # "#N {short_label}" when set, else bare "#N"
     state: PageStatusState
 
 
@@ -695,12 +695,12 @@ def _surface_context(
         )
         flat_rows.extend(group_rows)
 
-    # Per-page status pills for the rollup logic — retained as a
-    # build-only list so ``_session_status`` can derive the rollup
-    # pill (Submitted / Saved-not-submitted / Draft) from the
-    # per-instrument state. The template no longer renders the
-    # per-page pill list itself (Segment 18L retired the
-    # `.rs-status-panel` per-page pill loop alongside pagination).
+    # Per-instrument status pills in the overview card at the top of
+    # the surface. Labels follow the same ``#N {short_label}`` (or
+    # bare ``#N``) convention as the instrument heading so the pill
+    # row reads as a quick index into the form below. Also feeds
+    # ``_session_status`` for the lead rollup pill (Submitted /
+    # Saved-not-submitted / Draft).
     page_statuses: list[PageStatus] = []
     instrument_groups_by_id = {
         g["instrument"].id: g for g in instrument_groups
@@ -709,10 +709,12 @@ def _surface_context(
         if inst.id not in instrument_groups_by_id:
             continue
         position = position_by_id[inst.id]
+        short = (inst.short_label or "").strip()
+        label = f"#{position} {short}" if short else f"#{position}"
         page_statuses.append(
             PageStatus(
                 position=position,
-                label=f"Page {position}",
+                label=label,
                 state=_page_status_for_group(
                     instrument_groups_by_id[inst.id]["rows"]
                 ),

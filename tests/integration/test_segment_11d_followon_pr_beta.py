@@ -172,7 +172,7 @@ def test_page_status_pill_is_not_started_on_fresh_session(
     # `pill-empty` is the v2 alias mapped to amber for "needs-action"
     # states; matches the spec's pill-class table for not_started.
     assert 'class="pill pill-empty">' in body
-    assert "Page 1: not started" in body
+    assert "#1: not started" in body
 
 
 # ── Per-page status pill — Save flips to in_progress ──────────────────
@@ -207,7 +207,7 @@ def test_page_status_pill_flips_to_in_progress_after_save(
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
     # `pill-warning` is the v2 alias for "in progress" (amber).
     assert 'class="pill pill-warning">' in body
-    assert "Page 1: in progress" in body
+    assert "#1: in progress" in body
 
 
 def test_page_status_pill_flips_to_complete_when_required_filled(
@@ -237,7 +237,7 @@ def test_page_status_pill_flips_to_complete_when_required_filled(
     )
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
     assert 'class="pill pill-success">' in body
-    assert "Page 1: complete" in body
+    assert "#1: complete" in body
 
 
 # ── Per-page status pill — Submit flips to submitted ──────────────────
@@ -277,7 +277,7 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
     # `pill-success` is the v2 green pill.
     assert 'class="pill pill-success">' in body
-    assert "Page 1: submitted" in body
+    assert "#1: submitted" in body
 
 
 # ── Session-wide rollup pill + per-instrument completion pills ────────
