@@ -8,19 +8,33 @@ re-export wall so external callers — both
 ``from app.services.instruments import <symbol>`` — continue to
 work byte-identical to the pre-package shape.
 
-Final layout (post-PR-4):
+Final layout (post-2026-05-09 §12.A split + 2026-05-28 Segment
+18N PR 2 carve):
 
 - ``_state.py`` — cross-slice plumbing
   (``saved_state_for_session`` + ``_instrument_label``); read by
   every other slice, never reads from them.
-- ``_rtds.py`` — Response Type Definitions catalog + operator
-  CRUD (PR 1).
 - ``_display_fields.py`` — display-field constants, locked-row
-  gates, operator CRUD, lazy-seeding helpers (PR 2).
+  gates, operator CRUD, lazy-seeding helpers.
 - ``_response_fields.py`` — response-field catalog, slug helpers,
-  operator CRUD, ``bulk_save_fields`` (PR 3).
+  operator CRUD, ``bulk_save_fields``,
+  ``validation_block_from_inline``, the response-field exception
+  family.
+- ``_band1.py`` — Band 1 link-rule editor (Link 1 / 2 / 3 form
+  parse + persistence + sample-reviewee resolver).
+- ``_band2.py`` — Band 2 state save + the Band 3 dual-write
+  (``_sync_response_fields_to_db`` + ``_sync_display_field_visibility``).
+  Carved out of ``_instrument_crud.py`` in Segment 18N PR 2.
+- ``_pagination.py`` — Segment 18M ordering + per-instrument
+  page-break helpers. Carved out of ``_instrument_crud.py`` in
+  Segment 18N PR 2.
 - ``_instrument_crud.py`` — instrument lifecycle, default-
-  instrument seeding, session-level bulk toggles (PR 4).
+  instrument seeding, Band 1 group / unit-of-review helpers,
+  per-instrument column-widths writer, session-level bulk
+  accepting / visibility toggles. The Response Type Definitions
+  slice and the ``_rtds.py`` file retired 2026-05-26 alongside
+  the ``response_type_definitions`` table — type + bounds + list
+  options now live inline on ``InstrumentResponseField``.
 """
 
 from __future__ import annotations
@@ -83,15 +97,15 @@ from ._response_fields import (
     update_response_field,
 )
 
-# Instrument CRUD (sliced in PR 4 — the final slice).
+# Instrument CRUD — the core lifecycle, default-instrument
+# seeding, Band 1 group / unit-of-review helpers, per-instrument
+# column-widths writer, and session-level bulk toggles.
 from ._instrument_crud import (
     DEFAULT_INSTRUMENT_NAME,
     GROUP_KIND_SENTINEL,
     bulk_set_accepting,
     bulk_set_visibility,
-    clear_page_break,
     create_instrument,
-    create_page_break_after,
     decode_group_kind,
     delete_instrument,
     encode_group_kind,
@@ -103,13 +117,21 @@ from ._instrument_crud import (
     has_unpinned,
     is_configured,
     pin_rule_set,
-    reorder_instruments,
-    set_band2_state,
     set_column_widths,
     set_group_boundary,
     set_unit_of_review,
     update_instrument_description,
     update_short_label,
+)
+# Band 2 state + the Band 3 dual-write — carved into
+# ``_band2.py`` in Segment 18N PR 2.
+from ._band2 import set_band2_state
+# Segment 18M instrument ordering + per-instrument page-break
+# helpers — carved into ``_pagination.py`` in Segment 18N PR 2.
+from ._pagination import (
+    clear_page_break,
+    create_page_break_after,
+    reorder_instruments,
 )
 from ._band1 import (
     Band1ParseError,
