@@ -1,23 +1,24 @@
 # Segment 18K — Completing instrument visibility (Band 3) on the reviewer surface
 
-> **Status: in flight.** Stub created 2026-05-27; Parts 1 + 2 +
-> Part 4 (visible / hidden / round-trip scenarios) shipped same
-> day (PR #1487). Part 3 policy choices confirmed 2026-05-27.
-> Part 5 ("show hidden fields on summary") retired by policy —
-> hidden = gone, internally preserved for audit. **Still
-> pending:** PR 5 (reviewer-surface banner naming dropped
-> fields on next load after a visible-flag flip). PR 4 + the
-> two Part 4 scenarios shipped 2026-05-28 with the
-> ``acknowledged_drop`` flag on the band2-state endpoint and a
-> ``confirm()`` in the Band 2 pill click handler; the Part 4
+> **Status: shipped 2026-05-28.** Stub created 2026-05-27; Parts
+> 1 + 2 + Part 4 (visible / hidden / round-trip scenarios)
+> shipped same day (PR #1487). Part 3 policy choices confirmed
+> 2026-05-27. Part 5 of the original sketch ("show hidden fields
+> on summary") retired by policy — hidden = gone, internally
+> preserved for audit. PR 4 + the two Part 4 follow-up scenarios
+> shipped 2026-05-28 with the ``acknowledged_drop`` flag on the
+> band2-state endpoint and a ``confirm()`` in the Band 2 pill
+> click handler. PR 5 (reviewer-surface banner naming dropped
+> fields on next load after a visible-flag flip) shipped
+> 2026-05-28; banner suppressed in ``preview_mode``. PR 6
+> (replicate copies ``visible`` as-is) shipped 2026-05-28 —
+> and also corrected the prior claim that the behaviour was
+> already in place; ``replicate_instrument`` was silently
+> resetting cloned response fields to the column default. All
 > tests live in
 > ``tests/integration/test_reviewer_summary_visibility.py``
-> alongside the visibility-filter regressions. PR 6 (replicate
-> copies ``visible`` as-is) shipped 2026-05-28 — and also
-> corrected the prior claim that the behaviour was already in
-> place; ``replicate_instrument`` was silently resetting cloned
-> response fields to the column default. Audit confirming this
-> state: 2026-05-28.
+> (12 tests) alongside the unit + builder-route regressions.
+> Final audit: 2026-05-28.
 >
 > **Predecessors.** Segment 17B Phase 2 shipped the reviewer
 > summary page; Segment 18J Wave 6 cluster B re-aligned the
@@ -250,9 +251,18 @@ status lines above).
    names it. Folds in the two Part 4 scenarios — pill_state stays
    ``submitted`` after the flip; group-scoped fan-out honours the
    filter.
-5. **PR 5 — pending.** Reviewer-surface banner naming the
-   dropped field(s) on the next load after a visible-flag flip.
-   (Part 3 item 2.)
+5. **PR 5 — shipped.** Reviewer-surface banner naming the
+   dropped field(s) on the next load after a visible-flag flip
+   (Part 3 item 2). ``_surface_context`` queries every
+   ``InstrumentResponseField`` referenced by the reviewer's
+   saved ``Response`` rows + ``.where(visible.is_(False))``,
+   passes ``(instrument_label, field_label)`` pairs through as
+   ``dropped_fields``. Template renders a ``banner banner-info``
+   above ``rs-page-header``; suppressed in ``preview_mode``.
+   Pinned by three integration tests in
+   ``test_reviewer_summary_visibility.py``: banner shows /
+   doesn't show when no dropped fields / disappears when
+   visibility is restored.
 6. **PR 6 — shipped.** `_instrument_crud.py` `replicate_instrument`
    now copies `InstrumentResponseField.visible` as-is from source
    to clone; pinned by
