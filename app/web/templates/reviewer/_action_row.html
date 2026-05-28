@@ -11,9 +11,13 @@
    target exists and as a disabled ``<button>`` otherwise so the
    layout stays stable across page boundaries.
 
-   Suppressed entirely in ``preview_mode`` — preview is a synthetic
-   read-only render with no Save / Submit semantics and no page
-   nav (it's a single composite preview).
+   In ``preview_mode`` (operator-side full preview, Segment 18Q):
+   Save / Discard / Submit render as inert disabled ``<button>``
+   so the operator sees the action-row chrome exactly as the
+   reviewer would, but cannot accidentally drive a write through
+   the operator-side preview route. Prev / Next remain functional
+   and point at the operator-side preview URLs that the surface
+   context resolved via its ``page_url_builder``.
 
    Required context:
      - session: ReviewSession
@@ -22,18 +26,23 @@
      - action_row_position: "top" or "bottom" (default treated as
        "bottom"). Top is flush left; bottom is flush right.
 #}
-{% if not preview_mode %}
 <div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
   <div class="rs-action-row-controls">
-    <button class="btn" type="submit" data-rs-save>Save</button>
-    <a class="btn secondary"
-       href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}"
-       data-rs-discard>Discard</a>
-    <button class="btn"
-            type="submit"
-            formaction="/reviewer/sessions/{{ session.id }}/submit">
-      Submit
-    </button>
+    {% if preview_mode %}
+      <button class="btn" type="button" disabled aria-disabled="true">Save</button>
+      <button class="btn secondary" type="button" disabled aria-disabled="true">Discard</button>
+      <button class="btn" type="button" disabled aria-disabled="true">Submit</button>
+    {% else %}
+      <button class="btn" type="submit" data-rs-save>Save</button>
+      <a class="btn secondary"
+         href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}"
+         data-rs-discard>Discard</a>
+      <button class="btn"
+              type="submit"
+              formaction="/reviewer/sessions/{{ session.id }}/submit">
+        Submit
+      </button>
+    {% endif %}
   </div>
   {% if page_count > 1 %}
     <span class="rs-action-divider" aria-hidden="true"></span>
@@ -52,4 +61,3 @@
     </div>
   {% endif %}
 </div>
-{% endif %}
