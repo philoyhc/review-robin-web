@@ -1060,9 +1060,10 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 19, 20** (18K + 18L + 18M closed 2026-05-28; 18J retired
-2026-05-26). No global ordering constraints beyond the few dep
-chains called out at the bottom of this file.
+**14B, 18N, 19, 20** (18K + 18L + 18M closed 2026-05-28; 18J
+retired 2026-05-26; 18N is the post-28may-assessment housekeeping
+stub). No global ordering constraints beyond the few dep chains
+called out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1085,6 +1086,23 @@ chains called out at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
+
+- **18N — Housekeeping (file splits + reviewer-surface asymmetry)**
+  *(stub created 2026-05-28)*. Pure structural / consistency
+  cleanup follow-up to the 28may codebase assessment §5 watch
+  items. **Track A** — align the reviewer-surface page-validity
+  check between the GET (`routes_reviewer/_surface.py:784`) and
+  POST save (`:993`) handlers behind one helper; the asymmetry
+  is currently unreachable but inconsistent. **Track B** —
+  split `services/instruments/_instrument_crud.py` (1,928 LOC)
+  into per-concern slices (`_band2.py`, `_pagination.py`,
+  optionally `_bulk_toggles.py`), bringing it from ~1.9k down
+  to ~700; optional PR for `routes_operator/_instruments.py`
+  (1,497 LOC) if it's still oversized after Track B PR 1.
+  Best landed before 14B Part A so split files absorb email-
+  wiring code in the post-split shape. Mirrors the 17A
+  pattern.
+  **Plan:** `guide/segment_18N_housekeeping.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
