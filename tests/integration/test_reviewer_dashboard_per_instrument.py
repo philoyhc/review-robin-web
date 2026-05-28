@@ -1,23 +1,25 @@
-"""Slice 6 coverage for the reviewer dashboard per-instrument
-grouping.
+"""Reviewer dashboard sub-rows — one per operator-defined
+reviewer page (Segment 18L multi-page surface).
 
-Single-instrument sessions render byte-identical to their pre-15B
-shape (invariant #3 from the segment plan). Multi-instrument
-sessions grow stacked sub-rows — one per instrument — each with
-its own progress pill computed from
-``responses.reviewer_session_state_per_instrument``.
+Segment 15B Slice 6 introduced per-instrument sub-rows; Segment
+18L's multi-page reviewer surface (one page per run of instruments
+between Segment 18M page breaks) repointed the deep link at
+``/reviewer/sessions/{id}/{page_n}``, so the sub-rows now reflect
+*pages* rather than individual instruments.
 
 Tests pin:
 
-- N==1 session → no ``dashboard-instrument-row`` markup (the
-  byte-identical contract for single-instrument sessions).
-- N>1 session → one sub-row per instrument; pills reflect the
-  per-instrument state independently.
-- Per-instrument "no assignments" state surfaces when the
-  reviewer is excluded from an instrument by its pinned rule.
-- Per-instrument link points at the correct
-  ``/reviewer/sessions/{id}/{position}`` URL (the same 1-based
-  position the reviewer surface uses).
+- N==1 instrument session → no ``dashboard-page-row`` markup
+  (the byte-identical contract for single-instrument sessions).
+- N>1 instruments + single page (no operator page break) → no
+  sub-rows; the sub-row would just restate the parent session row
+  at the same ``/{id}/1`` URL.
+- M>1 pages → one sub-row per page, labelled
+  ``"Page N: #n {short_label}, ..."``; pill rolls up the page's
+  instruments.
+- Per-page "no assignments" surfaces when every instrument on
+  the page has zero assignments for this reviewer.
+- Per-page link points at ``/reviewer/sessions/{id}/{page_n}``.
 """
 from __future__ import annotations
 
@@ -152,8 +154,8 @@ def test_single_instrument_dashboard_renders_no_sub_rows(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """N==1 session: dashboard renders byte-identical to its
-    pre-15B shape — no ``dashboard-instrument-row`` markup, no
-    sub-row links."""
+    pre-15B shape — no ``dashboard-page-row`` markup, no sub-row
+    links."""
 
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="rae-s1")
@@ -176,19 +178,20 @@ def test_single_instrument_dashboard_renders_no_sub_rows(
     body = rae_client.get("/reviewer").text
 
     assert review_session.name in body
-    # The per-instrument sub-row markup is absent.
-    assert "dashboard-instrument-row" not in body
+    # The sub-row markup is absent.
+    assert "dashboard-page-row" not in body
 
 
-def test_multi_instrument_dashboard_renders_one_sub_row_per_instrument(
+def test_multi_instrument_single_page_dashboard_renders_no_sub_rows(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """N>1 session: one ``dashboard-instrument-row`` per instrument,
-    each with its own pill + a deep link to the per-position
-    surface URL."""
+    """N>1 instruments on a single page (no operator page break):
+    no sub-rows. A sub-row would just restate the parent session
+    row at the same ``/{id}/1`` URL — the parent row already
+    carries the session-wide pill."""
 
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="rae-m1")
@@ -219,26 +222,128 @@ def test_multi_instrument_dashboard_renders_one_sub_row_per_instrument(
     rae_client = make_client(rae)
     body = rae_client.get("/reviewer").text
 
-    assert body.count("dashboard-instrument-row") == 2
-    # The peer-survey sub-row carries its label; per 17B Phase 2 PR A
-    # the deep link only renders when the parent session is at least
-    # ``open`` (this fixture force-marks ``validated`` without a
-    # clean activation so the link is absent), but the label and
-    # row markup still appear.
-    assert "peer" in body
+    # Single page (no break) → no sub-row markup.
+    assert "dashboard-page-row" not in body
 
 
-def test_sub_row_state_pulls_from_per_instrument_projection(
+def test_multi_page_dashboard_renders_one_sub_row_per_page(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Submitting on instrument A but not B → A's sub-row shows
-    ``submitted`` while B's shows ``not started``. The session-
-    level pill rolls up to ``in progress`` per the existing
-    aggregate logic; the per-instrument breakdown lets the reviewer
-    see which instrument needs work."""
+    """Two instruments split across two pages (page break on the
+    second) → two sub-rows, each linking to ``/reviewer/.../{page_n}``
+    and labelled ``"Page N: #n {short_label}, ..."``."""
+
+    operator = make_client(alice)
+    review_session = _make_session_with_pair(operator, db, code="rae-m1-pg")
+    [first] = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    second = _add_instrument(
+        db,
+        review_session=review_session,
+        name="Peer survey",
+        short_label="peer",
+    )
+    # Page-break before instrument #2 — so page 1 = first only,
+    # page 2 = second only.
+    second.starts_new_page = True
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=first
+    )
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=second
+    )
+    review_session.assignment_mode = "rule_based"
+    db.flush()
+    db.commit()
+    _activate(operator, review_session)
+
+    rae_client = make_client(rae)
+    body = rae_client.get("/reviewer").text
+
+    # Two sub-rows.
+    assert body.count("dashboard-page-row") == 2
+    # Labels: "Page N: #n {short_label}, ...". The default seed
+    # instrument has no short_label so falls back to bare "#1".
+    assert "Page 1: #1" in body
+    assert "Page 2: #2 peer" in body
+
+
+def test_multi_page_dashboard_renders_deep_link_to_page_url(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the session is fully activated and ``link_enabled``,
+    each per-page sub-row renders an ``<a href>`` pointing at
+    ``/reviewer/sessions/{id}/{page_n}`` — not the older per-
+    instrument-position URL the dashboard used pre-18L."""
+    operator = make_client(alice)
+    review_session = _make_session_with_pair(
+        operator, db, code="rae-pg-link"
+    )
+    [first] = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    second = _add_instrument(
+        db,
+        review_session=review_session,
+        name="Peer survey",
+        short_label="peer",
+    )
+    second.starts_new_page = True
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=first
+    )
+    _add_assignment_for_reviewer(
+        db, review_session=review_session, instrument=second
+    )
+    review_session.assignment_mode = "rule_based"
+    db.flush()
+    db.commit()
+    # Pin Full Matrix on every instrument so activate succeeds and
+    # the dashboard renders linked sub-rows.
+    from ._full_matrix import pin_full_matrix_on_all_instruments
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    _activate(operator, review_session)
+    db.refresh(review_session)
+    if review_session.activated_at is None:
+        pytest.skip(
+            "Activation didn't reach `ready` in this fixture; the "
+            "label / sub-row count test above already pins the "
+            "non-linked render path."
+        )
+
+    rae_client = make_client(rae)
+    body = rae_client.get("/reviewer").text
+    assert f'href="/reviewer/sessions/{review_session.id}/1"' in body
+    assert f'href="/reviewer/sessions/{review_session.id}/2"' in body
+
+
+def test_sub_row_state_rolls_up_per_page(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Submitting all of instrument A but none of instrument B,
+    with each on its own page, → page 1 (A) reads ``submitted``
+    and page 2 (B) reads ``not started``. Per-page rollup mirrors
+    the surface's ``_page_status_for_group`` — uniform across the
+    page's instruments carry through; mixed reads ``in progress``.
+    """
 
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="rae-m2")
@@ -255,9 +360,7 @@ def test_sub_row_state_pulls_from_per_instrument_projection(
         name="Peer survey",
         short_label="peer",
     )
-    from app.services.instruments import (
-        DEFAULT_INSTRUMENT_NAME,  # noqa: F401
-    )
+    second.starts_new_page = True
     from datetime import datetime, timezone
 
     a_first = _add_assignment_for_reviewer(
@@ -284,14 +387,13 @@ def test_sub_row_state_pulls_from_per_instrument_projection(
     rae_client = make_client(rae)
     body = rae_client.get("/reviewer").text
 
-    # Both sub-rows render. Order: first instrument (rule_based seed
-    # default instrument) then "Peer survey".
-    sub_rows = body.split('class="dashboard-instrument-row"')
+    # Both sub-rows render in page order: page 1 (first instrument)
+    # then page 2 (peer survey).
+    sub_rows = body.split('class="dashboard-page-row"')
     assert len(sub_rows) == 3  # one head split + two row chunks
-    # First instrument: required fields filled + submitted_at →
-    # ``submitted`` pill.
+    # Page 1: required fields filled + submitted_at → ``submitted``.
     assert ">submitted</span>" in sub_rows[1]
-    # Second instrument (peer): no responses → ``not started``.
+    # Page 2: no responses on its instrument → ``not started``.
     assert ">not started</span>" in sub_rows[2]
 
 
@@ -301,11 +403,11 @@ def test_sub_row_renders_no_assignments_state_when_reviewer_excluded(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When the reviewer has zero assignments on one of the
-    session's instruments (e.g. excluded by that instrument's
-    pinned rule), the sub-row renders the ``no assignments`` pill
-    — visually distinct from ``not started`` so the operator can
-    spot the per-instrument gap on the reviewer's own dashboard."""
+    """When the reviewer has zero assignments on every instrument
+    on a page (e.g. excluded by that instrument's pinned rule), the
+    page sub-row renders the ``no assignments`` pill — visually
+    distinct from ``not started`` so the reviewer can spot the
+    per-page gap on their own dashboard."""
 
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="rae-m3")
@@ -316,15 +418,16 @@ def test_sub_row_renders_no_assignments_state_when_reviewer_excluded(
             )
         ).scalars()
     )
-    _add_instrument(
+    second = _add_instrument(
         db,
         review_session=review_session,
         name="Peer survey",
         short_label="peer",
     )
+    second.starts_new_page = True
     # Only one assignment — on ``first``. Nothing on ``second`` for
-    # Rae; the per-instrument resolver should report
-    # ``no assignments`` for the second sub-row.
+    # Rae; the per-page resolver should report ``no assignments``
+    # for page 2.
     _add_assignment_for_reviewer(
         db, review_session=review_session, instrument=first
     )
@@ -337,9 +440,8 @@ def test_sub_row_renders_no_assignments_state_when_reviewer_excluded(
     body = rae_client.get("/reviewer").text
 
     assert "no assignments" in body
-    # The sub-row that carries the ``no assignments`` pill is the
-    # peer-survey one (the second instrument).
-    sub_rows = body.split('class="dashboard-instrument-row"')
+    sub_rows = body.split('class="dashboard-page-row"')
+    # Page 2 (peer-survey) is the one with no assignments.
     assert ">no assignments</span>" in sub_rows[2]
     # The ``(N/M)`` muted suffix is suppressed on no-assignments
     # rows — there's no useful count to show.
