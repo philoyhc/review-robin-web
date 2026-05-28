@@ -6050,3 +6050,31 @@ def test_card_title_save_endpoint_persists_short_label(
     assert response.status_code == 200
     db.refresh(new_model)
     assert new_model.short_label is None
+
+
+def test_band2_preview_ships_textarea_rows_for_helper(
+    client: TestClient, db: Session
+) -> None:
+    """The Band 2 preview-cell builder
+    (``buildResponseFieldPreviewCell`` in
+    ``instruments_index.html``) calls a JS port of
+    ``views/_instruments.py::textarea_rows_for`` so the preview
+    textarea height matches what the reviewer surface will render.
+    Regression guard for both: the helper is defined on the page
+    AND the cell builder invokes it (so a future refactor that
+    deletes the helper or stops calling it surfaces here).
+    """
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="band2-preview-rows"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Helper is defined.
+    assert "function textareaRowsFor(" in body
+    # And called from the cell builder. The relevant constants
+    # match the Python side; if you tune one, tune both.
+    assert "DEFAULT_RESPONSE_COL_WIDTH_PX = 224" in body
+    assert "PX_PER_CHAR = 8" in body
+    assert "TYPICAL_RESPONSE_FRACTION = 0.75" in body
+    assert "textareaRowsFor(maxLenInt, colPx)" in body
