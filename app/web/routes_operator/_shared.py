@@ -101,6 +101,17 @@ _templates.env.globals["gmt_offset_zone_label"] = (
 _templates.env.globals["format_datetime_local"] = (
     date_formatting.format_datetime_local
 )
+# Per-numeric-column ``ch`` width for the fixed-layout group-scoped
+# instrument table (Segment 13C). Registered on the reviewer
+# ``_templates`` as well; the operator preview route
+# (``_preview_surface.py``) renders ``reviewer/review_surface.html``
+# through this operator instance, and the template references this
+# helper inside the group-scoped branch — so without this global,
+# previewing a session whose page-2+ holds a group-scoped instrument
+# 500s on render.
+_templates.env.globals["numeric_column_ch_width"] = (
+    views.numeric_column_ch_width
+)
 
 
 # ------------------------------------------------------------------ #
