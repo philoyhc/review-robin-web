@@ -279,6 +279,42 @@ def test_multi_page_nav_links_point_at_operator_preview(
     assert "Page 2 of 2" in body2
 
 
+def test_group_scoped_instrument_on_later_page_renders(
+    client: TestClient, db: Session
+) -> None:
+    """Regression — ``review_surface.html`` calls the
+    ``numeric_column_ch_width`` Jinja global inside the
+    group-scoped branch (``{% if group.is_group %}``). That global
+    is registered on both the operator and reviewer template
+    instances; without it on operator's, a session whose later
+    pages hold a group-scoped instrument 500s on render from the
+    operator preview route — silently fine on page 1 if all the
+    group-scoped instruments live on page 2+."""
+    session = _make_session_with_reviewer(
+        client, db, code="prev-s-grp", extra_instruments=1
+    )
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == session.id)
+        ).scalars().all(),
+        key=lambda i: (i.order, i.id),
+    )
+    # Flip the second instrument into a group-scoped one and split
+    # so it lands on page 2.
+    instruments[1].group_kind = "r1"
+    db.flush()
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(db, instrument=instruments[0])
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview-surface/2"
+    )
+    assert response.status_code == 200, response.text
+    # The second instrument's section should render on page 2.
+    assert 'data-rs-position="2"' in response.text
+
+
 def test_prev_next_preserve_reviewer_email_query(
     client: TestClient, db: Session
 ) -> None:
