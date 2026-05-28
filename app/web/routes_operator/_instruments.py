@@ -1055,9 +1055,21 @@ async def instrument_band2_state(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="band2-state body must be a JSON object",
         )
+    # Segment 18K PR 4 — Band 2 chip un-pin confirm guard. The
+    # operator-side JS shows a ``confirm()`` naming the field +
+    # response count before flipping a chip whose backing row has
+    # saved responses; on OK it re-POSTs with
+    # ``acknowledged_drop=true``. Top-level boolean (rather than
+    # per-field) matches the one-chip-click-at-a-time UX. Forged /
+    # buggy clients that omit it land on the 409 path below.
+    acknowledged_drop = bool(body.get("acknowledged_drop", False))
     try:
         instruments_service.set_band2_state(
-            db, instrument=instrument, state=body, actor=user
+            db,
+            instrument=instrument,
+            state=body,
+            actor=user,
+            acknowledged_drop=acknowledged_drop,
         )
     except instruments_service.ResponsesPresentError as exc:
         # Wave 3 PR i — cascade-blocked delete. The Band 3 row's X
@@ -1072,6 +1084,21 @@ async def instrument_band2_state(
                 "responses": exc.cascaded_response_count,
             },
         ) from exc
+    except instruments_service.ResponseFieldDropAcknowledgementRequired as exc:
+        # Segment 18K PR 4 — un-pin against a field with saved
+        # responses, without the ``acknowledged_drop`` flag. JSON
+        # body so the client confirm dialog can name the field +
+        # response count. The normal operator-flow JS confirms +
+        # re-POSTs with the flag set; this 409 is defence-in-depth
+        # for direct / forged API hits.
+        return JSONResponse(
+            {
+                "error": "drop_acknowledgement_required",
+                "field_label": exc.field_label,
+                "responses": exc.cascaded_response_count,
+            },
+            status_code=status.HTTP_409_CONFLICT,
+        )
     except instruments_service.ResponseFieldShapeChangeError as exc:
         # Wave 3 PR ii — operator tried to change data_type / bounds
         # on a row with saved responses. The Band 3 data_type select

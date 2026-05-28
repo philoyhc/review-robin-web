@@ -1003,6 +1003,7 @@ def set_band2_state(
     instrument: Instrument,
     state: dict[str, Any],
     actor: User,
+    acknowledged_drop: bool = False,
 ) -> Instrument:
     """Persist the operator's Band 2 selections + response-field
     definitions on a new-model instrument card.
@@ -1174,6 +1175,7 @@ def set_band2_state(
             sanitised_rfs=incoming_rfs,
             previous_json_ids=previous_ids,
             actor=actor,
+            acknowledged_drop=acknowledged_drop,
         )
         # Now that ``_sync_response_fields_to_db`` has back-filled
         # ids on newly-created rows, re-key any name-bound widths
@@ -1339,6 +1341,7 @@ def _sync_response_fields_to_db(
     sanitised_rfs: list[dict[str, Any]],
     previous_json_ids: set[int],
     actor: User,
+    acknowledged_drop: bool = False,
 ) -> None:
     """Wave 3 PR i — dual-write the operator-authored response-
     field JSON entries through to real ``InstrumentResponseField``
@@ -1366,6 +1369,7 @@ def _sync_response_fields_to_db(
     """
     from app.services.instruments._response_fields import (
         InvalidResponseFieldShapeError,
+        ResponseFieldDropAcknowledgementRequired,
         ResponseFieldShapeChangeError,
         ResponsesPresentError,
         validation_block_from_inline,
@@ -1422,7 +1426,32 @@ def _sync_response_fields_to_db(
         # Band 2 response-pill "selected" flag flows through to
         # the new visible column. Mirrors how Gap 1 wired the
         # display-field pill to InstrumentDisplayField.visible.
-        field.visible = bool(rf.get("selected", True))
+        #
+        # Segment 18K PR 4 — Visibility-drop confirm guard.
+        # Un-pinning a chip whose field has saved responses drops
+        # the column from every reviewer-facing render (surface,
+        # summary HTML, reviewer-record CSV). Underlying ``Response``
+        # rows stay in the DB for the operator-side audit / bundle
+        # export (Part 5 contract), but the reviewer can no longer
+        # see them. Operator must acknowledge per Part 3 item 1.
+        prior_visible = bool(field.visible)
+        incoming_visible = bool(rf.get("selected", True))
+        if (
+            prior_visible
+            and not incoming_visible
+            and not acknowledged_drop
+        ):
+            drop_response_count = db.execute(
+                select(func.count(Response.id)).where(
+                    Response.response_field_id == field.id
+                )
+            ).scalar_one()
+            if drop_response_count:
+                raise ResponseFieldDropAcknowledgementRequired(
+                    field_label=field.label,
+                    count=drop_response_count,
+                )
+        field.visible = incoming_visible
         help_text_raw = rf.get("help_text")
         field.help_text = (
             str(help_text_raw)[:1000] if help_text_raw else None

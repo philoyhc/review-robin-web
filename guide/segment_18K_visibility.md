@@ -5,17 +5,19 @@
 > day (PR #1487). Part 3 policy choices confirmed 2026-05-27.
 > Part 5 ("show hidden fields on summary") retired by policy —
 > hidden = gone, internally preserved for audit. **Still
-> pending:** PR 4 (operator-side confirm guard on un-pinning a
-> Band 2 response chip with saved responses), PR 5 (reviewer-
-> surface banner naming dropped fields on next load after a
-> visible-flag flip), plus the two Part 4 scenarios that PR 4's
-> flip path will exercise (operator toggles-off after reviewer
-> submit; group-scoped instrument fan-out under visibility
-> flips). PR 6 (replicate copies `visible` as-is) shipped
-> 2026-05-28 — and also corrected the prior claim that the
-> behaviour was already in place; `replicate_instrument` was
-> silently resetting cloned response fields to the column
-> default. Audit confirming this state: 2026-05-28.
+> pending:** PR 5 (reviewer-surface banner naming dropped
+> fields on next load after a visible-flag flip). PR 4 + the
+> two Part 4 scenarios shipped 2026-05-28 with the
+> ``acknowledged_drop`` flag on the band2-state endpoint and a
+> ``confirm()`` in the Band 2 pill click handler; the Part 4
+> tests live in
+> ``tests/integration/test_reviewer_summary_visibility.py``
+> alongside the visibility-filter regressions. PR 6 (replicate
+> copies ``visible`` as-is) shipped 2026-05-28 — and also
+> corrected the prior claim that the behaviour was already in
+> place; ``replicate_instrument`` was silently resetting cloned
+> response fields to the column default. Audit confirming this
+> state: 2026-05-28.
 >
 > **Predecessors.** Segment 17B Phase 2 shipped the reviewer
 > summary page; Segment 18J Wave 6 cluster B re-aligned the
@@ -160,12 +162,14 @@ view:
 - Operator toggles a Band 2 response chip off **after**
   reviewer has submitted: column drops, but the reviewer's
   `pill_state` stays `submitted` (no recall trigger) — the
-  reviewer is still "done". **Pending.**
+  reviewer is still "done". **Shipped 2026-05-28**
+  (`test_pill_state_stays_submitted_after_chip_un_pin_post_submit`).
 - Operator toggles a Band 2 response chip **back on**: the
   preserved value rehydrates into the summary column. Saved
   in the DB, never lost. **Shipped.**
 - Group-scoped instruments: same visibility rule applies; the
-  group-fan-out invariant carries through. **Pending.**
+  group-fan-out invariant carries through. **Shipped 2026-05-28**
+  (`test_group_scoped_instrument_visibility_filter_applies`).
 
 Each scenario lands a parametrised test in
 `tests/integration/test_reviewer_summary_visibility.py` (new file).
@@ -232,9 +236,20 @@ status lines above).
 3. **PR 3 — shipped (#1487).** `spec/instruments.md` Band 3
    section rewrite + the new "Per-field visibility lives on the
    Band 2 pill" cross-reference subsection. (Part 2.)
-4. **PR 4 — pending.** Operator-side confirm guard on un-pinning
-   a Band 2 response chip that has saved responses. (Part 3
-   item 1.)
+4. **PR 4 — shipped.** Operator-side confirm guard on un-pinning
+   a Band 2 response chip that has saved responses (Part 3 item
+   1). New ``ResponseFieldDropAcknowledgementRequired`` exception
+   in ``_response_fields.py``; the band2-state endpoint requires
+   ``acknowledged_drop=true`` in the JSON body when flipping
+   ``visible: True → False`` on a field with saved responses,
+   otherwise 409 with a structured detail naming the field and
+   response count. JS side: ``newModelToggleBand2Pill`` does a
+   ``confirm()`` before the visual flip (canceled → revert, no
+   POST). View-layer ``response_count`` annotation surfaces the
+   count on the pill (``data-response-count``) so the dialog
+   names it. Folds in the two Part 4 scenarios — pill_state stays
+   ``submitted`` after the flip; group-scoped fan-out honours the
+   filter.
 5. **PR 5 — pending.** Reviewer-surface banner naming the
    dropped field(s) on the next load after a visible-flag flip.
    (Part 3 item 2.)
