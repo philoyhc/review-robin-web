@@ -64,27 +64,27 @@ def test_page_button_label_treats_blank_short_label_as_unset() -> None:
             "Peer review",
             "Rate teammates on collaboration.",
             InstrumentHeading(
-                title="Page #2: Peer review",
+                title="#2: Peer review",
                 subtitle="Rate teammates on collaboration.",
             ),
         ),
         (
             "Peer review",
             None,
-            InstrumentHeading(title="Page #2: Peer review", subtitle=None),
+            InstrumentHeading(title="#2: Peer review", subtitle=None),
         ),
         (
             None,
             "Rate teammates on collaboration.",
             InstrumentHeading(
-                title="Page #2",
+                title="#2",
                 subtitle="Rate teammates on collaboration.",
             ),
         ),
         (
             None,
             None,
-            InstrumentHeading(title="Page #2", subtitle=None),
+            InstrumentHeading(title="#2", subtitle=None),
         ),
     ],
 )
@@ -93,7 +93,7 @@ def test_instrument_heading_multi_instrument_cases(
     description: str | None,
     expected: InstrumentHeading,
 ) -> None:
-    """Multi-instrument always has a `Page #N` prefix in the title; the
+    """Multi-instrument always has a `#N` prefix in the title; the
     subtitle is the description verbatim when present."""
     inst = _instrument(short_label=short_label, description=description)
     assert (
@@ -156,7 +156,7 @@ def test_instrument_heading_treats_blank_strings_as_unset() -> None:
     ) == InstrumentHeading(title=None, subtitle=None)
     assert instrument_heading(
         instrument=inst, position=2, total_count=2
-    ) == InstrumentHeading(title="Page #2", subtitle=None)
+    ) == InstrumentHeading(title="#2", subtitle=None)
 
 
 # ── placeholder_for_field ────────────────────────────────────────────────

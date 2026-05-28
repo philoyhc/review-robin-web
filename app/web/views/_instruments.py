@@ -69,10 +69,10 @@ class InstrumentHeading:
 
     | total_count | short_label | description | title | subtitle |
     |---|---|---|---|---|
-    | >1 | set     | set       | "Page #{N}: {short_label}" | description |
-    | >1 | set     | unset     | "Page #{N}: {short_label}" | None |
-    | >1 | unset   | set       | "Page #{N}"                | description |
-    | >1 | unset   | unset     | "Page #{N}"                | None |
+    | >1 | set     | set       | "#{N}: {short_label}" | description |
+    | >1 | set     | unset     | "#{N}: {short_label}" | None |
+    | >1 | unset   | set       | "#{N}"                | description |
+    | >1 | unset   | unset     | "#{N}"                | None |
     | 1  | set     | set       | "{short_label}"            | description |
     | 1  | set     | unset     | "{short_label}"            | None |
     | 1  | unset   | set       | "{description}" *          | None *     |
@@ -127,8 +127,8 @@ def instrument_heading(
         return InstrumentHeading(title=None, subtitle=None)
     # Multi-instrument: position prefix is the safety-net default.
     if short:
-        return InstrumentHeading(title=f"Page #{position}: {short}", subtitle=desc)
-    return InstrumentHeading(title=f"Page #{position}", subtitle=desc)
+        return InstrumentHeading(title=f"#{position}: {short}", subtitle=desc)
+    return InstrumentHeading(title=f"#{position}", subtitle=desc)
 
 
 @dataclass(frozen=True)
