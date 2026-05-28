@@ -8,11 +8,14 @@
 > pending:** PR 4 (operator-side confirm guard on un-pinning a
 > Band 2 response chip with saved responses), PR 5 (reviewer-
 > surface banner naming dropped fields on next load after a
-> visible-flag flip), PR 6 (replicate-semantics test), plus the
-> two Part 4 scenarios that PR 4's flip path will exercise
-> (operator toggles-off after reviewer submit; group-scoped
-> instrument fan-out under visibility flips). Audit confirming
-> this state: 2026-05-28.
+> visible-flag flip), plus the two Part 4 scenarios that PR 4's
+> flip path will exercise (operator toggles-off after reviewer
+> submit; group-scoped instrument fan-out under visibility
+> flips). PR 6 (replicate copies `visible` as-is) shipped
+> 2026-05-28 — and also corrected the prior claim that the
+> behaviour was already in place; `replicate_instrument` was
+> silently resetting cloned response fields to the column
+> default. Audit confirming this state: 2026-05-28.
 >
 > **Predecessors.** Segment 17B Phase 2 shipped the reviewer
 > summary page; Segment 18J Wave 6 cluster B re-aligned the
@@ -122,10 +125,15 @@ land **yes**:
    only. (The reviewer's previously saved answer is preserved
    internally for audit per Part 5 below; the banner just makes
    the disappearance visible.)
-3. **Yes — Replicate copies `visible` as-is.** Current behaviour
-   in `_instrument_crud.py` already does this; the segment lands a
-   test pinning it. A cloned card inherits its source's per-field
-   visibility unchanged.
+3. **Yes — Replicate copies `visible` as-is.** Shipped via PR 6:
+   `replicate_instrument` in `_instrument_crud.py` previously
+   omitted `visible` from the cloned `InstrumentResponseField`
+   ctor, so every clone reset to the column default `True`
+   regardless of source. PR 6 adds `visible=field.visible` to
+   the clone path and pins it with
+   `test_replicate_instrument_clones_response_field_visibility`.
+   A cloned card now inherits its source's per-field visibility
+   unchanged.
 
 ### Part 4 — Reviewer summary cross-instrument coverage — partially shipped 2026-05-27
 
@@ -230,8 +238,10 @@ status lines above).
 5. **PR 5 — pending.** Reviewer-surface banner naming the
    dropped field(s) on the next load after a visible-flag flip.
    (Part 3 item 2.)
-6. **PR 6 — pending.** Replicate-semantics test pinning
-   `_instrument_crud.py` clone-with-`visible`-as-is behaviour.
+6. **PR 6 — shipped.** `_instrument_crud.py` `replicate_instrument`
+   now copies `InstrumentResponseField.visible` as-is from source
+   to clone; pinned by
+   `test_replicate_instrument_clones_response_field_visibility`.
    (Part 3 item 3.)
 
 ## Cross-refs

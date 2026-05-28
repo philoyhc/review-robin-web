@@ -607,6 +607,65 @@ def test_replicate_instrument_clones_content(
     assert event.detail["refs"]["instrument_id"] == copy.id
 
 
+def test_replicate_instrument_clones_response_field_visibility(
+    client: TestClient, db: Session
+) -> None:
+    """Per Segment 18K Part 3 item 3: Replicate copies each
+    ``InstrumentResponseField.visible`` flag as-is. A hidden field on
+    the source clones as hidden; a visible field clones as visible."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _make_session(client, db, code="replicate-vis-1")
+    source = _instrument(db, review_session.id)
+    db.add_all(
+        [
+            InstrumentResponseField(
+                instrument_id=source.id,
+                field_key="hidden_field",
+                label="Hidden field",
+                required=False,
+                order=10,
+                visible=False,
+            ),
+            InstrumentResponseField(
+                instrument_id=source.id,
+                field_key="visible_field",
+                label="Visible field",
+                required=False,
+                order=11,
+                visible=True,
+            ),
+        ]
+    )
+    db.commit()
+    source_id = source.id
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{source_id}/replicate",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    copy = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.id != source_id,
+        )
+    ).scalar_one()
+
+    cloned_by_key = {
+        rf.field_key: rf
+        for rf in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == copy.id
+            )
+        ).scalars()
+    }
+    assert cloned_by_key["hidden_field"].visible is False
+    assert cloned_by_key["visible_field"].visible is True
+
+
 def test_add_new_model_creates_instrument(
     client: TestClient, db: Session
 ) -> None:

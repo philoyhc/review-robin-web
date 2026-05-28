@@ -303,9 +303,10 @@ def replicate_instrument(
     immediately after the source (Segment 13C PR 3).
 
     Copies the description, the response fields (incl. each
-    field's help text), the display fields (incl. each row's
-    ``visible`` Include flag), ``group_kind``, and
-    ``sort_display_fields``. The copy's name is the source name +
+    field's help text and per-field ``visible`` flag), the display
+    fields (incl. each row's ``visible`` Include flag),
+    ``group_kind``, and ``sort_display_fields``. The copy's name
+    is the source name +
     " (copy)"; it starts ``accepting_responses=False`` and carries
     **no** pinned rule (``rule_set_id``) — the operator pins one
     before opening it. Assignment rows are cloned from the source
@@ -366,6 +367,7 @@ def replicate_instrument(
                 ),
                 help_text=field.help_text,
                 help_text_visible=field.help_text_visible,
+                visible=field.visible,
                 _inline_data_type=field._inline_data_type,
                 _inline_response_type=field._inline_response_type,
                 _inline_min=field._inline_min,
