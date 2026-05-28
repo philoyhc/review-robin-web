@@ -479,7 +479,7 @@ names):
 
 | `data_type` | Render |
 |---|---|
-| `String` with `validation.max_length > 100` | `<textarea rows="2">` (with `min-height: 44px`); preserves stored value. |
+| `String` with `validation.max_length > 100` | `<textarea rows="N">` where `N` is derived from `max_length` and the operator-set column width via `views.textarea_rows_for` (see below); `min-height: 44px` floor; `resize: vertical` so the corner-drag doesn't push the column out of its operator-defined width; preserves stored value. |
 | `String` with `validation.max_length ≤ 100` | `<input type="text">`; the `maxlength` attribute reflects `validation.max_length`. |
 | `Integer`, `Decimal` | `<input type="number">`; `min` / `max` / `step` reflect `validation`. |
 | `List` | `<select>` over `validation.choices`, with an empty leading option (`value=""`) representing "no answer". |
@@ -488,6 +488,36 @@ names):
 When the assignment isn't accepting (deadline closed or operator-
 paused), every input renders `disabled`.
 
+**Textarea height derivation (2026-05-28).** Long-text textareas
+size their initial `rows` attribute so a typical response (assumed
+to cluster around 75% of the configured `max_length`) fits at the
+column's current width:
+
+```
+typical_chars = max_length * 0.75
+chars_per_row = max(20, column_width_px / 8)
+rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
+```
+
+`column_width_px` comes from `Instrument.column_widths["rf_<id>"]`
+(the per-cell width the operator sets via Band 2's column
+grippers); when unset, the default is 224px (matching the
+`td.rs-textlong { min-width: 14em }` CSS at the default 16px body
+font). The 8 px/char ratio is calibrated against the proportional
+sans-serif body font stack; the 0.75 factor is named at
+`views/_instruments.py::_TYPICAL_RESPONSE_FRACTION`. Reviewers
+retain native textarea corner-drag at runtime — this only sets
+the initial height. The Band 2 preview cell in
+`templates/operator/instruments_index.html` ships a JS port of
+the same formula (constants kept in sync) so the operator's
+preview matches what the reviewer will see.
+
+**Cell vertical alignment (2026-05-28).** Cells inside
+`.rs-instrument-group` and `[data-new-model-band2-preview]` carry
+`vertical-align: top` so multi-row textareas anchor at the top of
+the row rather than centering vertically next to single-line
+neighbours.
+
 Stored values are read from `Response` rows keyed by
 `(assignment_id, response_field_id)` and rendered as the input's
 `value` (or selected `<option>` for `List`, or textarea body for the
@@ -495,8 +525,7 @@ long `String` variant).
 
 ### View shape
 
-The route builds the table data in `_surface_context` (and its
-operator-side mirror `build_preview_context`) as
+The route builds the table data in `_surface_context` as
 `instrument_groups: list[InstrumentGroup]` where each group has:
 
 ```python
@@ -570,9 +599,11 @@ reviewer-surface specifics:
   `_compute_missing_required` reports one entry per
   `(instrument, group_key)` — a bad or missing group answer
   surfaces once, not once per member.
-- **Operator preview** still renders group-scoped instruments
-  per-reviewee (un-collapsed) — a known follow-up;
-  `build_preview_context` sets `is_group: False`.
+- **Operator preview** renders group-scoped instruments collapsed
+  the same way the reviewer surface does — it goes through the
+  same `_surface_context` path (Segment 18Q follow-on retired the
+  earlier synthetic `build_preview_context` builder that used to
+  un-collapse).
 
 The collapsed row carries the same dict shape plus a
 `group_identity` block (`tag_line` / `member_names` /
@@ -701,12 +732,23 @@ session can have multiple reviewers, each tied to a distinct user.
 
 ## Operator preview mode
 
-The Previews-hub surface card at `/operator/sessions/{id}/previews`
-(Segment 11F PR C) renders this template into an iframe `srcdoc`
-via `build_preview_context`. The legacy standalone
-`/operator/sessions/{id}/preview` (singular) is a permanent (308)
-redirect to `/previews#reviewer-surface` and no longer renders the
-template directly. In preview mode:
+The operator-side preview lives at
+`/operator/sessions/{id}/preview-surface/{page_n}` (Segment 18Q
+follow-on, 2026-05-28) and is reached from the Previews hub
+picker card's "Open full preview" button. The route renders this
+template through the same `_surface_context` plumbing the live
+reviewer route uses, with three `preview_mode=True` adjustments:
+the deadline observer is skipped (no DB mutation on a deadline
+crossing), `accepting=True` is forced on every row so the form
+renders interactive regardless of session lifecycle, and the
+action-row Prev/Next URLs are rewritten via a callback so they
+point back at the operator-side preview route. The Segment 11F
+PR C iframe-embedded surface card on the Previews hub was retired
+in the same follow-on (PR #1531); the legacy `/preview` (singular)
+URL is a permanent (308) redirect whose target was 2026-05-28-
+repointed from `/previews#reviewer-surface` to `/preview-surface/1`.
+
+In preview mode:
 
 - The chrome `top_bar` block calls `super()` so the operator chrome
   (with breadcrumb back to the session) renders instead of the
@@ -716,44 +758,29 @@ template directly. In preview mode:
   of the body: "**Preview** — not visible to reviewers. This page
   is operator-only and bypasses session-status / deadline /
   acceptance gates."
-- The reviewer write-path forms are suppressed (no Save / Submit /
-  Discard / Clear). The `<form>` wrapper is replaced by a plain
+- The reviewer write-path `<form>` wrapper is replaced by a plain
   `<div>` so no `formaction=` can re-target a write endpoint. The
-  Page N buttons still render in their slot so the operator can
-  walk through every instrument to verify setup — clicking them
-  toggles visibility client-side exactly as on the reviewer
-  surface. With Save / Discard / Submit gone, both action rows
-  collapse to just the Page N buttons (no vertical divider, since
-  there's nothing to separate). Danger zone doesn't render.
-- Inputs render disabled.
-- The overview card renders without the per-page status
-  pills (preview is read-only and synthetic; per-page state is
-  moot).
-- **Synthetic-row padding.** Up to three real assignments render
-  first (sorted by `Assignment.id` ascending). When there are fewer
-  than three, the table is padded with synthetic placeholders
-  (`Sample Reviewee 1/2/3` / `sample{n}@example.edu` / per-source
-  sample values) so the operator always has something to look at.
-  Synthetic rows expose only the attributes the template actually
-  reads (`assignment.id` negative to avoid colliding with real
-  autoincrement ids; `reviewee.name` / `email_or_identifier`); a
-  unit test guards the exposed shape against silent
-  AttributeErrors when a future template edit adds a new attribute
-  reference.
+  action row still renders (so the operator sees the form chrome
+  exactly as the reviewer would), but Save / Discard / Submit
+  render as inert disabled `<button>` elements; Prev / Next remain
+  functional and walk the operator through every operator-defined
+  page. The danger zone (Clear all responses) doesn't render.
+- Inputs render enabled (because `accepting=True` is forced), so
+  the operator can type into the form to test it; their keystrokes
+  go nowhere because the surrounding `<form>` is a `<div>` and the
+  Save/Discard/Submit buttons are disabled.
+- The overview card renders normally — `_surface_context` builds
+  the same per-page status pills the reviewer would see.
+- **Real-row rendering.** The preview shows the picker-selected
+  reviewer's real assignments (no synthetic-row padding). When
+  `?reviewer_email=…` is unset, the route defaults to the first
+  reviewer in the session (alphabetical-by-email); an unmatched
+  value redirects back to the Previews hub with the bad query
+  preserved so the picker's "No reviewer matched" hint renders.
 - **Read-only side-effects.** The preview GET emits no audit
-  events and **does not** call
-  `lifecycle.observe_deadline(...)` — opening a preview must never
-  flip `accepting_responses=false` even if the session deadline
-  has lapsed.
-
-The Previews-hub surface card lives at
-`/operator/sessions/{id}/previews?reviewer_email=…#reviewer-surface`
-(Segment 11F PR C). The picker-selected reviewer is the only state
-the URL carries; Page #N navigation inside the iframe runs through
-the existing reviewer-surface page-toggle JS (the iframe's
-`sandbox="allow-scripts"` keeps it alive). The retired
-`/preview` (singular) 308-redirects there for bookmarks /
-external links.
+  events and **does not** call `lifecycle.observe_deadline(...)`
+  — opening a preview must never flip `accepting_responses=false`
+  even if the session deadline has lapsed.
 
 ---
 
