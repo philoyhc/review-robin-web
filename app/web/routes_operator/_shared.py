@@ -16,13 +16,15 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import HTTPException, Request, UploadFile, status
+from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import ReviewSession, User
+from app.db.models import Instrument, ReviewSession, User
+from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
@@ -34,7 +36,7 @@ from app.web.date_filters import (
     format_date_filter,
     format_datetime_filter,
 )
-from app.web.deps import request_correlation_id
+from app.web.deps import request_correlation_id, require_session_operator
 
 
 # ------------------------------------------------------------------ #
@@ -278,6 +280,48 @@ def _redirect_keeping_selection(
         params.extend((key, value) for key, value in filter_params if value)
     params.extend(("selected", i) for i in selected_ids)
     url = base_url if not params else base_url + "?" + urlencode(params)
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _require_instrument_in_session(
+    instrument_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    db: Session = Depends(get_db),
+) -> tuple[Instrument, ReviewSession]:
+    """Resolve an instrument by id scoped to the operator's session,
+    or 404. Lifted to ``_shared.py`` in Segment 18N PR 3 so the
+    Instruments-page slices (``_instruments.py``,
+    ``_instruments_band2.py``, ``_instruments_pagination.py``) can
+    all share the same dependency."""
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.id == instrument_id,
+            Instrument.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if instrument is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return instrument, review_session
+
+
+def _instruments_redirect(
+    session_id: int, fragment: str | None = None
+) -> RedirectResponse:
+    """Redirect to the Instruments index, optionally landing on an
+    in-page anchor.
+
+    Per-instrument actions (open / close / visibility / save / page
+    break) should pass ``fragment="instrument-{id}"`` so the
+    operator lands on the instrument they were just acting on
+    instead of being yanked to the top of the page. Bulk actions
+    (accepting / visibility all-on/off) pass no fragment — they
+    affect the whole list, so landing at the top is appropriate.
+
+    Lifted to ``_shared.py`` in Segment 18N PR 3 alongside
+    ``_require_instrument_in_session``."""
+    url = f"/operator/sessions/{session_id}/instruments"
+    if fragment:
+        url = f"{url}#{fragment}"
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
