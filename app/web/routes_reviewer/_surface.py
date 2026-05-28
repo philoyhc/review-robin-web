@@ -59,6 +59,7 @@ from app.web.routes_reviewer._shared import (
     _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD,
     _templates,
     reviewer_review_count_for_user,
+    validate_page_n,
 )
 
 router = APIRouter(prefix="/reviewer")
@@ -936,9 +937,7 @@ def review_surface(
             },
         )
     pages = _pages_for_session(db, review_session.id)
-    page_count = len(pages) or 1
-    if page_n < 1 or page_n > page_count:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    validate_page_n(page_n, pages)
     context = _surface_context(
         db=db,
         user=user,
@@ -990,8 +989,7 @@ async def reviewer_save(
         {k: v for k, v in form.items() if isinstance(v, str)}
     )
     pages = _pages_for_session(db, review_session.id)
-    if page_n < 1 or page_n > len(pages):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    validate_page_n(page_n, pages)
     target_instrument_ids = {inst.id for inst in pages[page_n - 1]}
     target_assignment_ids = {
         a.id

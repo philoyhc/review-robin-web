@@ -10,12 +10,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from collections.abc import Sequence
+
+from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, not_, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import InstrumentDisplayField, Reviewer, User
+from app.db.models import Instrument, InstrumentDisplayField, Reviewer, User
 from app.web import views
 from app.web.date_filters import (
     display_timezone_context_processor,
@@ -49,6 +52,32 @@ _templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
 # ``display_timezone`` context key the processor above injects.
 _templates.env.filters["format_datetime"] = format_datetime_filter
 _templates.env.filters["format_date"] = format_date_filter
+
+
+def validate_page_n(
+    page_n: int, pages: Sequence[Sequence[Instrument]]
+) -> int:
+    """Validate a 1-based reviewer-surface ``page_n`` against the
+    session's page list, raising 404 if it's out of range.
+
+    Segment 18N PR 1 — single source of truth for the page-validity
+    check the reviewer-surface GET, the save POST, and the operator-
+    side preview route all need to perform. Previously the GET +
+    preview clamped ``page_count = len(pages) or 1`` (so a session
+    with zero instruments would still respond on ``/1`` with an
+    empty render) while the save POST hard-failed with ``len(pages)``
+    (404 on empty). The asymmetry was unreachable in practice
+    because session-setup validation refuses to activate an empty
+    session, but the defensive shape was inconsistent and would
+    have masked a real bug if upstream gating ever changed.
+
+    Strict semantics: an empty pages list yields 404 for every
+    method (rather than rendering empty content on ``/1``). Tracks
+    the 28may codebase assessment §5 weakness.
+    """
+    if not pages or page_n < 1 or page_n > len(pages):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return page_n
 
 
 def reviewer_review_count_for_user(db: Session, user: User) -> int:
