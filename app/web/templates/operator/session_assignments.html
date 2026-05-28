@@ -353,8 +353,8 @@
             <td data-sort-value="{{ 'yes' if assignment.include else 'no' }}">
               <span class="pill {{ 'pill-info' if assignment.include else 'pill-empty' }}">{{ "yes" if assignment.include else "no" }}</span>
             </td>
-            <td data-sort-value="{{ assignment.instrument.short_label or assignment.instrument.name }}">
-              {{ assignment.instrument.short_label or assignment.instrument.name }}
+            <td data-sort-value="{{ instrument_label(assignment.instrument) }}">
+              {{ instrument_label(assignment.instrument) }}
             </td>
           </tr>
         {% endfor %}

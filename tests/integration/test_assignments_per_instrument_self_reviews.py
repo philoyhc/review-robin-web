@@ -311,8 +311,10 @@ def test_status_block_uses_short_label_when_available(
     ctx = build_assignments_page_context(db, review_session)
     by_id = {b.instrument_id: b for b in ctx.status_blocks}
 
-    # inst_a has no short_label → falls back to ``instrument.name``.
-    assert by_id[inst_a.id].instrument_label == inst_a.name
+    # inst_a has no short_label → falls back to ``Instrument_{id}``
+    # per the 2026-05-28 operator-identifier policy
+    # (``app/services/instruments/_state.py::_instrument_label``).
+    assert by_id[inst_a.id].instrument_label == f"Instrument_{inst_a.id}"
     # inst_b's short_label wins.
     assert by_id[inst_b.id].instrument_label == "peer"
 

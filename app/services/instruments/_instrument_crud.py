@@ -273,7 +273,7 @@ def create_instrument(
     audit.write_event(
         db,
         event_type="instrument.created",
-        summary=f"Created instrument {instrument.name}",
+        summary=f"Created instrument {_instrument_label(instrument)}",
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(
@@ -504,7 +504,7 @@ def update_instrument_description(
     audit.write_event(
         db,
         event_type="instrument.described",
-        summary=f"Updated description on instrument {instrument.name}",
+        summary=f"Updated description on instrument {_instrument_label(instrument)}",
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"description": [old_value, new_value]}),
