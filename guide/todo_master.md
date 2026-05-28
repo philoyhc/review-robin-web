@@ -1098,8 +1098,10 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 19, 20** (18K + 18L + 18M + 18N closed 2026-05-28; 18J
-retired 2026-05-26). No global ordering constraints beyond the
+**URL remodel, 14B, 19, 20** (18K + 18L + 18M + 18N closed
+2026-05-28; 18J retired 2026-05-26; URL remodel is the
+``/reviewer/`` → ``/me/`` aggressive-rename stub best landed
+before 14B Part A). No global ordering constraints beyond the
 few dep chains called out at the bottom of this file.
 
 #### Numbered queue
@@ -1123,6 +1125,18 @@ few dep chains called out at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
+
+- **URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
+  rename)** *(stub created 2026-05-28)*. Independent prep for
+  the participant-model arc; doesn't depend on or block any
+  participant feature. One small PR sized at ~1-2 hours of
+  mechanical work (no compatibility shim — beta-state-no-real-
+  users assumption). Best landed **before 14B Part A** so the
+  invitation URLs that go out for real on day 1 ship with the
+  future-correct URL prefix. Lifted out of
+  ``guide/participant_model_upgrade.md`` §5.1 on 2026-05-28
+  so the rename can land independently.
+  **Plan:** ``guide/url_remodel.md``.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
