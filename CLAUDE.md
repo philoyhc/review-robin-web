@@ -82,8 +82,8 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    `_setup_reviewers.py`, `_setup_reviewees.py`,
    `_setup_relationships.py`, `_setup_invite.py`,
    `_assignments.py`, `_rule_builder.py`, `_operations.py`,
-   `_workflow.py`, `_instruments.py`, `_response_types.py`,
-   `_extracts.py`, `_sys_admin.py`), with
+   `_preview_surface.py`, `_workflow.py`, `_instruments.py`,
+   `_response_types.py`, `_extracts.py`, `_sys_admin.py`), with
    shared plumbing (the
    `Jinja2Templates` instance, lifecycle / edit-lock guards, Quick
    Setup cookie naming, and the cross-slice Setup-roster import /

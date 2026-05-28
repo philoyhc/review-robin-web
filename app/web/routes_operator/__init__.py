@@ -28,6 +28,7 @@ from . import (
     _instruments,
     _lobby,
     _operations,
+    _preview_surface,
     _quick_setup,
     _session_home,
     _settings,
@@ -54,6 +55,7 @@ router.include_router(_setup_relationships.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
 router.include_router(_operations.router)
+router.include_router(_preview_surface.router)
 router.include_router(_instruments.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)

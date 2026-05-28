@@ -48,6 +48,15 @@
             sandbox="allow-scripts"
             srcdoc="{{ surface_html }}"
             title="Reviewer surface preview"></iframe>
+    <p class="form-help surface-preview-open-full">
+      The iframe above shows a single composite page with synthetic
+      placeholders. Open the full preview to flip between
+      operator-defined pages with the same template the reviewer
+      will see — Save / Discard / Submit render disabled.
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/preview-surface/1{% if picker.current %}?reviewer_email={{ picker.current.email|urlencode }}{% endif %}"
+         target="_blank" rel="noopener">Open full preview</a>
+    </p>
   {% endif %}
 
   <p class="form-help surface-preview-footer">

@@ -23,6 +23,7 @@ longer possible after a session-wide POST.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -374,11 +375,25 @@ def _surface_context(
     bad_values: dict[tuple[int, str], str] | None = None,
     show_incomplete_marks: bool = False,
     cookies: dict[str, str] | None = None,
+    preview_mode: bool = False,
+    page_url_builder: Callable[[int], str] | None = None,
 ) -> dict:
-    lifecycle.observe_deadline(
-        db, review_session, correlation_id=request_correlation_id()
-    )
-    db.refresh(review_session)
+    # ``preview_mode`` (operator-side full preview, Segment 18Q):
+    # render the reviewer surface against the same plumbing the
+    # reviewer hits, but bypass the deadline-observer (which
+    # mutates the DB on a crossing) and force ``accepting=True``
+    # on every row so the form renders interactive regardless of
+    # session lifecycle. Page nav URLs are rewritten via
+    # ``page_url_builder`` so Prev/Next point back at the
+    # operator-side preview route. The template's ``preview_mode``
+    # branch swaps ``<form>`` for ``<div>`` and renders
+    # Save/Discard/Submit as inert disabled buttons, so the
+    # ``accepting=True`` override cannot leak writes.
+    if not preview_mode:
+        lifecycle.observe_deadline(
+            db, review_session, correlation_id=request_correlation_id()
+        )
+        db.refresh(review_session)
     assignments = _load_assignments_with_relations(
         db, session_id=review_session.id, reviewer_id=reviewer.id
     )
@@ -447,7 +462,12 @@ def _surface_context(
         instrument = instruments.get(assignment.instrument_id)
         accepting = bool(
             instrument
-            and lifecycle.session_accepts_responses(review_session, instrument)
+            and (
+                preview_mode
+                or lifecycle.session_accepts_responses(
+                    review_session, instrument
+                )
+            )
         )
         if accepting:
             any_accepting = True
@@ -741,14 +761,24 @@ def _surface_context(
     ]
     instrument_groups.sort(key=lambda g: g["position"])
 
-    prev_page_url = (
-        f"/reviewer/sessions/{review_session.id}/{safe_page_n - 1}"
-        if safe_page_n > 1 else None
-    )
-    next_page_url = (
-        f"/reviewer/sessions/{review_session.id}/{safe_page_n + 1}"
-        if safe_page_n < page_count else None
-    )
+    if preview_mode and page_url_builder is not None:
+        prev_page_url = (
+            page_url_builder(safe_page_n - 1) if safe_page_n > 1 else None
+        )
+        next_page_url = (
+            page_url_builder(safe_page_n + 1)
+            if safe_page_n < page_count
+            else None
+        )
+    else:
+        prev_page_url = (
+            f"/reviewer/sessions/{review_session.id}/{safe_page_n - 1}"
+            if safe_page_n > 1 else None
+        )
+        next_page_url = (
+            f"/reviewer/sessions/{review_session.id}/{safe_page_n + 1}"
+            if safe_page_n < page_count else None
+        )
 
     return {
         "user": user,
@@ -775,6 +805,15 @@ def _surface_context(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
         ),
+        "preview_mode": preview_mode,
+        # ``preview_mode_full`` differentiates the operator-side full
+        # preview (Segment 18Q — real plumbing via ``_surface_context``,
+        # gets the action row rendered with inert write buttons +
+        # functional Prev/Next) from the legacy synthetic iframe
+        # preview built by ``build_preview_context`` (which sets
+        # ``preview_mode=True`` but leaves this False, suppressing
+        # the action row in the iframe srcdoc).
+        "preview_mode_full": preview_mode,
     }
 
 
