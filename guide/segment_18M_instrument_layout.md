@@ -1,15 +1,17 @@
 # Segment 18M — Operator-side instrument ordering + page breaks
 
-> **Status: PRs 0 + 1 + 2 shipped (2026-05-27); PR 3
-> remaining and blocked on 18L starting.** Decisions 1–9
-> locked. The operator-side surface — collapsible
-> instrument cards, drag-and-drop reorder, page-break
-> cards, +Page break / +Instrument per-card buttons, full
-> collapse-state preservation on reorder + reload — is
-> live on the Setup → Instruments page. PR 3 (operator
-> preview honours the break flag) deferred until 18L's
-> single-page reviewer surface lands, since the preview
-> reuses the reviewer-side render.
+> **Status: all PRs shipped.** PRs 0 + 1 + 2 shipped
+> 2026-05-27; PR 3 (operator preview honours the break flag)
+> landed indirectly when the Segment 18Q follow-on retired
+> the iframe preview and replaced it with the operator-side
+> ``/preview-surface/{page_n}`` route, which reuses 18L's
+> ``_pages_for_session()`` and ``_surface_context()`` — so
+> the break flag is honoured by the preview without any 18M-
+> owned code change. Test coverage at
+> ``tests/integration/test_operator_preview_surface.py``
+> includes multi-page scenarios with operator-defined
+> breaks. Decisions 1–9 locked. Audit confirming this
+> closure: 2026-05-28.
 >
 > **Predecessors.** Segment 13D / Wave 5 collapsed the
 > instrument card model into a single new-model card; Segment
@@ -507,13 +509,26 @@ _(none — all locked below; see decisions 2–9.)_
    just-saved cards).
 
 3. **PR 3 — operator preview honours the break flag
-   (blocked).** Wait for 18L's single-page reviewer
-   surface to land; both the reviewer surface and the
-   operator preview consume the same render path. When
-   18L's surface walks instruments in order and emits
-   `<hr>` separators between pages, the preview will
-   inherit the same behaviour without additional code —
-   only test coverage will need to land here.
+   (shipped indirectly via Segment 18Q follow-on).** The
+   plan called for the operator preview to inherit 18L's
+   break-honouring render without additional code. The
+   pre-18Q iframe preview built its own synthetic context
+   (`routes_reviewer/_preview.py::build_preview_context`)
+   that hard-coded `page_count=1` and `prev_page_url=None`
+   — so even after 18L shipped, the iframe never picked up
+   page breaks. The Segment 18Q follow-on retired the
+   iframe + that synthetic builder entirely and replaced
+   it with a new operator-side route
+   `/operator/sessions/{id}/preview-surface/{page_n}`
+   (`app/web/routes_operator/_preview_surface.py`) that
+   calls `_surface_context()` and `_pages_for_session()`
+   directly in `preview_mode=True`. Page breaks are now
+   honoured end-to-end in the operator preview, with
+   Prev/Next URLs that walk the operator-defined pages.
+   Test coverage at
+   `tests/integration/test_operator_preview_surface.py`
+   (multi-page navigation, page-break-on-page-2 regression
+   guard).
 
 ### Sequencing notes
 
