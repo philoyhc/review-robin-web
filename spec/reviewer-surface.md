@@ -463,13 +463,24 @@ In rendered order:
 4. **Status indicator** (trailing, narrow): only renders when
    `group.show_status_col` is true (i.e. when at least one row has
    `submitted_at` set or `show_acknowledge` is true after a
-   missing-required Submit attempt). Cell content:
+   missing-required Submit attempt). Cell content is icon-only:
    - `<span class="status-icon-complete" title="Complete">✓</span>`
      when the row's required fields are all filled.
    - `<span class="status-icon-incomplete" title="N required field
      missing">⚠</span>` when any required field is empty.
-   - Plus a small `.muted` line below the icon: `submitted YYYY-MM-DD HH:MM`
-     when `submitted_at` is set.
+
+   The per-row ``submitted YYYY-MM-DD HH:MM`` subtitle that used
+   to render under the icon retired 2026-05-28. Submit stamps a
+   single ``now()`` across every Response row for the reviewer in
+   one go (see ``app/services/responses.py`` submit path), so the
+   per-row timestamp is always either NULL or
+   uniform-for-the-reviewer — redundant with the session-level
+   submission timestamp shown on the reviewer summary page.
+   ``Response.submitted_at`` itself stays in the data model: it
+   drives ``is_complete`` rollups, audit-event counts, the
+   session-status pill (``Submitted`` / ``Saved but not
+   submitted`` / ``Draft``) on the overview card, and the summary
+   page's session-level timestamp.
 
 ### Cell renderers
 

@@ -280,7 +280,7 @@
                     aria-label="Sort by {{ cell.field.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
-              {% if group.show_status_col %}<th scope="col" class="rs-narrow rs-status-col"><span class="visually-hidden">Status</span></th>{% endif %}
+              {% if group.show_status_col %}<th scope="col" class="rs-narrow"><span class="visually-hidden">Status</span></th>{% endif %}
             </tr>
             </thead>
             <tbody class="rrw-rows">
@@ -427,18 +427,17 @@
                   </td>
                 {% endfor %}
                 {% if group.show_status_col %}
-                  {# Inner ``<div>`` carries the ``min-width`` so the
-                     column is sized for the timestamp regardless of
-                     whether this row currently shows one. ``min-width``
-                     on the ``<td>`` itself is unreliably honoured in
-                     ``table-layout: auto`` (CSS2.1 left it undefined,
-                     and many engines fall back to content-based
-                     sizing); a wrapping div with ``min-width`` is the
-                     robust pattern. See base.html for the derivation
-                     (``YYYY-MM-DD HH:MM`` @ 0.85em → 16ch + 1ch
-                     breathing → 17ch). #}
-                  <td class="rs-status-col" style="text-align: center;">
-                    <div style="min-width: 17ch;">
+                  {# Per-row status icons only — ✓ for complete,
+                     ⚠ for incomplete-with-required-missing. The
+                     per-row ``submitted YYYY-MM-DD HH:MM`` line
+                     retired 2026-05-28: submit stamps a single
+                     ``now()`` across every Response row for the
+                     reviewer in one go (see ``responses.py``
+                     submit path), so the per-row timestamp is
+                     always either NULL or uniform-for-the-
+                     reviewer — redundant with the session-level
+                     timestamp on the summary page. #}
+                  <td style="width: 1%; white-space: nowrap; text-align: center;">
                     {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
                         <span class="status-icon-complete" role="img"
@@ -449,14 +448,7 @@
                               aria-label="{{ missing_label }}"
                               title="{{ missing_label }}">⚠</span>
                       {% endif %}
-                      {% if row.submitted_at %}
-                        <div class="muted"
-                             style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
-                          submitted {{ row.submitted_at | format_datetime }}
-                        </div>
-                      {% endif %}
                     {% endif %}
-                    </div>
                   </td>
                 {% endif %}
               </tr>
