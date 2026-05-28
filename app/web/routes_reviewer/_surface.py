@@ -449,6 +449,37 @@ def _surface_context(
         for r in db.execute(stmt).scalars():
             response_rows[(r.assignment_id, r.response_field_id)] = r
 
+    # Segment 18K PR 5 — informational banner naming response
+    # fields the reviewer has previously saved an answer on but
+    # whose Band 2 chip the operator has since un-pinned. The
+    # values stay in the DB for the audit / bundle export (Part 5
+    # contract), but they no longer surface on form / summary /
+    # CSV — the banner makes that disappearance visible so the
+    # reviewer isn't silently missing answers. Read-only; no
+    # action required.
+    dropped_fields: list[tuple[str, str]] = []
+    if response_rows:
+        saved_field_ids = {r.response_field_id for r in response_rows.values()}
+        hidden_rows = db.execute(
+            select(InstrumentResponseField, Instrument)
+            .join(
+                Instrument,
+                InstrumentResponseField.instrument_id == Instrument.id,
+            )
+            .where(InstrumentResponseField.id.in_(saved_field_ids))
+            .where(InstrumentResponseField.visible.is_(False))
+        ).all()
+        for field, instrument in hidden_rows:
+            inst_label = (
+                instrument.short_label
+                or instrument.name
+                or f"Instrument {instrument.id}"
+            )
+            dropped_fields.append((inst_label, field.label))
+        # De-dupe (multiple Response rows on the same hidden field
+        # show up once) and stabilise order.
+        dropped_fields = sorted(set(dropped_fields))
+
     instruments = _instruments_for_session(db, review_session.id)
     pair_context_lookup = relationships_service.pair_context_lookup(
         db, review_session.id
@@ -795,6 +826,7 @@ def _surface_context(
         ),
         "any_accepting": any_accepting,
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
+        "dropped_fields": dropped_fields,
         "page_statuses": page_statuses,
         "session_status": _session_status(page_statuses),
         "current_page_n": safe_page_n,

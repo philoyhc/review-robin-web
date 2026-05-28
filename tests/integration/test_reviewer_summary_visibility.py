@@ -568,6 +568,106 @@ def test_pill_state_stays_submitted_after_chip_un_pin_post_submit(
     assert after.pill_state == "submitted"
 
 
+# ── Segment 18K PR 5 — reviewer-surface dropped-fields banner ─────────────
+
+
+def test_reviewer_surface_banner_names_dropped_field(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Segment 18K PR 5 — When an operator un-pins a Band 2 chip
+    on a field where the reviewer has a saved Response, the next
+    GET of the reviewer surface renders an informational banner
+    naming the field. Read-only contract: the values stay in the
+    DB for the audit path; the banner just surfaces the
+    disappearance so the reviewer isn't silently missing answers."""
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="vis-banner", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+    _hide_field(db, review_session, "comments")
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Some saved responses are no longer collected" in body
+    assert "<em>Comments</em>" in body
+    # Field rendered alongside an instrument-context label (the
+    # default seeded instrument has neither short_label nor name,
+    # so the fallback ``Instrument <id>`` runs).
+    assert "Instrument" in body
+
+
+def test_reviewer_surface_no_banner_when_no_dropped_fields(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """No saved responses on hidden fields → no banner. Sanity
+    check that the banner is properly gated and doesn't leak onto
+    every surface render."""
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="vis-banner-none", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Some saved responses are no longer collected" not in body
+
+
+def test_reviewer_surface_banner_disappears_when_visibility_restored(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Flipping ``visible`` back to ``True`` rehydrates the column
+    (already pinned by the existing round-trip tests) and removes
+    the dropped-fields banner — the previously-saved response is
+    no longer "dropped" because the operator restored the chip."""
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="vis-banner-restore", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+    _hide_field(db, review_session, "comments")
+
+    app.dependency_overrides[get_current_user] = lambda: rae
+    body_hidden = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Some saved responses are no longer collected" in body_hidden
+
+    # Restore visibility.
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    field = db.execute(
+        select(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == instrument.id)
+        .where(InstrumentResponseField.field_key == "comments")
+    ).scalar_one()
+    field.visible = True
+    db.commit()
+
+    body_restored = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Some saved responses are no longer collected" not in body_restored
+
+
 def test_group_scoped_instrument_visibility_filter_applies(
     client: TestClient,
     db: Session,

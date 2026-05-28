@@ -24,6 +24,24 @@
     </div>
   {% endif %}
 
+  {# Segment 18K PR 5 — informational banner naming response fields
+     the reviewer has previously saved an answer on but whose Band 2
+     chip the operator has since un-pinned. No action required; the
+     values stay in the DB for the audit path. Suppressed in
+     preview_mode (the preview surface is operator-only and bypasses
+     this contract). #}
+  {% if dropped_fields and not preview_mode %}
+    <div class="banner banner-info">
+      <strong>Some saved responses are no longer collected:</strong>
+      {% for inst_label, field_label in dropped_fields %}
+        <em>{{ field_label }}</em>
+        <span class="muted">({{ inst_label }})</span>{% if not loop.last %}, {% endif %}
+      {% endfor %}.
+      Your previous answers stay in the record but no longer appear
+      on this page, the summary, or the reviewer-record CSV.
+    </div>
+  {% endif %}
+
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
     {% if session.deadline %}
