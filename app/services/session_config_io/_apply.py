@@ -47,6 +47,7 @@ from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     _inline_kwargs_from_default_spec,
     _validation_block_from_default_spec,
+    validation_block_from_inline,
 )
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely.
@@ -112,6 +113,16 @@ class _ResponseFieldSpec:
     required: bool = False
     help_text: str | None = None
     help_text_visible: bool = True
+    # Segment 18N PR 5 — inline type + bounds + per-field visibility.
+    # Pre-PR-5 the round-trip lost every semantic bound (the
+    # serializer exported only the legacy ``response_type`` label
+    # after 18J Wave 2 PR iii-b4 retired the RTD table).
+    data_type: str | None = None
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+    list_csv: str | None = None
+    visible: bool = True
 
 
 @dataclass
@@ -125,6 +136,13 @@ class _InstrumentSpec:
     sort_display_fields: list[Any] | None = None
     group_kind: str | None = None
     rule_set_name: str | None = None
+    # Segment 18N PR 5 — three operator-input fields the pre-PR-5
+    # round-trip silently dropped: drag-gripper column widths, the
+    # 18M page-break flag, and the Band 2 chip selections + sample-
+    # reviewee pick JSON blob.
+    column_widths: dict[str, Any] | None = None
+    starts_new_page: bool = False
+    band2_state: dict[str, Any] | None = None
     display_fields: dict[int, _DisplayFieldSpec] = _dataclass_field(default_factory=dict)
     response_fields: dict[int, _ResponseFieldSpec] = _dataclass_field(default_factory=dict)
 
@@ -323,7 +341,7 @@ def _apply_session_kv(
         # Defensively ignored even if exported — these are
         # machine-derived per the inclusion model.
         return
-    if key == "deadline":
+    if key in {"deadline", "scheduled_activate_at", "responses_release_at"}:
         plan.session_overrides[key] = _parse_datetime(value)
         return
     if key == "display_timezone":
@@ -331,6 +349,39 @@ def _apply_session_kv(
         return
     if key == "self_reviews_active":
         plan.session_overrides[key] = _parse_bool(value, default=True)
+        return
+    # Segment 18N PR 5 — the 18G scheduled-event offset / list /
+    # retention columns. Round-trip uses typed-cell parses; the
+    # ``parse_and_validate_*`` editor-side helpers in
+    # ``scheduled_events`` enforce save-time constraints (lead
+    # time, format) the operator gets on a direct edit. A round-
+    # tripped value already passed those when it was originally
+    # set, so this path just persists the raw value back.
+    if key in {"invite_offsets", "reminder_offsets"}:
+        # Comma-separated offset strings on the editor form; the
+        # column stores ``list[str] | None``. Empty cell → None
+        # (operator cleared the field).
+        if not value:
+            plan.session_overrides[key] = None
+        else:
+            entries = [
+                entry.strip() for entry in value.split(",") if entry.strip()
+            ]
+            plan.session_overrides[key] = entries or None
+        return
+    if key in {"archive_offset", "release_until_offset"}:
+        plan.session_overrides[key] = value or None
+        return
+    if key == "retention_exception":
+        # Tri-state column (``Boolean | None``); empty cell → None,
+        # otherwise standard truthy parse.
+        plan.session_overrides[key] = _parse_bool(value) if value else None
+        return
+    if key == "retention_overrides":
+        # Open-ended JSON dict; empty cell → None to match the
+        # column's nullable shape.
+        parsed = _parse_json(value, default=None)
+        plan.session_overrides[key] = parsed if parsed else None
         return
     if key in {"name", "code", "description", "help_contact"}:
         plan.session_overrides[key] = value or None
@@ -418,6 +469,24 @@ def _apply_instrument_kv(
             rf.help_text = value or None
         elif attr == "help_text_visible":
             rf.help_text_visible = _parse_bool(value, default=True)
+        # Segment 18N PR 5 — inline type + bounds + per-field
+        # visibility. The serializer carries these as ``data_type``
+        # (capitalised: ``String`` / ``Integer`` / ``Decimal`` /
+        # ``List``), four ``decimal`` cells for the numeric
+        # bounds (NULL → empty cell), ``list_csv`` for List
+        # options, and a ``boolean`` for the Band 2 chip flag.
+        elif attr == "data_type":
+            rf.data_type = value or None
+        elif attr == "min":
+            rf.min = _parse_decimal(value)
+        elif attr == "max":
+            rf.max = _parse_decimal(value)
+        elif attr == "step":
+            rf.step = _parse_decimal(value)
+        elif attr == "list_csv":
+            rf.list_csv = value or None
+        elif attr == "visible":
+            rf.visible = _parse_bool(value, default=True)
         else:
             raise _ParseError(
                 f"unknown response_fields[] attribute {attr!r}"
@@ -447,6 +516,14 @@ def _apply_instrument_kv(
         instrument.group_kind = _parse_group_kind(value)
     elif attr == "rule_set_name":
         instrument.rule_set_name = value or None
+    # Segment 18N PR 5 — three operator-input fields the pre-PR-5
+    # round-trip silently dropped.
+    elif attr == "column_widths":
+        instrument.column_widths = _parse_json(value, default={}) or None
+    elif attr == "starts_new_page":
+        instrument.starts_new_page = _parse_bool(value)
+    elif attr == "band2_state":
+        instrument.band2_state = _parse_json(value, default={}) or None
     else:
         raise _ParseError(f"unknown instruments[] attribute {attr!r}")
     del data_type  # unused; type-checked by parser per attr
@@ -806,7 +883,23 @@ def _apply_session_metadata(
     # created session always carries a stamped timezone and a
     # default ``self_reviews_active``. Force-apply matches the
     # wholesale replace of every other config section.
-    for key in ("display_timezone", "self_reviews_active"):
+    #
+    # Segment 18N PR 5 — the eight 18G scheduled-event columns
+    # follow the same config-not-identity rule: force-apply on
+    # every import so a deleted offset on the source disappears
+    # from the destination too.
+    for key in (
+        "display_timezone",
+        "self_reviews_active",
+        "scheduled_activate_at",
+        "responses_release_at",
+        "invite_offsets",
+        "reminder_offsets",
+        "archive_offset",
+        "release_until_offset",
+        "retention_exception",
+        "retention_overrides",
+    ):
         if key in overrides:
             setattr(review_session, key, overrides[key])
             written += 1
@@ -969,6 +1062,11 @@ def _apply_instruments(
             sort_display_fields=spec.sort_display_fields,
             group_kind=spec.group_kind,
             rule_set_id=resolved_rule_set_id,
+            # Segment 18N PR 5 — three round-trip-added columns
+            # the pre-PR-5 import would silently NULL out.
+            column_widths=spec.column_widths,
+            starts_new_page=spec.starts_new_page,
+            band2_state=spec.band2_state,
         )
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
@@ -990,10 +1088,19 @@ def _apply_instruments(
             counts["display_fields"] += 1
 
         # Per-session ``response_type_definitions`` table retired
-        # 2026-05-26. ``response_type`` is now an opaque label
-        # stored verbatim into ``_inline_response_type``; bounds
-        # default to the Rating Integer 1-5 shape (operators edit
-        # inline post-import via the Band 3 row UI).
+        # 2026-05-26. Type + bounds + list options now live inline
+        # on ``_inline_*`` columns. Segment 18N PR 5 wires the
+        # serializer to carry those + ``visible`` + recomputes the
+        # ``validation`` JSON block from the imported inline state
+        # via the same helper the operator-edit path uses (so the
+        # reviewer surface, which reads ``validation``, lines up
+        # with the inline state after a round-trip).
+        #
+        # When the CSV doesn't carry inline state (pre-PR-5 export,
+        # or a hand-edited Settings CSV that omits the new keys),
+        # fall back to the seeded Rating-Integer 1-5 default so
+        # the import still produces a usable response field —
+        # matches the pre-PR-5 behaviour for backwards compat.
         default_spec = DEFAULT_RESPONSE_FIELDS[0]
         default_inline = _inline_kwargs_from_default_spec(default_spec)
         default_validation = _validation_block_from_default_spec(default_spec)
@@ -1002,6 +1109,25 @@ def _apply_instruments(
             inline_kwargs = dict(default_inline)
             if rf_spec.response_type:
                 inline_kwargs["_inline_response_type"] = rf_spec.response_type
+            if rf_spec.data_type is not None:
+                inline_kwargs["_inline_data_type"] = rf_spec.data_type
+                inline_kwargs["_inline_min"] = rf_spec.min
+                inline_kwargs["_inline_max"] = rf_spec.max
+                inline_kwargs["_inline_step"] = rf_spec.step
+                inline_kwargs["_inline_list_csv"] = rf_spec.list_csv
+                # Recompute the ``validation`` JSON to match the
+                # imported inline state — mirrors the dual-write
+                # the operator's Band 3 save path lands (Segment
+                # 18K's ``validation_block_from_inline`` seam).
+                validation_block = validation_block_from_inline(
+                    rf_spec.data_type,
+                    rf_spec.min,
+                    rf_spec.max,
+                    rf_spec.step,
+                    rf_spec.list_csv,
+                )
+            else:
+                validation_block = default_validation
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
@@ -1009,9 +1135,10 @@ def _apply_instruments(
                     label=rf_spec.label or "",
                     required=rf_spec.required,
                     order=m,
-                    validation=default_validation,
+                    validation=validation_block,
                     help_text=rf_spec.help_text,
                     help_text_visible=rf_spec.help_text_visible,
+                    visible=rf_spec.visible,
                     **inline_kwargs,
                 )
             )

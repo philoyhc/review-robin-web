@@ -384,6 +384,292 @@ def test_empty_rules_json_round_trips_unchanged(db: Session) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Segment 18N PR 5 — operator-input round-trip catch-up
+#
+# Pre-PR-5 the settings-CSV round-trip silently dropped:
+#   - The eight 18G ``ReviewSession`` scheduled-event columns
+#     (anchors + offsets + retention).
+#   - Every ``InstrumentResponseField`` inline type / min / max /
+#     step / list_csv / visible (the bounds went to the
+#     ``response_type_definitions`` table pre-18J Wave 2; the
+#     serializer wasn't updated when those bounds moved inline).
+#   - ``Instrument.column_widths`` (drag-gripper widths).
+#   - ``Instrument.starts_new_page`` (18M page-break flag).
+#   - ``Instrument.band2_state`` (Band 2 chip selections + sample-
+#     reviewee pick + sample group member ids).
+#
+# This block pins each gap end-to-end via a
+# serialize → apply round-trip onto a fresh session.
+# --------------------------------------------------------------------------- #
+
+
+def _populated_round_trip_session(
+    db: Session, *, code: str
+) -> ReviewSession:
+    """Build a session whose every operator-input field carries a
+    non-default value, exercising the full export / import surface
+    Segment 18N PR 5 closes the gap on."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _session(
+        db,
+        code=code,
+        description="Round-trip target",
+        deadline=dt.datetime(2026, 6, 15, 17, 0, tzinfo=dt.timezone.utc),
+        help_contact="help@example.edu",
+    )
+    # ``_session`` doesn't thread every column through to the model
+    # ctor — set the 18G + other non-default scalars directly.
+    # ``display_timezone`` stays at UTC so the round-trip's
+    # serialize-in-zone / parse-in-zone wall-clock stays stable
+    # for the test's ``==`` assertions (SQLite drops tzinfo on
+    # write so an aware aware-vs-naive comparison would fail
+    # even when the stored moment is correct).
+    review_session.display_timezone = "UTC"
+    review_session.self_reviews_active = False
+    review_session.scheduled_activate_at = dt.datetime(2026, 6, 1, 9, 0)
+    review_session.responses_release_at = dt.datetime(2026, 6, 30, 23, 59)
+    review_session.invite_offsets = ["-7d", "-1d"]
+    review_session.reminder_offsets = ["-3d", "-1d", "-12h"]
+    review_session.archive_offset = "+30d"
+    review_session.release_until_offset = "+14d"
+    review_session.retention_exception = True
+    review_session.retention_overrides = {"audit_log_days": 365}
+
+    instrument = Instrument(
+        session_id=review_session.id,
+        name="Round-trip instrument",
+        order=1,
+        accepting_responses=False,
+        responses_visible_when_closed=False,
+        column_widths={"identity": 200, "df_1": 150},
+        starts_new_page=False,
+        band2_state={
+            "selected_display_keys": ["reviewee.name"],
+            "sample_reviewee_name": "Carol",
+            "sample_group_member_ids": [42, 43],
+        },
+    )
+    db.add(instrument)
+    db.flush()
+    # Add two response fields with operator-edited inline shapes
+    # that exercise the inline type + bounds + visibility
+    # round-trip.
+    db.add_all(
+        [
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key="rating",
+                label="Rating",
+                required=True,
+                order=1,
+                _inline_data_type="Decimal",
+                _inline_response_type="Score",
+                _inline_min=0.0,
+                _inline_max=10.0,
+                _inline_step=0.5,
+                visible=True,
+            ),
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key="comments",
+                label="Comments",
+                required=False,
+                order=2,
+                _inline_data_type="String",
+                _inline_response_type="Long text",
+                _inline_max=500.0,
+                visible=False,  # un-pinned chip — round-trip must preserve
+            ),
+        ]
+    )
+    db.flush()
+    return review_session
+
+
+def test_round_trip_carries_18g_scheduled_event_columns(db: Session) -> None:
+    """The eight 18G ``ReviewSession`` columns survive a
+    serialize → apply round-trip onto a fresh session."""
+    src = _populated_round_trip_session(db, code="rt-18g-src")
+    rows = serialize_session_config(db, src)
+
+    dst = _bare_session(db, code="rt-18g-dst")
+    result = apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt@e.edu")
+    )
+    assert result.errors == []
+    db.expire(dst)
+    db.refresh(dst)
+
+    assert dst.scheduled_activate_at == src.scheduled_activate_at
+    assert dst.responses_release_at == src.responses_release_at
+    assert dst.invite_offsets == src.invite_offsets
+    assert dst.reminder_offsets == src.reminder_offsets
+    assert dst.archive_offset == src.archive_offset
+    assert dst.release_until_offset == src.release_until_offset
+    assert dst.retention_exception == src.retention_exception
+    assert dst.retention_overrides == src.retention_overrides
+
+
+def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
+    """``Instrument.column_widths`` (drag-gripper widths) survives
+    the round-trip — pre-PR-5 the silent drop meant every imported
+    session lost its preview-table layout."""
+    src = _populated_round_trip_session(db, code="rt-cw-src")
+    rows = serialize_session_config(db, src)
+    dst = _bare_session(db, code="rt-cw-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-cw@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
+
+
+def test_round_trip_carries_starts_new_page(db: Session) -> None:
+    """``Instrument.starts_new_page`` (the 18M page-break flag)
+    survives the round-trip. Tests both flag states across two
+    instruments."""
+    src = _session(db, code="rt-spn-src")
+    # Two instruments so the round-trip asserts BOTH flag values
+    # land correctly (the False case is easy to miss on a default-
+    # value-shaped column).
+    db.add_all(
+        [
+            Instrument(
+                session_id=src.id,
+                name="First",
+                order=1,
+                starts_new_page=False,
+            ),
+            Instrument(
+                session_id=src.id,
+                name="Second",
+                order=2,
+                starts_new_page=True,
+            ),
+        ]
+    )
+    db.flush()
+    rows = serialize_session_config(db, src)
+    dst = _bare_session(db, code="rt-spn-dst")
+    apply_session_config(
+        db,
+        review_session=dst,
+        rows=rows,
+        user=_user(db, email="rt-spn@e.edu"),
+    )
+    db.expire_all()
+    dst_instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == dst.id)
+            .order_by(Instrument.order)
+        ).scalars()
+    )
+    assert len(dst_instruments) == 2
+    assert dst_instruments[0].starts_new_page is False
+    assert dst_instruments[1].starts_new_page is True
+
+
+def test_round_trip_carries_band2_state(db: Session) -> None:
+    """``Instrument.band2_state`` JSON blob (the Band 2 chip
+    selections + sample-reviewee pick + sample group member ids)
+    survives the round-trip byte-for-byte."""
+    src = _populated_round_trip_session(db, code="rt-b2-src")
+    rows = serialize_session_config(db, src)
+    dst = _bare_session(db, code="rt-b2-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-b2@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    assert dst_inst.band2_state == {
+        "selected_display_keys": ["reviewee.name"],
+        "sample_reviewee_name": "Carol",
+        "sample_group_member_ids": [42, 43],
+    }
+
+
+def test_round_trip_carries_response_field_inline_type_and_bounds(
+    db: Session,
+) -> None:
+    """The biggest gap: ``InstrumentResponseField`` inline type +
+    bounds + ``visible`` survive the round-trip. Pre-PR-5 the
+    serializer carried only the legacy ``response_type`` label
+    after 18J Wave 2 PR iii-b4 retired the RTD table — every
+    semantic bound went to default-Rating-Integer-1-5 on
+    re-import."""
+    from app.db.models import InstrumentResponseField
+
+    src = _populated_round_trip_session(db, code="rt-rf-src")
+    rows = serialize_session_config(db, src)
+    dst = _bare_session(db, code="rt-rf-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-rf@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    dst_fields = list(
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == dst_inst.id)
+            .order_by(InstrumentResponseField.order)
+        ).scalars()
+    )
+    rating, comments = dst_fields[0], dst_fields[1]
+    # Decimal field with custom range + step.
+    assert rating._inline_data_type == "Decimal"
+    assert rating._inline_min == 0.0
+    assert rating._inline_max == 10.0
+    assert rating._inline_step == 0.5
+    assert rating.visible is True
+    # String field with max-length cap + un-pinned chip.
+    assert comments._inline_data_type == "String"
+    assert comments._inline_max == 500.0
+    assert comments.visible is False
+    # ``validation`` JSON is recomputed from the imported inline
+    # state so the reviewer surface (which reads ``validation``)
+    # lines up post-round-trip. For Decimal, ``validation_block_from_inline``
+    # casts via ``float`` so 0.5 stays 0.5; for String, the only
+    # carried slot is ``max_length`` (cast via ``int``).
+    assert rating.validation == {"min": 0.0, "max": 10.0, "step": 0.5}
+    assert comments.validation == {"max_length": 500}
+
+
+def test_round_trip_empty_18g_fields_stays_empty(db: Session) -> None:
+    """Sessions without any 18G fields set round-trip cleanly —
+    the serializer emits empty cells for NULL columns and the
+    apply path interprets them as ``None`` (matching the pre-PR-5
+    default state)."""
+    src = _bare_session(db, code="rt-empty-src")
+    rows = serialize_session_config(db, src)
+    dst = _bare_session(db, code="rt-empty-dst")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=rows,
+        user=_user(db, email="rt-empty@e.edu"),
+    )
+    assert result.errors == []
+    db.refresh(dst)
+    assert dst.scheduled_activate_at is None
+    assert dst.responses_release_at is None
+    assert dst.invite_offsets is None
+    assert dst.reminder_offsets is None
+    assert dst.archive_offset is None
+    assert dst.release_until_offset is None
+    assert dst.retention_exception is None
+    assert dst.retention_overrides is None
+
+
+# --------------------------------------------------------------------------- #
 # Trivia
 # --------------------------------------------------------------------------- #
 

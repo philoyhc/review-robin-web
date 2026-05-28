@@ -28,6 +28,7 @@ from app.services.sessions import resolve_session_timezone
 from app.services.session_config_io._rows import (
     Row,
     _bool,
+    _decimal,
     _int,
     _json,
     _str,
@@ -118,6 +119,57 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             "session.self_reviews_active",
             _bool(review_session.self_reviews_active),
             "boolean",
+        ),
+        # Segment 18N PR 5 — the eight 18G scheduled-event columns
+        # added 2026-05-20 (Part 0 schema) + lit up across Parts 1-3.
+        # Two datetime anchors + four offset / offset-list strings +
+        # the retention overrides pair. Pre-PR-5 the round-trip was
+        # silently dropping every one of these on Zip-all → import.
+        Row(
+            "session.scheduled_activate_at",
+            iso_in_zone(
+                review_session.scheduled_activate_at,
+                resolve_session_timezone(review_session),
+            ),
+            "datetime",
+        ),
+        Row(
+            "session.responses_release_at",
+            iso_in_zone(
+                review_session.responses_release_at,
+                resolve_session_timezone(review_session),
+            ),
+            "datetime",
+        ),
+        Row(
+            "session.invite_offsets",
+            _str(", ".join(review_session.invite_offsets or [])),
+            "string",
+        ),
+        Row(
+            "session.reminder_offsets",
+            _str(", ".join(review_session.reminder_offsets or [])),
+            "string",
+        ),
+        Row(
+            "session.archive_offset",
+            _str(review_session.archive_offset),
+            "string",
+        ),
+        Row(
+            "session.release_until_offset",
+            _str(review_session.release_until_offset),
+            "string",
+        ),
+        Row(
+            "session.retention_exception",
+            _bool(review_session.retention_exception),
+            "boolean",
+        ),
+        Row(
+            "session.retention_overrides",
+            _json(review_session.retention_overrides or {}),
+            "json",
         ),
     ]
 
@@ -263,6 +315,25 @@ def _instrument_rows(
             _str(rule_set_name_value),
             "string",
         ),
+        # Segment 18N PR 5 — three operator-input fields that
+        # pre-PR-5 didn't round-trip: drag-gripper column widths
+        # (Band 2 preview table), the 18M page-break flag, and the
+        # Band 2 selections / sample-reviewee pick JSON blob.
+        Row(
+            f"{prefix}.column_widths",
+            _json(instrument.column_widths or {}),
+            "json",
+        ),
+        Row(
+            f"{prefix}.starts_new_page",
+            _bool(instrument.starts_new_page),
+            "boolean",
+        ),
+        Row(
+            f"{prefix}.band2_state",
+            _json(instrument.band2_state or {}),
+            "json",
+        ),
     ]
     return rows
 
@@ -310,6 +381,36 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
                 "boolean",
             )
         )
+        # Segment 18N PR 5 — inline type + bounds + per-field
+        # visibility. Pre-PR-5 the serializer exported the legacy
+        # ``response_type`` text label but lost every semantic
+        # bound after 18J Wave 2 PR iii-b4 retired the RTD table
+        # and moved type / bounds inline. Round-trips through
+        # ``_inline_*`` now restore the full Band 3 row state.
+        rows.append(
+            Row(
+                f"{prefix}.data_type",
+                _str(field._inline_data_type),
+                "string",
+            )
+        )
+        rows.append(
+            Row(f"{prefix}.min", _decimal(field._inline_min), "decimal")
+        )
+        rows.append(
+            Row(f"{prefix}.max", _decimal(field._inline_max), "decimal")
+        )
+        rows.append(
+            Row(f"{prefix}.step", _decimal(field._inline_step), "decimal")
+        )
+        rows.append(
+            Row(
+                f"{prefix}.list_csv",
+                _str(field._inline_list_csv),
+                "string",
+            )
+        )
+        rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
     return rows
 
 
