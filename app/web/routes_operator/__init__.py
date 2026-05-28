@@ -26,6 +26,8 @@ from . import (
     _assignments,
     _extracts,
     _instruments,
+    _instruments_band2,
+    _instruments_pagination,
     _lobby,
     _operations,
     _preview_surface,
@@ -57,6 +59,8 @@ router.include_router(_assignments.router)
 router.include_router(_operations.router)
 router.include_router(_preview_surface.router)
 router.include_router(_instruments.router)
+router.include_router(_instruments_band2.router)
+router.include_router(_instruments_pagination.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
 router.include_router(_workflow.router)
