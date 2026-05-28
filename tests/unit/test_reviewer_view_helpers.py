@@ -18,6 +18,7 @@ from app.web.views import (
     constraint_summary_for_field,
     instrument_heading,
     placeholder_for_field,
+    textarea_rows_for,
 )
 
 
@@ -217,3 +218,45 @@ def test_constraint_summary_for_field_table(
     data_type: str, validation: dict | None, expected: str
 ) -> None:
     assert constraint_summary_for_field(_field(data_type=data_type, validation=validation)) == expected
+
+
+# ── textarea_rows_for — String response-field height derivation ──────────
+
+
+@pytest.mark.parametrize(
+    "max_chars,column_width_px,expected_rows",
+    [
+        # Default column (None → 224px ≈ 28 chars/row), typical = 0.75 * max
+        (200, None, 6),    # typical 150 / 28 = ceil(5.36) = 6
+        (500, None, 8),    # typical 375 / 28 = ceil(13.39) → cap 8
+        (2000, None, 8),   # typical 1500 / 28 = ceil(53.57) → cap 8
+        # Operator widens column → fewer rows needed
+        (200, 600, 2),     # typical 150 / 75 = 2
+        (500, 600, 5),     # typical 375 / 75 = 5
+        (2000, 600, 8),    # typical 1500 / 75 = 20 → cap 8
+        # Operator narrows column → MIN_CHARS_PER_ROW floor of 20 chars/row
+        # kicks in (150px / 8 = 18.75 < 20 floor)
+        (200, 150, 8),     # typical 150 / 20 = ceil(7.5) = 8
+        # Short fields hit the 2-row floor regardless of column width
+        (101, 600, 2),     # typical 75 / 75 = 1 → floor 2
+        (101, None, 3),    # typical 75 / 28 = ceil(2.68) = 3
+        # Sentinel: no max_chars at all → floor (defensive — the
+        # template branch only reaches this helper when max_len > 100,
+        # but the helper is conservative for cleanliness).
+        (None, None, 2),
+        (0, None, 2),
+    ],
+)
+def test_textarea_rows_for_table(
+    max_chars: int | None, column_width_px: int | None, expected_rows: int
+) -> None:
+    assert textarea_rows_for(max_chars, column_width_px) == expected_rows
+
+
+def test_textarea_rows_for_never_returns_below_floor_or_above_cap() -> None:
+    """Defensive — the clamp guarantees every output stays in
+    ``[MIN_TEXTAREA_ROWS, MAX_TEXTAREA_ROWS]`` regardless of inputs."""
+    for max_chars in (1, 50, 200, 999, 10_000, 50_000):
+        for col_px in (None, 1, 50, 200, 500, 1000, 5000):
+            rows = textarea_rows_for(max_chars, col_px)
+            assert 2 <= rows <= 8, (max_chars, col_px, rows)

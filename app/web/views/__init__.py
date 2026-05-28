@@ -92,6 +92,7 @@ from ._instruments import (
     instrument_heading,
     numeric_column_ch_width,
     placeholder_for_field,
+    textarea_rows_for,
 )
 
 # Quick Setup card on Session Home + new-session preview variant
@@ -232,6 +233,7 @@ __all__ = [
     "compute_next_action_generate_state",
     "constraint_summary_for_field",
     "numeric_column_ch_width",
+    "textarea_rows_for",
     "email_preview_from_display",
     "filter_invitations_rows",
     "filter_relationships_rows",

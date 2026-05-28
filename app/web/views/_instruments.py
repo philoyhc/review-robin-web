@@ -19,6 +19,7 @@ Source range in pre-PR-6 ``_legacy.py``: lines 38-335.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -213,6 +214,48 @@ def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
     header_ch = len(field.label) + (2 if field.required else 0) + 4
     input_ch = digit_span + 3
     return max(header_ch, input_ch)
+
+
+# Calibration constants for ``textarea_rows_for``. Tuned against
+# ``td.rs-textlong { min-width: 14em }`` in ``base.html`` and the
+# default proportional sans-serif body font stack. Revisit if the
+# font stack or default column width changes.
+_DEFAULT_RESPONSE_COL_WIDTH_PX = 224  # 14em @ 16px body font
+_PX_PER_CHAR = 8                       # proportional sans-serif average
+_TYPICAL_RESPONSE_FRACTION = 0.75      # operators rarely use full max_chars
+_MIN_TEXTAREA_ROWS = 2
+_MAX_TEXTAREA_ROWS = 8
+_MIN_CHARS_PER_ROW = 20                # floor for absurdly narrow columns
+
+
+def textarea_rows_for(
+    max_chars: int | None, column_width_px: int | None
+) -> int:
+    """Derive a ``rows`` attribute for a String response-field
+    textarea on the reviewer surface.
+
+    Sizes the textarea to hold a *typical* response (assumed to
+    cluster around 75% of the configured ``max_chars``, not the
+    full cap) at the column's current width — so the operator can
+    pre-size the input by tightening / widening the column on
+    Band 2 of the new-model card without touching another knob.
+    Falls back to the default ``td.rs-textlong`` width (14em ≈
+    224px) when the operator hasn't dragged the column.
+
+    Clamped to ``[2, 8]`` so single-line String inputs never
+    collapse to a 1-row textarea (the reviewer-surface contract
+    only emits a textarea when ``max_chars > 100``) and a
+    2000-char field doesn't dwarf the page. Reviewers can still
+    drag the native textarea corner at runtime — this just sets
+    the initial height.
+    """
+    if max_chars is None or max_chars <= 0:
+        return _MIN_TEXTAREA_ROWS
+    width = column_width_px or _DEFAULT_RESPONSE_COL_WIDTH_PX
+    typical_chars = max_chars * _TYPICAL_RESPONSE_FRACTION
+    chars_per_row = max(_MIN_CHARS_PER_ROW, width / _PX_PER_CHAR)
+    raw = math.ceil(typical_chars / chars_per_row)
+    return max(_MIN_TEXTAREA_ROWS, min(_MAX_TEXTAREA_ROWS, raw))
 
 
 def _bulk_state(values: list[bool]) -> str:

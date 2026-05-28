@@ -37,6 +37,13 @@ _templates.env.globals["app_version"] = settings.app_version
 _templates.env.globals["numeric_column_ch_width"] = (
     views.numeric_column_ch_width
 )
+# 2026-05-28 — derives the ``rows`` attribute for String
+# response-field textareas from ``max_chars`` + operator-set
+# column width so reviewers see a textarea sized for the typical
+# response (75% of the configured cap) at the column's current
+# width, without waiting on the reviewer to drag-resize. Native
+# textarea resize stays available at runtime.
+_templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
 # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
 # Context-aware: the filters resolve their display zone from the
 # ``display_timezone`` context key the processor above injects.
