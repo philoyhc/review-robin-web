@@ -142,44 +142,27 @@
        card above, not as a standalone full-width banner here. #}
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}/save">
     {% endif %}
-      {# Segment 18L multi-page (post-replan): each render shows ONE
-         operator-defined page. Within a page, instruments stack
-         without a horizontal separator; between pages the reviewer
-         navigates via the Prev / Next links in the page-nav row.
-         The action row interleaves above every instrument heading
-         on this page + once at the bottom (outside the loop) with
-         the danger zone immediately beneath. #}
-      {% if page_count > 1 and not preview_mode %}
-        <nav class="rs-page-nav" aria-label="Page navigation">
-          <div>
-            {% if prev_page_url %}
-              <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
-            {% endif %}
-          </div>
-          <div class="rs-page-nav-counter">
-            Page {{ current_page_n }} of {{ page_count }}
-          </div>
-          <div>
-            {% if next_page_url %}
-              <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
-            {% endif %}
-          </div>
-        </nav>
+      {# Reviewer-surface form layout — Segment 18L multi-page
+         (post-replan + per-instrument-nav retirement):
+
+           [top action row, flush-left]
+           [instrument 1]
+           [instrument 2]
+           ...
+           [bottom action row, flush-right]
+           [danger zone]
+
+         The action row carries Save / Discard / Submit | divider |
+         Prev / Page N of M / Next. Within a page, instruments
+         stack vertically without an inter-instrument separator. #}
+      {% if any_accepting and not preview_mode %}
+        {% with action_row_position="top" %}
+          {% include "reviewer/_action_row.html" %}
+        {% endwith %}
       {% endif %}
       {% for group in instrument_groups %}
-        {# Anchor id lives on a wrapper around (action row +
-           section) so navigation to ``#instrument-{id}`` scrolls
-           to the action row above the heading — the operator
-           lands with the Save / Submit | #N TOC controls visible
-           at the top of the viewport, not buried just above it. #}
-        <div id="{{ group.anchor_id }}" class="rs-instrument-block">
-          {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
-            {% with action_row_position="top" %}
-              {% include "reviewer/_action_row.html" %}
-            {% endwith %}
-          {% endif %}
-          <section class="rs-instrument-group"
-                   data-rs-position="{{ group.position }}">
+        <section class="rs-instrument-group"
+                 data-rs-position="{{ group.position }}">
         {# Per-instrument intro: heading card (short label + description)
            sits alone in its own half-width slot. Help text cards
            start in their own 2-col grid below — they don't share a
@@ -460,28 +443,10 @@
           </table>
         </div>
           </section>{# /.rs-instrument-group #}
-        </div>{# /.rs-instrument-block #}
       {% endfor %}
 
-      {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
+      {% if any_accepting and not preview_mode %}
         {% include "reviewer/_action_row.html" %}
-      {% endif %}
-      {% if page_count > 1 and not preview_mode %}
-        <nav class="rs-page-nav rs-page-nav-bottom" aria-label="Page navigation">
-          <div>
-            {% if prev_page_url %}
-              <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
-            {% endif %}
-          </div>
-          <div class="rs-page-nav-counter">
-            Page {{ current_page_n }} of {{ page_count }}
-          </div>
-          <div>
-            {% if next_page_url %}
-              <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
-            {% endif %}
-          </div>
-        </nav>
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 

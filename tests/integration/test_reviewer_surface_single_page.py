@@ -8,11 +8,12 @@ bare URL 303s to page 1; positional URLs render the matching
 page; out-of-range page numbers 404.
 
 Locked decisions tested:
-- (6) Each instrument emits ``id="instrument-{id}"`` (intra-page
-  anchor for the in-page TOC).
 - Bare URL redirects to page 1 (post-replan: matches pre-18L).
 - ``POST /sessions/{id}/{N}/save`` saves the page's inputs and
   303s back to that page.
+- Each instrument renders one ``<section data-rs-position="N">``
+  block (used here as the structural anchor for set-membership
+  assertions across pages).
 """
 
 from __future__ import annotations
@@ -150,14 +151,11 @@ def test_page_one_renders_first_pages_instruments(
         reviewee_ident="carol@example.edu",
         extra_instruments=2,  # 3 instruments, all on one page (no breaks)
     )
-    instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().all()
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
-    # All three instrument anchors on page 1 since no break exists.
-    for inst in instruments:
-        assert f'id="instrument-{inst.id}"' in body
+    # All three instrument sections render on page 1 since no break exists.
+    for n in (1, 2, 3):
+        assert f'data-rs-position="{n}"' in body
 
 
 def test_out_of_range_page_returns_404(
@@ -219,19 +217,19 @@ def test_page_break_carves_session_into_separate_pages(
     )
     rae_client = make_client(rae)
 
-    # Page 1 has only the first instrument.
+    # Page 1 has only the first instrument (position 1).
     page1 = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    assert f'id="instrument-{instruments[0].id}"' in page1
-    assert f'id="instrument-{instruments[1].id}"' not in page1
+    assert 'data-rs-position="1"' in page1
+    assert 'data-rs-position="2"' not in page1
 
-    # Page 2 has only the second.
+    # Page 2 has only the second (position 2).
     page2 = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/2"
     ).text
-    assert f'id="instrument-{instruments[0].id}"' not in page2
-    assert f'id="instrument-{instruments[1].id}"' in page2
+    assert 'data-rs-position="1"' not in page2
+    assert 'data-rs-position="2"' in page2
 
     # Page 3 doesn't exist.
     response = rae_client.get(

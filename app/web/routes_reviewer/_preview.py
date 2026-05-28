@@ -161,7 +161,6 @@ def build_preview_context(
             "any_accepting": False,
             "any_closed_with_hidden_values": False,
             "page_statuses": [],
-            "page_buttons": [],
             "current_page_n": 1,
             "page_count": 1,
             "prev_page_url": None,
@@ -330,8 +329,6 @@ def build_preview_context(
                 "is_group": False,
                 "heading": heading,
                 "position": position,
-                "anchor_id": f"instrument-preview-{position}",
-                "starts_new_page": instrument.starts_new_page,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
@@ -340,25 +337,6 @@ def build_preview_context(
             }
         )
         flat_rows.extend(group_rows)
-
-    # Operator preview — build Page N buttons so multi-instrument
-    # preview lets the operator flip between pages (per Segment 11D
-    # follow-on PR ε). The unified action row collapses to Page N
-    # buttons only in preview; Save / Discard / Submit / divider are
-    # suppressed at the partial level. Segment 11F PR C now embeds
-    # the surface inside a sandboxed iframe on the previews hub —
-    # the JS that swaps pages client-side doesn't run in the iframe,
-    # so click-fallback hrefs land the operator on the previews hub
-    # surface card (the closest sensible target). The standalone
-    # ``/preview`` route is a 308 to that same hub.
-    page_buttons: list[views.PageButton] = [
-        views.PageButton(
-            position=group["position"],
-            label=views.page_button_label(group["instrument"], group["position"]),
-            href=f"#{group['anchor_id']}",
-        )
-        for group in instrument_groups
-    ]
 
     return {
         "user": user,
@@ -373,10 +351,10 @@ def build_preview_context(
         "any_accepting": False,
         "any_closed_with_hidden_values": False,
         "page_statuses": [],
-        "page_buttons": page_buttons,
-        # Preview is single-render synthetic; multi-page nav doesn't
-        # apply. Provide the post-Segment-18L-replan keys with values
-        # that make the template's page-nav row a no-op.
+        # Preview is single-render synthetic; the surface template's
+        # action row is suppressed entirely in ``preview_mode``, so
+        # nav-related context (page count, prev/next URLs) is moot
+        # but kept here to match the live surface's context shape.
         "current_page_n": 1,
         "page_count": 1,
         "prev_page_url": None,

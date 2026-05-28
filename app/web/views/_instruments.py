@@ -5,8 +5,8 @@ hints (placeholder / constraint summary).
 
 Slice 6 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
-Owns the ``InstrumentHeading`` / ``PageButton`` dataclasses, the
-``page_button_label`` / ``instrument_heading`` builders that drive
+Owns the ``InstrumentHeading`` dataclass + the
+``instrument_heading`` builder that drives
 the reviewer-surface composition table per
 ``spec/reviewer-surface.md``, the per-field render hints
 (``placeholder_for_field`` / ``constraint_summary_for_field``),
@@ -92,23 +92,6 @@ class InstrumentHeading:
     subtitle: str | None
 
 
-def page_button_label(instrument: Instrument, position: int) -> str:
-    """Label for a quick-jump anchor button on the reviewer surface's
-    action row.
-
-    Returns ``"#{N} {short_label}"`` when the operator has set
-    ``Instrument.short_label`` (32-char ceiling enforced at the
-    schema layer per Segment 11L); falls back to bare ``"#{N}"``
-    otherwise. Segment 18L dropped the ``"Page "`` prefix — the
-    button is no longer a pagination control but an in-page
-    anchor TOC, so the verbose word reads as stale.
-    """
-    short = (instrument.short_label or "").strip()
-    if short:
-        return f"#{position} {short}"
-    return f"#{position}"
-
-
 def instrument_heading(
     *, instrument: Instrument, position: int, total_count: int
 ) -> InstrumentHeading:
@@ -129,16 +112,6 @@ def instrument_heading(
     if short:
         return InstrumentHeading(title=f"#{position}: {short}", subtitle=desc)
     return InstrumentHeading(title=f"#{position}", subtitle=desc)
-
-
-@dataclass(frozen=True)
-class PageButton:
-    """View-shape for a quick-jump anchor button on the reviewer-surface
-    action row (Segment 18L)."""
-
-    position: int
-    label: str
-    href: str
 
 
 def _format_band2_bound(value: float) -> str:

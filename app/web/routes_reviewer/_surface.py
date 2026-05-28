@@ -681,8 +681,6 @@ def _surface_context(
                 "is_group": is_group,
                 "heading": heading,
                 "position": position_by_id[instrument_id],
-                "anchor_id": f"instrument-{instrument.id}",
-                "starts_new_page": instrument.starts_new_page,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
@@ -739,29 +737,6 @@ def _surface_context(
         g for g in instrument_groups
         if g["instrument"].id in current_page_instrument_ids
     ]
-    instrument_groups_by_id = {
-        g["instrument"].id: g for g in instrument_groups
-    }
-
-    # Quick-jump anchor TOC buttons for the unified action row.
-    # Segment 18L's multi-page replan scopes these to instruments on
-    # the CURRENT page only — cross-page navigation lives in the
-    # Prev/Next nav row instead. Buttons render as in-page anchor
-    # links pointing at the matching ``<section id="instrument-{id}">``
-    # block within the current page.
-    page_buttons: list[views.PageButton] = []
-    for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
-        if inst.id not in instrument_groups_by_id:
-            continue
-        position = position_by_id[inst.id]
-        page_buttons.append(
-            views.PageButton(
-                position=position,
-                label=views.page_button_label(inst, position),
-                href=f"#instrument-{inst.id}",
-            )
-        )
-
     instrument_groups.sort(key=lambda g: g["position"])
 
     prev_page_url = (
@@ -790,7 +765,6 @@ def _surface_context(
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
         "page_statuses": page_statuses,
         "session_status": _session_status(page_statuses),
-        "page_buttons": page_buttons,
         "current_page_n": safe_page_n,
         "page_count": page_count,
         "prev_page_url": prev_page_url,

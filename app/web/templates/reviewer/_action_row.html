@@ -1,53 +1,55 @@
 {# Reviewer-surface unified action row.
-   Segment 18L reshaped this partial: the per-instrument Page-N
-   buttons were navigation controls (positional URLs + JS-driven
-   .rs-active toggling); they're now plain in-page anchor links
-   pointing at the matching <section id="instrument-{id}"> block
-   on the all-instruments single-page surface.
 
    Order, left-to-right:
 
-       Save / Discard / Submit / divider / #N short_label
+       Save / Discard / Submit | divider | Prev / counter / Next
 
-   The vertical `.rs-action-divider` separates the review-level
-   controls (Save / Discard / Submit) from the per-instrument
-   anchor TOC. Discard reloads the same surface URL (any unsaved
-   form edits get dropped on the reload).
+   The right-hand Prev / counter / Next cluster renders only on
+   multi-page sessions (``page_count > 1``); the divider is
+   suppressed otherwise so a single-page surface collapses to bare
+   Save / Discard / Submit. Prev / Next render as ``<a>`` when a
+   target exists and as a disabled ``<button>`` otherwise so the
+   layout stays stable across page boundaries.
 
-   In ``preview_mode`` (operator preview), Save / Discard / Submit
-   / divider are suppressed so the row collapses to just the
-   anchor TOC — preview is read-only and synthetic, so Save /
-   Submit wouldn't write anything meaningful and Discard has
-   nothing to restore.
+   Suppressed entirely in ``preview_mode`` — preview is a synthetic
+   read-only render with no Save / Submit semantics and no page
+   nav (it's a single composite preview).
 
    Required context:
      - session: ReviewSession
-     - page_buttons: list[views.PageButton]
+     - current_page_n / page_count / prev_page_url / next_page_url
      - preview_mode: bool
      - action_row_position: "top" or "bottom" (default treated as
-       "bottom"). Top instances interleave above each instrument
-       heading and are left-aligned; the lone bottom instance
-       stays right-aligned and follows the last instrument's
-       table.
-   The caller renders the partial inside the instrument loop above
-   every heading + once outside the loop at the bottom.
+       "bottom"). Top is flush left; bottom is flush right.
 #}
+{% if not preview_mode %}
 <div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
-  {% if not preview_mode %}
+  <div class="rs-action-row-controls">
     <button class="btn" type="submit" data-rs-save>Save</button>
     <a class="btn secondary"
-       href="/reviewer/sessions/{{ session.id }}"
+       href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}"
        data-rs-discard>Discard</a>
     <button class="btn"
             type="submit"
             formaction="/reviewer/sessions/{{ session.id }}/submit">
       Submit
     </button>
-    {% if page_buttons %}
-      <span class="rs-action-divider" aria-hidden="true"></span>
-    {% endif %}
+  </div>
+  {% if page_count > 1 %}
+    <span class="rs-action-divider" aria-hidden="true"></span>
+    <div class="rs-page-nav-cluster">
+      {% if prev_page_url %}
+        <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
+      {% else %}
+        <button class="btn secondary" type="button" disabled aria-disabled="true">&lt; Previous page</button>
+      {% endif %}
+      <span class="rs-page-nav-counter">Page {{ current_page_n }} of {{ page_count }}</span>
+      {% if next_page_url %}
+        <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
+      {% else %}
+        <button class="btn secondary" type="button" disabled aria-disabled="true">Next page &gt;</button>
+      {% endif %}
+    </div>
   {% endif %}
-  {% for page in page_buttons %}
-    <a class="btn rs-page-btn" href="{{ page.href }}">{{ page.label }}</a>
-  {% endfor %}
 </div>
+{% endif %}
