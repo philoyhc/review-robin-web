@@ -23,7 +23,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -495,32 +495,40 @@ def _new_model_band2_state(
         if width is not None:
             entry["width_px"] = width
         response_fields.append(entry)
-    # Wave 3 PR i — annotate each entry with has_responses so the
-    # Band 3 template can render the X button disabled for fields
-    # with attached reviewer responses (cascade-blocked delete).
-    # Entries without an id (newly authored, not yet saved) carry
-    # has_responses=False.
+    # Wave 3 PR i — annotate each entry with ``has_responses`` so
+    # the Band 3 template can render the X button disabled for
+    # fields with attached reviewer responses (cascade-blocked
+    # delete). Segment 18K PR 4 promotes the same query to a
+    # GROUP BY count and also surfaces ``response_count`` so the
+    # Band 2 chip click handler can name the count in its
+    # un-pin confirm dialog. Entries without an id (newly
+    # authored, not yet saved) carry ``response_count=0`` /
+    # ``has_responses=False``.
     rf_ids_with_id = [
         rf.get("id") for rf in response_fields
         if isinstance(rf, dict) and isinstance(rf.get("id"), int)
     ]
-    has_responses_by_id: dict[int, bool] = {}
+    response_count_by_id: dict[int, int] = {}
     if rf_ids_with_id:
-        rows_with_responses = set(
-            db.execute(
-                select(Response.response_field_id)
-                .where(Response.response_field_id.in_(rf_ids_with_id))
-                .distinct()
-            ).scalars()
-        )
-        for fid in rf_ids_with_id:
-            has_responses_by_id[fid] = fid in rows_with_responses
+        rows = db.execute(
+            select(
+                Response.response_field_id,
+                func.count(Response.id),
+            )
+            .where(Response.response_field_id.in_(rf_ids_with_id))
+            .group_by(Response.response_field_id)
+        ).all()
+        response_count_by_id = {fid: count for fid, count in rows}
     for rf in response_fields:
         if isinstance(rf, dict):
             rf_id = rf.get("id")
-            rf["has_responses"] = bool(
-                isinstance(rf_id, int) and has_responses_by_id.get(rf_id, False)
+            count = (
+                response_count_by_id.get(rf_id, 0)
+                if isinstance(rf_id, int)
+                else 0
             )
+            rf["response_count"] = count
+            rf["has_responses"] = count > 0
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,

@@ -1773,6 +1773,7 @@
                       data-row-key="{{ _key }}"
                       data-response-key="{{ _key }}"
                       {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
+                      data-response-count="{{ rf.response_count or 0 }}"
                       data-required="{{ 'true' if rf.required else 'false' }}"
                       data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
                       data-help-text="{{ rf.help_text or '' }}"
@@ -2338,10 +2339,11 @@
           // field rows are matched to pills via data-row-key so
           // only ✓'d rows persist. Best-effort: failures are
           // logged but don't surface to the operator.
-          function saveBand2State(card) {
+          function saveBand2State(card, opts) {
             var sessionId = card.getAttribute('data-new-model-band2-session-id');
             var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
             if (!sessionId || !instrumentId) { return; }
+            var acknowledgedDrop = !!(opts && opts.acknowledgedDrop);
             var selectedDisplayKeys = [];
             card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (pill) {
               if (pill.getAttribute('data-source-type') !== 'response') {
@@ -2406,10 +2408,17 @@
             // spec, matching fetch's ``credentials: same-origin``.
             var url = '/operator/sessions/' + sessionId
               + '/instruments/' + instrumentId + '/band2-state';
-            var body = JSON.stringify({
+            var payload = {
               selected_display_keys: selectedDisplayKeys,
               response_fields: responseFields,
-            });
+            };
+            // Segment 18K PR 4 — only stamp the flag on payloads
+            // originating from a confirmed chip un-pin. Other
+            // call sites (Save, R toggle, ✓, etc.) leave it false
+            // so the server-side guard still defends against
+            // accidental flips elsewhere in the flow.
+            if (acknowledgedDrop) { payload.acknowledged_drop = true; }
+            var body = JSON.stringify(payload);
             if (navigator && navigator.sendBeacon) {
               try {
                 var blob = new Blob(
@@ -3118,6 +3127,32 @@
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
             var pressed = pill.getAttribute('aria-pressed') === 'true';
             var next = !pressed;
+            // Segment 18K PR 4 — visibility-drop confirm guard.
+            // Un-pinning a response chip whose backing field has
+            // saved responses drops the column from every reviewer-
+            // facing render. Confirm intent BEFORE the visual flip
+            // so a cancel leaves the UI exactly as it was. Server
+            // mirrors the check via ``ResponseFieldDropAcknowledgement``
+            // -required as defence-in-depth for forged hits.
+            var acknowledgedDrop = false;
+            if (!next && pill.getAttribute('data-source-type') === 'response') {
+              var responseCount = parseInt(
+                pill.getAttribute('data-response-count') || '0', 10
+              ) || 0;
+              if (responseCount > 0) {
+                var label = pill.getAttribute('data-label') || 'this field';
+                var pluralR = responseCount === 1 ? '' : 's';
+                var confirmed = window.confirm(
+                  'Hide "' + label + '" from the reviewer surface? '
+                  + responseCount + ' saved response' + pluralR
+                  + ' will be preserved for audit but no longer appear '
+                  + 'on the surface, summary, or reviewer-record CSV. '
+                  + 'Re-pin the chip later to restore the column.'
+                );
+                if (!confirmed) { return; }
+                acknowledgedDrop = true;
+              }
+            }
             pill.setAttribute('aria-pressed', next ? 'true' : 'false');
             if (next) {
               pill.classList.add('is-selected');
@@ -3129,7 +3164,7 @@
             var card = pill.closest('[data-new-model-band2]');
             if (card) {
               rebuildPreview(card);
-              saveBand2State(card);
+              saveBand2State(card, {acknowledgedDrop: acknowledgedDrop});
             }
           };
           window.newModelRefreshBand2 = function (card) {

@@ -220,6 +220,36 @@ class ResponseFieldShapeChangeError(Exception):
         self.changed_attrs = changed_attrs
 
 
+class ResponseFieldDropAcknowledgementRequired(Exception):
+    """Raised when an operator un-pins a Band 2 response chip whose
+    backing field has saved responses, *without* having explicitly
+    acknowledged the drop (Segment 18K PR 4).
+
+    Sibling of :class:`ResponseFieldShapeChangeError` for the
+    visibility-flip transition — the field's data and bounds stay
+    untouched, but the column disappears from every reviewer-facing
+    render (surface, summary HTML, reviewer-record CSV) per the
+    2026-05-27 Part 3 item 1 decision. The reviewer's previously
+    saved answers stay in the DB for the operator-side audit /
+    bundle export (Part 5 contract), but the reviewer can no longer
+    see them.
+
+    Confirm-style guard: the operator-side JS shows a ``confirm()``
+    naming the field + response count; on OK it re-POSTs the same
+    band2-state payload with ``acknowledged_drop=true`` so the
+    server lets the flip through. This exception is the
+    defence-in-depth gate for direct / forged API hits."""
+
+    def __init__(self, *, field_label: str, count: int) -> None:
+        super().__init__(
+            f"un-pinning {field_label!r} would drop {count} saved "
+            "response(s) from the reviewer surface; "
+            "acknowledged_drop=true required to proceed"
+        )
+        self.field_label = field_label
+        self.cascaded_response_count = count
+
+
 class InvalidResponseFieldShapeError(Exception):
     """Raised when an operator-authored response field has a
     nonsensical authoring shape (Wave 3 PR ii) — max < min, step
