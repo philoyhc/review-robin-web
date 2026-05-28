@@ -317,6 +317,87 @@ three participant audiences:
 Chrome stays light and audience-local per the identity spec;
 components stay universal.
 
+### 5.1 URL shape
+
+The participant-model headcount goes from three URL-bearing
+roles (sys admin / operator / reviewer) to five (add reviewee +
+observer). Five role-named URL prefixes would force the system
+to model a user as primarily one role — which contradicts the
+participant-model premise that one identity has overlapping
+roles in the same session. Recommended shape:
+
+```
+/me/                       — participant meta-lobby
+/me/sessions/{id}/{page}   — per-session participant surface
+                              (role-tabbed; today: reviewer-mode only;
+                               later: reviewer + reviewee + observer
+                               sections gated by resolved role)
+/operator/                 — administrative surfaces (unchanged)
+/operator/sys-admin/       — Sys Admin nests under operator (status quo)
+/auth/me                   — the current /me JSON debug endpoint
+                              moves here (one-line migration)
+```
+
+**Drop `/reviewer/`, don't introduce `/reviewee/` or `/observer/`.**
+Move everything participant-facing under `/me/`.
+
+**Why `/me/` rather than `/user/`.** Conversational ("you are
+at your page") and matches how identity surfaces self-refer in
+chrome today ("Signed in as …", "My Reviews"). Also clean
+because `/me` is already half-claimed by the JSON debug
+endpoint in `app/web/routes_auth.py` — the only cost is moving
+that to `/auth/me`.
+
+**Why drop `/reviewee/`.** A `/reviewee/` URL would force the
+system to model someone as "primarily a reviewee", contradicting
+the overlap premise. A meta-lobby with a "Your results" section
+handles the reviewee-only case without giving it its own URL
+prefix — one bookmark for a user no matter what roles they
+accumulate over time, and a reviewer who later gets reviewee
+results doesn't have to switch URLs.
+
+**Why drop `/observer/`.** Observers are **participants** who
+happen to have view-access to aggregated results, not
+**administrators** who happen to have restricted access. Folding
+them under `/operator/` would force every operator-route guard
+to add an "...but observers can read this" branch and would
+muddy the "/operator/ = admin" semantic that is currently
+clean. The lobby section for observers lives under `/me/`
+alongside reviewers / reviewees.
+
+**Per-session URL design (single page, role-tabbed).**
+Inside a session, a user who has multiple roles in it (e.g.
+they're both reviewer AND reviewee on the same session — the
+360° self-assessment case) lands on one URL with sections /
+tabs for each role they have. Picks up the existing multi-page
+reviewer-surface contract naturally — pages are the operator-
+defined runs of instruments; the lobby gates which instruments
++ which "lens" (form / results / observation) the user sees.
+The reviewer surface already passes `preview_mode` through
+`_surface_context` to repurpose the same template for the
+operator preview — adding `view_mode={form, results, observation}`
+is the natural extension: one template, one context builder,
+three rendering branches gated by the resolved role(s). Beats
+mode-prefixed routes (`/me/sessions/{id}/respond/{page}` etc.)
+because there's less shape to maintain and the per-session
+context resolution happens once.
+
+**Migration path.** Three steps; only step 2 changes any
+user-visible URL, and the redirect makes that non-breaking:
+
+1. Move `/me` JSON + `/me/debug` HTML to `/auth/me` (+
+   redirect for back-compat).
+2. Rename `/reviewer/` → `/me/` (302 redirect old URLs
+   forever; invitation tokens land at
+   `/me/sessions/{id}/{page}` instead of
+   `/reviewer/sessions/{id}/{page}`).
+3. Add the reviewee + observer lobby sections + per-session
+   role-tab branches as those features ship.
+
+Step 2 is the only step that touches existing user-visible
+URLs; it is sized as a single small PR when the participant-
+model arc opens.
+
 ## 6. Acknowledgement & notifications
 
 - A reviewee may mark results **acknowledged** (seen);
