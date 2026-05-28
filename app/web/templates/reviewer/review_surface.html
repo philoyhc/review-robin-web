@@ -427,7 +427,18 @@
                   </td>
                 {% endfor %}
                 {% if group.show_status_col %}
-                  <td class="rs-status-col" style="width: 1%; white-space: nowrap; text-align: center;">
+                  {# Inner ``<div>`` carries the ``min-width`` so the
+                     column is sized for the timestamp regardless of
+                     whether this row currently shows one. ``min-width``
+                     on the ``<td>`` itself is unreliably honoured in
+                     ``table-layout: auto`` (CSS2.1 left it undefined,
+                     and many engines fall back to content-based
+                     sizing); a wrapping div with ``min-width`` is the
+                     robust pattern. See base.html for the derivation
+                     (``YYYY-MM-DD HH:MM`` @ 0.85em → 16ch + 1ch
+                     breathing → 17ch). #}
+                  <td class="rs-status-col" style="text-align: center;">
+                    <div style="min-width: 17ch;">
                     {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
                         <span class="status-icon-complete" role="img"
@@ -445,6 +456,7 @@
                         </div>
                       {% endif %}
                     {% endif %}
+                    </div>
                   </td>
                 {% endif %}
               </tr>
