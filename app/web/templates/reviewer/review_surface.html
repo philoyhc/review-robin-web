@@ -541,4 +541,56 @@
     </script>
   {% endif %}
 
+  {# Post-render textarea-row adjustment. The server renders an
+     initial ``rows`` from ``textarea_rows_for(max_chars,
+     column_width_px)`` using the operator-set column width (or
+     the 224px fallback when unset). Once the table is in the DOM
+     we know the *actual* rendered width of each response cell,
+     which usually exceeds 224px when the column auto-distributes
+     — so the SSR rows overshoots. Recompute against the live
+     ``<td>`` width and overwrite ``rows`` so the visual height
+     matches what the typical response (50% of max) actually
+     needs at the rendered width.
+
+     Mirrors the JS port in
+     ``operator/instruments_index.html::textareaRowsFor`` —
+     keep the constants in sync if you tune either side. #}
+  <script>
+    (function () {
+      var DEFAULT_RESPONSE_COL_WIDTH_PX = 224;
+      var PX_PER_CHAR = 8;
+      var TYPICAL_RESPONSE_FRACTION = 0.5;
+      var MIN_TEXTAREA_ROWS = 2;
+      var MAX_TEXTAREA_ROWS = 8;
+      var MIN_CHARS_PER_ROW = 20;
+      function textareaRowsFor(maxChars, columnWidthPx) {
+        if (!maxChars || maxChars <= 0) { return MIN_TEXTAREA_ROWS; }
+        var width = columnWidthPx || DEFAULT_RESPONSE_COL_WIDTH_PX;
+        var typical = maxChars * TYPICAL_RESPONSE_FRACTION;
+        var charsPerRow = Math.max(MIN_CHARS_PER_ROW, width / PX_PER_CHAR);
+        var raw = Math.ceil(typical / charsPerRow);
+        return Math.max(
+          MIN_TEXTAREA_ROWS,
+          Math.min(MAX_TEXTAREA_ROWS, raw)
+        );
+      }
+      function adjustRows() {
+        document.querySelectorAll("textarea[maxlength]").forEach(function (ta) {
+          var maxLenInt = parseInt(ta.getAttribute("maxlength"), 10);
+          if (!maxLenInt || maxLenInt <= 100) { return; }
+          var cell = ta.closest("td");
+          if (!cell) { return; }
+          var rect = cell.getBoundingClientRect();
+          if (!rect || !(rect.width > 0)) { return; }
+          ta.rows = textareaRowsFor(maxLenInt, rect.width);
+        });
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", adjustRows);
+      } else {
+        adjustRows();
+      }
+    })();
+  </script>
+
 {% endblock %}
