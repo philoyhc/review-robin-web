@@ -349,3 +349,110 @@ are **file-size creep** (the biggest service is now nearly 2k
 LOC; a 17A-style housekeeping split is overdue) and the **minor
 defensive asymmetry between the reviewer-surface GET and POST
 save handlers** documented in §5.
+
+---
+
+## 9. Follow-up — Segment 18N (2026-05-28 PM)
+
+Closes both §5 watch items from the morning's assessment **and**
+surfaces a latent silent-drop defect the assessment hadn't
+spotted. Five PRs (#1556 → #1560) shipped the same afternoon.
+
+### What 18N closed from §5
+
+- **The defensive asymmetry** (§5 weakness 4). Reviewer-surface
+  GET (`routes_reviewer/_surface.py:784`) clamped `len(pages) or
+  1` while POST save (`:993`) hard-failed with `len(pages)`. The
+  asymmetry was unreachable in practice but inconsistent. PR 1
+  (#1556) lifted a `validate_page_n` helper into
+  `routes_reviewer/_shared.py` and called it from all three
+  page-bound routes (GET surface / POST save / operator
+  preview), with 23 new test cases pinning the alignment.
+- **File-size creep** (§5 weakness 3). PRs 2-4 carved the three
+  biggest production files into per-concern slices:
+
+  | File | 28may AM | 28may PM | Δ |
+  |---|---:|---:|---|
+  | `services/instruments/_instrument_crud.py` | 1,928 | 1,052 | −876 |
+  | `routes_operator/_instruments.py` | 1,497 | 1,027 | −470 |
+  | `services/responses.py` | 1,444 | 976 (`_core.py`) | −468 |
+
+  Every carve was pure structural (mechanical move + `__init__.py`
+  re-export wall), and each PR landed with the full suite green.
+  Six new sibling slices appeared:
+  `instruments/_band2.py` + `_pagination.py` (PR 2);
+  `routes_operator/_instruments_band2.py` +
+  `_instruments_pagination.py` (PR 3); the new `responses/`
+  package with `_core.py` + `_group_reconciliation.py` (PR 4).
+
+### The latent defect 18N PR 5 found
+
+While auditing the export / import surface for **Track C**
+(the original scope — round-trip the eight 18G `ReviewSession`
+scheduled-event columns the existing `session_config_io/`
+pre-dated), a thorough sweep against every operator-input
+column surfaced a much bigger story. After 18J Wave 2 PR
+iii-b4 retired the `response_type_definitions` table and moved
+type + bounds inline onto `InstrumentResponseField._inline_*`,
+the serializer wasn't updated to match. **Every Zip-all →
+import round-trip had been silently dropping each response
+field's `_inline_data_type` / `_inline_min` / `_inline_max` /
+`_inline_step` / `_inline_list_csv` / `visible`** for ~2 weeks.
+An operator-imported session got back response fields collapsed
+to the default Rating Integer 1-5 shape; the bug surfaces only
+on the second leg of the round-trip, which is why it slipped
+the morning's bug hunt (the surfaces the hunt covered all read
+the live DB state, not the re-imported state).
+
+PR 5 closes all 17 round-trip gaps in one go: 8 18G fields + 6
+response-field inline fields + `Instrument.column_widths` +
+`Instrument.starts_new_page` + `Instrument.band2_state`. Apply
+recomputes `validation` JSON from the imported inline state via
+the same `validation_block_from_inline` seam Band 3's save path
+uses, so the reviewer surface (which reads `validation`) lines
+up post-round-trip. Six new round-trip regression tests pin
+each closed gap.
+
+This is a **HIGH-severity correctness defect the morning bug
+hunt missed**, downgraded to "closed" by EOD. Severity rating
+is "would silently corrupt operator data on import"; user
+impact at this stage is "no real users yet, so nothing was
+lost in practice". The relevant lesson for the next bug hunt:
+**round-trip tests need their own audit pass** — read-side bugs
+in export-shape code only manifest after a re-import, which
+the live surface-walk hunts don't exercise.
+
+### Updated numbers (`main` at `70ee32b`)
+
+| Metric | 28may AM | 28may PM |
+|---|---:|---:|
+| Production LOC (`app/`) | 41,456 | 42,006 |
+| Test LOC (`tests/`) | 64,471 | 65,022 |
+| Test count | 2,010 | **2,021** (PR 1 added 23 new page-validity tests; PR 5 added 6 new round-trip tests; structural splits were pure moves) |
+| Files > 800 LOC | 15 | 15 |
+| Files > 1,150 LOC | **6** | **4** (down) |
+| Files > 1,500 LOC | 1 (1,928) | **0** |
+| Biggest production file | `_instrument_crud.py` (1,928) | `routes_reviewer/_surface.py` (1,269) |
+
+The biggest file is now the cohesive reviewer-surface route
+stack — that's a deliberate "cohesive, one route's full GET +
+POST" carve-out the morning assessment already noted as
+"don't split" (its natural split lifts `_surface_context` into
+`app/web/views/`, a bigger move than 18N scoped). Production +
+test LOC growth (+1,100 net) is mostly the new slice module
+docstrings + per-slice import boilerplate the PR 2-4 splits
+introduced; offset by the carved code being net-smaller than
+the inline source (CRUD seam mostly cleaner post-split).
+
+### Updated bottom line
+
+The same two pilot blockers stand (14B email transport + Azure
+infrastructure). One latent correctness defect surfaced and was
+closed the same day. Both §5 weakness 3 (file-size creep) and
+weakness 4 (defensive asymmetry) are now closed. **The
+codebase is healthier than the morning numbers suggested**:
+zero files > 1,500 LOC, the package layouts are cleaner, and
+the export / import round-trip — the operator's main
+session-sharing primitive — actually preserves every operator
+input now. The watch list reduces to the pilot-deployment
+blockers + the remaining 19 / 20 doc segments.
