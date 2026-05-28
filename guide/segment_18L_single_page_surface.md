@@ -425,15 +425,20 @@ segment is exclusively about the editable surface.
 
 ## Sequencing (as shipped, post-replan)
 
-The segment landed across five PRs in two phases. The
-first phase (PR 1a + PR 1b + small follow-ups) shipped
-the single-page-all-instruments model from the original
-lock. Mid-flight the user clarified that 18M's strategic
-vision called for true multi-page navigation; the replan
-PR (#1522) reshaped PR 1b's work into the multi-page
-model described in the Goal above. PR 1c followed with
-the helper / hidden-field cleanup. PR 1d (test sweep) +
-PR 2 (per-instrument heading-state card) remain.
+The segment landed across seven PRs in two phases plus a
+layout-polish sweep. The first phase (PR 1a + PR 1b + small
+follow-ups) shipped the single-page-all-instruments model
+from the original lock. Mid-flight the user clarified that
+18M's strategic vision called for true multi-page
+navigation; the replan PR (#1522) reshaped PR 1b's work
+into the multi-page model described in the Goal above.
+PR 1c followed with the helper / hidden-field cleanup, then
+PR 1d closed the test sweep. Three layout-polish PRs on
+2026-05-28 (#1526–#1528 + the summary-heading patch)
+landed the consolidated action row + the ``#N {short_label}``
+heading convention. PR 2 (per-instrument heading-state
+card) was **dropped** — see the "Dropped" subsection
+below.
 
 ### Shipped
 
@@ -508,9 +513,9 @@ PR 2 (per-instrument heading-state card) remain.
    counts, `rs-paginated` / `rs-active` JS hooks,
    `Previous` / `Next` buttons). The cross-cutting
    `current_position` hidden-form-field reads were
-   purged from every still-active test. PR 2 (per-
-   instrument heading-state card) is now the only
-   remaining piece of the segment.
+   purged from every still-active test. After this PR
+   the only outstanding item was PR 2; that landed in
+   the "Dropped" subsection below.
 
 ### Layout polish (2026-05-28)
 

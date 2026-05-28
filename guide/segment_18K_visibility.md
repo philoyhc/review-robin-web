@@ -1,11 +1,18 @@
 # Segment 18K — Completing instrument visibility (Band 3) on the reviewer surface
 
-> **Status: in flight.** Stub created 2026-05-27; Parts 1+2
-> shipped same day (PR #1487). Part 3 policy choices confirmed
-> 2026-05-27 — Parts 4–6 below cover the operator-side confirm
-> guard, the reviewer-surface banner, and the replicate test
-> respectively. Part 5 ("show hidden fields on summary") retired
-> by policy — hidden = gone, internally preserved for audit.
+> **Status: in flight.** Stub created 2026-05-27; Parts 1 + 2 +
+> Part 4 (visible / hidden / round-trip scenarios) shipped same
+> day (PR #1487). Part 3 policy choices confirmed 2026-05-27.
+> Part 5 ("show hidden fields on summary") retired by policy —
+> hidden = gone, internally preserved for audit. **Still
+> pending:** PR 4 (operator-side confirm guard on un-pinning a
+> Band 2 response chip with saved responses), PR 5 (reviewer-
+> surface banner naming dropped fields on next load after a
+> visible-flag flip), PR 6 (replicate-semantics test), plus the
+> two Part 4 scenarios that PR 4's flip path will exercise
+> (operator toggles-off after reviewer submit; group-scoped
+> instrument fan-out under visibility flips). Audit confirming
+> this state: 2026-05-28.
 >
 > **Predecessors.** Segment 17B Phase 2 shipped the reviewer
 > summary page; Segment 18J Wave 6 cluster B re-aligned the
@@ -120,23 +127,37 @@ land **yes**:
    test pinning it. A cloned card inherits its source's per-field
    visibility unchanged.
 
-### Part 4 — Reviewer summary cross-instrument coverage
+### Part 4 — Reviewer summary cross-instrument coverage — partially shipped 2026-05-27
+
+**Status.** Three of the five scenarios below shipped as part of
+PR #1487's
+`tests/integration/test_reviewer_summary_visibility.py` —
+specifically the visible-RF / hidden-RF / round-trip scenarios on
+both HTML and CSV (five `test_summary_*` functions in the file).
+The remaining two scenarios — *operator toggles a Band 2 response
+chip off after reviewer submitted* (`pill_state` stays
+`submitted`, no recall trigger) and *group-scoped instrument fan-
+out under visibility flips* — are still pending and need to land
+alongside (or just before) PR 4's confirm guard, since both
+exercise the same operator-side flip path that PR 4 will wrap in
+a confirm.
 
 Edge cases to lock down via integration tests on the summary
 view:
 
-- Visible RF appears on summary HTML and CSV.
+- Visible RF appears on summary HTML and CSV. **Shipped.**
 - Hidden RF does **not** appear on summary HTML or
   reviewer-record CSV; the data row no longer references it.
+  **Shipped.**
 - Operator toggles a Band 2 response chip off **after**
   reviewer has submitted: column drops, but the reviewer's
   `pill_state` stays `submitted` (no recall trigger) — the
-  reviewer is still "done".
+  reviewer is still "done". **Pending.**
 - Operator toggles a Band 2 response chip **back on**: the
   preserved value rehydrates into the summary column. Saved
-  in the DB, never lost.
+  in the DB, never lost. **Shipped.**
 - Group-scoped instruments: same visibility rule applies; the
-  group-fan-out invariant carries through.
+  group-fan-out invariant carries through. **Pending.**
 
 Each scenario lands a parametrised test in
 `tests/integration/test_reviewer_summary_visibility.py` (new file).
