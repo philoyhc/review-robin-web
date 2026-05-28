@@ -121,7 +121,6 @@ def test_summary_renders_after_full_submission(
     submit = rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
@@ -165,7 +164,6 @@ def test_summary_csv_streams_reviewer_only_rows(
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "3",
         },
         follow_redirects=False,
@@ -203,7 +201,6 @@ def test_dashboard_link_points_at_summary_when_submitted(
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
@@ -247,7 +244,6 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
@@ -289,7 +285,6 @@ def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_labe
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
@@ -302,7 +297,6 @@ def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_labe
     )
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_summary_multi_instrument_headings_use_page_prefix(
     db: Session,
     alice: AuthenticatedUser,
@@ -389,25 +383,23 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     db.refresh(review_session)
 
     # Submit responses on every assignment so the summary unlocks.
-    # Save is per-instrument-page — save each page separately
-    # with that page's assignment payload.
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1, so one /1/save POST carries every assignment's
+    # payload.
     assignments = list(
         db.execute(
             select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     )
     rae_client = make_client(rae)
-    for position, instrument in enumerate(instruments, start=1):
-        page_data: dict[str, str] = {"current_position": str(position)}
-        for a in assignments:
-            if a.instrument_id != instrument.id:
-                continue
-            page_data[f"response[{a.id}][rating]"] = "5"
-        rae_client.post(
-            f"/reviewer/sessions/{review_session.id}/{position}/save",
-            data=page_data,
-            follow_redirects=False,
-        )
+    page_data: dict[str, str] = {
+        f"response[{a.id}][rating]": "5" for a in assignments
+    }
+    rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/1/save",
+        data=page_data,
+        follow_redirects=False,
+    )
     rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         follow_redirects=False,

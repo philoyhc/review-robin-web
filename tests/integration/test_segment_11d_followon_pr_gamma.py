@@ -145,65 +145,6 @@ def rae() -> AuthenticatedUser:
     )
 
 
-# ── Action row order ─────────────────────────────────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_action_row_orders_save_discard_submit_divider_pages(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """The unified `.rs-action-row` lays out left-to-right as
-    Save / Discard / Submit / divider / Page #1 / Page #2. Each side
-    of the surface mirrors this order; here we just assert the first
-    occurrence."""
-    operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-g-order"
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
-    ).text
-
-    save_idx = body.find("data-rs-save")
-    discard_idx = body.find("data-rs-discard")
-    page1_idx = body.find('data-rs-page="1"')
-    page2_idx = body.find('data-rs-page="2"')
-    divider_idx = body.find('class="rs-action-divider"')
-    submit_idx = body.find("/submit")
-
-    assert -1 < save_idx < discard_idx < submit_idx < divider_idx < page1_idx < page2_idx
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_action_row_renders_mirrored_top_and_bottom(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """The action row is included twice — once above the tables and
-    once below. The divider shows up at least twice as a result."""
-    operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-g-mirror"
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
-    ).text
-
-    assert body.count('class="rs-action-divider"') == 2
-    # Two rs-action-row instances: top (carries the `rs-action-row-top`
-    # modifier so it can be left-aligned with extra space above) and
-    # bottom (default class string).
-    assert body.count('class="rs-action-row rs-action-row-top"') == 1
-    assert body.count('class="rs-action-row"') == 1
-
-
 # ── Page-button labels ───────────────────────────────────────────────────
 
 
@@ -428,22 +369,28 @@ def test_instrument_heading_single_short_label_only(
 # ── Per-position Save filter (defense in depth) ──────────────────────────
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_save_drops_cross_page_assignment_inputs(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Save's per-position filter drops ``response[<aid>][...]`` inputs
-    whose assignment belongs to a different instrument than the URL
-    position. Defense-in-depth against malformed POSTs (the GET surface
-    already narrows rendering to one page so the form normally only
-    contains its own page's inputs)."""
+    """Save's per-page filter drops ``response[<aid>][...]`` inputs
+    whose assignment belongs to an instrument on a different page than
+    the URL slot. Defense-in-depth against malformed POSTs (the GET
+    surface already narrows rendering to one page so the form normally
+    only contains its own page's inputs).
+
+    Migrated for Segment 18L PR 1d: a single-page-default session
+    places every instrument on the same page, so we set a page break
+    after the first instrument to carve out two pages."""
     operator = make_client(alice)
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-g-save-filter"
     )
+    # Carve the session into two pages — first on page 1, second on
+    # page 2.
+    instruments_service.create_page_break_after(db, instrument=first)
     # Both assignments exist for the same reviewer/reviewee pair.
     page1_assignment = db.execute(
         select(Assignment)
@@ -464,7 +411,6 @@ def test_save_drops_cross_page_assignment_inputs(
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 ok",
             f"response[{page2_assignment.id}][comments]": "page-2 leak",
-            "current_position": "1",
         },
         follow_redirects=False,
     )
@@ -488,53 +434,3 @@ def test_save_drops_cross_page_assignment_inputs(
     assert not any(r.value == "page-2 leak" for r in page2_responses)
 
 
-# ── Rendering narrows to current position ────────────────────────────────
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_surface_renders_all_groups_marks_current_active(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """PR δ — every instrument group lives in the DOM at once
-    (rendered into ``.rs-paginated``); only the URL position's group
-    carries the ``rs-active`` modifier. CSS hides non-active groups
-    so dirty edits in hidden groups survive client-side navigation."""
-    operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator,
-        db,
-        code="rae-d-allgroups",
-        first_short_label="Self-eval",
-        second_short_label="Peer review",
-    )
-    rae_client = make_client(rae)
-    body_p1 = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
-    ).text
-    # Both headings render — non-active group is hidden via CSS, not
-    # omitted from the markup.
-    assert "<h2>Page #1: Self-eval</h2>" in body_p1
-    assert "<h2>Page #2: Peer review</h2>" in body_p1
-    assert (
-        '<div class="rs-instrument-group rs-active"' in body_p1
-        and 'data-rs-position="1"' in body_p1
-    )
-    # Position 2 group is present without rs-active.
-    assert (
-        '<div class="rs-instrument-group"' in body_p1
-        and 'data-rs-position="2"' in body_p1
-    )
-
-    body_p2 = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/2"
-    ).text
-    assert "<h2>Page #2: Peer review</h2>" in body_p2
-    assert "<h2>Page #1: Self-eval</h2>" in body_p2
-    # Active group flips to position 2 on /2.
-    assert (
-        '<div class="rs-instrument-group rs-active"' in body_p2
-        and 'data-rs-position="2"' in body_p2
-    )

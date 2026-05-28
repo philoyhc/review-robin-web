@@ -745,7 +745,6 @@ def test_submit_blocks_on_validation_error(
     response = rae_client.post(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
-            "current_position": "1",
             f"response[{assignment.id}][rating]": "0",
         },
         follow_redirects=False,
@@ -1181,7 +1180,6 @@ def test_base_layout_has_skip_link_and_main_landmark(
     assert '<main id="main-content" tabindex="-1">' in page.text
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_group_instrument_save_fans_out_to_all_members(
     db: Session,
     alice: AuthenticatedUser,
@@ -1245,19 +1243,12 @@ def test_group_instrument_save_fans_out_to_all_members(
     )
     assert len(group_assignments) == 2  # one reviewer x two reviewees
 
-    ordered_ids = list(
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position = ordered_ids.index(group.id) + 1
-
     rae_client = make_client(rae)
     first = group_assignments[0]
+    # Segment 18L: single-page-default session keeps every instrument
+    # on page 1, so /1/save accepts inputs for any instrument.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={
             f"response[{first.id}][rating]": "4",
             f"response[{first.id}][comments]": "team did well",
@@ -1276,7 +1267,6 @@ def test_group_instrument_save_fans_out_to_all_members(
         assert by_key.get("comments") == "team did well"
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_group_instrument_fan_out_stays_within_boundary_group(
     db: Session,
     alice: AuthenticatedUser,
@@ -1350,19 +1340,12 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     }
     assert set(by_reviewee) == {"Carol", "Eve", "Dan"}
 
-    ordered_ids = list(
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position = ordered_ids.index(group.id) + 1
-
     rae_client = make_client(rae)
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1.
     # Answer the Team A group (keyed to Carol's assignment).
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -1381,7 +1364,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
 
     # Answering the Team B group leaves Team A's answer intact.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Dan'].id}][rating]": "2"},
         follow_redirects=False,
     )
@@ -1391,7 +1374,6 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
     db: Session,
     alice: AuthenticatedUser,
@@ -1464,19 +1446,12 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
             .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         ).scalars()
     }
-    ordered_ids = list(
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position = ordered_ids.index(group.id) + 1
-
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1.
     # Reviewer answers the Team A group → fans to Carol + Eve.
     rae_client = make_client(rae)
     saved = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -1517,7 +1492,6 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_tag_change_into_answered_group_refans_the_answer(
     db: Session,
     alice: AuthenticatedUser,
@@ -1593,18 +1567,12 @@ def test_tag_change_into_answered_group_refans_the_answer(
     # Carol (Team A) has the lower assignment id, so after she joins
     # Team B she becomes its collapse representative.
     assert by_reviewee["Carol"].id < by_reviewee["Dan"].id
-    ordered_ids = list(
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position = ordered_ids.index(group.id) + 1
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1.
     rae_client = make_client(rae)
     # Reviewer answers Team A (via Carol) and Team B (via Dan).
     saved = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={
             f"response[{by_reviewee['Carol'].id}][rating]": "5",
             f"response[{by_reviewee['Dan'].id}][rating]": "3",
@@ -1642,7 +1610,7 @@ def test_tag_change_into_answered_group_refans_the_answer(
 
     # The surface still surfaces Team B's answer.
     page = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/{position}"
+        f"/reviewer/sessions/{review_session.id}/1"
     )
     marker = f"rrw-sort-rs-{review_session.id}-{group.id}"
     table = page.text[
@@ -2007,7 +1975,6 @@ def test_group_self_review_toggle_rules_out_whole_group(
     }
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_group_instrument_surface_renders_one_row_per_group(
     db: Session,
     alice: AuthenticatedUser,
@@ -2067,18 +2034,11 @@ def test_group_instrument_surface_renders_one_row_per_group(
     generate_via_page_button(operator, review_session.id)
     _activate(operator, db, review_session)
 
-    ordered_ids = list(
-        db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position = ordered_ids.index(group.id) + 1
-
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1.
     rae_client = make_client(rae)
     page = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/{position}"
+        f"/reviewer/sessions/{review_session.id}/1"
     )
     assert page.status_code == 200
 

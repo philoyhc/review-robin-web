@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Instrument, Reviewer, ReviewSession
+from app.db.models import Assignment, Reviewer, ReviewSession
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -388,133 +388,6 @@ def test_review_surface_session_description_renders_in_overview_card(
     assert 'class="card rs-status-panel"' in body
     assert 'class="rs-session-description"' in body
     assert "Please rate each reviewee on the rubric." in body
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_review_surface_single_instrument_has_no_page_buttons(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Single-instrument sessions still render one Page #1 button
-    (there is just nowhere else to navigate). The unified action row
-    reads Save / Discard / Submit / divider / Page #1."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-one-inst",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
-    ).text
-    # PR #417's Previous / Next buttons retired in PR γ.
-    assert ">Next</button>" not in body
-    assert ">Previous</button>" not in body
-    # Page button anchor renders even on single-instrument sessions
-    # (one entry in `page_buttons`); the current page is disabled.
-    assert "Page #1" in body
-    # PR δ — every instrument group lives in the DOM under
-    # `.rs-paginated`; CSS hides the non-active ones. Single-instrument
-    # sessions still wrap their lone group in the same scaffold so
-    # the JS handler doesn't need a special case.
-    assert 'class="rs-paginated"' in body
-
-
-@pytest.mark.skip(reason="Segment 18L PR 1b retired the per-position pagination surface; PR 1d test sweep will delete this assertion.")
-def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """When the session has more than one instrument, both action rows
-    carry a Next button (`type="button"`, no form submission) and the
-    instrument groups are wrapped in `.rs-paginated` so CSS hides
-    inactive groups."""
-    operator = make_client(alice)
-    # Build the session in draft so we can slot in a second instrument
-    # before activation; `_require_instrument_editable` rejects edits
-    # once the session is `ready`.
-    operator.post(
-        "/operator/sessions",
-        data={"name": "Multi", "code": "rae-multi-inst"},
-        follow_redirects=False,
-    )
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "rae-multi-inst")
-    ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(operator, review_session.id)
-    # full-matrix pins all assignments to the default instrument; add a
-    # second instrument and slot in an extra Assignment for it so the
-    # reviewer sees both in their surface.
-    [default_instrument] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
-    )
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
-        data={"after": str(default_instrument.id)},
-        follow_redirects=False,
-    )
-    # ``instruments/add`` clones full-matrix assignments onto the new
-    # instrument automatically (per ``create_instrument``), so no
-    # manual Assignment seeding is needed.
-    operator.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
-    operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
-        data={"acknowledge_warnings": "true"},
-        follow_redirects=False,
-    )
-    db.refresh(review_session)
-    assert review_session.status == "ready"
-
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
-    ).text
-    # Previous / Next retired in PR γ.
-    assert ">Previous</button>" not in body
-    assert ">Next</button>" not in body
-    # Page #1 and Page #2 buttons render in the unified action row,
-    # mirrored top + bottom (so each appears twice). The current
-    # page's button is disabled.
-    assert body.count("Page #1") >= 2
-    assert body.count("Page #2") >= 2
-    # The current page's button renders disabled.
-    assert "aria-disabled=\"true\"" in body
-    # PR δ — both instrument groups live in the DOM at once under
-    # `.rs-paginated`; CSS hides the non-active one.
-    assert 'class="rs-paginated"' in body
-    assert body.count('class="rs-instrument-group') == 2
 
 
 def test_review_surface_clear_all_card_is_half_width_flush_right(

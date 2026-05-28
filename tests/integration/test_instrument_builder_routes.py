@@ -4994,7 +4994,6 @@ def test_wave3_priii_response_field_width_migrates_to_column_widths(
     assert "response_fields" not in (new_model.band2_state or {})
 
 
-@pytest.mark.skip(reason="Segment 18L multi-page replan: tests assume position=instrument_position, but URL slot is now page_n. PR 1d test sweep migrates.")
 def test_wave3_priii_reviewer_surface_emits_response_column_width(
     client: TestClient,
     db: Session,
@@ -5059,19 +5058,11 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     _activate(operator, db, review_session.id)
-    # Pick out the new-model instrument's position from the reviewer
-    # page; only that instrument has the operator-set width.
-    instruments = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().all()
-    new_model_position = (
-        [i.id for i in instruments].index(new_model.id) + 1
-    )
+    # Segment 18L: single-page-default session — every instrument
+    # lives on page 1.
     rae_client = make_client(reviewer_user)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/{new_model_position}"
+        f"/reviewer/sessions/{review_session.id}/1"
     ).text
     assert "width: 260px" in body
 
