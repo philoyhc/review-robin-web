@@ -45,13 +45,13 @@ reviewable, each landable on its own.
 
 ## PR sequence
 
-| PR | Track | Title | Depends on |
+| PR | Track | Title | Status |
 |---|---|---|---|
-| 1 | A | Align reviewer-surface page-validity check between GET and POST save | — |
-| 2 | B | Split `services/instruments/_instrument_crud.py` into per-concern slices | — |
-| 3 | B | *(optional)* Carve route slices out of `routes_operator/_instruments.py` | — |
-| 4 | C | Settings round-trip: serialise + apply the 18G ``ReviewSession`` columns | — |
-| 5 | C | Round-trip regression test pinning Quick Setup → Zip-all → import | PR 4 |
+| 1 | A | Align reviewer-surface page-validity check between GET and POST save | **shipped** PR #1556 |
+| 2 | B | Split `services/instruments/_instrument_crud.py` into per-concern slices | **shipped** PR #1557 |
+| 3 | B | Carve route slices out of `routes_operator/_instruments.py` | **shipped** PR #1558 |
+| 4 | B | Split `services/responses.py` into `_core` + `_group_reconciliation` | **shipped** PR #1559 |
+| 5 | C | Settings round-trip: serialise + apply every operator-input column the export was silently dropping (scope widened from 8 18G fields to the full audit set) + regression tests | **in flight** |
 
 The three tracks are independent. PR 1 is small enough to land
 first as a warm-up; PR 2 is the substantive structural item;
