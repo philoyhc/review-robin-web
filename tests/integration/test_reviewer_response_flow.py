@@ -413,20 +413,15 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
     ).text
 
     # Default seeded Comments is max_length=2000 → at default
-    # 224px column → typical 1500 chars / 28 chars/row → 53 →
+    # 224px column → typical 1000 chars / 28 chars/row → 36 →
     # clamped to the 8-row cap.
     assert 'rows="8"' in body_default
     # Sanity check: the legacy hard-coded ``rows="2"`` is gone.
     assert 'rows="2"' not in body_default
 
-    # Widen the Comments column to 800px and re-render — the
-    # textarea should shrink toward 4 rows (1500 / (800/8=100
-    # chars/row) = 15 → cap 8 — still 8 here, so let's widen
-    # FURTHER to force a meaningful shrink). At width 1600px,
-    # chars/row = 200 → 1500/200 = 7.5 → ceil 8 → cap stays 8.
-    # The 2000-char field's typical-response is so long it caps
-    # at every realistic width. Switch to a smaller field that
-    # WILL shrink: shorten max_length to 300 and re-render.
+    # The 2000-char field's typical-response still caps at every
+    # realistic width. Switch to a smaller field that WILL shrink:
+    # shorten max_length to 300 and re-render.
     from app.db.models import Instrument
 
     instrument = db.execute(
@@ -447,13 +442,13 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
     body_narrow = rae_client.get(
         f"/reviewer/sessions/{review_session.id}"
     ).text
-    # 300 max → typical 225 / 28 chars/row (default 224px) =
-    # ceil(8.04) = 9 → clamped to 8. Still cap.
-    assert 'rows="8"' in body_narrow
+    # 300 max → typical 150 / 28 chars/row (default 224px) =
+    # ceil(5.36) = 6.
+    assert 'rows="6"' in body_narrow
 
     # Now widen the column for the Comments field to 800px and
-    # re-render — chars/row jumps to 100, typical 225 / 100 =
-    # 3 rows.
+    # re-render — chars/row jumps to 100, typical 150 / 100 =
+    # ceil(1.5) = 2 → floor 2 (the MIN_TEXTAREA_ROWS clamp).
     widths = dict(instrument.column_widths or {})
     widths[f"rf_{comments.id}"] = 800
     instrument.column_widths = widths
@@ -461,7 +456,7 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
     body_wide = rae_client.get(
         f"/reviewer/sessions/{review_session.id}"
     ).text
-    assert 'rows="3"' in body_wide
+    assert 'rows="2"' in body_wide
 
 
 def test_surface_dedupes_reviewee_name_and_email_display_fields(
