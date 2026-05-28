@@ -75,6 +75,15 @@
           Random
         </button>
       </form>
+      {% if picker.options %}
+        <a class="btn secondary"
+           target="_blank" rel="noopener"
+           href="/operator/sessions/{{ session.id }}/preview-surface/1{% if picker.current %}?reviewer_email={{ picker.current.email | urlencode }}{% endif %}">
+          Open full preview
+        </a>
+      {% else %}
+        <a class="btn secondary" aria-disabled="true" href="#">Open full preview</a>
+      {% endif %}
     </div>
   </div>
 

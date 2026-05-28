@@ -6,11 +6,6 @@ tag. Each concern is a sibling sub-module exposing its own
 route is the bare prefix root, so the prefix can't live only on
 the parent); this package mounts them all. Split out of the
 single-file ``routes_reviewer.py`` in Segment 17B PR 1.
-
-External imports of the package pin to the symbols re-exported
-below — ``router`` (``app.main``) and ``build_preview_context``
-/ ``_make_synthetic_row`` / ``_SYNTHETIC_VALUES_BY_SOURCE``
-(``app.web.views._previews`` and its unit test).
 """
 
 from __future__ import annotations
@@ -18,11 +13,6 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.web.routes_reviewer import _dashboard, _invite, _summary, _surface
-from app.web.routes_reviewer._preview import (
-    _SYNTHETIC_VALUES_BY_SOURCE,
-    _make_synthetic_row,
-    build_preview_context,
-)
 
 router = APIRouter(tags=["reviewer"])
 router.include_router(_dashboard.router)
@@ -30,9 +20,4 @@ router.include_router(_summary.router)
 router.include_router(_surface.router)
 router.include_router(_invite.router)
 
-__all__ = [
-    "router",
-    "build_preview_context",
-    "_make_synthetic_row",
-    "_SYNTHETIC_VALUES_BY_SOURCE",
-]
+__all__ = ["router"]

@@ -23,7 +23,6 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 
-from ._preview_iframe import get_surface_preview_html
 
 
 def _operator_creates_session_with_pair(
@@ -367,53 +366,12 @@ def test_instrument_card_shows_completion_pills(
     assert "All items completed: 1/2" in after
 
 
-# ── Operator preview suppresses per-page pills ────────────────────────
-
-
-def test_operator_preview_omits_overview_card(
-    client: TestClient, db: Session
-) -> None:
-    """Operator preview reuses the surface template; preview mode
-    ships no per-page pills (read-only / synthetic — per-page state
-    is moot), so with no session description the overview card has
-    no content and is omitted entirely. After Segment 11F PR C the
-    surface renders inside an iframe srcdoc on the previews hub."""
-    review_session_response = client.post(
-        "/operator/sessions",
-        data={"name": "Prev", "code": "rae-prev-pills"},
-        follow_redirects=False,
-    )
-    assert review_session_response.status_code == 303
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "rae-prev-pills")
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(client, review_session.id)
-    body = get_surface_preview_html(
-        client, review_session.id, "r@example.edu"
-    )
-    # No description + no pills ⇒ the overview card is omitted.
-    assert 'class="card rs-status-panel"' not in body
-    assert 'class="rs-page-status-pills"' not in body
+# ``test_operator_preview_omits_overview_card`` retired in the
+# Segment 18Q follow-on. The old synthetic iframe preview returned an
+# empty ``page_statuses`` so the overview card collapsed when the
+# session had no description; the new full-preview path reuses
+# ``_surface_context`` against real assignments and emits the
+# per-page status pills exactly as a reviewer would see them — the
+# overview card now renders even with no session description. This
+# is consistent with the "operator sees exactly what the reviewer
+# would see" contract that drove the retirement.

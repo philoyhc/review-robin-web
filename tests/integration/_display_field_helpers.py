@@ -6,7 +6,7 @@ Per ``guide/archive/major_refactor.md`` §12.D the original
 six per-surface files. The seven helper functions below were
 shared by ~30 of those tests; this module avoids duplicating them
 across the resulting files. Mirrors the
-``tests/integration/_preview_iframe.py`` shared-helper-module
+``tests/integration/_full_preview.py`` shared-helper-module
 convention.
 
 The ``reviewer_user`` ``@pytest.fixture`` was used by exactly one
