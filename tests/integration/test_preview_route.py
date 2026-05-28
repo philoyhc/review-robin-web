@@ -1,15 +1,17 @@
-"""Integration tests for the retired ``/operator/sessions/{id}/preview``
-route (Segment 10B-3 → Segment 11F PR C).
+"""Integration tests for the legacy ``/operator/sessions/{id}/preview``
+permanent-redirect (Segment 10B-3 → Segment 11F PR C → Segment 18Q
+follow-on).
 
-PR C retires the standalone preview route in favor of the iframe-
-embedded surface card on the consolidated previews hub. This file
-keeps the tests that exercise behaviors specific to the retired
-route — the 308 redirect contract, operator-only access, and the
-deadline-observation D9 contract — plus the regression guard for
-the live reviewer surface route. The bulk of the rendered-surface
-assertions migrate to ``test_session_previews.py`` (PR C tests) and
-``test_segment_11d_*.py`` (chrome / panel / inputs / page buttons),
-which call ``get_surface_preview_html`` to extract the iframe srcdoc.
+PR C retired the standalone preview route in favor of the iframe-
+embedded surface card on the consolidated previews hub; the Segment
+18Q follow-on then retired the iframe in favor of the standalone
+operator-side full preview at ``/preview-surface/{page_n}``
+(``_preview_surface.py``). The legacy ``/preview`` URL now 308s
+straight to ``/preview-surface/1``. This file keeps the redirect
+contract test, the operator-only access regression guard, the
+deadline-observation D9 contract (rendering after deadline does not
+mutate session state), and a regression guard that the live reviewer
+surface still ships the write-path chrome.
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 
-from ._preview_iframe import get_surface_preview_html
+from ._full_preview import get_full_preview_html
 
 
 @pytest.fixture
@@ -94,13 +96,15 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
     )
 
 
-def test_preview_route_returns_308_to_previews_hub(
+def test_preview_route_returns_308_to_full_preview(
     client: TestClient, db: Session
 ) -> None:
-    """``/preview`` (singular) is a permanent redirect to the previews
-    hub anchored on the surface card. Status 308 keeps the GET method
-    on cross-client redirect handling and signals to crawlers that
-    the standalone route is gone."""
+    """``/preview`` (singular) is a permanent redirect. Through
+    Segment 11F PR C it pointed at the Previews hub's iframe surface
+    card; the Segment 18Q follow-on retired that card and the
+    redirect now points straight at the operator-side full preview
+    (``/preview-surface/1``). Status 308 keeps the GET method on
+    cross-client redirect handling and preserves legacy bookmarks."""
     review_session = _make_session(client, db, code="prev-308")
 
     response = client.get(
@@ -110,7 +114,7 @@ def test_preview_route_returns_308_to_previews_hub(
 
     assert response.status_code == 308
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/previews#reviewer-surface"
+        f"/operator/sessions/{review_session.id}/preview-surface/1"
     )
 
 
@@ -140,14 +144,14 @@ def test_preview_route_redirects_non_operator_to_request_access(
     assert response.headers["location"] == "/request-access"
 
 
-def test_preview_iframe_does_not_observe_deadline_side_effect(
+def test_preview_does_not_observe_deadline_side_effect(
     client: TestClient, db: Session
 ) -> None:
     """Bypassing deadline observation per D9 means an expired deadline
     does NOT trigger the lazy-close path on a preview render. The
-    contract carries through the iframe srcdoc on the previews hub:
-    rendering the surface card after deadline must not emit a
-    ``deadline``-reason ``instrument.closed`` audit event."""
+    contract carries through the operator-side full preview route:
+    rendering it after deadline must not emit a ``deadline``-reason
+    ``instrument.closed`` audit event."""
     from datetime import datetime, timedelta, timezone
 
     review_session = _make_session(client, db, code="prev-deadline")
@@ -160,7 +164,7 @@ def test_preview_iframe_does_not_observe_deadline_side_effect(
     review_session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
     db.flush()
 
-    body = get_surface_preview_html(
+    body = get_full_preview_html(
         client, review_session.id, "r@example.edu"
     )
     # Surface still renders without observing the deadline.

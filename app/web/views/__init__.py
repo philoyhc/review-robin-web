@@ -128,8 +128,11 @@ from ._workflow_card import (
 )
 
 # Previews page view-shapes (sliced in PR 9): reviewer picker,
-# three-tab email previews, merge-tag editor strip, reviewer-
-# surface preview card.
+# three-tab email previews, merge-tag editor strip. The iframe-
+# embedded reviewer-surface preview card was retired in the Segment
+# 18Q follow-on alongside its ``SurfacePreviewContext`` /
+# ``SurfacePreviewMissing`` / ``build_surface_preview_context``
+# adapters.
 from ._previews import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
@@ -138,11 +141,8 @@ from ._previews import (
     EmailPreviewTab,
     PreviewPickerContext,
     PreviewPickerOption,
-    SurfacePreviewContext,
-    SurfacePreviewMissing,
     build_email_preview_body,
     build_preview_picker_context,
-    build_surface_preview_context,
     email_preview_from_display,
     merge_tags_for_template,
     resolve_email_preview_tab,
@@ -208,8 +208,6 @@ __all__ = [
     "SetupCoverageRow",
     "SetupRow",
     "SeverityChip",
-    "SurfacePreviewContext",
-    "SurfacePreviewMissing",
     "ValidateContext",
     # Builders / helpers.
     "build_assignments_page_context",
@@ -222,7 +220,6 @@ __all__ = [
     "build_quick_setup_context",
     "build_responses_rows",
     "build_setup_rows",
-    "build_surface_preview_context",
     "build_validate_context",
     "build_auto_send_invites_caption",
     "build_auto_send_reminders_caption",

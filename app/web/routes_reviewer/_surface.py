@@ -806,14 +806,6 @@ def _surface_context(
             at=review_session.deadline,
         ),
         "preview_mode": preview_mode,
-        # ``preview_mode_full`` differentiates the operator-side full
-        # preview (Segment 18Q — real plumbing via ``_surface_context``,
-        # gets the action row rendered with inert write buttons +
-        # functional Prev/Next) from the legacy synthetic iframe
-        # preview built by ``build_preview_context`` (which sets
-        # ``preview_mode=True`` but leaves this False, suppressing
-        # the action row in the iframe srcdoc).
-        "preview_mode_full": preview_mode,
     }
 
 

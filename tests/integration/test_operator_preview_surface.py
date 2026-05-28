@@ -332,9 +332,9 @@ def test_preview_works_on_draft_session(
 def test_previews_hub_links_to_full_preview(
     client: TestClient, db: Session
 ) -> None:
-    """The Previews hub's iframe surface card carries an "Open full
-    preview" link that targets the new operator-side preview route
-    (with the picker's selected reviewer in the query string)."""
+    """The Previews hub picker card carries an "Open full preview"
+    link that targets the operator-side full preview route (with the
+    picker's selected reviewer in the query string)."""
     session = _make_session_with_reviewer(client, db, code="prev-s-link")
     body = client.get(
         f"/operator/sessions/{session.id}/previews"
@@ -345,30 +345,5 @@ def test_previews_hub_links_to_full_preview(
         "?reviewer_email=rae%40example.edu"
     )
     assert f'href="{expected}"' in body
-
-
-# --------------------------------------------------------------------------- #
-# Iframe preview should not gain a phantom action row from the new flag
-# --------------------------------------------------------------------------- #
-
-
-def test_iframe_preview_has_no_action_row(
-    client: TestClient, db: Session
-) -> None:
-    """Regression guard — ``build_preview_context`` (the iframe path)
-    sets ``preview_mode=True`` but does NOT set ``preview_mode_full``,
-    so the synthetic single-page iframe srcdoc must still suppress
-    the action row entirely. Without the dedicated flag the iframe
-    would gain three disabled ``Save / Discard / Submit`` buttons."""
-    from ._preview_iframe import get_surface_preview_html
-
-    session = _make_session_with_reviewer(client, db, code="prev-s-iframe")
-    srcdoc = get_surface_preview_html(
-        client, session.id, "rae@example.edu"
-    )
-    # The iframe srcdoc must NOT carry an action-row container ``<div>``
-    # — ``rs-action-row`` shows up as a CSS class definition in
-    # ``base.html``'s inline stylesheet whether or not the row renders,
-    # so checking for the actual rendered ``class="rs-action-row...``
-    # is the right marker.
-    assert 'class="rs-action-row' not in srcdoc
+    # Picker card carries the "Open full preview" anchor text.
+    assert "Open full preview" in body

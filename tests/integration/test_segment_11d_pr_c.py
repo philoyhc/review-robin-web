@@ -16,7 +16,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 
-from ._preview_iframe import get_surface_preview_html
+from ._full_preview import get_full_preview_html
 
 
 def _operator_creates_session_with_pair(
@@ -285,7 +285,7 @@ def test_review_surface_preview_banner_is_banner_info(
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
-    body = get_surface_preview_html(
+    body = get_full_preview_html(
         operator, review_session.id, "rae@example.edu"
     )
     assert 'class="banner banner-info"' in body
@@ -457,7 +457,7 @@ def test_operator_preview_keeps_operator_chrome(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
-    body = get_surface_preview_html(
+    body = get_full_preview_html(
         client, review_session.id, "r@example.edu"
     )
     # Operator chrome present (Web App identity, breadcrumb).

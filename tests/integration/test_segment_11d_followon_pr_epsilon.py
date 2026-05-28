@@ -33,7 +33,6 @@ from ._full_matrix import (
 )
 from app.services import instruments as instruments_service
 
-from ._preview_iframe import get_surface_preview_html
 
 
 def _setup_two_instrument_session(
@@ -360,59 +359,15 @@ def test_preview_status_panel_renders_without_per_page_pills(
     assert 'class="rs-page-status-pills"' not in body
 
 
-def test_preview_inputs_render_disabled(
-    client: TestClient, db: Session
-) -> None:
-    """Preview's read-only contract — every input renders ``disabled``
-    so the operator can't type into a synthetic surface."""
-    client.post(
-        "/operator/sessions",
-        data={"name": "Prev", "code": "prev-eps-disabled"},
-        follow_redirects=False,
-    )
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "prev-eps-disabled")
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv",
-                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={
-            "file": (
-                "e.csv",
-                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(client, review_session.id)
-    body = get_surface_preview_html(
-        client, review_session.id, "r@example.edu"
-    )
-    # Every actual response input on the synthetic surface carries
-    # ``disabled``. Anchor on the seeded `rating` field.
-    assert 'name="response' in body
-    # At least one input/textarea/select with `disabled` lands; verify
-    # via the `name="response"` token co-occurring with `disabled`.
-    response_input_idx = body.find('name="response')
-    assert response_input_idx >= 0
-    # Look forward up to the next tag close for the `disabled`
-    # attribute. The window has to be generous enough to cover the
-    # numeric input's full attribute set (min, max, step, title, …).
-    tag_close = body.find(">", response_input_idx)
-    assert tag_close > response_input_idx
-    assert "disabled" in body[response_input_idx:tag_close]
+# ``test_preview_inputs_render_disabled`` retired in the Segment 18Q
+# follow-on. The old iframe preview path forced ``accepting=False`` on
+# every row so all inputs rendered ``disabled``; the new full-preview
+# path bypasses session-lifecycle / acceptance gates and forces
+# ``accepting=True`` so the operator sees the form exactly as a
+# reviewer would when it's accepting responses. Write semantics are
+# blocked at the action-row level (Save/Discard/Submit disabled) and
+# the surrounding ``<form>`` is replaced by a ``<div>``, both covered
+# by ``test_operator_preview_surface.py``.
 
 
 def test_preview_omits_pushstate_prefix(
