@@ -233,9 +233,11 @@
          Scoped to ``.rs-instrument-group`` so the rule covers
          both the group-scoped table and the regular per-reviewee
          table without re-aligning other tables in the
-         operator-side chrome. */
-      .rs-instrument-group td,
-      .rs-instrument-group th {
+         operator-side chrome. The ``body.ui-v2`` prefix matches
+         the higher-specificity ``body.ui-v2 td { vertical-align:
+         middle }`` rule downstream that would otherwise win. */
+      body.ui-v2 .rs-instrument-group td,
+      body.ui-v2 .rs-instrument-group th {
         vertical-align: top;
       }
       /*
