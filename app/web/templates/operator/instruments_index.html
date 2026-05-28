@@ -50,6 +50,11 @@
     body.ui-v2 [data-new-model-band2-preview] th,
     body.ui-v2 [data-new-model-band2-preview] td {
       padding: var(--space-2) var(--space-3);
+      /* Top-align so multi-row textareas (long-text response
+         fields) anchor at the top of the row rather than
+         centering vertically inside it — matches the reviewer
+         surface contract in base.html. */
+      vertical-align: top;
     }
     body.ui-v2 [data-new-model-band2-preview] input,
     body.ui-v2 [data-new-model-band2-preview] textarea,
@@ -2854,6 +2859,28 @@
           // (max_len > 100) → <textarea rows=2>, Integer / Decimal →
           // <input type=number>, List → <select>. The placeholder
           // string mirrors ``views/_instruments.py::placeholder_for_field``.
+          // ``textareaRowsFor`` mirrors
+          // ``views/_instruments.py::textarea_rows_for`` — keep the
+          // constants in sync if you tune either side.
+          function textareaRowsFor(maxChars, columnWidthPx) {
+            var DEFAULT_RESPONSE_COL_WIDTH_PX = 224;
+            var PX_PER_CHAR = 8;
+            var TYPICAL_RESPONSE_FRACTION = 0.75;
+            var MIN_TEXTAREA_ROWS = 2;
+            var MAX_TEXTAREA_ROWS = 8;
+            var MIN_CHARS_PER_ROW = 20;
+            if (!maxChars || maxChars <= 0) { return MIN_TEXTAREA_ROWS; }
+            var width = columnWidthPx || DEFAULT_RESPONSE_COL_WIDTH_PX;
+            var typical = maxChars * TYPICAL_RESPONSE_FRACTION;
+            var charsPerRow = Math.max(
+              MIN_CHARS_PER_ROW, width / PX_PER_CHAR
+            );
+            var raw = Math.ceil(typical / charsPerRow);
+            return Math.max(
+              MIN_TEXTAREA_ROWS,
+              Math.min(MAX_TEXTAREA_ROWS, raw)
+            );
+          }
           function buildResponseFieldPreviewCell(card, r) {
             var instrumentCard = card.closest('[id^="instrument-"]');
             if (!instrumentCard) { return '<span class="muted">—</span>'; }
@@ -2878,10 +2905,25 @@
             var commonAttrs = 'disabled tabindex="-1" aria-hidden="true" '
               + 'style="width: 100%; box-sizing: border-box; font: inherit;"';
             if (dataType === 'string' && maxLenInt > 100) {
+              // Mirror ``views/_instruments.py::textarea_rows_for``
+              // so the Band 2 preview shows the same initial row
+              // count the reviewer surface will render. Reads the
+              // current ``<col>`` width from the same Band 2
+              // table; falls back to the helper's default when
+              // unset.
+              var colEl = instrumentCard.querySelector(
+                'col[data-col-key="resp_' + r.key + '"]'
+              );
+              var colPx = null;
+              if (colEl) {
+                var cw = parseInt(colEl.style.width, 10);
+                if (cw > 0) { colPx = cw; }
+              }
+              var rows = textareaRowsFor(maxLenInt, colPx);
               return '<textarea ' + commonAttrs.replace(
                 'width: 100%;',
-                'width: 100%; min-height: 44px;'
-              ) + ' rows="2"'
+                'width: 100%; min-height: 44px; resize: vertical;'
+              ) + ' rows="' + rows + '"'
                 + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
                 + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')
                 + '></textarea>';
