@@ -358,18 +358,28 @@
             </thead>
           </table>
         </div>
+        {# Action row — adopts the Band-3 response-field
+           builder's row pattern: plain text input filling the
+           available width, followed by a tight
+           ``inline-flex; gap: 0`` icon-button group on the
+           right. ``btn-icon action`` / ``btn-icon danger`` are
+           the same classes the Band-3 builder uses for its
+           per-row ``➕`` / ``✗`` icons. #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
-                 data-shape-name placeholder="Name this shape">
+                 data-shape-name placeholder="Name this shape"
+                 style="width: 100%;">
           <span class="data-shape-name-display" data-shape-name-display></span>
-          <button type="button" class="btn-icon action"
-                  data-shape-save title="Save shape">&#10003;</button>
-          <button type="button" class="btn-icon action"
-                  data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
-          <button type="button" class="btn-icon danger"
-                  data-shape-delete title="Delete shape">&#10007;</button>
-          <button type="button" class="btn-icon action"
-                  data-shape-add title="Add another shape below">&#10133;</button>
+          <div class="data-shape-icon-group">
+            <button type="button" class="btn-icon action"
+                    data-shape-save title="Save shape">&#10003;</button>
+            <button type="button" class="btn-icon action"
+                    data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
+            <button type="button" class="btn-icon danger"
+                    data-shape-delete title="Delete shape">&#10007;</button>
+            <button type="button" class="btn-icon action"
+                    data-shape-add title="Add another shape below">&#10133;</button>
+          </div>
         </div>
       </div>
     </template>
@@ -388,18 +398,28 @@
             </thead>
           </table>
         </div>
+        {# Action row — adopts the Band-3 response-field
+           builder's row pattern: plain text input filling the
+           available width, followed by a tight
+           ``inline-flex; gap: 0`` icon-button group on the
+           right. ``btn-icon action`` / ``btn-icon danger`` are
+           the same classes the Band-3 builder uses for its
+           per-row ``➕`` / ``✗`` icons. #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
-                 data-shape-name placeholder="Name this shape">
+                 data-shape-name placeholder="Name this shape"
+                 style="width: 100%;">
           <span class="data-shape-name-display" data-shape-name-display></span>
-          <button type="button" class="btn-icon action"
-                  data-shape-save title="Save shape">&#10003;</button>
-          <button type="button" class="btn-icon action"
-                  data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
-          <button type="button" class="btn-icon danger"
-                  data-shape-delete title="Delete shape">&#10007;</button>
-          <button type="button" class="btn-icon action"
-                  data-shape-add title="Add another shape below">&#10133;</button>
+          <div class="data-shape-icon-group">
+            <button type="button" class="btn-icon action"
+                    data-shape-save title="Save shape">&#10003;</button>
+            <button type="button" class="btn-icon action"
+                    data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
+            <button type="button" class="btn-icon danger"
+                    data-shape-delete title="Delete shape">&#10007;</button>
+            <button type="button" class="btn-icon action"
+                    data-shape-add title="Add another shape below">&#10133;</button>
+          </div>
         </div>
       </div>
     </div>
