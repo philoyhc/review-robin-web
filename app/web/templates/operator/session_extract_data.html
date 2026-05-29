@@ -809,28 +809,35 @@
         wrapper.appendChild(fragment);
         relevantSlot.appendChild(wrapper);
         wrapper.querySelectorAll("[data-shaper-col-chip]").forEach(bindColChip);
-        // If a response field is already selected, re-apply its
-        // data-type filter to the freshly-mounted aggregate
-        // chips — the pool was cloned fresh so its
-        // ``Mean`` / ``Length`` / etc. chips revert to
-        // "all visible" without this.
+        // Always re-apply the data-type filter on a fresh
+        // mount: the pool was cloned with every
+        // ``Mean`` / ``Length`` / etc. chip visible, but
+        // they need to start hidden whenever no response
+        // field is selected (and reflect the right
+        // data-type subset whenever one is).
         var currentField = card.querySelector(
           '[data-shaper-field-chip][aria-pressed="true"]'
         );
-        if (currentField) {
-          applyFieldDataType(
-            currentField.getAttribute("data-shaper-field-data-type")
-          );
-        }
+        applyFieldDataType(
+          currentField
+            ? currentField.getAttribute("data-shaper-field-data-type")
+            : null
+        );
       }
 
       // ``Mean`` / ``Median`` / ``Min`` / ``Max`` chips only
       // apply to numeric response fields; ``Length`` only
-      // applies to string fields. When the operator picks a
-      // response field, hide the aggregate chips that don't
-      // match its data type — and auto-deselect any already-on
-      // chip that gets hidden so the preview row stays
-      // consistent.
+      // applies to string fields. They're field-scoped
+      // aggregates — without a specific response field
+      // selected there's no value vector to summarise, so
+      // they **hide entirely** until the operator picks a
+      // response field. Once a field is selected the
+      // remaining chips filter to the ones relevant to the
+      // field's data type, and any already-on chip that gets
+      // hidden auto-deselects so the preview row stays
+      // consistent. ``Assigned`` / ``Count`` carry no
+      // ``data-shaper-relevant-for`` attribute and stay
+      // visible always — they're field-independent.
       function applyFieldDataType(dataType) {
         var NUMERIC = ["Integer", "Decimal"];
         var STRING = ["String"];
@@ -839,11 +846,16 @@
           .querySelectorAll("[data-shaper-relevant-for]")
           .forEach(function (chip) {
             var relevantFor = chip.getAttribute("data-shaper-relevant-for");
-            var show = noField;
-            if (relevantFor === "numeric")
-              show = noField || NUMERIC.indexOf(dataType) !== -1;
-            else if (relevantFor === "string")
-              show = noField || STRING.indexOf(dataType) !== -1;
+            var show;
+            if (noField) {
+              show = false;
+            } else if (relevantFor === "numeric") {
+              show = NUMERIC.indexOf(dataType) !== -1;
+            } else if (relevantFor === "string") {
+              show = STRING.indexOf(dataType) !== -1;
+            } else {
+              show = true;
+            }
             chip.style.display = show ? "" : "none";
             if (
               !show &&

@@ -246,15 +246,21 @@ require any per-lens configuration first.
        `Mean` / `Median` / `Min` / `Max` / `Length`
        (mirrors the Reviewer / Reviewee response metadata
        cards' aggregate column vocabulary, with `Assigned`
-       leading per that card's column order). When a
-       response field is selected, the aggregate chips
+       leading per that card's column order). The
+       field-scoped aggregates (`Mean`, `Median`, `Min`,
+       `Max`, `Length`) **only render when a response field
+       is selected** — without a specific field there's no
+       value vector to summarise. `Assigned` and `Count`
+       stay visible always (field-independent). Once a
+       response field is picked, the field-scoped chips
        filter to the ones **relevant to that field's data
        type**: numeric (Integer / Decimal) fields surface
-       `Assigned`, `Count`, `Mean`, `Median`, `Min`, `Max`;
-       string fields surface `Assigned`, `Count`, `Length`;
-       other types surface `Assigned`, `Count`. Selected
-       chips that get hidden by a data-type swap auto-
-       deselect so the preview row stays consistent.
+       `Mean`, `Median`, `Min`, `Max`; string fields surface
+       `Length`; other types surface neither (just
+       `Assigned` and `Count`). Selected chips that get
+       hidden by a data-type swap (or by the operator
+       deselecting the response field) auto-deselect so
+       the preview row stays consistent.
   - **Preview-row empty state**: each Data shape sub-card's
     preview table seeds a muted-italic placeholder cell
     ("Pick chips above to compose this shape's columns")
