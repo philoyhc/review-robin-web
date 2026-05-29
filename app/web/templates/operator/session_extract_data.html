@@ -15,38 +15,54 @@
      is set to ``extract-data`` so card POSTs land back here. #}
   {% include "operator/partials/next_action_card.html" %}
 
-  <div class="card" id="extract-data-intro">
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
-      <div>
-        <h2 style="margin-top: 0;">Extract data</h2>
-        <p class="form-help" style="margin-bottom: 0;">
-          Shape this session's response data for offline analysis.
-          Configure what you need on the lens cards below and
-          download the specific files — or take everything at once
-          with <strong>Zip all</strong>.
-        </p>
+  {# Top row: two half-width cards side-by-side. The intro card
+     on the left carries the page heading + the "Zip all
+     responses" button (the one-click everything shortcut). The
+     By-instrument card on the right is the first wired lens
+     (per ``guide/extract_data.md``); its Zip-all button downloads
+     just the instrument-focused CSVs. #}
+  <div class="extract-data-top-grid">
+    <div class="card" id="extract-data-intro">
+      <div class="extract-data-card-row">
+        <div>
+          <h2 style="margin-top: 0;">Extract data</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Shape this session's response data for offline analysis.
+            Configure what you need on the lens cards below and
+            download the specific files — or take everything at
+            once with <strong>Zip all responses</strong>.
+          </p>
+        </div>
+        <a class="btn secondary"
+           id="extract-data-zip-all"
+           href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
+          Zip all responses
+        </a>
       </div>
-      <a class="btn secondary"
-         id="extract-data-zip-all"
-         href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
-        Zip all
-      </a>
+    </div>
+
+    <div class="card" id="extract-data-by-instrument">
+      <div class="extract-data-card-row">
+        <div>
+          <h3 style="margin-top: 0;">By instrument</h3>
+          <p style="margin-bottom: 0;">
+            One CSV per instrument; rows = (reviewer × reviewee)
+            pairs; columns = response fields side-by-side.
+            Optimised for cross-reviewer comparison on a single
+            rubric.
+          </p>
+        </div>
+        <a class="btn secondary"
+           id="extract-data-by-instrument-zip"
+           href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip">
+          Zip all
+        </a>
+      </div>
     </div>
   </div>
 
-  {# Skeleton — each lens renders a card with a one-line description
-     and a "Coming soon" note. Per-lens download wiring lands in
-     follow-up PRs. #}
-
-  <div class="card" id="extract-data-by-instrument">
-    <h3>By instrument</h3>
-    <p>
-      One CSV per instrument; rows = (reviewee × reviewer) pairs for
-      that instrument; columns = response fields side-by-side.
-      Optimised for cross-reviewer comparison on a single rubric.
-    </p>
-    <p class="muted">Coming soon.</p>
-  </div>
+  {# Remaining lenses still planned — per-card configuration +
+     downloads land in follow-up PRs. #}
 
   <div class="card" id="extract-data-by-reviewer">
     <h3>By reviewer</h3>

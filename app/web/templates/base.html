@@ -1255,6 +1255,33 @@
         gap: var(--space-2);
         flex-wrap: wrap;
       }
+      /* Extract data page — top row of two half-width cards
+         (intro + By instrument) sitting side-by-side. Each card
+         lays out its heading-and-button row via
+         ``extract-data-card-row``. Collapses to a single column
+         on narrow viewports. */
+      body.ui-v2 .extract-data-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+        margin-top: var(--space-3);
+        align-items: stretch;
+      }
+      body.ui-v2 .extract-data-top-grid > .card {
+        margin-top: 0;
+      }
+      body.ui-v2 .extract-data-card-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-3);
+        height: 100%;
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .extract-data-top-grid {
+          grid-template-columns: 1fr;
+        }
+      }
       /* Extract Setup card — 2 explicit column containers, each
          stacking its rows vertically. Col 1 = Reviewers /
          Reviewees; col 2 = Relationships / Session settings /

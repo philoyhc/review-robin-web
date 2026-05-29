@@ -45,6 +45,7 @@ from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.extracts.zip_bundle import (
+    build_by_instrument_bundle,
     build_responses_bundle,
     build_setup_bundle,
 )
@@ -297,6 +298,46 @@ def export_responses_bundle_zip(
         headers={
             "Content-Disposition": (
                 f'attachment; filename="{code}_responses.zip"'
+            ),
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/export/by_instrument_bundle.zip"
+)
+def export_by_instrument_bundle_zip(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The Extract data tab's By-instrument Zip-all button —
+    one wide-format CSV per instrument carrying a meta header
+    + the cross-reviewer comparison table. Filename:
+    ``{code}_by_instrument.zip`` (members named
+    ``{code}_by_instrument_{slug}.csv``). Per
+    ``guide/extract_data.md``."""
+    zip_bytes, counts = build_by_instrument_bundle(db, review_session)
+
+    audit.write_event(
+        db,
+        event_type="session.by_instrument_bundle_extracted",
+        summary=(
+            f"Extracted By-instrument bundle for session "
+            f"{review_session.code}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(**counts),
+    )
+
+    code = (review_session.code or "session").strip() or "session"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{code}_by_instrument.zip"'
             ),
         },
     )

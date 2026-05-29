@@ -45,7 +45,7 @@ def test_extract_data_tab_renders_skeleton(
     assert 'id="extract-data-by-reviewer"' in body
     assert 'id="extract-data-by-reviewee"' in body
     # Lens headings.
-    assert "<h3>By instrument</h3>" in body
+    assert ">By instrument</h3>" in body
     assert "<h3>By reviewer</h3>" in body
     assert "<h3>By reviewee</h3>" in body
 
