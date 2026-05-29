@@ -31,7 +31,7 @@
         <h2 style="margin-top: 0;">Extract all data</h2>
         <p class="form-help" style="margin-bottom: 0;">
           Configure what you need on the lens cards and download
-          the specific files. Use <strong>Extract all data</strong>
+          the specific files. Use <strong>Zip all</strong>
           to download all response files (as configured using the
           other cards) at once.
         </p>
@@ -43,21 +43,21 @@
               tabindex="0"
               aria-pressed="true">By instruments</span>
         <span class="pill pill-count tag-chip is-selected"
-              data-extract-all-chip="by-reviewers"
+              data-extract-all-chip="reviewer-metadata"
               role="button"
               tabindex="0"
-              aria-pressed="true">By reviewers</span>
+              aria-pressed="true">Reviewer response metadata</span>
         <span class="pill pill-count tag-chip is-selected"
-              data-extract-all-chip="by-reviewees"
+              data-extract-all-chip="reviewee-metadata"
               role="button"
               tabindex="0"
-              aria-pressed="true">By reviewees</span>
+              aria-pressed="true">Reviewee response metadata</span>
       </p>
       <div class="extract-data-card-actions">
         <a class="btn secondary"
            id="extract-data-zip-all"
            href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
-          Extract all data
+          Zip all
         </a>
       </div>
     </div>
@@ -118,28 +118,52 @@
     </div>
   </div>
 
-  {# Remaining lenses still planned — per-card configuration +
-     downloads land in follow-up PRs. Text styling matches the
-     intro card (``h2`` + ``form-help``) for consistency. #}
+  {# The "Reviewer response metadata" / "Reviewee response metadata"
+     cards replace the earlier "By reviewer" / "By reviewee"
+     lenses. Per-reviewer / per-reviewee response data is already
+     trivially reshaped from the By-instrument export via a
+     spreadsheet sort or Power Query; these cards focus on
+     *metadata about responses* (when, what, by whom) rather
+     than the response values themselves. ``Zip all`` button is
+     a placeholder — wiring lands in a follow-up PR. #}
 
-  <div class="card" id="extract-data-by-reviewer">
-    <h2 style="margin-top: 0;">By reviewer</h2>
-    <p class="form-help">
-      One CSV per reviewer; rows = every response that reviewer made;
-      columns include instrument / reviewee / field / value.
-      Optimised for individual reviewer audit and coaching.
-    </p>
-    <p class="muted">Coming soon.</p>
+  <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
+    <div>
+      <h2 style="margin-top: 0;">Reviewer response metadata</h2>
+      <p class="form-help" style="margin-bottom: 0;">
+        Per-reviewer metadata about the responses each reviewer
+        produced — how many, when saved / submitted, against which
+        instruments. Optimised for reviewer audit and coaching.
+      </p>
+    </div>
+    <div class="extract-data-card-actions">
+      <a class="btn secondary"
+         id="extract-data-reviewer-metadata-zip"
+         href="#"
+         aria-disabled="true">
+        Zip all
+      </a>
+    </div>
   </div>
 
-  <div class="card" id="extract-data-by-reviewee">
-    <h2 style="margin-top: 0;">By reviewee</h2>
-    <p class="form-help">
-      One CSV per reviewee; rows = every response made about that
-      reviewee; columns include reviewer / instrument / field / value.
-      Optimised for the feedback packet handed to the reviewed person.
-    </p>
-    <p class="muted">Coming soon.</p>
+  <div class="card extract-data-card-stack" id="extract-data-by-reviewee">
+    <div>
+      <h2 style="margin-top: 0;">Reviewee response metadata</h2>
+      <p class="form-help" style="margin-bottom: 0;">
+        Per-reviewee metadata about the responses produced about
+        each reviewee — how many, when saved / submitted, against
+        which instruments. Optimised for the feedback packet
+        handed to the reviewed person.
+      </p>
+    </div>
+    <div class="extract-data-card-actions">
+      <a class="btn secondary"
+         id="extract-data-reviewee-metadata-zip"
+         href="#"
+         aria-disabled="true">
+        Zip all
+      </a>
+    </div>
   </div>
 
   {# Progressive-enhancement toggle for the Extract-data chip
