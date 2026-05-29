@@ -48,8 +48,8 @@ def test_extract_data_tab_renders_skeleton(
     # Extract data intro card's text styling (Wave 2 PR — chip
     # row layout shipped).
     assert ">By instrument</h2>" in body
-    assert ">By reviewer</h2>" in body
-    assert ">By reviewee</h2>" in body
+    assert ">Reviewer response metadata</h2>" in body
+    assert ">Reviewee response metadata</h2>" in body
 
 
 def test_extract_data_tab_appears_in_operations_strip(
@@ -101,10 +101,11 @@ def test_extract_data_tab_breadcrumbs(
 def test_extract_all_card_renders_lens_selector_chips(
     client: TestClient, db: Session
 ) -> None:
-    """The intro card (now ``Extract all data``) carries three
+    """The intro card (``Extract all data``) carries three
     placeholder selector chips — ``By instruments``,
-    ``By reviewers``, ``By reviewees`` — all defaulting to
-    selected. Wiring lands later; this slice is layout."""
+    ``Reviewer response metadata``, ``Reviewee response
+    metadata`` — all defaulting to selected. Wiring lands
+    later; this slice is layout."""
     review_session = _make_session(client, db, code="ed-all-chips")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -112,10 +113,10 @@ def test_extract_all_card_renders_lens_selector_chips(
 
     assert 'data-extract-all-chip="by-instruments"' in body
     assert ">By instruments<" in body
-    assert 'data-extract-all-chip="by-reviewers"' in body
-    assert ">By reviewers<" in body
-    assert 'data-extract-all-chip="by-reviewees"' in body
-    assert ">By reviewees<" in body
+    assert 'data-extract-all-chip="reviewer-metadata"' in body
+    assert ">Reviewer response metadata<" in body
+    assert 'data-extract-all-chip="reviewee-metadata"' in body
+    assert ">Reviewee response metadata<" in body
 
     # All three chips start selected.
     chip_block = body.split('id="extract-data-intro"')[1].split(
