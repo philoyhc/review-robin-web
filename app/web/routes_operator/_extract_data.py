@@ -11,9 +11,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
@@ -45,6 +46,13 @@ def session_extract_data(
         ),
         prepare_confirm=prepare_confirm,
     )
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_extract_data.html",
@@ -55,6 +63,7 @@ def session_extract_data(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Extract data"
             ),
+            "instruments": instruments,
             **workflow_ctx,
         },
     )

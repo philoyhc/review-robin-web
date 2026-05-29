@@ -44,10 +44,12 @@ def test_extract_data_tab_renders_skeleton(
     assert 'id="extract-data-by-instrument"' in body
     assert 'id="extract-data-by-reviewer"' in body
     assert 'id="extract-data-by-reviewee"' in body
-    # Lens headings.
-    assert ">By instrument</h3>" in body
-    assert "<h3>By reviewer</h3>" in body
-    assert "<h3>By reviewee</h3>" in body
+    # Lens headings — every lens card uses h2 to match the
+    # Extract data intro card's text styling (Wave 2 PR — chip
+    # row layout shipped).
+    assert ">By instrument</h2>" in body
+    assert ">By reviewer</h2>" in body
+    assert ">By reviewee</h2>" in body
 
 
 def test_extract_data_tab_appears_in_operations_strip(
@@ -94,3 +96,32 @@ def test_extract_data_tab_breadcrumbs(
 
     # operator_session_child renders "Sessions › <name> › Extract data".
     assert "Extract data" in body
+
+
+def test_by_instrument_card_renders_selectable_chips(
+    client: TestClient, db: Session
+) -> None:
+    """The By instrument card carries one chip per instrument
+    (by short label or ``Instrument_{n}`` fallback) plus the two
+    cross-cutting toggles. All default to selected
+    (``is-selected`` + ``aria-pressed="true"``)."""
+    review_session = _make_session(client, db, code="ed-chips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Default-seeded session has one instrument — the chip falls
+    # back to ``Instrument_1`` since no short label is set.
+    assert "data-by-instrument-chip=\"instrument-" in body
+    assert ">Instrument_1<" in body
+    # Cross-cutting toggles.
+    assert "data-by-instrument-chip=\"include-metadata\"" in body
+    assert ">Include metadata<" in body
+    assert "data-by-instrument-chip=\"all-assignment-rows\"" in body
+    assert ">All assignment rows<" in body
+    # All chips start selected — the toggle JS flips this later.
+    chip_block = body.split("extract-data-by-instrument")[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert chip_block.count("is-selected") >= 3
+    assert chip_block.count('aria-pressed="true"') >= 3
