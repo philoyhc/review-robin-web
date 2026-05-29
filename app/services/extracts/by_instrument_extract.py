@@ -219,24 +219,47 @@ def _render_rule(rule: dict[str, str], session: ReviewSession) -> str:
     op = rule.get("op") or "IS"
     operand_value = rule.get("operand_value") or ""
     operand_tag = rule.get("operand_tag") or ""
-    field_label = _field_friendly_label(field, session)
+    field_label = _prefixed_field_label(field, session)
     if operand_tag:
-        operand_label = _field_friendly_label(operand_tag, session)
+        operand_label = _prefixed_field_label(operand_tag, session)
         return f"{field_label} {op} {operand_label}"
     return f"{field_label} {op} '{operand_value}'"
+
+
+def _prefixed_field_label(field_path: str, session: ReviewSession) -> str:
+    """``<source_type>.<friendly label>`` rendering for the Pool
+    rule rows — preserves the prefix so the row reads
+    ``reviewer.Position`` not the ambiguous bare ``Position``."""
+    if "." not in field_path:
+        return field_path
+    source_type, _, _ = field_path.partition(".")
+    return f"{source_type}.{_field_friendly_label(field_path, session)}"
 
 
 def _field_friendly_label(field_path: str, session: ReviewSession) -> str:
     """Resolve ``reviewer.tag_1`` etc. to its friendly label via
     the per-session field-label resolver. Falls back to the raw
-    field path when the slot isn't in scope."""
+    field path when the slot isn't in scope.
+
+    Band 1 rules persist the source-field as ``tag1`` /
+    ``tag2`` / ``tag3`` (no underscore — see
+    ``_band1.py``'s rule shape docstring) while the field-label
+    resolver keys on ``tag_1`` / ``tag_2`` / ``tag_3``. Normalise
+    the no-underscore form on lookup so both spellings resolve."""
     if "." not in field_path:
         return field_path
     source_type, _, source_field = field_path.partition(".")
+    lookup_field = source_field
+    if (
+        len(lookup_field) == 4
+        and lookup_field.startswith("tag")
+        and lookup_field[3].isdigit()
+    ):
+        lookup_field = f"tag_{lookup_field[3]}"
     try:
-        return field_labels.resolve(session, source_type, source_field)
+        return field_labels.resolve(session, source_type, lookup_field)
     except field_labels.FieldLabelSourceError:
-        return field_path
+        return source_field
 
 
 def _unit_of_review_label(

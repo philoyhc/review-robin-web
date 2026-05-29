@@ -18,7 +18,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument, ReviewSession
+from app.db.models import AuditEvent, Instrument, ReviewSession, User
+from app.services import field_labels
+from app.services.instruments import set_band1_assignment_rules
+
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 def _make_session(
@@ -183,6 +187,77 @@ def test_route_emits_audit_event(
     counts = cast(dict, event.detail)["counts"]
     # Default-seeded session has one instrument.
     assert counts["instrument_files"] == 1
+
+
+def test_pool_rule_rows_prefix_source_type_with_friendly_label(
+    client: TestClient, db: Session
+) -> None:
+    """Pool of reviewers / Pool of reviewees rows render fields
+    as ``reviewer.<friendly label>`` / ``reviewee.<friendly
+    label>`` — the prefix stays so the row disambiguates which
+    side of the assignment owns the slot."""
+    review_session = _make_session(client, db, code="bi-pool")
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    instrument = _default_instrument(db, review_session.id)
+    actor = db.execute(select(User)).scalars().first()
+    assert actor is not None
+
+    # Operator-renamed tag — Pool row should pick this up.
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Position",
+        user=actor,
+        correlation_id="bi-pool-test",
+    )
+
+    set_band1_assignment_rules(
+        db=db,
+        instrument=instrument,
+        link1_mode="filter",
+        link1_combinator="AND",
+        link1_rules=[
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_value": "Lead",
+                "operand_tag": "",
+            }
+        ],
+        link2_mode="filter",
+        link2_combinator="OR",
+        link2_rules=[
+            {
+                "field": "reviewee.tag2",
+                "op": "IS THE SAME AS",
+                "operand_value": "",
+                "operand_tag": "reviewer.tag2",
+            }
+        ],
+        actor=actor,
+    )
+    db.commit()
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/by_instrument_bundle.zip"
+    )
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    payload = archive.read(archive.namelist()[0]).decode("utf-8")
+
+    # Reviewers pool: filter on the renamed reviewer.tag_1 —
+    # prefixed source type, friendly label, default CSV cell
+    # (no surrounding quotes since the single-rule AND(...) has
+    # no comma).
+    assert "Pool of reviewers,AND(reviewer.Position IS 'Lead')" in payload
+    # Reviewees pool: same-as relation between two tag slots —
+    # both sides prefixed; default labels (no override) for tag_2.
+    assert (
+        "Pool of reviewees,OR(reviewee.Tag 2 IS THE SAME AS reviewer.Tag 2)"
+        in payload
+    )
 
 
 def test_extract_data_page_links_button_to_by_instrument_bundle(
