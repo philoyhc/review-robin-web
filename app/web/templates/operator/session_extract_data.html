@@ -301,6 +301,7 @@
           <span class="pill pill-count tag-chip"
                 data-shaper-field-chip="{{ instr.id }}:{{ field.id }}"
                 data-shaper-field-data-type="{{ field._inline_data_type or '' }}"
+                {% if field._inline_data_type == 'List' and field._inline_list_csv %}data-shaper-field-list-options="{{ field._inline_list_csv }}"{% endif %}
                 role="button" tabindex="0" aria-pressed="false">{{ field.label or field.field_key }}</span>
         {% endfor %}
       </template>
@@ -814,13 +815,20 @@
         // ``Mean`` / ``Length`` / etc. chip visible, but
         // they need to start hidden whenever no response
         // field is selected (and reflect the right
-        // data-type subset whenever one is).
+        // data-type subset whenever one is). For List fields
+        // also re-mount the option chips since the previous
+        // axis-pool unmount took them with it.
         var currentField = card.querySelector(
           '[data-shaper-field-chip][aria-pressed="true"]'
         );
         applyFieldDataType(
           currentField
             ? currentField.getAttribute("data-shaper-field-data-type")
+            : null,
+          currentField
+            ? parseListOptions(
+                currentField.getAttribute("data-shaper-field-list-options")
+              )
             : null
         );
       }
@@ -838,7 +846,57 @@
       // consistent. ``Assigned`` / ``Count`` carry no
       // ``data-shaper-relevant-for`` attribute and stay
       // visible always — they're field-independent.
-      function applyFieldDataType(dataType) {
+      //
+      // **List-type fields** are a special case: instead of
+      // numeric / string aggregates, the operator wants one
+      // chip per list **option**, each contributing a
+      // count-of-responses column for that option. The
+      // chips render dynamically from the active field
+      // chip's ``data-shaper-field-list-options`` CSV when
+      // a List field is selected, and unmount when the
+      // field is deselected or swapped.
+      function parseListOptions(csv) {
+        if (!csv) return [];
+        return csv
+          .split(",")
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return s.length > 0; });
+      }
+
+      function mountListOptionChips(options) {
+        var mountedPool = relevantSlot.querySelector(
+          "[data-shaper-axis-chips-mounted]"
+        );
+        if (!mountedPool) return;
+        var axis = mountedPool.getAttribute(
+          "data-shaper-axis-chips-mounted"
+        );
+        var container = document.createElement("span");
+        container.setAttribute("data-shaper-list-options", "");
+        options.forEach(function (opt, idx) {
+          var chip = document.createElement("span");
+          chip.className = "pill pill-count tag-chip";
+          chip.setAttribute(
+            "data-shaper-col-chip",
+            axis + ":list-option:" + idx
+          );
+          chip.setAttribute("role", "button");
+          chip.setAttribute("tabindex", "0");
+          chip.setAttribute("aria-pressed", "false");
+          chip.textContent = opt;
+          container.appendChild(chip);
+          bindColChip(chip);
+        });
+        mountedPool.appendChild(container);
+      }
+
+      function unmountListOptionChips() {
+        relevantSlot
+          .querySelectorAll("[data-shaper-list-options]")
+          .forEach(function (n) { n.remove(); });
+      }
+
+      function applyFieldDataType(dataType, listOptions) {
         var NUMERIC = ["Integer", "Decimal"];
         var STRING = ["String"];
         var noField = !dataType;
@@ -865,6 +923,14 @@
               chip.setAttribute("aria-pressed", "false");
             }
           });
+        // List-option chips are dynamic; rebuild from scratch
+        // each time the data type changes (or the field
+        // deselects) so options from a previously-selected
+        // List field don't leak across.
+        unmountListOptionChips();
+        if (dataType === "List" && listOptions && listOptions.length) {
+          mountListOptionChips(listOptions);
+        }
         rebuildPreviewRow();
       }
 
@@ -926,11 +992,16 @@
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
           // Filter the per-axis aggregate chips by the
-          // selected field's data type. When the operator
-          // deselects the field, ``null`` restores all chips.
+          // selected field's data type, and for List fields
+          // also mount one option chip per list value.
           applyFieldDataType(
             pressed
               ? chip.getAttribute("data-shaper-field-data-type")
+              : null,
+            pressed
+              ? parseListOptions(
+                  chip.getAttribute("data-shaper-field-list-options")
+                )
               : null
           );
         }
