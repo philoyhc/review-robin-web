@@ -1305,6 +1305,44 @@
         white-space: nowrap;
         background: var(--bg-muted);
       }
+      /* Data shaper axis pipe — visual divider between the axis
+         chips and the per-axis column chips that surface to its
+         right when an axis is on. */
+      body.ui-v2 .shaper-axis-pipe {
+        display: inline-block;
+        padding: 0 var(--space-2);
+        color: var(--color-muted, #94a3b8);
+        font-weight: 600;
+        opacity: 0.5;
+      }
+      /* Data shape sub-card — one per shape, stacked vertically
+         inside the outer Data shaper card. Light bordered tile
+         with the preview row on top and the action row (name +
+         save / edit / delete / add icons) below. Matches the
+         band-3 response-field builder's row tile shape so the
+         two builders read the same way. */
+      body.ui-v2 .data-shape-card {
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 6px;
+        padding: var(--space-2);
+        margin-top: var(--space-2);
+        background: var(--bg-card, #fff);
+      }
+      body.ui-v2 .data-shape-actions {
+        display: flex;
+        gap: var(--space-1);
+        align-items: center;
+        margin-top: var(--space-2);
+      }
+      body.ui-v2 .data-shape-name-input {
+        flex: 1;
+        max-width: 320px;
+      }
+      body.ui-v2 .data-shape-name-display {
+        flex: 1;
+        max-width: 320px;
+        font-weight: 600;
+      }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
           grid-template-columns: 1fr;

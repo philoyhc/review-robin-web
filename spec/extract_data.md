@@ -27,9 +27,14 @@ the load-bearing decision behind the page's existence — see
 > end-to-end: chips drive query-string params on a real download
 > route, chip state persists per session via `localStorage`,
 > and every download emits an audit event. The full-width
-> **Data shaper** card below the grid stays a placeholder
-> (heading + body copy + preview-table stub + disabled `Zip all`);
-> its functional spec is out of scope for this doc.
+> **Data shaper** card below the grid ships the **placeholder
+> UI** (axis chip row, hidden per-axis chip pools, the
+> always-present blank Data shape sub-card with its save / edit
+> / delete / add icons, and the disabled `Zip all` button) —
+> all interactions are client-side only; persistence and
+> file generation are deferred. The full functional spec for
+> the Data shaper card is out of scope for this doc — see
+> `guide/extract_data.md` "Data shaper design".
 
 ## Page identity
 

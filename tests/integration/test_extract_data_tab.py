@@ -98,7 +98,7 @@ def test_extract_data_tab_breadcrumbs(
     assert "Extract data" in body
 
 
-def test_data_shaper_placeholder_card_and_chip_render(
+def test_data_shaper_placeholder_card_renders(
     client: TestClient, db: Session
 ) -> None:
     """The Data shaper placeholder lives below the 2-column
@@ -113,18 +113,83 @@ def test_data_shaper_placeholder_card_and_chip_render(
 
     # Intro card chip.
     assert 'data-extract-all-chip="data-shaper"' in body
-    # Placeholder card.
+    # Placeholder card shell + bottom ``Zip all`` button stays
+    # disabled in this slice (no file-gen wiring yet).
     assert 'id="extract-data-shaper"' in body
     assert ">Data shaper</h2>" in body
     assert 'id="extract-data-shaper-zip"' in body
-    # Preview-table stub — flush-left, one ``<th>`` per
-    # placeholder column with a sort-icon button. Class
-    # ``shaper-preview-table`` carries the ``width: auto``
-    # styling.
-    assert 'class="shaper-preview-table"' in body
-    for col in ("Reviewer", "Reviewee", "Instrument", "Field", "Value"):
-        assert f'data-shaper-preview-col="{col.lower()}"' in body
-        assert f'aria-label="Sort by {col}"' in body
+
+
+def test_data_shaper_axis_chip_row_and_pools(
+    client: TestClient, db: Session
+) -> None:
+    """The axis chip row at the top of the outer Data shaper
+    card carries the three axis-selector chips (Reviewer /
+    Reviewee / Instrument), all default-unselected. Each axis
+    has a hidden ``<template data-shaper-chip-pool>`` carrying
+    its relevant column chips for the progressive-enhancement
+    JS to clone when the axis toggles on."""
+    review_session = _make_session(client, db, code="ed-shaper-axes")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    for axis, label in [
+        ("reviewer", "Reviewer"),
+        ("reviewee", "Reviewee"),
+        ("instrument", "Instrument"),
+    ]:
+        # Axis chip itself.
+        assert f'data-shaper-axis-chip="{axis}"' in body
+        assert f'>{label}</span>' in body
+        # Hidden pool template for the axis's column chips.
+        assert f'data-shaper-chip-pool="{axis}"' in body
+
+    # Reviewer pool carries the identity chips + the six
+    # aggregate chips that mirror the Reviewer response
+    # metadata card's column shape.
+    for slot in (
+        "reviewer:name",
+        "reviewer:email",
+        "reviewer:tag-1",
+        "reviewer:tag-2",
+        "reviewer:tag-3",
+        "reviewer:count",
+        "reviewer:mean",
+        "reviewer:median",
+        "reviewer:min",
+        "reviewer:max",
+        "reviewer:length",
+    ):
+        assert f'data-shaper-col-chip="{slot}"' in body
+
+
+def test_data_shaper_initial_blank_shape_card(
+    client: TestClient, db: Session
+) -> None:
+    """One always-present blank Data shape sub-card renders on
+    initial load so the operator has an immediate edit target
+    (matches the band-3 response-field builder's
+    always-present-empty-row pattern). The card carries the
+    preview row stub + the four action icons (save / edit /
+    delete / add)."""
+    review_session = _make_session(client, db, code="ed-shaper-blank")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    assert "data-shaper-stack" in body
+    # One non-template ``data-shape`` div sits in the stack on
+    # first render. (The ``<template>`` clones don't render
+    # in the DOM until the JS spawns them.)
+    stack_block = body.split("data-shaper-stack")[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert 'data-shape-mode="edit"' in stack_block
+    assert "data-shape-preview-row" in stack_block
+    assert "data-shape-name" in stack_block
+    for action in ("save", "edit", "delete", "add"):
+        assert f"data-shape-{action}" in stack_block
 
 
 def test_extract_all_card_renders_lens_selector_chips(

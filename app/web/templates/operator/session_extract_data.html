@@ -211,13 +211,33 @@
   </div>
 
   {# Data shaper — full-width card below the 2-column grid.
-     The eventual builder is a generalised engine for composing
-     a custom data shape (selecting + grouping + aggregating
-     across reviewer / reviewee / instrument / response-field
-     axes). Placeholder for now: heading + body + preview-table
-     stub + ``Zip all`` button. The chip on the intro card lets
-     the operator include the shaper's output in the top-level
-     ``Zip all`` once the engine ships. #}
+     A generalised builder for custom CSV shapes (selecting +
+     grouping + aggregating across reviewer / reviewee /
+     instrument / response-field axes). This slice ships the
+     **placeholder UI** per ``guide/extract_data.md`` "Data
+     shaper design":
+
+     * **Axis chip row at the top of the outer card** — three
+       axis-selector chips (Reviewer / Reviewee / Instrument)
+       + a vertical pipe + the relevant column chips that
+       surface as axes toggle on. Multiple axes can be on at
+       once; their chip groups concatenate left-to-right.
+     * **Stack of Data shape sub-cards below** — one card per
+       shape. Always-present blank shape card on first load
+       (matching the band-3 response-field builder pattern).
+       Each sub-card has its own preview row (the column
+       chips selected so far render as `<th>` cells) plus an
+       action row (name input + ``✓`` save + ``✗`` delete +
+       ``➕`` add new shape below).
+
+     **No file-generation wiring in this slice.** The intro
+     card's ``Data shaper`` chip stays default-selected so the
+     forthcoming Zip-all hook is one wiring away, and the
+     bottom ``Zip all`` button stays a placeholder
+     (``href="#"``, ``aria-disabled``). Persistence of saved
+     shapes is also deferred — the save / edit / delete
+     buttons flip visual state in this slice but nothing
+     survives reload yet. #}
   <div class="card extract-data-card-stack" id="extract-data-shaper">
     <div>
       <h2 style="margin-top: 0;">Data shaper</h2>
@@ -228,29 +248,162 @@
         the canned lens CSVs.
       </p>
     </div>
-    {# Preview-table stub. Shows the column headers of the CSV
-       being built. Flush-left + width: auto so each column
-       sizes to its header (plus the sort icon) rather than the
-       table spanning the card. Sort icon mirrors the shared
-       ``rrw-sortable`` primitive (the click handler isn't
-       wired yet — placeholder); column reordering via
-       click-and-drag lands in a follow-up. #}
-    <div class="shaper-preview-scroll">
-      <table class="shaper-preview-table">
-        <thead>
-          <tr>
-            {% for col in ["Reviewer", "Reviewee", "Instrument", "Field", "Value"] %}
-              <th class="rrw-sortable shaper-preview-th"
-                  data-shaper-preview-col="{{ col | lower }}">{{ col }}<button type="button"
-                    class="rrw-sort-btn"
-                    aria-label="Sort by {{ col }}"
-                    disabled
-                    aria-disabled="true"><span class="rrw-sort-badge">↕</span></button></th>
-            {% endfor %}
-          </tr>
-        </thead>
-      </table>
+
+    {# Axis chip row. The three axis chips live at the head of
+       the row; ``data-shaper-relevant-chips`` is the slot the
+       progressive-enhancement JS fills with the relevant
+       column chips for whichever axes are currently on. The
+       pipe is purely visual; ``aria-hidden`` keeps it out of
+       the AX tree. #}
+    <p class="col-chip-row" style="margin: 0;">
+      <span class="pill pill-count tag-chip"
+            data-shaper-axis-chip="reviewer"
+            role="button" tabindex="0" aria-pressed="false">Reviewer</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-axis-chip="reviewee"
+            role="button" tabindex="0" aria-pressed="false">Reviewee</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-axis-chip="instrument"
+            role="button" tabindex="0" aria-pressed="false">Instrument</span>
+      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      <span data-shaper-relevant-chips></span>
+    </p>
+
+    {# Hidden chip-pool templates. Each ``<template>`` carries
+       the relevant column chips for one axis; the JS clones
+       them into ``data-shaper-relevant-chips`` when the axis
+       toggles on, and removes them when it toggles off.
+
+       The Reviewer / Reviewee aggregate vocabulary mirrors the
+       column-shape of the Reviewer / Reviewee response
+       metadata cards exactly (``Count`` / ``Mean`` / ``Median``
+       / ``Min`` / ``Max`` / ``Length``). The Instrument pool
+       iterates the session's instruments to emit one chip per
+       response field plus a per-instrument ``Short label``
+       chip; the six aggregate chips on this axis are global
+       (apply to whichever fields are selected). #}
+    <template data-shaper-chip-pool="reviewer">
+      {% for slot, label in [
+          ("reviewer:name", "Reviewer Name"),
+          ("reviewer:email", "Reviewer Email"),
+          ("reviewer:tag-1", "Reviewer Tag 1"),
+          ("reviewer:tag-2", "Reviewer Tag 2"),
+          ("reviewer:tag-3", "Reviewer Tag 3"),
+          ("reviewer:count", "Reviewer Count"),
+          ("reviewer:mean", "Reviewer Mean"),
+          ("reviewer:median", "Reviewer Median"),
+          ("reviewer:min", "Reviewer Min"),
+          ("reviewer:max", "Reviewer Max"),
+          ("reviewer:length", "Reviewer Length"),
+      ] %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="{{ slot }}"
+              role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
+      {% endfor %}
+    </template>
+    <template data-shaper-chip-pool="reviewee">
+      {% for slot, label in [
+          ("reviewee:name", "Reviewee Name"),
+          ("reviewee:email", "Reviewee Email"),
+          ("reviewee:tag-1", "Reviewee Tag 1"),
+          ("reviewee:tag-2", "Reviewee Tag 2"),
+          ("reviewee:tag-3", "Reviewee Tag 3"),
+          ("reviewee:count", "Reviewee Count"),
+          ("reviewee:mean", "Reviewee Mean"),
+          ("reviewee:median", "Reviewee Median"),
+          ("reviewee:min", "Reviewee Min"),
+          ("reviewee:max", "Reviewee Max"),
+          ("reviewee:length", "Reviewee Length"),
+      ] %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="{{ slot }}"
+              role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
+      {% endfor %}
+    </template>
+    <template data-shaper-chip-pool="instrument">
+      {% for instr in instruments %}
+        {% set chip_short = (instr.short_label or "").strip() %}
+        {% set instr_prefix = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="instrument:{{ instr.id }}:short-label"
+              role="button" tabindex="0" aria-pressed="false">{{ instr_prefix }}.Short label</span>
+        {% for field in instr.response_fields | sort(attribute='order') %}
+          <span class="pill pill-count tag-chip"
+                data-shaper-col-chip="instrument:{{ instr.id }}:field-{{ field.id }}"
+                role="button" tabindex="0" aria-pressed="false">{{ instr_prefix }}.{{ field.label or field.field_key }}</span>
+        {% endfor %}
+      {% endfor %}
+      {% for slot, label in [
+          ("instrument:agg-count", "Field Count"),
+          ("instrument:agg-mean", "Field Mean"),
+          ("instrument:agg-median", "Field Median"),
+          ("instrument:agg-min", "Field Min"),
+          ("instrument:agg-max", "Field Max"),
+          ("instrument:agg-length", "Field Length"),
+      ] %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="{{ slot }}"
+              role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
+      {% endfor %}
+    </template>
+
+    {# Hidden template for spawning new Data shape sub-cards.
+       The JS clones this when ``➕`` is clicked. #}
+    <template data-shaper-shape-card-template>
+      <div class="data-shape-card" data-shape data-shape-mode="edit">
+        <div class="shaper-preview-scroll">
+          <table class="shaper-preview-table">
+            <thead>
+              <tr data-shape-preview-row></tr>
+            </thead>
+          </table>
+        </div>
+        <div class="data-shape-actions">
+          <input type="text" class="data-shape-name-input"
+                 data-shape-name placeholder="Name this shape">
+          <span class="data-shape-name-display" data-shape-name-display></span>
+          <button type="button" class="btn-icon action"
+                  data-shape-save title="Save shape">&#10003;</button>
+          <button type="button" class="btn-icon action"
+                  data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
+          <button type="button" class="btn-icon danger"
+                  data-shape-delete title="Delete shape">&#10007;</button>
+          <button type="button" class="btn-icon action"
+                  data-shape-add title="Add another shape below">&#10133;</button>
+        </div>
+      </div>
+    </template>
+
+    {# Sub-card stack. Starts with one blank shape card on
+       initial load (band-3-builder pattern — operator always
+       has an immediate edit target). The placeholder slice
+       leaves wiring of column-chip drag-reorder + sort-icon
+       clicks to the follow-up. #}
+    <div data-shaper-stack>
+      <div class="data-shape-card" data-shape data-shape-mode="edit">
+        <div class="shaper-preview-scroll">
+          <table class="shaper-preview-table">
+            <thead>
+              <tr data-shape-preview-row></tr>
+            </thead>
+          </table>
+        </div>
+        <div class="data-shape-actions">
+          <input type="text" class="data-shape-name-input"
+                 data-shape-name placeholder="Name this shape">
+          <span class="data-shape-name-display" data-shape-name-display></span>
+          <button type="button" class="btn-icon action"
+                  data-shape-save title="Save shape">&#10003;</button>
+          <button type="button" class="btn-icon action"
+                  data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
+          <button type="button" class="btn-icon danger"
+                  data-shape-delete title="Delete shape">&#10007;</button>
+          <button type="button" class="btn-icon action"
+                  data-shape-add title="Add another shape below">&#10133;</button>
+        </div>
+      </div>
     </div>
+
     <div class="extract-data-card-actions">
       <a class="btn secondary"
          id="extract-data-shaper-zip"
@@ -442,6 +595,183 @@
         "reviewee_metadata",
         "all-reviewees"
       );
+    })();
+  </script>
+
+  {# Data shaper placeholder interactions. Pure progressive
+     enhancement, all client-side; no persistence and no file
+     generation in this slice. Three wiring blocks:
+
+     * **Axis chip toggle** — clicking an axis chip flips its
+       ``aria-pressed`` state and (un)mounts that axis's chip
+       group inside ``data-shaper-relevant-chips`` by cloning
+       the matching ``<template data-shaper-chip-pool>``.
+     * **Column chip toggle** — clicking a column chip in the
+       relevant-chips area flips its ``aria-pressed`` state
+       and (adds | removes) a matching ``<th>`` cell on the
+       currently-active shape card's preview row. "Active"
+       means the most-recently focused / clicked shape that
+       is still in edit mode (``data-shape-mode="edit"``).
+     * **Shape card lifecycle** — ``✓`` flips the card to
+       saved mode (input → plain text, ``✓`` → ``✎``);
+       ``✎`` flips it back to edit mode; ``✗`` removes it
+       from the stack (but never the last card on the
+       page — the operator always has at least one starting
+       point, matching the band-3 builder's
+       always-present-empty-row pattern); ``➕`` clones a
+       fresh blank card after this one and makes it the
+       active target. #}
+  <script>
+    (function () {
+      var card = document.getElementById("extract-data-shaper");
+      if (!card) return;
+      var relevantSlot = card.querySelector("[data-shaper-relevant-chips]");
+      var stack = card.querySelector("[data-shaper-stack]");
+      var shapeTemplate = card.querySelector(
+        "[data-shaper-shape-card-template]"
+      );
+      if (!relevantSlot || !stack || !shapeTemplate) return;
+
+      var activeShape = stack.querySelector("[data-shape]");
+
+      function setActiveShape(shape) {
+        activeShape = shape;
+      }
+
+      function previewRowFor(shape) {
+        return shape.querySelector("[data-shape-preview-row]");
+      }
+
+      function colChips() {
+        return relevantSlot.querySelectorAll("[data-shaper-col-chip]");
+      }
+
+      function rebuildPreviewRow() {
+        if (!activeShape) return;
+        var row = previewRowFor(activeShape);
+        row.innerHTML = "";
+        colChips().forEach(function (chip) {
+          if (chip.getAttribute("aria-pressed") !== "true") return;
+          var th = document.createElement("th");
+          th.className = "shaper-preview-th";
+          th.textContent = chip.textContent.trim();
+          row.appendChild(th);
+        });
+      }
+
+      function bindColChip(chip) {
+        function toggle() {
+          var pressed = chip.getAttribute("aria-pressed") !== "true";
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          rebuildPreviewRow();
+        }
+        chip.addEventListener("click", toggle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        });
+      }
+
+      function mountAxisChips(axis) {
+        var pool = card.querySelector(
+          '[data-shaper-chip-pool="' + axis + '"]'
+        );
+        if (!pool) return;
+        var fragment = pool.content.cloneNode(true);
+        var wrapper = document.createElement("span");
+        wrapper.setAttribute("data-shaper-axis-chips-mounted", axis);
+        wrapper.appendChild(fragment);
+        relevantSlot.appendChild(wrapper);
+        wrapper.querySelectorAll("[data-shaper-col-chip]").forEach(bindColChip);
+      }
+
+      function unmountAxisChips(axis) {
+        var mounted = relevantSlot.querySelector(
+          '[data-shaper-axis-chips-mounted="' + axis + '"]'
+        );
+        if (mounted) mounted.remove();
+        rebuildPreviewRow();
+      }
+
+      card.querySelectorAll("[data-shaper-axis-chip]").forEach(function (chip) {
+        function toggle() {
+          var pressed = chip.getAttribute("aria-pressed") !== "true";
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          var axis = chip.getAttribute("data-shaper-axis-chip");
+          if (pressed) mountAxisChips(axis);
+          else unmountAxisChips(axis);
+        }
+        chip.addEventListener("click", toggle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        });
+      });
+
+      function bindShapeCard(shape) {
+        var nameInput = shape.querySelector("[data-shape-name]");
+        var nameDisplay = shape.querySelector("[data-shape-name-display]");
+        var saveBtn = shape.querySelector("[data-shape-save]");
+        var editBtn = shape.querySelector("[data-shape-edit]");
+        var deleteBtn = shape.querySelector("[data-shape-delete]");
+        var addBtn = shape.querySelector("[data-shape-add]");
+
+        shape.addEventListener("click", function () {
+          if (shape.getAttribute("data-shape-mode") === "edit") {
+            setActiveShape(shape);
+          }
+        });
+
+        saveBtn.addEventListener("click", function () {
+          shape.setAttribute("data-shape-mode", "saved");
+          nameDisplay.textContent = nameInput.value || "(unnamed shape)";
+          nameInput.style.display = "none";
+          nameDisplay.style.display = "";
+          saveBtn.style.display = "none";
+          editBtn.style.display = "";
+          if (activeShape === shape) setActiveShape(null);
+        });
+
+        editBtn.addEventListener("click", function () {
+          shape.setAttribute("data-shape-mode", "edit");
+          nameInput.style.display = "";
+          nameDisplay.style.display = "none";
+          editBtn.style.display = "none";
+          saveBtn.style.display = "";
+          setActiveShape(shape);
+        });
+
+        deleteBtn.addEventListener("click", function () {
+          var allShapes = stack.querySelectorAll("[data-shape]");
+          if (allShapes.length <= 1) {
+            // Never strip the page of its last shape card —
+            // matches the band-3 builder's
+            // always-present-empty-row pattern.
+            return;
+          }
+          if (activeShape === shape) setActiveShape(null);
+          shape.remove();
+        });
+
+        addBtn.addEventListener("click", function () {
+          var fragment = shapeTemplate.content.cloneNode(true);
+          var newShape = fragment.querySelector("[data-shape]");
+          shape.parentNode.insertBefore(newShape, shape.nextSibling);
+          bindShapeCard(newShape);
+          setActiveShape(newShape);
+        });
+
+        // Hide the (display) span until a save event populates it.
+        if (nameDisplay) nameDisplay.style.display = "none";
+      }
+
+      stack.querySelectorAll("[data-shape]").forEach(bindShapeCard);
     })();
   </script>
 {% endblock %}
