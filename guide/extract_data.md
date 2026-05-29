@@ -206,17 +206,40 @@ require any per-lens configuration first.
   - Query-string wiring on the button reuses the same
     `?instrument=<id>` (repeated) + `?all=0` shape the chip
     JS composes.
-- **Data shaper** (full-width, below the grid).
+- **Data shaper** (full-width, below the grid). Placeholder
+  UI shipped; persistence and file generation deferred.
   - Heading + body copy describing the generalised builder.
-  - **Preview-table stub** showing the column headers of the
-    CSV being built. Flush-left + `width: auto` so each column
-    sizes to its header (plus a sort-icon affordance reusing
-    the shared `rrw-sortable` primitive). Five placeholder
-    columns today: `Reviewer` / `Reviewee` / `Instrument` /
-    `Field` / `Value`. Sort buttons render disabled; the click
-    + drag-reorder wiring is the follow-up.
+  - **Axis chip row** at the top of the outer card — three
+    axis-selector chips (`Reviewer`, `Reviewee`, `Instrument`)
+    + a vertical pipe + a slot for the relevant column chips.
+    All axis chips default unselected; toggling one on clones
+    its hidden per-axis chip pool (Reviewer / Reviewee
+    identity + aggregate chips; Instrument's per-(instrument,
+    field) chips + Short-label-per-instrument + six global
+    aggregate chips) into the slot. Multiple axes can be on
+    at once; their pools concatenate left-to-right.
+  - **Data shape sub-card stack** below the axis row — one
+    sub-card per shape. One always-present blank shape card
+    on initial load (matches the band-3 response-field
+    builder's always-present-empty-row pattern, so the
+    operator has an immediate edit target). Each sub-card
+    carries:
+    - **Preview row** — `width: auto` `<thead>` whose cells
+      mirror the currently-selected column chips. Toggling a
+      column chip on / off adds / removes a `<th>` in the
+      currently-active shape card.
+    - **Action row** — name input (collapses to plain text
+      on save) + `✓` save / `✎` edit / `✗` delete / `➕` add
+      icons. `✓` and `✎` swap; `✗` removes the card from the
+      stack except when it's the last one (never strip the
+      page of its starting point); `➕` clones a fresh blank
+      card after this one and makes it the active target.
   - Button: placeholder `Zip all` (`href="#"`,
-    `aria-disabled`).
+    `aria-disabled`) at the bottom of the outer card.
+  - **Out of scope in this slice** (lands separately):
+    column-chip drag-reorder + sort-icon click on the preview
+    row; per-session persistence of saved shapes; the
+    file-generation pipeline; audit events.
 
 ### Data shaper design
 
