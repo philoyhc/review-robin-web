@@ -39,7 +39,7 @@ def test_extract_data_tab_renders_skeleton(
     body = response.text
 
     # Page heading.
-    assert ">Extract data</h2>" in body
+    assert ">Extract all data</h2>" in body
     # Three lens placeholder sections present.
     assert 'id="extract-data-by-instrument"' in body
     assert 'id="extract-data-by-reviewer"' in body
@@ -96,6 +96,33 @@ def test_extract_data_tab_breadcrumbs(
 
     # operator_session_child renders "Sessions › <name> › Extract data".
     assert "Extract data" in body
+
+
+def test_extract_all_card_renders_lens_selector_chips(
+    client: TestClient, db: Session
+) -> None:
+    """The intro card (now ``Extract all data``) carries three
+    placeholder selector chips — ``By instruments``,
+    ``By reviewers``, ``By reviewees`` — all defaulting to
+    selected. Wiring lands later; this slice is layout."""
+    review_session = _make_session(client, db, code="ed-all-chips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    assert 'data-extract-all-chip="by-instruments"' in body
+    assert ">By instruments<" in body
+    assert 'data-extract-all-chip="by-reviewers"' in body
+    assert ">By reviewers<" in body
+    assert 'data-extract-all-chip="by-reviewees"' in body
+    assert ">By reviewees<" in body
+
+    # All three chips start selected.
+    chip_block = body.split('id="extract-data-intro"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert chip_block.count("is-selected") == 3
+    assert chip_block.count('aria-pressed="true"') == 3
 
 
 def test_by_instrument_card_renders_selectable_chips(
