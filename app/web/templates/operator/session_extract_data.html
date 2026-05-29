@@ -22,17 +22,17 @@
      (per ``guide/extract_data.md``); its Zip-all button downloads
      just the instrument-focused CSVs. #}
   <div class="extract-data-top-grid">
-    <div class="card" id="extract-data-intro">
-      <div class="extract-data-card-row">
-        <div>
-          <h2 style="margin-top: 0;">Extract data</h2>
-          <p class="form-help" style="margin-bottom: 0;">
-            Shape this session's response data for offline analysis.
-            Configure what you need on the lens cards below and
-            download the specific files — or take everything at
-            once with <strong>Zip all responses</strong>.
-          </p>
-        </div>
+    <div class="card extract-data-card-stack" id="extract-data-intro">
+      <div>
+        <h2 style="margin-top: 0;">Extract data</h2>
+        <p class="form-help" style="margin-bottom: 0;">
+          Shape this session's response data for offline analysis.
+          Configure what you need on the lens cards below and
+          download the specific files — or take everything at
+          once with <strong>Zip all responses</strong>.
+        </p>
+      </div>
+      <div class="extract-data-card-actions">
         <a class="btn secondary"
            id="extract-data-zip-all"
            href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
@@ -41,17 +41,17 @@
       </div>
     </div>
 
-    <div class="card" id="extract-data-by-instrument">
-      <div class="extract-data-card-row">
-        <div>
-          <h3 style="margin-top: 0;">By instrument</h3>
-          <p style="margin-bottom: 0;">
-            One CSV per instrument; rows = (reviewer × reviewee)
-            pairs; columns = response fields side-by-side.
-            Optimised for cross-reviewer comparison on a single
-            rubric.
-          </p>
-        </div>
+    <div class="card extract-data-card-stack" id="extract-data-by-instrument">
+      <div>
+        <h3 style="margin-top: 0;">By instrument</h3>
+        <p style="margin-bottom: 0;">
+          One CSV per instrument; rows = (reviewer × reviewee)
+          pairs; columns = response fields side-by-side.
+          Optimised for cross-reviewer comparison on a single
+          rubric.
+        </p>
+      </div>
+      <div class="extract-data-card-actions">
         <a class="btn secondary"
            id="extract-data-by-instrument-zip"
            href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip">
