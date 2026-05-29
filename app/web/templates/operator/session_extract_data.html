@@ -77,6 +77,23 @@
             instruments. Optimised for reviewer audit and coaching.
           </p>
         </div>
+        <p class="col-chip-row" style="margin: 0;">
+          {% for slot, label in [
+              ("all-reviewers", "All reviewers"),
+              ("count", "Count"),
+              ("mean", "Mean"),
+              ("median", "Median"),
+              ("min", "Min"),
+              ("max", "Max"),
+              ("length", "Length"),
+          ] %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-reviewer-metadata-chip="{{ slot }}"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">{{ label }}</span>
+          {% endfor %}
+        </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewer-metadata-zip"
@@ -157,6 +174,23 @@
             handed to the reviewed person.
           </p>
         </div>
+        <p class="col-chip-row" style="margin: 0;">
+          {% for slot, label in [
+              ("all-reviewees", "All reviewees"),
+              ("count", "Count"),
+              ("mean", "Mean"),
+              ("median", "Median"),
+              ("min", "Min"),
+              ("max", "Max"),
+              ("length", "Length"),
+          ] %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-reviewee-metadata-chip="{{ slot }}"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">{{ label }}</span>
+          {% endfor %}
+        </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewee-metadata-zip"
@@ -178,7 +212,8 @@
   <script>
     (function () {
       var chips = document.querySelectorAll(
-        "[data-by-instrument-chip], [data-extract-all-chip]"
+        "[data-by-instrument-chip], [data-extract-all-chip], " +
+        "[data-reviewer-metadata-chip], [data-reviewee-metadata-chip]"
       );
       if (!chips.length) return;
       chips.forEach(function (chip) {

@@ -126,6 +126,65 @@ def test_extract_all_card_renders_lens_selector_chips(
     assert chip_block.count('aria-pressed="true"') == 3
 
 
+def test_reviewer_metadata_card_renders_selectable_chips(
+    client: TestClient, db: Session
+) -> None:
+    """The Reviewer response metadata card carries one
+    ``All reviewers`` chip plus per-statistic chips (Count /
+    Mean / Median / Min / Max / Length). All default to
+    selected; wiring lands in a follow-up."""
+    review_session = _make_session(client, db, code="ed-revwr-meta-chips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    chip_block = body.split('id="extract-data-by-reviewer"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    for slot, label in [
+        ("all-reviewers", "All reviewers"),
+        ("count", "Count"),
+        ("mean", "Mean"),
+        ("median", "Median"),
+        ("min", "Min"),
+        ("max", "Max"),
+        ("length", "Length"),
+    ]:
+        assert f'data-reviewer-metadata-chip="{slot}"' in chip_block
+        assert f">{label}<" in chip_block
+    assert chip_block.count("is-selected") == 7
+    assert chip_block.count('aria-pressed="true"') == 7
+
+
+def test_reviewee_metadata_card_renders_selectable_chips(
+    client: TestClient, db: Session
+) -> None:
+    """Mirror of the Reviewer metadata chips on the Reviewee
+    card — leads with ``All reviewees`` and shares the six
+    per-statistic chips."""
+    review_session = _make_session(client, db, code="ed-revwe-meta-chips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    chip_block = body.split('id="extract-data-by-reviewee"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    for slot, label in [
+        ("all-reviewees", "All reviewees"),
+        ("count", "Count"),
+        ("mean", "Mean"),
+        ("median", "Median"),
+        ("min", "Min"),
+        ("max", "Max"),
+        ("length", "Length"),
+    ]:
+        assert f'data-reviewee-metadata-chip="{slot}"' in chip_block
+        assert f">{label}<" in chip_block
+    assert chip_block.count("is-selected") == 7
+    assert chip_block.count('aria-pressed="true"') == 7
+
+
 def test_by_instrument_card_renders_selectable_chips(
     client: TestClient, db: Session
 ) -> None:
