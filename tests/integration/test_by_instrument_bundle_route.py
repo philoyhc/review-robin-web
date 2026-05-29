@@ -273,5 +273,6 @@ def test_extract_data_page_links_button_to_by_instrument_bundle(
         f'href="/operator/sessions/{review_session.id}'
         f'/export/by_instrument_bundle.zip"' in body
     )
-    # "Zip all responses" button still wired (intro card).
-    assert "Zip all responses" in body
+    # Intro card's Extract-all button still wired to the
+    # responses bundle.
+    assert "Extract all data" in body

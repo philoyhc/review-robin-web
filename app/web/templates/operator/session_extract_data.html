@@ -16,27 +16,48 @@
   {% include "operator/partials/next_action_card.html" %}
 
   {# Top row: two half-width cards side-by-side. The intro card
-     on the left carries the page heading + the "Zip all
-     responses" button (the one-click everything shortcut). The
-     By-instrument card on the right is the first wired lens
-     (per ``guide/extract_data.md``); its Zip-all button downloads
-     just the instrument-focused CSVs. #}
+     on the left carries the page heading + the
+     ``Extract all data`` button — the one-click everything
+     shortcut. Its chip row mirrors the By-instrument chip row
+     in shape: three placeholder selectors (``By instruments``,
+     ``By reviewers``, ``By reviewees``) that will eventually
+     scope which lens-shaped CSVs land in the ``Extract all
+     data`` zip; layout-only for now. The By-instrument card on
+     the right is the first wired lens (per
+     ``guide/extract_data.md``). #}
   <div class="extract-data-top-grid">
     <div class="card extract-data-card-stack" id="extract-data-intro">
       <div>
-        <h2 style="margin-top: 0;">Extract data</h2>
+        <h2 style="margin-top: 0;">Extract all data</h2>
         <p class="form-help" style="margin-bottom: 0;">
-          Shape this session's response data for offline analysis.
-          Configure what you need on the lens cards below and
-          download the specific files — or take everything at
-          once with <strong>Zip all responses</strong>.
+          Configure what you need on the lens cards and download
+          the specific files. Use <strong>Extract all data</strong>
+          to download all response files (as configured using the
+          other cards) at once.
         </p>
       </div>
+      <p class="col-chip-row" style="margin: 0;">
+        <span class="pill pill-count tag-chip is-selected"
+              data-extract-all-chip="by-instruments"
+              role="button"
+              tabindex="0"
+              aria-pressed="true">By instruments</span>
+        <span class="pill pill-count tag-chip is-selected"
+              data-extract-all-chip="by-reviewers"
+              role="button"
+              tabindex="0"
+              aria-pressed="true">By reviewers</span>
+        <span class="pill pill-count tag-chip is-selected"
+              data-extract-all-chip="by-reviewees"
+              role="button"
+              tabindex="0"
+              aria-pressed="true">By reviewees</span>
+      </p>
       <div class="extract-data-card-actions">
         <a class="btn secondary"
            id="extract-data-zip-all"
            href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
-          Zip all responses
+          Extract all data
         </a>
       </div>
     </div>
@@ -121,13 +142,17 @@
     <p class="muted">Coming soon.</p>
   </div>
 
-  {# Progressive-enhancement toggle for the By-instrument chips.
-     Pure visual state — clicking flips ``is-selected`` +
-     ``aria-pressed``. No persistence, no form submission yet
-     (this slice is layout-only). #}
+  {# Progressive-enhancement toggle for the Extract-data chip
+     rows (intro card's ``data-extract-all-chip`` selectors
+     plus the By-instrument card's ``data-by-instrument-chip``
+     selectors). Pure visual state — clicking flips
+     ``is-selected`` + ``aria-pressed``. No persistence, no
+     form submission yet (this slice is layout-only). #}
   <script>
     (function () {
-      var chips = document.querySelectorAll("[data-by-instrument-chip]");
+      var chips = document.querySelectorAll(
+        "[data-by-instrument-chip], [data-extract-all-chip]"
+      );
       if (!chips.length) return;
       chips.forEach(function (chip) {
         function toggle() {
