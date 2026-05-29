@@ -307,6 +307,9 @@ def export_responses_bundle_zip(
     "/sessions/{session_id}/export/by_instrument_bundle.zip"
 )
 def export_by_instrument_bundle_zip(
+    instrument: list[int] | None = Query(default=None),
+    meta: int = Query(default=1),
+    all_rows: int = Query(default=1),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -316,8 +319,25 @@ def export_by_instrument_bundle_zip(
     + the cross-reviewer comparison table. Filename:
     ``{code}_by_instrument.zip`` (members named
     ``{code}_by_instrument_{slug}.csv``). Per
-    ``guide/extract_data.md``."""
-    zip_bytes, counts = build_by_instrument_bundle(db, review_session)
+    ``guide/extract_data.md``.
+
+    Query params (driven by the card's chip row):
+
+    * ``?instrument=42&instrument=43`` — only these instrument
+      ids ship. Omitted = every instrument on the session.
+    * ``?meta=0`` — drop the meta header block and the blank
+      separator row from each CSV.
+    * ``?all_rows=0`` — only assignment rows with at least one
+      response ship in each CSV.
+    """
+    instrument_ids = set(instrument) if instrument else None
+    zip_bytes, counts = build_by_instrument_bundle(
+        db,
+        review_session,
+        instrument_ids=instrument_ids,
+        include_metadata=meta != 0,
+        include_empty_assignments=all_rows != 0,
+    )
 
     audit.write_event(
         db,

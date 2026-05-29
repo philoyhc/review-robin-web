@@ -107,6 +107,8 @@ def serialize_by_instrument(
     instrument: Instrument,
     *,
     position: int,
+    include_metadata: bool = True,
+    include_empty_assignments: bool = True,
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
 
@@ -114,10 +116,14 @@ def serialize_by_instrument(
 
     1. Meta header (key / value rows) — instrument identity, per
        response-field metadata, assignment count, pool /
-       unit-of-review / self-review config.
-    2. One blank row.
+       unit-of-review / self-review config. **Skipped entirely
+       when ``include_metadata`` is False, along with the
+       blank separator row.**
+    2. One blank row (skipped with the meta block).
     3. Data table header.
     4. Data rows, one per (reviewer, reviewee_or_group) pair.
+       Assignments with no responses are skipped when
+       ``include_empty_assignments`` is False.
     """
 
     session_zone = resolve_session_timezone(review_session)
@@ -125,10 +131,18 @@ def serialize_by_instrument(
         instrument.response_fields, key=lambda f: (f.order, f.id)
     )
 
-    yield from _meta_block(db, review_session, instrument, fields, position)
-    yield ()
+    if include_metadata:
+        yield from _meta_block(
+            db, review_session, instrument, fields, position
+        )
+        yield ()
     yield from _data_block(
-        db, review_session, instrument, fields, session_zone
+        db,
+        review_session,
+        instrument,
+        fields,
+        session_zone,
+        include_empty_assignments=include_empty_assignments,
     )
 
 
@@ -299,10 +313,17 @@ def _data_block(
     instrument: Instrument,
     fields: list[InstrumentResponseField],
     session_zone: object,
+    *,
+    include_empty_assignments: bool,
 ) -> Iterable[tuple[str, ...]]:
     yield _header_row(review_session, fields)
     yield from _data_rows(
-        db, review_session, instrument, fields, session_zone
+        db,
+        review_session,
+        instrument,
+        fields,
+        session_zone,
+        include_empty_assignments=include_empty_assignments,
     )
 
 
@@ -334,6 +355,8 @@ def _data_rows(
     instrument: Instrument,
     fields: list[InstrumentResponseField],
     session_zone: object,
+    *,
+    include_empty_assignments: bool,
 ) -> Iterable[tuple[str, ...]]:
     assignments = list(
         db.execute(
@@ -363,6 +386,11 @@ def _data_rows(
     rows: list[tuple[tuple[str, str], tuple[str, ...]]] = []
     seen_group_rows: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
+        assignment_responses = responses_by_assignment.get(
+            assignment.id, {}
+        )
+        if not include_empty_assignments and not assignment_responses:
+            continue
         group_key = group_key_by_assignment.get(assignment.id)
         if group_key is not None:
             dedupe = (assignment.reviewer_id, group_key)
@@ -373,7 +401,7 @@ def _data_rows(
             assignment=assignment,
             instrument=instrument,
             field_ids=field_ids,
-            responses=responses_by_assignment.get(assignment.id, {}),
+            responses=assignment_responses,
             group_key=group_key,
             group_identity=group_identity,
             session_zone=session_zone,

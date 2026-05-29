@@ -143,19 +143,39 @@ def build_responses_bundle(
 
 
 def build_by_instrument_bundle(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    instrument_ids: set[int] | None = None,
+    include_metadata: bool = True,
+    include_empty_assignments: bool = True,
 ) -> tuple[bytes, dict[str, int]]:
     """Build the By-instrument zip for ``review_session``.
 
-    One CSV per instrument, named
+    One CSV per included instrument, named
     ``{code}_by_instrument_{slug}.csv`` where ``{slug}`` is the
     instrument's short label (or the ``Instrument_{N}`` fallback)
     sanitised for filesystem safety. Each CSV carries a meta
     header + the wide-format data table — see
     ``by_instrument_extract.py``.
 
+    The three options gate the By-instrument card's chip row:
+
+    * ``instrument_ids`` — when provided, only these instruments
+      ship. ``None`` (default) = every instrument on the session.
+      Position numbering follows the session-order sequence
+      regardless of which subset is selected, so the
+      ``Instrument_{N}`` fallback stays stable as the operator
+      toggles chips on / off.
+    * ``include_metadata`` — when False, each CSV skips the meta
+      header block (and the blank separator row) and starts
+      directly with the data-table header.
+    * ``include_empty_assignments`` — when False, each CSV's
+      data table omits assignment rows that have no responses.
+
     Returns ``(zip_bytes, counts)`` where ``counts`` carries
-    ``{"instrument_files": N}`` for the
+    ``{"instrument_files": N}`` (the actually-shipped count
+    post-filter) for the
     ``session.by_instrument_bundle_extracted`` audit envelope.
     """
     instruments = list(
@@ -168,23 +188,35 @@ def build_by_instrument_bundle(
 
     code = (review_session.code or "session").strip() or "session"
     used_slugs: set[str] = set()
+    shipped = 0
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for position, instrument in enumerate(instruments, start=1):
+            if (
+                instrument_ids is not None
+                and instrument.id not in instrument_ids
+            ):
+                continue
             slug = by_instrument_filename_slug(
                 instrument, position, used=used_slugs
             )
             rows = list(
                 serialize_by_instrument(
-                    db, review_session, instrument, position=position
+                    db,
+                    review_session,
+                    instrument,
+                    position=position,
+                    include_metadata=include_metadata,
+                    include_empty_assignments=include_empty_assignments,
                 )
             )
             archive.writestr(
                 f"{code}_by_instrument_{slug}.csv",
                 b"".join(stream_csv(rows)),
             )
+            shipped += 1
 
-    counts = {"instrument_files": len(instruments)}
+    counts = {"instrument_files": shipped}
     return buffer.getvalue(), counts
 
 
