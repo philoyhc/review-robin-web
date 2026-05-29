@@ -282,8 +282,28 @@
               data-shaper-instrument-chip="{{ instr.id }}"
               role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
       {% endfor %}
+      <span class="shaper-axis-pipe" aria-hidden="true" data-shaper-field-pipe>|</span>
+      <span data-shaper-field-chips></span>
       <span data-shaper-relevant-chips></span>
     </p>
+
+    {# Hidden per-instrument field-pool templates. The JS clones
+       the matching pool into ``data-shaper-field-chips`` when
+       an instrument toggles on, and removes it when the
+       instrument toggles off (or a different instrument
+       supplants it via the mutex). Field chips themselves are
+       mutually exclusive within the pool — only one response
+       field can be in scope at a time, matching the Data
+       shaper's fine-grained focus framing. #}
+    {% for instr in instruments %}
+      <template data-shaper-field-pool="{{ instr.id }}">
+        {% for field in instr.response_fields | sort(attribute='order') %}
+          <span class="pill pill-count tag-chip"
+                data-shaper-field-chip="{{ instr.id }}:{{ field.id }}"
+                role="button" tabindex="0" aria-pressed="false">{{ field.label or field.field_key }}</span>
+        {% endfor %}
+      </template>
+    {% endfor %}
 
     {# Hidden chip-pool templates. Each ``<template>`` carries
        the relevant column chips for one axis; the JS clones
@@ -757,6 +777,69 @@
       // preview row, so the placeholder just flips visual /
       // pressed state on click; the real narrowing semantic
       // lands with the file-gen wiring.
+      //
+      // Selecting an instrument also **mounts that
+      // instrument's response-field chip pool** into the
+      // adjacent ``data-shaper-field-chips`` slot. Field
+      // chips are themselves mutex (only one field in scope
+      // at a time) and surface the response field's friendly
+      // label as the chip text. The intra-row pipe before the
+      // field slot hides when no instrument is selected (the
+      // pool is empty in that state and a stranded pipe reads
+      // as noise).
+      var fieldSlot = card.querySelector("[data-shaper-field-chips]");
+      var fieldPipe = card.querySelector("[data-shaper-field-pipe]");
+
+      function bindFieldChip(chip) {
+        function toggle() {
+          var pressed = chip.getAttribute("aria-pressed") !== "true";
+          if (pressed && fieldSlot) {
+            fieldSlot
+              .querySelectorAll("[data-shaper-field-chip]")
+              .forEach(function (other) {
+                if (other === chip) return;
+                if (other.getAttribute("aria-pressed") === "true") {
+                  other.classList.remove("is-selected");
+                  other.setAttribute("aria-pressed", "false");
+                }
+              });
+          }
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
+        chip.addEventListener("click", toggle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        });
+      }
+
+      function mountFieldPool(instrumentId) {
+        if (!fieldSlot) return;
+        var pool = card.querySelector(
+          '[data-shaper-field-pool="' + instrumentId + '"]'
+        );
+        if (!pool) return;
+        fieldSlot.innerHTML = "";
+        fieldSlot.appendChild(pool.content.cloneNode(true));
+        fieldSlot
+          .querySelectorAll("[data-shaper-field-chip]")
+          .forEach(bindFieldChip);
+        if (fieldPipe) fieldPipe.style.display = "";
+      }
+
+      function unmountFieldPool() {
+        if (fieldSlot) fieldSlot.innerHTML = "";
+        if (fieldPipe) fieldPipe.style.display = "none";
+      }
+
+      // No instrument selected on first render — hide the
+      // field-section pipe so the row doesn't carry an
+      // orphan ``|``.
+      unmountFieldPool();
+
       var instrumentChips = card.querySelectorAll(
         "[data-shaper-instrument-chip]"
       );
@@ -774,6 +857,11 @@
           }
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          if (pressed) {
+            mountFieldPool(chip.getAttribute("data-shaper-instrument-chip"));
+          } else {
+            unmountFieldPool();
+          }
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
