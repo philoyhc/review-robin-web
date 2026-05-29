@@ -170,6 +170,60 @@ def test_data_shaper_axis_chip_row_and_pools(
         assert f'data-shaper-col-chip="{slot}"' in body
 
 
+def test_data_shaper_tag_chip_labels_resolve_friendly_overrides(
+    client: TestClient, db: Session
+) -> None:
+    """Reviewer / Reviewee tag chip labels render through
+    ``field_labels.resolve`` so they pick up operator renames
+    done on the Setup pages — falling back to the built-in
+    ``Tag 1`` / ``Tag 2`` / ``Tag 3`` when no override is
+    set."""
+    from app.db.models import User
+    from app.services import field_labels
+
+    review_session = _make_session(client, db, code="ed-shaper-friendly")
+    actor = db.execute(select(User)).scalars().first()
+    assert actor is not None
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Position",
+        user=actor,
+        correlation_id="ed-shaper-friendly-test",
+    )
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewee",
+        source_field="tag_2",
+        label="Cohort",
+        user=actor,
+        correlation_id="ed-shaper-friendly-test",
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split(
+        "</template>"
+    )[0]
+    reviewee_pool = body.split('data-shaper-chip-pool="reviewee"')[1].split(
+        "</template>"
+    )[0]
+    # Renamed slots render the override.
+    assert ">Position<" in reviewer_pool
+    assert ">Cohort<" in reviewee_pool
+    # Unrenamed slots fall back to the built-in default — the
+    # Reviewee Tag 1 / Tag 3 + Reviewer Tag 2 / Tag 3 slots
+    # weren't overridden, so ``Tag N`` still renders for them.
+    assert ">Tag 2<" in reviewer_pool
+    assert ">Tag 3<" in reviewer_pool
+    assert ">Tag 1<" in reviewee_pool
+    assert ">Tag 3<" in reviewee_pool
+
+
 def test_data_shaper_instrument_chips_live_on_axis_row(
     client: TestClient, db: Session
 ) -> None:

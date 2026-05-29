@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
+from app.services import field_labels
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
@@ -53,6 +54,19 @@ def session_extract_data(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
+    # Friendly labels for the Data shaper's Reviewer / Reviewee
+    # tag chips — picks up operator renames done on the Setup
+    # pages and falls back to ``Tag 1`` / ``Tag 2`` / ``Tag 3``
+    # when no override is set (per ``field_labels.resolve``'s
+    # built-in default chain).
+    reviewer_tag_labels = [
+        field_labels.resolve(review_session, "reviewer", slot)
+        for slot in ("tag_1", "tag_2", "tag_3")
+    ]
+    reviewee_tag_labels = [
+        field_labels.resolve(review_session, "reviewee", slot)
+        for slot in ("tag_1", "tag_2", "tag_3")
+    ]
     return _templates.TemplateResponse(
         request,
         "operator/session_extract_data.html",
@@ -64,6 +78,8 @@ def session_extract_data(
                 review_session, "Extract data"
             ),
             "instruments": instruments,
+            "reviewer_tag_labels": reviewer_tag_labels,
+            "reviewee_tag_labels": reviewee_tag_labels,
             **workflow_ctx,
         },
     )
