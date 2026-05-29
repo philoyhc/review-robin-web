@@ -246,7 +246,21 @@ require any per-lens configuration first.
        `Mean` / `Median` / `Min` / `Max` / `Length`
        (mirrors the Reviewer / Reviewee response metadata
        cards' aggregate column vocabulary, with `Assigned`
-       leading per that card's column order).
+       leading per that card's column order). When a
+       response field is selected, the aggregate chips
+       filter to the ones **relevant to that field's data
+       type**: numeric (Integer / Decimal) fields surface
+       `Assigned`, `Count`, `Mean`, `Median`, `Min`, `Max`;
+       string fields surface `Assigned`, `Count`, `Length`;
+       other types surface `Assigned`, `Count`. Selected
+       chips that get hidden by a data-type swap auto-
+       deselect so the preview row stays consistent.
+  - **Preview-row empty state**: each Data shape sub-card's
+    preview table seeds a muted-italic placeholder cell
+    ("Pick chips above to compose this shape's columns")
+    whenever no column chips are selected on the active
+    shape — keeps the table visible so the operator has an
+    obvious affordance to work with.
   - **Data shape sub-card stack** below the axis row — one
     sub-card per shape. One always-present blank shape card
     on initial load (matches the band-3 response-field

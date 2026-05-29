@@ -172,6 +172,43 @@ def test_data_shaper_axis_chip_row_and_pools(
         assert f'data-shaper-col-chip="{slot}"' in body
 
 
+def test_data_shaper_aggregate_chips_carry_data_type_attribute(
+    client: TestClient, db: Session
+) -> None:
+    """``Mean`` / ``Median`` / ``Min`` / ``Max`` chips carry
+    ``data-shaper-relevant-for="numeric"`` so the JS hides
+    them when a string field is selected; ``Length`` carries
+    ``"string"`` (hidden for numeric fields). ``Assigned``
+    and ``Count`` carry no such attribute — they apply to
+    every data type and stay visible always.
+
+    Field chips carry their ``_inline_data_type`` via
+    ``data-shaper-field-data-type`` so the JS knows which
+    bucket to apply on toggle."""
+    review_session = _make_session(client, db, code="ed-shaper-dtype")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Numeric aggregates carry the ``numeric`` marker.
+    for slot in ("reviewer:mean", "reviewer:median", "reviewer:min", "reviewer:max"):
+        chip_block = body.split(f'data-shaper-col-chip="{slot}"')[1].split(">")[0]
+        assert 'data-shaper-relevant-for="numeric"' in chip_block
+
+    # String aggregate carries the ``string`` marker.
+    length_block = body.split('data-shaper-col-chip="reviewer:length"')[1].split(">")[0]
+    assert 'data-shaper-relevant-for="string"' in length_block
+
+    # Assigned + Count have no marker.
+    for slot in ("reviewer:assigned", "reviewer:count"):
+        chip_block = body.split(f'data-shaper-col-chip="{slot}"')[1].split(">")[0]
+        assert "data-shaper-relevant-for" not in chip_block
+
+    # Field chips carry ``data-shaper-field-data-type`` so the
+    # JS knows which bucket to apply when toggled.
+    assert "data-shaper-field-data-type=" in body
+
+
 def test_data_shaper_response_field_chip_pool(
     client: TestClient, db: Session
 ) -> None:

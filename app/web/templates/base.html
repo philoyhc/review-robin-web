@@ -1305,6 +1305,18 @@
         white-space: nowrap;
         background: var(--bg-muted);
       }
+      /* Empty-state placeholder cell that surfaces inside the
+         preview row when no column chips are selected on the
+         active shape — keeps the preview table visible so the
+         operator sees something to interact with. Renders
+         muted and italic; matches the rest of the page's
+         ``form-help`` muted-text palette. */
+      body.ui-v2 .shaper-preview-placeholder {
+        color: var(--text-secondary, #94a3b8);
+        font-style: italic;
+        font-weight: normal;
+        background: transparent;
+      }
       /* Data shaper axis pipe — visual divider between the axis
          chips and the per-axis column chips that surface to its
          right when an axis is on. */

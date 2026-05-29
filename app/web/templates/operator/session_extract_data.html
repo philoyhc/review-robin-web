@@ -300,6 +300,7 @@
         {% for field in instr.response_fields | sort(attribute='order') %}
           <span class="pill pill-count tag-chip"
                 data-shaper-field-chip="{{ instr.id }}:{{ field.id }}"
+                data-shaper-field-data-type="{{ field._inline_data_type or '' }}"
                 role="button" tabindex="0" aria-pressed="false">{{ field.label or field.field_key }}</span>
         {% endfor %}
       </template>
@@ -340,17 +341,18 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
-      {% for slot, label in [
-          ("reviewer:assigned", "Assigned"),
-          ("reviewer:count", "Count"),
-          ("reviewer:mean", "Mean"),
-          ("reviewer:median", "Median"),
-          ("reviewer:min", "Min"),
-          ("reviewer:max", "Max"),
-          ("reviewer:length", "Length"),
+      {% for slot, label, relevant_for in [
+          ("reviewer:assigned", "Assigned", None),
+          ("reviewer:count", "Count", None),
+          ("reviewer:mean", "Mean", "numeric"),
+          ("reviewer:median", "Median", "numeric"),
+          ("reviewer:min", "Min", "numeric"),
+          ("reviewer:max", "Max", "numeric"),
+          ("reviewer:length", "Length", "string"),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
+              {% if relevant_for %}data-shaper-relevant-for="{{ relevant_for }}"{% endif %}
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
     </template>
@@ -367,17 +369,18 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
-      {% for slot, label in [
-          ("reviewee:assigned", "Assigned"),
-          ("reviewee:count", "Count"),
-          ("reviewee:mean", "Mean"),
-          ("reviewee:median", "Median"),
-          ("reviewee:min", "Min"),
-          ("reviewee:max", "Max"),
-          ("reviewee:length", "Length"),
+      {% for slot, label, relevant_for in [
+          ("reviewee:assigned", "Assigned", None),
+          ("reviewee:count", "Count", None),
+          ("reviewee:mean", "Mean", "numeric"),
+          ("reviewee:median", "Median", "numeric"),
+          ("reviewee:min", "Min", "numeric"),
+          ("reviewee:max", "Max", "numeric"),
+          ("reviewee:length", "Length", "string"),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
+              {% if relevant_for %}data-shaper-relevant-for="{{ relevant_for }}"{% endif %}
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
     </template>
@@ -709,17 +712,41 @@
         return relevantSlot.querySelectorAll("[data-shaper-col-chip]");
       }
 
-      function rebuildPreviewRow() {
-        if (!activeShape) return;
-        var row = previewRowFor(activeShape);
+      function rebuildPreviewRow(targetShape) {
+        var shape = targetShape || activeShape;
+        if (!shape) return;
+        var row = previewRowFor(shape);
         row.innerHTML = "";
-        colChips().forEach(function (chip) {
-          if (chip.getAttribute("aria-pressed") !== "true") return;
-          var th = document.createElement("th");
-          th.className = "shaper-preview-th";
-          th.textContent = chip.textContent.trim();
-          row.appendChild(th);
-        });
+        var any = false;
+        // Only the active shape sources its columns from the
+        // live chip selection; non-active (saved) shapes
+        // keep whatever was in the row at save time —
+        // re-rendering here would wipe them. For the
+        // placeholder slice the saved shapes don't persist
+        // their columns yet, so they render the empty-state
+        // placeholder too.
+        if (shape === activeShape) {
+          colChips().forEach(function (chip) {
+            if (chip.getAttribute("aria-pressed") !== "true") return;
+            any = true;
+            var th = document.createElement("th");
+            th.className = "shaper-preview-th";
+            th.textContent = chip.textContent.trim();
+            row.appendChild(th);
+          });
+        }
+        if (!any) {
+          // Empty preview row collapses to zero height without
+          // any cells — operators couldn't see the table.
+          // Emit a placeholder cell so the row stays visible
+          // and surfaces a hint about what to do.
+          var placeholder = document.createElement("th");
+          placeholder.className =
+            "shaper-preview-th shaper-preview-placeholder";
+          placeholder.textContent =
+            "Pick chips above to compose this shape's columns";
+          row.appendChild(placeholder);
+        }
       }
 
       function bindColChip(chip) {
@@ -749,6 +776,51 @@
         wrapper.appendChild(fragment);
         relevantSlot.appendChild(wrapper);
         wrapper.querySelectorAll("[data-shaper-col-chip]").forEach(bindColChip);
+        // If a response field is already selected, re-apply its
+        // data-type filter to the freshly-mounted aggregate
+        // chips — the pool was cloned fresh so its
+        // ``Mean`` / ``Length`` / etc. chips revert to
+        // "all visible" without this.
+        var currentField = card.querySelector(
+          '[data-shaper-field-chip][aria-pressed="true"]'
+        );
+        if (currentField) {
+          applyFieldDataType(
+            currentField.getAttribute("data-shaper-field-data-type")
+          );
+        }
+      }
+
+      // ``Mean`` / ``Median`` / ``Min`` / ``Max`` chips only
+      // apply to numeric response fields; ``Length`` only
+      // applies to string fields. When the operator picks a
+      // response field, hide the aggregate chips that don't
+      // match its data type — and auto-deselect any already-on
+      // chip that gets hidden so the preview row stays
+      // consistent.
+      function applyFieldDataType(dataType) {
+        var NUMERIC = ["Integer", "Decimal"];
+        var STRING = ["String"];
+        var noField = !dataType;
+        relevantSlot
+          .querySelectorAll("[data-shaper-relevant-for]")
+          .forEach(function (chip) {
+            var relevantFor = chip.getAttribute("data-shaper-relevant-for");
+            var show = noField;
+            if (relevantFor === "numeric")
+              show = noField || NUMERIC.indexOf(dataType) !== -1;
+            else if (relevantFor === "string")
+              show = noField || STRING.indexOf(dataType) !== -1;
+            chip.style.display = show ? "" : "none";
+            if (
+              !show &&
+              chip.getAttribute("aria-pressed") === "true"
+            ) {
+              chip.classList.remove("is-selected");
+              chip.setAttribute("aria-pressed", "false");
+            }
+          });
+        rebuildPreviewRow();
       }
 
       function unmountAxisChips(axis) {
@@ -808,6 +880,14 @@
           }
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          // Filter the per-axis aggregate chips by the
+          // selected field's data type. When the operator
+          // deselects the field, ``null`` restores all chips.
+          applyFieldDataType(
+            pressed
+              ? chip.getAttribute("data-shaper-field-data-type")
+              : null
+          );
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
@@ -835,6 +915,10 @@
       function unmountFieldPool() {
         if (fieldSlot) fieldSlot.innerHTML = "";
         if (fieldPipe) fieldPipe.style.display = "none";
+        // No field selected ➝ no data-type filter on
+        // aggregates. Restores every Mean / Median / etc.
+        // chip in the currently-mounted axis pool.
+        applyFieldDataType(null);
       }
 
       // No instrument selected on first render — hide the
@@ -959,10 +1043,16 @@
           shape.parentNode.insertBefore(newShape, shape.nextSibling);
           bindShapeCard(newShape);
           setActiveShape(newShape);
+          rebuildPreviewRow();
         });
 
         // Hide the (display) span until a save event populates it.
         if (nameDisplay) nameDisplay.style.display = "none";
+
+        // Seed the placeholder preview-row cell so the empty
+        // table renders visibly on first paint (an empty
+        // ``<tr>`` collapses to zero height).
+        rebuildPreviewRow(shape);
       }
 
       stack.querySelectorAll("[data-shape]").forEach(bindShapeCard);
