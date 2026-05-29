@@ -1049,18 +1049,21 @@
               show = hasListItems || hasDiscreteSteps;
             } else if (relevantFor === "field-scoped") {
               // The pipe between Assigned / Count and the
-              // field-scoped statistics shows iff at least
-              // one field-scoped chip will be visible after
-              // this filter pass — i.e. the data type
-              // surfaces Mean / Length / List items /
-              // Discrete steps. For data types that have no
-              // matching chip (or no field selected) the
-              // pipe hides too so the row doesn't carry an
-              // orphan ``|``.
+              // standard field-scoped aggregate chips
+              // (Mean / Median / Min / Max / Length) shows
+              // iff at least one of **those** would render —
+              // i.e. the data type is numeric or string. List
+              // fields don't surface any of those (only the
+              // ``List items`` fan-out chip), so this pipe
+              // hides for List too; the trailing
+              // ``list-or-discrete`` pipe right before
+              // ``List items`` already separates Count from
+              // it. Without this gate, List fields render
+              // two adjacent pipes between Count and List
+              // items.
               show =
                 NUMERIC.indexOf(dataType) !== -1 ||
-                STRING.indexOf(dataType) !== -1 ||
-                dataType === "List";
+                STRING.indexOf(dataType) !== -1;
             } else {
               show = true;
             }
