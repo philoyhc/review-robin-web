@@ -1098,11 +1098,13 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**URL remodel, 14B, 19, 20** (18K + 18L + 18M + 18N closed
-2026-05-28; 18J retired 2026-05-26; URL remodel is the
-``/reviewer/`` → ``/me/`` aggressive-rename stub best landed
-before 14B Part A). No global ordering constraints beyond the
-few dep chains called out at the bottom of this file.
+**URL remodel, 14B, Extract data, 19, 20** (18K + 18L + 18M
++ 18N closed 2026-05-28; 18J retired 2026-05-26; URL remodel
+is the ``/reviewer/`` → ``/me/`` aggressive-rename stub best
+landed before 14B Part A; Extract data is the Session Home
+card split + new Operations tab for response-data shaping).
+No global ordering constraints beyond the few dep chains
+called out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1137,6 +1139,21 @@ few dep chains called out at the bottom of this file.
   ``guide/participant_model_upgrade.md`` §5.1 on 2026-05-28
   so the rename can land independently.
   **Plan:** ``guide/url_remodel.md``.
+
+- **Extract data — Session Home card split + new Operations
+  tab** *(stub created 2026-05-29)*. Renames the Session Home
+  **Extract data** card to **Extract setup** (porting-shaped
+  CSVs only — Reviewers / Reviewees / Relationships / Session
+  settings + a four-CSV Zip-all), and adds a new **Extract
+  data** tab to the Operations strip after Responses for
+  fine-grained response-data shaping (by instrument /
+  by reviewer / by reviewee lenses). Aim is to shape the data
+  to facilitate offline analysis — no charts or in-app
+  pivots. Sized at ~3-4 small PRs; independent of the
+  numbered queue. Best landed **after URL remodel** so any
+  internal links to the reviewer surface ship with `/me/`
+  prefixes from day 1.
+  **Plan:** ``guide/extract_data.md``.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
