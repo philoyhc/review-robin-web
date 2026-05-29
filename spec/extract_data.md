@@ -257,9 +257,10 @@ shape** of the CSV itself, where they apply by data type.
 | Filename | `{code}_reviewer_metadata.csv` | `{code}_reviewee_metadata.csv` |
 | Audit event | `session.reviewer_metadata_extracted` | `session.reviewee_metadata_extracted` |
 
-The button label stays `Zip all` for consistency with the
-other page cards, even though each card produces a single
-CSV (not a zip).
+The button label reads `Download` (not `Zip all`) on both
+metadata cards because each card produces a single CSV — no
+zipping happens. The by-instrument card keeps `Zip all`
+because it really does zip N CSVs together.
 
 **Chip row.** Per-instrument chips inline before the entity-
 scope toggle:

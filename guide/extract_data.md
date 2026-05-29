@@ -161,10 +161,10 @@ require any per-lens configuration first.
     retired — they moved into the per-(instrument, field)
     column blocks of the extract output where they apply
     by data type (see below).
-  - Button: `Zip all` → `{code}_reviewer_metadata.csv` /
-    `{code}_reviewee_metadata.csv` (a single CSV per card —
-    the button label stays for consistency with the other
-    page cards).
+  - Button: `Download` → `{code}_reviewer_metadata.csv` /
+    `{code}_reviewee_metadata.csv` (a single CSV per card,
+    so the button label drops the `Zip all` framing used on
+    the other cards — nothing actually gets zipped here).
   - **Column shape** (Reviewer side; Reviewee side is
     symmetric, swapping `ReviewerName` / `ReviewerEmail` for
     `RevieweeName` / `RevieweeEmail`):
