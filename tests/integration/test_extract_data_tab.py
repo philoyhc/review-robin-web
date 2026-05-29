@@ -170,13 +170,16 @@ def test_data_shaper_axis_chip_row_and_pools(
         assert f'data-shaper-col-chip="{slot}"' in body
 
 
-def test_data_shaper_axis_pool_has_intra_pool_pipe_and_instrument_chips(
+def test_data_shaper_instrument_chips_live_on_axis_row(
     client: TestClient, db: Session
 ) -> None:
-    """Each axis chip pool carries three sub-groups separated
-    by a ``|`` pipe: identification chips, then per-instrument
-    scope chips (one per session instrument, labelled like the
-    By-instrument card), then the aggregate data chips.
+    """Per-instrument scope chips sit on the **top axis chip
+    row** (right after the ``|`` pipe), not inside the
+    per-axis pools. They're session-level filters: visible
+    regardless of axis selection, and they use a distinct
+    ``data-shaper-instrument-chip`` attribute (vs the per-axis
+    ``data-shaper-col-chip`` vocabulary) so the JS can treat
+    them as scope filters rather than column-producing chips.
 
     With no instrument scope chip selected the aggregates
     span every session instrument — matching the "By
@@ -186,28 +189,34 @@ def test_data_shaper_axis_pool_has_intra_pool_pipe_and_instrument_chips(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
 
-    # Slice the Reviewer chip pool's body.
-    reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split(
-        "</template>"
+    # The card's first chip row is the axis chip row. Slice
+    # it (between ``col-chip-row`` and the first
+    # ``</p>``) and confirm the instrument chip + the
+    # ``data-shaper-relevant-chips`` slot live there.
+    card_slice = body.split('id="extract-data-shaper"')[1].split(
+        "data-shaper-chip-pool"
     )[0]
-    # ID chip ➝ pipe ➝ instrument chip ➝ aggregate chip in
-    # that order. ``str.index`` will raise if any is absent.
-    name_at = reviewer_pool.index('data-shaper-col-chip="reviewer:name"')
-    pipe_at = reviewer_pool.index('shaper-axis-pipe')
-    instrument_at = reviewer_pool.index(
-        'data-shaper-col-chip="reviewer:instrument-'
-    )
-    count_at = reviewer_pool.index('data-shaper-col-chip="reviewer:count"')
-    assert name_at < pipe_at < instrument_at < count_at
+    axis_chip_at = card_slice.index('data-shaper-axis-chip="reviewer"')
+    pipe_at = card_slice.index('shaper-axis-pipe')
+    instrument_at = card_slice.index('data-shaper-instrument-chip="')
+    relevant_slot_at = card_slice.index('data-shaper-relevant-chips')
+    # Axis chip ➝ pipe ➝ instrument chip ➝ relevant-chips slot
+    # in that order on the top row.
+    assert axis_chip_at < pipe_at < instrument_at < relevant_slot_at
 
-    # Reviewee pool follows the same shape.
-    reviewee_pool = body.split('data-shaper-chip-pool="reviewee"')[1].split(
-        "</template>"
-    )[0]
-    assert 'data-shaper-col-chip="reviewee:name"' in reviewee_pool
-    assert 'shaper-axis-pipe' in reviewee_pool
-    assert 'data-shaper-col-chip="reviewee:instrument-' in reviewee_pool
-    assert 'data-shaper-col-chip="reviewee:count"' in reviewee_pool
+    # Each axis pool now carries only two sub-groups —
+    # identification + pipe + aggregate. The instrument
+    # ``data-shaper-col-chip`` slot retired from both pools.
+    for axis in ("reviewer", "reviewee"):
+        pool = body.split(f'data-shaper-chip-pool="{axis}"')[1].split(
+            "</template>"
+        )[0]
+        name_at = pool.index(f'data-shaper-col-chip="{axis}:name"')
+        pipe_at = pool.index('shaper-axis-pipe')
+        count_at = pool.index(f'data-shaper-col-chip="{axis}:count"')
+        assert name_at < pipe_at < count_at
+        # No instrument-prefixed col chips inside the pool.
+        assert f'data-shaper-col-chip="{axis}:instrument-' not in pool
 
 
 def test_data_shaper_initial_blank_shape_card(
