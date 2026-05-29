@@ -1288,6 +1288,23 @@
         display: flex;
         justify-content: flex-end;
       }
+      /* Data shaper preview table — flush-left, columns sized
+         to their headers (plus the sort icon) rather than the
+         table spanning the card. The wrapping ``-scroll`` div
+         keeps the table from overflowing the card when the
+         operator adds many columns; the table itself stays
+         ``width: auto`` so unused horizontal space sits to the
+         right. */
+      body.ui-v2 .shaper-preview-scroll {
+        overflow-x: auto;
+      }
+      body.ui-v2 .shaper-preview-table {
+        width: auto;
+      }
+      body.ui-v2 .shaper-preview-th {
+        white-space: nowrap;
+        background: var(--bg-muted);
+      }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
           grid-template-columns: 1fr;

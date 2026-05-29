@@ -117,6 +117,14 @@ def test_data_shaper_placeholder_card_and_chip_render(
     assert 'id="extract-data-shaper"' in body
     assert ">Data shaper</h2>" in body
     assert 'id="extract-data-shaper-zip"' in body
+    # Preview-table stub — flush-left, one ``<th>`` per
+    # placeholder column with a sort-icon button. Class
+    # ``shaper-preview-table`` carries the ``width: auto``
+    # styling.
+    assert 'class="shaper-preview-table"' in body
+    for col in ("Reviewer", "Reviewee", "Instrument", "Field", "Value"):
+        assert f'data-shaper-preview-col="{col.lower()}"' in body
+        assert f'aria-label="Sort by {col}"' in body
 
 
 def test_extract_all_card_renders_lens_selector_chips(
