@@ -1257,27 +1257,26 @@
       }
       /* Extract data page — top row of two half-width cards
          (intro + By instrument) sitting side-by-side. Each card
-         lays out its heading-and-button row via
-         ``extract-data-card-row``. Collapses to a single column
-         on narrow viewports. */
+         sizes to its own content; the action button sits on its
+         own row immediately below the body text, right-aligned.
+         Collapses to a single column on narrow viewports. */
       body.ui-v2 .extract-data-top-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-3);
         margin-top: var(--space-3);
-        align-items: stretch;
+        margin-bottom: var(--space-4);
+        align-items: start;
       }
       body.ui-v2 .extract-data-top-grid > .card {
-        margin-top: 0;
+        margin-bottom: 0;
       }
       body.ui-v2 .extract-data-card-stack {
         display: flex;
         flex-direction: column;
         gap: var(--space-3);
-        height: 100%;
       }
       body.ui-v2 .extract-data-card-actions {
-        margin-top: auto;
         display: flex;
         justify-content: flex-end;
       }
