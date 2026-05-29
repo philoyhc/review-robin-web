@@ -211,10 +211,10 @@
      The eventual builder is a generalised engine for composing
      a custom data shape (selecting + grouping + aggregating
      across reviewer / reviewee / instrument / response-field
-     axes). Placeholder for now: heading + body + ``Zip all``
-     button only — the chip on the intro card lets the operator
-     include the shaper's output in the top-level ``Zip all``
-     once the engine ships. #}
+     axes). Placeholder for now: heading + body + preview-table
+     stub + ``Zip all`` button. The chip on the intro card lets
+     the operator include the shaper's output in the top-level
+     ``Zip all`` once the engine ships. #}
   <div class="card extract-data-card-stack" id="extract-data-shaper">
     <div>
       <h2 style="margin-top: 0;">Data shaper</h2>
@@ -224,6 +224,29 @@
         and the aggregations — and export the result alongside
         the canned lens CSVs.
       </p>
+    </div>
+    {# Preview-table stub. Shows the column headers of the CSV
+       being built. Flush-left + width: auto so each column
+       sizes to its header (plus the sort icon) rather than the
+       table spanning the card. Sort icon mirrors the shared
+       ``rrw-sortable`` primitive (the click handler isn't
+       wired yet — placeholder); column reordering via
+       click-and-drag lands in a follow-up. #}
+    <div class="shaper-preview-scroll">
+      <table class="shaper-preview-table">
+        <thead>
+          <tr>
+            {% for col in ["Reviewer", "Reviewee", "Instrument", "Field", "Value"] %}
+              <th class="rrw-sortable shaper-preview-th"
+                  data-shaper-preview-col="{{ col | lower }}">{{ col }}<button type="button"
+                    class="rrw-sort-btn"
+                    aria-label="Sort by {{ col }}"
+                    disabled
+                    aria-disabled="true"><span class="rrw-sort-badge">↕</span></button></th>
+            {% endfor %}
+          </tr>
+        </thead>
+      </table>
     </div>
     <div class="extract-data-card-actions">
       <a class="btn secondary"
