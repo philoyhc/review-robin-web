@@ -14,7 +14,12 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession, User
+from app.db.models import (
+    Instrument,
+    InstrumentResponseField,
+    ReviewSession,
+    User,
+)
 from app.db.session import get_db
 from app.services import field_labels
 from app.web import breadcrumbs, views
@@ -22,6 +27,46 @@ from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
+
+
+# Numeric response fields with a finite, small number of valid
+# values get a Data shaper "Discrete steps" chip. Threshold: 12
+# (one chip per value would scale poorly past that).
+_DISCRETE_STEPS_THRESHOLD = 12
+
+
+def _discrete_steps_values(field: InstrumentResponseField) -> list[str]:
+    """Return the discrete step values for a numeric response
+    field as a list of pre-formatted strings, or an empty list
+    when the field is non-numeric, lacks the min/max/step
+    triple, or has more than ``_DISCRETE_STEPS_THRESHOLD``
+    steps. Used by the Data shaper to decide whether to ship
+    the per-field "Discrete steps" chip in the field pool."""
+    data_type = field._inline_data_type
+    if data_type not in ("Integer", "Decimal"):
+        return []
+    mn = field._inline_min
+    mx = field._inline_max
+    step = field._inline_step
+    if step is None and data_type == "Integer":
+        step = 1.0
+    if mn is None or mx is None or step is None or step <= 0:
+        return []
+    span = mx - mn
+    if span < 0:
+        return []
+    count = int(round(span / step)) + 1
+    if count <= 0 or count > _DISCRETE_STEPS_THRESHOLD:
+        return []
+    is_int = data_type == "Integer"
+    values: list[str] = []
+    for i in range(count):
+        v = mn + i * step
+        if is_int or v == int(v):
+            values.append(str(int(round(v))))
+        else:
+            values.append(f"{v:g}")
+    return values
 
 
 @router.get(
@@ -54,6 +99,13 @@ def session_extract_data(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
+    # Per-field discrete-steps values, keyed by field id.
+    # Empty list when the field doesn't qualify for the
+    # Data shaper's "Discrete steps" chip.
+    field_discrete_steps: dict[int, list[str]] = {}
+    for instrument in instruments:
+        for f in instrument.response_fields:
+            field_discrete_steps[f.id] = _discrete_steps_values(f)
     # Friendly labels for the Data shaper's Reviewer / Reviewee
     # tag chips — picks up operator renames done on the Setup
     # pages and falls back to ``Tag 1`` / ``Tag 2`` / ``Tag 3``
@@ -80,6 +132,7 @@ def session_extract_data(
             "instruments": instruments,
             "reviewer_tag_labels": reviewer_tag_labels,
             "reviewee_tag_labels": reviewee_tag_labels,
+            "field_discrete_steps": field_discrete_steps,
             **workflow_ctx,
         },
     )

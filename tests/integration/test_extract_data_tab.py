@@ -172,6 +172,93 @@ def test_data_shaper_axis_chip_row_and_pools(
         assert f'data-shaper-col-chip="{slot}"' in body
 
 
+def test_data_shaper_numeric_field_carries_discrete_steps_attribute(
+    client: TestClient, db: Session
+) -> None:
+    """Numeric (Integer / Decimal) response fields with a
+    finite, small (≤12) number of discrete valid values gain
+    a ``data-shaper-field-discrete-steps`` attribute carrying
+    the comma-separated step values. The progressive-
+    enhancement JS surfaces a ``Discrete steps`` chip in the
+    per-axis pool when such a field is selected; clicking it
+    emits one preview-row column per step value."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _make_session(client, db, code="ed-shaper-discrete")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    # Integer field 1..5 — five discrete entries.
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="discrete5",
+        label="Score 1-5",
+        order=88,
+        _inline_data_type="Integer",
+        _inline_response_type="100int",
+        _inline_min=1.0,
+        _inline_max=5.0,
+        _inline_step=1.0,
+    )
+    db.add(field)
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert 'data-shaper-field-discrete-steps="1,2,3,4,5"' in body
+    # The per-axis ``Discrete steps`` chip + its leading pipe
+    # render gated behind ``data-shaper-relevant-for="discrete-steps"``
+    # so the JS can hide them when the active field doesn't
+    # qualify.
+    assert 'data-shaper-col-chip="reviewer:discrete-steps"' in body
+    assert 'data-shaper-col-chip="reviewee:discrete-steps"' in body
+
+
+def test_data_shaper_oversized_numeric_field_skips_discrete_steps(
+    client: TestClient, db: Session
+) -> None:
+    """Numeric fields with > 12 discrete entries don't qualify
+    for the ``Discrete steps`` chip — the attribute is omitted
+    so the JS keeps the chip hidden when the field is selected."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _make_session(
+        client, db, code="ed-shaper-discrete-skip"
+    )
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    # 0..100 step 1 ⇒ 101 entries, far past the 12 threshold.
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="hundredish",
+        label="0-100",
+        order=89,
+        _inline_data_type="Integer",
+        _inline_response_type="100int",
+        _inline_min=0.0,
+        _inline_max=100.0,
+        _inline_step=1.0,
+    )
+    db.add(field)
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    # Slice the body around the oversized field's chip to
+    # confirm its tag doesn't carry the attribute (the
+    # default-seeded session may include other in-range
+    # fields whose chips do carry it).
+    label = ">0-100<"
+    end_idx = body.index(label)
+    # Walk back to the start of this chip's ``<span``.
+    chip_start = body.rfind("<span", 0, end_idx)
+    chip_html = body[chip_start:end_idx]
+    assert "data-shaper-field-discrete-steps" not in chip_html
+
+
 def test_data_shaper_list_field_carries_options_attribute(
     client: TestClient, db: Session
 ) -> None:

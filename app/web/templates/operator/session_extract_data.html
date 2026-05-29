@@ -311,10 +311,12 @@
     {% for instr in instruments %}
       <template data-shaper-field-pool="{{ instr.id }}">
         {% for field in instr.response_fields | sort(attribute='order') %}
+          {% set discrete_steps = field_discrete_steps.get(field.id, []) %}
           <span class="pill pill-count tag-chip"
                 data-shaper-field-chip="{{ instr.id }}:{{ field.id }}"
                 data-shaper-field-data-type="{{ field._inline_data_type or '' }}"
                 {% if field._inline_data_type == 'List' and field._inline_list_csv %}data-shaper-field-list-options="{{ field._inline_list_csv }}"{% endif %}
+                {% if discrete_steps %}data-shaper-field-discrete-steps="{{ discrete_steps | join(',') }}"{% endif %}
                 role="button" tabindex="0" aria-pressed="false">{{ field.label or field.field_key }}</span>
         {% endfor %}
       </template>
@@ -355,9 +357,14 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewer:assigned"
+            role="button" tabindex="0" aria-pressed="false">Assigned</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewer:count"
+            role="button" tabindex="0" aria-pressed="false">Count</span>
+      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for slot, label, relevant_for in [
-          ("reviewer:assigned", "Assigned", None),
-          ("reviewer:count", "Count", None),
           ("reviewer:mean", "Mean", "numeric"),
           ("reviewer:median", "Median", "numeric"),
           ("reviewer:min", "Min", "numeric"),
@@ -366,9 +373,23 @@
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
-              {% if relevant_for %}data-shaper-relevant-for="{{ relevant_for }}"{% endif %}
+              data-shaper-relevant-for="{{ relevant_for }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
+      {# Discrete-steps pipe + chip. Both gated by
+         ``data-shaper-relevant-for="discrete-steps"`` so they
+         only render when the operator picks a numeric field
+         with ≤12 discrete values. Selecting the chip emits
+         one preview-row column per step value (the JS reads
+         the active field chip's
+         ``data-shaper-field-discrete-steps`` CSV at render
+         time). #}
+      <span class="shaper-axis-pipe" aria-hidden="true"
+            data-shaper-relevant-for="discrete-steps">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewer:discrete-steps"
+            data-shaper-relevant-for="discrete-steps"
+            role="button" tabindex="0" aria-pressed="false">Discrete steps</span>
     </template>
     <template data-shaper-chip-pool="reviewee">
       {% for slot, label in [
@@ -383,9 +404,14 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewee:assigned"
+            role="button" tabindex="0" aria-pressed="false">Assigned</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewee:count"
+            role="button" tabindex="0" aria-pressed="false">Count</span>
+      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for slot, label, relevant_for in [
-          ("reviewee:assigned", "Assigned", None),
-          ("reviewee:count", "Count", None),
           ("reviewee:mean", "Mean", "numeric"),
           ("reviewee:median", "Median", "numeric"),
           ("reviewee:min", "Min", "numeric"),
@@ -394,9 +420,15 @@
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
-              {% if relevant_for %}data-shaper-relevant-for="{{ relevant_for }}"{% endif %}
+              data-shaper-relevant-for="{{ relevant_for }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
+      <span class="shaper-axis-pipe" aria-hidden="true"
+            data-shaper-relevant-for="discrete-steps">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewee:discrete-steps"
+            data-shaper-relevant-for="discrete-steps"
+            role="button" tabindex="0" aria-pressed="false">Discrete steps</span>
     </template>
 
     {# Hidden template for spawning new Data shape sub-cards.
@@ -743,6 +775,31 @@
           colChips().forEach(function (chip) {
             if (chip.getAttribute("aria-pressed") !== "true") return;
             any = true;
+            // The Discrete-steps chip is a single chip that
+            // produces N preview columns — one per step value
+            // — when selected. The values are pulled from the
+            // currently-selected response field's
+            // ``data-shaper-field-discrete-steps`` CSV.
+            var slot = chip.getAttribute("data-shaper-col-chip") || "";
+            if (slot.indexOf(":discrete-steps") !== -1) {
+              var activeField = card.querySelector(
+                '[data-shaper-field-chip][aria-pressed="true"]'
+              );
+              var values = activeField
+                ? parseDiscreteSteps(
+                    activeField.getAttribute(
+                      "data-shaper-field-discrete-steps"
+                    )
+                  )
+                : [];
+              values.forEach(function (val) {
+                var th = document.createElement("th");
+                th.className = "shaper-preview-th";
+                th.textContent = val;
+                row.appendChild(th);
+              });
+              return;
+            }
             var th = document.createElement("th");
             th.className = "shaper-preview-th";
             th.textContent = chip.textContent.trim();
@@ -842,6 +899,11 @@
             ? parseListOptions(
                 currentField.getAttribute("data-shaper-field-list-options")
               )
+            : null,
+          currentField
+            ? parseDiscreteSteps(
+                currentField.getAttribute("data-shaper-field-discrete-steps")
+              )
             : null
         );
       }
@@ -909,10 +971,24 @@
           .forEach(function (n) { n.remove(); });
       }
 
-      function applyFieldDataType(dataType, listOptions) {
+      // Comma-separated → array. Matches ``parseListOptions``
+      // but used for the numeric step-value vocabulary.
+      function parseDiscreteSteps(csv) {
+        if (!csv) return [];
+        return csv
+          .split(",")
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return s.length > 0; });
+      }
+
+      function applyFieldDataType(dataType, listOptions, discreteSteps) {
         var NUMERIC = ["Integer", "Decimal"];
         var STRING = ["String"];
         var noField = !dataType;
+        var hasDiscreteSteps =
+          NUMERIC.indexOf(dataType) !== -1 &&
+          discreteSteps &&
+          discreteSteps.length > 0;
         relevantSlot
           .querySelectorAll("[data-shaper-relevant-for]")
           .forEach(function (chip) {
@@ -924,6 +1000,13 @@
               show = NUMERIC.indexOf(dataType) !== -1;
             } else if (relevantFor === "string") {
               show = STRING.indexOf(dataType) !== -1;
+            } else if (relevantFor === "discrete-steps") {
+              // The Discrete-steps pipe + chip are gated by
+              // both data type (numeric) AND the field having
+              // ≤12 discrete values pre-computed server-side
+              // (in the ``data-shaper-field-discrete-steps``
+              // CSV).
+              show = hasDiscreteSteps;
             } else {
               show = true;
             }
@@ -1014,6 +1097,11 @@
             pressed
               ? parseListOptions(
                   chip.getAttribute("data-shaper-field-list-options")
+                )
+              : null,
+            pressed
+              ? parseDiscreteSteps(
+                  chip.getAttribute("data-shaper-field-discrete-steps")
                 )
               : null
           );
