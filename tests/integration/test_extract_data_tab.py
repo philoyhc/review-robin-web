@@ -110,10 +110,12 @@ def test_by_instrument_card_renders_selectable_chips(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
 
-    # Default-seeded session has one instrument — the chip falls
-    # back to ``Instrument_1`` since no short label is set.
+    # Default-seeded session has one instrument with no short
+    # label — the chip carries the bare ``#1`` positional prefix
+    # (matches the Reviewer-surface heading helper's no-label
+    # branch).
     assert "data-by-instrument-chip=\"instrument-" in body
-    assert ">Instrument_1<" in body
+    assert ">#1<" in body
     # Cross-cutting toggles.
     assert "data-by-instrument-chip=\"include-metadata\"" in body
     assert ">Include metadata<" in body

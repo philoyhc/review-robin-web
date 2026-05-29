@@ -60,8 +60,16 @@
         </p>
       </div>
       <p class="col-chip-row" style="margin: 0;">
+        {# Chip label mirrors the Reviewer-surface heading
+           (``app/web/views/_instruments.py::instrument_heading``):
+           ``#{n}: {short_label}`` when set, ``#{n}`` otherwise.
+           Inlined rather than reusing the helper because the
+           heading helper drops the ``#{n}`` prefix on
+           single-instrument sessions — the chip always carries
+           it so the positional ordering reads consistently. #}
         {% for instr in instruments %}
-          {% set chip_label = instr.short_label if instr.short_label and instr.short_label.strip() else "Instrument_" ~ loop.index %}
+          {% set chip_short = (instr.short_label or "").strip() %}
+          {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
           <span class="pill pill-count tag-chip is-selected"
                 data-by-instrument-chip="instrument-{{ instr.id }}"
                 role="button"
