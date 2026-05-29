@@ -160,10 +160,12 @@ def test_extract_all_card_renders_lens_selector_chips(
 def test_reviewer_metadata_card_renders_selectable_chips(
     client: TestClient, db: Session
 ) -> None:
-    """The Reviewer response metadata card carries one
-    ``All reviewers`` chip plus per-statistic chips (Count /
-    Mean / Median / Min / Max / Length). All default to
-    selected; wiring lands in a follow-up."""
+    """The Reviewer response metadata card carries one chip per
+    instrument (by short label or ``Instrument_{n}`` fallback)
+    inline before the ``All reviewers`` toggle. All chips
+    default to selected; the per-statistic chips moved into the
+    extract column shape (numeric fields ship
+    ``.Mean/.Median/.Min/.Max``, string fields ship ``.Length``)."""
     review_session = _make_session(client, db, code="ed-revwr-meta-chips")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -172,27 +174,23 @@ def test_reviewer_metadata_card_renders_selectable_chips(
     chip_block = body.split('id="extract-data-by-reviewer"')[1].split(
         "extract-data-card-actions"
     )[0]
-    for slot, label in [
-        ("all-reviewers", "All reviewers"),
-        ("count", "Count"),
-        ("mean", "Mean"),
-        ("median", "Median"),
-        ("min", "Min"),
-        ("max", "Max"),
-        ("length", "Length"),
-    ]:
-        assert f'data-reviewer-metadata-chip="{slot}"' in chip_block
-        assert f">{label}<" in chip_block
-    assert chip_block.count("is-selected") == 7
-    assert chip_block.count('aria-pressed="true"') == 7
+    # Default-seeded session has one instrument; its chip plus
+    # the ``All reviewers`` toggle = 2 chips.
+    assert 'data-reviewer-metadata-chip="instrument-' in chip_block
+    assert 'data-reviewer-metadata-chip="all-reviewers"' in chip_block
+    assert ">All reviewers<" in chip_block
+    # The old per-statistic chips (Count / Mean / etc.) retired —
+    # the only labels left are the instrument chips + the toggle.
+    assert chip_block.count("is-selected") == 2
+    assert chip_block.count('aria-pressed="true"') == 2
 
 
 def test_reviewee_metadata_card_renders_selectable_chips(
     client: TestClient, db: Session
 ) -> None:
     """Mirror of the Reviewer metadata chips on the Reviewee
-    card — leads with ``All reviewees`` and shares the six
-    per-statistic chips."""
+    card — one chip per instrument followed by ``All
+    reviewees``."""
     review_session = _make_session(client, db, code="ed-revwe-meta-chips")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -201,19 +199,11 @@ def test_reviewee_metadata_card_renders_selectable_chips(
     chip_block = body.split('id="extract-data-by-reviewee"')[1].split(
         "extract-data-card-actions"
     )[0]
-    for slot, label in [
-        ("all-reviewees", "All reviewees"),
-        ("count", "Count"),
-        ("mean", "Mean"),
-        ("median", "Median"),
-        ("min", "Min"),
-        ("max", "Max"),
-        ("length", "Length"),
-    ]:
-        assert f'data-reviewee-metadata-chip="{slot}"' in chip_block
-        assert f">{label}<" in chip_block
-    assert chip_block.count("is-selected") == 7
-    assert chip_block.count('aria-pressed="true"') == 7
+    assert 'data-reviewee-metadata-chip="instrument-' in chip_block
+    assert 'data-reviewee-metadata-chip="all-reviewees"' in chip_block
+    assert ">All reviewees<" in chip_block
+    assert chip_block.count("is-selected") == 2
+    assert chip_block.count('aria-pressed="true"') == 2
 
 
 def test_by_instrument_card_renders_selectable_chips(

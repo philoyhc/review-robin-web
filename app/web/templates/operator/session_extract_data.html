@@ -139,27 +139,32 @@
           </p>
         </div>
         <p class="col-chip-row" style="margin: 0;">
-          {% for slot, label in [
-              ("all-reviewers", "All reviewers"),
-              ("count", "Count"),
-              ("mean", "Mean"),
-              ("median", "Median"),
-              ("min", "Min"),
-              ("max", "Max"),
-              ("length", "Length"),
-          ] %}
+          {# Instrument chips mirror the By-instrument card's
+             label convention (``#{n}: {short_label}``, or bare
+             ``#{n}`` when the operator left it blank); see the
+             By-instrument card body for the rationale on always
+             carrying the ``#{n}`` prefix even on single-instrument
+             sessions. ``All reviewers`` follows after the
+             instrument chips per the card's spec. #}
+          {% for instr in instruments %}
+            {% set chip_short = (instr.short_label or "").strip() %}
+            {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
             <span class="pill pill-count tag-chip is-selected"
-                  data-reviewer-metadata-chip="{{ slot }}"
+                  data-reviewer-metadata-chip="instrument-{{ instr.id }}"
                   role="button"
                   tabindex="0"
-                  aria-pressed="true">{{ label }}</span>
+                  aria-pressed="true">{{ chip_label }}</span>
           {% endfor %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-reviewer-metadata-chip="all-reviewers"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">All reviewers</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewer-metadata-zip"
-             href="#"
-             aria-disabled="true">
+             href="/operator/sessions/{{ session.id }}/export/reviewer_metadata.csv">
             Zip all
           </a>
         </div>
@@ -179,27 +184,25 @@
           </p>
         </div>
         <p class="col-chip-row" style="margin: 0;">
-          {% for slot, label in [
-              ("all-reviewees", "All reviewees"),
-              ("count", "Count"),
-              ("mean", "Mean"),
-              ("median", "Median"),
-              ("min", "Min"),
-              ("max", "Max"),
-              ("length", "Length"),
-          ] %}
+          {% for instr in instruments %}
+            {% set chip_short = (instr.short_label or "").strip() %}
+            {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
             <span class="pill pill-count tag-chip is-selected"
-                  data-reviewee-metadata-chip="{{ slot }}"
+                  data-reviewee-metadata-chip="instrument-{{ instr.id }}"
                   role="button"
                   tabindex="0"
-                  aria-pressed="true">{{ label }}</span>
+                  aria-pressed="true">{{ chip_label }}</span>
           {% endfor %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-reviewee-metadata-chip="all-reviewees"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">All reviewees</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewee-metadata-zip"
-             href="#"
-             aria-disabled="true">
+             href="/operator/sessions/{{ session.id }}/export/reviewee_metadata.csv">
             Zip all
           </a>
         </div>
@@ -272,10 +275,21 @@
      * ``include-metadata`` adds ``?meta=0`` when off.
      * ``all-assignment-rows`` adds ``?all_rows=0`` when off.
 
+     The Reviewer / Reviewee response metadata chips drive
+     their respective buttons the same way:
+
+     * Per-instrument chips (``instrument-{id}``) compose the
+       ``?instrument=...`` query params for the per-(instrument,
+       field) column blocks.
+     * ``all-reviewers`` / ``all-reviewees`` add ``?all=0`` when
+       off (filter body rows to entities with at least one
+       response in scope).
+     * Unlike the By-instrument card, zero-instrument selection
+       is **valid** here — the export still ships, carrying just
+       the cross-instrument totals.
+
      Chip state survives reload via ``localStorage`` keyed to
-     the session id; the metadata + reviewer / reviewee chips
-     persist the same way for the eventual filter wiring,
-     even though no current download consumes them. #}
+     the session id. #}
   <script>
     (function () {
       var chips = document.querySelectorAll(
@@ -317,6 +331,18 @@
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
           persist();
           syncByInstrumentButton();
+          syncMetadataButton(
+            "data-reviewer-metadata-chip",
+            "extract-data-reviewer-metadata-zip",
+            "reviewer_metadata",
+            "all-reviewers"
+          );
+          syncMetadataButton(
+            "data-reviewee-metadata-chip",
+            "extract-data-reviewee-metadata-zip",
+            "reviewee_metadata",
+            "all-reviewees"
+          );
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
@@ -375,7 +401,47 @@
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
+      function syncMetadataButton(chipAttr, btnId, slug, allSlot) {
+        var btn = document.getElementById(btnId);
+        if (!btn) return;
+        var instrumentIds = [];
+        var allOn = true;
+        document
+          .querySelectorAll("[" + chipAttr + "]")
+          .forEach(function (chip) {
+            var slot = chip.getAttribute(chipAttr);
+            var on = chip.getAttribute("aria-pressed") === "true";
+            if (slot.indexOf("instrument-") === 0) {
+              if (on) {
+                instrumentIds.push(slot.substring("instrument-".length));
+              }
+            } else if (slot === allSlot) {
+              allOn = on;
+            }
+          });
+        var params = new URLSearchParams();
+        instrumentIds.forEach(function (id) {
+          params.append("instrument", id);
+        });
+        if (!allOn) params.set("all", "0");
+        var base =
+          "/operator/sessions/" + sessionId + "/export/" + slug + ".csv";
+        var qs = params.toString();
+        btn.setAttribute("href", qs ? base + "?" + qs : base);
+      }
       syncByInstrumentButton();
+      syncMetadataButton(
+        "data-reviewer-metadata-chip",
+        "extract-data-reviewer-metadata-zip",
+        "reviewer_metadata",
+        "all-reviewers"
+      );
+      syncMetadataButton(
+        "data-reviewee-metadata-chip",
+        "extract-data-reviewee-metadata-zip",
+        "reviewee_metadata",
+        "all-reviewees"
+      );
     })();
   </script>
 {% endblock %}

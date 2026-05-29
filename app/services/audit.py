@@ -630,6 +630,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.by_instrument_bundle_extracted": EventSchema(
         _IDENTITY | {"counts"}
     ),
+    # Extract data tab — Reviewer / Reviewee response metadata
+    # cards. ``counts.rows`` carries the body row count
+    # (header excluded); ``counts.instruments`` carries the chip
+    # selection size (0 when no instruments were selected).
+    "session.reviewer_metadata_extracted": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
+    "session.reviewee_metadata_extracted": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes
