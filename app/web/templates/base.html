@@ -1255,14 +1255,22 @@
         gap: var(--space-2);
         flex-wrap: wrap;
       }
-      /* Extract Data card — 2 columns of cells (Reviewers / Reviewees /
-         Assignments / Responses / Session settings / Zip all) per the
-         post-Part-1 polish; collapses to 1 column on narrow viewports. */
+      /* Extract Setup card — 2 explicit column containers, each
+         stacking its rows vertically. Col 1 = Reviewers /
+         Reviewees; col 2 = Relationships / Session settings /
+         Zip all (per ``guide/extract_data.md``). Collapses to 1
+         column on narrow viewports. */
       body.ui-v2 .extract-data-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-3);
         margin-top: var(--space-3);
+        align-items: start;
+      }
+      body.ui-v2 .extract-data-col {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
       }
       @media (max-width: 600px) {
         body.ui-v2 .extract-data-grid {

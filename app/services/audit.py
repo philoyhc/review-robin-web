@@ -617,8 +617,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.
     "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
-    # Segment 18D PR E1 — Zip-all bundle export.
-    "session.bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 18D PR E1 — Zip-all bundle export. Split 2026-05-29
+    # into setup-only (Session Home card) and responses-only
+    # (Extract data Operations tab) when response-data extraction
+    # moved off Session Home (per ``guide/extract_data.md``). The
+    # original ``session.bundle_extracted`` event type retires —
+    # nothing in the live code paths emits it anymore.
+    "session.setup_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
+    "session.responses_bundle_extracted": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes

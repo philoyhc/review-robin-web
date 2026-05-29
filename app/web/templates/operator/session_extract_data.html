@@ -15,12 +15,23 @@
      is set to ``extract-data`` so card POSTs land back here. #}
   {% include "operator/partials/next_action_card.html" %}
 
-  <div class="card">
-    <h2>Extract data</h2>
-    <p class="form-help">
-      Shape this session's response data for offline analysis.
-      Three lenses are planned (see <code>guide/extract_data.md</code>):
-    </p>
+  <div class="card" id="extract-data-intro">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
+      <div>
+        <h2 style="margin-top: 0;">Extract data</h2>
+        <p class="form-help" style="margin-bottom: 0;">
+          Shape this session's response data for offline analysis.
+          Configure what you need on the lens cards below and
+          download the specific files — or take everything at once
+          with <strong>Zip all</strong>.
+        </p>
+      </div>
+      <a class="btn secondary"
+         id="extract-data-zip-all"
+         href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
+        Zip all
+      </a>
+    </div>
   </div>
 
   {# Skeleton — each lens renders a card with a one-line description

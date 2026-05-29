@@ -225,25 +225,30 @@ Notes specific to Session Home:
 ### 2. Extract Setup card (right column, below Quick Setup)
 
 The card for porting / archiving — the CSVs Quick Setup can
-re-ingest. Four live per-entity download tiles plus a single
-zip-bundle footer:
+re-ingest. Four live per-entity download tiles plus a Zip-all
+bundle, arranged in two columns mirroring the Quick Setup slot
+placement:
 
-| Tile | DOM order | Wired by |
+| Tile | DOM column | Wired by |
 |---|---|---|
-| Reviewers | left col, top | 12A-1 PR 2 (#717) |
-| Settings  | right col, top | 12A-1 PR 1 (#713) |
-| Reviewees | left col, middle | 12A-1 PR 2 (#717) |
-| Relationships | left col, bottom | 12A-3 PR 1 (#779) |
-| Download all (zip) | right col, middle | 18D PR E1 |
+| Reviewers | col 1, top | 12A-1 PR 2 (#717) |
+| Reviewees | col 1, bottom | 12A-1 PR 2 (#717) |
+| Relationships | col 2, top | 12A-3 PR 1 (#779) |
+| Settings  | col 2, middle | 12A-1 PR 1 (#713) |
+| Zip all | col 2, bottom | 18D PR E1 |
 
-Originally five tiles (including a Responses tile); the
-Responses tile moved to the new **Extract data**
-Operations-strip tab on 2026-05-29 (per
-`guide/extract_data.md`). The Zip-all bundle's *contents* are
-deliberately unchanged in that rename — it still includes
-responses + stats + per-instrument files (see
-`app/services/extracts/zip_bundle.py`); slimming the bundle to
-setup-only is a follow-up PR.
+Originally five tiles (Reviewers / Reviewees / Relationships /
+Settings / Responses) plus a zip footer; the Responses tile
+moved to the new **Extract data** Operations-strip tab on
+2026-05-29 (per `guide/extract_data.md`). The Zip-all bundle
+slimmed in the same change — it now contains only the four
+setup CSVs and exports as `{code}_setup.zip` (was
+`{code}_bundle.zip`). Response-side downloads — unified
+Responses CSV, reviewer/reviewee stats, per-instrument files
+— moved to the responses bundle at
+`/export/responses_bundle.zip` (filename
+`{code}_responses.zip`) behind the Extract data tab's
+Zip-all button.
 
 The post-15D + post-12A-3 layout settled in 12A-3 PR 2 (#780)
 which also retired the Assignments tile end-to-end (route +
@@ -255,7 +260,8 @@ Settings ↔ Relationships ↔ Reviewers / Reviewees.
 Relationships tiles grey out their Download button when the
 underlying count is `0` (post-12A-3 polish #781). The Settings
 tile is always clickable — a session always has settings to
-extract.
+extract. The Zip-all tile stays clickable for the same reason
+(Settings always contributes).
 
 **No audit-log tile in Extract Setup.** Segment 12B shipped the
 audit-events CSV route (`GET /export/audit_log.csv`) live but

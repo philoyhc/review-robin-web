@@ -1,6 +1,6 @@
-"""Extract Data downloads — Segment 12A-1 + 12A-3 + 12B + 18D.
+"""Extract downloads — per-entity CSVs + two zip bundles.
 
-Seven GET routes:
+Eight GET routes:
 
 - Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
 - Reviewers / Reviewees (12A-1 PR 2) — wide CSVs that
@@ -9,7 +9,13 @@ Seven GET routes:
   (no import counterpart).
 - Relationships (12A-3 PR 1) — wide CSV that round-trips with
   the importer shipped by 15D PR 1.
-- Bundle (18D PR E1) — a zip of the five CSVs above.
+- Setup bundle — ``bundle.zip`` (filename ``{code}_setup.zip``).
+  Setup-only members (Reviewers + Reviewees + Relationships +
+  Settings) for the Session Home Extract Setup card.
+- Responses bundle — ``responses_bundle.zip`` (filename
+  ``{code}_responses.zip``). Backs the new Extract data
+  Operations-strip tab's "Zip all" button. Members: unified
+  Responses + reviewer/reviewee stats + per-instrument files.
 - Audit log (12B PR 1) — wide CSV of ``audit_events`` rows
   for the session; system-emitted, no import counterpart.
 
@@ -17,13 +23,8 @@ The Manual Assignments route from 12A-1 PR 3 retired in
 12A-3 PR 2 — assignments are derived post-15D (output, not
 input), so the download has no place in a porting bundle.
 
-All routes live here so the route file mirrors the Extract Data
-card on Session Home.
-
 No lifecycle gate — extraction is read-only and useful in every
-state (``draft`` / ``validated`` / ``ready`` / ``closed``). The
-Extract Data card stays interactive even when the yellow lock
-card is active; lock disables setup mutations only, not reads.
+state (``draft`` / ``validated`` / ``ready`` / ``closed``).
 """
 
 from __future__ import annotations
@@ -43,7 +44,10 @@ from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
-from app.services.extracts.zip_bundle import build_session_bundle
+from app.services.extracts.zip_bundle import (
+    build_responses_bundle,
+    build_setup_bundle,
+)
 from app.services.session_config_io import (
     HEADER,
     serialize_session_config,
@@ -228,17 +232,21 @@ def export_bundle_zip(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    """The Zip-all bundle — every operator-facing CSV (Reviewers /
-    Reviewees / Relationships / Responses / Settings) in one
-    archive (Segment 18D PR E1). Built fully in memory; the
-    audit-events extract stays out of the bundle."""
-    zip_bytes, counts = build_session_bundle(db, review_session)
+    """The Extract Setup card's Zip-all bundle — the four porting
+    CSVs (Reviewers / Reviewees / Relationships / Settings) in
+    one archive. Built fully in memory.
+
+    Filename: ``{code}_setup.zip``. Slimmed from the original
+    "session bundle" on 2026-05-29 when response-data download
+    moved to the Extract data Operations tab (per
+    ``guide/extract_data.md``)."""
+    zip_bytes, counts = build_setup_bundle(db, review_session)
 
     audit.write_event(
         db,
-        event_type="session.bundle_extracted",
+        event_type="session.setup_bundle_extracted",
         summary=(
-            f"Extracted Zip-all bundle for session {review_session.code}"
+            f"Extracted Setup bundle for session {review_session.code}"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -250,7 +258,46 @@ def export_bundle_zip(
         content=zip_bytes,
         media_type="application/zip",
         headers={
-            "Content-Disposition": f'attachment; filename="{code}_bundle.zip"',
+            "Content-Disposition": f'attachment; filename="{code}_setup.zip"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/responses_bundle.zip")
+def export_responses_bundle_zip(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The Extract data tab's Zip-all bundle — the unified
+    Responses CSV + reviewer/reviewee stats + one per-instrument
+    CSV in one archive. Built fully in memory.
+
+    Filename: ``{code}_responses.zip``. Per
+    ``guide/extract_data.md`` the per-card lens downloads are
+    the fine-grained alternative; this button is the one-click
+    "all response files" shortcut."""
+    zip_bytes, counts = build_responses_bundle(db, review_session)
+
+    audit.write_event(
+        db,
+        event_type="session.responses_bundle_extracted",
+        summary=(
+            f"Extracted Responses bundle for session {review_session.code}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(**counts),
+    )
+
+    code = (review_session.code or "session").strip() or "session"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{code}_responses.zip"'
+            ),
         },
     )
 

@@ -1,8 +1,13 @@
 """Integration tests for ``GET
-/operator/sessions/{id}/export/bundle.zip`` — Segment 18D PR E1.
+/operator/sessions/{id}/export/bundle.zip`` — the setup-only
+zip backing the Session Home Extract Setup card. Renamed from
+"session bundle" on 2026-05-29 when responses-data downloads
+moved off to the Extract data Operations tab (per
+``guide/extract_data.md``).
 
 Covers the HTTP surface (content type, filename), the zip's
-members, and the ``session.bundle_extracted`` audit emission.
+members, and the ``session.setup_bundle_extracted`` audit
+emission.
 """
 
 from __future__ import annotations
@@ -41,12 +46,15 @@ def test_bundle_route_streams_zip_with_canonical_filename(
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
+    # Filename changed from ``{code}_bundle.zip`` to
+    # ``{code}_setup.zip`` on 2026-05-29 when the bundle slimmed
+    # to setup-only.
     assert response.headers["content-disposition"] == (
-        'attachment; filename="bnd-fname_bundle.zip"'
+        'attachment; filename="bnd-fname_setup.zip"'
     )
 
 
-def test_bundle_contains_the_csv_members(
+def test_bundle_contains_only_the_setup_csv_members(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="bnd-mem")
@@ -56,16 +64,13 @@ def test_bundle_contains_the_csv_members(
     assert response.status_code == 200
 
     archive = zipfile.ZipFile(io.BytesIO(response.content))
-    # The operator-route session-create call seeds a default
-    # instrument, so the bundle picks up one ``instrument_1.csv``
-    # per-instrument file alongside the unified Responses CSV.
+    # Setup-only bundle: Reviewers / Reviewees / Relationships /
+    # Settings. Responses + reviewer/reviewee stats +
+    # per-instrument files moved to the responses bundle (per
+    # ``guide/extract_data.md``).
     assert sorted(archive.namelist()) == [
-        "bnd-mem_instrument_1.csv",
         "bnd-mem_relationships.csv",
-        "bnd-mem_responses.csv",
-        "bnd-mem_reviewee_stats.csv",
         "bnd-mem_reviewees.csv",
-        "bnd-mem_reviewer_stats.csv",
         "bnd-mem_reviewers.csv",
         "bnd-mem_settings.csv",
     ]
@@ -86,21 +91,18 @@ def test_bundle_route_emits_audit_event_with_per_csv_counts(
     db.expire_all()
     event = db.execute(
         select(AuditEvent).where(
-            AuditEvent.event_type == "session.bundle_extracted",
+            AuditEvent.event_type == "session.setup_bundle_extracted",
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
     counts = cast(dict, event.detail)["counts"]
-    # A bare session: no rosters / responses, but Settings always
-    # has rows.
+    # Setup-only bundle counts.
     assert counts["reviewers"] == 0
     assert counts["reviewees"] == 0
     assert counts["relationships"] == 0
-    assert counts["responses"] == 0
     assert counts["settings"] > 0
-    assert counts["reviewer_stats"] == 0
-    assert counts["reviewee_stats"] == 0
-    # ``instrument_files`` is the count of per-instrument response
-    # CSVs (one per instrument); the auto-seeded default instrument
-    # gives a bare session exactly one.
-    assert counts["instrument_files"] == 1
+    # Response-side counts no longer present.
+    assert "responses" not in counts
+    assert "reviewer_stats" not in counts
+    assert "reviewee_stats" not in counts
+    assert "instrument_files" not in counts

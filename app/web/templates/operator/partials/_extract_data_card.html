@@ -43,10 +43,20 @@
     Download the setup CSVs for porting or archiving this session.
     For response data, use the <strong>Extract data</strong> tab.
   </p>
+  {# Two explicit columns mirroring the Quick Setup slot layout:
+     col 1 = Reviewers + Reviewees; col 2 = Relationships +
+     Session settings + Zip all. #}
   <div class="extract-data-grid">
-    {% for row in extract_data.rows %}
-      {{ extract_data_row(row) }}
-    {% endfor %}
-    {{ extract_data_row(extract_data.bundle) }}
+    <div class="extract-data-col">
+      {% for row in extract_data.col_one %}
+        {{ extract_data_row(row) }}
+      {% endfor %}
+    </div>
+    <div class="extract-data-col">
+      {% for row in extract_data.col_two %}
+        {{ extract_data_row(row) }}
+      {% endfor %}
+      {{ extract_data_row(extract_data.bundle) }}
+    </div>
   </div>
 </div>

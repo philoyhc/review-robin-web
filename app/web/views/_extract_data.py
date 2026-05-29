@@ -88,6 +88,8 @@ class ExtractDataRow:
 class ExtractDataContext:
     rows: list[ExtractDataRow]
     bundle: ExtractDataRow
+    col_one: list[ExtractDataRow]
+    col_two: list[ExtractDataRow]
 
 
 def build_extract_data_context(
@@ -107,28 +109,46 @@ def build_extract_data_context(
         )
     )
 
-    # Row order = DOM order. The ``extract-data-grid`` CSS wraps
-    # row-major in a 2-column grid, so this list lays out as:
+    # Two-column layout matching the Quick Setup slot placement:
     #
-    #   Reviewers       |  Session settings
-    #   Reviewees       |  Zip all
-    #   Relationships   |
+    #   Col 1            |  Col 2
+    #   ---------------- | ----------------
+    #   Reviewers        |  Relationships
+    #   Reviewees        |  Session settings
+    #                    |  Zip all
     #
-    # Left column = per-entity rosters (operator-uploaded porting
-    # inputs). Right column = session-level outputs (settings,
-    # bundle). The Responses row moved to the new Extract data
-    # Operations-strip tab (``guide/extract_data.md``) on
-    # 2026-05-29 — this card is the porting / archival surface.
-    # Per-entity rows (Reviewers / Reviewees / Relationships)
-    # grey out when the count is 0 — there's nothing to download.
-    # Settings stays always-live: session metadata always exists
-    # even on a freshly-created draft.
-    rows = [
+    # The template renders the two columns as explicit ``<div>``
+    # children. Per-entity rows (Reviewers / Reviewees /
+    # Relationships) grey out when the count is 0 — there's
+    # nothing to download. Settings stays always-live: session
+    # metadata always exists even on a freshly-created draft.
+    # The Zip-all bundle contains only the four setup CSVs (per
+    # ``guide/extract_data.md``); response data downloads live on
+    # the Extract data Operations-strip tab.
+    col_one = [
         _entity_row(
             key="reviewers",
             label="Reviewers",
             noun="reviewer",
             count=reviewer_count,
+            sid=sid,
+            code=code,
+        ),
+        _entity_row(
+            key="reviewees",
+            label="Reviewees",
+            noun="reviewee",
+            count=reviewee_count,
+            sid=sid,
+            code=code,
+        ),
+    ]
+    col_two = [
+        _entity_row(
+            key="relationships",
+            label="Relationships",
+            noun="relationship",
+            count=relationship_count,
             sid=sid,
             code=code,
         ),
@@ -142,40 +162,26 @@ def build_extract_data_context(
             download_url=f"/operator/sessions/{sid}/export/settings.csv",
             coming_in=None,
         ),
-        _entity_row(
-            key="reviewees",
-            label="Reviewees",
-            noun="reviewee",
-            count=reviewee_count,
-            sid=sid,
-            code=code,
-        ),
-        _entity_row(
-            key="relationships",
-            label="Relationships",
-            noun="relationship",
-            count=relationship_count,
-            sid=sid,
-            code=code,
-        ),
     ]
+    # Flat ``rows`` preserves the historical iteration contract
+    # (callers + tests). Read column-major: col 1 (rows[0:2])
+    # then col 2 (rows[2:4]).
+    rows = col_one + col_two
 
-    # The Zip-all bundle's underlying archive (``zip_bundle.py``)
-    # is unchanged in this rename PR — it still contains the
-    # Responses CSV + reviewer/reviewee stats + per-instrument
-    # files. Slimming the bundle to setup-only is a follow-up.
     bundle = ExtractDataRow(
         key="bundle",
         label="Zip all",
-        filename=f"{code}_bundle.zip",
+        filename=f"{code}_setup.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of all session CSVs",
+        count_summary="zip of the four setup CSVs",
         is_wired=True,
         download_url=f"/operator/sessions/{sid}/export/bundle.zip",
         coming_in=None,
     )
 
-    return ExtractDataContext(rows=rows, bundle=bundle)
+    return ExtractDataContext(
+        rows=rows, bundle=bundle, col_one=col_one, col_two=col_two
+    )
 
 
 def _entity_row(
