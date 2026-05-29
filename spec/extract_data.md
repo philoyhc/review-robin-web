@@ -518,7 +518,7 @@ Each sub-card carries:
    "Pick chips above to compose this shape's columns" —
    keeps the table visible so the operator sees something
    to interact with.
-2. An **action row** with five squarish `btn secondary`
+2. An **action row** with four squarish `btn secondary`
    icon buttons (matching the Instruments page Response
    Fields builder pattern — see `instruments_index.html`
    lines 3833-3843 for the source):
@@ -534,11 +534,13 @@ Each sub-card carries:
    - `+` (`data-shape-add`) — clones a fresh blank sub-card
      immediately after this one and makes it the active
      target.
-   - `↓` (`data-shape-download`) — placeholder, renders
-     `disabled` / `aria-disabled` until the file-gen wiring
-     slice teaches it to extract this shape's CSV. Reserved
-     here so the squarish-icon vocabulary stays consistent
-     across cards.
+3. A **`Download` button row** at the bottom-right of the
+   sub-card (`.extract-data-card-actions` — same
+   `display: flex; justify-content: flex-end` rule the
+   per-lens cards use for their `Download` / `Zip all`
+   buttons). Placeholder until the file-gen wiring slice
+   teaches it to extract this shape's CSV — currently
+   renders with `href="#"` and `aria-disabled="true"`.
 
 The **always-present blank sub-card** on initial load gives
 the operator an immediate edit target without requiring a
