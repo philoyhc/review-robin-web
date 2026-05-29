@@ -211,23 +211,28 @@ require any per-lens configuration first.
   - Heading + body copy describing the generalised builder.
   - **Axis chip row** at the top of the outer card — two
     **mutually exclusive** axis-selector chips (`Reviewer`,
-    `Reviewee`) + a vertical pipe + **per-instrument scope
-    chips** (always visible, one per session instrument,
-    labelled `#{N}: {short_label}` like the By-instrument
-    card) + a slot for the relevant column chips. Clicking
-    one axis deselects the other; the full `reviewer ×
-    reviewee` matrix is already downloadable via the
-    By-instrument card, and a row keyed by both leaves little
-    to aggregate. Instrument scope chips are session-level
-    filters — they apply to whichever axis is on. With no
+    `Reviewee`) + a vertical pipe + **mutually exclusive
+    per-instrument scope chips** (always visible, one per
+    session instrument, labelled `#{N}: {short_label}` like
+    the By-instrument card) + a slot for the relevant column
+    chips. Both mutex groups follow the same rationale: the
+    Data shaper is for fine-grained shape composition, so
+    "one at a time" focus reads more naturally than
+    multi-select. The full `reviewer × reviewee` matrix is
+    already downloadable via the By-instrument card, and
+    cross-instrument summaries already live on the metadata
+    cards — those broader cuts don't belong here. With no
     instrument scope chip selected the aggregates span every
     session instrument — matching the legacy "By reviewer" /
-    "By reviewee" general-data framings; selecting one or
-    more scopes the aggregates to those instruments. Each
-    axis pool, when mounted, has two sub-groups separated by
-    `|`:
+    "By reviewee" general-data framings; selecting one
+    scopes the aggregates to that instrument. Each axis
+    pool, when mounted, has two sub-groups separated by `|`:
     1. **Identification chips** — Name / Email / Tag 1-3
-       (per-axis-entity).
+       (per-axis-entity). The three tag chips render the
+       **session-friendly labels** for those slots
+       (operator renames via the Setup pages), falling back
+       to the built-in `Tag 1` / `Tag 2` / `Tag 3` defaults
+       when no override is set.
     2. **Aggregate data chips** — `Count` / `Mean` / `Median`
        / `Min` / `Max` / `Length` (mirrors the Reviewer /
        Reviewee response metadata cards' aggregate column

@@ -302,13 +302,18 @@
        per-axis pools — they're now session-level filters on
        the top axis chip row (right after the axis-row pipe),
        always visible regardless of axis selection. #}
+    {# Tag chip labels resolve through ``field_labels.resolve``
+       in the route so the chip picks up operator renames done
+       on the Setup pages — falling back to the built-in
+       ``Tag 1`` / ``Tag 2`` / ``Tag 3`` defaults when no
+       override is set. #}
     <template data-shaper-chip-pool="reviewer">
       {% for slot, label in [
           ("reviewer:name", "Reviewer Name"),
           ("reviewer:email", "Reviewer Email"),
-          ("reviewer:tag-1", "Reviewer Tag 1"),
-          ("reviewer:tag-2", "Reviewer Tag 2"),
-          ("reviewer:tag-3", "Reviewer Tag 3"),
+          ("reviewer:tag-1", reviewer_tag_labels[0]),
+          ("reviewer:tag-2", reviewer_tag_labels[1]),
+          ("reviewer:tag-3", reviewer_tag_labels[2]),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
@@ -332,9 +337,9 @@
       {% for slot, label in [
           ("reviewee:name", "Reviewee Name"),
           ("reviewee:email", "Reviewee Email"),
-          ("reviewee:tag-1", "Reviewee Tag 1"),
-          ("reviewee:tag-2", "Reviewee Tag 2"),
-          ("reviewee:tag-3", "Reviewee Tag 3"),
+          ("reviewee:tag-1", reviewee_tag_labels[0]),
+          ("reviewee:tag-2", reviewee_tag_labels[1]),
+          ("reviewee:tag-3", reviewee_tag_labels[2]),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
@@ -742,28 +747,42 @@
        // is little left to aggregate per row.
       var MUTEX_AXES = ["reviewer", "reviewee"];
       // Instrument scope chips live on the top axis chip row
-      // (not inside the per-axis pools). They're scope
-      // filters — they don't add columns to a shape's
-      // preview row, so the placeholder just flips their
-      // visual / pressed state on click. The real semantic
-      // (narrowing aggregate data to the selected
-      // instruments) lands with the file-gen wiring.
-      card
-        .querySelectorAll("[data-shaper-instrument-chip]")
-        .forEach(function (chip) {
-          function toggle() {
-            var pressed = chip.getAttribute("aria-pressed") !== "true";
-            chip.classList.toggle("is-selected", pressed);
-            chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+      // (not inside the per-axis pools). They're **mutually
+      // exclusive** scope filters — only one instrument can
+      // be in scope at a time. Rationale: the Data shaper
+      // is for fine-grained shape composition, and fine-
+      // grained analysis requires focusing on one instrument
+      // at a time; cross-instrument summaries live on the
+      // metadata cards. They don't add columns to a shape's
+      // preview row, so the placeholder just flips visual /
+      // pressed state on click; the real narrowing semantic
+      // lands with the file-gen wiring.
+      var instrumentChips = card.querySelectorAll(
+        "[data-shaper-instrument-chip]"
+      );
+      instrumentChips.forEach(function (chip) {
+        function toggle() {
+          var pressed = chip.getAttribute("aria-pressed") !== "true";
+          if (pressed) {
+            instrumentChips.forEach(function (other) {
+              if (other === chip) return;
+              if (other.getAttribute("aria-pressed") === "true") {
+                other.classList.remove("is-selected");
+                other.setAttribute("aria-pressed", "false");
+              }
+            });
           }
-          chip.addEventListener("click", toggle);
-          chip.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggle();
-            }
-          });
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
+        chip.addEventListener("click", toggle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
         });
+      });
 
       card.querySelectorAll("[data-shaper-axis-chip]").forEach(function (chip) {
         function toggle() {
