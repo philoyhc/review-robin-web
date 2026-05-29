@@ -250,17 +250,23 @@
     </div>
 
     {# Axis chip row. Two **mutually exclusive** axis chips —
-       Reviewer / Reviewee — followed by the pipe and the slot
-       the progressive-enhancement JS fills with the relevant
-       column chips for whichever axis is currently on. The
-       full ``Reviewer × Reviewee`` matrix is already
-       downloadable via the By-instrument card; that, plus the
-       fact that a row keyed by both reviewer and reviewee
-       leaves little to aggregate, makes "one axis at a time"
-       the right default. Instrument is no longer an axis —
-       it became a per-axis **scope filter** (the instrument
-       chips appear inside each axis pool to the right of the
-       intra-pool pipe). #}
+       Reviewer / Reviewee — followed by the pipe, then the
+       per-session **instrument scope chips** (always visible,
+       independent of axis selection), then the slot the
+       progressive-enhancement JS fills with the relevant
+       column chips for whichever axis is currently on.
+
+       Instrument scope chips are session-level filters —
+       they apply to whichever axis is selected, not to a
+       specific axis pool. With no instrument chip selected
+       the aggregates span every session instrument, matching
+       the legacy "By reviewer" / "By reviewee" general-data
+       framing. Selecting one or more scopes the aggregates
+       to those instruments. They use a distinct
+       ``data-shaper-instrument-chip`` attribute (vs the
+       per-axis ``data-shaper-col-chip`` vocabulary) so the
+       progressive-enhancement JS can treat them as scope
+       filters, not column-producing chips. #}
     <p class="col-chip-row" style="margin: 0;">
       <span class="pill pill-count tag-chip"
             data-shaper-axis-chip="reviewer"
@@ -269,6 +275,13 @@
             data-shaper-axis-chip="reviewee"
             role="button" tabindex="0" aria-pressed="false">Reviewee</span>
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      {% for instr in instruments %}
+        {% set chip_short = (instr.short_label or "").strip() %}
+        {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-instrument-chip="{{ instr.id }}"
+              role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
+      {% endfor %}
       <span data-shaper-relevant-chips></span>
     </p>
 
@@ -277,21 +290,18 @@
        them into ``data-shaper-relevant-chips`` when the axis
        toggles on, and removes them when it toggles off.
 
-       Each pool is **three sub-groups** separated by ``|``:
+       Each pool is **two sub-groups** separated by ``|``:
 
        1. **Identification chips** — Name / Email / Tag 1-3
           (per-axis-entity).
        2. **Aggregate data chips** — Count / Mean / Median /
           Min / Max / Length (mirrors the Reviewer / Reviewee
           response metadata cards' aggregate column vocabulary).
-       3. **Per-instrument scope chips** — one chip per session
-          instrument, labelled ``#{N}: {short_label}`` (same
-          convention as the By-instrument card). With no
-          instrument chip selected, aggregate data spans every
-          instrument on the session — matching the legacy
-          "By reviewer" / "By reviewee" framings. Selecting one
-          or more instrument chips scopes the aggregates to
-          those instruments. #}
+
+       Per-instrument scope chips no longer live inside the
+       per-axis pools — they're now session-level filters on
+       the top axis chip row (right after the axis-row pipe),
+       always visible regardless of axis selection. #}
     <template data-shaper-chip-pool="reviewer">
       {% for slot, label in [
           ("reviewer:name", "Reviewer Name"),
@@ -305,13 +315,6 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
-      {% for instr in instruments %}
-        {% set chip_short = (instr.short_label or "").strip() %}
-        {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
-        <span class="pill pill-count tag-chip"
-              data-shaper-col-chip="reviewer:instrument-{{ instr.id }}"
-              role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
-      {% endfor %}
       {% for slot, label in [
           ("reviewer:count", "Count"),
           ("reviewer:mean", "Mean"),
@@ -338,13 +341,6 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
-      {% for instr in instruments %}
-        {% set chip_short = (instr.short_label or "").strip() %}
-        {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
-        <span class="pill pill-count tag-chip"
-              data-shaper-col-chip="reviewee:instrument-{{ instr.id }}"
-              role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
-      {% endfor %}
       {% for slot, label in [
           ("reviewee:count", "Count"),
           ("reviewee:mean", "Mean"),
@@ -745,6 +741,30 @@
        // By-instrument card, and once both axes are on there
        // is little left to aggregate per row.
       var MUTEX_AXES = ["reviewer", "reviewee"];
+      // Instrument scope chips live on the top axis chip row
+      // (not inside the per-axis pools). They're scope
+      // filters — they don't add columns to a shape's
+      // preview row, so the placeholder just flips their
+      // visual / pressed state on click. The real semantic
+      // (narrowing aggregate data to the selected
+      // instruments) lands with the file-gen wiring.
+      card
+        .querySelectorAll("[data-shaper-instrument-chip]")
+        .forEach(function (chip) {
+          function toggle() {
+            var pressed = chip.getAttribute("aria-pressed") !== "true";
+            chip.classList.toggle("is-selected", pressed);
+            chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          }
+          chip.addEventListener("click", toggle);
+          chip.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggle();
+            }
+          });
+        });
+
       card.querySelectorAll("[data-shaper-axis-chip]").forEach(function (chip) {
         function toggle() {
           var pressed = chip.getAttribute("aria-pressed") !== "true";

@@ -211,23 +211,24 @@ require any per-lens configuration first.
   - Heading + body copy describing the generalised builder.
   - **Axis chip row** at the top of the outer card — two
     **mutually exclusive** axis-selector chips (`Reviewer`,
-    `Reviewee`) + a vertical pipe + a slot for the relevant
-    column chips. Clicking one axis deselects the other; the
-    full `reviewer × reviewee` matrix is already downloadable
-    via the By-instrument card, and a row keyed by both leaves
-    little to aggregate. Each axis pool, when mounted, has
-    three sub-groups separated by `|`:
+    `Reviewee`) + a vertical pipe + **per-instrument scope
+    chips** (always visible, one per session instrument,
+    labelled `#{N}: {short_label}` like the By-instrument
+    card) + a slot for the relevant column chips. Clicking
+    one axis deselects the other; the full `reviewer ×
+    reviewee` matrix is already downloadable via the
+    By-instrument card, and a row keyed by both leaves little
+    to aggregate. Instrument scope chips are session-level
+    filters — they apply to whichever axis is on. With no
+    instrument scope chip selected the aggregates span every
+    session instrument — matching the legacy "By reviewer" /
+    "By reviewee" general-data framings; selecting one or
+    more scopes the aggregates to those instruments. Each
+    axis pool, when mounted, has two sub-groups separated by
+    `|`:
     1. **Identification chips** — Name / Email / Tag 1-3
        (per-axis-entity).
-    2. **Per-instrument scope chips** — one per session
-       instrument, labelled `#{N}: {short_label}` (same
-       convention as the By-instrument card). With no
-       instrument chip selected the aggregates span every
-       session instrument — matching the legacy "By
-       reviewer" / "By reviewee" general-data framings;
-       selecting one or more scopes the aggregates to those
-       instruments.
-    3. **Aggregate data chips** — `Count` / `Mean` / `Median`
+    2. **Aggregate data chips** — `Count` / `Mean` / `Median`
        / `Min` / `Max` / `Length` (mirrors the Reviewer /
        Reviewee response metadata cards' aggregate column
        vocabulary).

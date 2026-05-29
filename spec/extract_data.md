@@ -28,17 +28,17 @@ the load-bearing decision behind the page's existence — see
 > route, chip state persists per session via `localStorage`,
 > and every download emits an audit event. The full-width
 > **Data shaper** card below the grid ships the **placeholder
-> UI** with the mutually-exclusive Reviewer / Reviewee axis
-> chips (Instrument is no longer an axis — it became a
-> per-axis scope filter), each axis pool's three sub-groups
-> (identification chips | per-instrument scope chips |
-> aggregate data chips), the always-present blank Data shape
-> sub-card with its save / edit / delete / add icons, and the
-> disabled `Zip all` button. All interactions are client-side
-> only; persistence and file generation are deferred. The
-> full functional spec for the Data shaper card is out of
-> scope for this doc — see `guide/extract_data.md` "Data
-> shaper design".
+> UI**: the mutually-exclusive Reviewer / Reviewee axis chips
+> on the top row followed by the pipe, the always-visible
+> session-level per-instrument scope chips, and the slot for
+> the per-axis pool's relevant column chips (each pool now a
+> two-sub-group ``identification | aggregate`` shape); plus
+> the always-present blank Data shape sub-card with its save
+> / edit / delete / add icons and the disabled `Zip all`
+> button. All interactions are client-side only; persistence
+> and file generation are deferred. The full functional spec
+> for the Data shaper card is out of scope for this doc — see
+> `guide/extract_data.md` "Data shaper design".
 
 ## Page identity
 
