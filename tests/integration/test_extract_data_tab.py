@@ -124,11 +124,13 @@ def test_data_shaper_axis_chip_row_and_pools(
     client: TestClient, db: Session
 ) -> None:
     """The axis chip row at the top of the outer Data shaper
-    card carries the three axis-selector chips (Reviewer /
-    Reviewee / Instrument), all default-unselected. Each axis
+    card carries the two **mutually exclusive** axis chips
+    (Reviewer / Reviewee), all default-unselected. Each axis
     has a hidden ``<template data-shaper-chip-pool>`` carrying
     its relevant column chips for the progressive-enhancement
-    JS to clone when the axis toggles on."""
+    JS to clone when the axis toggles on. Instrument is no
+    longer an axis — it became a per-axis-pool scope filter
+    rendered to the right of the intra-pool pipe."""
     review_session = _make_session(client, db, code="ed-shaper-axes")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -137,13 +139,17 @@ def test_data_shaper_axis_chip_row_and_pools(
     for axis, label in [
         ("reviewer", "Reviewer"),
         ("reviewee", "Reviewee"),
-        ("instrument", "Instrument"),
     ]:
         # Axis chip itself.
         assert f'data-shaper-axis-chip="{axis}"' in body
         assert f'>{label}</span>' in body
         # Hidden pool template for the axis's column chips.
         assert f'data-shaper-chip-pool="{axis}"' in body
+
+    # Instrument axis chip retired — it lives as a per-axis
+    # scope chip inside the Reviewer / Reviewee pools now.
+    assert 'data-shaper-axis-chip="instrument"' not in body
+    assert 'data-shaper-chip-pool="instrument"' not in body
 
     # Reviewer pool carries the identity chips + the six
     # aggregate chips that mirror the Reviewer response
@@ -162,6 +168,46 @@ def test_data_shaper_axis_chip_row_and_pools(
         "reviewer:length",
     ):
         assert f'data-shaper-col-chip="{slot}"' in body
+
+
+def test_data_shaper_axis_pool_has_intra_pool_pipe_and_instrument_chips(
+    client: TestClient, db: Session
+) -> None:
+    """Each axis chip pool carries three sub-groups separated
+    by a ``|`` pipe: identification chips, then per-instrument
+    scope chips (one per session instrument, labelled like the
+    By-instrument card), then the aggregate data chips.
+
+    With no instrument scope chip selected the aggregates
+    span every session instrument — matching the "By
+    reviewer" / "By reviewee" general-data framing."""
+    review_session = _make_session(client, db, code="ed-shaper-pool")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Slice the Reviewer chip pool's body.
+    reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split(
+        "</template>"
+    )[0]
+    # ID chip ➝ pipe ➝ instrument chip ➝ aggregate chip in
+    # that order. ``str.index`` will raise if any is absent.
+    name_at = reviewer_pool.index('data-shaper-col-chip="reviewer:name"')
+    pipe_at = reviewer_pool.index('shaper-axis-pipe')
+    instrument_at = reviewer_pool.index(
+        'data-shaper-col-chip="reviewer:instrument-'
+    )
+    count_at = reviewer_pool.index('data-shaper-col-chip="reviewer:count"')
+    assert name_at < pipe_at < instrument_at < count_at
+
+    # Reviewee pool follows the same shape.
+    reviewee_pool = body.split('data-shaper-chip-pool="reviewee"')[1].split(
+        "</template>"
+    )[0]
+    assert 'data-shaper-col-chip="reviewee:name"' in reviewee_pool
+    assert 'shaper-axis-pipe' in reviewee_pool
+    assert 'data-shaper-col-chip="reviewee:instrument-' in reviewee_pool
+    assert 'data-shaper-col-chip="reviewee:count"' in reviewee_pool
 
 
 def test_data_shaper_initial_blank_shape_card(

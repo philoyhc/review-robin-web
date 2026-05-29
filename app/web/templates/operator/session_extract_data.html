@@ -249,12 +249,18 @@
       </p>
     </div>
 
-    {# Axis chip row. The three axis chips live at the head of
-       the row; ``data-shaper-relevant-chips`` is the slot the
-       progressive-enhancement JS fills with the relevant
-       column chips for whichever axes are currently on. The
-       pipe is purely visual; ``aria-hidden`` keeps it out of
-       the AX tree. #}
+    {# Axis chip row. Two **mutually exclusive** axis chips —
+       Reviewer / Reviewee — followed by the pipe and the slot
+       the progressive-enhancement JS fills with the relevant
+       column chips for whichever axis is currently on. The
+       full ``Reviewer × Reviewee`` matrix is already
+       downloadable via the By-instrument card; that, plus the
+       fact that a row keyed by both reviewer and reviewee
+       leaves little to aggregate, makes "one axis at a time"
+       the right default. Instrument is no longer an axis —
+       it became a per-axis **scope filter** (the instrument
+       chips appear inside each axis pool to the right of the
+       intra-pool pipe). #}
     <p class="col-chip-row" style="margin: 0;">
       <span class="pill pill-count tag-chip"
             data-shaper-axis-chip="reviewer"
@@ -262,9 +268,6 @@
       <span class="pill pill-count tag-chip"
             data-shaper-axis-chip="reviewee"
             role="button" tabindex="0" aria-pressed="false">Reviewee</span>
-      <span class="pill pill-count tag-chip"
-            data-shaper-axis-chip="instrument"
-            role="button" tabindex="0" aria-pressed="false">Instrument</span>
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       <span data-shaper-relevant-chips></span>
     </p>
@@ -274,14 +277,21 @@
        them into ``data-shaper-relevant-chips`` when the axis
        toggles on, and removes them when it toggles off.
 
-       The Reviewer / Reviewee aggregate vocabulary mirrors the
-       column-shape of the Reviewer / Reviewee response
-       metadata cards exactly (``Count`` / ``Mean`` / ``Median``
-       / ``Min`` / ``Max`` / ``Length``). The Instrument pool
-       iterates the session's instruments to emit one chip per
-       response field plus a per-instrument ``Short label``
-       chip; the six aggregate chips on this axis are global
-       (apply to whichever fields are selected). #}
+       Each pool is **three sub-groups** separated by ``|``:
+
+       1. **Identification chips** — Name / Email / Tag 1-3
+          (per-axis-entity).
+       2. **Aggregate data chips** — Count / Mean / Median /
+          Min / Max / Length (mirrors the Reviewer / Reviewee
+          response metadata cards' aggregate column vocabulary).
+       3. **Per-instrument scope chips** — one chip per session
+          instrument, labelled ``#{N}: {short_label}`` (same
+          convention as the By-instrument card). With no
+          instrument chip selected, aggregate data spans every
+          instrument on the session — matching the legacy
+          "By reviewer" / "By reviewee" framings. Selecting one
+          or more instrument chips scopes the aggregates to
+          those instruments. #}
     <template data-shaper-chip-pool="reviewer">
       {% for slot, label in [
           ("reviewer:name", "Reviewer Name"),
@@ -289,12 +299,26 @@
           ("reviewer:tag-1", "Reviewer Tag 1"),
           ("reviewer:tag-2", "Reviewer Tag 2"),
           ("reviewer:tag-3", "Reviewer Tag 3"),
-          ("reviewer:count", "Reviewer Count"),
-          ("reviewer:mean", "Reviewer Mean"),
-          ("reviewer:median", "Reviewer Median"),
-          ("reviewer:min", "Reviewer Min"),
-          ("reviewer:max", "Reviewer Max"),
-          ("reviewer:length", "Reviewer Length"),
+      ] %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="{{ slot }}"
+              role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
+      {% endfor %}
+      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      {% for instr in instruments %}
+        {% set chip_short = (instr.short_label or "").strip() %}
+        {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+        <span class="pill pill-count tag-chip"
+              data-shaper-col-chip="reviewer:instrument-{{ instr.id }}"
+              role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
+      {% endfor %}
+      {% for slot, label in [
+          ("reviewer:count", "Count"),
+          ("reviewer:mean", "Mean"),
+          ("reviewer:median", "Median"),
+          ("reviewer:min", "Min"),
+          ("reviewer:max", "Max"),
+          ("reviewer:length", "Length"),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
@@ -308,38 +332,26 @@
           ("reviewee:tag-1", "Reviewee Tag 1"),
           ("reviewee:tag-2", "Reviewee Tag 2"),
           ("reviewee:tag-3", "Reviewee Tag 3"),
-          ("reviewee:count", "Reviewee Count"),
-          ("reviewee:mean", "Reviewee Mean"),
-          ("reviewee:median", "Reviewee Median"),
-          ("reviewee:min", "Reviewee Min"),
-          ("reviewee:max", "Reviewee Max"),
-          ("reviewee:length", "Reviewee Length"),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
-    </template>
-    <template data-shaper-chip-pool="instrument">
+      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for instr in instruments %}
         {% set chip_short = (instr.short_label or "").strip() %}
-        {% set instr_prefix = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+        {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
         <span class="pill pill-count tag-chip"
-              data-shaper-col-chip="instrument:{{ instr.id }}:short-label"
-              role="button" tabindex="0" aria-pressed="false">{{ instr_prefix }}.Short label</span>
-        {% for field in instr.response_fields | sort(attribute='order') %}
-          <span class="pill pill-count tag-chip"
-                data-shaper-col-chip="instrument:{{ instr.id }}:field-{{ field.id }}"
-                role="button" tabindex="0" aria-pressed="false">{{ instr_prefix }}.{{ field.label or field.field_key }}</span>
-        {% endfor %}
+              data-shaper-col-chip="reviewee:instrument-{{ instr.id }}"
+              role="button" tabindex="0" aria-pressed="false">{{ chip_label }}</span>
       {% endfor %}
       {% for slot, label in [
-          ("instrument:agg-count", "Field Count"),
-          ("instrument:agg-mean", "Field Mean"),
-          ("instrument:agg-median", "Field Median"),
-          ("instrument:agg-min", "Field Min"),
-          ("instrument:agg-max", "Field Max"),
-          ("instrument:agg-length", "Field Length"),
+          ("reviewee:count", "Count"),
+          ("reviewee:mean", "Mean"),
+          ("reviewee:median", "Median"),
+          ("reviewee:min", "Min"),
+          ("reviewee:max", "Max"),
+          ("reviewee:length", "Length"),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
@@ -724,12 +736,37 @@
         rebuildPreviewRow();
       }
 
+      // Reviewer and Reviewee are mutually exclusive — only
+       // one can drive the row axis at a time. Clicking the
+       // off chip turns the other off (unmounting its chip
+       // pool) before turning the clicked one on. This
+       // matches the rationale that the full ``reviewer ×
+       // reviewee`` matrix is already downloadable via the
+       // By-instrument card, and once both axes are on there
+       // is little left to aggregate per row.
+      var MUTEX_AXES = ["reviewer", "reviewee"];
       card.querySelectorAll("[data-shaper-axis-chip]").forEach(function (chip) {
         function toggle() {
           var pressed = chip.getAttribute("aria-pressed") !== "true";
+          var axis = chip.getAttribute("data-shaper-axis-chip");
+          if (pressed && MUTEX_AXES.indexOf(axis) !== -1) {
+            MUTEX_AXES.forEach(function (other) {
+              if (other === axis) return;
+              var otherChip = card.querySelector(
+                '[data-shaper-axis-chip="' + other + '"]'
+              );
+              if (
+                otherChip &&
+                otherChip.getAttribute("aria-pressed") === "true"
+              ) {
+                otherChip.classList.remove("is-selected");
+                otherChip.setAttribute("aria-pressed", "false");
+                unmountAxisChips(other);
+              }
+            });
+          }
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
-          var axis = chip.getAttribute("data-shaper-axis-chip");
           if (pressed) mountAxisChips(axis);
           else unmountAxisChips(axis);
         }

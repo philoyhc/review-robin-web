@@ -209,15 +209,28 @@ require any per-lens configuration first.
 - **Data shaper** (full-width, below the grid). Placeholder
   UI shipped; persistence and file generation deferred.
   - Heading + body copy describing the generalised builder.
-  - **Axis chip row** at the top of the outer card — three
-    axis-selector chips (`Reviewer`, `Reviewee`, `Instrument`)
-    + a vertical pipe + a slot for the relevant column chips.
-    All axis chips default unselected; toggling one on clones
-    its hidden per-axis chip pool (Reviewer / Reviewee
-    identity + aggregate chips; Instrument's per-(instrument,
-    field) chips + Short-label-per-instrument + six global
-    aggregate chips) into the slot. Multiple axes can be on
-    at once; their pools concatenate left-to-right.
+  - **Axis chip row** at the top of the outer card — two
+    **mutually exclusive** axis-selector chips (`Reviewer`,
+    `Reviewee`) + a vertical pipe + a slot for the relevant
+    column chips. Clicking one axis deselects the other; the
+    full `reviewer × reviewee` matrix is already downloadable
+    via the By-instrument card, and a row keyed by both leaves
+    little to aggregate. Each axis pool, when mounted, has
+    three sub-groups separated by `|`:
+    1. **Identification chips** — Name / Email / Tag 1-3
+       (per-axis-entity).
+    2. **Per-instrument scope chips** — one per session
+       instrument, labelled `#{N}: {short_label}` (same
+       convention as the By-instrument card). With no
+       instrument chip selected the aggregates span every
+       session instrument — matching the legacy "By
+       reviewer" / "By reviewee" general-data framings;
+       selecting one or more scopes the aggregates to those
+       instruments.
+    3. **Aggregate data chips** — `Count` / `Mean` / `Median`
+       / `Min` / `Max` / `Length` (mirrors the Reviewer /
+       Reviewee response metadata cards' aggregate column
+       vocabulary).
   - **Data shape sub-card stack** below the axis row — one
     sub-card per shape. One always-present blank shape card
     on initial load (matches the band-3 response-field
