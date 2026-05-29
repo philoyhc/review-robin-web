@@ -267,13 +267,25 @@ require any per-lens configuration first.
        stay visible always (field-independent). Once a
        response field is picked, the field-scoped chips
        filter to the ones **relevant to that field's data
-       type**: numeric (Integer / Decimal) fields surface
-       `Mean`, `Median`, `Min`, `Max`; string fields surface
-       `Length`; other types surface neither (just
-       `Assigned` and `Count`). Selected chips that get
-       hidden by a data-type swap (or by the operator
-       deselecting the response field) auto-deselect so
-       the preview row stays consistent.
+       type**:
+       - Numeric (Integer / Decimal) fields surface
+         `Mean`, `Median`, `Min`, `Max`.
+       - String fields surface `Length`.
+       - **List fields** swap the numeric / string
+         aggregates for **one chip per list option** —
+         each chip's text is the option label and selecting
+         it contributes a count-of-responses column for
+         that option to the preview row. The option chips
+         are rendered dynamically from the field chip's
+         `data-shaper-field-list-options` CSV when the List
+         field is selected, and unmount when the field is
+         deselected or swapped.
+       - Other types surface neither — just `Assigned` and
+         `Count`.
+
+       Selected chips that get hidden by a data-type swap
+       (or by the operator deselecting the response field)
+       auto-deselect so the preview row stays consistent.
   - **Preview-row empty state**: each Data shape sub-card's
     preview table seeds a muted-italic placeholder cell
     ("Pick chips above to compose this shape's columns")

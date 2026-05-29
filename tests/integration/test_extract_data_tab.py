@@ -172,6 +172,44 @@ def test_data_shaper_axis_chip_row_and_pools(
         assert f'data-shaper-col-chip="{slot}"' in body
 
 
+def test_data_shaper_list_field_carries_options_attribute(
+    client: TestClient, db: Session
+) -> None:
+    """List-type response fields render an extra
+    ``data-shaper-field-list-options`` attribute on their chip
+    carrying the CSV of options. The progressive-enhancement
+    JS swaps the standard Mean / Median / etc. chips for one
+    chip per list option (each contributing a
+    count-of-responses column for that option) when the
+    operator picks a List field; the attribute is the
+    server-rendered hook the JS reads."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _make_session(client, db, code="ed-shaper-list")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    # Seed a List-type response field with a few options.
+    list_field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="vote",
+        label="Vote",
+        order=99,
+        _inline_data_type="List",
+        _inline_response_type="Choice",
+        _inline_list_csv="Strong yes,Yes,Maybe,No",
+    )
+    db.add(list_field)
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert (
+        'data-shaper-field-list-options="Strong yes,Yes,Maybe,No"' in body
+    )
+
+
 def test_data_shaper_aggregate_chips_carry_data_type_attribute(
     client: TestClient, db: Session
 ) -> None:
@@ -205,7 +243,12 @@ def test_data_shaper_aggregate_chips_carry_data_type_attribute(
         assert "data-shaper-relevant-for" not in chip_block
 
     # Field chips carry ``data-shaper-field-data-type`` so the
-    # JS knows which bucket to apply when toggled.
+    # JS knows which bucket to apply when toggled. List fields
+    # additionally carry ``data-shaper-field-list-options``
+    # (a CSV of options) so the JS can render one option chip
+    # per list value in place of the numeric / string
+    # aggregates — exercised by the inline progressive-
+    # enhancement script.
     assert "data-shaper-field-data-type=" in body
 
 
