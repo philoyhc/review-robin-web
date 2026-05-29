@@ -261,6 +261,54 @@ require any per-lens configuration first.
     whenever no column chips are selected on the active
     shape — keeps the table visible so the operator has an
     obvious affordance to work with.
+  - **Name ↔ Email chip coupling** (UI behaviour shipped;
+    underlying row-key semantics described below — wiring
+    pending).
+    - Email can stand alone — it's a unique identifier on
+      its own.
+    - Name cannot stand alone — selecting `Reviewer Name` /
+      `Reviewee Name` auto-selects the matching `Email`
+      chip; deselecting `Email` while `Name` is on cascades
+      the deselect to `Name`. Rationale: people share
+      names, so `Name` alone isn't a sound row key.
+
+### Row-key semantics — for the wiring slice
+
+The shipped chip-toggle behaviour is purely client-side; the
+**row identity** semantics each combination implies live
+here as the contract the file-gen slice must honour.
+
+For a given axis (Reviewer or Reviewee — symmetric
+behaviour, swap `reviewer` ↔ `reviewee` throughout):
+
+| Chip selection on the active shape | Row identity of the produced CSV |
+|---|---|
+| `Name` + `Email` selected (Name implies Email, so this is the same as "Name selected") | **One row per individual** — every reviewer / reviewee on the session gets its own row. |
+| Only `Email` selected (no `Name`) | **One row per individual** — Email is the canonical unique identifier. The `Name` column simply isn't emitted. |
+| Only some subset of tag chips (`Tag 1`, `Tag 2`, `Tag 3` — any combination) — no `Name` / `Email` | **One row per distinct tag-combination** — the rows are aggregates of the individuals sharing the selected tag values. With three tag chips on, the row key is the (Tag 1, Tag 2, Tag 3) tuple; with one, it's that one tag's value. |
+| Nothing selected (neither identification nor tag chips) | **A single summary row** across every reviewer / reviewee on the session — the aggregate columns are computed across the whole roster. |
+| Both `Name` / `Email` **and** tag chips selected | `Name` / `Email` wins for row identity — **one row per individual**. The tag chips emit additional identification columns on each row but don't roll up. |
+
+Aggregate columns (`Assigned`, `Count`, `Mean`, `Median`,
+`Min`, `Max`, `Length`) compute against the chosen row key:
+
+- Per-individual rows → aggregate over that individual's
+  in-scope responses.
+- Per-tag-combo rows → aggregate over every individual
+  sharing that tag combination's responses.
+- Single summary row → aggregate over the whole roster's
+  in-scope responses.
+
+The instrument scope chip + response-field scope chip on the
+top axis row narrow what "in-scope responses" means: with no
+instrument chip selected, the aggregates span every session
+instrument; selecting one narrows to that instrument;
+selecting a response field narrows further to that specific
+field. The aggregate-chip data-type filter (numeric chips
+for numeric fields, `Length` for string fields, only
+`Assigned` / `Count` for other types) follows the same
+field-data-type rules the Reviewer / Reviewee response
+metadata cards already use.
   - **Data shape sub-card stack** below the axis row — one
     sub-card per shape. One always-present blank shape card
     on initial load (matches the band-3 response-field

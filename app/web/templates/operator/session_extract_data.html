@@ -754,6 +754,7 @@
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          enforceNameEmailCoupling(chip, pressed);
           rebuildPreviewRow();
         }
         chip.addEventListener("click", toggle);
@@ -763,6 +764,38 @@
             toggle();
           }
         });
+      }
+
+      // Identification-chip coupling per ``guide/extract_data.md``:
+      // Name + Email together identify a row uniquely (Name on
+      // its own isn't unique — people share names). So:
+      //
+      // * Selecting Name auto-selects Email.
+      // * Deselecting Email cascades the deselect to Name.
+      //
+      // The reverse asymmetry holds: Email can stand alone.
+      function enforceNameEmailCoupling(chip, pressed) {
+        var slot = chip.getAttribute("data-shaper-col-chip") || "";
+        var match = slot.match(/^(reviewer|reviewee):(name|email)$/);
+        if (!match) return;
+        var axis = match[1];
+        var role = match[2];
+        var partnerSlot = axis + ":" + (role === "name" ? "email" : "name");
+        var partner = relevantSlot.querySelector(
+          '[data-shaper-col-chip="' + partnerSlot + '"]'
+        );
+        if (!partner) return;
+        var partnerPressed =
+          partner.getAttribute("aria-pressed") === "true";
+        if (role === "name" && pressed && !partnerPressed) {
+          // Name turning on ➝ Email must follow.
+          partner.classList.add("is-selected");
+          partner.setAttribute("aria-pressed", "true");
+        } else if (role === "email" && !pressed && partnerPressed) {
+          // Email turning off while Name is on ➝ deselect Name.
+          partner.classList.remove("is-selected");
+          partner.setAttribute("aria-pressed", "false");
+        }
       }
 
       function mountAxisChips(axis) {
