@@ -363,7 +363,15 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:count"
             role="button" tabindex="0" aria-pressed="false">Count</span>
-      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      {# Pipe between the field-independent totals
+         (Assigned / Count) and the field-scoped statistics
+         to its right. Gated by ``data-shaper-relevant-for=
+         "field-scoped"`` so the JS hides it whenever nothing
+         to the right will render — i.e. no response field
+         selected, or a selected field whose data type has no
+         matching field-scoped chip. #}
+      <span class="shaper-axis-pipe" aria-hidden="true"
+            data-shaper-relevant-for="field-scoped">|</span>
       {% for slot, label, relevant_for in [
           ("reviewer:mean", "Mean", "numeric"),
           ("reviewer:median", "Median", "numeric"),
@@ -410,7 +418,8 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:count"
             role="button" tabindex="0" aria-pressed="false">Count</span>
-      <span class="shaper-axis-pipe" aria-hidden="true">|</span>
+      <span class="shaper-axis-pipe" aria-hidden="true"
+            data-shaper-relevant-for="field-scoped">|</span>
       {% for slot, label, relevant_for in [
           ("reviewee:mean", "Mean", "numeric"),
           ("reviewee:median", "Median", "numeric"),
@@ -1007,6 +1016,20 @@
               // (in the ``data-shaper-field-discrete-steps``
               // CSV).
               show = hasDiscreteSteps;
+            } else if (relevantFor === "field-scoped") {
+              // The pipe between Assigned / Count and the
+              // field-scoped statistics shows iff at least
+              // one field-scoped chip will be visible after
+              // this filter pass — i.e. the data type
+              // surfaces Mean / Length / list-options /
+              // Discrete steps. For data types that have no
+              // matching chip (or no field selected) the
+              // pipe hides too so the row doesn't carry an
+              // orphan ``|``.
+              show =
+                NUMERIC.indexOf(dataType) !== -1 ||
+                STRING.indexOf(dataType) !== -1 ||
+                dataType === "List";
             } else {
               show = true;
             }

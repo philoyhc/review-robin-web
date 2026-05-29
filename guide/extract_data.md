@@ -261,7 +261,9 @@ require any per-lens configuration first.
        metadata cards' aggregate column vocabulary, with
        `Assigned` leading per that card's column order, and
        a `|` after `Count` separating the field-independent
-       totals from the field-scoped statistics). The
+       totals from the field-scoped statistics — the pipe
+       itself hides when nothing to its right would render,
+       so the row never carries an orphan separator). The
        field-scoped aggregates (`Mean`, `Median`, `Min`,
        `Max`, `Length`, `Discrete steps`) **only render when
        a response field is selected** — without a specific
