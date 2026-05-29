@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Instrument, ReviewSession
 
 
 def _make_session(
@@ -151,8 +151,9 @@ def test_data_shaper_axis_chip_row_and_pools(
     assert 'data-shaper-axis-chip="instrument"' not in body
     assert 'data-shaper-chip-pool="instrument"' not in body
 
-    # Reviewer pool carries the identity chips + the six
-    # aggregate chips that mirror the Reviewer response
+    # Reviewer pool carries the identity chips + the seven
+    # aggregate chips (Assigned / Count / Mean / Median / Min
+    # / Max / Length) that mirror the Reviewer response
     # metadata card's column shape.
     for slot in (
         "reviewer:name",
@@ -160,6 +161,7 @@ def test_data_shaper_axis_chip_row_and_pools(
         "reviewer:tag-1",
         "reviewer:tag-2",
         "reviewer:tag-3",
+        "reviewer:assigned",
         "reviewer:count",
         "reviewer:mean",
         "reviewer:median",
@@ -168,6 +170,42 @@ def test_data_shaper_axis_chip_row_and_pools(
         "reviewer:length",
     ):
         assert f'data-shaper-col-chip="{slot}"' in body
+
+
+def test_data_shaper_response_field_chip_pool(
+    client: TestClient, db: Session
+) -> None:
+    """Each session instrument carries a hidden
+    ``<template data-shaper-field-pool="{id}">`` on the page,
+    each member chip carrying the response field's friendly
+    label. The progressive-enhancement JS mounts the pool
+    into ``data-shaper-field-chips`` when the matching
+    instrument scope chip toggles on (and swaps pools when
+    the operator switches instruments, since instrument
+    chips are mutex). The intra-row ``data-shaper-field-pipe``
+    sits between the instrument scope chips and the field
+    slot — the JS hides it when no instrument is selected
+    so the row doesn't carry an orphan ``|``."""
+    review_session = _make_session(client, db, code="ed-shaper-fields")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Field-section pipe and slot live on the top axis row.
+    assert "data-shaper-field-pipe" in body
+    assert "data-shaper-field-chips" in body
+    # Pool template for the default-seeded instrument lives in
+    # the markup, each chip wired with the
+    # ``data-shaper-field-chip`` attribute carrying
+    # ``{instrument_id}:{field_id}`` as the slot key.
+    assert f'data-shaper-field-pool="{instrument.id}"' in body
+    pool = body.split(
+        f'data-shaper-field-pool="{instrument.id}"'
+    )[1].split("</template>")[0]
+    assert f'data-shaper-field-chip="{instrument.id}:' in pool
 
 
 def test_data_shaper_tag_chip_labels_resolve_friendly_overrides(

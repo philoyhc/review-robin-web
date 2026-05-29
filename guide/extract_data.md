@@ -214,29 +214,39 @@ require any per-lens configuration first.
     `Reviewee`) + a vertical pipe + **mutually exclusive
     per-instrument scope chips** (always visible, one per
     session instrument, labelled `#{N}: {short_label}` like
-    the By-instrument card) + a slot for the relevant column
-    chips. Both mutex groups follow the same rationale: the
-    Data shaper is for fine-grained shape composition, so
-    "one at a time" focus reads more naturally than
-    multi-select. The full `reviewer × reviewee` matrix is
-    already downloadable via the By-instrument card, and
-    cross-instrument summaries already live on the metadata
-    cards — those broader cuts don't belong here. With no
+    the By-instrument card) + another vertical pipe + the
+    **mutually exclusive response-field scope chips** for
+    the currently-selected instrument (chip text = the
+    field's friendly label) + a slot for the relevant
+    column chips. All three mutex groups follow the same
+    rationale: the Data shaper is for fine-grained shape
+    composition, so "one at a time" focus reads more
+    naturally than multi-select. The full `reviewer ×
+    reviewee` matrix is already downloadable via the
+    By-instrument card, and cross-instrument summaries
+    already live on the metadata cards — those broader cuts
+    don't belong here. The response-field chip row swaps
+    contents when the operator switches instruments (and
+    its leading `|` hides when no instrument is selected,
+    so the row doesn't carry an orphan pipe). With no
     instrument scope chip selected the aggregates span every
     session instrument — matching the legacy "By reviewer" /
     "By reviewee" general-data framings; selecting one
-    scopes the aggregates to that instrument. Each axis
-    pool, when mounted, has two sub-groups separated by `|`:
+    scopes the aggregates to that instrument, and selecting
+    a response field narrows further to that single
+    instrument-field cell. Each axis pool, when mounted,
+    has two sub-groups separated by `|`:
     1. **Identification chips** — Name / Email / Tag 1-3
        (per-axis-entity). The three tag chips render the
        **session-friendly labels** for those slots
        (operator renames via the Setup pages), falling back
        to the built-in `Tag 1` / `Tag 2` / `Tag 3` defaults
        when no override is set.
-    2. **Aggregate data chips** — `Count` / `Mean` / `Median`
-       / `Min` / `Max` / `Length` (mirrors the Reviewer /
-       Reviewee response metadata cards' aggregate column
-       vocabulary).
+    2. **Aggregate data chips** — `Assigned` / `Count` /
+       `Mean` / `Median` / `Min` / `Max` / `Length`
+       (mirrors the Reviewer / Reviewee response metadata
+       cards' aggregate column vocabulary, with `Assigned`
+       leading per that card's column order).
   - **Data shape sub-card stack** below the axis row — one
     sub-card per shape. One always-present blank shape card
     on initial load (matches the band-3 response-field
