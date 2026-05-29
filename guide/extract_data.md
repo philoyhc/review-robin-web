@@ -209,33 +209,46 @@ require any per-lens configuration first.
 - **Data shaper** (full-width, below the grid). Placeholder
   UI shipped; persistence and file generation deferred.
   - Heading + body copy describing the generalised builder.
-  - **Axis chip row** at the top of the outer card — two
-    **mutually exclusive** axis-selector chips (`Reviewer`,
-    `Reviewee`) + a vertical pipe + **mutually exclusive
-    per-instrument scope chips** (always visible, one per
-    session instrument, labelled `#{N}: {short_label}` like
-    the By-instrument card) + another vertical pipe + the
-    **mutually exclusive response-field scope chips** for
-    the currently-selected instrument (chip text = the
-    field's friendly label) + a slot for the relevant
-    column chips. All three mutex groups follow the same
-    rationale: the Data shaper is for fine-grained shape
-    composition, so "one at a time" focus reads more
-    naturally than multi-select. The full `reviewer ×
-    reviewee` matrix is already downloadable via the
-    By-instrument card, and cross-instrument summaries
-    already live on the metadata cards — those broader cuts
-    don't belong here. The response-field chip row swaps
-    contents when the operator switches instruments (and
-    its leading `|` hides when no instrument is selected,
-    so the row doesn't carry an orphan pipe). With no
+  - **Two stacked chip rows** at the top of the outer card:
+    a **scope row** (top) and a **content row** (one row
+    below). Splitting them keeps the row reading scannable
+    as the operator composes a shape — the scope row
+    answers "what subset of data are we looking at?", the
+    content row answers "what columns go in the CSV?".
+
+    **Scope row** carries three mutex chip groups separated
+    by `|`s:
+
+    1. Two **mutually exclusive** axis-selector chips
+       (`Reviewer`, `Reviewee`).
+    2. **Mutually exclusive per-instrument scope chips**
+       (always visible, one per session instrument, labelled
+       `#{N}: {short_label}` like the By-instrument card).
+    3. **Mutually exclusive response-field scope chips** for
+       the currently-selected instrument (chip text = the
+       field's friendly label). The response-field section
+       swaps contents when the operator switches instruments
+       (and its leading `|` hides when no instrument is
+       selected, so the row doesn't carry an orphan pipe).
+
+    All three mutex groups follow the same rationale: the
+    Data shaper is for fine-grained shape composition, so
+    "one at a time" focus reads more naturally than
+    multi-select. The full `reviewer × reviewee` matrix is
+    already downloadable via the By-instrument card, and
+    cross-instrument summaries already live on the metadata
+    cards — those broader cuts don't belong here. With no
     instrument scope chip selected the aggregates span every
     session instrument — matching the legacy "By reviewer" /
     "By reviewee" general-data framings; selecting one
     scopes the aggregates to that instrument, and selecting
     a response field narrows further to that single
-    instrument-field cell. Each axis pool, when mounted,
-    has two sub-groups separated by `|`:
+    instrument-field cell.
+
+    **Content row** carries the per-axis chip pool — mounted
+    by the JS into a single `<span
+    data-shaper-relevant-chips>` slot. The pool has two
+    sub-groups separated by `|`:
     1. **Identification chips** — Name / Email / Tag 1-3
        (per-axis-entity). The three tag chips render the
        **session-friendly labels** for those slots

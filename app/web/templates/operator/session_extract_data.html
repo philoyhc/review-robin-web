@@ -284,6 +284,19 @@
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true" data-shaper-field-pipe>|</span>
       <span data-shaper-field-chips></span>
+    </p>
+
+    {# Second chip row — the per-axis pool (identification
+       chips + the field-scoped aggregate chips) lives here.
+       Splitting it off the top row keeps the **scope** chips
+       (axis / instrument / response field) on one line and
+       the **content** chips (what columns to put in the CSV)
+       on the next, so the row stays scannable as the operator
+       composes a shape. The slot itself is unchanged from the
+       previous single-row layout — the JS mounts axis-pool
+       clones (and the dynamic List-option chips, when
+       applicable) into it on every axis toggle. #}
+    <p class="col-chip-row" style="margin: 0;">
       <span data-shaper-relevant-chips></span>
     </p>
 

@@ -318,10 +318,14 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
 
-    # The card's first chip row is the axis chip row. Slice
-    # it (between ``col-chip-row`` and the first
-    # ``</p>``) and confirm the instrument chip + the
-    # ``data-shaper-relevant-chips`` slot live there.
+    # The card opens with the **scope** chip row (axis chips +
+    # instrument scope chips + response-field scope slot)
+    # followed by the **content** chip row (per-axis pool of
+    # identification + aggregate chips, mounted by the JS into
+    # ``data-shaper-relevant-chips``). Both live before the
+    # hidden ``<template data-shaper-chip-pool>`` blocks, so
+    # slicing up to the first ``data-shaper-chip-pool`` and
+    # asserting ordering is sufficient.
     card_slice = body.split('id="extract-data-shaper"')[1].split(
         "data-shaper-chip-pool"
     )[0]
@@ -329,9 +333,12 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
     pipe_at = card_slice.index('shaper-axis-pipe')
     instrument_at = card_slice.index('data-shaper-instrument-chip="')
     relevant_slot_at = card_slice.index('data-shaper-relevant-chips')
-    # Axis chip ➝ pipe ➝ instrument chip ➝ relevant-chips slot
-    # in that order on the top row.
+    # Axis chip ➝ pipe ➝ instrument chip on row 1; the
+    # ``data-shaper-relevant-chips`` slot follows on row 2.
     assert axis_chip_at < pipe_at < instrument_at < relevant_slot_at
+    # The relevant-chips slot now lives in its own ``<p>``
+    # (one row down from the scope chip row).
+    assert card_slice.count('class="col-chip-row"') >= 2
 
     # Each axis pool now carries only two sub-groups —
     # identification + pipe + aggregate. The instrument
