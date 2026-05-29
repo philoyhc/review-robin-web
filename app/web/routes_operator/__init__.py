@@ -24,6 +24,7 @@ from app.web.deps import require_operator
 
 from . import (
     _assignments,
+    _extract_data,
     _extracts,
     _instruments,
     _instruments_band2,
@@ -61,6 +62,7 @@ router.include_router(_preview_surface.router)
 router.include_router(_instruments.router)
 router.include_router(_instruments_band2.router)
 router.include_router(_instruments_pagination.router)
+router.include_router(_extract_data.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
 router.include_router(_workflow.router)

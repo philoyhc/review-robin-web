@@ -124,7 +124,7 @@ The session-scoped chrome consists of:
 ```
 ┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses]
+└────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
 
 Specifics:

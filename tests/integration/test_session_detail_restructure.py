@@ -661,37 +661,41 @@ def test_delete_session_post_still_rejected_when_ready(
 def test_extract_data_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """The Extract Data card on Session Home renders five per-entity
-    rows + a "Zip all" cell in a 2-col grid:
+    """The Extract Setup card on Session Home renders four
+    per-entity rows + a "Zip all" cell in a 2-col grid:
 
         Reviewers       |  Session settings
-        Reviewees       |  Responses
-        Relationships   |  Zip all  (greyed out)
+        Reviewees       |  Zip all
+        Relationships   |
 
-    Post-12A-3 PR 2: every row except the zip bundle is wired
-    live."""
+    Originally five rows; the Responses row moved to the new
+    Extract data Operations-strip tab on 2026-05-29."""
 
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     assert 'id="extract-data"' in body
-    assert "<h2>Extract Data</h2>" in body
-    # Card subtitle stays.
-    assert "Download per-entity CSVs of the session's data." in body
+    # Renamed from "Extract Data" → "Extract Setup" on 2026-05-29
+    # (per ``guide/extract_data.md``).
+    assert "<h2>Extract Setup</h2>" in body
+    # Card subtitle reflects the porting / archival framing.
+    assert "Download the setup CSVs" in body
     # Two-column grid wraps the cells.
     assert 'class="extract-data-grid"' in body
-    # Five rows + bundle cell with stable fragment anchors.
+    # Four rows + bundle cell with stable fragment anchors
+    # (Responses row relocated to the Extract data Ops tab).
     for key in (
         "settings",
         "reviewers",
         "reviewees",
         "relationships",
-        "responses",
         "bundle",
     ):
         assert f'id="extract-data-{key}"' in body
     # Assignments tile retired in 12A-3 PR 2.
     assert 'id="extract-data-assignments"' not in body
+    # Responses row no longer here.
+    assert 'id="extract-data-responses"' not in body
     # Cell labels — bundle is "Zip all".
     assert "Zip all" in body
     # Wiring tooltips: every row — including the zip bundle
@@ -721,11 +725,11 @@ def test_extract_data_card_stays_interactive_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # No ``disabled`` modifier on the Extract Data card.
+    # No ``disabled`` modifier on the Extract Setup card.
     assert 'id="extract-data"' in body
     assert 'class="card disabled" id="extract-data"' not in body
-    # Rows still render with their counts.
-    assert 'id="extract-data-responses"' in body
+    # Rows still render — sample one to confirm.
+    assert 'id="extract-data-reviewers"' in body
 
 
 # ---------------------------------------------------------------------------

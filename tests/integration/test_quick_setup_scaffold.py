@@ -313,15 +313,17 @@ def test_quick_setup_card_lives_in_right_column_above_extract_data(
        Workflow                  (full-width, top)
        ┌───────────────────┐  ┌───────────────────┐
        │  Session Details  │  │  Quick Setup      │
-       │                   │  │  Extract Data     │
+       │                   │  │  Extract Setup    │
        └───────────────────┘  └───────────────────┘
 
     Danger Zone moved to the Edit Session page; the remaining
     layout is two independent flex columns, with Quick Setup +
-    Extract Data stacked in the right column.
+    Extract Setup stacked in the right column (the card was
+    renamed from "Extract Data" → "Extract Setup" on 2026-05-29;
+    DOM id ``extract-data`` kept stable).
 
     Mobile collapse order follows source: Workflow → Session
-    Details → Quick Setup → Extract Data.
+    Details → Quick Setup → Extract Setup.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
