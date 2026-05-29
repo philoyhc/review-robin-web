@@ -27,18 +27,18 @@ the load-bearing decision behind the page's existence — see
 > end-to-end: chips drive query-string params on a real download
 > route, chip state persists per session via `localStorage`,
 > and every download emits an audit event. The full-width
-> **Data shaper** card below the grid ships the **placeholder
-> UI**: the mutually-exclusive Reviewer / Reviewee axis chips
-> on the top row followed by the pipe, the always-visible
-> session-level per-instrument scope chips, and the slot for
-> the per-axis pool's relevant column chips (each pool now a
-> two-sub-group ``identification | aggregate`` shape); plus
-> the always-present blank Data shape sub-card with its save
-> / edit / delete / add icons and the disabled `Zip all`
-> button. All interactions are client-side only; persistence
-> and file generation are deferred. The full functional spec
-> for the Data shaper card is out of scope for this doc — see
-> `guide/extract_data.md` "Data shaper design".
+> **Data shaper** card below the grid ships its full
+> **placeholder UI** — two stacked chip rows (scope ⇒ axis +
+> instrument + response field; content ⇒ per-axis pool of
+> identification + aggregate chips with all the field-scoped
+> behaviour: Name ↔ Email coupling, data-type filtering, List
+> option chips, Discrete-steps chip), the stack of Data shape
+> sub-cards (each with preview row + save / edit / delete /
+> add icons, always-present blank starter card), and the
+> disabled `Zip all` button. All interactions are client-side
+> only; persistence and file generation are deferred — see
+> "Data shaper card" + "Data shaper — row-key contract"
+> below.
 
 ## Page identity
 
@@ -88,9 +88,9 @@ Three regions, top to bottom:
      below.
 
    The grid collapses to a single column on narrow viewports.
-3. **Full-width `Data shaper` card** below the grid. (Spec for
-   this card is out of scope for this doc — see
-   `guide/extract_data.md` "Data shaper design".)
+3. **Full-width `Data shaper` card** below the grid (see
+   the dedicated "Data shaper card" section below for the
+   chip vocabulary + the row-key contract).
 
 Each card on the grid shares a uniform body shape:
 
@@ -382,6 +382,245 @@ same payload shape:
 }
 ```
 
+## `Data shaper` card
+
+Full-width, below the two-column grid. The page's
+**generalised builder** for custom CSV shapes —
+"compose the cut you want by toggling chips, see the
+column header live in a preview row, save it under a
+name, repeat." The card sits last because it requires
+the most operator attention; the canned lens cards
+above it cover the common cases without configuration.
+
+| Field | Value |
+|---|---|
+| Heading | `Data shaper` |
+| Body copy | "Compose a custom data shape — pick the axes (reviewer / reviewee / instrument / response field), the grouping, and the aggregations — and export the result alongside the canned lens CSVs." |
+| Card id | `extract-data-shaper` |
+| Button id | `extract-data-shaper-zip` |
+| Button target | `#` (placeholder — `aria-disabled`) |
+
+**Implementation status.** Placeholder UI shipped end-to-
+end through PRs landing 2026-05-29 (#1589 → #1603). The
+chip-driven UX described below is real and survives reload;
+the **file generation** that turns a saved shape into a CSV
+in the top-level `Zip all` bundle is the next wiring slice
+(out of scope for this spec — see "Out of scope" at the
+end of this section).
+
+### Two stacked chip rows
+
+The card opens with **two `<p class="col-chip-row">` rows**
+stacked vertically. The first row answers "what subset of
+data are we looking at?", the second answers "what columns
+go in the CSV?". Splitting them keeps the row scannable as
+the operator narrows the scope and picks columns.
+
+#### Scope row (top)
+
+Three mutex chip groups separated by vertical pipes (`|`):
+
+1. **Axis chip** — `Reviewer` and `Reviewee`, **mutually
+   exclusive**. Clicking the off chip deselects whichever
+   sibling axis was on. Rationale: the full
+   `reviewer × reviewee` matrix is already downloadable via
+   the By-instrument card; a row keyed by both leaves
+   little to aggregate. (The `data-shaper-axis-chip="..."`
+   attribute drives mount / unmount of the per-axis pool on
+   the content row below.)
+2. **Instrument scope chip** — one per session instrument,
+   labelled `#{N}: {short_label}` exactly like the
+   By-instrument card. **Mutually exclusive** — one
+   instrument at a time. Selecting an instrument also
+   reveals its **response-field scope chips** in the next
+   group; deselecting it hides them. With no instrument
+   selected the (eventual) aggregate columns span every
+   session instrument, matching the legacy "By reviewer" /
+   "By reviewee" framings.
+3. **Response-field scope chip** — one per response field
+   on the selected instrument, **mutually exclusive**, chip
+   text = the field's friendly label
+   (`field.label` falling back to `field.field_key`).
+   Each field chip carries the field's data type as
+   `data-shaper-field-data-type` so the content row's
+   field-scoped chips can filter appropriately; List fields
+   additionally carry `data-shaper-field-list-options` (CSV
+   of option labels), and numeric fields with a finite,
+   small (≤12) discrete-value set additionally carry
+   `data-shaper-field-discrete-steps` (CSV of step values
+   pre-computed server-side by
+   `_discrete_steps_values(field)` in the route).
+
+   The group's leading `|` and the chips themselves render
+   only when an instrument is selected — no orphan pipe
+   when no field chips would follow.
+
+The unifying rationale: the Data shaper is for **fine-
+grained shape composition**, and fine-grained analysis
+benefits from one-at-a-time focus. Cross-instrument and
+cross-axis summaries already live elsewhere (the canned
+lens cards and the metadata cards); the Data shaper covers
+the focused cuts those don't.
+
+#### Content row (one row below)
+
+The per-axis chip pool mounts dynamically into a
+`<span data-shaper-relevant-chips>` slot when the operator
+toggles `Reviewer` or `Reviewee` on. The pool has two
+sub-groups separated by `|`:
+
+##### Identification chips (left of the pipe)
+
+| Chip | Slot | Semantics |
+|---|---|---|
+| `{Reviewer\|Reviewee} Name` | `{axis}:name` | Per-individual name column. **Auto-couples with Email** — selecting Name auto-selects Email. |
+| `{Reviewer\|Reviewee} Email` | `{axis}:email` | Per-individual email column. Can stand alone. Deselecting Email while Name is on cascades the deselect to Name. |
+| `Tag 1` / `Tag 2` / `Tag 3` | `{axis}:tag-1` / `tag-2` / `tag-3` | Per-tag-slot columns. Labels render via `field_labels.resolve(session, "{axis}", "tag_N")` so operator renames on the Setup pages flow through; falls back to `Tag 1` / `Tag 2` / `Tag 3` when no override is set. |
+
+**Name ↔ Email coupling rationale.** People share names, so
+`Name` alone isn't a sound row key. The auto-select +
+cascade-deselect rule keeps the operator in the valid
+"Email-with-or-without-Name" or "Tags-only" or "nothing"
+states — see "Row-key contract" below for what each state
+means for the CSV.
+
+##### Aggregate chips (right of the pipe)
+
+| Chip | Slot | When it renders |
+|---|---|---|
+| `Assigned` | `{axis}:assigned` | Always (field-independent). |
+| `Count` | `{axis}:count` | Always (field-independent). |
+| `|` (intra-pool pipe) | — | Hidden until at least one field-scoped chip would render to its right — keeps the row free of orphan separators. |
+| `Mean` / `Median` / `Min` / `Max` | `{axis}:mean` / `:median` / `:min` / `:max` | Numeric (Integer / Decimal) fields. Marked `data-shaper-relevant-for="numeric"`. |
+| `Length` | `{axis}:length` | String fields. Marked `data-shaper-relevant-for="string"` — sums character count across non-empty responses. |
+| **List option chips** | `{axis}:list-option:{idx}` | List fields. Mounted dynamically from `data-shaper-field-list-options` when the field chip turns on; one chip per option, chip text = the option label. Each contributes a count-of-responses column for that option. Unmount when the field is deselected or swapped. |
+| `|` + `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min`, `max`, `step` defined and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
+
+All field-scoped aggregates hide entirely until a response
+field is selected (without one there's no value vector to
+summarise). Selected chips that get hidden by a data-type
+swap auto-deselect so the preview row stays consistent.
+
+### Preview-table + Data shape sub-cards
+
+Below the two chip rows, a `<div data-shaper-stack>` holds
+a stack of **Data shape sub-cards**. One sub-card per
+shape; the operator can add more via the `+` icon on any
+existing card.
+
+Each sub-card carries:
+
+1. A **preview row** — a `<table class="shaper-preview-
+   table">` whose `<thead><tr>` mirrors the currently-
+   selected column chips on the active shape. Cells are
+   `width: auto` so each header sizes to its label.
+   Empty-state placeholder (muted italic) reads
+   "Pick chips above to compose this shape's columns" —
+   keeps the table visible so the operator sees something
+   to interact with.
+2. An **action row** with four squarish `btn secondary`
+   icon buttons (matching the Instruments page Response
+   Fields builder pattern — see `instruments_index.html`
+   lines 3833-3843 for the source):
+   - `✓` (`data-shape-save`) — flips the card to saved
+     mode (name input → plain text, `✓` → `✎`).
+   - `✎` (`data-shape-edit`) — flips back to edit mode
+     (the inverse of save).
+   - `X` (`data-shape-delete`) — removes the sub-card from
+     the stack. Never strips the page of its last sub-card:
+     a delete on the final remaining card is a no-op,
+     mirroring the Response Fields builder's always-present
+     empty row.
+   - `+` (`data-shape-add`) — clones a fresh blank sub-card
+     immediately after this one and makes it the active
+     target.
+
+The **always-present blank sub-card** on initial load gives
+the operator an immediate edit target without requiring a
+preceding "Add a shape" click — matching the Band-3
+Response Fields builder's always-present empty row.
+
+### Row-key contract — for the file-gen wiring slice
+
+The shipped chip-toggle behaviour is purely client-side;
+the **row identity** that each selection implies for the
+file-gen pipeline is pinned here as the contract that
+pipeline must honour. Symmetric across axes — swap
+`reviewer` ↔ `reviewee` throughout.
+
+| Chip selection on the active shape | Row identity of the produced CSV |
+|---|---|
+| `Name` + `Email` selected (Name implies Email, so this is the same as "Name selected") | **One row per individual** — every reviewer / reviewee on the session gets its own row. |
+| Only `Email` selected (no `Name`) | **One row per individual** — Email is the canonical unique identifier. The `Name` column simply isn't emitted. |
+| Only some subset of tag chips selected — no `Name` / `Email` | **One row per distinct tag-combination** — the rows are aggregates of the individuals sharing the selected tag values. With three tag chips on, the row key is the (Tag 1, Tag 2, Tag 3) tuple; with one, it's that one tag's value. |
+| Nothing selected (neither identification nor tag chips) | **A single summary row** across every reviewer / reviewee on the session — the aggregate columns are computed across the whole roster. |
+| `Name` / `Email` **and** tag chips selected | `Name` / `Email` wins for row identity — **one row per individual**. The tag chips emit additional identification columns on each row but don't roll up. |
+
+The instrument and response-field scope chips on the scope
+row narrow what "in-scope responses" means for the
+aggregate columns:
+
+- No instrument chip selected → aggregates span every
+  instrument on the session.
+- An instrument chip selected → aggregates scope to that
+  instrument's responses.
+- A response field chip selected → aggregates narrow
+  further to that single instrument-field cell.
+
+Aggregate-chip data-type filtering follows the same rules
+the Reviewer / Reviewee response metadata cards already
+use: numeric fields surface `Mean` / `Median` / `Min` /
+`Max` (+ `Discrete steps` when ≤12 entries); string fields
+surface `Length`; list fields surface one option chip per
+list value; other types just surface `Assigned` and
+`Count`. Group-scoped instruments inherit the asymmetric
+dedupe rule: reviewer side dedupes by `(reviewer,
+instrument, group_key)`, reviewee side does not (each
+member-assignment counts on its own).
+
+### Cross-cutting behaviours specific to the Data shaper
+
+- **Chip-state persistence.** Every chip on the page —
+  including the Data shaper card's axis, instrument,
+  response-field, identification, and aggregate chips —
+  persists `aria-pressed` via the shared
+  `rrw-extract-data-chips-{session_id}` `localStorage`
+  store described in the page's "Cross-cutting
+  behaviours" section below.
+- **Dynamic chip pools.** Three slots host chips that
+  mount / unmount on selection:
+  `data-shaper-relevant-chips` (the per-axis content
+  pool), `data-shaper-field-chips` (the per-instrument
+  response-field pool), and the per-axis pool's interior
+  list-option container (`data-shaper-list-options`).
+  Each pool's mount is idempotent — re-applying the
+  current selection state restores the pool to the
+  correct contents.
+- **Lifecycle behaviour.** The card renders identically
+  in every session lifecycle state. Once the file-gen
+  pipeline wires the `Zip all` button, the same
+  no-yellow-lock-card behaviour the rest of the page
+  already has will apply.
+
+### Out of scope (file-gen wiring slice)
+
+The placeholder slice deliberately doesn't ship the
+following — they're the explicit follow-up:
+
+- **Per-session persistence of saved shapes.** No DB
+  schema decision yet; `localStorage` covers chip state
+  but not saved-shape names + column-chip selections.
+- **The file-generation pipeline.** Turning a saved
+  shape into a CSV in the top-level `Zip all` bundle is
+  the bulk of the wiring work and depends on the
+  persistence model.
+- **Audit events.** `session.data_shaper_extracted` (or
+  per-shape variants) will register against
+  `EVENT_SCHEMAS` when the route lands.
+- **Column-chip drag-to-reorder + sort-icon click**
+  inside the preview row. The chips currently render
+  in chip-selection order; reorder is a follow-up.
+
 ## Cross-cutting behaviours
 
 **Chip-state persistence.** Every chip on the page persists
@@ -423,6 +662,15 @@ valid post-close use case. No yellow lock card wrap.
 - `app/services/extracts/zip_bundle.py` —
   `build_by_instrument_bundle` zip wrapper consumed by
   `export_by_instrument_bundle_zip`.
+- `_discrete_steps_values` in
+  `app/web/routes_operator/_extract_data.py` — small
+  helper computing the Data shaper's `Discrete steps`
+  step vocabulary for qualifying numeric fields
+  (≤12 distinct values).
+- `tests/unit/test_extract_data_route_helpers.py` —
+  unit tests for the discrete-steps helper covering the
+  Integer / Decimal / threshold-boundary / non-numeric
+  cases.
 - `guide/extract_data.md` — landing plan, design rationale,
-  open-question resolutions, and the Data shaper roadmap
-  (out of scope for this spec).
+  open-question resolutions, and the Data shaper's
+  pending file-gen + persistence wiring.
