@@ -1255,12 +1255,15 @@
         gap: var(--space-2);
         flex-wrap: wrap;
       }
-      /* Extract data page — top row of two half-width cards
-         (intro + By instrument) sitting side-by-side. Each card
-         sizes to its own content; the action button sits on its
-         own row immediately below the body text, right-aligned.
-         Collapses to a single column on narrow viewports. */
-      body.ui-v2 .extract-data-top-grid {
+      /* Extract data page — two independent columns of cards
+         (not a row-aligned grid). Each column flows with the
+         natural heights of its cards, so the bottoms of
+         neighbouring cards across columns don't have to line
+         up. Each card sizes to its own content; the action
+         button sits on its own row immediately below the body
+         text, right-aligned. Collapses to a single column on
+         narrow viewports. */
+      body.ui-v2 .extract-data-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-3);
@@ -1268,7 +1271,12 @@
         margin-bottom: var(--space-4);
         align-items: start;
       }
-      body.ui-v2 .extract-data-top-grid > .card {
+      body.ui-v2 .extract-data-column {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      body.ui-v2 .extract-data-column > .card {
         margin-bottom: 0;
       }
       body.ui-v2 .extract-data-card-stack {
@@ -1281,7 +1289,7 @@
         justify-content: flex-end;
       }
       @media (max-width: 800px) {
-        body.ui-v2 .extract-data-top-grid {
+        body.ui-v2 .extract-data-grid {
           grid-template-columns: 1fr;
         }
       }
