@@ -493,7 +493,7 @@ means for the CSV.
 | `|` (intra-pool pipe) | — | Hidden until at least one field-scoped chip would render to its right — keeps the row free of orphan separators. |
 | `Mean` / `Median` / `Min` / `Max` | `{axis}:mean` / `:median` / `:min` / `:max` | Numeric (Integer / Decimal) fields. Marked `data-shaper-relevant-for="numeric"`. |
 | `Length` | `{axis}:length` | String fields. Marked `data-shaper-relevant-for="string"` — sums character count across non-empty responses. |
-| **List option chips** | `{axis}:list-option:{idx}` | List fields. Mounted dynamically from `data-shaper-field-list-options` when the field chip turns on; one chip per option, chip text = the option label. Each contributes a count-of-responses column for that option. Unmount when the field is deselected or swapped. |
+| `|` + `List items` | `{axis}:list-items` (marker `data-shaper-relevant-for="list-items"`) | List fields with a non-empty options CSV. Selecting the single `List items` chip emits **one preview-row column per list option** (the JS reads the active field chip's `data-shaper-field-list-options` CSV at render time). Same fan-out shape as `Discrete steps`. |
 | `|` + `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min`, `max`, `step` defined and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
 
 All field-scoped aggregates hide entirely until a response

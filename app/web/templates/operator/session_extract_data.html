@@ -384,16 +384,25 @@
               data-shaper-relevant-for="{{ relevant_for }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
-      {# Discrete-steps pipe + chip. Both gated by
-         ``data-shaper-relevant-for="discrete-steps"`` so they
-         only render when the operator picks a numeric field
-         with ≤12 discrete values. Selecting the chip emits
-         one preview-row column per step value (the JS reads
-         the active field chip's
-         ``data-shaper-field-discrete-steps`` CSV at render
-         time). #}
+      {# Trailing pipe shared by the per-field-options chips
+         (``List items`` and ``Discrete steps``). It shows when
+         **either** the active field is List with options, or
+         the active field is numeric with ≤12 discrete values.
+         The ``List items`` and ``Discrete steps`` chips each
+         carry their own ``data-shaper-relevant-for`` marker so
+         the JS can show / hide them independently — only one
+         of the two ever applies for a given data type. Each
+         chip is a single chip that fans into N preview-row
+         columns when selected: ``List items`` reads the CSV
+         from the active field chip's
+         ``data-shaper-field-list-options``, ``Discrete steps``
+         reads ``data-shaper-field-discrete-steps``. #}
       <span class="shaper-axis-pipe" aria-hidden="true"
-            data-shaper-relevant-for="discrete-steps">|</span>
+            data-shaper-relevant-for="list-or-discrete">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewer:list-items"
+            data-shaper-relevant-for="list-items"
+            role="button" tabindex="0" aria-pressed="false">List items</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:discrete-steps"
             data-shaper-relevant-for="discrete-steps"
@@ -433,7 +442,11 @@
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true"
-            data-shaper-relevant-for="discrete-steps">|</span>
+            data-shaper-relevant-for="list-or-discrete">|</span>
+      <span class="pill pill-count tag-chip"
+            data-shaper-col-chip="reviewee:list-items"
+            data-shaper-relevant-for="list-items"
+            role="button" tabindex="0" aria-pressed="false">List items</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:discrete-steps"
             data-shaper-relevant-for="discrete-steps"
@@ -808,24 +821,40 @@
           colChips().forEach(function (chip) {
             if (chip.getAttribute("aria-pressed") !== "true") return;
             any = true;
-            // The Discrete-steps chip is a single chip that
-            // produces N preview columns — one per step value
-            // — when selected. The values are pulled from the
-            // currently-selected response field's
-            // ``data-shaper-field-discrete-steps`` CSV.
+            // ``Discrete steps`` and ``List items`` are each a
+            // single chip that produces N preview columns —
+            // one per step value or list option — when
+            // selected. The values are pulled at render time
+            // from the currently-selected response field
+            // chip's ``data-shaper-field-discrete-steps`` /
+            // ``data-shaper-field-list-options`` CSV.
             var slot = chip.getAttribute("data-shaper-col-chip") || "";
+            var fanValues = null;
             if (slot.indexOf(":discrete-steps") !== -1) {
-              var activeField = card.querySelector(
+              var activeFieldDS = card.querySelector(
                 '[data-shaper-field-chip][aria-pressed="true"]'
               );
-              var values = activeField
+              fanValues = activeFieldDS
                 ? parseDiscreteSteps(
-                    activeField.getAttribute(
+                    activeFieldDS.getAttribute(
                       "data-shaper-field-discrete-steps"
                     )
                   )
                 : [];
-              values.forEach(function (val) {
+            } else if (slot.indexOf(":list-items") !== -1) {
+              var activeFieldLI = card.querySelector(
+                '[data-shaper-field-chip][aria-pressed="true"]'
+              );
+              fanValues = activeFieldLI
+                ? parseListOptions(
+                    activeFieldLI.getAttribute(
+                      "data-shaper-field-list-options"
+                    )
+                  )
+                : [];
+            }
+            if (fanValues !== null) {
+              fanValues.forEach(function (val) {
                 var th = document.createElement("th");
                 th.className = "shaper-preview-th";
                 th.textContent = val;
@@ -955,14 +984,14 @@
       // ``data-shaper-relevant-for`` attribute and stay
       // visible always — they're field-independent.
       //
-      // **List-type fields** are a special case: instead of
-      // numeric / string aggregates, the operator wants one
-      // chip per list **option**, each contributing a
-      // count-of-responses column for that option. The
-      // chips render dynamically from the active field
-      // chip's ``data-shaper-field-list-options`` CSV when
-      // a List field is selected, and unmount when the
-      // field is deselected or swapped.
+      // **List-type fields** swap the numeric / string
+      // aggregates for a single ``List items`` chip that
+      // fans into one preview-row column per option when
+      // selected — same shape as the ``Discrete steps``
+      // chip for numeric fields with ≤12 discrete values.
+      // Both ``parseListOptions`` and ``parseDiscreteSteps``
+      // turn a comma-separated CSV into an array of trimmed,
+      // non-empty strings.
       function parseListOptions(csv) {
         if (!csv) return [];
         return csv
@@ -971,41 +1000,6 @@
           .filter(function (s) { return s.length > 0; });
       }
 
-      function mountListOptionChips(options) {
-        var mountedPool = relevantSlot.querySelector(
-          "[data-shaper-axis-chips-mounted]"
-        );
-        if (!mountedPool) return;
-        var axis = mountedPool.getAttribute(
-          "data-shaper-axis-chips-mounted"
-        );
-        var container = document.createElement("span");
-        container.setAttribute("data-shaper-list-options", "");
-        options.forEach(function (opt, idx) {
-          var chip = document.createElement("span");
-          chip.className = "pill pill-count tag-chip";
-          chip.setAttribute(
-            "data-shaper-col-chip",
-            axis + ":list-option:" + idx
-          );
-          chip.setAttribute("role", "button");
-          chip.setAttribute("tabindex", "0");
-          chip.setAttribute("aria-pressed", "false");
-          chip.textContent = opt;
-          container.appendChild(chip);
-          bindColChip(chip);
-        });
-        mountedPool.appendChild(container);
-      }
-
-      function unmountListOptionChips() {
-        relevantSlot
-          .querySelectorAll("[data-shaper-list-options]")
-          .forEach(function (n) { n.remove(); });
-      }
-
-      // Comma-separated → array. Matches ``parseListOptions``
-      // but used for the numeric step-value vocabulary.
       function parseDiscreteSteps(csv) {
         if (!csv) return [];
         return csv
@@ -1018,6 +1012,10 @@
         var NUMERIC = ["Integer", "Decimal"];
         var STRING = ["String"];
         var noField = !dataType;
+        var hasListItems =
+          dataType === "List" &&
+          listOptions &&
+          listOptions.length > 0;
         var hasDiscreteSteps =
           NUMERIC.indexOf(dataType) !== -1 &&
           discreteSteps &&
@@ -1033,19 +1031,28 @@
               show = NUMERIC.indexOf(dataType) !== -1;
             } else if (relevantFor === "string") {
               show = STRING.indexOf(dataType) !== -1;
+            } else if (relevantFor === "list-items") {
+              // ``List items`` is a single chip gated on the
+              // data type being List AND the field having
+              // options pre-computed server-side in
+              // ``data-shaper-field-list-options``.
+              show = hasListItems;
             } else if (relevantFor === "discrete-steps") {
-              // The Discrete-steps pipe + chip are gated by
-              // both data type (numeric) AND the field having
+              // ``Discrete steps`` is a single chip gated on
+              // both numeric data type AND the field having
               // ≤12 discrete values pre-computed server-side
-              // (in the ``data-shaper-field-discrete-steps``
-              // CSV).
+              // in ``data-shaper-field-discrete-steps``.
               show = hasDiscreteSteps;
+            } else if (relevantFor === "list-or-discrete") {
+              // Trailing pipe shared by the two fan-out chips
+              // — shows iff at least one of them will render.
+              show = hasListItems || hasDiscreteSteps;
             } else if (relevantFor === "field-scoped") {
               // The pipe between Assigned / Count and the
               // field-scoped statistics shows iff at least
               // one field-scoped chip will be visible after
               // this filter pass — i.e. the data type
-              // surfaces Mean / Length / list-options /
+              // surfaces Mean / Length / List items /
               // Discrete steps. For data types that have no
               // matching chip (or no field selected) the
               // pipe hides too so the row doesn't carry an
@@ -1066,14 +1073,6 @@
               chip.setAttribute("aria-pressed", "false");
             }
           });
-        // List-option chips are dynamic; rebuild from scratch
-        // each time the data type changes (or the field
-        // deselects) so options from a previously-selected
-        // List field don't leak across.
-        unmountListOptionChips();
-        if (dataType === "List" && listOptions && listOptions.length) {
-          mountListOptionChips(listOptions);
-        }
         rebuildPreviewRow();
       }
 

@@ -287,14 +287,13 @@ require any per-lens configuration first.
            `data-shaper-field-discrete-steps` CSV.
        - String fields surface `Length`.
        - **List fields** swap the numeric / string
-         aggregates for **one chip per list option** —
-         each chip's text is the option label and selecting
-         it contributes a count-of-responses column for
-         that option to the preview row. The option chips
-         are rendered dynamically from the field chip's
-         `data-shaper-field-list-options` CSV when the List
-         field is selected, and unmount when the field is
-         deselected or swapped.
+         aggregates for a single **`List items` chip** —
+         clicking it emits one preview-row column per
+         option (the JS reads the option CSV from the
+         active field chip's
+         `data-shaper-field-list-options` at render time).
+         Same shape as the `Discrete steps` chip — a
+         single chip that fans into N preview columns.
        - Other types surface neither — just `Assigned` and
          `Count`.
 
