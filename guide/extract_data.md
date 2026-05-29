@@ -224,38 +224,54 @@ that ships in the Data shaper's `Zip all` zip — and, when
 the intro card's `Data shaper` chip is selected, in the
 top-level `Zip all` too.
 
-**Open design questions for the next slice.**
+**Open design questions for the next slice.** All five
+resolved 2026-05-29 — see *Data shaper — open design
+questions* below for the full answers; the placeholder
+prompts that lived here have been removed.
 
-1. **Relevant column chips per axis.** What exactly does
-   `Reviewer` surface to the right of the `|`? Candidates
-   today: `Name`, `Email`, `Tag 1`, `Tag 2`, `Tag 3`,
-   per-reviewer aggregates (`Count`, `Mean`, `Median`, …).
-   Same shape question for `Reviewee` (`Name`, `Email`, the
-   three tags, group identity for group-scoped, aggregates)
-   and `Instrument` (short label, response-field labels,
-   per-field aggregates). The two metadata cards already
-   enumerate the aggregate chips that fit the analyst's
-   intent — likely the Data shaper reuses those names so the
-   operator doesn't relearn vocabulary.
-2. **Per-axis vs cross-axis aggregates.** If `Reviewer` is on
-   and the operator picks `Count`, does that mean "count per
-   reviewer" (one row per reviewer) or "count across rows"
-   (one cell)? Default proposal: the *axes* drive grouping
-   (one row per unique combination of selected axes' identity
-   chips), and the aggregate chips drive the value columns.
-3. **Persistence.** Saved shapes scoped per-session, per-user,
-   or per-operator? Most useful is per-session, per-user (so
-   each operator's preset library survives lifecycle changes
-   on that session) with an option to copy a shape to another
-   session.
-4. **`Zip all` membership.** A Data shaper might carry N
-   shapes; does the card's `Zip all` produce N CSVs (one per
-   shape) named after the shape? Yes — and the top-level
-   `Zip all` folds those in too when the intro chip is on.
-5. **Empty-state behaviour.** A blank Data shape card with no
-   column chips selected yields a CSV with no columns —
-   surface that as a validation error on save, or just elide
-   from the zip silently?
+### Data shaper — open design questions (resolved 2026-05-29)
+
+1. **Relevant column chips per axis.**
+   - **Reviewer**: `Name`, `Email`, `Tag 1`, `Tag 2`, `Tag 3`
+     (rendered with their session-friendly labels where set)
+     + the per-reviewer aggregate chips (`Count`, `Mean`,
+     `Median`, `Min`, `Max`, `Length` — same vocabulary as the
+     Reviewer response metadata card).
+   - **Reviewee**: same shape as Reviewer (`Name`, `Email`,
+     three tags + the six aggregate chips). For group-scoped
+     instruments the row identity is the **composed group
+     name** from `_compose_group_identity` — one row per group
+     identity is enough; no per-member fan-out at this layer.
+   - **Instrument**: `Short label`, response-field labels (one
+     chip per response field defined on the instrument), and
+     per-field aggregate chips (same six).
+   - More axis-relevant chips may surface later — the slice
+     ships with the above as the v1 set.
+
+2. **Per-axis vs cross-axis aggregates — confirmed.** The
+   *axes* drive grouping (one row per unique combination of
+   selected axes' identity chips); the aggregate chips drive
+   the value columns. Example: with `Reviewer` selected as
+   the only axis, each row = one reviewer; columns = on a
+   per-instrument basis, aggregate data (e.g. mean / min /
+   max response value on a numeric response field, mean /
+   min / max response length for a string field, etc.).
+
+3. **Persistence — per-session only.** Saved shapes live on
+   the session, not on the operator. Every operator with
+   access to the session sees the same shape library. No
+   cross-session copy in v1.
+
+4. **`Zip all` membership — N CSVs, one per shape.** The Data
+   shaper card's `Zip all` produces one CSV per saved shape,
+   named after the shape. The top-level intro-card `Zip all`
+   folds those same CSVs in when the intro card's
+   `Data shaper` chip is selected.
+
+5. **Empty-state behaviour — block the save.** A Data shape
+   card with no column chips selected is not savable. The
+   tick icon stays disabled (or surfaces an inline error)
+   until at least one column chip is on.
 
 ### The three lenses on the new page (legacy framing)
 
@@ -301,44 +317,36 @@ existing `responses.csv`:
   practice (`docs/status.md` Segment 16A notes); the new
   page stays response-data only.
 
-## Open design questions
+## Open design questions (resolved 2026-05-29)
 
-These are intentionally left open for the segment plan PR to
-resolve:
+1. **Per-reviewer / per-reviewee single CSV vs zip of CSVs —
+   one big CSV.** The single-CSV shape ships; the
+   zip-of-N-per-reviewer or per-reviewee handoff use case
+   belongs to the eventual Participant model (each
+   participant fetches their own data through the
+   participant surface), not to a bulk-CSV download here.
 
-1. **Per-reviewer / per-reviewee single CSV vs zip of CSVs.**
-   The "by reviewer" lens could be one big CSV (rows tagged
-   with `ReviewerName`) *or* a zip of N CSVs (one per reviewer).
-   Same for "by reviewee". Single CSV is simpler; zip-of-N is
-   better for handoff (you can email one reviewee their own
-   file without leaking others'). Probably ship both — the
-   download buttons live side-by-side on the same page.
+2. **Numeric roll-ups.** Resolved on the metadata cards
+   directly — `Count`, `Mean`, `Median`, `Min`, `Max`,
+   `Length` all ship as toggleable chips. The Data shaper
+   inherits the same vocabulary for its aggregate column
+   chips.
 
-2. **Numeric roll-ups.** Per-reviewee summary file likely
-   wants `mean` / `median` columns for numeric response fields.
-   How aggressive? Just `mean` and `count` to start; defer
-   `median` / `std` until requested.
+3. **Group-scoped reviewee semantics — one row per group
+   identity.** The composed name from
+   `_compose_group_identity` is sufficient; no
+   "by group member" fan-out at this layer.
 
-3. **Group-scoped reviewee semantics.** When the reviewee
-   lens runs over a group-scoped instrument, the natural
-   "row per reviewee" is ambiguous — the response is *about
-   the group*, not any individual member. Default: surface
-   one row per *group identity* (the composed name from
-   `_compose_group_identity`), and a separate
-   "by group member" expansion that fans the group response
-   back out to each member. Keep both available.
+4. **The Zip-all on Session Home post-split — settings
+   only.** The Session Home Extract-setup card's `Zip all`
+   bundles just `settings.csv` (the Reviewers / Reviewees /
+   Relationships rows ship as individual downloads, not in
+   the home bundle). Response-data zips live on the new
+   Extract data page.
 
-4. **The Zip-all on Session Home** post-split. Today it's
-   five CSVs; under the rename it's four (setup-only). Some
-   operators may have scripts that expect the Responses
-   file inside the bundle. Beta-state assumption → no real
-   pipelines exist → break it cleanly. The new Extract data
-   page offers its own zip downloads for response data.
-
-5. **Settings.csv stays on Session Home?** It's also
-   round-trippable (Quick Setup ingests it), so yes — it
-   belongs in the Extract setup card. The Responses CSV is
-   the one that moves.
+5. **Settings.csv stays on Session Home — yes.** It's the
+   round-trippable surface Quick Setup ingests, so it
+   belongs in the home Extract setup card.
 
 ## Blast radius (rough estimate, pre-execution)
 
