@@ -40,6 +40,10 @@ from app.services import audit, responses as responses_service
 from app.web import views as audit_views
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
+from app.services.extracts.entity_metadata_extract import (
+    build_reviewee_metadata,
+    build_reviewer_metadata,
+)
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -359,6 +363,97 @@ def export_by_instrument_bundle_zip(
             "Content-Disposition": (
                 f'attachment; filename="{code}_by_instrument.zip"'
             ),
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/reviewer_metadata.csv")
+def export_reviewer_metadata_csv(
+    instrument: list[int] | None = Query(default=None),
+    all: int = Query(default=1),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Backs the Extract data tab's Reviewer response metadata
+    card. ``?instrument=<id>`` (repeated) drives the per-(instrument,
+    field) column blocks; omitted = no per-field blocks (just the
+    cross-instrument totals). ``?all=0`` filters body rows to
+    reviewers with at least one non-empty response in scope."""
+    instrument_ids = set(instrument) if instrument else None
+    rows = build_reviewer_metadata(
+        db,
+        review_session,
+        instrument_ids=instrument_ids,
+        all_reviewers=all != 0,
+    )
+    body_count = len(rows) - 1  # subtract header
+
+    audit.write_event(
+        db,
+        event_type="session.reviewer_metadata_extracted",
+        summary=(
+            f"Extracted Reviewer response metadata for session "
+            f"{review_session.code} ({body_count} rows)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            rows=body_count,
+            instruments=len(instrument_ids) if instrument_ids else 0,
+        ),
+    )
+
+    download_name = filename(review_session, "reviewer_metadata")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/reviewee_metadata.csv")
+def export_reviewee_metadata_csv(
+    instrument: list[int] | None = Query(default=None),
+    all: int = Query(default=1),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Backs the Extract data tab's Reviewee response metadata
+    card — symmetric to ``export_reviewer_metadata_csv``."""
+    instrument_ids = set(instrument) if instrument else None
+    rows = build_reviewee_metadata(
+        db,
+        review_session,
+        instrument_ids=instrument_ids,
+        all_reviewees=all != 0,
+    )
+    body_count = len(rows) - 1
+
+    audit.write_event(
+        db,
+        event_type="session.reviewee_metadata_extracted",
+        summary=(
+            f"Extracted Reviewee response metadata for session "
+            f"{review_session.code} ({body_count} rows)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            rows=body_count,
+            instruments=len(instrument_ids) if instrument_ids else 0,
+        ),
+    )
+
+    download_name = filename(review_session, "reviewee_metadata")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
         },
     )
 

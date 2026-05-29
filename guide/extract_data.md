@@ -151,13 +151,50 @@ require any per-lens configuration first.
     per-reviewer / per-reviewee response *data* is trivially
     reshaped from the By-instrument export via a spreadsheet
     sort or Power Query; these cards focus on *metadata
-    about responses* (counts, timestamps, against which
-    instruments).
-  - Chips (all default-selected): `All reviewers` /
-    `All reviewees` + per-statistic chips `Count`, `Mean`,
-    `Median`, `Min`, `Max`, `Length`.
-  - Button: placeholder `Zip all` (`href="#"`,
-    `aria-disabled`); wiring follows.
+    about responses* (counts, aggregates per response field,
+    against which instruments).
+  - Chips (all default-selected): one chip per instrument
+    (mirroring the By-instrument card's `#{n}: {short_label}`
+    label, or bare `#{n}` when no short label) followed inline
+    by `All reviewers` / `All reviewees`. The per-statistic
+    chips (`Count`, `Mean`, `Median`, `Min`, `Max`, `Length`)
+    retired — they moved into the per-(instrument, field)
+    column blocks of the extract output where they apply
+    by data type (see below).
+  - Button: `Zip all` → `{code}_reviewer_metadata.csv` /
+    `{code}_reviewee_metadata.csv` (a single CSV per card —
+    the button label stays for consistency with the other
+    page cards).
+  - **Column shape** (Reviewer side; Reviewee side is
+    symmetric, swapping `ReviewerName` / `ReviewerEmail` for
+    `RevieweeName` / `RevieweeEmail`):
+    - Always: `ReviewerName`, `ReviewerEmail`,
+      `Assigned` (the count of reviewee × field cells the
+      reviewer is supposed to fill in, scoped to the
+      in-scope instruments), `Count` (those cells with a
+      non-empty response).
+    - Per selected instrument, per response field: one block
+      named `#{N}: {short_label}.{field}.<metric>`. `{N}` is
+      the instrument's 1-based **session** position (stable
+      as chips toggle). Block columns always carry `.Assigned`
+      + `.Count`; numeric fields (Integer / Decimal) add
+      `.Mean`, `.Median`, `.Min`, `.Max`; string fields add
+      `.Length` (sum of characters across non-empty
+      responses).
+  - **Row scoping**:
+    - No instruments selected → only the two cross-instrument
+      totals ship, scanning **every** session instrument so
+      the totals stay meaningful.
+    - `All reviewers` / `All reviewees` ON → every roster
+      entry gets a row. OFF → only entries with at least
+      one non-empty response in scope.
+  - **Group-scoped instruments** fan responses across each
+    member assignment at save time; both `Assigned` and
+    `Count` count the member rows directly so denominators
+    stay aligned (no group dedupe at this layer).
+  - Query-string wiring on the button reuses the same
+    `?instrument=<id>` (repeated) + `?all=0` shape the chip
+    JS composes.
 - **Data shaper** (full-width, below the grid).
   - Heading + body copy describing the generalised builder.
   - **Preview-table stub** showing the column headers of the
