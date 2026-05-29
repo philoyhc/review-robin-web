@@ -33,9 +33,18 @@ The ``all_*`` toggle gates which roster entries get a row:
   selected).
 
 Group-scoped instruments fan responses across every member
-assignment at save time; both ``Assigned`` and ``Count`` count
-the member-assignments directly so the two totals stay
-denominator-aligned. No group dedupe at this layer.
+assignment at save time. The two sides handle that asymmetry
+the same way ``entity_stats_extract.py`` does:
+
+* **Reviewer side** — a reviewer fills one form per group, not
+  one per member; the save layer copies the answer onto every
+  member-assignment. So ``Assigned`` counts ``# groups × # fields``
+  (deduped by ``(reviewer, instrument, group_key)``), and
+  ``Count`` / per-field aggregates count each group answer once
+  (deduped by ``(reviewer, group_key, field_id)``).
+* **Reviewee side** — from a reviewee's perspective there is
+  exactly one cell per (reviewer, field) about them, so no
+  dedupe is needed; each member-assignment counts on its own.
 """
 
 from __future__ import annotations
@@ -55,6 +64,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services import responses as responses_service
 
 __all__ = [
     "build_reviewer_metadata",
@@ -309,25 +319,49 @@ def build_reviewer_metadata(
     total_count: dict[int, int] = {r.id: 0 for r in reviewers}
 
     if scope_ids:
-        for reviewer_id, instrument_id in db.execute(
-            select(
-                Assignment.reviewer_id, Assignment.instrument_id
-            ).where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope_ids),
-            )
-        ):
-            if reviewer_id not in total_assigned:
+        assignments = list(
+            db.execute(
+                select(Assignment).where(
+                    Assignment.session_id == review_session.id,
+                    Assignment.include.is_(True),
+                    Assignment.instrument_id.in_(scope_ids),
+                )
+            ).scalars()
+        )
+        group_key_by_assignment = responses_service.group_keys(
+            db, assignments=assignments, session_id=review_session.id
+        )
+
+        # Reviewer-side Assigned dedupes group fan-out: a reviewer
+        # fills one form per group, not one per member, so each
+        # ``(reviewer, instrument, group_key)`` triple counts once.
+        seen_reviewer_group_assigned: set[
+            tuple[int, int, tuple[str, ...]]
+        ] = set()
+        for a in assignments:
+            if a.reviewer_id not in total_assigned:
                 continue
-            per_field = assigned_per_field[reviewer_id]
-            for f in fields_by_instrument.get(instrument_id, ()):
-                total_assigned[reviewer_id] += 1
+            group_key = group_key_by_assignment.get(a.id)
+            if group_key is not None:
+                dedupe_key = (a.reviewer_id, a.instrument_id, group_key)
+                if dedupe_key in seen_reviewer_group_assigned:
+                    continue
+                seen_reviewer_group_assigned.add(dedupe_key)
+            per_field = assigned_per_field[a.reviewer_id]
+            for f in fields_by_instrument.get(a.instrument_id, ()):
+                total_assigned[a.reviewer_id] += 1
                 if f.id in selected_field_ids:
                     per_field[f.id] += 1
 
-        for reviewer_id, field_id, value in db.execute(
+        # Reviewer-side Count + per-field rollup dedupe the same
+        # way: each group answer counts once per (reviewer,
+        # group_key, field_id).
+        seen_reviewer_group_response: set[
+            tuple[int, tuple[str, ...], int]
+        ] = set()
+        for assignment_id, reviewer_id, field_id, value in db.execute(
             select(
+                Assignment.id,
                 Assignment.reviewer_id,
                 Response.response_field_id,
                 Response.value,
@@ -341,6 +375,12 @@ def build_reviewer_metadata(
         ):
             if reviewer_id not in total_count or not value:
                 continue
+            group_key = group_key_by_assignment.get(assignment_id)
+            if group_key is not None:
+                dedupe_key = (reviewer_id, group_key, field_id)
+                if dedupe_key in seen_reviewer_group_response:
+                    continue
+                seen_reviewer_group_response.add(dedupe_key)
             total_count[reviewer_id] += 1
             if field_id in selected_field_ids:
                 _ingest_value(
