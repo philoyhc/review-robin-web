@@ -148,6 +148,7 @@ _REVERT_RETURN_TO = {
     "previews",
     "invitations",
     "responses",
+    "extract-data",
 }
 
 

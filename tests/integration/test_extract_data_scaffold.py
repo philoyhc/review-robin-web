@@ -1,9 +1,13 @@
-"""Tests for the Segment 11H PR B Extract Data card scaffold.
+"""Tests for the Session Home card scaffold (renamed to
+"Extract Setup" on 2026-05-29 per ``guide/extract_data.md``).
 
 The scaffold replaces the ``placeholder_card(id="extract-data")``
-stub with the full five-row + zip-bundle layout per
-``guide/segment_12A.md`` PR 6. Every Download button is inert
-(``aria-disabled="true"``) until 12A wires the routes.
+stub with a per-entity row + zip-bundle layout. Originally five
+rows (12A vintage); on 2026-05-29 the Responses row moved off
+to the new Extract data Operations-strip tab, leaving four rows
+(Reviewers / Reviewees / Relationships / Session settings) +
+the Zip-all bundle. DOM ids kept the ``extract-data*`` prefix
+to avoid a wider sweep.
 """
 
 from __future__ import annotations
@@ -80,20 +84,25 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_extract_data_context_returns_five_rows_plus_bundle(
+def test_build_extract_data_context_returns_four_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the five per-entity rows in
-    the post-12A-3-PR-2 DOM order. The ``extract-data-grid`` CSS
-    wraps row-major in a 2-column grid, so this list lays out as:
+    """The view-shape adapter returns the four per-entity rows
+    (Reviewers / Reviewees / Relationships / Session settings)
+    in DOM order. The ``extract-data-grid`` CSS wraps row-major
+    in a 2-column grid, so this list lays out as:
 
         Reviewers       |  Session settings
-        Reviewees       |  Responses
-        Relationships   |  Zip all  (inert)
+        Reviewees       |  Zip all
+        Relationships   |
 
     On a freshly-created draft (no rosters yet), the per-entity
     rows are inert — there's nothing to download. Settings stays
     always-live (session metadata always exists).
+
+    Responses moved to the new Extract data Operations-strip tab
+    on 2026-05-29 (per ``guide/extract_data.md``); the row no
+    longer surfaces on this card.
 
     Audit log download is deliberately *not* surfaced here —
     it lives at the audit-log route but relocates to the Sys
@@ -107,7 +116,6 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
         "reviewers",
         "settings",
         "reviewees",
-        "responses",
         "relationships",
     ]
     assert context.bundle.key == "bundle"
@@ -118,8 +126,8 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert by_key["settings"].download_url == (
         f"/operator/sessions/{review_session.id}/export/settings.csv"
     )
-    # Roster + responses rows are inert on an empty session (count=0).
-    for key in ("reviewers", "reviewees", "relationships", "responses"):
+    # Roster rows are inert on an empty session (count=0).
+    for key in ("reviewers", "reviewees", "relationships"):
         assert by_key[key].is_wired is False, key
         assert by_key[key].download_url is None, key
         assert by_key[key].coming_in is not None, key
@@ -129,8 +137,9 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert context.bundle.download_url == (
         f"/operator/sessions/{review_session.id}/export/bundle.zip"
     )
-    # Retired / never-surfaced keys absent.
+    # Retired / relocated / never-surfaced keys absent.
     assert "assignments" not in by_key
+    assert "responses" not in by_key
     assert "audit_log" not in by_key
 
 
@@ -155,8 +164,9 @@ def test_per_entity_rows_go_live_when_populated(
     assert by_key["reviewees"].is_wired is True
     # Relationships not seeded → still inert.
     assert by_key["relationships"].is_wired is False
-    # No responses on a not-yet-activated session → still inert.
-    assert by_key["responses"].is_wired is False
+    # Responses row no longer on this card (moved to Extract
+    # data Operations-strip tab on 2026-05-29).
+    assert "responses" not in by_key
 
 
 def test_extract_data_filenames_carry_session_code(
@@ -174,7 +184,6 @@ def test_extract_data_filenames_carry_session_code(
     assert by_key["reviewers"].filename == "abc123_reviewers.csv"
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
     assert by_key["relationships"].filename == "abc123_relationships.csv"
-    assert by_key["responses"].filename == "abc123_responses.csv"
     assert context.bundle.filename == "abc123_bundle.zip"
 
 
@@ -201,7 +210,7 @@ def test_extract_data_count_summaries_pluralise_correctly(
 def test_extract_data_bundle_count_sums_per_entity_counts(
     client: TestClient, db: Session
 ) -> None:
-    """The bundle row's count summary aggregates the five entity
+    """The bundle row's count summary aggregates the per-entity
     counts; useful to give the operator a single "total rows in
     the zip" number."""
 
@@ -228,23 +237,24 @@ def test_extract_data_dom_carries_wire_target_attributes(
         "reviewers",
         "reviewees",
         "relationships",
-        "responses",
         "bundle",
     ):
         assert f'data-wire-target="extract-data-{key}"' in body
     # Assignments tile retired in 12A-3 PR 2.
     assert 'data-wire-target="extract-data-assignments"' not in body
+    # Responses tile relocated to the Extract data Operations
+    # tab on 2026-05-29.
+    assert 'data-wire-target="extract-data-responses"' not in body
     # Audit log lives at its own route but is not surfaced on
-    # Extract Data — it'll move to the Sys Admin page (Segment 16).
+    # Extract Setup — it'll move to the Sys Admin page (Segment 16).
     assert 'data-wire-target="extract-data-audit_log"' not in body
 
 
 def test_extract_data_card_renders_counts_for_entity_rows_only(
     client: TestClient, db: Session
 ) -> None:
-    """Per the post-Part-1 polish, the per-entity rows
-    (Reviewers / Reviewees / Relationships / Responses) surface
-    their raw count inline next to the title (e.g.
+    """The per-entity rows (Reviewers / Reviewees / Relationships)
+    surface their raw count inline next to the title (e.g.
     ``Reviewers (1)``). Session settings and the zip-bundle row
     keep the title-only treatment — counts there are either
     redundant (instrument count isn't a useful "Session settings"
@@ -260,7 +270,8 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert "Reviewers <span" in body
     assert "Reviewees <span" in body
     assert "Relationships <span" in body
-    assert "Responses <span" in body
+    # Responses row no longer on this card.
+    assert "Responses <span" not in body
     # Settings + Zip all keep title-only treatment.
     assert "Session settings <span" not in body
     assert "Zip all <span" not in body
@@ -271,7 +282,6 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert by_key["reviewers"].show_count is True
     assert by_key["reviewees"].show_count is True
     assert by_key["relationships"].show_count is True
-    assert by_key["responses"].show_count is True
     assert by_key["settings"].show_count is False
     assert context.bundle.show_count is False
 
@@ -282,9 +292,10 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
     don't honour native ``disabled``). On a freshly-created draft
-    the four empty per-entity rows are inert (nothing to download
-    yet); Settings and the Zip-all bundle stay live. So 4 inert
-    anchors total — the four empty per-entity rows."""
+    the three empty per-entity rows (Reviewers / Reviewees /
+    Relationships) are inert (nothing to download yet); Settings
+    and the Zip-all bundle stay live. So 3 inert anchors total
+    on a fresh draft."""
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -295,7 +306,7 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    assert download_count == 4
+    assert download_count == 3
 
 
 def test_extract_data_card_renders_when_session_is_activated(
@@ -319,12 +330,12 @@ def test_extract_data_card_renders_when_session_is_activated(
     # Card rendered without a ``.disabled`` modifier.
     assert 'id="extract-data"' in body
     assert 'class="card disabled' not in body
-    # Five rows still present with their counts surfaced.
+    # Four rows still present (Responses relocated 2026-05-29).
     for key in (
         "settings",
         "reviewers",
         "reviewees",
         "relationships",
-        "responses",
     ):
         assert f'id="extract-data-{key}"' in body
+    assert 'id="extract-data-responses"' not in body

@@ -1,6 +1,18 @@
-"""Extract Data card on Session Home — five per-entity rows
-(Reviewers / Reviewees / Relationships / Session settings /
-Responses) plus a Zip-all bundle footer.
+"""Extract Setup card on Session Home — four per-entity rows
+(Reviewers / Reviewees / Relationships / Session settings) plus
+a Zip-all bundle footer.
+
+The card was renamed from "Extract Data" to "Extract Setup" on
+2026-05-29 to mark it as the **porting / archival** surface —
+the CSVs an operator would feed back into Quick Setup, or hand
+off to a colleague cloning the session. The Responses row moved
+to the new **Extract data** Operations-strip tab (per
+``guide/extract_data.md``), which is where fine-grained shaping
+of response data lives. The Zip-all bundle's contents are
+deliberately unchanged in this PR — it still includes
+responses + reviewer/reviewee stats + per-instrument files
+(see ``app/services/extracts/zip_bundle.py``); the bundle slim
+is a follow-up PR.
 
 Slice 2 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
@@ -32,7 +44,6 @@ from app.db.models import Instrument, ReviewSession
 from app.services import (
     csv_imports,
     relationships as relationships_service,
-    responses as responses_service,
 )
 
 
@@ -42,8 +53,9 @@ class ExtractDataRow:
 
     key: str
     """Stable identifier — ``reviewers`` / ``reviewees`` /
-    ``relationships`` / ``settings`` / ``responses`` / ``bundle``.
-    DOM id is ``#extract-data-{key}``."""
+    ``relationships`` / ``settings`` / ``bundle``. DOM id is
+    ``#extract-data-{key}`` (DOM ids kept stable across the
+    2026-05-29 card rename to avoid a wider sweep)."""
 
     label: str
 
@@ -63,13 +75,12 @@ class ExtractDataRow:
     def show_count(self) -> bool:
         """True for the per-entity rows whose count is operator-
         meaningful inline alongside the title (Reviewers /
-        Reviewees / Relationships / Responses). Session settings +
-        the zip-bundle row keep the title-only treatment."""
+        Reviewees / Relationships). Session settings + the
+        zip-bundle row keep the title-only treatment."""
         return self.key in (
             "reviewers",
             "reviewees",
             "relationships",
-            "responses",
         )
 
 
@@ -88,7 +99,6 @@ def build_extract_data_context(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
-    response_count = responses_service.session_response_count(db, sid)
     instrument_count = len(
         list(
             db.execute(
@@ -101,16 +111,18 @@ def build_extract_data_context(
     # row-major in a 2-column grid, so this list lays out as:
     #
     #   Reviewers       |  Session settings
-    #   Reviewees       |  Responses
-    #   Relationships   |  Zip all  (inert)
+    #   Reviewees       |  Zip all
+    #   Relationships   |
     #
     # Left column = per-entity rosters (operator-uploaded porting
     # inputs). Right column = session-level outputs (settings,
-    # downstream-analysis, future bundle).
-    # Per-entity rows (Reviewers / Reviewees / Relationships /
-    # Responses) grey out when the count is 0 — there's nothing
-    # to download. Settings stays always-live: session metadata
-    # always exists even on a freshly-created draft.
+    # bundle). The Responses row moved to the new Extract data
+    # Operations-strip tab (``guide/extract_data.md``) on
+    # 2026-05-29 — this card is the porting / archival surface.
+    # Per-entity rows (Reviewers / Reviewees / Relationships)
+    # grey out when the count is 0 — there's nothing to download.
+    # Settings stays always-live: session metadata always exists
+    # even on a freshly-created draft.
     rows = [
         _entity_row(
             key="reviewers",
@@ -139,14 +151,6 @@ def build_extract_data_context(
             code=code,
         ),
         _entity_row(
-            key="responses",
-            label="Responses",
-            noun="response",
-            count=response_count,
-            sid=sid,
-            code=code,
-        ),
-        _entity_row(
             key="relationships",
             label="Relationships",
             noun="relationship",
@@ -156,12 +160,16 @@ def build_extract_data_context(
         ),
     ]
 
+    # The Zip-all bundle's underlying archive (``zip_bundle.py``)
+    # is unchanged in this rename PR — it still contains the
+    # Responses CSV + reviewer/reviewee stats + per-instrument
+    # files. Slimming the bundle to setup-only is a follow-up.
     bundle = ExtractDataRow(
         key="bundle",
         label="Zip all",
         filename=f"{code}_bundle.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of all five CSVs above",
+        count_summary="zip of all session CSVs",
         is_wired=True,
         download_url=f"/operator/sessions/{sid}/export/bundle.zip",
         coming_in=None,

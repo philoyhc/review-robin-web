@@ -68,30 +68,39 @@ Two-column body below the chrome and status strip.
 ┌── Session Details ───────┐  ┌── Quick Setup ───────────┐
 │   metadata + Edit        │  │   scaffolded bulk        │
 └──────────────────────────┘  └──────────────────────────┘
-                              ┌── Extract Data ──────────┐
-                              │   responses extract      │
+                              ┌── Extract Setup ─────────┐
+                              │   porting CSVs           │
                               └──────────────────────────┘
 ```
+
+> **Note.** The right-column card was renamed from "Extract
+> Data" → "Extract Setup" on 2026-05-29 (per
+> `guide/extract_data.md`) to mark it as the porting / archival
+> surface — Reviewers / Reviewees / Relationships / Session
+> settings, the inputs Quick Setup can re-ingest. Fine-grained
+> shaping of response data moved to a new **Extract data**
+> Operations-strip tab. The card's DOM id (`extract-data`) was
+> kept stable to avoid a wider sweep.
 
 The Workflow card sits full-width at the top of the page-card
 region, just below the chrome (same `next_action_card.html`
 partial the Operations-row pages render). Underneath it, the
 remaining three cards lay out in two **independent flex columns**
 (`.bottom-left` flex-column wrappers); each column flows
-independently so Extract Data sits directly below Quick Setup
+independently so Extract Setup sits directly below Quick Setup
 with the normal inter-card gap regardless of how tall Session
 Details grows in the other column.
 
 DOM source order = mobile-collapse order:
-**Workflow → Session Details → Quick Setup → Extract Data**.
+**Workflow → Session Details → Quick Setup → Extract Setup**.
 Below ~800px viewport width the columns collapse into a single
 stacked column in that same order.
 
 Session Details anchors the left column on its own; Quick Setup
-and Extract Data stack in the right column so the bulk-setup
-affordances cluster together. Extract Data anchors the bottom of
-the right column — operators reach for it once responses are in,
-which is late in the session lifecycle. The Danger Zone card
+and Extract Setup stack in the right column so the bulk-setup
+affordances cluster together. Extract Setup anchors the bottom of
+the right column — operators reach for it when porting or
+archiving the session. The Danger Zone card
 (Delete Data + Delete Session) lives on the Edit Session Details
 page, not on Home — see §3 below.
 
@@ -207,25 +216,34 @@ Notes specific to Session Home:
   "Right column — per state".
 - **Reserved states (Expired, Archived).** Not yet in scope.
   Expected treatments:
-  - **Expired** likely gets an Extract Data primary action with
-    "Deadline has passed" prominent.
+  - **Expired** likely gets an Extract data primary action with
+    "Deadline has passed" prominent (the new Operations-strip
+    tab, not the Session Home Extract Setup card).
   - **Archived** likely renders the card empty or with a
     "Restore" affordance.
 
-### 2. Extract Data card (left column, middle)
+### 2. Extract Setup card (right column, below Quick Setup)
 
-Lets the operator pull response data out of the session for
-downstream use. Five live per-entity download tiles plus a
-single zip-bundle footer:
+The card for porting / archiving — the CSVs Quick Setup can
+re-ingest. Four live per-entity download tiles plus a single
+zip-bundle footer:
 
 | Tile | DOM order | Wired by |
 |---|---|---|
 | Reviewers | left col, top | 12A-1 PR 2 (#717) |
 | Settings  | right col, top | 12A-1 PR 1 (#713) |
 | Reviewees | left col, middle | 12A-1 PR 2 (#717) |
-| Responses | right col, middle | 12A-1 PR 4 (#721) |
 | Relationships | left col, bottom | 12A-3 PR 1 (#779) |
-| Download all (zip) | footer | Inert — future bundle |
+| Download all (zip) | right col, middle | 18D PR E1 |
+
+Originally five tiles (including a Responses tile); the
+Responses tile moved to the new **Extract data**
+Operations-strip tab on 2026-05-29 (per
+`guide/extract_data.md`). The Zip-all bundle's *contents* are
+deliberately unchanged in that rename — it still includes
+responses + stats + per-instrument files (see
+`app/services/extracts/zip_bundle.py`); slimming the bundle to
+setup-only is a follow-up PR.
 
 The post-15D + post-12A-3 layout settled in 12A-3 PR 2 (#780)
 which also retired the Assignments tile end-to-end (route +
@@ -234,14 +252,14 @@ derivative post-15D and the operator's preferred round-trip is
 Settings ↔ Relationships ↔ Reviewers / Reviewees.
 
 **Grey-out when empty.** The Reviewers / Reviewees /
-Relationships / Responses tiles grey out their Download button
-when the underlying count is `0` (post-12A-3 polish #781). The
-Settings tile is always clickable — a session always has
-settings to extract.
+Relationships tiles grey out their Download button when the
+underlying count is `0` (post-12A-3 polish #781). The Settings
+tile is always clickable — a session always has settings to
+extract.
 
-**No audit-log tile in Extract Data.** Segment 12B shipped the
+**No audit-log tile in Extract Setup.** Segment 12B shipped the
 audit-events CSV route (`GET /export/audit_log.csv`) live but
-deliberately **without** an Extract Data tile — industry best
+deliberately **without** an Extract Setup tile — industry best
 practice (GitHub / Stripe / Slack / Notion / Atlassian) parks
 audit data behind an admin / diagnostics doorway. The operator-
 facing surface relocates to the Sys Admin page when Segment 16A

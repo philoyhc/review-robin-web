@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Extract data — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Extract data" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  {# Workflow card — Operations-page chrome. ``next_action_return_to``
+     is set to ``extract-data`` so card POSTs land back here. #}
+  {% include "operator/partials/next_action_card.html" %}
+
+  <div class="card">
+    <h2>Extract data</h2>
+    <p class="form-help">
+      Shape this session's response data for offline analysis.
+      Three lenses are planned (see <code>guide/extract_data.md</code>):
+    </p>
+  </div>
+
+  {# Skeleton — each lens renders a card with a one-line description
+     and a "Coming soon" note. Per-lens download wiring lands in
+     follow-up PRs. #}
+
+  <div class="card" id="extract-data-by-instrument">
+    <h3>By instrument</h3>
+    <p>
+      One CSV per instrument; rows = (reviewee × reviewer) pairs for
+      that instrument; columns = response fields side-by-side.
+      Optimised for cross-reviewer comparison on a single rubric.
+    </p>
+    <p class="muted">Coming soon.</p>
+  </div>
+
+  <div class="card" id="extract-data-by-reviewer">
+    <h3>By reviewer</h3>
+    <p>
+      One CSV per reviewer; rows = every response that reviewer made;
+      columns include instrument / reviewee / field / value.
+      Optimised for individual reviewer audit and coaching.
+    </p>
+    <p class="muted">Coming soon.</p>
+  </div>
+
+  <div class="card" id="extract-data-by-reviewee">
+    <h3>By reviewee</h3>
+    <p>
+      One CSV per reviewee; rows = every response made about that
+      reviewee; columns include reviewer / instrument / field / value.
+      Optimised for the feedback packet handed to the reviewed person.
+    </p>
+    <p class="muted">Coming soon.</p>
+  </div>
+{% endblock %}

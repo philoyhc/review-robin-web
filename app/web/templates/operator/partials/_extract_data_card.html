@@ -1,19 +1,22 @@
-{# Extract Data card scaffold — Segment 11H PR B + post-Part-1 polish.
+{# Extract Setup card scaffold.
 
    Renders the per-entity download set as a 2-column grid: titles +
    Download buttons only, in the order Reviewers / Reviewees /
-   Assignments / Responses / Session settings / Zip all
-   (left-right, up-down).
+   Relationships / Session settings / Zip all (left-right, up-down).
 
-   Every Download button renders with ``aria-disabled="true"`` and a
-   missing ``href`` until Segment 12A wires the routes live.
+   Renamed from "Extract Data" → "Extract Setup" on 2026-05-29
+   (per ``guide/extract_data.md``): the card now scopes to the
+   porting / archival CSVs (the ones Quick Setup can re-ingest).
+   Response data shaping moved to the new **Extract data**
+   Operations-strip tab. DOM ids stayed ``extract-data*`` to
+   avoid a wider sweep; the visible label is the source of truth.
 
    No lifecycle gate — the card stays interactive in every session
    state. Extraction is read-only and useful at every state per
    ``guide/segment_12A.md`` "No lifecycle gate".
 
-   The fragment-anchor + ``data-wire-target`` contract per row stays
-   stable so 12A's wiring PRs are thin diffs.
+   The fragment-anchor + ``data-wire-target`` contract per row
+   stays stable.
 #}
 {% macro extract_data_row(row) -%}
 <section class="extract-data-row"
@@ -35,9 +38,10 @@
 {%- endmacro %}
 
 <div class="card" id="extract-data">
-  <h2>Extract Data</h2>
+  <h2>Extract Setup</h2>
   <p class="form-help">
-    Download per-entity CSVs of the session's data.
+    Download the setup CSVs for porting or archiving this session.
+    For response data, use the <strong>Extract data</strong> tab.
   </p>
   <div class="extract-data-grid">
     {% for row in extract_data.rows %}

@@ -26,8 +26,14 @@ action bar.
 Operations row order:
 
 ```
-Operations  [Assignments][Validate][Previews][Invitations][Responses]
+Operations  [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
+
+The **Extract data** tab landed 2026-05-29 as a skeleton page
+(per `guide/extract_data.md`); per-lens download wiring follows
+in subsequent PRs. The tab sits at the end of the strip
+because it's an end-of-flow surface — operators reach for it
+once response data is in.
 
 The dev-diagnostic Outbox page (`sys_admin_session_outbox.html`)
 sits **outside the chrome** under the Sys Admin doorway at
