@@ -358,28 +358,32 @@
             </thead>
           </table>
         </div>
-        {# Action row — adopts the Band-3 response-field
-           builder's row pattern: plain text input filling the
-           available width, followed by a tight
-           ``inline-flex; gap: 0`` icon-button group on the
-           right. ``btn-icon action`` / ``btn-icon danger`` are
-           the same classes the Band-3 builder uses for its
-           per-row ``➕`` / ``✗`` icons. #}
+        {# Action row — adopts the new-model Response Fields
+           builder's per-row button vocabulary exactly (see
+           ``instruments_index.html`` lines 3833-3843):
+           ``btn secondary`` with ``style="flex: 0 0 auto;
+           padding: 4px 10px;"`` gives the squarish bordered
+           shape; the glyphs are plain ``X`` / ``+`` rather
+           than the heavier ``✗`` / ``➕`` so the row reads
+           the same way as the Response Fields builder. ✓ /
+           ✎ stay as character glyphs (the tick mirrors the
+           Response Fields builder's per-row save button). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
-                 data-shape-name placeholder="Name this shape"
-                 style="width: 100%;">
+                 data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
-          <div class="data-shape-icon-group">
-            <button type="button" class="btn-icon action"
-                    data-shape-save title="Save shape">&#10003;</button>
-            <button type="button" class="btn-icon action"
-                    data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
-            <button type="button" class="btn-icon danger"
-                    data-shape-delete title="Delete shape">&#10007;</button>
-            <button type="button" class="btn-icon action"
-                    data-shape-add title="Add another shape below">&#10133;</button>
-          </div>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-save title="Save shape">&#10003;</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px; display: none;"
+                  data-shape-edit title="Edit shape">&#9998;</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-delete title="Delete shape">X</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-add title="Add another shape below">+</button>
         </div>
       </div>
     </template>
@@ -398,28 +402,32 @@
             </thead>
           </table>
         </div>
-        {# Action row — adopts the Band-3 response-field
-           builder's row pattern: plain text input filling the
-           available width, followed by a tight
-           ``inline-flex; gap: 0`` icon-button group on the
-           right. ``btn-icon action`` / ``btn-icon danger`` are
-           the same classes the Band-3 builder uses for its
-           per-row ``➕`` / ``✗`` icons. #}
+        {# Action row — adopts the new-model Response Fields
+           builder's per-row button vocabulary exactly (see
+           ``instruments_index.html`` lines 3833-3843):
+           ``btn secondary`` with ``style="flex: 0 0 auto;
+           padding: 4px 10px;"`` gives the squarish bordered
+           shape; the glyphs are plain ``X`` / ``+`` rather
+           than the heavier ``✗`` / ``➕`` so the row reads
+           the same way as the Response Fields builder. ✓ /
+           ✎ stay as character glyphs (the tick mirrors the
+           Response Fields builder's per-row save button). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
-                 data-shape-name placeholder="Name this shape"
-                 style="width: 100%;">
+                 data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
-          <div class="data-shape-icon-group">
-            <button type="button" class="btn-icon action"
-                    data-shape-save title="Save shape">&#10003;</button>
-            <button type="button" class="btn-icon action"
-                    data-shape-edit title="Edit shape" style="display: none;">&#9998;</button>
-            <button type="button" class="btn-icon danger"
-                    data-shape-delete title="Delete shape">&#10007;</button>
-            <button type="button" class="btn-icon action"
-                    data-shape-add title="Add another shape below">&#10133;</button>
-          </div>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-save title="Save shape">&#10003;</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px; display: none;"
+                  data-shape-edit title="Edit shape">&#9998;</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-delete title="Delete shape">X</button>
+          <button type="button" class="btn secondary"
+                  style="flex: 0 0 auto; padding: 4px 10px;"
+                  data-shape-add title="Add another shape below">+</button>
         </div>
       </div>
     </div>

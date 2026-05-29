@@ -1330,32 +1330,22 @@
       }
       body.ui-v2 .data-shape-actions {
         display: flex;
-        gap: var(--space-2);
+        gap: var(--space-1);
         align-items: center;
         margin-top: var(--space-2);
       }
-      /* Name input + saved-name display both flex to fill the
-         row before the icon group — mirrors the Band-3 builder's
-         label cell (``style="width: 100%;"`` on a plain input).
-         ``min-width: 0`` lets the input shrink in narrow
-         containers without overflowing. */
+      /* Name input + saved-name display share a bounded width
+         so the row reads compactly — the operator names the
+         shape, they don't write an essay. The 320px cap
+         matches the original placeholder shipping width. */
       body.ui-v2 .data-shape-name-input {
         flex: 1;
-        min-width: 0;
+        max-width: 320px;
       }
       body.ui-v2 .data-shape-name-display {
         flex: 1;
-        min-width: 0;
+        max-width: 320px;
         font-weight: 600;
-      }
-      /* Icon group — Band-3 pattern: ``inline-flex; gap: 0;
-         align-items: center;`` keeps the ✓ / ✎ / ✗ / ➕ buttons
-         packed tightly together on the right of the row. */
-      body.ui-v2 .data-shape-icon-group {
-        display: inline-flex;
-        gap: 0;
-        align-items: center;
-        white-space: nowrap;
       }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
