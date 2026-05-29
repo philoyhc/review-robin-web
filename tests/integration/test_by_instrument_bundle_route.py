@@ -21,7 +21,8 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Instrument, ReviewSession, User
 from app.services import field_labels
 from app.services.instruments import set_band1_assignment_rules
-from tests.integration._full_matrix import pin_full_matrix_on_all_instruments
+
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 def _make_session(
