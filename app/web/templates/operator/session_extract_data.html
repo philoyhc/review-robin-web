@@ -41,16 +41,44 @@
       </div>
     </div>
 
+    {# By instrument — text styling matches the intro card
+       (``h2`` + ``form-help``). Selectable chips below the body
+       text let the operator scope the export: one chip per
+       instrument (short label or ``Instrument_{n}`` fallback)
+       plus the two cross-cutting toggles (``Include metadata``,
+       ``All assignment rows``). All chips default to selected;
+       toggle wiring (POST shape, CSV filter logic) lands in a
+       follow-up PR — this is layout-only for now. #}
     <div class="card extract-data-card-stack" id="extract-data-by-instrument">
       <div>
-        <h3 style="margin-top: 0;">By instrument</h3>
-        <p style="margin-bottom: 0;">
+        <h2 style="margin-top: 0;">By instrument</h2>
+        <p class="form-help" style="margin-bottom: 0;">
           One CSV per instrument; rows = (reviewer × reviewee)
           pairs; columns = response fields side-by-side.
           Optimised for cross-reviewer comparison on a single
           rubric.
         </p>
       </div>
+      <p class="col-chip-row" style="margin: 0;">
+        {% for instr in instruments %}
+          {% set chip_label = instr.short_label if instr.short_label and instr.short_label.strip() else "Instrument_" ~ loop.index %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-by-instrument-chip="instrument-{{ instr.id }}"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">{{ chip_label }}</span>
+        {% endfor %}
+        <span class="pill pill-count tag-chip is-selected"
+              data-by-instrument-chip="include-metadata"
+              role="button"
+              tabindex="0"
+              aria-pressed="true">Include metadata</span>
+        <span class="pill pill-count tag-chip is-selected"
+              data-by-instrument-chip="all-assignment-rows"
+              role="button"
+              tabindex="0"
+              aria-pressed="true">All assignment rows</span>
+      </p>
       <div class="extract-data-card-actions">
         <a class="btn secondary"
            id="extract-data-by-instrument-zip"
@@ -62,11 +90,12 @@
   </div>
 
   {# Remaining lenses still planned — per-card configuration +
-     downloads land in follow-up PRs. #}
+     downloads land in follow-up PRs. Text styling matches the
+     intro card (``h2`` + ``form-help``) for consistency. #}
 
   <div class="card" id="extract-data-by-reviewer">
-    <h3>By reviewer</h3>
-    <p>
+    <h2 style="margin-top: 0;">By reviewer</h2>
+    <p class="form-help">
       One CSV per reviewer; rows = every response that reviewer made;
       columns include instrument / reviewee / field / value.
       Optimised for individual reviewer audit and coaching.
@@ -75,12 +104,37 @@
   </div>
 
   <div class="card" id="extract-data-by-reviewee">
-    <h3>By reviewee</h3>
-    <p>
+    <h2 style="margin-top: 0;">By reviewee</h2>
+    <p class="form-help">
       One CSV per reviewee; rows = every response made about that
       reviewee; columns include reviewer / instrument / field / value.
       Optimised for the feedback packet handed to the reviewed person.
     </p>
     <p class="muted">Coming soon.</p>
   </div>
+
+  {# Progressive-enhancement toggle for the By-instrument chips.
+     Pure visual state — clicking flips ``is-selected`` +
+     ``aria-pressed``. No persistence, no form submission yet
+     (this slice is layout-only). #}
+  <script>
+    (function () {
+      var chips = document.querySelectorAll("[data-by-instrument-chip]");
+      if (!chips.length) return;
+      chips.forEach(function (chip) {
+        function toggle() {
+          var pressed = chip.getAttribute("aria-pressed") !== "true";
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
+        chip.addEventListener("click", toggle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        });
+      });
+    })();
+  </script>
 {% endblock %}
