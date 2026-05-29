@@ -50,6 +50,11 @@
                 role="button"
                 tabindex="0"
                 aria-pressed="true">Reviewee response metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="data-shaper"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Data shaper</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
@@ -199,6 +204,34 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  {# Data shaper — full-width card below the 2-column grid.
+     The eventual builder is a generalised engine for composing
+     a custom data shape (selecting + grouping + aggregating
+     across reviewer / reviewee / instrument / response-field
+     axes). Placeholder for now: heading + body + ``Zip all``
+     button only — the chip on the intro card lets the operator
+     include the shaper's output in the top-level ``Zip all``
+     once the engine ships. #}
+  <div class="card extract-data-card-stack" id="extract-data-shaper">
+    <div>
+      <h2 style="margin-top: 0;">Data shaper</h2>
+      <p class="form-help" style="margin-bottom: 0;">
+        Compose a custom data shape — pick the axes (reviewer /
+        reviewee / instrument / response field), the grouping,
+        and the aggregations — and export the result alongside
+        the canned lens CSVs.
+      </p>
+    </div>
+    <div class="extract-data-card-actions">
+      <a class="btn secondary"
+         id="extract-data-shaper-zip"
+         href="#"
+         aria-disabled="true">
+        Zip all
+      </a>
     </div>
   </div>
 

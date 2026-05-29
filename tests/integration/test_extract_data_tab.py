@@ -98,6 +98,27 @@ def test_extract_data_tab_breadcrumbs(
     assert "Extract data" in body
 
 
+def test_data_shaper_placeholder_card_and_chip_render(
+    client: TestClient, db: Session
+) -> None:
+    """The Data shaper placeholder lives below the 2-column
+    grid as a full-width card; the intro card's chip row
+    carries a matching ``Data shaper`` selector defaulting to
+    selected so the shaper output can be folded into the
+    top-level ``Zip all`` once the engine ships."""
+    review_session = _make_session(client, db, code="ed-shaper")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Intro card chip.
+    assert 'data-extract-all-chip="data-shaper"' in body
+    # Placeholder card.
+    assert 'id="extract-data-shaper"' in body
+    assert ">Data shaper</h2>" in body
+    assert 'id="extract-data-shaper-zip"' in body
+
+
 def test_extract_all_card_renders_lens_selector_chips(
     client: TestClient, db: Session
 ) -> None:
@@ -117,13 +138,15 @@ def test_extract_all_card_renders_lens_selector_chips(
     assert ">Reviewer response metadata<" in body
     assert 'data-extract-all-chip="reviewee-metadata"' in body
     assert ">Reviewee response metadata<" in body
+    assert 'data-extract-all-chip="data-shaper"' in body
+    assert ">Data shaper<" in body
 
     # All three chips start selected.
     chip_block = body.split('id="extract-data-intro"')[1].split(
         "extract-data-card-actions"
     )[0]
-    assert chip_block.count("is-selected") == 3
-    assert chip_block.count('aria-pressed="true"') == 3
+    assert chip_block.count("is-selected") == 4
+    assert chip_block.count('aria-pressed="true"') == 4
 
 
 def test_reviewer_metadata_card_renders_selectable_chips(
