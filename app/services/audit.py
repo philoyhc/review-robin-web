@@ -627,6 +627,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.responses_bundle_extracted": EventSchema(
         _IDENTITY | {"counts"}
     ),
+    "session.by_instrument_bundle_extracted": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes

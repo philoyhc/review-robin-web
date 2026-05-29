@@ -107,6 +107,28 @@ the per-lens cards are "I want it shaped a specific way."
 Per-lens downloads stay independent — Zip-all doesn't
 require any per-lens configuration first.
 
+### Shipped today
+
+- **Page layout**: two half-width cards across the top — intro
+  card (left) with the "Zip all responses" button, By-instrument
+  card (right) with its own "Zip all" button. Remaining lenses
+  (By reviewer / By reviewee) still placeholder cards below.
+- **Top "Zip all responses" button** → `responses_bundle.zip`
+  (unified Responses CSV + reviewer/reviewee stats +
+  per-instrument long-format files).
+- **By-instrument "Zip all" button** →
+  `by_instrument_bundle.zip` containing one wide-format CSV per
+  instrument, named `{code}_by_instrument_{slug}.csv` where the
+  slug is the instrument's short label (or `Instrument_{N}`
+  fallback) sanitised to alphanumerics / `_` / `-`. Each CSV
+  carries a **meta header** (instrument identity + per-field
+  type/constraint rows + assignment count + pool /
+  unit-of-review / self-review configuration) + blank row +
+  **wide data table** (one row per assignment, columns =
+  identity + tags + one column per response field + SelfReview
+  + SavedAt + SubmittedAt). Group-scoped instruments collapse
+  the same way the unified Responses CSV does.
+
 ### The three lenses on the new page
 
 | Lens | Shape | Use case |

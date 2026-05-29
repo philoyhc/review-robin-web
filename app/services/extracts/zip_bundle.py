@@ -31,6 +31,10 @@ from app.db.models import Instrument, ReviewSession
 from app.services import responses as responses_service
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.entity_stats_extract import build_entity_stats
+from app.services.extracts.by_instrument_extract import (
+    by_instrument_filename_slug,
+    serialize_by_instrument,
+)
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import (
     serialize_responses,
@@ -41,7 +45,11 @@ from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.session_config_io import HEADER as SETTINGS_HEADER
 from app.services.session_config_io import serialize_session_config
 
-__all__ = ["build_setup_bundle", "build_responses_bundle"]
+__all__ = [
+    "build_setup_bundle",
+    "build_responses_bundle",
+    "build_by_instrument_bundle",
+]
 
 
 def build_setup_bundle(
@@ -132,6 +140,52 @@ def build_responses_bundle(
         "instrument_files": len(instruments),
     }
     return buffer, counts
+
+
+def build_by_instrument_bundle(
+    db: Session, review_session: ReviewSession
+) -> tuple[bytes, dict[str, int]]:
+    """Build the By-instrument zip for ``review_session``.
+
+    One CSV per instrument, named
+    ``{code}_by_instrument_{slug}.csv`` where ``{slug}`` is the
+    instrument's short label (or the ``Instrument_{N}`` fallback)
+    sanitised for filesystem safety. Each CSV carries a meta
+    header + the wide-format data table — see
+    ``by_instrument_extract.py``.
+
+    Returns ``(zip_bytes, counts)`` where ``counts`` carries
+    ``{"instrument_files": N}`` for the
+    ``session.by_instrument_bundle_extracted`` audit envelope.
+    """
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+
+    code = (review_session.code or "session").strip() or "session"
+    used_slugs: set[str] = set()
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for position, instrument in enumerate(instruments, start=1):
+            slug = by_instrument_filename_slug(
+                instrument, position, used=used_slugs
+            )
+            rows = list(
+                serialize_by_instrument(
+                    db, review_session, instrument, position=position
+                )
+            )
+            archive.writestr(
+                f"{code}_by_instrument_{slug}.csv",
+                b"".join(stream_csv(rows)),
+            )
+
+    counts = {"instrument_files": len(instruments)}
+    return buffer.getvalue(), counts
 
 
 def _write_archive(
