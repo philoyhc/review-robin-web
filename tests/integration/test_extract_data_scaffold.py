@@ -89,34 +89,47 @@ def test_build_extract_data_context_returns_four_rows_plus_bundle(
 ) -> None:
     """The view-shape adapter returns the four per-entity rows
     (Reviewers / Reviewees / Relationships / Session settings)
-    in DOM order. The ``extract-data-grid`` CSS wraps row-major
-    in a 2-column grid, so this list lays out as:
+    plus the Zip-all bundle. Two-column layout matching Quick
+    Setup:
 
-        Reviewers       |  Session settings
-        Reviewees       |  Zip all
-        Relationships   |
+        Col 1            |  Col 2
+        Reviewers        |  Relationships
+        Reviewees        |  Session settings
+                         |  Zip all
+
+    The flat ``rows`` list preserves column-major iteration
+    (col 1 then col 2), so ``rows[0:2]`` = col 1 and
+    ``rows[2:4]`` = col 2. The bundle stays on
+    ``context.bundle`` and lives at the bottom of col 2.
 
     On a freshly-created draft (no rosters yet), the per-entity
     rows are inert — there's nothing to download. Settings stays
     always-live (session metadata always exists).
 
-    Responses moved to the new Extract data Operations-strip tab
-    on 2026-05-29 (per ``guide/extract_data.md``); the row no
-    longer surfaces on this card.
-
-    Audit log download is deliberately *not* surfaced here —
-    it lives at the audit-log route but relocates to the Sys
-    Admin page (Segment 16) per industry best practice for
-    audit-data surfaces."""
+    Responses moved to the Extract data Operations-strip tab on
+    2026-05-29 (per ``guide/extract_data.md``); the row no longer
+    surfaces here. Audit log download is deliberately *not*
+    surfaced here — it lives at the audit-log route but
+    relocates to the Sys Admin page (Segment 16)."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
 
+    # Column-major: col 1 first, then col 2.
+    assert [row.key for row in context.col_one] == [
+        "reviewers",
+        "reviewees",
+    ]
+    assert [row.key for row in context.col_two] == [
+        "relationships",
+        "settings",
+    ]
+    # ``rows`` = col 1 + col 2 for backward-compatible iteration.
     assert [row.key for row in context.rows] == [
         "reviewers",
-        "settings",
         "reviewees",
         "relationships",
+        "settings",
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
@@ -131,8 +144,8 @@ def test_build_extract_data_context_returns_four_rows_plus_bundle(
         assert by_key[key].is_wired is False, key
         assert by_key[key].download_url is None, key
         assert by_key[key].coming_in is not None, key
-    # Bundle row is wired (Segment 18D PR E1) — the session
-    # always has at least the Settings CSV to bundle.
+    # Bundle row is wired — the session always has at least the
+    # Settings CSV to bundle.
     assert context.bundle.is_wired is True
     assert context.bundle.download_url == (
         f"/operator/sessions/{review_session.id}/export/bundle.zip"
@@ -184,7 +197,10 @@ def test_extract_data_filenames_carry_session_code(
     assert by_key["reviewers"].filename == "abc123_reviewers.csv"
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
     assert by_key["relationships"].filename == "abc123_relationships.csv"
-    assert context.bundle.filename == "abc123_bundle.zip"
+    # The Zip-all bundle is now setup-only — filename reflects
+    # that (renamed from ``_bundle.zip`` → ``_setup.zip`` on
+    # 2026-05-29 per ``guide/extract_data.md``).
+    assert context.bundle.filename == "abc123_setup.zip"
 
 
 def test_extract_data_count_summaries_pluralise_correctly(

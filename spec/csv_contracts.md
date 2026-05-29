@@ -415,7 +415,8 @@ shares. Public surface:
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above plus the two bundle-only entity-stats CSVs and one bundle-only `instrument_{n}.csv` per instrument (`GET /export/bundle.zip`, Segment 18D PR E1 / 18H Parts 2 + 3) | same |
+| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the four setup CSVs above (`GET /export/bundle.zip`, filename `{code}_setup.zip`; renamed 2026-05-29 from the original "session bundle" per `guide/extract_data.md`) | same |
+| Extract data tab — Zip all button | Out | `build_responses_bundle` — a zip of the unified Responses CSV plus the two bundle-only entity-stats CSVs and one `instrument_{n}.csv` per instrument (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`; split out from the original session bundle 2026-05-29) | `guide/extract_data.md` |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
 | Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /reviewer/sessions/{id}/summary.csv`, Segment 17B Phase 2 PR B) | `spec/reviewer-surface.md` "Per-session summary" |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |

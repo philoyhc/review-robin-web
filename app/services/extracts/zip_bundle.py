@@ -1,15 +1,22 @@
-"""Zip-all bundle — Segment 18D PR E1 / 18H Part 3 / 18H Part 2.
+"""Zip bundles — setup + responses.
 
-Collects the operator-facing per-session CSVs — Reviewers,
-Reviewees, Relationships, Responses, Settings, plus the two
-bundle-only Reviewer / Reviewee stats CSVs (18H Part 3) and one
-``instrument_{n}`` CSV per instrument sorted reviewee-first (18H
-Part 2) — into one in-memory zip archive. Backs the Extract
-Data card's "Zip all" tile: one download for porting a whole
-session.
+Two complementary archives:
+
+- **Setup bundle** (``build_setup_bundle``) — Reviewers /
+  Reviewees / Relationships / Settings only. Backs the
+  Session Home Extract Setup card's "Zip all" tile: the
+  porting / archival shape Quick Setup can re-ingest. Renamed
+  from "session bundle" on 2026-05-29 when the response data
+  moved off the Session Home card to its own Operations-strip
+  tab (per ``guide/extract_data.md``).
+- **Responses bundle** (``build_responses_bundle``) — the
+  unified Responses CSV + bundle-only reviewer/reviewee stats
+  + one ``instrument_{n}.csv`` per instrument sorted
+  reviewee-first. Backs the new Extract data Operations-strip
+  tab's "Zip all" button.
 
 The Sys-Admin-gated audit-events extract is deliberately not in
-the bundle (it lives behind the diagnostics doorway).
+either bundle (it lives behind the diagnostics doorway).
 """
 
 from __future__ import annotations
@@ -34,23 +41,23 @@ from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.session_config_io import HEADER as SETTINGS_HEADER
 from app.services.session_config_io import serialize_session_config
 
-__all__ = ["build_session_bundle"]
+__all__ = ["build_setup_bundle", "build_responses_bundle"]
 
 
-def build_session_bundle(
+def build_setup_bundle(
     db: Session, review_session: ReviewSession
 ) -> tuple[bytes, dict[str, int]]:
-    """Build the all-CSVs zip for ``review_session``.
+    """Build the setup-only zip for ``review_session``.
 
     Returns ``(zip_bytes, counts)`` — the zip archive bytes and a
-    per-CSV data-row-count map for the ``session.bundle_extracted``
-    audit envelope. Each CSV is named ``{code}_{kind}.csv`` inside
-    the archive, matching the per-entity downloads.
+    per-CSV data-row-count map for the
+    ``session.setup_bundle_extracted`` audit envelope. Each CSV
+    is named ``{code}_{kind}.csv`` inside the archive, matching
+    the per-entity downloads.
     """
     reviewers = list(serialize_reviewers(db, review_session))
     reviewees = list(serialize_reviewees(db, review_session))
     relationships = list(serialize_relationships(db, review_session))
-    responses = list(serialize_responses(db, review_session))
 
     # Settings serialiser returns Row objects; the CSV prepends the
     # 3-column header, exactly as the standalone Settings route does.
@@ -60,27 +67,46 @@ def build_session_bundle(
         (r.field, r.value, r.data_type) for r in settings_rows
     )
 
-    # Bundle-only stats CSVs (18H Part 3) — roster shape plus
-    # aggregate response-activity columns; not individual downloads.
+    members: dict[str, list[tuple[str, ...]]] = {
+        "reviewers": reviewers,
+        "reviewees": reviewees,
+        "relationships": relationships,
+        "settings": settings_csv,
+    }
+    buffer = _write_archive(review_session, members)
+
+    counts = {
+        "reviewers": max(0, len(reviewers) - 1),
+        "reviewees": max(0, len(reviewees) - 1),
+        "relationships": max(0, len(relationships) - 1),
+        "settings": len(settings_rows),
+    }
+    return buffer, counts
+
+
+def build_responses_bundle(
+    db: Session, review_session: ReviewSession
+) -> tuple[bytes, dict[str, int]]:
+    """Build the responses-only zip for ``review_session``.
+
+    Returns ``(zip_bytes, counts)`` — the zip archive bytes and a
+    per-CSV data-row-count map for the
+    ``session.responses_bundle_extracted`` audit envelope.
+    Members: the unified ``responses.csv`` + ``reviewer_stats.csv``
+    + ``reviewee_stats.csv`` + one ``instrument_{n}.csv`` per
+    instrument.
+    """
+    responses = list(serialize_responses(db, review_session))
     reviewer_stats, reviewee_stats = build_entity_stats(
         db, review_session
     )
 
     members: dict[str, list[tuple[str, ...]]] = {
-        "reviewers": reviewers,
-        "reviewees": reviewees,
-        "relationships": relationships,
         "responses": responses,
-        "settings": settings_csv,
         "reviewer_stats": reviewer_stats,
         "reviewee_stats": reviewee_stats,
     }
 
-    # Per-instrument response files (18H Part 2) — one CSV per
-    # instrument named ``{code}_instrument_{n}.csv``, same column
-    # shape as the unified Responses CSV, sorted reviewee-first.
-    # Positional ``n`` matches the ``instrument_{n}`` label used
-    # in the unified file's preamble and ``InstrumentName`` column.
     instruments = list(
         db.execute(
             select(Instrument)
@@ -95,6 +121,23 @@ def build_session_bundle(
             )
         )
 
+    buffer = _write_archive(review_session, members)
+
+    counts = {
+        "responses": responses_service.session_response_count(
+            db, review_session.id
+        ),
+        "reviewer_stats": max(0, len(reviewer_stats) - 1),
+        "reviewee_stats": max(0, len(reviewee_stats) - 1),
+        "instrument_files": len(instruments),
+    }
+    return buffer, counts
+
+
+def _write_archive(
+    review_session: ReviewSession,
+    members: dict[str, list[tuple[str, ...]]],
+) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for kind, rows in members.items():
@@ -102,19 +145,4 @@ def build_session_bundle(
                 filename(review_session, kind),
                 b"".join(stream_csv(rows)),
             )
-
-    # Data-row counts (header / preamble excluded), matching how
-    # each per-entity route counts its own download.
-    counts = {
-        "reviewers": max(0, len(reviewers) - 1),
-        "reviewees": max(0, len(reviewees) - 1),
-        "relationships": max(0, len(relationships) - 1),
-        "responses": responses_service.session_response_count(
-            db, review_session.id
-        ),
-        "settings": len(settings_rows),
-        "reviewer_stats": max(0, len(reviewer_stats) - 1),
-        "reviewee_stats": max(0, len(reviewee_stats) - 1),
-        "instrument_files": len(instruments),
-    }
-    return buffer.getvalue(), counts
+    return buffer.getvalue()

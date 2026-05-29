@@ -47,22 +47,23 @@ asks for.
 ### Session Home — rename "Extract data" → "Extract setup"
 
 The card stays where it is (right column of Session Home,
-two-column layout). Its row list shrinks to the porting-
-shaped CSVs only:
+two-column internal layout). Its row list shrinks to the
+porting-shaped CSVs only, and the column placement mirrors
+Quick Setup's slot layout so the two cards read the same way:
 
 ```
 Extract setup
-  Reviewers         Session settings
-  Reviewees         Zip all  (the four CSVs above)
-  Relationships
+  Reviewers         Relationships
+  Reviewees         Session settings
+                    Zip all  (the four CSVs above)
 ```
 
 **Drop the Responses row.** It moves to the new tab. The
-**Zip-all** row stays — but bundles **only the four
-setup CSVs**. This matches the card's repositioned purpose
-(porting / cloning) and aligns 1:1 with the **Apply Settings
-CSV** input on Quick Setup: what the card exports is exactly
-what Quick Setup can ingest.
+**Zip-all** row stays — but bundles **only the four setup
+CSVs** (`{code}_setup.zip`). This matches the card's
+repositioned purpose (porting / cloning) and aligns 1:1 with
+the **Apply Settings CSV** input on Quick Setup: what the card
+exports is exactly what Quick Setup can ingest.
 
 The card stays interactive in every lifecycle state (no
 lock-card wrap), same as today.
@@ -76,6 +77,35 @@ Operations:  Assignments  Validate  Previews  Invitations  Responses  Extract da
 Lives at `/operator/sessions/{id}/extract-data`. Behaves like
 the other Operations pages (read-mostly, no lock card, breadcrumbs
 via `operator_session_child("Extract data")`).
+
+### Page interaction model
+
+Two interaction shapes coexist on the page:
+
+- **Per-lens configure + download.** The "By instrument" /
+  "By reviewer" / "By reviewee" cards (below) are the
+  fine-grained surface. Each card is configurable — the
+  operator picks which entities to include, what shape they
+  want (single CSV vs zip-of-N) — and clicks Download on that
+  card to get exactly those files. The page is **the
+  operator's data-shaping workbench**; each card produces a
+  scoped download.
+- **Top "Zip all" button.** A one-click shortcut that
+  downloads every response-side CSV in a single archive
+  (`{code}_responses.zip`). Members: unified `responses.csv`
+  + bundle-only `reviewer_stats.csv` + `reviewee_stats.csv` +
+  one `instrument_{n}.csv` per instrument sorted
+  reviewee-first. This is the "I just want everything"
+  affordance — operators who don't want to fiddle with
+  per-lens configuration can take the full set with one
+  click. Sits in the top-right of the page intro card so
+  it's the first affordance the operator sees on entry.
+
+The two shapes are complementary, not redundant. Zip-all is
+the operator's "I trust the default; give me everything";
+the per-lens cards are "I want it shaped a specific way."
+Per-lens downloads stay independent — Zip-all doesn't
+require any per-lens configuration first.
 
 ### The three lenses on the new page
 
@@ -210,7 +240,12 @@ the Session Home surface.
 - **Operators who scripted against the Zip-all bundle
   expecting Responses inside.** Beta-state → no real scripts
   → break cleanly. The new page exports the same data
-  shaped better.
+  shaped better; the responses Zip-all button is the direct
+  replacement.
+- **Filename change: ``{code}_bundle.zip`` →
+  ``{code}_setup.zip``.** Same rationale — beta-state, no
+  scripts to break. The new ``{code}_responses.zip`` covers
+  the response-data side.
 - **URL shape collisions.** `extract-data` as a tab slug
   doesn't collide with existing routes
   (`/operator/sessions/{id}/extract-data` is unused per

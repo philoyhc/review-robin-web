@@ -39,7 +39,7 @@ def test_extract_data_tab_renders_skeleton(
     body = response.text
 
     # Page heading.
-    assert "<h2>Extract data</h2>" in body
+    assert ">Extract data</h2>" in body
     # Three lens placeholder sections present.
     assert 'id="extract-data-by-instrument"' in body
     assert 'id="extract-data-by-reviewer"' in body
