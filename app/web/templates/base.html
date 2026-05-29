@@ -1270,12 +1270,16 @@
       body.ui-v2 .extract-data-top-grid > .card {
         margin-top: 0;
       }
-      body.ui-v2 .extract-data-card-row {
+      body.ui-v2 .extract-data-card-stack {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
+        flex-direction: column;
         gap: var(--space-3);
         height: 100%;
+      }
+      body.ui-v2 .extract-data-card-actions {
+        margin-top: auto;
+        display: flex;
+        justify-content: flex-end;
       }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-top-grid {
