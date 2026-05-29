@@ -341,6 +341,7 @@
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for slot, label in [
+          ("reviewer:assigned", "Assigned"),
           ("reviewer:count", "Count"),
           ("reviewer:mean", "Mean"),
           ("reviewer:median", "Median"),
@@ -367,6 +368,7 @@
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for slot, label in [
+          ("reviewee:assigned", "Assigned"),
           ("reviewee:count", "Count"),
           ("reviewee:mean", "Mean"),
           ("reviewee:median", "Median"),

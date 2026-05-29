@@ -242,10 +242,11 @@ require any per-lens configuration first.
        (operator renames via the Setup pages), falling back
        to the built-in `Tag 1` / `Tag 2` / `Tag 3` defaults
        when no override is set.
-    2. **Aggregate data chips** — `Count` / `Mean` / `Median`
-       / `Min` / `Max` / `Length` (mirrors the Reviewer /
-       Reviewee response metadata cards' aggregate column
-       vocabulary).
+    2. **Aggregate data chips** — `Assigned` / `Count` /
+       `Mean` / `Median` / `Min` / `Max` / `Length`
+       (mirrors the Reviewer / Reviewee response metadata
+       cards' aggregate column vocabulary, with `Assigned`
+       leading per that card's column order).
   - **Data shape sub-card stack** below the axis row — one
     sub-card per shape. One always-present blank shape card
     on initial load (matches the band-3 response-field

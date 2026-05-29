@@ -151,8 +151,9 @@ def test_data_shaper_axis_chip_row_and_pools(
     assert 'data-shaper-axis-chip="instrument"' not in body
     assert 'data-shaper-chip-pool="instrument"' not in body
 
-    # Reviewer pool carries the identity chips + the six
-    # aggregate chips that mirror the Reviewer response
+    # Reviewer pool carries the identity chips + the seven
+    # aggregate chips (Assigned / Count / Mean / Median / Min
+    # / Max / Length) that mirror the Reviewer response
     # metadata card's column shape.
     for slot in (
         "reviewer:name",
@@ -160,6 +161,7 @@ def test_data_shaper_axis_chip_row_and_pools(
         "reviewer:tag-1",
         "reviewer:tag-2",
         "reviewer:tag-3",
+        "reviewer:assigned",
         "reviewer:count",
         "reviewer:mean",
         "reviewer:median",
