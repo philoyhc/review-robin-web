@@ -261,9 +261,21 @@
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
      plus the By-instrument card's ``data-by-instrument-chip``
-     selectors). Pure visual state — clicking flips
-     ``is-selected`` + ``aria-pressed``. No persistence, no
-     form submission yet (this slice is layout-only). #}
+     selectors). Click flips ``is-selected`` + ``aria-pressed``.
+
+     By-instrument chips drive the Zip-all button's href +
+     enabled state in real time:
+
+     * Per-instrument chips (``instrument-{id}``) compose the
+       ``?instrument=...`` query params; the button greys out
+       when none are selected.
+     * ``include-metadata`` adds ``?meta=0`` when off.
+     * ``all-assignment-rows`` adds ``?all_rows=0`` when off.
+
+     Chip state survives reload via ``localStorage`` keyed to
+     the session id; the metadata + reviewer / reviewee chips
+     persist the same way for the eventual filter wiring,
+     even though no current download consumes them. #}
   <script>
     (function () {
       var chips = document.querySelectorAll(
@@ -271,11 +283,40 @@
         "[data-reviewer-metadata-chip], [data-reviewee-metadata-chip]"
       );
       if (!chips.length) return;
+      var sessionId = {{ session.id | tojson }};
+      var STORAGE_KEY = "rrw-extract-data-chips-" + sessionId;
+      var stored = {};
+      try {
+        stored = JSON.parse(
+          window.localStorage.getItem(STORAGE_KEY) || "{}"
+        ) || {};
+      } catch (e) {}
+      function chipKey(chip) {
+        var attrs = [
+          "data-by-instrument-chip",
+          "data-extract-all-chip",
+          "data-reviewer-metadata-chip",
+          "data-reviewee-metadata-chip",
+        ];
+        for (var i = 0; i < attrs.length; i++) {
+          var v = chip.getAttribute(attrs[i]);
+          if (v) return attrs[i] + ":" + v;
+        }
+        return null;
+      }
       chips.forEach(function (chip) {
+        var key = chipKey(chip);
+        if (key && Object.prototype.hasOwnProperty.call(stored, key)) {
+          var pressed = !!stored[key];
+          chip.classList.toggle("is-selected", pressed);
+          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
         function toggle() {
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          persist();
+          syncByInstrumentButton();
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
@@ -285,6 +326,56 @@
           }
         });
       });
+      function persist() {
+        var state = {};
+        chips.forEach(function (chip) {
+          var key = chipKey(chip);
+          if (!key) return;
+          state[key] = chip.getAttribute("aria-pressed") === "true";
+        });
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {}
+      }
+      function syncByInstrumentButton() {
+        var btn = document.getElementById("extract-data-by-instrument-zip");
+        if (!btn) return;
+        var instrumentIds = [];
+        var meta = true;
+        var allRows = true;
+        document
+          .querySelectorAll("[data-by-instrument-chip]")
+          .forEach(function (chip) {
+            var slot = chip.getAttribute("data-by-instrument-chip");
+            var on = chip.getAttribute("aria-pressed") === "true";
+            if (slot.indexOf("instrument-") === 0) {
+              if (on) {
+                instrumentIds.push(slot.substring("instrument-".length));
+              }
+            } else if (slot === "include-metadata") {
+              meta = on;
+            } else if (slot === "all-assignment-rows") {
+              allRows = on;
+            }
+          });
+        var disabled = instrumentIds.length === 0;
+        btn.setAttribute("aria-disabled", disabled ? "true" : "false");
+        if (disabled) {
+          btn.setAttribute("href", "#");
+          return;
+        }
+        var params = new URLSearchParams();
+        instrumentIds.forEach(function (id) {
+          params.append("instrument", id);
+        });
+        if (!meta) params.set("meta", "0");
+        if (!allRows) params.set("all_rows", "0");
+        var base =
+          "/operator/sessions/" + sessionId + "/export/by_instrument_bundle.zip";
+        var qs = params.toString();
+        btn.setAttribute("href", qs ? base + "?" + qs : base);
+      }
+      syncByInstrumentButton();
     })();
   </script>
 {% endblock %}

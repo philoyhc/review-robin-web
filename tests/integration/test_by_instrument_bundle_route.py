@@ -280,3 +280,98 @@ def test_extract_data_page_links_button_to_by_instrument_bundle(
         f'href="/operator/sessions/{review_session.id}'
         f'/export/responses_bundle.zip"' in body
     )
+
+
+def _make_second_instrument(
+    db: Session, review_session: ReviewSession
+) -> Instrument:
+    instrument = Instrument(
+        session_id=review_session.id,
+        name="Second instrument",
+        short_label="Second",
+        order=2,
+    )
+    db.add(instrument)
+    db.commit()
+    db.refresh(instrument)
+    return instrument
+
+
+def test_instrument_query_param_filters_zip_members(
+    client: TestClient, db: Session
+) -> None:
+    """``?instrument=<id>&instrument=<id>`` ships only the
+    requested instruments. Other instruments on the session
+    are dropped, and ``counts.instrument_files`` reports the
+    delivered count not the total."""
+    review_session = _make_session(client, db, code="bi-filter")
+    first = _default_instrument(db, review_session.id)
+    second = _make_second_instrument(db, review_session)
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/export/by_instrument_bundle.zip?instrument={second.id}"
+    )
+    assert response.status_code == 200
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = archive.namelist()
+    assert len(names) == 1
+    assert "Second" in names[0]
+    # Ensure the unselected instrument's file is NOT in the zip.
+    for name in names:
+        assert "Instrument_1" not in name
+    _ = first  # explicit: first stays on the session, just not in zip
+
+    db.expire_all()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type
+            == "session.by_instrument_bundle_extracted",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    counts = cast(dict, event.detail)["counts"]
+    assert counts["instrument_files"] == 1
+
+
+def test_meta_query_param_off_drops_meta_block_and_blank_row(
+    client: TestClient, db: Session
+) -> None:
+    """``?meta=0`` skips the meta header rows + the blank
+    separator row in every member CSV. The data-table header
+    is the first row."""
+    review_session = _make_session(client, db, code="bi-meta-off")
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/by_instrument_bundle.zip?meta=0"
+    )
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    payload = archive.read(archive.namelist()[0]).decode("utf-8")
+    # First row must be the data-table header (starts with
+    # ReviewerName), not the meta block's "Instrument," row.
+    assert payload.startswith("ReviewerName,")
+    # Spot-check none of the meta keys leaked in.
+    assert "Pool of reviewers" not in payload
+    assert "Number of assignments" not in payload
+
+
+def test_all_rows_query_param_off_drops_empty_assignment_rows(
+    client: TestClient, db: Session
+) -> None:
+    """``?all_rows=0`` drops assignment rows whose
+    response-field cells are all empty (i.e. no ``Response``
+    rows for the assignment). A freshly seeded session has no
+    responses anywhere, so the resulting CSV's data table is
+    just the header — no data rows."""
+    review_session = _make_session(client, db, code="bi-allrows-off")
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/by_instrument_bundle.zip?all_rows=0&meta=0"
+    )
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    payload = archive.read(archive.namelist()[0]).decode("utf-8")
+    lines = [line for line in payload.split("\r\n") if line]
+    # ``meta=0`` already drops the meta block; with no
+    # responses + ``all_rows=0``, only the header survives.
+    assert len(lines) == 1
+    assert lines[0].startswith("ReviewerName,")
