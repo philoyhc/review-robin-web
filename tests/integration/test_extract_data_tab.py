@@ -492,19 +492,22 @@ def test_data_shaper_initial_blank_shape_card(
     initial load so the operator has an immediate edit target
     (matches the band-3 response-field builder's
     always-present-empty-row pattern). The card carries the
-    preview row stub + the four action icons (save / edit /
-    delete / add)."""
+    preview row stub, the four action icons (save / edit /
+    delete / add), and a placeholder ``Download`` button at
+    the bottom-right."""
     review_session = _make_session(client, db, code="ed-shaper-blank")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
 
     assert "data-shaper-stack" in body
-    # One non-template ``data-shape`` div sits in the stack on
-    # first render. (The ``<template>`` clones don't render
-    # in the DOM until the JS spawns them.)
+    # Slice from the stack opening to the OUTER card-level
+    # ``Zip all`` button id — that boundary captures everything
+    # inside the sub-card stack (the per-sub-card
+    # ``.extract-data-card-actions`` row carrying the
+    # ``Download`` button sits in between).
     stack_block = body.split("data-shaper-stack")[1].split(
-        "extract-data-card-actions"
+        'id="extract-data-shaper-zip"'
     )[0]
     assert 'data-shape-mode="edit"' in stack_block
     assert "data-shape-preview-row" in stack_block

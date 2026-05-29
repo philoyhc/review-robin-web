@@ -477,15 +477,18 @@
           <button type="button" class="btn secondary"
                   style="flex: 0 0 auto; padding: 4px 10px;"
                   data-shape-add title="Add another shape below">+</button>
-          {# Download — placeholder; ``aria-disabled`` until the
-             file-gen wiring slice teaches it to extract this
-             shape's CSV. Same ``btn secondary`` + ``padding:
-             4px 10px`` squarish vocabulary as the rest of the
-             action row. #}
-          <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-download title="Download this shape (placeholder)"
-                  aria-disabled="true" disabled>&#8595;</button>
+        </div>
+        {# Download — placeholder; ``aria-disabled`` until the
+           file-gen wiring slice teaches it to extract this
+           shape's CSV. Right-aligned at the bottom of the
+           sub-card via the shared
+           ``.extract-data-card-actions`` rule (already
+           ``display: flex; justify-content: flex-end``). #}
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             data-shape-download
+             href="#"
+             aria-disabled="true">Download</a>
         </div>
       </div>
     </template>
@@ -530,15 +533,18 @@
           <button type="button" class="btn secondary"
                   style="flex: 0 0 auto; padding: 4px 10px;"
                   data-shape-add title="Add another shape below">+</button>
-          {# Download — placeholder; ``aria-disabled`` until the
-             file-gen wiring slice teaches it to extract this
-             shape's CSV. Same ``btn secondary`` + ``padding:
-             4px 10px`` squarish vocabulary as the rest of the
-             action row. #}
-          <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-download title="Download this shape (placeholder)"
-                  aria-disabled="true" disabled>&#8595;</button>
+        </div>
+        {# Download — placeholder; ``aria-disabled`` until the
+           file-gen wiring slice teaches it to extract this
+           shape's CSV. Right-aligned at the bottom of the
+           sub-card via the shared
+           ``.extract-data-card-actions`` rule (already
+           ``display: flex; justify-content: flex-end``). #}
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             data-shape-download
+             href="#"
+             aria-disabled="true">Download</a>
         </div>
       </div>
     </div>
