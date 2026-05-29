@@ -255,15 +255,19 @@ require any per-lens configuration first.
        (operator renames via the Setup pages), falling back
        to the built-in `Tag 1` / `Tag 2` / `Tag 3` defaults
        when no override is set.
-    2. **Aggregate data chips** — `Assigned` / `Count` | `Mean`
-       / `Median` / `Min` / `Max` / `Length` | `Discrete
-       steps` (mirrors the Reviewer / Reviewee response
-       metadata cards' aggregate column vocabulary, with
-       `Assigned` leading per that card's column order, and
-       a `|` after `Count` separating the field-independent
-       totals from the field-scoped statistics — the pipe
-       itself hides when nothing to its right would render,
-       so the row never carries an orphan separator). The
+    2. **Aggregate data chips** — `Assigned` / `Count` |
+       `Mean` / `Median` / `Min` / `Max` / `Length` |
+       `List items` / `Discrete steps` (mirrors the Reviewer
+       / Reviewee response metadata cards' aggregate column
+       vocabulary, with `Assigned` leading per that card's
+       column order, a `|` after `Count` separating the
+       field-independent totals from the standard
+       field-scoped statistics, and a trailing `|` before
+       the fan-out chips. Each `|` hides when nothing to
+       its right would render, so the row never carries an
+       orphan separator — and List fields specifically only
+       show the trailing pipe before `List items`, never
+       the post-Count one). The
        field-scoped aggregates (`Mean`, `Median`, `Min`,
        `Max`, `Length`, `Discrete steps`) **only render when
        a response field is selected** — without a specific

@@ -31,14 +31,16 @@ the load-bearing decision behind the page's existence — see
 > **placeholder UI** — two stacked chip rows (scope ⇒ axis +
 > instrument + response field; content ⇒ per-axis pool of
 > identification + aggregate chips with all the field-scoped
-> behaviour: Name ↔ Email coupling, data-type filtering, List
-> option chips, Discrete-steps chip), the stack of Data shape
-> sub-cards (each with preview row + save / edit / delete /
-> add icons, always-present blank starter card), and the
-> disabled `Zip all` button. All interactions are client-side
-> only; persistence and file generation are deferred — see
-> "Data shaper card" + "Data shaper — row-key contract"
-> below.
+> behaviour: Name ↔ Email coupling, data-type filtering,
+> `List items` fan-out chip for List fields, `Discrete steps`
+> fan-out chip for low-cardinality numeric fields), the stack
+> of Data shape sub-cards (each with preview row + four
+> ✓ / ✎ / X / + action icons on the same row as a
+> right-anchored `Download` button, always-present blank
+> starter card), and the disabled outer `Zip all` button.
+> All interactions are client-side only; persistence and
+> file generation are deferred — see "Data shaper card" +
+> "Data shaper — row-key contract" below.
 
 ## Page identity
 
@@ -490,16 +492,29 @@ means for the CSV.
 |---|---|---|
 | `Assigned` | `{axis}:assigned` | Always (field-independent). |
 | `Count` | `{axis}:count` | Always (field-independent). |
-| `|` (intra-pool pipe) | — | Hidden until at least one field-scoped chip would render to its right — keeps the row free of orphan separators. |
+| `|` (intra-pool pipe after `Count`) | — (marker `data-shaper-relevant-for="field-scoped"`) | Shows iff the data type is numeric or string (the chips it introduces). Hides for List fields — the trailing `list-or-discrete` pipe (below) carries the single separator between `Count` and `List items` instead. Also hides when no response field is selected, so the row never carries an orphan `|`. |
 | `Mean` / `Median` / `Min` / `Max` | `{axis}:mean` / `:median` / `:min` / `:max` | Numeric (Integer / Decimal) fields. Marked `data-shaper-relevant-for="numeric"`. |
 | `Length` | `{axis}:length` | String fields. Marked `data-shaper-relevant-for="string"` — sums character count across non-empty responses. |
-| `|` + `List items` | `{axis}:list-items` (marker `data-shaper-relevant-for="list-items"`) | List fields with a non-empty options CSV. Selecting the single `List items` chip emits **one preview-row column per list option** (the JS reads the active field chip's `data-shaper-field-list-options` CSV at render time). Same fan-out shape as `Discrete steps`. |
-| `|` + `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min`, `max`, `step` defined and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
+| `|` (trailing pipe) | — (marker `data-shaper-relevant-for="list-or-discrete"`) | Single pipe shared by the two fan-out chips below. Shows iff `List items` or `Discrete steps` will render. |
+| `List items` | `{axis}:list-items` (marker `data-shaper-relevant-for="list-items"`) | List fields with a non-empty options CSV. Selecting the single `List items` chip emits **one preview-row column per list option** (the JS reads the active field chip's `data-shaper-field-list-options` CSV at render time). Same fan-out shape as `Discrete steps`. |
+| `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min`, `max`, `step` defined and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
 
 All field-scoped aggregates hide entirely until a response
 field is selected (without one there's no value vector to
 summarise). Selected chips that get hidden by a data-type
 swap auto-deselect so the preview row stays consistent.
+
+**Per-data-type chip-row layout** (what the operator
+actually sees after picking a response field; `[ID] |`
+prefix elided):
+
+| Data type | Rendered row |
+|---|---|
+| Numeric, no discrete steps | `Assigned Count | Mean Median Min Max` |
+| Numeric, ≤12 discrete steps | `Assigned Count | Mean Median Min Max | Discrete steps` |
+| String | `Assigned Count | Length` |
+| List (with options) | `Assigned Count | List items` |
+| Other types | `Assigned Count` |
 
 ### Preview-table + Data shape sub-cards
 
@@ -594,15 +609,20 @@ member-assignment counts on its own).
   `rrw-extract-data-chips-{session_id}` `localStorage`
   store described in the page's "Cross-cutting
   behaviours" section below.
-- **Dynamic chip pools.** Three slots host chips that
+- **Dynamic chip pools.** Two slots host chips that
   mount / unmount on selection:
   `data-shaper-relevant-chips` (the per-axis content
-  pool), `data-shaper-field-chips` (the per-instrument
-  response-field pool), and the per-axis pool's interior
-  list-option container (`data-shaper-list-options`).
+  pool — mounted on axis toggle), and
+  `data-shaper-field-chips` (the per-instrument
+  response-field pool — mounted on instrument toggle).
   Each pool's mount is idempotent — re-applying the
   current selection state restores the pool to the
-  correct contents.
+  correct contents. The two fan-out chips (`List items`
+  / `Discrete steps`) live **statically** inside each
+  per-axis pool template and are hidden / shown via the
+  `data-shaper-relevant-for` filter rather than cloned
+  in / out (the dynamic per-option List chips that
+  shipped briefly in #1600 retired in #1608).
 - **Lifecycle behaviour.** The card renders identically
   in every session lifecycle state. Once the file-gen
   pipeline wires the `Zip all` button, the same
