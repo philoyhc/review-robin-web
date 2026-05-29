@@ -109,27 +109,163 @@ require any per-lens configuration first.
 
 ### Shipped today
 
-- **Page layout**: two half-width cards across the top — intro
-  card (left) with the "Zip all responses" button, By-instrument
-  card (right) with its own "Zip all" button. Remaining lenses
-  (By reviewer / By reviewee) still placeholder cards below.
-- **Top "Zip all responses" button** → `responses_bundle.zip`
-  (unified Responses CSV + reviewer/reviewee stats +
-  per-instrument long-format files).
-- **By-instrument "Zip all" button** →
-  `by_instrument_bundle.zip` containing one wide-format CSV per
-  instrument, named `{code}_by_instrument_{slug}.csv` where the
-  slug is the instrument's short label (or `Instrument_{N}`
-  fallback) sanitised to alphanumerics / `_` / `-`. Each CSV
-  carries a **meta header** (instrument identity + per-field
-  type/constraint rows + assignment count + pool /
-  unit-of-review / self-review configuration) + blank row +
-  **wide data table** (one row per assignment, columns =
-  identity + tags + one column per response field + SelfReview
-  + SavedAt + SubmittedAt). Group-scoped instruments collapse
-  the same way the unified Responses CSV does.
+- **Page layout**: 2-column grid of half-width cards, bottom-
+  aligned via `align-items: end`.
+  - **Left column (response data)**: `Extract all data` intro
+    card (top) + `By instrument` lens (below).
+  - **Right column (metadata)**: `Reviewer response metadata`
+    + `Reviewee response metadata`.
+  - **Full-width Data shaper** card below the grid (placeholder
+    — see *Data shaper design* below).
+- **Intro card** (`Extract all data`).
+  - Body copy: "Configure what you need on the lens cards and
+    download the specific files. Use **Zip all** to download all
+    response files (as configured using the other cards) at once."
+  - Chip row (all default-selected): `By instruments`,
+    `Reviewer response metadata`, `Reviewee response metadata`,
+    `Data shaper`. Each chip will scope which lens-shaped CSVs
+    land in the top-level `Zip all` zip once wired.
+  - Button: `Zip all` → `responses_bundle.zip` (unified
+    Responses CSV + reviewer/reviewee stats + per-instrument
+    long-format files).
+- **By-instrument card**.
+  - Chips: one per instrument (label = `#{n}: {short_label}`
+    mirroring the Reviewer-surface heading, or bare `#{n}`
+    when no short label) + cross-cutting toggles
+    `Include metadata` + `All assignment rows`. All
+    default-selected.
+  - Button: `Zip all` → `by_instrument_bundle.zip` carrying
+    one wide-format CSV per instrument, named
+    `{code}_by_instrument_{slug}.csv`. Each CSV carries a
+    **meta header** (instrument identity + per-field
+    type/constraint rows + assignment count + pool /
+    unit-of-review / self-review configuration; the latter
+    three render rule fields as
+    `<source_type>.<friendly label>`) + blank row + **wide
+    data table** (one row per assignment, columns = identity
+    + tags + one column per response field + SelfReview +
+    SavedAt + SubmittedAt). Group-scoped instruments collapse
+    the same way the unified Responses CSV does.
+- **Reviewer / Reviewee response metadata cards**.
+  - Heading + body copy explaining the data/metadata split:
+    per-reviewer / per-reviewee response *data* is trivially
+    reshaped from the By-instrument export via a spreadsheet
+    sort or Power Query; these cards focus on *metadata
+    about responses* (counts, timestamps, against which
+    instruments).
+  - Chips (all default-selected): `All reviewers` /
+    `All reviewees` + per-statistic chips `Count`, `Mean`,
+    `Median`, `Min`, `Max`, `Length`.
+  - Button: placeholder `Zip all` (`href="#"`,
+    `aria-disabled`); wiring follows.
+- **Data shaper** (full-width, below the grid).
+  - Heading + body copy describing the generalised builder.
+  - **Preview-table stub** showing the column headers of the
+    CSV being built. Flush-left + `width: auto` so each column
+    sizes to its header (plus a sort-icon affordance reusing
+    the shared `rrw-sortable` primitive). Five placeholder
+    columns today: `Reviewer` / `Reviewee` / `Instrument` /
+    `Field` / `Value`. Sort buttons render disabled; the click
+    + drag-reorder wiring is the follow-up.
+  - Button: placeholder `Zip all` (`href="#"`,
+    `aria-disabled`).
 
-### The three lenses on the new page
+### Data shaper design
+
+The Data shaper is a generalised engine for composing custom
+data shapes. The shipped placeholder card holds the heading
++ a preview-table stub; the full design below lands across
+the next slices.
+
+**Mental model.** Each *shape* = one CSV. The columns of the
+CSV are composed by selecting **column chips** that name each
+column. A shape is rendered as one **Data shape card** (a
+full-width card *inside* the outer Data shaper card). One
+Data shape card per shape. Multiple shapes per Data shaper
+(operator clicks the `+` icon to add another below).
+
+**Axis chip row (top of the Data shaper card).** Three
+**axis-selector chips** — `Reviewer`, `Reviewee`,
+`Instrument` — followed by a vertical pipe (`|`). All axis
+chips default to **unselected**. Selecting an axis surfaces
+its **relevant column chips** to the right of the `|` (the
+list of relevant chips per axis remains to be determined —
+this is the open design question for the next slice). The
+operator picks column chips to compose the shape; toggling
+the axis off hides its chips and removes the corresponding
+columns from the active shape.
+
+Multiple axes can be on at once — the relevant chip row
+concatenates the selected axes' chips left-to-right.
+
+**Data shape card (full-width, inside the Data shaper card).**
+One per shape. Layout, top to bottom:
+
+1. **Preview row** — the selected column chips render as the
+   header row of the CSV being built. Flush-left, `width:
+   auto`; each column sized to its header. (The placeholder
+   table shipped today is the stub for this row.) Sort-icon
+   per column (visual today; click + drag-reorder wiring
+   follows).
+2. **Edit box** for the shape's name + **tick icon** (save the
+   sequence under the typed name) + **X icon** (delete this
+   shape) + **+ icon** (add a new blank Data shape card below
+   this one).
+
+On save: the edit box collapses to the saved name as plain
+text, and the tick icon flips to an **edit icon** (clicking
+it restores the edit box so the operator can rename).
+
+**Operator's mental loop.** Toggle axes → pick column chips
+→ see the preview-row header update live → name and save the
+shape → click `+` to start a new one. The end state is a
+stack of named Data shape cards, each describing one CSV
+that ships in the Data shaper's `Zip all` zip — and, when
+the intro card's `Data shaper` chip is selected, in the
+top-level `Zip all` too.
+
+**Open design questions for the next slice.**
+
+1. **Relevant column chips per axis.** What exactly does
+   `Reviewer` surface to the right of the `|`? Candidates
+   today: `Name`, `Email`, `Tag 1`, `Tag 2`, `Tag 3`,
+   per-reviewer aggregates (`Count`, `Mean`, `Median`, …).
+   Same shape question for `Reviewee` (`Name`, `Email`, the
+   three tags, group identity for group-scoped, aggregates)
+   and `Instrument` (short label, response-field labels,
+   per-field aggregates). The two metadata cards already
+   enumerate the aggregate chips that fit the analyst's
+   intent — likely the Data shaper reuses those names so the
+   operator doesn't relearn vocabulary.
+2. **Per-axis vs cross-axis aggregates.** If `Reviewer` is on
+   and the operator picks `Count`, does that mean "count per
+   reviewer" (one row per reviewer) or "count across rows"
+   (one cell)? Default proposal: the *axes* drive grouping
+   (one row per unique combination of selected axes' identity
+   chips), and the aggregate chips drive the value columns.
+3. **Persistence.** Saved shapes scoped per-session, per-user,
+   or per-operator? Most useful is per-session, per-user (so
+   each operator's preset library survives lifecycle changes
+   on that session) with an option to copy a shape to another
+   session.
+4. **`Zip all` membership.** A Data shaper might carry N
+   shapes; does the card's `Zip all` produce N CSVs (one per
+   shape) named after the shape? Yes — and the top-level
+   `Zip all` folds those in too when the intro chip is on.
+5. **Empty-state behaviour.** A blank Data shape card with no
+   column chips selected yields a CSV with no columns —
+   surface that as a validation error on save, or just elide
+   from the zip silently?
+
+### The three lenses on the new page (legacy framing)
+
+The original plan called these "By instrument / By reviewer /
+By reviewee". As shipped, the by-reviewer / by-reviewee
+lenses retired and the cards became **Reviewer response
+metadata** / **Reviewee response metadata** (metadata, not
+data — see the rationale above). The by-instrument lens
+stayed and is fully wired today. The table below remains for
+historical context.
 
 | Lens | Shape | Use case |
 |---|---|---|
