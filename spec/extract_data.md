@@ -521,7 +521,8 @@ Each sub-card carries:
 2. An **action row** with four squarish `btn secondary`
    icon buttons (matching the Instruments page Response
    Fields builder pattern — see `instruments_index.html`
-   lines 3833-3843 for the source):
+   lines 3833-3843 for the source) followed by a
+   right-anchored `Download` button:
    - `✓` (`data-shape-save`) — flips the card to saved
      mode (name input → plain text, `✓` → `✎`).
    - `✎` (`data-shape-edit`) — flips back to edit mode
@@ -534,13 +535,12 @@ Each sub-card carries:
    - `+` (`data-shape-add`) — clones a fresh blank sub-card
      immediately after this one and makes it the active
      target.
-3. A **`Download` button row** at the bottom-right of the
-   sub-card (`.extract-data-card-actions` — same
-   `display: flex; justify-content: flex-end` rule the
-   per-lens cards use for their `Download` / `Zip all`
-   buttons). Placeholder until the file-gen wiring slice
-   teaches it to extract this shape's CSV — currently
-   renders with `href="#"` and `aria-disabled="true"`.
+   - `Download` (`data-shape-download`) — sits on the same
+     row as the icon group, pushed to the right edge via
+     `margin-left: auto`. Placeholder until the file-gen
+     wiring slice teaches it to extract this shape's CSV —
+     currently renders with `href="#"` and
+     `aria-disabled="true"`.
 
 The **always-present blank sub-card** on initial load gives
 the operator an immediate edit target without requiring a

@@ -367,15 +367,15 @@ metadata cards already use.
       currently-active shape card.
     - **Action row** — name input (collapses to plain text
       on save) + `✓` save / `✎` edit / `✗` delete / `➕` add
-      icons. `✓` and `✎` swap; `✗` removes the card from
-      the stack except when it's the last one (never strip
-      the page of its starting point); `➕` clones a fresh
-      blank card after this one and makes it the active
-      target.
-    - **`Download` button row** at the bottom-right of the
-      sub-card — placeholder (`href="#"` + `aria-disabled`)
-      until the file-gen wiring slice teaches it to extract
-      this shape's CSV.
+      icons + a right-anchored `Download` button (pushed
+      via `margin-left: auto`). `✓` and `✎` swap; `✗`
+      removes the card from the stack except when it's the
+      last one (never strip the page of its starting
+      point); `➕` clones a fresh blank card after this one
+      and makes it the active target; `Download` is a
+      placeholder (`href="#"` + `aria-disabled`) until the
+      file-gen wiring slice teaches it to extract this
+      shape's CSV.
   - Button: placeholder `Zip all` (`href="#"`,
     `aria-disabled`) at the bottom of the outer card.
   - **Out of scope in this slice** (lands separately):
