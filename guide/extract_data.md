@@ -255,21 +255,34 @@ require any per-lens configuration first.
        (operator renames via the Setup pages), falling back
        to the built-in `Tag 1` / `Tag 2` / `Tag 3` defaults
        when no override is set.
-    2. **Aggregate data chips** — `Assigned` / `Count` /
-       `Mean` / `Median` / `Min` / `Max` / `Length`
-       (mirrors the Reviewer / Reviewee response metadata
-       cards' aggregate column vocabulary, with `Assigned`
-       leading per that card's column order). The
+    2. **Aggregate data chips** — `Assigned` / `Count` | `Mean`
+       / `Median` / `Min` / `Max` / `Length` | `Discrete
+       steps` (mirrors the Reviewer / Reviewee response
+       metadata cards' aggregate column vocabulary, with
+       `Assigned` leading per that card's column order, and
+       a `|` after `Count` separating the field-independent
+       totals from the field-scoped statistics). The
        field-scoped aggregates (`Mean`, `Median`, `Min`,
-       `Max`, `Length`) **only render when a response field
-       is selected** — without a specific field there's no
-       value vector to summarise. `Assigned` and `Count`
-       stay visible always (field-independent). Once a
-       response field is picked, the field-scoped chips
-       filter to the ones **relevant to that field's data
-       type**:
+       `Max`, `Length`, `Discrete steps`) **only render when
+       a response field is selected** — without a specific
+       field there's no value vector to summarise.
+       `Assigned` and `Count` stay visible always
+       (field-independent). Once a response field is picked,
+       the field-scoped chips filter to the ones **relevant
+       to that field's data type**:
        - Numeric (Integer / Decimal) fields surface
          `Mean`, `Median`, `Min`, `Max`.
+         - Numeric fields with a finite, small (≤12)
+           number of discrete values — i.e. `min`, `max`,
+           and `step` defined and `(max - min) / step + 1
+           ≤ 12` — additionally surface a **`Discrete
+           steps`** chip after `Max` (separated by another
+           `|`). Selecting it emits one preview-row
+           column per step value (e.g. an Integer
+           1..5/step 1 yields the five columns `1` `2`
+           `3` `4` `5`). The step values are pre-computed
+           server-side and stitched into the field chip's
+           `data-shaper-field-discrete-steps` CSV.
        - String fields surface `Length`.
        - **List fields** swap the numeric / string
          aggregates for **one chip per list option** —
