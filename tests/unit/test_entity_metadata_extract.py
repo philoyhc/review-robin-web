@@ -21,6 +21,7 @@ Pinned behaviours:
 
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -101,16 +102,37 @@ def _instrument(
     name: str = "Form",
     short_label: str | None = None,
     order: int = 0,
+    group_kind: str | None = None,
 ) -> Instrument:
     i = Instrument(
         session_id=review_session.id,
         name=name,
         short_label=short_label,
         order=order,
+        group_kind=group_kind,
     )
     db.add(i)
     db.flush()
     return i
+
+
+def _reviewee_with_tag(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    name: str,
+    identifier: str,
+    tag_1: str | None = None,
+) -> Reviewee:
+    e = Reviewee(
+        session_id=review_session.id,
+        name=name,
+        email_or_identifier=identifier,
+        tag_1=tag_1,
+    )
+    db.add(e)
+    db.flush()
+    return e
 
 
 def _field(
@@ -525,6 +547,183 @@ def test_selected_instrument_filter_scopes_totals(db: Session) -> None:
     # And the per-field block belongs to ``#1: First`` exclusively.
     assert "#1: First.A.Assigned" in rows[0]
     assert "#2: Second.B.Assigned" not in rows[0]
+
+
+def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
+    """Rob reviews 3 groups on a group-scoped instrument with 2
+    fields, plus 3 reviewees on an individual instrument with 2
+    fields. Each group has 2 members, so the group-scoped
+    instrument carries 6 member-assignments for Rob — but
+    ``Assigned`` counts each (Rob, group) once, giving
+    ``3 × 2 + 3 × 2 = 12`` on the reviewer side, not the
+    inflated ``6 × 2 + 3 × 2 = 18``."""
+    review_session = _session(db, code="rob")
+    rob = _reviewer(db, review_session, name="Rob", email="rob@x.edu")
+
+    # Individual instrument: 3 reviewees, 2 fields, no fan-out.
+    individual = _instrument(
+        db, review_session, short_label="I", order=0
+    )
+    _field(db, individual, _NUMERIC, field_key="a", label="A")
+    _field(db, individual, _NUMERIC, field_key="b", label="B", order=1)
+    for n in range(3):
+        ree = _reviewee(
+            db, review_session, name=f"Ind{n}", identifier=f"i{n}@x"
+        )
+        _assignment(
+            db,
+            review_session,
+            reviewer=rob,
+            reviewee=ree,
+            instrument=individual,
+        )
+
+    # Group instrument: 3 groups (Team A / Team B / Team C),
+    # 2 members each, 2 fields. Fan-out gives Rob 6
+    # member-assignments here.
+    group = _instrument(
+        db, review_session, short_label="G", order=1, group_kind="r1"
+    )
+    _field(db, group, _NUMERIC, field_key="x", label="X")
+    _field(db, group, _NUMERIC, field_key="y", label="Y", order=1)
+    for team in ("A", "B", "C"):
+        for slot in (1, 2):
+            ree = _reviewee_with_tag(
+                db,
+                review_session,
+                name=f"{team}{slot}",
+                identifier=f"{team.lower()}{slot}@x",
+                tag_1=f"Team{team}",
+            )
+            _assignment(
+                db,
+                review_session,
+                reviewer=rob,
+                reviewee=ree,
+                instrument=group,
+            )
+
+    rows = build_reviewer_metadata(
+        db, review_session, instrument_ids=None, all_reviewers=True
+    )
+    rob_row = _row_by_name(rows, rows[0], "Rob")
+    assert rob_row["Assigned"] == "12"
+
+
+def test_group_scoped_reviewer_count_dedupes_too(db: Session) -> None:
+    """The same dedupe applies to ``Count`` and the per-field
+    aggregate rollups: a single group answer counts once per
+    (reviewer, group, field), no matter how many members
+    received the fan-out."""
+    review_session = _session(db, code="rob-count")
+    rob = _reviewer(db, review_session, name="Rob", email="rob@x.edu")
+    group = _instrument(
+        db, review_session, short_label="G", order=0, group_kind="r1"
+    )
+    fld = _field(db, group, _NUMERIC, field_key="x", label="X")
+    # One group, 3 members; Rob's group answer is "50" — fanned
+    # to all 3 member-assignments.
+    for slot in (1, 2, 3):
+        ree = _reviewee_with_tag(
+            db,
+            review_session,
+            name=f"A{slot}",
+            identifier=f"a{slot}@x",
+            tag_1="TeamA",
+        )
+        assignment = _assignment(
+            db,
+            review_session,
+            reviewer=rob,
+            reviewee=ree,
+            instrument=group,
+        )
+        _response(db, assignment=assignment, field=fld, value="50")
+
+    rows = build_reviewer_metadata(
+        db,
+        review_session,
+        instrument_ids={group.id},
+        all_reviewers=True,
+    )
+    rob_row = _row_by_name(rows, rows[0], "Rob")
+    assert rob_row["Assigned"] == "1"
+    assert rob_row["Count"] == "1"
+    # Mean / Min / Max all see the answer once, not three times.
+    assert rob_row["#1: G.X.Count"] == "1"
+    assert rob_row["#1: G.X.Mean"] == "50"
+
+
+def test_group_scoped_reviewee_does_not_dedupe(db: Session) -> None:
+    """Eli's group is reviewed by 3 reviewers on a group-scoped
+    instrument with 2 fields, plus Eli is reviewed individually
+    by 3 reviewers on an individual instrument with 2 fields.
+    Eli's ``Assigned`` = 3 × 2 (individual) + 3 × 2 (group) =
+    12 — no group dedupe on the reviewee side because from
+    Eli's perspective each (reviewer, field) cell exists
+    independently."""
+    review_session = _session(db, code="eli")
+    eli = _reviewee_with_tag(
+        db,
+        review_session,
+        name="Eli",
+        identifier="eli@x",
+        tag_1="TeamE",
+    )
+    # Two other group members so the group has 3 members total.
+    for slot in (2, 3):
+        _reviewee_with_tag(
+            db,
+            review_session,
+            name=f"Eli{slot}",
+            identifier=f"eli{slot}@x",
+            tag_1="TeamE",
+        )
+
+    individual = _instrument(
+        db, review_session, short_label="I", order=0
+    )
+    _field(db, individual, _NUMERIC, field_key="a", label="A")
+    _field(db, individual, _NUMERIC, field_key="b", label="B", order=1)
+    group = _instrument(
+        db, review_session, short_label="G", order=1, group_kind="r1"
+    )
+    _field(db, group, _NUMERIC, field_key="x", label="X")
+    _field(db, group, _NUMERIC, field_key="y", label="Y", order=1)
+
+    for n in range(3):
+        reviewer = _reviewer(
+            db, review_session, name=f"R{n}", email=f"r{n}@x.edu"
+        )
+        _assignment(
+            db,
+            review_session,
+            reviewer=reviewer,
+            reviewee=eli,
+            instrument=individual,
+        )
+        # Group fan-out: each reviewer reviews each member of the
+        # group, so Eli gets one Assignment row per reviewer on
+        # the group instrument too.
+        for member in db.execute(
+            select(Reviewee).where(
+                Reviewee.session_id == review_session.id,
+                Reviewee.tag_1 == "TeamE",
+            )
+        ).scalars():
+            _assignment(
+                db,
+                review_session,
+                reviewer=reviewer,
+                reviewee=member,
+                instrument=group,
+            )
+
+    rows = build_reviewee_metadata(
+        db, review_session, instrument_ids=None, all_reviewees=True
+    )
+    eli_row = _row_by_name(rows, rows[0], "Eli")
+    assert eli_row["Assigned"] == "12"
 
 
 def test_no_instrument_filter_scans_every_instrument(db: Session) -> None:

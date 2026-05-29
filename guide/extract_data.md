@@ -189,9 +189,20 @@ require any per-lens configuration first.
       entry gets a row. OFF → only entries with at least
       one non-empty response in scope.
   - **Group-scoped instruments** fan responses across each
-    member assignment at save time; both `Assigned` and
-    `Count` count the member rows directly so denominators
-    stay aligned (no group dedupe at this layer).
+    member assignment at save time. The two sides handle that
+    asymmetry differently:
+    - **Reviewer side** — a reviewer fills one form per group,
+      not one per member; the save layer copies the answer onto
+      every member-assignment. So `Assigned` dedupes by
+      `(reviewer, instrument, group_key)` (one count per group)
+      and `Count` / per-field rollups dedupe by
+      `(reviewer, group_key, field_id)` (one count per group
+      answer, no matter how many members received the
+      fan-out).
+    - **Reviewee side** — from a reviewee's perspective there
+      is exactly one cell per (reviewer, field) about them,
+      so no dedupe is needed; each member-assignment counts on
+      its own.
   - Query-string wiring on the button reuses the same
     `?instrument=<id>` (repeated) + `?all=0` shape the chip
     JS composes.
