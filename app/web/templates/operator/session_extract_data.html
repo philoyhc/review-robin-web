@@ -16,13 +16,12 @@
   {% include "operator/partials/next_action_card.html" %}
 
   {# Two independent columns of cards (not a row-aligned grid):
-     left column = ``Extract all data`` intro + ``Reviewer
-     response metadata``; right column = ``By instrument`` +
-     ``Reviewee response metadata``. Each column flows with
-     natural card heights so the bottoms of the two metadata
-     cards (and the tops of the two upper cards) don't have to
-     align across columns. Collapses to a single column on
-     narrow viewports. #}
+     left column = ``Extract all data`` intro + ``By instrument``
+     (the response-data lenses); right column = ``Reviewer
+     response metadata`` + ``Reviewee response metadata``. Each
+     column flows with natural card heights so neighbouring
+     cards across columns don't have to align top or bottom.
+     Collapses to a single column on narrow viewports. #}
   <div class="extract-data-grid">
     <div class="extract-data-column">
       <div class="card extract-data-card-stack" id="extract-data-intro">
@@ -61,59 +60,14 @@
         </div>
       </div>
 
-      {# Reviewer response metadata — left column, below the
-         intro. Per-reviewer / per-reviewee response data is
-         trivially reshaped from the By-instrument export via a
-         spreadsheet sort or Power Query; this card focuses on
-         *metadata about responses* (counts, timestamps, which
-         instruments). ``Zip all`` is a placeholder — wiring
-         lands in a follow-up PR. #}
-      <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
-        <div>
-          <h2 style="margin-top: 0;">Reviewer response metadata</h2>
-          <p class="form-help" style="margin-bottom: 0;">
-            Per-reviewer metadata about the responses each reviewer
-            produced — how many, when saved / submitted, against which
-            instruments. Optimised for reviewer audit and coaching.
-          </p>
-        </div>
-        <p class="col-chip-row" style="margin: 0;">
-          {% for slot, label in [
-              ("all-reviewers", "All reviewers"),
-              ("count", "Count"),
-              ("mean", "Mean"),
-              ("median", "Median"),
-              ("min", "Min"),
-              ("max", "Max"),
-              ("length", "Length"),
-          ] %}
-            <span class="pill pill-count tag-chip is-selected"
-                  data-reviewer-metadata-chip="{{ slot }}"
-                  role="button"
-                  tabindex="0"
-                  aria-pressed="true">{{ label }}</span>
-          {% endfor %}
-        </p>
-        <div class="extract-data-card-actions">
-          <a class="btn secondary"
-             id="extract-data-reviewer-metadata-zip"
-             href="#"
-             aria-disabled="true">
-            Zip all
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <div class="extract-data-column">
-      {# By instrument — text styling matches the intro card
-         (``h2`` + ``form-help``). Selectable chips below the body
-         text let the operator scope the export: one chip per
-         instrument (short label or ``Instrument_{n}`` fallback)
-         plus the two cross-cutting toggles (``Include metadata``,
-         ``All assignment rows``). All chips default to selected;
-         toggle wiring (POST shape, CSV filter logic) lands in a
-         follow-up PR — this is layout-only for now. #}
+      {# By instrument — left column, below the intro. Text
+         styling matches the intro card (``h2`` + ``form-help``).
+         Selectable chips below the body text let the operator
+         scope the export: one chip per instrument (short label
+         or ``Instrument_{n}`` fallback) plus the two
+         cross-cutting toggles (``Include metadata``,
+         ``All assignment rows``). All chips default to
+         selected; filter wiring lands in a follow-up PR. #}
       <div class="card extract-data-card-stack" id="extract-data-by-instrument">
         <div>
           <h2 style="margin-top: 0;">By instrument</h2>
@@ -160,9 +114,54 @@
           </a>
         </div>
       </div>
+    </div>
+
+    <div class="extract-data-column">
+      {# Reviewer response metadata — right column, top. Per-
+         reviewer / per-reviewee response data is trivially
+         reshaped from the By-instrument export via a spreadsheet
+         sort or Power Query; these cards focus on *metadata
+         about responses* (counts, timestamps, which
+         instruments). ``Zip all`` is a placeholder — wiring
+         lands in a follow-up PR. #}
+      <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
+        <div>
+          <h2 style="margin-top: 0;">Reviewer response metadata</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Per-reviewer metadata about the responses each reviewer
+            produced — how many, when saved / submitted, against which
+            instruments. Optimised for reviewer audit and coaching.
+          </p>
+        </div>
+        <p class="col-chip-row" style="margin: 0;">
+          {% for slot, label in [
+              ("all-reviewers", "All reviewers"),
+              ("count", "Count"),
+              ("mean", "Mean"),
+              ("median", "Median"),
+              ("min", "Min"),
+              ("max", "Max"),
+              ("length", "Length"),
+          ] %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-reviewer-metadata-chip="{{ slot }}"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">{{ label }}</span>
+          {% endfor %}
+        </p>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-reviewer-metadata-zip"
+             href="#"
+             aria-disabled="true">
+            Zip all
+          </a>
+        </div>
+      </div>
 
       {# Reviewee response metadata — right column, below the
-         By-instrument card. Placeholder ``Zip all`` per the
+         Reviewer-metadata card. Placeholder ``Zip all`` per the
          same rationale as the Reviewer metadata card. #}
       <div class="card extract-data-card-stack" id="extract-data-by-reviewee">
         <div>
