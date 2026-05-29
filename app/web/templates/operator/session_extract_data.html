@@ -15,154 +15,157 @@
      is set to ``extract-data`` so card POSTs land back here. #}
   {% include "operator/partials/next_action_card.html" %}
 
-  {# Top row: two half-width cards side-by-side. The intro card
-     on the left carries the page heading + the
-     ``Extract all data`` button — the one-click everything
-     shortcut. Its chip row mirrors the By-instrument chip row
-     in shape: three placeholder selectors (``By instruments``,
-     ``By reviewers``, ``By reviewees``) that will eventually
-     scope which lens-shaped CSVs land in the ``Extract all
-     data`` zip; layout-only for now. The By-instrument card on
-     the right is the first wired lens (per
-     ``guide/extract_data.md``). #}
-  <div class="extract-data-top-grid">
-    <div class="card extract-data-card-stack" id="extract-data-intro">
-      <div>
-        <h2 style="margin-top: 0;">Extract all data</h2>
-        <p class="form-help" style="margin-bottom: 0;">
-          Configure what you need on the lens cards and download
-          the specific files. Use <strong>Zip all</strong>
-          to download all response files (as configured using the
-          other cards) at once.
-        </p>
-      </div>
-      <p class="col-chip-row" style="margin: 0;">
-        <span class="pill pill-count tag-chip is-selected"
-              data-extract-all-chip="by-instruments"
-              role="button"
-              tabindex="0"
-              aria-pressed="true">By instruments</span>
-        <span class="pill pill-count tag-chip is-selected"
-              data-extract-all-chip="reviewer-metadata"
-              role="button"
-              tabindex="0"
-              aria-pressed="true">Reviewer response metadata</span>
-        <span class="pill pill-count tag-chip is-selected"
-              data-extract-all-chip="reviewee-metadata"
-              role="button"
-              tabindex="0"
-              aria-pressed="true">Reviewee response metadata</span>
-      </p>
-      <div class="extract-data-card-actions">
-        <a class="btn secondary"
-           id="extract-data-zip-all"
-           href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
-          Zip all
-        </a>
-      </div>
-    </div>
-
-    {# By instrument — text styling matches the intro card
-       (``h2`` + ``form-help``). Selectable chips below the body
-       text let the operator scope the export: one chip per
-       instrument (short label or ``Instrument_{n}`` fallback)
-       plus the two cross-cutting toggles (``Include metadata``,
-       ``All assignment rows``). All chips default to selected;
-       toggle wiring (POST shape, CSV filter logic) lands in a
-       follow-up PR — this is layout-only for now. #}
-    <div class="card extract-data-card-stack" id="extract-data-by-instrument">
-      <div>
-        <h2 style="margin-top: 0;">By instrument</h2>
-        <p class="form-help" style="margin-bottom: 0;">
-          One CSV per instrument; rows = (reviewer × reviewee)
-          pairs; columns = response fields side-by-side.
-          Optimised for cross-reviewer comparison on a single
-          rubric.
-        </p>
-      </div>
-      <p class="col-chip-row" style="margin: 0;">
-        {# Chip label mirrors the Reviewer-surface heading
-           (``app/web/views/_instruments.py::instrument_heading``):
-           ``#{n}: {short_label}`` when set, ``#{n}`` otherwise.
-           Inlined rather than reusing the helper because the
-           heading helper drops the ``#{n}`` prefix on
-           single-instrument sessions — the chip always carries
-           it so the positional ordering reads consistently. #}
-        {% for instr in instruments %}
-          {% set chip_short = (instr.short_label or "").strip() %}
-          {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+  {# Two independent columns of cards (not a row-aligned grid):
+     left column = ``Extract all data`` intro + ``Reviewer
+     response metadata``; right column = ``By instrument`` +
+     ``Reviewee response metadata``. Each column flows with
+     natural card heights so the bottoms of the two metadata
+     cards (and the tops of the two upper cards) don't have to
+     align across columns. Collapses to a single column on
+     narrow viewports. #}
+  <div class="extract-data-grid">
+    <div class="extract-data-column">
+      <div class="card extract-data-card-stack" id="extract-data-intro">
+        <div>
+          <h2 style="margin-top: 0;">Extract all data</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Configure what you need on the lens cards and download
+            the specific files. Use <strong>Zip all</strong>
+            to download all response files (as configured using the
+            other cards) at once.
+          </p>
+        </div>
+        <p class="col-chip-row" style="margin: 0;">
           <span class="pill pill-count tag-chip is-selected"
-                data-by-instrument-chip="instrument-{{ instr.id }}"
+                data-extract-all-chip="by-instruments"
                 role="button"
                 tabindex="0"
-                aria-pressed="true">{{ chip_label }}</span>
-        {% endfor %}
-        <span class="pill pill-count tag-chip is-selected"
-              data-by-instrument-chip="include-metadata"
-              role="button"
-              tabindex="0"
-              aria-pressed="true">Include metadata</span>
-        <span class="pill pill-count tag-chip is-selected"
-              data-by-instrument-chip="all-assignment-rows"
-              role="button"
-              tabindex="0"
-              aria-pressed="true">All assignment rows</span>
-      </p>
-      <div class="extract-data-card-actions">
-        <a class="btn secondary"
-           id="extract-data-by-instrument-zip"
-           href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip">
-          Zip all
-        </a>
+                aria-pressed="true">By instruments</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="reviewer-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Reviewer response metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="reviewee-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Reviewee response metadata</span>
+        </p>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-zip-all"
+             href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip">
+            Zip all
+          </a>
+        </div>
+      </div>
+
+      {# Reviewer response metadata — left column, below the
+         intro. Per-reviewer / per-reviewee response data is
+         trivially reshaped from the By-instrument export via a
+         spreadsheet sort or Power Query; this card focuses on
+         *metadata about responses* (counts, timestamps, which
+         instruments). ``Zip all`` is a placeholder — wiring
+         lands in a follow-up PR. #}
+      <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
+        <div>
+          <h2 style="margin-top: 0;">Reviewer response metadata</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Per-reviewer metadata about the responses each reviewer
+            produced — how many, when saved / submitted, against which
+            instruments. Optimised for reviewer audit and coaching.
+          </p>
+        </div>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-reviewer-metadata-zip"
+             href="#"
+             aria-disabled="true">
+            Zip all
+          </a>
+        </div>
       </div>
     </div>
-  </div>
 
-  {# The "Reviewer response metadata" / "Reviewee response metadata"
-     cards replace the earlier "By reviewer" / "By reviewee"
-     lenses. Per-reviewer / per-reviewee response data is already
-     trivially reshaped from the By-instrument export via a
-     spreadsheet sort or Power Query; these cards focus on
-     *metadata about responses* (when, what, by whom) rather
-     than the response values themselves. ``Zip all`` button is
-     a placeholder — wiring lands in a follow-up PR. #}
+    <div class="extract-data-column">
+      {# By instrument — text styling matches the intro card
+         (``h2`` + ``form-help``). Selectable chips below the body
+         text let the operator scope the export: one chip per
+         instrument (short label or ``Instrument_{n}`` fallback)
+         plus the two cross-cutting toggles (``Include metadata``,
+         ``All assignment rows``). All chips default to selected;
+         toggle wiring (POST shape, CSV filter logic) lands in a
+         follow-up PR — this is layout-only for now. #}
+      <div class="card extract-data-card-stack" id="extract-data-by-instrument">
+        <div>
+          <h2 style="margin-top: 0;">By instrument</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            One CSV per instrument; rows = (reviewer × reviewee)
+            pairs; columns = response fields side-by-side.
+            Optimised for cross-reviewer comparison on a single
+            rubric.
+          </p>
+        </div>
+        <p class="col-chip-row" style="margin: 0;">
+          {# Chip label mirrors the Reviewer-surface heading
+             (``app/web/views/_instruments.py::instrument_heading``):
+             ``#{n}: {short_label}`` when set, ``#{n}`` otherwise.
+             Inlined rather than reusing the helper because the
+             heading helper drops the ``#{n}`` prefix on
+             single-instrument sessions — the chip always carries
+             it so the positional ordering reads consistently. #}
+          {% for instr in instruments %}
+            {% set chip_short = (instr.short_label or "").strip() %}
+            {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-by-instrument-chip="instrument-{{ instr.id }}"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">{{ chip_label }}</span>
+          {% endfor %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-by-instrument-chip="include-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Include metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-by-instrument-chip="all-assignment-rows"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">All assignment rows</span>
+        </p>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-by-instrument-zip"
+             href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip">
+            Zip all
+          </a>
+        </div>
+      </div>
 
-  <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
-    <div>
-      <h2 style="margin-top: 0;">Reviewer response metadata</h2>
-      <p class="form-help" style="margin-bottom: 0;">
-        Per-reviewer metadata about the responses each reviewer
-        produced — how many, when saved / submitted, against which
-        instruments. Optimised for reviewer audit and coaching.
-      </p>
-    </div>
-    <div class="extract-data-card-actions">
-      <a class="btn secondary"
-         id="extract-data-reviewer-metadata-zip"
-         href="#"
-         aria-disabled="true">
-        Zip all
-      </a>
-    </div>
-  </div>
-
-  <div class="card extract-data-card-stack" id="extract-data-by-reviewee">
-    <div>
-      <h2 style="margin-top: 0;">Reviewee response metadata</h2>
-      <p class="form-help" style="margin-bottom: 0;">
-        Per-reviewee metadata about the responses produced about
-        each reviewee — how many, when saved / submitted, against
-        which instruments. Optimised for the feedback packet
-        handed to the reviewed person.
-      </p>
-    </div>
-    <div class="extract-data-card-actions">
-      <a class="btn secondary"
-         id="extract-data-reviewee-metadata-zip"
-         href="#"
-         aria-disabled="true">
-        Zip all
-      </a>
+      {# Reviewee response metadata — right column, below the
+         By-instrument card. Placeholder ``Zip all`` per the
+         same rationale as the Reviewer metadata card. #}
+      <div class="card extract-data-card-stack" id="extract-data-by-reviewee">
+        <div>
+          <h2 style="margin-top: 0;">Reviewee response metadata</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Per-reviewee metadata about the responses produced about
+            each reviewee — how many, when saved / submitted, against
+            which instruments. Optimised for the feedback packet
+            handed to the reviewed person.
+          </p>
+        </div>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-reviewee-metadata-zip"
+             href="#"
+             aria-disabled="true">
+            Zip all
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 
