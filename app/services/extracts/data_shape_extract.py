@@ -55,7 +55,11 @@ from app.services import field_labels
 from app.services import responses as responses_service
 
 
-__all__ = ["build_shape_rows", "compose_shape_preview_headers"]
+__all__ = [
+    "build_shape_rows",
+    "compose_shape_preview_headers",
+    "compose_shape_preview_aggregates",
+]
 
 
 _NUMERIC = ("Integer", "Decimal")
@@ -385,6 +389,44 @@ def compose_shape_preview_headers(
             )
             headers.extend(steps)
     return tuple(headers)
+
+
+def compose_shape_preview_aggregates(
+    db: Session, review_session: ReviewSession, shape: DataShape
+) -> tuple[bool, ...]:
+    """Parallel to ``compose_shape_preview_headers`` — emits
+    ``True`` for aggregate columns (which the CSV duplicates
+    under ``self_review_handling="both"``) and ``False`` for
+    identity columns (which never duplicate). Used by the
+    preview row to mark duplicated columns with an underline
+    when the operator's chip is on ``both``. Fan-out slots
+    (``list-items`` / ``discrete-steps``) propagate the
+    aggregate flag to every emitted column."""
+    slots: list[str] = json.loads(shape.column_chip_slots)
+    scope = _resolve_scope(db, review_session, shape)
+    axis = shape.axis
+    anchor_field = scope.anchor_field
+    flags: list[bool] = []
+    for slot in slots:
+        if _slot_is_identity(axis, slot):
+            flags.append(False)
+        elif slot == f"{axis}:list-items":
+            options = (
+                _list_option_values(anchor_field)
+                if anchor_field
+                else []
+            )
+            flags.extend([True] * len(options))
+        elif slot == f"{axis}:discrete-steps":
+            steps = (
+                _discrete_step_values(anchor_field)
+                if anchor_field
+                else []
+            )
+            flags.extend([True] * len(steps))
+        else:
+            flags.append(True)
+    return tuple(flags)
 
 
 _IDENTITY_SLOT_SUFFIXES = ("name", "email")

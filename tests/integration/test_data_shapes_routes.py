@@ -589,3 +589,80 @@ def test_saved_shape_renders_include_empty_rows_attr_on_card(
     ).text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-include-empty-rows="false"' in body
+
+
+# --------------------------------------------------------------------------- #
+# Duplicated-column marker — preview-row aggregate flag
+# --------------------------------------------------------------------------- #
+
+
+def test_preview_th_marks_aggregate_columns_with_data_aggregate(
+    client: TestClient, db: Session
+) -> None:
+    """Aggregate columns (Assigned / Count / Mean / etc.) carry
+    ``data-aggregate="true"`` on the ``<th>`` element so the
+    CSS underline rule can pick them up under
+    ``self_review_handling="both"``. Identity columns (Name /
+    Email / Tag-N) never carry the attribute."""
+    review_session = _make_session(client, db, code="agg-th")
+    client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(
+            name="Mixed",
+            column_chip_slots=[
+                "reviewer:name",
+                "reviewer:email",
+                "reviewer:assigned",
+            ],
+        ),
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    # Scope the search to the saved sub-card's preview row to
+    # avoid matching chip-pool entries or anything else.
+    preview_block = body.split('data-shape-id="')[1].split(
+        "data-shape-actions"
+    )[0]
+    # Identity ths have no aggregate marker; aggregate ths do.
+    import re
+
+    ths = re.findall(
+        r'<th class="shaper-preview-th"([^>]*)>([^<]+)</th>',
+        preview_block,
+    )
+    by_label = {label: attrs for attrs, label in ths}
+    assert "data-aggregate" not in by_label["Reviewer Name"]
+    assert "data-aggregate" not in by_label["Reviewer Email"]
+    assert 'data-aggregate="true"' in by_label["Assigned"]
+
+
+def test_saved_card_ships_column_aggregates_attr_parallel_to_headers(
+    client: TestClient, db: Session
+) -> None:
+    """The saved sub-card carries ``data-shape-column-aggregates``
+    parallel to ``data-shape-column-headers`` — same length, one
+    per header cell — so the JS cancel-restore path can rebuild
+    the th cells with the right marker."""
+    review_session = _make_session(client, db, code="agg-attr")
+    client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(
+            name="Mixed",
+            column_chip_slots=[
+                "reviewer:name",
+                "reviewer:email",
+                "reviewer:assigned",
+            ],
+        ),
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert (
+        "data-shape-column-headers='[\"Reviewer Name\", "
+        "\"Reviewer Email\", \"Assigned\"]'"
+    ) in body
+    assert (
+        "data-shape-column-aggregates='[false, false, true]'"
+    ) in body
