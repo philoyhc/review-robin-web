@@ -791,15 +791,36 @@ classification rule + bug-fix scope needed is now in place:
   By-instrument card bullet earlier in this section is the
   history note.
 
-**Remaining gap — 2-3 small PRs.** All chip / route / file-
-gen / persistence wiring is still TBD. None of the four
+**Placeholders — shipped** (PR #1640, 2026-05-30). Three
+inert chips with stable hook attributes already render on
+the three target cards, so each subsequent PR replaces the
+placeholder rather than introducing the chip at a fresh
+location:
+
+* Reviewer response metadata card —
+  `data-self-review-handling-placeholder="reviewer-metadata"`
+  (inline, after `All reviewers`).
+* Reviewee response metadata card —
+  `data-self-review-handling-placeholder="reviewee-metadata"`
+  (inline, after `All reviewees`).
+* Data shaper scope row —
+  `data-self-review-handling-placeholder="data-shaper"`
+  (after the Reviewer / Reviewee axis chips, before the
+  first `|` separator).
+
+Each placeholder carries `aria-disabled="true"` +
+`tabindex="-1"` + a "coming soon" `title`; PRs A / C below
+swap the inert `<span>` for the wired three-state chip
+without moving the visual anchor.
+
+**Remaining gap — 2-3 small PRs.** All chip toggle / route /
+file-gen / persistence wiring is still TBD. None of the four
 target call sites currently reads / honors a
 `self_review_handling` value (verified via grep across
 `entity_metadata_extract.py`, `data_shape_extract.py`,
 `routes_operator/_extracts.py`, `routes_operator/_extract_data.py`,
-`db/models/data_shape.py`, `services/data_shapes.py`,
-`session_config_io/{_serialize,_apply}.py`, and the
-`session_extract_data.html` template).
+`db/models/data_shape.py`, `services/data_shapes.py`, and
+`session_config_io/{_serialize,_apply}.py`).
 
 #### PR A — Metadata-card chip + filtered extracts
 
@@ -844,14 +865,23 @@ the query string).
   schema-key add needed — `context` is part of the
   canonical envelope set.)
 * `app/web/templates/operator/session_extract_data.html` —
-  per-card chip row gains a three-way `Self-review
-  handling` chip (state machine over the data, locked /
-  selectable arms per the table earlier in this section).
-  Initial render computes the chip's state server-side
-  via the same preflight as the route. JS re-derives on
+  the inert placeholder `<span data-self-review-handling-placeholder="reviewer-metadata">`
+  (and the `reviewee-metadata` sibling) shipped in
+  PR #1640 retires in favour of a three-way pill cluster
+  rendered in the same DOM slot. The cluster carries the
+  state machine described in the table earlier in this
+  section — `Include self` / `Exclude self` / `Both`
+  states, with locked / selectable arms driven by the
+  data-state preflight. Initial render reads
+  `shape.self_review_handling` (Data shaper) or the chip's
+  pre-rendered default (metadata cards); JS re-derives on
   every instrument scope-chip toggle so the locked /
   selectable status doesn't drift; the Download button
-  href picks up the chip's value.
+  href picks up the chip's value. The placeholder's
+  `data-self-review-handling-placeholder` attribute can
+  retire once the wired chip carries a stable
+  `data-self-review-handling-chip` attribute the route /
+  audit / Settings round-trip can target.
 
 **Tests.**
 
@@ -948,12 +978,14 @@ JS state-machine over the persisted column.
 **Files.**
 
 * `app/web/templates/operator/session_extract_data.html` —
-  scope row grows a `Self-review handling` chip after the
-  response-field group, separated by `|`. The chip is a
-  three-state pill cluster (or a single pill that cycles
-  through the three states; pick whichever reads more
-  naturally — both have precedent in the existing chip
-  vocabulary). On render: the server passes
+  the inert
+  `<span data-self-review-handling-placeholder="data-shaper">`
+  shipped in PR #1640 retires in favour of the wired
+  three-state pill cluster in the same scope-row slot
+  (already correctly positioned after the Reviewer /
+  Reviewee axis chips and before the first `|`). Pick
+  three-pill cluster vs single-pill cycling at PR-C time;
+  both have precedent. On render: the server passes
   `shape.self_review_handling` per sub-card; the JS
   reflects it. On `Edit` of a saved card,
   `restoreShapeChipState` syncs the chip; on save,
@@ -965,12 +997,14 @@ JS state-machine over the persisted column.
   passed as `data-shape-self-review-data-state` JSON).
   Filename suffix picked up via the existing
   `data-shape-id`-driven Download anchor (server route
-  already returns the suffix; PR B). The chip carries
-  the same lock-when-no-edit-mode behaviour as the
-  existing scope chips (the
-  `data-shaper-chips-locked="true"` attribute on the
-  outer card already covers it via the CSS rule shipped
-  in #1638).
+  already returns the suffix; PR B). To pick up the
+  chips-lock-when-no-edit-mode behaviour shipped in
+  #1638, the wired chip needs to declare the appropriate
+  `data-shaper-*-chip` attribute (or the CSS rule needs a
+  third entry) so the existing
+  `[data-shaper-chips-locked="true"]` selector applies —
+  the inert placeholder slipped through because it
+  doesn't carry one of the four existing chip attributes.
 * `app/web/routes_operator/_extract_data.py` — page
   context grows the per-(instrument, field) self-review
   data-state map for the JS preflight; PATCH/POST
