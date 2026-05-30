@@ -451,6 +451,14 @@ def reconcile_group_responses_for_relationship_change(
     _refan_group_responses(
         db, session_id=session_id, assignment_ids=target_assignment_ids
     )
+    # Pair-context boundary tag edits / re-points can shift group
+    # composition and therefore the whole-group self-review rule;
+    # recompute against the session.
+    from app.services.assignments import (
+        recompute_self_review_classification,
+    )
+
+    recompute_self_review_classification(db, session_id=session_id)
     return len(response_ids)
 
 

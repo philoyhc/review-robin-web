@@ -361,6 +361,52 @@ def _self_review_assignment_ids(
     }
 
 
+def recompute_self_review_classification(
+    db: Session, *, session_id: int
+) -> int:
+    """Recompute :attr:`Assignment.is_self_review` for every
+    assignment in the session and persist any row whose stored
+    value diverged from what :func:`classify_self_review` now
+    returns.
+
+    The whole-group rule requires seeing every ``(R, member)``
+    pair in a group to detect self-groups correctly; the
+    whole-session scope is the only one that always includes
+    them all without expensive expansion. Beta-scale session
+    sizes make this cheap; if it ever turns hot a scoped
+    variant can wrap the same canonical helper.
+
+    Every write site that creates / changes assignments, and
+    every edit site that can shift the rule's input
+    (reviewer email, reviewee identifier or boundary tag,
+    relationship boundary tag, instrument ``group_kind``)
+    calls this after its own flush. The function flushes
+    automatically when at least one row changed.
+
+    Returns the number of rows whose stored value changed.
+    """
+    rows = db.execute(
+        select(Assignment, Reviewer, Reviewee)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    if not rows:
+        return 0
+    classification = classify_self_review(
+        db, session_id=session_id, rows=rows
+    )
+    changed = 0
+    for assignment, _, _ in rows:
+        new_value = classification[assignment.id]
+        if assignment.is_self_review != new_value:
+            assignment.is_self_review = new_value
+            changed += 1
+    if changed:
+        db.flush()
+    return changed
+
+
 def self_review_breakdown_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, tuple[int, int]]:
@@ -860,6 +906,15 @@ def _materialise_one_instrument(
         if row.include != pair_include:
             row.include = pair_include
     db.flush()
+
+    # ``Assignment.is_self_review`` is derived from (reviewer / reviewee
+    # identifiers + instrument group_kind + relationship boundary tags)
+    # — recompute against the post-diff population so newly inserted
+    # rows pick up the correct flag and kept rows reflect any
+    # composition shift that happened mid-session.
+    recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
 
     counts_kwargs: dict[str, int] = {
         "new": len(diff.to_insert),

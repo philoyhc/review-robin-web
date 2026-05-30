@@ -263,6 +263,18 @@ def create_instrument(
             )
             cloned_assignments += 1
         db.flush()
+        # Cloned rows inherit the source instrument's (reviewer,
+        # reviewee) pairs but the new instrument may carry a
+        # different ``group_kind`` — recompute against the post-
+        # clone population so each row's is_self_review flag
+        # matches the new instrument's grouping shape.
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
 
     created_refs: dict[str, int] = {"instrument_id": instrument.id}
     if after_instrument_id is not None:
@@ -408,6 +420,18 @@ def replicate_instrument(
         )
         cloned_assignments += 1
     db.flush()
+    # Replicated rows inherit the source's pairs but live on a
+    # fresh instrument id; the canonical helper still re-keys
+    # them correctly because ``classify_self_review`` is keyed on
+    # ``(instrument_id, reviewer_id)``. Recompute over the
+    # session to set the column on every freshly inserted row.
+    from app.services.assignments import (
+        recompute_self_review_classification,
+    )
+
+    recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
 
     audit.write_event(
         db,
@@ -802,6 +826,17 @@ def set_group_boundary(
     old_value = instrument.group_kind
     instrument.group_kind = new_value
     db.flush()
+    # A boundary change re-keys every (reviewer, reviewee) pair on
+    # this instrument into different groups, which can flip
+    # is_self_review on every row (whole-group rule depends on
+    # who's a member of which group).
+    from app.services.assignments import (
+        recompute_self_review_classification,
+    )
+
+    recompute_self_review_classification(
+        db, session_id=instrument.session_id
+    )
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",
@@ -868,6 +903,16 @@ def set_unit_of_review(
     old_value = instrument.group_kind
     instrument.group_kind = new_value
     db.flush()
+    # Same rationale as ``set_group_boundary``: a unit-of-review
+    # change re-keys group membership and can flip is_self_review
+    # on every row on this instrument.
+    from app.services.assignments import (
+        recompute_self_review_classification,
+    )
+
+    recompute_self_review_classification(
+        db, session_id=instrument.session_id
+    )
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",

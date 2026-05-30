@@ -250,6 +250,20 @@ def update_reviewer(
         setattr(reviewer, field, new_value)
     db.flush()
 
+    # ``Assignment.is_self_review`` is keyed off ``reviewer.email``
+    # (case-insensitive). If the email changed, every group this
+    # reviewer is reviewing may need re-classification — recompute
+    # against the whole session (the canonical helper handles the
+    # whole-group rule for us).
+    if "email" in changes:
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=reviewer.session_id
+        )
+
     audit.write_event(
         db,
         event_type="reviewer.updated",
