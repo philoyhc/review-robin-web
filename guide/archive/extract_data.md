@@ -1,25 +1,52 @@
 # Extract data — new Operations tab + Session Home card split
 
-> **Mostly shipped 2026-05-29 → 2026-05-30 (PRs #1565 →
-> #1627).** Session Home card split + new **Extract data**
-> Operations tab + per-instrument / reviewer-metadata /
-> reviewee-metadata lenses + the full **Data shaper** (saved
-> `data_shapes` with CRUD routes, file generation, Settings
-> CSV round-trip, and Zip-all integration) all landed. Wiring
-> lives in `app/web/routes_operator/_extract_data.py`,
-> `app/services/data_shapes.py`,
-> `app/services/extracts/data_shape_extract.py`,
-> `app/services/extracts/zip_bundle.py`
-> (`include_data_shapes`), and
-> `app/services/session_config_io/{_serialize,_apply}.py`
-> (`_data_shape_rows` + `_apply_data_shapes`).
+> **Shipped 2026-05-29 → 2026-05-30. Archived 2026-05-30.**
+> Two-phase landing: the feature core shipped 2026-05-29 →
+> 2026-05-30 (PRs #1565 → #1627), and the queued **Self-
+> review handling** chip slice shipped same day (PRs #1642 →
+> #1647 — the latter pinning audit-flagged test-coverage
+> gaps).
 >
-> **Follow-on slice pending (proposed 2026-05-30):**
-> three-way `Self-review handling` chip on the two metadata
-> cards + Data shaper scope row. See *Self-review handling in
-> summarizing extracts (proposed 2026-05-30)* below. Plan
-> stays in `guide/` (not yet archived) until that slice
-> lands.
+> Final feature surface:
+>
+> * **Session Home — Extract setup card.** Renamed from
+>   *Extract data*; porting-shaped CSVs only (Reviewers /
+>   Reviewees / Relationships / Session settings) + a
+>   four-CSV `{code}_setup.zip`. Round-trips 1:1 with
+>   Quick Setup.
+> * **Operations strip — Extract data tab.** New page at
+>   `/operator/sessions/{id}/extract-data` with three
+>   summarizing cards + the full-width **Data shaper**.
+> * **By-instrument card.** Per-instrument wide-format CSVs
+>   with a per-row `SelfReview` column. (The pre-2026-05-30
+>   `SelfReview = FALSE` hardcode on group-scoped rows
+>   retired with the consolidation slice; see
+>   `guide/archive/self_review_consolidate.md`.)
+> * **Reviewer / Reviewee response metadata cards.**
+>   Aggregate metadata extracts with the three-state
+>   *Self-review handling* chip (Include / Exclude / Both)
+>   driving the column-name suffix + filename suffix +
+>   audit context slot.
+> * **Data shaper.** Saved `data_shapes` with CRUD routes,
+>   file generation, Settings CSV round-trip, and Zip-all
+>   integration. Each shape persists its own Self-review
+>   handling state on `data_shapes.self_review_handling`;
+>   the scope-row chip cycles + drives the same suffix /
+>   audit / filter shape.
+>
+> Wiring lives in `app/web/routes_operator/_extract_data.py`,
+> `app/web/routes_operator/_extracts.py`,
+> `app/services/extracts/{entity_metadata,data_shape,by_instrument,responses,zip_bundle}_extract.py`,
+> `app/services/data_shapes.py`,
+> `app/services/session_config_io/{_serialize,_apply}.py`
+> (`_data_shape_rows` + `_apply_data_shapes`), and the
+> `session_extract_data.html` template.
+>
+> Q4 (per-individual rows on the Data shaper × `exclude_self`)
+> stays at the conservative interpretation pinned in
+> `data_shape_extract.py:578` — rows surface with empty
+> aggregate cells when their only response was self-review;
+> revisit if/when the UX feels off.
 >
 > **Original stub header (created 2026-05-29):** Captures the
 > plan to split the current Session Home "Extract data" card
