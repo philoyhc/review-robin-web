@@ -521,6 +521,69 @@
        leaves wiring of column-chip drag-reorder + sort-icon
        clicks to the follow-up. #}
     <div data-shaper-stack>
+      {# Saved shapes from the database render first as
+         saved-mode sub-cards. Each carries the persistence
+         attributes the JS reads on ``Edit`` to restore chip
+         state: ``data-shape-id`` for the PATCH / DELETE
+         routes, ``data-shape-axis`` for the axis chip to
+         re-press, ``data-shape-instrument-id`` /
+         ``data-shape-response-field-id`` for the scope
+         chips, and ``data-shape-column-slots`` for the
+         column-chip selection (JSON-encoded list, decoded
+         on click). #}
+      {% for saved in saved_shapes %}
+        <div class="data-shape-card"
+             data-shape
+             data-shape-mode="saved"
+             data-shape-id="{{ saved.id }}"
+             data-shape-axis="{{ saved.axis }}"
+             {% if saved.instrument_id is not none %}data-shape-instrument-id="{{ saved.instrument_id }}"{% endif %}
+             {% if saved.response_field_id is not none %}data-shape-response-field-id="{{ saved.response_field_id }}"{% endif %}
+             data-shape-column-slots="{{ saved.column_chip_slots | tojson | e }}">
+          <div class="shaper-preview-scroll">
+            <table class="shaper-preview-table">
+              <thead>
+                <tr data-shape-preview-row>
+                  {% for slot in saved.column_chip_slots %}
+                    <th class="shaper-preview-th">{{ slot }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+            </table>
+          </div>
+          <div class="data-shape-actions">
+            <input type="text" class="data-shape-name-input"
+                   data-shape-name placeholder="Name this shape"
+                   value="{{ saved.name }}" style="display: none;">
+            <span class="data-shape-name-display"
+                  data-shape-name-display>{{ saved.name }}</span>
+            <button type="button" class="btn secondary"
+                    data-shape-save title="Save shape"
+                    style="display: none;">Save</button>
+            <button type="button" class="btn secondary"
+                    data-shape-edit title="Edit shape">Edit</button>
+            <button type="button" class="btn secondary"
+                    data-shape-cancel
+                    title="Abandon unsaved edits and unselect">Cancel</button>
+            <button type="button" class="btn secondary"
+                    data-shape-delete title="Delete shape">Delete</button>
+            <button type="button" class="btn secondary"
+                    data-shape-add title="Spawn a new blank shape">+Shape</button>
+            <a class="btn secondary"
+               data-shape-download
+               href="#"
+               aria-disabled="true">Download</a>
+          </div>
+        </div>
+      {% endfor %}
+      {# Always-present blank sub-card on initial load —
+         renders only when no shapes are saved yet, matching
+         the band-3 builder's always-present-empty-row
+         pattern (operator gets an immediate edit target on
+         a brand-new session). Once shapes exist, the
+         operator uses ``+Shape`` on any existing card to
+         spawn a new blank editable card. #}
+      {% if not saved_shapes %}
       <div class="data-shape-card" data-shape data-shape-mode="edit"
            data-shape-selected="true">
         <div class="shaper-preview-scroll">
@@ -578,6 +641,7 @@
              aria-disabled="true">Download</a>
         </div>
       </div>
+      {% endif %}
     </div>
 
     <div class="extract-data-card-actions">
@@ -1381,6 +1445,226 @@
         window.setTimeout(updateAllButtonStates, 0);
       });
 
+      // --------------------------------------------------- //
+      // Persistence — POST / PATCH / DELETE on the Data shape
+      // routes. ``saveShape`` reads the current chip state +
+      // name input off the active sub-card and ships it; the
+      // route returns 201 (new) / 200 (update) on success
+      // or 422 with an inline error.
+      //
+      // ``restoreShapeChipState`` walks the saved shape's
+      // attributes and re-presses chips to match — used by
+      // ``✎`` on a saved sub-card and on initial page load
+      // for the first saved shape (so the operator's last-
+      // edited shape's scope chips ride along visually).
+      // --------------------------------------------------- //
+
+      function currentAxis() {
+        var on = card.querySelector(
+          '[data-shaper-axis-chip][aria-pressed="true"]'
+        );
+        return on ? on.getAttribute("data-shaper-axis-chip") : null;
+      }
+
+      function currentInstrumentId() {
+        var on = card.querySelector(
+          '[data-shaper-instrument-chip][aria-pressed="true"]'
+        );
+        return on
+          ? parseInt(on.getAttribute("data-shaper-instrument-chip"), 10)
+          : null;
+      }
+
+      function currentFieldId() {
+        var on = card.querySelector(
+          '[data-shaper-field-chip][aria-pressed="true"]'
+        );
+        if (!on) return null;
+        var slot = on.getAttribute("data-shaper-field-chip") || "";
+        var parts = slot.split(":");
+        return parts.length === 2 ? parseInt(parts[1], 10) : null;
+      }
+
+      function currentColumnSlots() {
+        var slots = [];
+        relevantSlot
+          .querySelectorAll('[data-shaper-col-chip][aria-pressed="true"]')
+          .forEach(function (chip) {
+            slots.push(chip.getAttribute("data-shaper-col-chip"));
+          });
+        return slots;
+      }
+
+      function showShapeError(shape, msg, conflict) {
+        var nameInput = shape.querySelector("[data-shape-name]");
+        if (nameInput) {
+          nameInput.setCustomValidity(msg);
+          nameInput.reportValidity();
+          // Clear on next input so the error doesn't stick
+          // forever once the operator fixes it.
+          function clear() {
+            nameInput.setCustomValidity("");
+            nameInput.removeEventListener("input", clear);
+          }
+          nameInput.addEventListener("input", clear);
+        } else {
+          window.alert(msg);
+        }
+        void conflict;
+      }
+
+      function applySavedShapeAttrs(shape, data) {
+        shape.setAttribute("data-shape-id", data.id);
+        shape.setAttribute("data-shape-axis", data.axis);
+        if (data.instrument_id !== null && data.instrument_id !== undefined) {
+          shape.setAttribute("data-shape-instrument-id", data.instrument_id);
+        } else {
+          shape.removeAttribute("data-shape-instrument-id");
+        }
+        if (
+          data.response_field_id !== null &&
+          data.response_field_id !== undefined
+        ) {
+          shape.setAttribute(
+            "data-shape-response-field-id", data.response_field_id
+          );
+        } else {
+          shape.removeAttribute("data-shape-response-field-id");
+        }
+        shape.setAttribute(
+          "data-shape-column-slots",
+          JSON.stringify(data.column_chip_slots || [])
+        );
+      }
+
+      function persistShape(shape) {
+        var nameInput = shape.querySelector("[data-shape-name]");
+        var payload = {
+          name: (nameInput && nameInput.value) || "",
+          axis: currentAxis(),
+          instrument_id: currentInstrumentId(),
+          response_field_id: currentFieldId(),
+          column_chip_slots: currentColumnSlots(),
+        };
+        var shapeId = shape.getAttribute("data-shape-id");
+        var method = shapeId ? "PATCH" : "POST";
+        var url = shapeId
+          ? "/operator/sessions/" + sessionId +
+              "/extract-data/shapes/" + shapeId
+          : "/operator/sessions/" + sessionId + "/extract-data/shapes";
+        return fetch(url, {
+          method: method,
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+          credentials: "same-origin",
+        }).then(function (resp) {
+          return resp.json().then(function (body) {
+            return {status: resp.status, body: body};
+          }).catch(function () {
+            return {status: resp.status, body: null};
+          });
+        }).then(function (result) {
+          if (result.status === 201 || result.status === 200) {
+            applySavedShapeAttrs(shape, result.body);
+            return true;
+          }
+          if (result.status === 422 && result.body) {
+            showShapeError(
+              shape,
+              result.body.error || "Validation error.",
+              !!result.body.conflict
+            );
+            return false;
+          }
+          showShapeError(shape, "Save failed (HTTP " + result.status + ").", false);
+          return false;
+        });
+      }
+
+      function deleteShapeOnServer(shape) {
+        var shapeId = shape.getAttribute("data-shape-id");
+        if (!shapeId) return Promise.resolve(true);
+        return fetch(
+          "/operator/sessions/" + sessionId +
+            "/extract-data/shapes/" + shapeId,
+          {method: "DELETE", credentials: "same-origin"}
+        ).then(function (resp) {
+          return resp.status === 204 || resp.status === 200;
+        });
+      }
+
+      // Walk a saved shape's persistence attributes and
+      // re-press chips so the scope + content rows reflect
+      // its contents. Used by the ``Edit`` button so the
+      // operator can keep editing where they left off.
+      function clickChipIfNotPressed(chip) {
+        if (!chip) return;
+        if (chip.getAttribute("aria-pressed") !== "true") chip.click();
+      }
+      function clickChipIfPressed(chip) {
+        if (!chip) return;
+        if (chip.getAttribute("aria-pressed") === "true") chip.click();
+      }
+
+      function restoreShapeChipState(shape) {
+        // Clear current selection first.
+        card
+          .querySelectorAll('[data-shaper-col-chip][aria-pressed="true"]')
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll(
+            '[data-shaper-field-chip][aria-pressed="true"]'
+          )
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll(
+            '[data-shaper-instrument-chip][aria-pressed="true"]'
+          )
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll('[data-shaper-axis-chip][aria-pressed="true"]')
+          .forEach(clickChipIfPressed);
+
+        var axis = shape.getAttribute("data-shape-axis");
+        if (axis) {
+          clickChipIfNotPressed(
+            card.querySelector(
+              '[data-shaper-axis-chip="' + axis + '"]'
+            )
+          );
+        }
+        var instrumentId = shape.getAttribute("data-shape-instrument-id");
+        if (instrumentId) {
+          clickChipIfNotPressed(
+            card.querySelector(
+              '[data-shaper-instrument-chip="' + instrumentId + '"]'
+            )
+          );
+        }
+        var fieldId = shape.getAttribute("data-shape-response-field-id");
+        if (fieldId && instrumentId) {
+          clickChipIfNotPressed(
+            card.querySelector(
+              '[data-shaper-field-chip="' +
+                instrumentId + ":" + fieldId + '"]'
+            )
+          );
+        }
+        var slotsAttr = shape.getAttribute("data-shape-column-slots");
+        var slots = [];
+        try {
+          slots = JSON.parse(slotsAttr || "[]");
+        } catch (e) {}
+        slots.forEach(function (slot) {
+          clickChipIfNotPressed(
+            relevantSlot.querySelector(
+              '[data-shaper-col-chip="' + slot + '"]'
+            )
+          );
+        });
+        rebuildPreviewRow();
+      }
+
       function bindShapeCard(shape) {
         var nameInput = shape.querySelector("[data-shape-name]");
         var nameDisplay = shape.querySelector("[data-shape-name-display]");
@@ -1404,17 +1688,22 @@
           });
         }
 
-        // Save = persist the name into the display span but
-        // **stay in edit mode** (per wiring decision: Save
-        // does not unselect). For the placeholder slice
-        // there's no server-side persistence yet — flipping
-        // the display value is the visible feedback. Save
-        // stays disabled until ``shapeIsValid(shape)`` per
-        // the wiring decisions' validation rules.
+        // Save = POST (new shape) or PATCH (existing shape
+        // identified by ``data-shape-id``). The card stays
+        // in edit mode (per wiring decision: Save does not
+        // unselect). Save stays disabled until
+        // ``shapeIsValid(shape)`` per the wiring decisions'
+        // validation rules; the server re-checks and returns
+        // 422 with an inline error on any drift (notably the
+        // ``UNIQUE (session_id, name)`` constraint that the
+        // client can't fully check).
         saveBtn.addEventListener("click", function () {
           if (!shapeIsValid(shape)) return;
-          nameDisplay.textContent = nameInput.value;
-          updateAllButtonStates();
+          persistShape(shape).then(function (ok) {
+            if (!ok) return;
+            nameDisplay.textContent = nameInput.value;
+            updateAllButtonStates();
+          });
         });
 
         editBtn.addEventListener("click", function () {
@@ -1427,6 +1716,13 @@
           editBtn.style.display = "none";
           saveBtn.style.display = "";
           cancelBtn.style.display = "";
+          // For saved sub-cards (those with
+          // ``data-shape-id``), restore the persisted chip
+          // state so the operator can keep editing where
+          // they left off.
+          if (shape.getAttribute("data-shape-id")) {
+            restoreShapeChipState(shape);
+          }
           setActiveShape(shape);
           updateAllButtonStates();
         });
@@ -1454,6 +1750,11 @@
 
         deleteBtn.addEventListener("click", function () {
           if (deleteBtn.disabled) return;
+          // Fire-and-forget the server delete; the visual
+          // removal happens immediately for a snappy feel.
+          // Idempotent on the server side so a stale local
+          // ``data-shape-id`` doesn't 404 — it just no-ops.
+          deleteShapeOnServer(shape);
           var wasSelected = activeShape === shape;
           var nextSelected = shape.nextElementSibling
             || shape.previousElementSibling;

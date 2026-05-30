@@ -9,8 +9,11 @@ downloads is the follow-up.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,12 +24,49 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import field_labels
+from app.services import data_shapes, field_labels
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
+
+
+# --------------------------------------------------------------------------- #
+# Data shaper saved-shape CRUD — POST / PATCH / DELETE. Per the
+# wiring decisions in ``spec/extract_data.md``.
+# --------------------------------------------------------------------------- #
+
+
+class DataShapePayload(BaseModel):
+    """Request body for ``POST`` / ``PATCH`` on a saved
+    Data shape. Mirrors the persisted columns 1:1."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    axis: str
+    instrument_id: int | None = None
+    response_field_id: int | None = None
+    column_chip_slots: list[str] = Field(default_factory=list)
+
+
+def _validation_error_response(
+    exc: data_shapes.DataShapeValidationError,
+) -> JSONResponse:
+    """422 with a structured body the inline error display
+    on the page consumes. ``conflict=True`` lets the JS
+    target the name input specifically rather than rendering
+    a generic error."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": str(exc),
+            "conflict": isinstance(
+                exc, data_shapes.DataShapeNameConflictError
+            ),
+        },
+    )
 
 
 # Numeric response fields with a finite, small number of valid
@@ -119,6 +159,22 @@ def session_extract_data(
         field_labels.resolve(review_session, "reviewee", slot)
         for slot in ("tag_1", "tag_2", "tag_3")
     ]
+    saved_shapes = data_shapes.list_shapes(db, review_session)
+    # The template walks each saved shape's column-chip slot
+    # list to re-toggle the matching chips when the operator
+    # clicks ``Edit``. Decoding the JSON server-side keeps
+    # the template clean.
+    saved_shape_rows = [
+        {
+            "id": shape.id,
+            "name": shape.name,
+            "axis": shape.axis,
+            "instrument_id": shape.instrument_id,
+            "response_field_id": shape.response_field_id,
+            "column_chip_slots": json.loads(shape.column_chip_slots),
+        }
+        for shape in saved_shapes
+    ]
     return _templates.TemplateResponse(
         request,
         "operator/session_extract_data.html",
@@ -133,6 +189,117 @@ def session_extract_data(
             "reviewer_tag_labels": reviewer_tag_labels,
             "reviewee_tag_labels": reviewee_tag_labels,
             "field_discrete_steps": field_discrete_steps,
+            "saved_shapes": saved_shape_rows,
             **workflow_ctx,
         },
     )
+
+
+@router.post("/sessions/{session_id}/extract-data/shapes")
+def create_data_shape(
+    payload: DataShapePayload,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Persist a brand-new Data shape on ``review_session``.
+
+    Returns 201 with the new row's columns on success or
+    422 with an inline error on validation failure (see
+    ``_validation_error_response``).
+    """
+    try:
+        shape = data_shapes.create_shape(
+            db,
+            review_session=review_session,
+            actor=user,
+            name=payload.name,
+            axis=payload.axis,
+            instrument_id=payload.instrument_id,
+            response_field_id=payload.response_field_id,
+            column_chip_slots=payload.column_chip_slots,
+        )
+    except data_shapes.DataShapeValidationError as exc:
+        return _validation_error_response(exc)
+    db.commit()
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={
+            "id": shape.id,
+            "name": shape.name,
+            "axis": shape.axis,
+            "instrument_id": shape.instrument_id,
+            "response_field_id": shape.response_field_id,
+            "column_chip_slots": json.loads(shape.column_chip_slots),
+        },
+    )
+
+
+@router.patch(
+    "/sessions/{session_id}/extract-data/shapes/{shape_id}"
+)
+def update_data_shape(
+    shape_id: int,
+    payload: DataShapePayload,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Update an existing Data shape on ``review_session``.
+
+    404s on cross-session ids (so a malicious / typo'd
+    shape_id can't leak data from another session). 422 on
+    validation failure.
+    """
+    shape = data_shapes.get_shape(db, review_session, shape_id)
+    if shape is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        data_shapes.update_shape(
+            db,
+            review_session=review_session,
+            actor=user,
+            shape=shape,
+            name=payload.name,
+            axis=payload.axis,
+            instrument_id=payload.instrument_id,
+            response_field_id=payload.response_field_id,
+            column_chip_slots=payload.column_chip_slots,
+        )
+    except data_shapes.DataShapeValidationError as exc:
+        return _validation_error_response(exc)
+    db.commit()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "id": shape.id,
+            "name": shape.name,
+            "axis": shape.axis,
+            "instrument_id": shape.instrument_id,
+            "response_field_id": shape.response_field_id,
+            "column_chip_slots": json.loads(shape.column_chip_slots),
+        },
+    )
+
+
+@router.delete(
+    "/sessions/{session_id}/extract-data/shapes/{shape_id}"
+)
+def delete_data_shape(
+    shape_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Delete a Data shape. Idempotent — re-deleting a
+    missing shape still returns 204."""
+    shape = data_shapes.get_shape(db, review_session, shape_id)
+    if shape is not None:
+        data_shapes.delete_shape(
+            db,
+            review_session=review_session,
+            actor=user,
+            shape=shape,
+        )
+        db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
