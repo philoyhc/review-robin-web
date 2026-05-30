@@ -107,6 +107,8 @@
                 aria-pressed="true">Include metadata</span>
           <span class="pill pill-count tag-chip is-selected"
                 data-by-instrument-chip="all-assignment-rows"
+                data-label-on="All assignment rows"
+                data-label-off="Assignment rows with data"
                 role="button"
                 tabindex="0"
                 aria-pressed="true">All assignment rows</span>
@@ -157,6 +159,8 @@
           {% endfor %}
           <span class="pill pill-count tag-chip is-selected"
                 data-reviewer-metadata-chip="all-reviewers"
+                data-label-on="All reviewers"
+                data-label-off="Reviewers with responses"
                 role="button"
                 tabindex="0"
                 aria-pressed="true">All reviewers</span>
@@ -209,6 +213,8 @@
           {% endfor %}
           <span class="pill pill-count tag-chip is-selected"
                 data-reviewee-metadata-chip="all-reviewees"
+                data-label-on="All reviewees"
+                data-label-off="Reviewees with responses"
                 role="button"
                 tabindex="0"
                 aria-pressed="true">All reviewees</span>
@@ -799,17 +805,35 @@
         }
         return null;
       }
+      // PR 8 of the chip-controlled-drop slice — the three
+      // empty-row-drop chips (``all-assignment-rows`` /
+      // ``all-reviewers`` / ``all-reviewees``) carry both
+      // labels via ``data-label-on`` / ``data-label-off`` and
+      // swap on toggle, matching the Data shaper's cycling-pill
+      // chip's two-state-with-explicit-labels pattern. Other
+      // chips (per-instrument, ``include-metadata``,
+      // ``extract-all`` toggles) keep the single-label
+      // semantics; ``syncLabel`` no-ops on those.
+      function syncLabel(chip) {
+        var onLabel = chip.getAttribute("data-label-on");
+        var offLabel = chip.getAttribute("data-label-off");
+        if (!onLabel || !offLabel) return;
+        var pressed = chip.getAttribute("aria-pressed") === "true";
+        chip.textContent = pressed ? onLabel : offLabel;
+      }
       chips.forEach(function (chip) {
         var key = chipKey(chip);
         if (key && Object.prototype.hasOwnProperty.call(stored, key)) {
           var pressed = !!stored[key];
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          syncLabel(chip);
         }
         function toggle() {
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+          syncLabel(chip);
           persist();
           syncByInstrumentButton();
           syncMetadataButton(
