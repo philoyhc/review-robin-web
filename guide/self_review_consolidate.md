@@ -447,3 +447,231 @@ column as its single source of truth.
 - `guide/extract_data.md` *Self-review handling in
   summarizing extracts* — the chip slice the consolidation
   unblocks.
+
+## Addendum — attributable-drop on Data shaper per-individual / per-tag-combo rows (2026-05-30)
+
+> **Why this exists.** The Self-review handling chip slice
+> shipped with a conservative interpretation pin at
+> `app/services/extracts/data_shape_extract.py:578`: when a
+> per-individual row's only response was the reviewer's own
+> self-review, `exclude_self` surfaces the row with empty
+> aggregate cells rather than dropping it. The
+> 2026-05-30 codebase assessment flagged it for revisit; PR #1651
+> (placeholder `Number of data rows: —` pill on each Data shape
+> sub-card) and PR #1652 (flush-left CSS fix) prepared the visible
+> surface that makes any drop legible to the operator.
+>
+> **The decision.** Adopt **attributable drop** — drop rows
+> whose `_Acc` accumulator was non-empty under `include_self`
+> but went empty under `exclude_self`. Apply to
+> `per_individual` and `per_tag_combo` only; never drop on
+> `single-summary` (one row, would empty the CSV); never drop
+> on `self_review_handling = "both"` (operator opted in to
+> seeing both side-by-side views). Wire the per-shape row count
+> through to the pill so the drop is visible.
+
+### What "attributable drop" means precisely
+
+Strict drop ("any row with empty `_Acc` post-exclusion") would
+turn `exclude_self` into a stealth "All reviewers OFF" toggle —
+roster members with no participation at all would also vanish.
+Attributable drop targets only the rows where exclusion is the
+*cause* of emptiness:
+
+```
+keep if include_self_acc.is_empty()                  # no data either way — keep
+   or not exclude_self_acc.is_empty()                # data survived — keep
+drop if include_self_acc.non_empty()                 # had data
+       and exclude_self_acc.is_empty()               # and exclusion removed it
+```
+
+`_Acc.is_empty()` ≡ `assigned == 0 and count == 0 and not
+fanout_counts`. (`assigned` is the assignment-pool count, `count`
+sums numeric / string / other response counts, `fanout_counts`
+tracks discrete-value fan-out.)
+
+The decision matrix:
+
+| Row scheme \ chip | `include_self` | `exclude_self` | `both` |
+|---|---|---|---|
+| per_individual | no drop | **attributable drop** | no drop |
+| per_tag_combo | no drop | **attributable drop** | no drop |
+| single-summary | no drop | no drop | no drop |
+
+### PR ladder
+
+**Three PRs, target one focused stretch.**
+
+#### PR 6 — Attributable drop in the extract pipeline
+
+**Scope.** `data_shape_extract.py` only. No UI, no spec.
+
+- Add `_Acc.is_empty(self) -> bool` predicate.
+- In `build_shape_rows`, when `shape.self_review_handling
+  == "exclude_self"` **and** row scheme ∈ {per_individual,
+  per_tag_combo}, force both passes to run (currently only
+  the requested state runs). Add `include_self`'s
+  accumulators as a comparison set; only need them for the
+  drop check (don't render them).
+- Drop body rows whose `(include_acc, exclude_acc)` pair
+  matches the attributable-drop predicate.
+- Update `_aggregate_block` callsites — no signature change,
+  just gate the row emission upstream.
+
+**Tests.**
+- Per-individual + `exclude_self`: reviewer whose only
+  response is their own self-review → row dropped; reviewer
+  with other-target responses → row kept; reviewer with no
+  participation at all → row kept (matches "All reviewers
+  ON" semantics on the metadata cards).
+- Per-tag-combo + `exclude_self`: tag-combo whose only data
+  was self-review → row dropped.
+- Per-individual + `include_self`: no drop (regression
+  guard).
+- Per-individual + `both`: no drop (regression guard).
+- Single-summary + `exclude_self`: no drop, even if every
+  response was self-review (empty aggregates surface in
+  the one row).
+
+**Done when.** The CSV reflects attributable drop. Pill still
+ships `—` (PR 7 wires it up). Operator who downloads the file
+sees fewer rows than under conservative interpretation but
+no visible warning yet — acceptable for one PR's worth of gap
+in pre-MVP.
+
+#### PR 7 — Server-rendered row count on the pill + JS live-preflight
+
+**Scope.** Pill goes from placeholder to live counter.
+
+- Add `count_shape_rows(db, session, shape) -> int` in
+  `data_shape_extract.py` (re-uses `build_shape_rows` and
+  returns `len(rows) - 1`; the extra pass cost is bounded
+  since the function caches per-state accumulators).
+- `app/web/views/_extract_data.py` adapter: each saved shape
+  carries `row_count: int`. Template renders
+  `Number of data rows: {{ saved.row_count }}` instead of `—`
+  for saved sub-cards.
+- New route: `POST /operator/sessions/{id}/data-shapes/preflight`
+  taking the same payload shape as `DataShapePayload`
+  (axis / slots / scope / self_review_handling), returning
+  `{"row_count": N}`. Uses the in-memory `DataShape` shim so
+  it doesn't have to be persisted to be counted.
+- Page JS: on every chip toggle inside an edit-mode
+  sub-card (debounced ~300ms), serialize the active chip
+  state to the preflight payload, update the pill text
+  with the returned count. Edit-mode pill renders `—` in
+  the brief in-flight window.
+
+**Tests.**
+- View adapter: saved shape's `row_count` matches
+  `count_shape_rows` output.
+- Template render: saved sub-card surfaces the live count
+  (no longer `—`).
+- New preflight route: smoke (`200 OK` + `{"row_count": int}`),
+  attributable-drop case (count drops when chip flips to
+  `exclude_self`), authorization (non-operator → 403).
+
+**Done when.** Operator sees the per-shape row count update
+live as they toggle chips. The attributable drop from PR 6 is
+no longer silent — flipping to `exclude_self` visibly
+decrements the pill count.
+
+#### PR 8 — Spec sweep + archive close-out
+
+**Scope.** Doc hygiene only.
+
+- `spec/extract_data.md` *Self-review handling* — add a row
+  to the decision matrix: per-individual / per-tag-combo +
+  `exclude_self` attributable-drop, `both` never drops,
+  single-summary never drops. Reference the pill as the
+  visibility surface.
+- `spec/extract_data.md` — pill is part of every Data shape
+  sub-card's surface contract; note the wire-up route.
+- This file → `guide/archive/self_review_consolidate.md`
+  with an addendum banner: "Addendum shipped 2026-XX-XX
+  in PRs #NNNN → #NNNN — attributable drop on Data shaper
+  per-individual / per-tag-combo rows + visible per-shape
+  row count."
+- `guide/todo_master.md` — Done entry summarising the
+  attributable-drop slice + the row-count pill.
+- `guide/codebase_assessment_30may.md` — strike the Q4
+  conservative-interpretation flag (the assessment surfaced
+  the need; the addendum closes it).
+
+**Done when.** The Q4 pin is gone from the codebase
+assessment, the spec reflects the new contract, and the plan
+is archived.
+
+### Risks and open questions
+
+1. **Should the drop be auto-fired or chip-controlled?** The
+   two metadata cards already use a chip-controlled drop:
+   `entity_metadata_extract.py:564` drops rows whose
+   `total_count == 0` when `all_reviewers=False`. Mirroring
+   that on Data shaper would mean adding a per-shape "All
+   rows" / "Drop empty" chip (default ON, OFF activates the
+   drop) instead of auto-firing on `exclude_self`. The
+   chip-controlled variant is **more general** (drops
+   roster members with no participation too, not only
+   self-review-attributable rows) and **more consistent**
+   with the metadata cards. The auto-fire variant is
+   **simpler** (no new chip, no new persisted column) and
+   matches the operator mental model of "Exclude self
+   should clean up the self-review-only rows". This
+   addendum plans auto-fire per the 2026-05-30 conversation;
+   if the chip-controlled approach lands instead, PR 6
+   becomes "add `drop_empty_rows` column + scope-row chip"
+   and the drop predicate becomes
+   `chip on AND acc.is_empty()` (matches metadata-card
+   logic exactly). **Revisit before PR 6 lands.**
+2. **2× query cost on PR 6.** Always running both passes for
+   per-individual / per-tag-combo + `exclude_self` doubles
+   the assignment + response query cost for those shapes.
+   At beta scale (<10K assignments per session, <1K
+   responses) it's negligible; flag if it becomes hot.
+3. **Preflight cost on PR 7.** Every chip toggle in an
+   edit-mode sub-card fires a preflight POST. Debounce
+   300ms (matches the typical extract-data card chip
+   debounce). If chip-state churn becomes hot, consider
+   caching the accumulator within the request.
+4. **Authorization on the preflight route.** Re-uses
+   `require_session_operator` like the existing data-shape
+   routes; same permission model. Non-operator → 403, same
+   as POST / PATCH / DELETE.
+5. **Pill on the initial-blank sub-card.** Stays at `—` —
+   no validated shape state to count against. Same for
+   edit-mode cards mid-toggle (in-flight preflight window).
+6. **Test-database `_Acc` empty-state semantics.** Verify
+   `_Acc()` (no responses, no assignments) tests as empty
+   via `is_empty()` — this is the predicate the drop logic
+   keys off, so a regression-guard unit test in PR 6 is
+   cheap insurance.
+
+### Sequencing notes
+
+- **Independent of every other queued item** (URL remodel,
+  14B, 19, 20). No cross-dependencies.
+- **3 PRs across one focused stretch** — pattern matches
+  the original 5-PR self-review consolidation cadence.
+- **PR 6 ships first** even though it changes CSV output
+  silently — the gap is one PR's worth of "operator sees
+  fewer rows in download but no visible warning". Pre-MVP,
+  single operator, acceptable. Inverting (PR 7 ships first)
+  would mean the pill shows pre-drop count, then the
+  number jumps when PR 6 lands; equally acceptable but no
+  better.
+
+### Done when
+
+- Per-individual / per-tag-combo + `exclude_self` drops
+  rows whose only data was the now-excluded self-review.
+- `both` / single-summary / `include_self` are unaffected.
+- The per-shape row-count pill renders a live integer
+  (server-rendered on saved sub-cards; JS-preflight-driven
+  on edit-mode sub-cards).
+- `spec/extract_data.md` and `guide/todo_master.md`
+  reflect the new contract.
+- The Q4 conservative-interpretation flag is gone from
+  `guide/codebase_assessment_30may.md`.
+- Plan archived to `guide/archive/self_review_consolidate.md`
+  with the addendum-shipped banner appended.
