@@ -64,6 +64,12 @@ class DataShapePayload(BaseModel):
     instrument_id: int | None = None
     response_field_id: int | None = None
     column_chip_slots: list[str] = Field(default_factory=list)
+    # Self-review handling chip state — PR B of the chip slice
+    # per ``guide/extract_data.md`` § *Self-review handling*.
+    # Stored per-shape so each shape's chip survives page
+    # navigation, re-download, and Settings CSV round-trip.
+    # Validated downstream in ``app/services/data_shapes.py``.
+    self_review_handling: str = "include_self"
 
 
 def _validation_error_response(
@@ -244,6 +250,7 @@ def create_data_shape(
             instrument_id=payload.instrument_id,
             response_field_id=payload.response_field_id,
             column_chip_slots=payload.column_chip_slots,
+            self_review_handling=payload.self_review_handling,
         )
     except data_shapes.DataShapeValidationError as exc:
         return _validation_error_response(exc)
@@ -257,6 +264,7 @@ def create_data_shape(
             "instrument_id": shape.instrument_id,
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
+            "self_review_handling": shape.self_review_handling,
             "column_headers": list(
                 compose_shape_header(db, review_session, shape)
             ),
@@ -294,6 +302,7 @@ def update_data_shape(
             instrument_id=payload.instrument_id,
             response_field_id=payload.response_field_id,
             column_chip_slots=payload.column_chip_slots,
+            self_review_handling=payload.self_review_handling,
         )
     except data_shapes.DataShapeValidationError as exc:
         return _validation_error_response(exc)
@@ -307,6 +316,7 @@ def update_data_shape(
             "instrument_id": shape.instrument_id,
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
+            "self_review_handling": shape.self_review_handling,
             "column_headers": list(
                 compose_shape_header(db, review_session, shape)
             ),
@@ -368,11 +378,25 @@ def download_data_shape(
         session=review_session,
         payload=audit.counts(rows=body_count),
         refs={"shape_id": shape.id},
+        # Self-review handling chip state — PR B of the chip
+        # slice. ``context`` is part of the canonical envelope
+        # set; the slot value matches the per-shape persisted
+        # column the file-gen path read against.
+        context={"self_review_handling": shape.self_review_handling},
     )
     db.commit()
 
+    # Filename carries the Self-review handling chip's suffix
+    # (``_self`` / ``_noself`` / ``_both``) per the spec's Q2
+    # resolution — downstream consumers can tell which pool the
+    # file represents at a glance.
     code = (review_session.code or "session").strip() or "session"
-    download_name = f"{code}_{_slug_shape_name(shape.name)}.csv"
+    suffix = _self_review_handling_filename_suffix(
+        shape.self_review_handling
+    )
+    download_name = (
+        f"{code}_{_slug_shape_name(shape.name)}{suffix}.csv"
+    )
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",
@@ -382,3 +406,19 @@ def download_data_shape(
             ),
         },
     )
+
+
+def _self_review_handling_filename_suffix(state: str) -> str:
+    """Per-state Data shape filename suffix. ``include_self`` →
+    ``_self``; ``exclude_self`` → ``_noself``; ``both`` →
+    ``_both``. Mirrors the metadata-card suffix policy shipped in
+    PR A (``self_review_handling_filename_suffix`` in
+    ``entity_metadata_extract.py``) so the two surfaces read
+    identically; not reused directly because the Data shape side
+    operates on a per-shape persisted state, not a query-param
+    state."""
+    if state == "exclude_self":
+        return "_noself"
+    if state == "both":
+        return "_both"
+    return "_self"

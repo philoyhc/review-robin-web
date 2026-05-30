@@ -93,7 +93,8 @@ def _seed_three_shapes(
     )
     field = _field(db, instrument, field_key="score")
 
-    # Shape 1 — session-wide (no scope).
+    # Shape 1 — session-wide (no scope). Default Self-review
+    # handling state (``include_self``).
     db.add(
         DataShape(
             session_id=review_session.id,
@@ -104,9 +105,10 @@ def _seed_three_shapes(
             column_chip_slots=json.dumps(
                 ["reviewer:name", "reviewer:email"]
             ),
+            self_review_handling="include_self",
         )
     )
-    # Shape 2 — scoped to an instrument.
+    # Shape 2 — scoped to an instrument, exclude_self chip.
     db.add(
         DataShape(
             session_id=review_session.id,
@@ -117,9 +119,10 @@ def _seed_three_shapes(
             column_chip_slots=json.dumps(
                 ["reviewer:name", "reviewer:count"]
             ),
+            self_review_handling="exclude_self",
         )
     )
-    # Shape 3 — scoped to a specific response field.
+    # Shape 3 — scoped to a specific response field, both chip.
     db.add(
         DataShape(
             session_id=review_session.id,
@@ -130,6 +133,7 @@ def _seed_three_shapes(
             column_chip_slots=json.dumps(
                 ["reviewee:name", "reviewee:mean"]
             ),
+            self_review_handling="both",
         )
     )
     db.flush()
@@ -143,8 +147,11 @@ def test_export_serialises_all_three_shape_variants(
     _seed_three_shapes(db, review_session)
     rows = session_config_io.serialize_session_config(db, review_session)
     shape_rows = [r for r in rows if r.field.startswith("data_shapes[")]
-    # 5 rows per shape × 3 shapes = 15
-    assert len(shape_rows) == 15
+    # 6 rows per shape × 3 shapes = 18. The 6 keys are name +
+    # axis + instrument_short_label + response_field_key +
+    # column_chip_slots + self_review_handling (PR B of the
+    # Self-review handling chip slice added the last one).
+    assert len(shape_rows) == 18
     by_field = {r.field: r.value for r in shape_rows}
     # Shapes sorted by name → 0: Per field, 1: Per instrument,
     # 2: Whole roster.
@@ -262,3 +269,85 @@ def test_apply_wipes_existing_shapes_before_replacing(
     }
     assert "Stale" not in names
     assert names == {"Whole roster", "Per instrument", "Per field"}
+
+
+# --------------------------------------------------------------------------- #
+# Self-review handling chip — PR B
+# --------------------------------------------------------------------------- #
+
+
+def test_self_review_handling_state_roundtrips_through_settings_csv(
+    db: Session,
+) -> None:
+    """Each of the three chip states (``include_self`` /
+    ``exclude_self`` / ``both``) survives an export → import
+    round-trip via the Settings CSV. Per
+    ``guide/extract_data.md`` § *Self-review handling* PR B."""
+    session_a = _session(db, code="srh-src")
+    _seed_three_shapes(db, session_a)
+    rows = session_config_io.serialize_session_config(db, session_a)
+
+    # Confirm the per-shape ``self_review_handling`` rows appear
+    # on the export side.
+    field_by_path = {r.field: r.value for r in rows}
+    # Shapes sorted by name on serialize: Per field, Per
+    # instrument, Whole roster.
+    assert field_by_path["data_shapes[0].self_review_handling"] == "both"
+    assert (
+        field_by_path["data_shapes[1].self_review_handling"]
+        == "exclude_self"
+    )
+    assert (
+        field_by_path["data_shapes[2].self_review_handling"]
+        == "include_self"
+    )
+
+    # Import onto a fresh session with matching short_label /
+    # field_key and confirm the state survives.
+    session_b = _session(db, code="srh-dst")
+    instr_b = _instrument(db, session_b, short_label="Peer Review")
+    _field(db, instr_b, field_key="score")
+    db.flush()
+    result = session_config_io.apply_session_config(
+        db, session_b, list(rows), user=None
+    )
+    assert result.ok, result.errors
+    db.expire_all()
+    shapes_b = {
+        s.name: s for s in db.execute(
+            select(DataShape).where(DataShape.session_id == session_b.id)
+        ).scalars()
+    }
+    assert shapes_b["Whole roster"].self_review_handling == "include_self"
+    assert shapes_b["Per instrument"].self_review_handling == "exclude_self"
+    assert shapes_b["Per field"].self_review_handling == "both"
+
+
+def test_apply_falls_through_to_default_on_missing_self_review_handling_row(
+    db: Session,
+) -> None:
+    """A pre-PR-B Settings CSV (no ``self_review_handling`` row)
+    imports cleanly with the ``include_self`` default — today's
+    behaviour preserved for chip-less exports."""
+    session_a = _session(db, code="srh-legacy-src")
+    _seed_three_shapes(db, session_a)
+    rows = list(session_config_io.serialize_session_config(db, session_a))
+    # Strip the new column from the row set to simulate a
+    # pre-PR-B export.
+    rows = [
+        r for r in rows
+        if not r.field.endswith(".self_review_handling")
+    ]
+    session_b = _session(db, code="srh-legacy-dst")
+    instr_b = _instrument(db, session_b, short_label="Peer Review")
+    _field(db, instr_b, field_key="score")
+    db.flush()
+    result = session_config_io.apply_session_config(
+        db, session_b, rows, user=None
+    )
+    assert result.ok, result.errors
+    db.expire_all()
+    for shape in db.execute(
+        select(DataShape).where(DataShape.session_id == session_b.id)
+    ).scalars():
+        assert shape.self_review_handling == "include_self"

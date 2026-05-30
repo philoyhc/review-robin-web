@@ -53,6 +53,8 @@ __all__ = [
     "DataShapeValidationError",
     "DataShapeNameConflictError",
     "VALID_AXES",
+    "VALID_SELF_REVIEW_HANDLING",
+    "DEFAULT_SELF_REVIEW_HANDLING",
     "list_shapes",
     "get_shape",
     "create_shape",
@@ -62,6 +64,12 @@ __all__ = [
 
 
 VALID_AXES: frozenset[str] = frozenset({"reviewer", "reviewee"})
+# Per-shape Self-review handling chip state — PR B of the chip
+# slice per ``guide/extract_data.md`` § *Self-review handling*.
+VALID_SELF_REVIEW_HANDLING: frozenset[str] = frozenset(
+    {"include_self", "exclude_self", "both"}
+)
+DEFAULT_SELF_REVIEW_HANDLING = "include_self"
 
 
 class DataShapeValidationError(ValueError):
@@ -130,6 +138,7 @@ def _validate(
     instrument_id: int | None,
     response_field_id: int | None,
     column_chip_slots: list[str],
+    self_review_handling: str,
 ) -> tuple[Instrument | None, InstrumentResponseField | None]:
     """Server-side validation per the wiring decisions.
 
@@ -151,6 +160,12 @@ def _validate(
     if not all(isinstance(s, str) and s for s in column_chip_slots):
         raise DataShapeValidationError(
             "Column chip slots must be non-empty strings."
+        )
+    if self_review_handling not in VALID_SELF_REVIEW_HANDLING:
+        raise DataShapeValidationError(
+            f"Self-review handling must be one of "
+            f"{sorted(VALID_SELF_REVIEW_HANDLING)}, got "
+            f"{self_review_handling!r}."
         )
 
     instrument: Instrument | None = None
@@ -206,6 +221,7 @@ def _audit_snapshot(shape: DataShape) -> dict[str, Any]:
         "instrument_id": shape.instrument_id,
         "response_field_id": shape.response_field_id,
         "column_chip_slots": slots,
+        "self_review_handling": shape.self_review_handling,
     }
 
 
@@ -224,6 +240,7 @@ def create_shape(
     instrument_id: int | None,
     response_field_id: int | None,
     column_chip_slots: list[str],
+    self_review_handling: str = DEFAULT_SELF_REVIEW_HANDLING,
     correlation_id: str | None = None,
 ) -> DataShape:
     """Persist a new shape on ``review_session`` + emit the
@@ -243,6 +260,7 @@ def create_shape(
         instrument_id=instrument_id,
         response_field_id=response_field_id,
         column_chip_slots=column_chip_slots,
+        self_review_handling=self_review_handling,
     )
 
     shape = DataShape(
@@ -252,6 +270,7 @@ def create_shape(
         instrument_id=instrument_id,
         response_field_id=response_field_id,
         column_chip_slots=json.dumps(column_chip_slots),
+        self_review_handling=self_review_handling,
         created_by_user_id=actor.id if actor else None,
     )
     db.add(shape)
@@ -290,6 +309,7 @@ def update_shape(
     instrument_id: int | None,
     response_field_id: int | None,
     column_chip_slots: list[str],
+    self_review_handling: str = DEFAULT_SELF_REVIEW_HANDLING,
     correlation_id: str | None = None,
 ) -> DataShape:
     """Update an existing shape in place + re-emit the
@@ -308,6 +328,7 @@ def update_shape(
         instrument_id=instrument_id,
         response_field_id=response_field_id,
         column_chip_slots=column_chip_slots,
+        self_review_handling=self_review_handling,
     )
 
     shape.name = name
@@ -315,6 +336,7 @@ def update_shape(
     shape.instrument_id = instrument_id
     shape.response_field_id = response_field_id
     shape.column_chip_slots = json.dumps(column_chip_slots)
+    shape.self_review_handling = self_review_handling
     try:
         db.flush()
     except IntegrityError as exc:

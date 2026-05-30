@@ -80,6 +80,20 @@ class DataShape(Base, TimestampMixin):
     # drives the preview-row column order and the CSV header
     # order on extract.
     column_chip_slots: Mapped[str] = mapped_column(Text, nullable=False)
+    # Self-review handling chip — three-state cycle persisted per
+    # shape (``include_self`` / ``exclude_self`` / ``both``); see
+    # ``guide/extract_data.md`` § *Self-review handling in
+    # summarizing extracts*. PR B (#TBD) added the column with a
+    # default of ``include_self`` so existing rows + chip-less
+    # imports preserve today's behaviour. The file-gen path
+    # (``app/services/extracts/data_shape_extract.py``) reads the
+    # column to pick the column-name suffix + the in-pool filter.
+    self_review_handling: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default="include_self",
+        default="include_self",
+    )
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
