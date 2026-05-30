@@ -727,3 +727,49 @@ def test_include_empty_rows_chip_renders_on_data_shaper(
         'data-shaper-self-review-chip="data-shaper"'
     )
     assert reviewee_pos < ier_pos < srh_pos
+
+
+def test_empty_row_drop_chips_carry_dual_labels(
+    client: TestClient, db: Session
+) -> None:
+    """PR 8 of the chip-controlled-drop slice — the three
+    existing empty-row-drop chips on By instrument / Reviewer
+    response metadata / Reviewee response metadata become
+    two-state cycling pills with explicit labels per state.
+    Both labels ride along on ``data-label-on`` /
+    ``data-label-off`` so the page JS can swap on toggle; the
+    initial render shows the on-label."""
+    review_session = _make_session(client, db, code="ed-dual-labels")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # By instrument card.
+    bi_block = body.split("extract-data-by-instrument")[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert 'data-by-instrument-chip="all-assignment-rows"' in bi_block
+    assert 'data-label-on="All assignment rows"' in bi_block
+    assert (
+        'data-label-off="Assignment rows with data"' in bi_block
+    )
+    # Initial render still shows the on-label.
+    assert ">All assignment rows<" in bi_block
+
+    # Reviewer response metadata card.
+    rwr_block = body.split('id="extract-data-by-reviewer"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert 'data-reviewer-metadata-chip="all-reviewers"' in rwr_block
+    assert 'data-label-on="All reviewers"' in rwr_block
+    assert 'data-label-off="Reviewers with responses"' in rwr_block
+    assert ">All reviewers<" in rwr_block
+
+    # Reviewee response metadata card.
+    rwe_block = body.split('id="extract-data-by-reviewee"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert 'data-reviewee-metadata-chip="all-reviewees"' in rwe_block
+    assert 'data-label-on="All reviewees"' in rwe_block
+    assert 'data-label-off="Reviewees with responses"' in rwe_block
+    assert ">All reviewees<" in rwe_block
