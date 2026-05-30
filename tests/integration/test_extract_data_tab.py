@@ -609,10 +609,9 @@ def test_self_review_handling_chips_render(
     client: TestClient, db: Session
 ) -> None:
     """The Self-review handling chip lives on three cards. PR A
-    wires the two metadata cards (Reviewer / Reviewee response
-    metadata) as live three-state cycle chips; the Data shaper
-    card keeps an inert placeholder until PR C lands the
-    per-shape persistence."""
+    wired the two metadata cards; PR C wires the Data shaper
+    scope row's chip with the same cycling-pill semantics, just
+    backed by the per-shape persisted column."""
     review_session = _make_session(client, db, code="ed-self-review-chips")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -643,19 +642,28 @@ def test_self_review_handling_chips_render(
         "data-self-review-handling-chip"
     )
 
-    # Data shaper card — placeholder still in place pending PR C.
+    # Data shaper card — PR C wires the chip in place of the
+    # PR-A placeholder. Same cycling-pill state machine; backed
+    # by the per-shape persisted column.
     assert (
-        'data-self-review-handling-placeholder="data-shaper"' in body
+        'data-shaper-self-review-chip="data-shaper"' in body
+    )
+    assert (
+        'data-self-review-handling-placeholder="data-shaper"' not in body
     )
     shaper_block = body.split('id="extract-data-shaper"')[1].split(
         "data-shaper-stack"
     )[0]
+    assert (
+        'data-shaper-self-review-state="include_self"' in shaper_block
+    )
+    assert ">Self-review: Include<" in shaper_block
     reviewee_pos = shaper_block.index('data-shaper-axis-chip="reviewee"')
-    placeholder_pos = shaper_block.index(
-        'data-self-review-handling-placeholder="data-shaper"'
+    chip_pos = shaper_block.index(
+        'data-shaper-self-review-chip="data-shaper"'
     )
     first_pipe_pos = shaper_block.index("shaper-axis-pipe")
-    assert reviewee_pos < placeholder_pos < first_pipe_pos
+    assert reviewee_pos < chip_pos < first_pipe_pos
 
 
 def test_by_instrument_card_renders_selectable_chips(

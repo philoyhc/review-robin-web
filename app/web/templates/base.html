@@ -1359,7 +1359,14 @@
         [data-shaper-field-chip],
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
-        [data-shaper-col-chip] {
+        [data-shaper-col-chip],
+      /* PR C of the Self-review handling chip slice — the
+         scope-row chip joins the chips-lock-when-no-edit-mode
+         rule via its own ``data-shaper-self-review-chip``
+         attribute. */
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-self-review-chip] {
         opacity: 0.4;
         pointer-events: none;
         cursor: default;

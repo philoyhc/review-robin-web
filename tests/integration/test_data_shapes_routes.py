@@ -494,3 +494,22 @@ def test_download_audit_event_carries_context_self_review_handling(
     ).scalar_one()
     detail = event.detail
     assert detail["context"]["self_review_handling"] == "both"
+
+
+def test_saved_shape_renders_self_review_handling_attr_on_card(
+    client: TestClient, db: Session
+) -> None:
+    """PR C — the saved sub-card carries its persisted chip
+    state as ``data-shape-self-review-handling`` so the JS can
+    sync the scope-row chip on Edit and so the dirty-state Save
+    gate has something to compare against."""
+    review_session = _make_session(client, db, code="srh-render")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(name="Excludey"), "self_review_handling": "exclude_self"},
+    ).json()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert f'data-shape-id="{created["id"]}"' in body
+    assert 'data-shape-self-review-handling="exclude_self"' in body

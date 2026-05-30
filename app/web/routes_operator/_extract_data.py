@@ -204,6 +204,9 @@ def session_extract_data(
             "column_headers": list(
                 compose_shape_header(db, review_session, shape)
             ),
+            # Self-review handling chip state (PR C wires the
+            # UI; PR B persists the column).
+            "self_review_handling": shape.self_review_handling,
         }
         for shape in saved_shapes
     ]
