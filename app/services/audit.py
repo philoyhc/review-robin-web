@@ -652,11 +652,15 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # cards. ``counts.rows`` carries the body row count
     # (header excluded); ``counts.instruments`` carries the chip
     # selection size (0 when no instruments were selected).
+    # ``context.self_review_handling`` records the operator's
+    # Self-review handling chip state (``include_self`` /
+    # ``exclude_self`` / ``both``) per ``guide/extract_data.md``
+    # § *Self-review handling*. PR A wired the slot 2026-05-30.
     "session.reviewer_metadata_extracted": EventSchema(
-        _IDENTITY | {"counts"}
+        _IDENTITY | {"counts", "context"}
     ),
     "session.reviewee_metadata_extracted": EventSchema(
-        _IDENTITY | {"counts"}
+        _IDENTITY | {"counts", "context"}
     ),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the

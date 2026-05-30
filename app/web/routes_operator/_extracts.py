@@ -41,8 +41,11 @@ from app.web import views as audit_views
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
 from app.services.extracts.entity_metadata_extract import (
+    SELF_REVIEW_HANDLING_DEFAULT,
+    SELF_REVIEW_HANDLING_STATES,
     build_reviewee_metadata,
     build_reviewer_metadata,
+    self_review_handling_filename_suffix,
 )
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
@@ -376,10 +379,34 @@ def export_by_instrument_bundle_zip(
     )
 
 
+def _normalise_self_review_handling(raw: str | None) -> str:
+    """Coerce the ``?self_review_handling=`` query param to one of
+    the three canonical states. Unknown / missing values fall back
+    to ``include_self`` so a malformed link still returns a
+    sensible default (today's behaviour pre-chip)."""
+    if raw and raw in SELF_REVIEW_HANDLING_STATES:
+        return raw
+    return SELF_REVIEW_HANDLING_DEFAULT
+
+
+def _metadata_download_name(
+    review_session: ReviewSession, kind: str, suffix: str
+) -> str:
+    """Insert the Self-review handling chip's filename suffix
+    (``_self`` / ``_noself`` / ``_both``) between the kind slug
+    and the ``.csv`` extension. Falls through to :func:`filename`
+    so the canonical-name policy stays in one place."""
+    base = filename(review_session, kind)
+    if base.endswith(".csv"):
+        return base[: -len(".csv")] + suffix + ".csv"
+    return base + suffix
+
+
 @router.get("/sessions/{session_id}/export/reviewer_metadata.csv")
 def export_reviewer_metadata_csv(
     instrument: list[int] | None = Query(default=None),
     all: int = Query(default=1),
+    self_review_handling: str = Query(default=SELF_REVIEW_HANDLING_DEFAULT),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -388,13 +415,23 @@ def export_reviewer_metadata_csv(
     card. ``?instrument=<id>`` (repeated) drives the per-(instrument,
     field) column blocks; omitted = no per-field blocks (just the
     cross-instrument totals). ``?all=0`` filters body rows to
-    reviewers with at least one non-empty response in scope."""
+    reviewers with at least one non-empty response in scope.
+
+    ``?self_review_handling=`` ∈ ``{"include_self", "exclude_self",
+    "both"}`` drives the chip's three-state column shape (PR A of
+    the Self-review handling chip slice per
+    ``guide/extract_data.md`` § *Self-review handling*). Unknown
+    values fall through to ``include_self`` so today's chip-less
+    links keep working unchanged.
+    """
+    state = _normalise_self_review_handling(self_review_handling)
     instrument_ids = set(instrument) if instrument else None
     rows = build_reviewer_metadata(
         db,
         review_session,
         instrument_ids=instrument_ids,
         all_reviewers=all != 0,
+        self_review_handling=state,
     )
     body_count = len(rows) - 1  # subtract header
 
@@ -411,9 +448,14 @@ def export_reviewer_metadata_csv(
             rows=body_count,
             instruments=len(instrument_ids) if instrument_ids else 0,
         ),
+        context={"self_review_handling": state},
     )
 
-    download_name = filename(review_session, "reviewer_metadata")
+    download_name = _metadata_download_name(
+        review_session,
+        "reviewer_metadata",
+        self_review_handling_filename_suffix(state),
+    )
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",
@@ -427,18 +469,22 @@ def export_reviewer_metadata_csv(
 def export_reviewee_metadata_csv(
     instrument: list[int] | None = Query(default=None),
     all: int = Query(default=1),
+    self_review_handling: str = Query(default=SELF_REVIEW_HANDLING_DEFAULT),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Backs the Extract data tab's Reviewee response metadata
-    card — symmetric to ``export_reviewer_metadata_csv``."""
+    card — symmetric to ``export_reviewer_metadata_csv``. See
+    that route for the ``?self_review_handling=`` contract."""
+    state = _normalise_self_review_handling(self_review_handling)
     instrument_ids = set(instrument) if instrument else None
     rows = build_reviewee_metadata(
         db,
         review_session,
         instrument_ids=instrument_ids,
         all_reviewees=all != 0,
+        self_review_handling=state,
     )
     body_count = len(rows) - 1
 
@@ -455,9 +501,14 @@ def export_reviewee_metadata_csv(
             rows=body_count,
             instruments=len(instrument_ids) if instrument_ids else 0,
         ),
+        context={"self_review_handling": state},
     )
 
-    download_name = filename(review_session, "reviewee_metadata")
+    download_name = _metadata_download_name(
+        review_session,
+        "reviewee_metadata",
+        self_review_handling_filename_suffix(state),
+    )
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",
