@@ -1,4 +1,4 @@
-"""End-to-end coverage for the return-to-origin affordance on About + /me/debug
+"""End-to-end coverage for the return-to-origin affordance on About + /auth/me/debug
 and the chrome user-menu About link that populates ``return_to`` (Segment 11D, PR A)."""
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def test_about_falls_back_to_default_for_disallowed_return_to(
 def test_me_debug_renders_back_link(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="rrw-md")
     body = client.get(
-        f"/me/debug?return_to=/operator/sessions/{session.id}"
+        f"/auth/me/debug?return_to=/operator/sessions/{session.id}"
     ).text
     assert 'class="back-link"' in body
     assert f"Back to {session.name}" in body

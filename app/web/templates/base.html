@@ -2333,7 +2333,7 @@
         color: var(--text-primary);
       }
       /* Return-to-origin "← Back to {context}" link rendered at the
-         top of detour destinations (About, /me/debug). Per
+         top of detour destinations (About, /auth/me/debug). Per
          spec/visual_style_rrw.md "Return-to-origin behavior". */
       body.ui-v2 .back-link {
         display: inline-block;
@@ -2700,7 +2700,7 @@
             {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}
               <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
             {% endif %}
-            {% if request.url.path not in ("/about", "/me/debug") %}
+            {% if request.url.path not in ("/about", "/auth/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
             {% endif %}
             <a class="signout" href="/.auth/logout">Sign out</a>

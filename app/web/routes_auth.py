@@ -20,7 +20,7 @@ _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
 
 
-@router.get("/me")
+@router.get("/auth/me")
 def me(user: AuthenticatedUser = Depends(get_current_user)) -> dict[str, object]:
     return {
         "principal_id": user.principal_id,
@@ -31,7 +31,7 @@ def me(user: AuthenticatedUser = Depends(get_current_user)) -> dict[str, object]
     }
 
 
-@router.get("/me/debug", response_class=HTMLResponse)
+@router.get("/auth/me/debug", response_class=HTMLResponse)
 def me_debug(
     request: Request,
     user: AuthenticatedUser = Depends(get_current_user),

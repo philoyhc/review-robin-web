@@ -242,11 +242,11 @@ Azure App Service Authentication ("Easy Auth") V2 is enabled on the dev app.
 To verify after a deploy:
 
 1. In a fresh browser, open
-   `https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/me`
+   `https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/auth/me`
    — you should be redirected to Microsoft sign-in.
-2. After sign-in, `/me` should return JSON with your `email`, `name`,
+2. After sign-in, `/auth/me` should return JSON with your `email`, `name`,
    `principal_id`, and `provider: "aad"`.
-3. `/me/debug` renders the same identity as an HTML page plus the full raw
+3. `/auth/me/debug` renders the same identity as an HTML page plus the full raw
    claims list and a sign-out link (`/.auth/logout`) — useful for inspecting
    what Entra is sending for this tenant.
 4. `curl https://.../health` (unauthenticated) should still return

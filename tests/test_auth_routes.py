@@ -15,7 +15,7 @@ def test_me_returns_identity_from_easy_auth_headers() -> None:
     client = TestClient(app)
 
     response = client.get(
-        "/me",
+        "/auth/me",
         headers={
             "X-MS-CLIENT-PRINCIPAL-NAME": "alice@example.edu",
             "X-MS-CLIENT-PRINCIPAL-ID": "principal-123",
@@ -42,7 +42,7 @@ def test_me_returns_401_when_unauthenticated_and_fake_auth_disabled() -> None:
     app.dependency_overrides[get_current_user] = override_get_current_user
     try:
         client = TestClient(app)
-        response = client.get("/me")
+        response = client.get("/auth/me")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -58,7 +58,7 @@ def test_me_returns_fake_identity_when_fake_auth_enabled() -> None:
     app.dependency_overrides[get_current_user] = override_get_current_user
     try:
         client = TestClient(app)
-        response = client.get("/me")
+        response = client.get("/auth/me")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -93,7 +93,7 @@ def test_me_debug_renders_html_with_identity_and_claims() -> None:
     )
 
     response = client.get(
-        "/me/debug",
+        "/auth/me/debug",
         headers={"X-MS-CLIENT-PRINCIPAL": rich},
     )
 
@@ -115,7 +115,7 @@ def test_me_debug_returns_401_when_unauthenticated() -> None:
     app.dependency_overrides[get_current_user] = override_get_current_user
     try:
         client = TestClient(app)
-        response = client.get("/me/debug")
+        response = client.get("/auth/me/debug")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -131,7 +131,7 @@ def test_me_debug_renders_with_fake_auth_and_no_claims() -> None:
     app.dependency_overrides[get_current_user] = override_get_current_user
     try:
         client = TestClient(app)
-        response = client.get("/me/debug")
+        response = client.get("/auth/me/debug")
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
