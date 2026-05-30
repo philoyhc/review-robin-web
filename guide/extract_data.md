@@ -508,7 +508,7 @@ contract that slice must honour. Full table form lives in
 the design-question equivalent.
 
 1. **Persistence — per-session, name-unique.** A new
-   `data_shape_shapes` table keyed on `(session_id, name)`
+   `data_shapes` table keyed on `(session_id, name)`
    with `UNIQUE (session_id, name)` so the operator can't
    save two shapes with the same name on a session. Per-
    session library (every operator on the session sees the
