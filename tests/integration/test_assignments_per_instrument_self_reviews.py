@@ -88,6 +88,13 @@ def _self_review(
     )
     db.add(a)
     db.flush()
+    # Mirror the production write-path: recompute the
+    # ``is_self_review`` column so downstream readers (which now
+    # consume the column post-PR-3 of
+    # ``guide/self_review_consolidate.md``) see the correct value.
+    assignments_service.recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
     db.commit()
     return a
 

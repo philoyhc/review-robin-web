@@ -44,7 +44,6 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import responses as responses_service
-from app.services.assignments import is_self_review
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
 
@@ -87,14 +86,15 @@ HEADER: tuple[str, ...] = (
     "ResponseType",
     # Value (1 col). Empty cell ⇒ reviewer cleared the field.
     "Value",
-    # Self-review flag (1 col, PR 4a). Computed from
-    # ``is_self_review(reviewer, reviewee)`` — case-insensitive
-    # match of ``reviewer.email`` against
-    # ``reviewee.email_or_identifier`` when the latter is an
-    # email; ``FALSE`` for non-email reviewee identifiers, and
-    # ``FALSE`` on a collapsed group-scoped row (a group response
-    # is not a per-person self-review). Uppercase ``TRUE`` /
-    # ``FALSE`` for analyst-tool friendliness (Excel idiom).
+    # Self-review flag (1 col, PR 4a). Reads the canonical
+    # ``Assignment.is_self_review`` column (PR 1/2 of
+    # ``guide/self_review_consolidate.md``). On individual-scoped
+    # instruments that is a case-insensitive match of
+    # ``reviewer.email`` against ``reviewee.email_or_identifier``;
+    # on group-scoped instruments it is the whole-group rule
+    # (every member-row in a group whose reviewer is a member
+    # counts as self-review). Uppercase ``TRUE`` / ``FALSE`` for
+    # analyst-tool friendliness (Excel idiom).
     "SelfReview",
     # Lifecycle (3 cols). ``SubmittedAt`` empty ⇒
     # saved-but-not-submitted draft.
@@ -205,11 +205,19 @@ def _response_row_tuple(
     group_key: tuple[str, ...] | None,
     group_identity: dict[tuple[int, tuple[str, ...]], str],
     session_zone: object,
+    is_self_review_value: bool,
 ) -> tuple[str, ...]:
     """Build the 21-column data tuple for one ``Response``.
 
     iii-b4: the ``response_type`` column reads ``field.response_type``
     (inline; no RTD join). Pre-iii-b4 callers passed an RTD instance.
+
+    ``is_self_review_value`` is the canonical ``Assignment.is_self_review``
+    column for this row (PR 1/2 of ``guide/self_review_consolidate.md``).
+    Pre-consolidation the per-row check called the pair-level
+    ``is_self_review(reviewer, reviewee)`` (wrong for group-scoped rows)
+    and group-scoped rows hardcoded ``FALSE`` regardless — both retired
+    in favour of the column-read.
     """
     if group_key is not None:
         reviewee_name = group_identity.get(
@@ -217,7 +225,6 @@ def _response_row_tuple(
         )
         reviewee_email = ""
         reviewee_tags = ("", "", "")
-        self_review = "FALSE"
         flavour = "group-scoped"
     else:
         reviewee_name = reviewee.name
@@ -227,10 +234,8 @@ def _response_row_tuple(
             reviewee.tag_2 or "",
             reviewee.tag_3 or "",
         )
-        self_review = (
-            "TRUE" if is_self_review(reviewer, reviewee) else "FALSE"
-        )
         flavour = "per-reviewee"
+    self_review = "TRUE" if is_self_review_value else "FALSE"
     return (
         reviewer.name,
         reviewer.email,
@@ -333,6 +338,7 @@ def serialize_responses(
             Reviewee,
             Instrument,
             InstrumentResponseField,
+            Assignment.is_self_review,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -354,9 +360,14 @@ def serialize_responses(
         .execution_options(yield_per=1000)
     )
 
-    for response, reviewer, reviewee, instrument, field in db.execute(
-        stmt
-    ):
+    for (
+        response,
+        reviewer,
+        reviewee,
+        instrument,
+        field,
+        is_self_review_value,
+    ) in db.execute(stmt):
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
             cell = (reviewer.id, instrument.id, group_key, field.id)
@@ -373,6 +384,7 @@ def serialize_responses(
             group_key=group_key,
             group_identity=group_identity,
             session_zone=session_zone,
+            is_self_review_value=is_self_review_value,
         )
 
 
@@ -434,6 +446,7 @@ def serialize_responses_for_instrument(
             Reviewee,
             Instrument,
             InstrumentResponseField,
+            Assignment.is_self_review,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -455,7 +468,14 @@ def serialize_responses_for_instrument(
     )
 
     collected: list[tuple[tuple[str, str, int, int], tuple[str, ...]]] = []
-    for response, reviewer, reviewee, instr, field in db.execute(stmt):
+    for (
+        response,
+        reviewer,
+        reviewee,
+        instr,
+        field,
+        is_self_review_value,
+    ) in db.execute(stmt):
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
             cell = (reviewer.id, instr.id, group_key, field.id)
@@ -472,6 +492,7 @@ def serialize_responses_for_instrument(
             group_key=group_key,
             group_identity=group_identity,
             session_zone=session_zone,
+            is_self_review_value=is_self_review_value,
         )
         # Sort key: composed ``RevieweeName`` (col 5) → reviewer
         # email (col 1) → field order (carried separately to
@@ -575,6 +596,7 @@ def serialize_reviewer_session_summary(
             Reviewee,
             Instrument,
             InstrumentResponseField,
+            Assignment.is_self_review,
         )
         .join(Assignment, Response.assignment_id == Assignment.id)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -597,9 +619,14 @@ def serialize_reviewer_session_summary(
         .execution_options(yield_per=1000)
     )
 
-    for response, the_reviewer, reviewee, instrument, field in db.execute(
-        stmt
-    ):
+    for (
+        response,
+        the_reviewer,
+        reviewee,
+        instrument,
+        field,
+        is_self_review_value,
+    ) in db.execute(stmt):
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
             cell = (the_reviewer.id, instrument.id, group_key, field.id)
@@ -616,4 +643,5 @@ def serialize_reviewer_session_summary(
             group_key=group_key,
             group_identity=group_identity,
             session_zone=session_zone,
+            is_self_review_value=is_self_review_value,
         )

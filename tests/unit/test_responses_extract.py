@@ -172,6 +172,8 @@ def _add_assignment(
     reviewee: Reviewee,
     instrument: Instrument,
 ) -> Assignment:
+    from app.services import assignments as assignments_service
+
     a = Assignment(
         session_id=review_session.id,
         reviewer_id=reviewer.id,
@@ -182,6 +184,12 @@ def _add_assignment(
     )
     db.add(a)
     db.flush()
+    # Mirror the production write-path so the
+    # ``Assignment.is_self_review`` column is populated for the
+    # post-PR-3 column-reading extracts.
+    assignments_service.recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
     return a
 
 
