@@ -510,6 +510,12 @@ def test_data_shaper_initial_blank_shape_card(
         'id="extract-data-shaper-zip"'
     )[0]
     assert 'data-shape-mode="edit"' in stack_block
+    # Initial sub-card also carries ``data-shape-selected``
+    # ⇒ the accent-blue border CSS rule kicks in on first
+    # render so the operator sees which card the scope /
+    # content rows feed (per the wiring decisions in
+    # ``spec/extract_data.md`` "Edit-icon behaviour").
+    assert 'data-shape-selected="true"' in stack_block
     assert "data-shape-preview-row" in stack_block
     assert "data-shape-name" in stack_block
     for action in ("save", "edit", "delete", "add", "download"):

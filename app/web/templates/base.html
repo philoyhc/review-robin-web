@@ -1340,6 +1340,20 @@
         margin-top: var(--space-2);
         background: var(--bg-card, #fff);
       }
+      /* Selected sub-card — the one currently in edit mode.
+         Border switches to the accent-blue used for primary
+         buttons + selected chips so the operator can see
+         which sub-card the scope/content rows above feed.
+         Wired via ``data-shape-selected="true"`` on the
+         editing sub-card; the JS only toggles that one
+         attribute, the CSS does the rest. Visual-only
+         placeholder for the wiring slice — actual chip-state
+         restoration on ``✎`` click follows. */
+      body.ui-v2 .data-shape-card[data-shape-selected="true"] {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 1px var(--accent-blue);
+        background: var(--accent-blue-bg-faint, #fafcff);
+      }
       body.ui-v2 .data-shape-actions {
         display: flex;
         gap: var(--space-1);
