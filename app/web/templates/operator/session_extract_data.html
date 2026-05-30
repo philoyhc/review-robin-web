@@ -951,6 +951,14 @@
           if (oNameInput) oNameInput.style.display = "none";
           if (oSaveBtn) oSaveBtn.style.display = "none";
           if (oEditBtn) oEditBtn.style.display = "";
+          // Restore the persisted preview row so transient
+          // edits drop. ``renderSavedPreviewRow`` reads the
+          // ``data-shape-column-slots`` attribute server-
+          // (or save-) populated when the shape was last
+          // persisted.
+          if (other.getAttribute("data-shape-id")) {
+            renderSavedPreviewRow(other);
+          }
         });
       }
 
@@ -965,18 +973,17 @@
       function rebuildPreviewRow(targetShape) {
         var shape = targetShape || activeShape;
         if (!shape) return;
+        // Saved sub-cards keep their server-rendered
+        // ``<th>`` cells until the operator clicks Edit —
+        // ``setActiveShape`` runs first, then
+        // ``restoreShapeChipState`` flips chips which fires
+        // this function for the now-active card. Non-active
+        // saved cards keep what the route emitted.
+        if (shape !== activeShape) return;
         var row = previewRowFor(shape);
         row.innerHTML = "";
         var any = false;
-        // Only the active shape sources its columns from the
-        // live chip selection; non-active (saved) shapes
-        // keep whatever was in the row at save time —
-        // re-rendering here would wipe them. For the
-        // placeholder slice the saved shapes don't persist
-        // their columns yet, so they render the empty-state
-        // placeholder too.
-        if (shape === activeShape) {
-          colChips().forEach(function (chip) {
+        colChips().forEach(function (chip) {
             if (chip.getAttribute("aria-pressed") !== "true") return;
             any = true;
             // ``Discrete steps`` and ``List items`` are each a
@@ -1025,7 +1032,6 @@
             th.textContent = chip.textContent.trim();
             row.appendChild(th);
           });
-        }
         if (!any) {
           // Empty preview row collapses to zero height without
           // any cells — operators couldn't see the table.
@@ -1656,6 +1662,62 @@
         if (chip.getAttribute("aria-pressed") === "true") chip.click();
       }
 
+      // Click every currently-pressed chip on the page off,
+      // in reverse-dependency order (col → field → instrument
+      // → axis) so the unmount handlers fire in the right
+      // sequence. Used by ``+Shape`` to land the operator on
+      // a fully-blank scratch sub-card.
+      function clearAllSelectionChips() {
+        card
+          .querySelectorAll('[data-shaper-col-chip][aria-pressed="true"]')
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll(
+            '[data-shaper-field-chip][aria-pressed="true"]'
+          )
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll(
+            '[data-shaper-instrument-chip][aria-pressed="true"]'
+          )
+          .forEach(clickChipIfPressed);
+        card
+          .querySelectorAll('[data-shaper-axis-chip][aria-pressed="true"]')
+          .forEach(clickChipIfPressed);
+      }
+
+      // Re-render a saved sub-card's preview row from its
+      // persisted ``data-shape-column-slots`` attribute.
+      // Used by ``Cancel`` to revert the transient chip-row
+      // updates when the operator exits edit mode without
+      // saving.
+      function renderSavedPreviewRow(shape) {
+        var row = previewRowFor(shape);
+        if (!row) return;
+        row.innerHTML = "";
+        var slots = [];
+        try {
+          slots = JSON.parse(
+            shape.getAttribute("data-shape-column-slots") || "[]"
+          );
+        } catch (e) {}
+        if (!slots.length) {
+          var placeholder = document.createElement("th");
+          placeholder.className =
+            "shaper-preview-th shaper-preview-placeholder";
+          placeholder.textContent =
+            "Pick chips above to compose this shape's columns";
+          row.appendChild(placeholder);
+          return;
+        }
+        slots.forEach(function (slot) {
+          var th = document.createElement("th");
+          th.className = "shaper-preview-th";
+          th.textContent = slot;
+          row.appendChild(th);
+        });
+      }
+
       function restoreShapeChipState(shape) {
         // Clear current selection first.
         card
@@ -1766,24 +1828,22 @@
           editBtn.style.display = "none";
           saveBtn.style.display = "";
           cancelBtn.style.display = "";
-          // For saved sub-cards (those with
-          // ``data-shape-id``), restore the persisted chip
-          // state so the operator can keep editing where
-          // they left off.
+          // Mark this card as the active target BEFORE
+          // restoring chip state so the chip toggles that
+          // ``restoreShapeChipState`` fires hit
+          // ``rebuildPreviewRow`` against the right shape.
+          setActiveShape(shape);
           if (shape.getAttribute("data-shape-id")) {
             restoreShapeChipState(shape);
           }
-          setActiveShape(shape);
           updateAllButtonStates();
         });
 
         // Cancel = abandon the in-progress edits + unselect
-        // the sub-card. For the placeholder slice "abandon"
-        // is a no-op (no persisted state to revert to); the
-        // visible effect is the mode flip to saved + the
-        // selected-state clear. The wiring slice will teach
-        // this to revert chip selections to the persisted
-        // shape state.
+        // the sub-card. For saved sub-cards, re-render the
+        // preview row from the persisted column slots so the
+        // transient unsaved-chip selections drop. For brand-
+        // new (never-saved) sub-cards, clear the row.
         cancelBtn.addEventListener("click", function () {
           if (cancelBtn.disabled) return;
           shape.setAttribute("data-shape-mode", "saved");
@@ -1795,6 +1855,7 @@
           editBtn.style.display = "";
           cancelBtn.style.display = "";
           if (activeShape === shape) setActiveShape(null);
+          renderSavedPreviewRow(shape);
           updateAllButtonStates();
         });
 
@@ -1824,8 +1885,13 @@
         addBtn.addEventListener("click", function () {
           // Active-shape mutex carries through ``+`` too:
           // spawning a fresh blank sub-card closes the
-          // currently-editing one.
+          // currently-editing one. The new sub-card starts
+          // **fully blank** — clear every chip on the page
+          // so the operator composes from scratch rather
+          // than inheriting whatever was on for the
+          // previously-active card.
           closeOtherEditingShapes(null);
+          clearAllSelectionChips();
           var fragment = shapeTemplate.content.cloneNode(true);
           var newShape = fragment.querySelector("[data-shape]");
           shape.parentNode.insertBefore(newShape, shape.nextSibling);
@@ -1835,13 +1901,21 @@
           updateAllButtonStates();
         });
 
-        // Hide the (display) span until a save event populates it.
-        if (nameDisplay) nameDisplay.style.display = "none";
+        // Show the saved-name span only when the card lands
+        // in saved mode (server-rendered saved shapes); the
+        // edit-mode initial blank sub-card keeps it hidden.
+        if (nameDisplay) {
+          nameDisplay.style.display =
+            shape.getAttribute("data-shape-mode") === "saved"
+              ? "" : "none";
+        }
 
-        // Seed the placeholder preview-row cell so the empty
-        // table renders visibly on first paint (an empty
-        // ``<tr>`` collapses to zero height).
-        rebuildPreviewRow(shape);
+        // Seed the placeholder preview-row cell for the
+        // initial blank card. Server-rendered saved cards
+        // already carry their preview ``<th>`` cells.
+        if (shape.getAttribute("data-shape-mode") === "edit") {
+          rebuildPreviewRow(shape);
+        }
         updateButtonStates(shape);
       }
 
