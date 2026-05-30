@@ -1354,6 +1354,19 @@
         box-shadow: 0 0 0 1px var(--accent-blue);
         background: var(--accent-blue-bg-faint, #fafcff);
       }
+      /* Unlocked (= currently-being-edited) instrument card
+         on the Instruments page picks up the same accent-blue
+         cue as the selected Data shape sub-card. The
+         attribute ``data-instrument-editing="true"`` is
+         emitted on the outer ``.card`` div whenever
+         ``is_editing`` is set in the Jinja template; the
+         tinted background is skipped here (the instrument
+         card already carries a per-instrument palette
+         background that should win). */
+      body.ui-v2 .card[data-instrument-editing="true"] {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 1px var(--accent-blue);
+      }
       body.ui-v2 .data-shape-actions {
         display: flex;
         gap: var(--space-1);
@@ -1382,6 +1395,13 @@
       body.ui-v2 .data-shape-name-display {
         flex: 0 0 auto;
         font-weight: 600;
+        /* Extra breathing room between the saved shape name
+           and the ``Edit`` button — the default
+           ``.data-shape-actions`` ``gap: var(--space-1)``
+           (~4px) reads too tight there, and the name display
+           shows only in saved mode so the extra margin
+           collapses to zero when the input is visible. */
+        margin-right: 10px;
       }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
