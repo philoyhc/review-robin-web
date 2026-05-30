@@ -259,23 +259,24 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
         '"reviewer:email", "reviewer:assigned"]\''
     )
     assert expected_slots_attr in body
-    # Preview row pre-populated with the **canonical CSV
-    # headers** (``ReviewerName`` etc.) — same labels the
-    # download row carries — not the raw chip slot
-    # strings. Aggregate columns carry the Self-review
-    # handling chip's ``_self`` / ``_noself`` suffix per
-    # ``guide/extract_data.md`` § *Self-review handling*
-    # (PR B); ``include_self`` is the default state on a
-    # freshly-saved shape.
-    assert ">ReviewerName<" in body
-    assert ">ReviewerEmail<" in body
-    assert ">Assigned_self<" in body
+    # Preview row pre-populated with the **preview-table
+    # labels** per ``compose_shape_preview_headers``:
+    # identity columns carry a space (``Reviewer Name``,
+    # ``Reviewer Email``); aggregate columns drop the Self-
+    # review handling chip suffix (``Assigned`` rather than
+    # ``Assigned_self``). The preview is a descriptive aid
+    # for what the operator selected, not a literal duplicate
+    # of the CSV headers.
+    assert ">Reviewer Name<" in body
+    assert ">Reviewer Email<" in body
+    assert ">Assigned<" in body
+    assert ">Assigned_self<" not in body
     # ``data-shape-column-headers`` carries the JSON-encoded
-    # canonical header list — used by the post-Cancel /
+    # preview-label list — used by the post-Cancel /
     # close-other-editing ``renderSavedPreviewRow`` path.
     assert (
-        "data-shape-column-headers='[\"ReviewerName\", "
-        "\"ReviewerEmail\", \"Assigned_self\"]'"
+        "data-shape-column-headers='[\"Reviewer Name\", "
+        "\"Reviewer Email\", \"Assigned\"]'"
     ) in body
     # The always-present blank initial card does NOT render
     # when shapes exist — operator uses ``+Shape`` to spawn

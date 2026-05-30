@@ -631,6 +631,22 @@ Each sub-card carries:
    "Pick chips above to compose this shape's columns" —
    keeps the table visible so the operator sees something
    to interact with.
+
+   **Preview labels diverge from CSV headers.** The preview
+   is a descriptive aid for what the operator selected, not
+   a literal duplicate of the file. Identity columns surface
+   with a space (``Reviewer Name`` / ``Reviewer Email`` /
+   ``Reviewee Name`` / ``Reviewee Email``) while the CSV
+   uses the no-space form (``ReviewerName`` etc.). Aggregate
+   columns drop the Self-review handling chip suffix
+   (``Mean`` rather than ``Mean_self``), and
+   ``self_review_handling="both"`` emits a single aggregate
+   block in the preview (one block per slot) rather than
+   the side-by-side duplication the CSV ships. Source:
+   ``compose_shape_preview_headers`` in
+   ``app/services/extracts/data_shape_extract.py``; CSV
+   generation continues to call ``_compose_header``
+   directly from ``build_shape_rows``.
 2. An **action row** flushed to the right edge of the
    sub-card (`.data-shape-actions` carries
    `justify-content: flex-end`). The name input / display

@@ -29,7 +29,7 @@ from app.services import audit, data_shapes, field_labels
 from app.services.extracts import stream_csv
 from app.services.extracts.data_shape_extract import (
     build_shape_rows,
-    compose_shape_header,
+    compose_shape_preview_headers,
 )
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
@@ -194,11 +194,13 @@ def session_extract_data(
     # The template walks each saved shape's column-chip slot
     # list to re-toggle the matching chips when the operator
     # clicks ``Edit``. ``column_headers`` carries the
-    # canonical CSV header for each shape so the preview
-    # ``<th>`` cells render the same labels the eventual
-    # download would (``ReviewerName``, actual step values,
-    # etc.) — without it the cells fell back to the raw
-    # chip slot strings like ``reviewer:name``.
+    # **preview-table** labels (with-space identity columns;
+    # aggregate columns no longer carry the Self-review
+    # handling chip suffix and ``both`` is a single block, not
+    # duplicated) — diverges from the CSV headers per
+    # ``compose_shape_preview_headers``'s docstring so the
+    # preview reads as "what's chosen" rather than "what
+    # the file will look like".
     saved_shape_rows = [
         {
             "id": shape.id,
@@ -208,7 +210,7 @@ def session_extract_data(
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
             "column_headers": list(
-                compose_shape_header(db, review_session, shape)
+                compose_shape_preview_headers(db, review_session, shape)
             ),
             # Self-review handling chip state (PR C wires the
             # UI; PR B persists the column).
@@ -281,7 +283,7 @@ def create_data_shape(
             "self_review_handling": shape.self_review_handling,
             "include_empty_rows": shape.include_empty_rows,
             "column_headers": list(
-                compose_shape_header(db, review_session, shape)
+                compose_shape_preview_headers(db, review_session, shape)
             ),
         },
     )
@@ -335,7 +337,7 @@ def update_data_shape(
             "self_review_handling": shape.self_review_handling,
             "include_empty_rows": shape.include_empty_rows,
             "column_headers": list(
-                compose_shape_header(db, review_session, shape)
+                compose_shape_preview_headers(db, review_session, shape)
             ),
         },
     )

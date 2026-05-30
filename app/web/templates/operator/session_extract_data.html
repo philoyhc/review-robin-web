@@ -409,13 +409,15 @@
        override is set. #}
     <template data-shaper-chip-pool="reviewer">
       {# ``label`` = visible chip text (operator-facing);
-         ``header`` = the CSV column header the eventual
-         download row carries — used by ``rebuildPreviewRow``
-         via ``data-shape-header-label`` so the preview
-         ``<th>`` cells read the same way as the CSV. #}
+         ``header`` = the **preview-table** label
+         ``rebuildPreviewRow`` writes into ``<th>`` cells via
+         ``data-shape-header-label``. Diverges from the CSV
+         headers — identity columns carry a space and
+         aggregate columns drop the Self-review handling
+         suffix (see ``compose_shape_preview_headers``). #}
       {% for slot, label, header in [
-          ("reviewer:name", "Reviewer Name", "ReviewerName"),
-          ("reviewer:email", "Reviewer Email", "ReviewerEmail"),
+          ("reviewer:name", "Reviewer Name", "Reviewer Name"),
+          ("reviewer:email", "Reviewer Email", "Reviewer Email"),
           ("reviewer:tag-1", reviewer_tag_labels[0], reviewer_tag_labels[0]),
           ("reviewer:tag-2", reviewer_tag_labels[1], reviewer_tag_labels[1]),
           ("reviewer:tag-3", reviewer_tag_labels[2], reviewer_tag_labels[2]),
@@ -482,8 +484,8 @@
     </template>
     <template data-shaper-chip-pool="reviewee">
       {% for slot, label, header in [
-          ("reviewee:name", "Reviewee Name", "RevieweeName"),
-          ("reviewee:email", "Reviewee Email", "RevieweeEmail"),
+          ("reviewee:name", "Reviewee Name", "Reviewee Name"),
+          ("reviewee:email", "Reviewee Email", "Reviewee Email"),
           ("reviewee:tag-1", reviewee_tag_labels[0], reviewee_tag_labels[0]),
           ("reviewee:tag-2", reviewee_tag_labels[1], reviewee_tag_labels[1]),
           ("reviewee:tag-3", reviewee_tag_labels[2], reviewee_tag_labels[2]),
@@ -631,13 +633,17 @@
               <thead>
                 <tr data-shape-preview-row>
                   {# Server-rendered preview headers use the
-                     canonical CSV column labels (``ReviewerName``,
-                     resolved tag labels, raw step / option
-                     values for fan-out chips) — same as what
-                     the eventual download row carries. The
-                     JS-driven build (when this card flips into
-                     edit mode) uses ``data-shape-header-label``
-                     on each chip to match. #}
+                     preview-table labels per
+                     ``compose_shape_preview_headers`` — with-
+                     space identity columns (``Reviewer Name``
+                     etc.), aggregate columns with no Self-
+                     review handling suffix, ``both`` rendered
+                     as a single block. The preview is a
+                     descriptive aid for what the operator
+                     selected, not a literal duplicate of the
+                     CSV headers. The JS-driven edit-mode
+                     build pulls matching labels from
+                     ``data-shape-header-label`` on each chip. #}
                   {% for header in saved.column_headers %}
                     <th class="shaper-preview-th">{{ header }}</th>
                   {% endfor %}
