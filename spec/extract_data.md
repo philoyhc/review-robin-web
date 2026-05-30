@@ -127,9 +127,21 @@ Three families of chip live on the page:
   on single-instrument sessions — so the positional ordering
   reads consistently across cards.
 - **Cross-cutting toggles** (by-instrument card +
-  metadata cards) — `Include metadata` / `All assignment
-  rows` on the by-instrument card; `All reviewers` /
-  `All reviewees` on the metadata cards.
+  metadata cards + Data shaper) — two-state cycling pills
+  that flip between an "include everything" label and a
+  "drop empty rows" label so the OFF state reads as a
+  named intent rather than a not-pressed chip:
+
+  | Card | "Include" label | "Drop empty" label |
+  |---|---|---|
+  | By instrument | `All assignment rows` | `Assignment rows with data` |
+  | Reviewer response metadata | `All reviewers` | `Reviewers with responses` |
+  | Reviewee response metadata | `All reviewees` | `Reviewees with responses` |
+  | Data shaper | `All rows` | `Rows with data` |
+
+  The by-instrument card also keeps an `Include metadata`
+  toggle (single-label) that drops the meta-header block
+  on each CSV. All toggles default to the "include" state.
 - **Self-review handling chip** (metadata cards + Data
   shaper scope row) — single-pill three-state cycle
   (`Include self` → `Exclude self` → `Both` → …) shipped
@@ -208,11 +220,11 @@ single rubric — "how did everyone score on this instrument?"
 **Chip row.** Per-instrument chips followed by the two
 cross-cutting toggles:
 
-| Chip slot | Label | Role |
+| Chip slot | Labels (on / off) | Role |
 |---|---|---|
 | `instrument-{id}` | `#{N}: {short_label}` | Membership filter — only selected instruments ship as zip members. |
 | `include-metadata` | `Include metadata` | When **off**, drops the meta-header block + blank separator row from every CSV. |
-| `all-assignment-rows` | `All assignment rows` | When **off**, drops assignment rows whose response-field cells are all empty. |
+| `all-assignment-rows` | `All assignment rows` / `Assignment rows with data` | Two-state cycling pill — when **off**, drops assignment rows whose response-field cells are all empty. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle (PR #1657, chip-controlled-drop consistency sweep). |
 
 All default-selected.
 
@@ -294,10 +306,10 @@ because it really does zip N CSVs together.
 **Chip row.** Per-instrument chips inline before the entity-
 scope toggle:
 
-| Chip slot | Label | Role |
+| Chip slot | Labels (on / off) | Role |
 |---|---|---|
 | `instrument-{id}` | `#{N}: {short_label}` | Selects which instruments contribute per-(instrument, field) column blocks; also scopes the cross-instrument totals when at least one is selected. |
-| `all-reviewers` / `all-reviewees` | `All reviewers` / `All reviewees` | When **off**, drops body rows for entities with zero non-empty responses in scope. |
+| `all-reviewers` / `all-reviewees` | `All reviewers` / `Reviewers with responses` (or `All reviewees` / `Reviewees with responses`) | Two-state cycling pill — when **off**, drops body rows for entities with zero non-empty responses in scope. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle (PR #1657, chip-controlled-drop consistency sweep). |
 
 All default-selected.
 
@@ -465,8 +477,8 @@ the operator narrows the scope and picks columns.
 
 #### Scope row (top)
 
-Three mutex chip groups + the Self-review handling chip,
-separated by vertical pipes (`|`):
+Three mutex chip groups + the empty-row drop chip + the
+Self-review handling chip, separated by vertical pipes (`|`):
 
 1. **Axis chip** — `Reviewer` and `Reviewee`, **mutually
    exclusive**. Clicking the off chip deselects whichever
@@ -476,10 +488,36 @@ separated by vertical pipes (`|`):
    little to aggregate. (The `data-shaper-axis-chip="..."`
    attribute drives mount / unmount of the per-axis pool on
    the content row below.)
-2. **Self-review handling chip** — inline after the axis
-   chips, before the first `|`. Three-state cycle
+2. **Empty-row drop chip** — inline after the axis chips,
+   **before** the Self-review handling chip. Two-state
+   cycling pill (`All rows` ↔ `Rows with data`) shipped
+   2026-05-30 (PR #1654, chip-controlled-drop slice).
+   Persists per-shape on the
+   `data_shapes.include_empty_rows` boolean column (see
+   `spec/settings_inventory.md` §9.5). When `Rows with data`
+   is selected, drops body rows whose `_Acc.is_empty()` on
+   per-individual / per-tag-combo shapes; single-summary
+   shapes always emit their one row regardless. For
+   `self_review_handling="both"` the row drops only when
+   **both** `_self` and `_noself` halves are empty. Carries
+   `data-shaper-include-empty-rows-chip="data-shaper"` so
+   the chips-lock-when-no-edit-mode CSS picks it up
+   alongside the other scope-row chips.
+
+   **Decision matrix.** With `self_review_handling`
+   orthogonal — it just decides which assignments /
+   responses feed `_Acc`:
+
+   | Row scheme \ chip | `All rows` (default) | `Rows with data` |
+   |---|---|---|
+   | per_individual | no drop | drop if `_Acc.is_empty()` |
+   | per_tag_combo | no drop | drop if `_Acc.is_empty()` |
+   | single-summary | no drop | no drop (always one row, even if empty) |
+
+3. **Self-review handling chip** — inline after the empty-
+   row drop chip, before the first `|`. Three-state cycle
    (`Include self` → `Exclude self` → `Both` → …) shipped
-   2026-05-30 (PR #1644). Persists per-shape on the new
+   2026-05-30 (PR #1644). Persists per-shape on the
    `data_shapes.self_review_handling` column (see
    `spec/settings_inventory.md` §9.5). Drives the
    column-name suffix (`_self` / `_noself` / `_both`) on
@@ -490,7 +528,7 @@ separated by vertical pipes (`|`):
    chips-lock-when-no-edit-mode CSS rule on
    `[data-shaper-chips-locked="true"]` greys it out
    alongside the rest of the scope-row chips.
-3. **Instrument scope chip** — one per session instrument,
+4. **Instrument scope chip** — one per session instrument,
    labelled `#{N}: {short_label}` exactly like the
    By-instrument card. **Mutually exclusive** — one
    instrument at a time. Selecting an instrument also
@@ -499,7 +537,7 @@ separated by vertical pipes (`|`):
    selected the (eventual) aggregate columns span every
    session instrument, matching the legacy "By reviewer" /
    "By reviewee" framings.
-4. **Response-field scope chip** — one per response field
+5. **Response-field scope chip** — one per response field
    on the selected instrument, **mutually exclusive**, chip
    text = the field's friendly label
    (`field.label` falling back to `field.field_key`).
@@ -735,6 +773,8 @@ Columns (working draft; finalise during the wiring slice):
 | `instrument_id` | nullable FK to `instruments` — null when no instrument scope chip is on |
 | `response_field_id` | nullable FK to `instrument_response_fields` — null when no field chip is on |
 | `column_chip_slots` | JSON list of column-chip slot strings (e.g. `["reviewer:name", "reviewer:email", "reviewer:assigned", "reviewer:count", "reviewer:list-items"]`) — preserves chip-selection order so the preview-row order matches the CSV header order |
+| `self_review_handling` | Self-review handling chip state — `include_self` (default) / `exclude_self` / `both`. Added 2026-05-30 by PR #1643. |
+| `include_empty_rows` | Empty-row drop chip state — `True` (default, "All rows") / `False` ("Rows with data"). Added 2026-05-30 by PR #1654. |
 | `created_by_user_id` | FK to `users` |
 | `created_at` | timestamp |
 | `updated_at` | timestamp (bumps on PATCH) |
@@ -773,7 +813,7 @@ Three new event types register against `EVENT_SCHEMAS`:
 
 | Event type | Envelope | Notes |
 |---|---|---|
-| `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, self_review_handling, name); `refs.shape_id` carries the row's id. |
+| `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, self_review_handling, include_empty_rows, name); `refs.shape_id` carries the row's id. |
 | `session.data_shape_deleted` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on DELETE. `snapshot` captures the deleted row's columns so the audit trail can reconstruct what existed pre-delete. |
 | `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs", "context"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted; `context.self_review_handling` records the chip state the download was generated under (PR #1643). |
 

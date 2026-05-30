@@ -1189,13 +1189,63 @@ shaper × group-scoped × `exclude_self`, plus three
 ``compute_self_review_data_state`` preflight cases).
 
 Q4 (per-individual rows on the Data shaper × `exclude_self`)
-left at the conservative interpretation pinned in
-``data_shape_extract.py:578`` — rows surface with empty
-aggregate cells when their only response was self-review;
-revisit if/when the UX feels off.
+closed 2026-05-30 by the chip-controlled-drop slice
+(`include_empty_rows` column + `All rows` / `Rows with data`
+cycling chip — see *Chip-controlled drop of empty rows*
+below).
 
 Plan archived: `guide/archive/extract_data.md`.
 Functional spec: `spec/extract_data.md`.
+
+---
+
+### Chip-controlled drop of empty rows + cross-card consistency sweep — done 2026-05-30 (PRs #1654 → #1657 + this entry)
+
+Generalised the empty-row drop pattern across all four
+Extract data cards. The Data shaper picks up a new
+`All rows` / `Rows with data` cycling-pill chip (axis-
+neutral, two-state) **before** the Self-review handling chip
+in the scope row; the three existing single-label chips on
+By instrument / Reviewer response metadata / Reviewee
+response metadata convert to two-state cycling pills with
+explicit labels per state. Behaviour unchanged on the three
+existing chips (same URL contract); the Data shaper's chip
+is wired through to a new persisted
+`data_shapes.include_empty_rows` boolean + extract-pipeline
+drop predicate (`_Acc.is_empty()`).
+
+**Q4 closes by implication.** A self-review-only row under
+`exclude_self` surfaces with an empty accumulator; the chip
+drops it without bespoke attributable-comparison machinery.
+
+**PR ladder.**
+
+- **PR 6 (#1654)** — `DataShape.include_empty_rows` boolean
+  column (default `True`, server-default `true`), Alembic
+  migration `d8e4c3a1b5f6`, payload + service + audit
+  snapshot wiring, `_Acc.is_empty()` predicate +
+  `build_shape_rows` drop logic, Settings CSV round-trip
+  (7th row per shape), new chip in the Data shaper scope row
+  + JS state machine.
+- **PR 7 (#1656)** — Reverted the placeholder
+  `Number of data rows: —` pill from PRs #1651 / #1652 after
+  walking through the live-preflight cost (~150-300ms per
+  shape per page load + per chip-toggle preflight at medium
+  session scale — prohibitive). The drop is visible at
+  Download time; a snapshot-on-Download column can layer in
+  later if pilot use justifies it.
+- **PR 8 (#1657)** — Two-state cycling-pill conversion of
+  the three existing chips. Each carries `data-label-on` /
+  `data-label-off`; the page JS swaps `textContent` on
+  toggle. URL contract (`?all=0` / `?all_rows=0`) untouched.
+- **PR 9 (this entry)** — Spec sweep
+  (`spec/extract_data.md` chip vocabulary + Data shaper
+  scope row + persistence model + audit envelope;
+  `spec/settings_inventory.md` §9.5 + §10 CSV coverage);
+  Q4 flag struck from `guide/codebase_assessment_30may.md`;
+  `guide/self_review_consolidate.md` addendum closed out.
+
+Plan archived: `guide/archive/self_review_consolidate.md`.
 
 ---
 
