@@ -1358,19 +1358,21 @@
         display: flex;
         gap: var(--space-1);
         align-items: center;
+        justify-content: flex-end;
         margin-top: var(--space-2);
       }
-      /* Name input + saved-name display share a bounded width
-         so the row reads compactly — the operator names the
-         shape, they don't write an essay. The 320px cap
-         matches the original placeholder shipping width. */
+      /* Name input + saved-name display sit on the same
+         row as the action buttons and ``Download``, flushed
+         right with them. ``flex: 0 0 auto`` keeps them from
+         stretching past their content; the 240px width is
+         enough for typical shape names without crowding the
+         button strip. */
       body.ui-v2 .data-shape-name-input {
-        flex: 1;
-        max-width: 320px;
+        flex: 0 0 auto;
+        width: 240px;
       }
       body.ui-v2 .data-shape-name-display {
-        flex: 1;
-        max-width: 320px;
+        flex: 0 0 auto;
         font-weight: 600;
       }
       @media (max-width: 800px) {

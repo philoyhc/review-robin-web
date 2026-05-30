@@ -368,11 +368,12 @@ metadata cards already use.
       mirror the currently-selected column chips. Toggling a
       column chip on / off adds / removes a `<th>` in the
       currently-active shape card.
-    - **Action row** — name input / display, then a row of
-      normal-sized text buttons: `Save` / `Edit` (mode-
-      toggle slot — `Save` shown in edit mode, `Edit` in
-      saved), `Cancel`, `Delete`, `+Shape`, and a
-      right-anchored `Download` anchor. `Save` stays
+    - **Action row** — flushed right inside the sub-card.
+      The name input / display sits inline with the
+      buttons: `Save` / `Edit` (mode-toggle slot — `Save`
+      shown in edit mode, `Edit` in saved), `Cancel`,
+      `Delete`, `+Shape`, and `Download` at the rightmost
+      end. `Save` stays
       disabled until the active shape is valid (name
       non-empty + axis chip on + ≥1 column chip on);
       clicking it persists the name but **keeps the
