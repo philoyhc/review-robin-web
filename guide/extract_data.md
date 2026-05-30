@@ -687,33 +687,25 @@ suffix — they describe the row, not the response pool.
   per-row `SelfReview` `TRUE` / `FALSE` column already);
   offline filtering is trivial. Adding the chip there would
   duplicate machinery the per-row column already serves.
-  **But there's a known latent bug to fix in the same slice
-  while we're here:** the By-instrument extract hardcodes
-  `SelfReview = FALSE` for group-scoped rows (see
-  `app/services/extracts/by_instrument_extract.py:436`),
-  silently mislabelling self-review groups. The fix is to
-  route through the canonical helper (see *Self-review
-  classification* below) so the column reflects the
-  whole-group rule.
+  (The pre-2026-05-30 By-instrument extract hardcoded
+  `SelfReview = FALSE` for group-scoped rows. That bug was
+  fixed in PR 3 of `guide/archive/self_review_consolidate.md`
+  — the extract now reads the canonical
+  `Assignment.is_self_review` column, which carries the
+  whole-group rule per `spec/assignments.md` § *Self-review
+  policy*.)
 
 **Self-review classification.** The aggregate-fold rule —
 which responses count as self-review for the chip's
-"include / exclude / both" decision — uses the **canonical
-whole-group rule** from `spec/assignments.md` *Self-review
-policy* → *Group-scoped instruments — the whole-group rule*:
-
-- On individual-scoped instruments: a row is self-review iff
-  `is_self_review(reviewer, reviewee)` (case-insensitive
-  email match; FALSE on non-email reviewee identifiers).
-- On group-scoped instruments: the **whole group** is
-  self-review iff the reviewer is themselves a member of the
-  group they're reviewing. Every `Assignment` row in that
-  group counts as self-review, not just the `(R, R)` cell.
-  This matches what the policy / exclusion machinery already
-  does via `_self_review_assignment_ids` in
-  `app/services/assignments.py:282` — the chip should reuse
-  that helper (or a refactored public surface of it) so the
-  rule stays in one place.
+"include / exclude / both" decision — reads the canonical
+`Assignment.is_self_review` column. The column is the source
+of truth post-consolidation; every write path keeps it
+current via `recompute_self_review_classification`, and the
+canonical rule is documented in `spec/assignments.md` §
+*Self-review policy* (per-row email match on individual-
+scoped instruments; whole-group rule on group-scoped — every
+row in a group whose reviewer is a member counts, not just
+the `(R, R)` cell).
 
 **Audit event payload.** The `_extracted` events grow a
 `context.self_review_handling` scalar slot

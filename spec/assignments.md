@@ -366,26 +366,38 @@ member pair. Excluding self-reviews on a group-scoped
 instrument rules the whole group out, not just the `(R, R)`
 cell.
 
-This is what the policy / exclusion machinery already honors
-— `_self_review_assignment_ids` in
-`app/services/assignments.py:282` is the canonical
-implementation and is the function every caller that needs
-"is this assignment row a self-review" should go through.
-On individual-scoped instruments it collapses to the per-row
-`is_self_review(reviewer, reviewee)` test; on group-scoped
-instruments it applies the whole-group rule.
+The canonical computation surface is
+`assignments.classify_self_review(db, session_id=, rows=)` in
+`app/services/assignments.py`; on individual-scoped
+instruments it collapses to the per-row
+`is_self_review(reviewer, reviewee)` test, and on group-
+scoped instruments it applies the whole-group rule.
 
-> **Known gap (tracked for follow-up).** The wide-format
-> By-instrument extract today hardcodes `SelfReview = FALSE`
-> on group-scoped rows
-> (`app/services/extracts/by_instrument_extract.py:436`)
-> instead of consulting the canonical helper. It silently
-> mislabels self-review groups. The proposed-2026-05-30
-> Self-review handling chip slice (see
-> `guide/extract_data.md` § *Self-review handling in
-> summarizing extracts*) is the natural carrier for the fix
-> — switching the column over to the whole-group rule at
-> the same time as the new chip lands.
+**Source of truth — `Assignment.is_self_review` column.**
+The boolean column on the `assignments` table persists the
+canonical classification for every row. Every write site
+(regenerate, manual add, instrument clone / replicate) and
+every edit trigger (reviewer email, reviewee identifier or
+boundary tag, relationship pair-context tag, instrument
+`group_kind`) calls
+`assignments.recompute_self_review_classification` so the
+column never drifts. Every downstream reader (extracts,
+audit counters, the in-app `Assignments`-page status
+blocks, the `set_instrument_self_reviews_active` toggle
+backend) consumes the column directly. The
+`assignments.replace_assignments` regenerate path closes
+with a continuous-gate invariant
+(`assignments.verify_self_review_classification`); strict
+in test envs, log-and-auto-correct in production. The
+overall consolidation plan + the five-PR ladder that
+landed it lives in `guide/archive/self_review_consolidate.md`.
+
+Pair-level `is_self_review(reviewer, reviewee)` survives as
+a helper for the rule-engine desugar paths that operate on
+**unsaved pair candidates** (where no `Assignment` row
+exists yet), and as the inner per-row test inside
+`classify_self_review`'s individual-scoped arm. Callers that
+have an `Assignment` row in hand should read the column.
 
 ## Group-scoped fan-out
 

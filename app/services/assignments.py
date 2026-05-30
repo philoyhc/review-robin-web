@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
@@ -21,6 +23,18 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, session_lifecycle as lifecycle
 from app.services._queries import session_scoped, slot_has_data
+
+_logger = logging.getLogger(__name__)
+
+
+def _is_test_env() -> bool:
+    """Match :func:`app.services.audit._is_test_env` for the self-
+    review classification invariant (PR 4 of
+    ``guide/self_review_consolidate.md``) — strict-mode in
+    pytest, log-and-correct in production."""
+    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in os.environ.get(
+        "_", ""
+    )
 
 PAIR_PREVIEW_LIMIT = 200
 
@@ -255,6 +269,14 @@ def count_self_review_candidates(
 
     Independent of whether the operator chose to exclude self-reviews —
     this is the population from which exclusion is drawn.
+
+    Pair-level — operates on the unsaved reviewer × reviewee
+    population, before any ``Assignment`` row exists. The whole-
+    group rule from ``spec/assignments.md`` § *Self-review policy*
+    only applies once assignments are materialised (since groups
+    are keyed off ``Assignment.instrument_id`` / ``group_kind``);
+    a pair count over the unsaved matrix is the right semantics
+    here.
     """
     reviewers_list = list(reviewers)
     reviewees_list = list(reviewees)
@@ -416,6 +438,44 @@ def recompute_self_review_classification(
     if changed:
         db.flush()
     return changed
+
+
+def verify_self_review_classification(
+    db: Session, *, session_id: int
+) -> list[tuple[int, bool, bool]]:
+    """Read-only sanity check: return the list of assignment rows
+    in the session whose stored ``is_self_review`` column differs
+    from what :func:`classify_self_review` now computes.
+
+    Each entry is ``(assignment_id, stored_value, expected_value)``.
+    An empty list means the column is in sync with the canonical
+    rule for every row.
+
+    Used by :func:`replace_assignments` as a post-recompute
+    continuous-gate invariant — drift means either a write path
+    forgot to call :func:`recompute_self_review_classification`,
+    or there's a non-determinism bug in the helper. In test envs
+    (``PYTEST_CURRENT_TEST`` set) the regenerate path asserts on
+    drift; in production it logs and auto-corrects. See
+    ``guide/self_review_consolidate.md``.
+    """
+    rows = db.execute(
+        select(Assignment, Reviewer, Reviewee)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    if not rows:
+        return []
+    classification = classify_self_review(
+        db, session_id=session_id, rows=rows
+    )
+    return [
+        (assignment.id, assignment.is_self_review, expected)
+        for assignment, _, _ in rows
+        for expected in (classification[assignment.id],)
+        if assignment.is_self_review != expected
+    ]
 
 
 def self_review_breakdown_per_instrument(
@@ -729,6 +789,20 @@ def _diff_one_instrument(
 ) -> _InstrumentDiff:
     """Run the engine for one instrument and diff its pair fan-out
     against the instrument's existing ``Assignment`` rows.
+
+    Note: the pair-level :func:`is_self_review` calls inside this
+    function (and its helper :func:`_build_pair_candidates`)
+    operate on **unsaved pair candidates** produced by the engine —
+    no ``Assignment`` row exists yet, so the column-read shape
+    used by every downstream consumer doesn't apply here. The
+    whole-group rule is implemented inline against those unsaved
+    pairs (lines further down) so the engine's ``include`` /
+    exclusion logic still respects ``spec/assignments.md`` §
+    *Self-review policy*. Once the rows are written, the regenerate
+    path calls :func:`recompute_self_review_classification` to
+    populate ``Assignment.is_self_review`` from the canonical
+    helper, and :func:`verify_self_review_classification` runs as
+    a continuous-gate invariant on the result.
 
     Read-only: runs the (pure) rule engine and issues ``SELECT``s, but
     writes nothing. Shared by :func:`_materialise_one_instrument` (which
@@ -1166,6 +1240,43 @@ def replace_assignments(
     review_session.assignment_mode = mode.value
     db.flush()
     db.commit()
+
+    # Continuous-gate invariant (PR 4 of
+    # ``guide/self_review_consolidate.md``). The per-instrument
+    # ``_materialise_one_instrument`` already calls
+    # ``recompute_self_review_classification`` after its bulk
+    # insert / delete, so post-regenerate the column should match
+    # the canonical rule on every row. Drift means a non-regenerate
+    # write path is missing a recompute hook, or there's a non-
+    # determinism bug in :func:`classify_self_review`.
+    drift = verify_self_review_classification(
+        db, session_id=review_session.id
+    )
+    if drift:
+        if _is_test_env():
+            raise AssertionError(
+                "Self-review classification drift detected post-"
+                f"regenerate on session {review_session.id}: "
+                f"{len(drift)} row(s) differ between "
+                "Assignment.is_self_review and "
+                "classify_self_review. First few: "
+                f"{drift[:5]}. See guide/self_review_consolidate.md."
+            )
+        # Production: log + auto-correct. The recompute writes the
+        # canonical value; the audit-event side already covered the
+        # underlying mutation, so the correction is silent.
+        _logger.warning(
+            "self_review_drift_post_regenerate",
+            extra={
+                "session_id": review_session.id,
+                "drift_count": len(drift),
+                "first_few": drift[:5],
+            },
+        )
+        recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
+        db.commit()
 
     # Lazy-seed pair_context display fields for any populated slots
     # — see guide/unfinished_business item #14.
