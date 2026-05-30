@@ -279,21 +279,35 @@ def count_self_reviews_in_assignments(
     return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
 
 
-def _self_review_assignment_ids(
+def classify_self_review(
     db: Session,
     *,
     session_id: int,
     rows: list[tuple[Assignment, Reviewer, Reviewee]],
-) -> set[int]:
-    """The assignment ids that count as self-reviews.
+) -> dict[int, bool]:
+    """The canonical self-review classification for a set of
+    ``(Assignment, Reviewer, Reviewee)`` rows on one session.
 
-    On a **per-reviewee** instrument that is a row where
-    ``is_self_review`` — the reviewer reviewing themselves. On a
-    **group-scoped** instrument it is *every* assignment in a
-    group the reviewer is a member of: a group whose reviewer
-    appears as one of its own reviewees is a self-review group,
-    and excluding self-reviews rules the whole group out — not
-    just the ``(R, R)`` pair (Segment 13C)."""
+    Returns ``{assignment_id: is_self_review}`` for every row passed
+    in. The rule is documented in ``spec/assignments.md`` § *Self-
+    review policy*:
+
+    * **Individual-scoped instrument** (``instrument.group_kind`` is
+      ``None``): per-row pair match — true iff
+      :func:`is_self_review` returns ``True`` on this row's
+      reviewer / reviewee.
+    * **Group-scoped instrument**: the whole-group rule — true iff
+      the reviewer is themselves a member of the group they're
+      reviewing (i.e. any ``(R, member)`` pair in that group has
+      ``member == R`` by the pair-level test). When the rule fires,
+      *every* assignment in the group is flagged, not just the
+      ``(R, R)`` cell.
+
+    Single canonical computation surface — every write site
+    (Assignment creation / fan-out / recompute) and the PR-1 backfill
+    route through this function so the rule lives in exactly one
+    place. See ``guide/self_review_consolidate.md``.
+    """
     from app.services.responses import group_keys
 
     group_key_by_assignment = group_keys(
@@ -302,7 +316,8 @@ def _self_review_assignment_ids(
         session_id=session_id,
     )
     # (group instrument, reviewer) -> group key of the group that
-    # reviewer is a member of.
+    # reviewer is a member of (i.e. groups where the (R, R) member
+    # pair exists, identifying the group as a self-review group).
     self_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
     for assignment, reviewer, reviewee in rows:
         if assignment.id in group_key_by_assignment and is_self_review(
@@ -311,21 +326,39 @@ def _self_review_assignment_ids(
             self_group_key[
                 (assignment.instrument_id, assignment.reviewer_id)
             ] = group_key_by_assignment[assignment.id]
-    ids: set[int] = set()
+    result: dict[int, bool] = {}
     for assignment, reviewer, reviewee in rows:
         group_key = group_key_by_assignment.get(assignment.id)
         if group_key is None:
-            # Per-reviewee instrument.
-            if is_self_review(reviewer, reviewee):
-                ids.add(assignment.id)
-        elif (
-            self_group_key.get(
-                (assignment.instrument_id, assignment.reviewer_id)
+            # Individual-scoped instrument.
+            result[assignment.id] = is_self_review(reviewer, reviewee)
+        else:
+            # Group-scoped: whole-group rule.
+            result[assignment.id] = (
+                self_group_key.get(
+                    (assignment.instrument_id, assignment.reviewer_id)
+                )
+                == group_key
             )
-            == group_key
-        ):
-            ids.add(assignment.id)
-    return ids
+    return result
+
+
+def _self_review_assignment_ids(
+    db: Session,
+    *,
+    session_id: int,
+    rows: list[tuple[Assignment, Reviewer, Reviewee]],
+) -> set[int]:
+    """Thin wrapper over :func:`classify_self_review` that returns
+    the set of assignment ids that count as self-reviews. Kept for
+    callsites that already work in the set-of-ids shape."""
+    return {
+        assignment_id
+        for assignment_id, is_self in classify_self_review(
+            db, session_id=session_id, rows=rows
+        ).items()
+        if is_self
+    }
 
 
 def self_review_breakdown_per_instrument(
