@@ -489,6 +489,78 @@ prompts that lived here have been removed.
    tick icon stays disabled (or surfaces an inline error)
    until at least one column chip is on.
 
+### Data shaper — wiring decisions (resolved 2026-05-29)
+
+The placeholder UI shipped through #1589 → #1610. The
+**wiring slice** ahead turns chip selections into persisted
+shapes + CSV downloads; the decisions below pin the
+contract that slice must honour. Full table form lives in
+`spec/extract_data.md` "Wiring decisions"; this section is
+the design-question equivalent.
+
+1. **Persistence — per-session, name-unique.** A new
+   `data_shape_shapes` table keyed on `(session_id, name)`
+   with `UNIQUE (session_id, name)` so the operator can't
+   save two shapes with the same name on a session. Per-
+   session library (every operator on the session sees the
+   same shapes); no per-operator scoping.
+
+2. **Routes — save-then-download.** `POST` /
+   `PATCH` / `DELETE` against
+   `/operator/sessions/{id}/extract-data/shapes/{shape_id}`
+   for save / update / delete, then `GET
+   .../{shape_id}/download.csv` for the per-shape extract.
+   No ephemeral download URL — every download corresponds
+   to a saved shape.
+
+3. **Audit events.** Three new event types register
+   against `EVENT_SCHEMAS`:
+   `session.data_shape_saved` (snapshot + refs.shape_id),
+   `session.data_shape_deleted` (snapshot + refs.shape_id),
+   `session.data_shape_extracted` (counts.rows +
+   refs.shape_id).
+
+4. **Filename — `{code}_{slug(name)}.csv`.** Same
+   alphanumeric-plus-underscore slug as
+   `by_instrument_filename_slug`. Collisions impossible
+   thanks to the session-unique name constraint.
+
+5. **Validation.** Name required (non-empty after trim).
+   Server-side `UNIQUE` constraint backs the client-side
+   check. Save (`✓`) stays disabled until at least one
+   column chip is on AND axis is picked AND name is
+   non-empty.
+
+6. **Edit-icon — full chip-state restore.** Clicking
+   `✎` on a saved sub-card loads its axis /
+   instrument / response-field / column-chip selections
+   into the scope + content rows, flips the sub-card
+   into edit mode (visual cue: border tinted to the same
+   accent-blue used for primary buttons + selected
+   chips), and closes any other open sub-card.
+
+7. **Active-shape mutex.** Only one sub-card can be in
+   edit mode at a time. Clicking `✎` on another saved
+   card silently switches the editable target — the
+   previously-editing card's transient chip selection
+   (if any) is discarded, not auto-saved. The placeholder-
+   slice operator doesn't need a save / discard prompt at
+   this seam.
+
+**Group-scoped semantics for tag-aggregate rows.** Carries
+over the asymmetric dedupe rule the metadata cards already
+use:
+
+- Reviewer-tag aggregate row × group-scoped field →
+  dedupe by `(reviewer-tag-combo, group_key, field_id)`.
+- Reviewee-tag aggregate row × group-scoped field → no
+  dedupe; each member-assignment counts.
+
+Same rule applies on per-individual rows (with
+`reviewer` / `reviewee` substituted for the tag combo)
+and on the single summary row (with the whole roster
+substituted).
+
 ### The three lenses on the new page (legacy framing)
 
 The original plan called these "By instrument / By reviewer /

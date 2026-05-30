@@ -629,24 +629,166 @@ member-assignment counts on its own).
   no-yellow-lock-card behaviour the rest of the page
   already has will apply.
 
-### Out of scope (file-gen wiring slice)
+### Wiring decisions (resolved 2026-05-29)
 
-The placeholder slice deliberately doesn't ship the
-following — they're the explicit follow-up:
+The placeholder UI shipped through #1589 → #1610 covers the
+operator-facing surface; the **wiring slice** still ahead
+turns chip selections into persisted shapes and CSV
+downloads. The decisions below pin the contract that slice
+must honour.
 
-- **Per-session persistence of saved shapes.** No DB
-  schema decision yet; `localStorage` covers chip state
-  but not saved-shape names + column-chip selections.
-- **The file-generation pipeline.** Turning a saved
-  shape into a CSV in the top-level `Zip all` bundle is
-  the bulk of the wiring work and depends on the
-  persistence model.
-- **Audit events.** `session.data_shaper_extracted` (or
-  per-shape variants) will register against
-  `EVENT_SCHEMAS` when the route lands.
-- **Column-chip drag-to-reorder + sort-icon click**
-  inside the preview row. The chips currently render
-  in chip-selection order; reorder is a follow-up.
+#### Persistence model
+
+A new `data_shape_shapes` table keyed on `(session_id,
+name)` with `UNIQUE (session_id, name)` so the operator
+can't save two shapes with the same name on the same
+session. Per-session (not per-operator) — every operator
+on the session sees the same shape library.
+
+Columns (working draft; finalise during the wiring slice):
+
+| Column | Purpose |
+|---|---|
+| `id` | PK |
+| `session_id` | FK to `review_sessions`, indexed |
+| `name` | Operator-supplied name (non-empty after trim, unique per session) |
+| `axis` | `"reviewer"` or `"reviewee"` — the selected axis chip |
+| `instrument_id` | nullable FK to `instruments` — null when no instrument scope chip is on |
+| `response_field_id` | nullable FK to `instrument_response_fields` — null when no field chip is on |
+| `column_chip_slots` | JSON list of column-chip slot strings (e.g. `["reviewer:name", "reviewer:email", "reviewer:assigned", "reviewer:count", "reviewer:list-items"]`) — preserves chip-selection order so the preview-row order matches the CSV header order |
+| `created_by_user_id` | FK to `users` |
+| `created_at` | timestamp |
+| `updated_at` | timestamp (bumps on PATCH) |
+
+The same columns drive both the persisted-shape rebuild
+(when an operator clicks `✎` to re-edit) and the
+file-generation pipeline.
+
+#### Routes
+
+Save-then-download — every download corresponds to a saved
+shape; there's no inline / ephemeral download URL.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/operator/sessions/{id}/extract-data/shapes` | Create a new shape from the current chip state. Body: `name`, `axis`, `instrument_id`, `response_field_id`, `column_chip_slots`. Returns the new `shape_id`. Validation errors (empty name, name conflict, empty column chips) return 422 with an inline error. |
+| `PATCH` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Update an existing shape. Same body shape as POST; renaming clashes with another shape on the session ⇒ 422. |
+| `DELETE` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Delete a shape. Idempotent — re-delete returns 204. |
+| `GET` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}/download.csv` | Stream the shape's CSV. Backs the `Download` button on each saved sub-card. |
+
+All four go through `require_session_operator` per the rest
+of the page. No new lifecycle gating — extracts work in
+every state.
+
+#### File naming
+
+Each `Download` button serves `{code}_{slug(name)}.csv`,
+where `slug(name)` uses the same alphanumeric-plus-underscore
+sanitisation as `by_instrument_filename_slug`. Filename
+collisions can't happen because the underlying name is
+session-unique.
+
+#### Audit events
+
+Three new event types register against `EVENT_SCHEMAS`:
+
+| Event type | Envelope | Notes |
+|---|---|---|
+| `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, name); `refs.shape_id` carries the row's id. |
+| `session.data_shape_deleted` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on DELETE. `snapshot` captures the deleted row's columns so the audit trail can reconstruct what existed pre-delete. |
+| `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted. |
+
+#### Validation rules
+
+* **Column chips required.** Save (the `✓` icon) stays
+  `disabled` until at least one `data-shaper-col-chip`
+  on the active shape is `aria-pressed="true"`.
+* **Name required and unique per session.** The name
+  input rejects whitespace-only submissions; server-side
+  `UNIQUE (session_id, name)` constraint backs the
+  client-side check.
+* **Axis required.** A shape with no axis chip on can't
+  save — without an axis there's no row identity to
+  compose, and the row-key contract collapses (only the
+  single summary row would render and the operator can't
+  meaningfully name it).
+
+#### Edit-icon behaviour
+
+Clicking `✎` on a saved sub-card:
+
+1. **Closes any other open sub-card.** Only one sub-card
+   can be in edit mode at a time. If another sub-card was
+   already in edit mode and has unsaved chip changes, the
+   server-side state stays the way it is and the
+   client-side chip selection silently switches — the
+   transient unsaved selection is discarded. (Forcing a
+   save / discard prompt is more friction than the
+   placeholder-slice operator needs.)
+2. **Restores the saved shape's chip state** into the
+   scope row + content row by walking the row's `axis` →
+   `instrument_id` → `response_field_id` → `column_chip_slots`
+   chain and re-toggling the matching chips.
+3. **Flips the sub-card's visual state** to "selected"
+   via a `data-shape-selected` attribute the CSS gates on
+   (see "Selected-sub-card visual cue" below).
+4. The `+` icon also closes the currently-editing
+   sub-card before spawning a new blank one. The new
+   sub-card becomes the new selected/editing target.
+
+#### Selected-sub-card visual cue
+
+The sub-card currently in edit mode renders with its
+border tinted to the same accent blue used for primary
+buttons + selected chips (`var(--accent-blue)`). Concretely:
+
+* Default sub-card border: `1px solid var(--color-border)`
+  (existing).
+* Selected sub-card border: `1px solid var(--accent-blue)`
+  + a tighter / brighter `box-shadow` inset to lift the
+  card out of the stack.
+
+Driven by a single attribute (`data-shape-selected="true"`
+or equivalent on the editing sub-card) so the JS that
+manages "which sub-card is being edited" only flips one
+attribute and the CSS handles the rest. The cue lands as a
+**visual-only placeholder ahead of the full edit-mode
+restoration logic** (see "Edit-icon behaviour" above) so
+the operator can see the selected-state styling before the
+wiring slice teaches `✎` to swap shapes.
+
+#### Group-scoped semantics for tag-aggregate rows
+
+The metadata cards' asymmetric dedupe rule carries over
+for tag-aggregate rows on group-scoped instruments:
+
+* **Reviewer-tag aggregate row × group-scoped field**
+  → dedupe by `(reviewer-tag-combo, group_key, field_id)`.
+  Multiple reviewers sharing the same tag combo, each
+  reviewing the same group on the same field, contribute
+  their distinct group answers; the fan-out copies
+  within a single reviewer's group review collapse to one.
+* **Reviewee-tag aggregate row × group-scoped field**
+  → no dedupe. Each member-assignment carries its own
+  copy of the group answer (from the save-time fan-out),
+  and from the reviewee's perspective each (reviewer,
+  field) cell is independent.
+
+Same rule on per-individual rows (with `reviewer` /
+`reviewee` substituted for the tag combo) and on the
+single summary row (with the whole roster substituted).
+
+### Out of scope (still — even after the wiring slice)
+
+The wiring slice doesn't cover:
+
+- **Column-chip drag-to-reorder + sort-icon click** inside
+  the preview row. The chips currently render in
+  chip-selection order; reorder is a follow-up.
+- **Cross-session shape copy.** Saved shapes don't travel
+  when the operator clones a session. Possible v2.
+- **Per-operator privacy.** All operators on a session see
+  every saved shape — no per-operator scoping.
 
 ## Cross-cutting behaviours
 
