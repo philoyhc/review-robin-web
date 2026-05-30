@@ -638,6 +638,7 @@
              data-shape-column-headers='{{ saved.column_headers | tojson }}'
              data-shape-column-aggregates='{{ saved.column_aggregates | tojson }}'
              data-shape-self-review-handling="{{ saved.self_review_handling }}"
+             data-shape-current-self-review-handling="{{ saved.self_review_handling }}"
              data-shape-include-empty-rows="{{ 'true' if saved.include_empty_rows else 'false' }}">
           <div class="shaper-preview-scroll">
             <table class="shaper-preview-table">
@@ -1243,13 +1244,19 @@
         chip.textContent = SHAPER_SRH_LABELS[state];
         chip.classList.add("is-selected");
         chip.setAttribute("aria-pressed", "true");
-        // Mirror the chip state on the active sub-card so the
-        // CSS underline rule (keyed on
-        // ``data-shape-self-review-handling="both"``) picks up
-        // the change live as the operator cycles the chip.
+        // Mirror the live chip state onto the active sub-card's
+        // ``data-shape-current-self-review-handling`` attribute
+        // (NOT ``data-shape-self-review-handling`` — that's the
+        // *saved* state ``hasUnsavedChanges`` compares against,
+        // so overwriting it on every chip cycle would zero out
+        // the dirty-state gate). The CSS marker for CSV-
+        // duplicated columns keys off the *current* attribute
+        // so flipping the chip flips the underline immediately;
+        // Save updates the *saved* attribute so the dirty-gate
+        // resets correctly.
         if (activeShape) {
           activeShape.setAttribute(
-            "data-shape-self-review-handling", state
+            "data-shape-current-self-review-handling", state
           );
         }
       }
@@ -2050,9 +2057,14 @@
         // Self-review handling chip state (PR C). Falls back to
         // ``include_self`` when the response body predates PR B's
         // wiring; in practice POST / PATCH always echo it back.
+        // After Save both ``data-shape-self-review-handling`` and
+        // ``data-shape-current-self-review-handling`` converge on
+        // the new saved value — the dirty-state gate resets and
+        // the CSS marker keeps pointing at the right state.
+        var newSrh = data.self_review_handling || "include_self";
+        shape.setAttribute("data-shape-self-review-handling", newSrh);
         shape.setAttribute(
-          "data-shape-self-review-handling",
-          data.self_review_handling || "include_self"
+          "data-shape-current-self-review-handling", newSrh
         );
         // Empty-row drop chip state (PR 6 of the chip-controlled-
         // drop slice). Defaults to ``true`` when the response
