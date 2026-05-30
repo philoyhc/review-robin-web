@@ -1366,8 +1366,16 @@
          right with them. ``flex: 0 0 auto`` keeps them from
          stretching; the input is bounded to **25% of the
          sub-card width** so it doesn't crowd the buttons or
-         overshoot to the left on wide cards. */
-      body.ui-v2 .data-shape-name-input {
+         overshoot to the left on wide cards.
+
+         The selector matches the input with both its element
+         and its type attribute (``input[type="text"]``) so
+         this rule out-specifies the global
+         ``body.ui-v2 input[type="text"] { width: 100%; }``
+         base rule further down in this file. Without the
+         attribute-selector bump the base rule wins and the
+         input stretches to fill the whole action row. */
+      body.ui-v2 input[type="text"].data-shape-name-input {
         flex: 0 0 auto;
         width: 25%;
       }
