@@ -460,6 +460,40 @@ surface). Backing model: `app/db/models/session_rule_set.py`.
 
 ---
 
+## 9.5. `data_shapes` — operator-saved Data shaper shapes
+
+> **History.** Per-session library landed 2026-05-30 across the
+> Extract data slice (PRs #1565 → #1627; persistence slice
+> #1618 → #1623). The Self-review handling chip's per-shape
+> state column followed in PR #1643 (Phase 2 of
+> `guide/archive/extract_data.md`).
+
+Per-session library of custom column compositions the operator
+composes via the Data shaper card and downloads as CSVs.
+``UNIQUE (session_id, name)`` keeps shape names unique inside
+a session. Round-trips through the Settings CSV via portable
+references (instrument by ``short_label``, response field by
+``field_key``) — see §10 below.
+
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
+| `name` | `String(255)` | Operator-typed name; unique per session via `uq_data_shape_session_name`. |
+| `axis` | `String(16)` | ``reviewer`` / ``reviewee`` — drives the row-key contract (see `guide/archive/extract_data.md` § *Row-key semantics*). |
+| `instrument_id` | `Integer` (FK → `instruments.id` ON DELETE CASCADE; nullable) | Scope-filter chip: NULL = aggregates span every session instrument. |
+| `response_field_id` | `Integer` (FK → `instrument_response_fields.id` ON DELETE CASCADE; nullable) | Scope-filter chip: NULL = aggregates span every field on the chosen instrument. |
+| `column_chip_slots` | `Text` (JSON list) | Operator's column-chip selection in click order. Drives the preview-row + CSV header order. |
+| `self_review_handling` | `String(16)` | Self-review handling chip state: ``include_self`` (default) / ``exclude_self`` / ``both``. Drives the column-name suffix (`_self` / `_noself` / `_both`), filename suffix, audit ``context.self_review_handling`` slot, and the in-pool ``Assignment.is_self_review.is_(False)`` filter on the non-default states. Added by PR #1643 (Phase 2 of the Extract data slice). |
+| `created_by_user_id` | `Integer` (FK → `users.id` ON DELETE SET NULL; nullable) | Audit-trail anchor for the operator who saved the shape. |
+
+**Canonical spec:** `guide/archive/extract_data.md` (the
+shipped feature surface). Backing model:
+`app/db/models/data_shape.py`. File-gen lives in
+`app/services/extracts/data_shape_extract.py`; service-layer
+CRUD + validation lives in `app/services/data_shapes.py`.
+
+---
+
 ## 10. CSV export / import coverage
 
 Two segment plans co-author the porting / template-capture
@@ -520,6 +554,7 @@ The five CSVs split the work three ways:
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
 | §2.5 | `session_field_labels` (per-session friendly labels) | ✅ All | All listed columns → Settings CSV. 12-slot allowlist enforced by `_VALID_FL_SOURCE_FIELDS` on import. Per-entity CSVs intentionally stay canonical-only on their header rows. |
 | §9 | `session_rule_sets` | Partial | All rows → Settings CSV (the seeded-vs-authored distinction retired alongside the 5-seeded-RuleSets default-seed in Wave 5 PR 5.2). The `library_name` provenance column also retired in the same wave; the importer recognises-and-skips legacy CSVs that still carry it. |
+| §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 6 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), and `self_review_handling` (Self-review handling chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). The `self_review_handling` row was added by PR #1643 (Phase 2); pre-PR-B CSVs without the row import to `include_self` default. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
 | n/a | Audit events (`audit_events`) | ✅ (analytics only) | `{code}_audit_log.csv` (Segment 12B PR 1) — 7-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column. **No import counterpart**, no round-trip — audit events are system-emitted. The route ships live but **without an Extract Data tile** — operator-facing surface relocates to the Sys Admin page when Segment 16A ships, per industry best practice for audit-data downloads. |
 | n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
