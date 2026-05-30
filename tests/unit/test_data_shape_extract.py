@@ -22,7 +22,10 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services.extracts.data_shape_extract import build_shape_rows
+from app.services.extracts.data_shape_extract import (
+    build_shape_rows,
+    compose_shape_preview_headers,
+)
 
 
 _INLINE_NUMERIC = {
@@ -1117,3 +1120,85 @@ def test_both_state_drop_chip_on_keeps_row_with_data_on_either_half(
     body = rows[1:]
     # Alice's data lives on both halves — row kept.
     assert any(row[0] == "Alice" for row in body)
+
+
+# --------------------------------------------------------------------------- #
+# Preview-table headers — diverge from CSV headers per
+# ``compose_shape_preview_headers``'s docstring.
+# --------------------------------------------------------------------------- #
+
+
+def test_preview_headers_identity_columns_carry_a_space(db: Session) -> None:
+    """Identity columns surface in the preview with a space —
+    ``Reviewer Name`` / ``Reviewer Email`` — diverging from the
+    CSV's no-space ``ReviewerName`` / ``ReviewerEmail``."""
+    review_session = _session(db, code="pv-identity")
+    shape = _shape(
+        db,
+        review_session,
+        slots=["reviewer:name", "reviewer:email"],
+    )
+    headers = compose_shape_preview_headers(db, review_session, shape)
+    assert headers == ("Reviewer Name", "Reviewer Email")
+
+
+def test_preview_headers_aggregate_columns_drop_self_review_suffix(
+    db: Session,
+) -> None:
+    """Aggregate columns drop the Self-review handling chip
+    suffix in the preview — ``Mean`` rather than
+    ``Mean_self``. The CSV file still emits the suffixed form
+    via ``_compose_header`` inside ``build_shape_rows``."""
+    review_session = _session(db, code="pv-suffix")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=["reviewer:mean", "reviewer:min", "reviewer:max"],
+        self_review_handling="include_self",
+    )
+    headers = compose_shape_preview_headers(db, review_session, shape)
+    assert headers == ("Mean", "Min", "Max")
+
+
+def test_preview_headers_both_state_does_not_duplicate_aggregate_block(
+    db: Session,
+) -> None:
+    """``self_review_handling="both"`` emits a single
+    aggregate block in the preview (not two side-by-side like
+    the CSV) — the preview tracks chip selection, not the
+    eventual file shape."""
+    review_session = _session(db, code="pv-both")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:name",
+            "reviewer:assigned",
+            "reviewer:count",
+        ],
+        self_review_handling="both",
+    )
+    headers = compose_shape_preview_headers(db, review_session, shape)
+    assert headers == ("Reviewer Name", "Assigned", "Count")
+
+
+def test_preview_headers_for_reviewee_axis_carries_reviewee_titles(
+    db: Session,
+) -> None:
+    review_session = _session(db, code="pv-axis-reviewee")
+    shape = _shape(
+        db,
+        review_session,
+        axis="reviewee",
+        slots=["reviewee:name", "reviewee:email"],
+    )
+    headers = compose_shape_preview_headers(db, review_session, shape)
+    assert headers == ("Reviewee Name", "Reviewee Email")

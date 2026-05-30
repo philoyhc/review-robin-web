@@ -55,7 +55,7 @@ from app.services import field_labels
 from app.services import responses as responses_service
 
 
-__all__ = ["build_shape_rows", "compose_shape_header"]
+__all__ = ["build_shape_rows", "compose_shape_preview_headers"]
 
 
 _NUMERIC = ("Integer", "Decimal")
@@ -315,27 +315,76 @@ def _aggregate_cells(
     return cells
 
 
-def compose_shape_header(
+def compose_shape_preview_headers(
     db: Session, review_session: ReviewSession, shape: DataShape
 ) -> tuple[str, ...]:
-    """Return just the CSV header row for ``shape``.
+    """Return the **preview-table** header row for ``shape``.
 
-    Used by the Extract data page route to embed canonical
-    column headers into the server-rendered saved-sub-card
-    preview rows — so the preview ``<th>`` cells read the
-    same way as the eventual download (``ReviewerName``,
-    actual step values, etc.) rather than the raw chip slot
-    strings.
+    Used by the Extract data page route to populate the server-
+    rendered saved-sub-card preview row. Diverges from the CSV
+    header on three points (the preview is a descriptive aid
+    for what the operator selected, not a literal duplicate of
+    the file headers):
+
+    * Identity columns read with a space — ``Reviewer Name`` /
+      ``Reviewer Email`` (or the Reviewee variants) — rather
+      than the CSV-canonical no-space form.
+    * Aggregate columns drop the Self-review handling chip
+      suffix (``_self`` / ``_noself``).
+    * ``self_review_handling="both"`` does NOT duplicate the
+      aggregate block — the preview shows one block per
+      slot, matching the operator's chip selection.
+
+    The CSV file generation still emits canonical headers
+    (with suffixes / duplication for ``both``) via
+    ``_compose_header`` from inside ``build_shape_rows``.
     """
     slots: list[str] = json.loads(shape.column_chip_slots)
     scope = _resolve_scope(db, review_session, shape)
-    return _compose_header(
-        review_session,
-        shape.axis,
-        slots,
-        scope.anchor_field,
-        self_review_handling=shape.self_review_handling,
-    )
+    axis = shape.axis
+    axis_title = "Reviewer" if axis == "reviewer" else "Reviewee"
+    anchor_field = scope.anchor_field
+    headers: list[str] = []
+    for slot in slots:
+        if slot == f"{axis}:name":
+            headers.append(f"{axis_title} Name")
+        elif slot == f"{axis}:email":
+            headers.append(f"{axis_title} Email")
+        elif slot.startswith(f"{axis}:tag-"):
+            headers.append(
+                _tag_header_label(
+                    review_session, axis, slot.split(":", 1)[1]
+                )
+            )
+        elif slot == f"{axis}:assigned":
+            headers.append("Assigned")
+        elif slot == f"{axis}:count":
+            headers.append("Count")
+        elif slot == f"{axis}:mean":
+            headers.append("Mean")
+        elif slot == f"{axis}:median":
+            headers.append("Median")
+        elif slot == f"{axis}:min":
+            headers.append("Min")
+        elif slot == f"{axis}:max":
+            headers.append("Max")
+        elif slot == f"{axis}:length":
+            headers.append("Length")
+        elif slot == f"{axis}:list-items":
+            options = (
+                _list_option_values(anchor_field)
+                if anchor_field
+                else []
+            )
+            headers.extend(options)
+        elif slot == f"{axis}:discrete-steps":
+            steps = (
+                _discrete_step_values(anchor_field)
+                if anchor_field
+                else []
+            )
+            headers.extend(steps)
+    return tuple(headers)
 
 
 _IDENTITY_SLOT_SUFFIXES = ("name", "email")
