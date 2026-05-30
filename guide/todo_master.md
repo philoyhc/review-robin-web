@@ -1165,24 +1165,36 @@ session metadata + 18G scheduled events + email overrides +
 per-instrument (incl. 18N inline response-field type /
 bounds / visible) + RuleSets + field labels + data shapes.
 
-**Follow-on slice queued (proposed 2026-05-30):** three-way
-`Self-review handling` chip
-(`Include self` / `Exclude self` / `Both`) on the two
-metadata cards + Data shaper scope row. Always surfaced
-whenever the scope holds any response data; states the
-in-scope data can't support are auto-locked (only non-self
-data → `Exclude self` locked; only self data → `Include self`
-locked; both kinds → full three-way selectable). `_self` /
-`_noself` column-name + filename suffixes always emit so the
-CSV schema stays stable for downstream consumers. `Both`
-duplicates the aggregate-column block with both suffixes.
-Persistence on the Data shaper side adds a new
-`data_shapes.self_review_handling` column + Settings CSV
-round-trip key. Plan stays in `guide/extract_data.md`
-("Self-review handling in summarizing extracts" section)
-until that slice lands; archived after.
+**Self-review handling chip slice — done 2026-05-30 (PRs
+#1642 → #1647).** Three-state cycle (`Include self` /
+`Exclude self` / `Both`) shipped end-to-end on the two
+metadata cards + the Data shaper scope row. Column-name
+suffix (`_self` / `_noself` / `_both`), filename suffix, and
+`context.self_review_handling` audit slot consistent across
+all three surfaces. **PR A (#1642)** wired the metadata-card
+chips + filtered Reviewer / Reviewee metadata extracts.
+**PR B (#1643)** landed the
+``data_shapes.self_review_handling`` column + migration +
+Pydantic + service-layer validation + file-gen + Settings
+CSV round-trip + audit envelope update. **PR C (#1644)**
+swapped the inert Data shaper placeholder for the wired
+chip + scope-row JS + saved-shape attribute roundtrip. Two
+small CSS polish PRs (**#1645 / #1646**) muted the locked
+chip to the unselected-pill palette so it reads with the
+rest of the scope chips. A post-implementation audit
+(2026-05-30) found no bugs / no spec drift; **PR #1647**
+closed the three test-coverage gaps the audit flagged (per-
+tag-combo × chip-state, single-summary × `both`, Data
+shaper × group-scoped × `exclude_self`, plus three
+``compute_self_review_data_state`` preflight cases).
 
-Plan (still live): `guide/extract_data.md`.
+Q4 (per-individual rows on the Data shaper × `exclude_self`)
+left at the conservative interpretation pinned in
+``data_shape_extract.py:578`` — rows surface with empty
+aggregate cells when their only response was self-review;
+revisit if/when the UX feels off.
+
+Plan archived: `guide/archive/extract_data.md`.
 Functional spec: `spec/extract_data.md`.
 
 ---
