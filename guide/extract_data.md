@@ -594,31 +594,46 @@ substituted).
 
 ### Self-review handling in summarizing extracts (proposed 2026-05-30)
 
-Three layers already exist for *whether self-review rows exist
-in the data*:
+Self-review rows in Review Robin are **always materialised**
+at Generate time — the legacy `SessionRuleSet.exclude_self_reviews`
+column is vestigial (the engine hardcodes `False` regardless,
+backfill migration `d2e4f6a8c1b3` flattened every row to
+`False`, and `_create_band1_rule_set` writes `False` on every
+save; see `spec/assignments.md` "Self-review policy" + the
+`_band1.py:146-167` healing-on-save block). Whether
+self-review rows then count as *active* turns on two layers:
 
-1. Band 1 rule-set's `exclude_self_reviews` flag drops self-pair
-   assignments at generation time.
-2. Operator can flip individual self-pair assignments to inactive
-   on the Assignments page after generation.
-3. Reviewers may or may not actually submit responses on their
-   self-review rows.
+1. **`ReviewSession.self_reviews_active`** (session-level
+   toggle, defaults `True`). When `False`, every newly-
+   materialised self-review `Assignment` lands with
+   `include=False` so the reviewer surface never shows it.
+2. **Per-row `Assignment.include` flip** on the Assignments
+   page. The operator can flip individual self-pairs (or
+   any pair) on/off post-Generate without re-running it.
 
-What the summarizing extracts still lack is a fourth, orthogonal,
-**extract-time** control: given the self-review rows that
-do exist, fold them into aggregates or not. This section
-captures the proposal for that control.
+Whether the reviewer then **submitted** a response on an
+active self-review row is a third independent layer
+downstream of both.
+
+What the summarizing extracts still lack is a fourth,
+orthogonal, **extract-time** control: given the self-review
+responses that exist on `include=True` rows, fold them into
+aggregates or not. This section captures the proposal for
+that control.
 
 **Three-way chip, conditionally surfaced.** Add a single
-three-way `Self-review handling` chip that **only renders when
-the session actually contains one or more self-review rows
-with a response** (i.e., the server-side preflight finds at
-least one row where `is_self_review(reviewer, reviewee)` is
-true on a saved-or-submitted response). On sessions where
-self-reviews were excluded at Band 1 (or where the operator
-deactivated all of them, or where no self-review row carries
-a response), the chip never appears — the operator never sees
-a control that wouldn't change anything.
+three-way `Self-review handling` chip that **only renders
+when the session actually contains one or more
+included-and-answered self-review rows** (server-side
+preflight: at least one `Response` whose
+`Assignment.include=True` and where
+`is_self_review(reviewer, reviewee)` returns `True` and
+whose value is non-null). On sessions where every
+self-review pair sits inactive (e.g. `self_reviews_active=False`
+or the operator deactivated each self-pair individually) or
+where no active self-review pair carries a response yet,
+the chip never appears — the operator never sees a control
+that wouldn't change anything.
 
 When it appears, the chip has three mutually exclusive
 states:
