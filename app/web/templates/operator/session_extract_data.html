@@ -298,18 +298,23 @@
       <span class="pill pill-count tag-chip"
             data-shaper-axis-chip="reviewee"
             role="button" tabindex="0" aria-pressed="false">Reviewee</span>
-      {# Placeholder for the proposed three-state Self-review
-         handling chip on the Data shaper scope row. Sits between
-         the axis chips and the first ``|`` per the operator's
-         spec note. Inert until the chip slice lands (PR B / PR C
-         in ``guide/extract_data.md`` § *Self-review handling —
-         gap analysis*). #}
-      <span class="pill pill-count tag-chip"
-            data-self-review-handling-placeholder="data-shaper"
-            role="button" tabindex="-1"
-            aria-disabled="true" aria-pressed="false"
-            title="Self-review handling chip — placeholder; wiring lands in a follow-up PR per guide/extract_data.md."
-            style="opacity: 0.5; cursor: default;">Self-review handling</span>
+      {# Self-review handling chip — three-state cycle
+         (Include self → Exclude self → Both → …). Cycles via
+         the cycling-pill JS at the bottom of the page; drives
+         the active sub-card's persisted state through
+         ``persistShape`` + the Download URL filename suffix.
+         Wired in PR C of ``guide/extract_data.md`` § *Self-
+         review handling*. The chip joins the chips-lock-when-
+         no-edit-mode CSS via its own
+         ``data-shaper-self-review-chip`` selector (base.html
+         #1638 → PR C). #}
+      <span class="pill pill-count tag-chip is-selected"
+            data-shaper-self-review-chip="data-shaper"
+            data-shaper-self-review-state="include_self"
+            role="button" tabindex="0"
+            aria-pressed="true"
+            title="Self-review handling: click to cycle through Include self / Exclude self / Both."
+            >Self-review: Include</span>
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for instr in instruments %}
         {% set chip_short = (instr.short_label or "").strip() %}
@@ -596,7 +601,8 @@
                 double-quotes inside double quotes
                 (collapsing to an empty value). #}
              data-shape-column-slots='{{ saved.column_chip_slots | tojson }}'
-             data-shape-column-headers='{{ saved.column_headers | tojson }}'>
+             data-shape-column-headers='{{ saved.column_headers | tojson }}'
+             data-shape-self-review-handling="{{ saved.self_review_handling }}">
           <div class="shaper-preview-scroll">
             <table class="shaper-preview-table">
               <thead>
@@ -1145,6 +1151,39 @@
 
       function chipsLocked() {
         return card.getAttribute("data-shaper-chips-locked") === "true";
+      }
+
+      // Self-review handling chip on the Data shaper scope row.
+      // Three-state cycle (Include self → Exclude self → Both
+      // → …) wired in PR C of the chip slice
+      // (``guide/extract_data.md`` § *Self-review handling*).
+      // The chip's state lives on
+      // ``data-shaper-self-review-state``; the persisted column
+      // lives on the active sub-card's
+      // ``data-shape-self-review-handling`` attribute (updated
+      // by ``applySavedShapeAttrs`` after Save). On ``Edit`` of
+      // a saved card, ``restoreShapeChipState`` sets the chip
+      // back to the saved value via ``setShaperSelfReviewState``.
+      var SHAPER_SRH_STATES = [
+        "include_self", "exclude_self", "both",
+      ];
+      var SHAPER_SRH_LABELS = {
+        include_self: "Self-review: Include",
+        exclude_self: "Self-review: Exclude",
+        both: "Self-review: Both",
+      };
+      function setShaperSelfReviewState(state) {
+        var chip = card.querySelector(
+          '[data-shaper-self-review-chip="data-shaper"]'
+        );
+        if (!chip) return;
+        if (SHAPER_SRH_STATES.indexOf(state) === -1) {
+          state = "include_self";
+        }
+        chip.setAttribute("data-shaper-self-review-state", state);
+        chip.textContent = SHAPER_SRH_LABELS[state];
+        chip.classList.add("is-selected");
+        chip.setAttribute("aria-pressed", "true");
       }
 
       function closeOtherEditingShapes(except) {
@@ -1714,6 +1753,14 @@
         for (var i = 0; i < savedSlots.length; i++) {
           if (savedSlots[i] !== currentSlots[i]) return true;
         }
+        // Self-review handling chip state (PR C). Save flips
+        // back to disabled once the chip returns to the saved
+        // value.
+        var savedSrh = (
+          shape.getAttribute("data-shape-self-review-handling")
+          || "include_self"
+        );
+        if (currentSelfReviewHandling() !== savedSrh) return true;
         return false;
       }
 
@@ -1883,6 +1930,24 @@
           "data-shape-column-headers",
           JSON.stringify(data.column_headers || [])
         );
+        // Self-review handling chip state (PR C). Falls back to
+        // ``include_self`` when the response body predates PR B's
+        // wiring; in practice POST / PATCH always echo it back.
+        shape.setAttribute(
+          "data-shape-self-review-handling",
+          data.self_review_handling || "include_self"
+        );
+      }
+
+      function currentSelfReviewHandling() {
+        var chip = card.querySelector(
+          '[data-shaper-self-review-chip="data-shaper"]'
+        );
+        if (!chip) return "include_self";
+        return (
+          chip.getAttribute("data-shaper-self-review-state")
+          || "include_self"
+        );
       }
 
       function persistShape(shape) {
@@ -1893,6 +1958,7 @@
           instrument_id: currentInstrumentId(),
           response_field_id: currentFieldId(),
           column_chip_slots: currentColumnSlots(),
+          self_review_handling: currentSelfReviewHandling(),
         };
         var shapeId = shape.getAttribute("data-shape-id");
         var method = shapeId ? "PATCH" : "POST";
@@ -1976,6 +2042,10 @@
         card
           .querySelectorAll('[data-shaper-axis-chip][aria-pressed="true"]')
           .forEach(clickChipIfPressed);
+        // Reset the Self-review handling chip to its default
+        // state — a fresh sub-card composes from
+        // ``include_self`` per the spec's "default state" Q3.
+        setShaperSelfReviewState("include_self");
       }
 
       // Re-render a saved sub-card's preview row from its
@@ -2079,6 +2149,12 @@
             )
           );
         });
+        // Self-review handling chip — sync to the saved state
+        // on the shape (PR C of the chip slice).
+        var srhState = shape.getAttribute(
+          "data-shape-self-review-handling"
+        ) || "include_self";
+        setShaperSelfReviewState(srhState);
         rebuildPreviewRow();
       }
 
@@ -2244,6 +2320,41 @@
       }
 
       stack.querySelectorAll("[data-shape]").forEach(bindShapeCard);
+
+      // Cycle handler for the Self-review handling chip on the
+      // Data shaper scope row. ``chipsLocked()`` short-circuits
+      // the cycle so the chip stays inert when no sub-card is
+      // in edit mode (matches the rest of the scope-row chips).
+      // On Save the saved card's
+      // ``data-shape-self-review-handling`` attribute picks the
+      // current chip state up via ``persistShape`` →
+      // ``applySavedShapeAttrs``; ``hasUnsavedChanges`` checks
+      // the chip state against that attribute so Save's
+      // dirty-state gate honours self-review-only edits.
+      (function () {
+        var chip = card.querySelector(
+          '[data-shaper-self-review-chip="data-shaper"]'
+        );
+        if (!chip) return;
+        function cycle() {
+          if (chipsLocked()) return;
+          var current = chip.getAttribute(
+            "data-shaper-self-review-state"
+          ) || "include_self";
+          var nextIdx = (SHAPER_SRH_STATES.indexOf(current) + 1)
+            % SHAPER_SRH_STATES.length;
+          setShaperSelfReviewState(SHAPER_SRH_STATES[nextIdx]);
+          updateAllButtonStates();
+        }
+        chip.addEventListener("click", cycle);
+        chip.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            cycle();
+          }
+        });
+      })();
+
       // Sync the chip-lock + Save-validity gates to the initial
       // active-shape state (null when only saved cards exist;
       // the always-present blank edit-mode card otherwise).
