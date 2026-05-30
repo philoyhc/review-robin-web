@@ -19,28 +19,31 @@ Setup data lives on Home; response data lives here. The split is
 the load-bearing decision behind the page's existence — see
 `guide/extract_data.md` for the rationale.
 
-> **Implementation status — shipped through the four per-card
-> wirings (2026-05-29).** Page chrome + skeleton landed in the
-> Extract-data tab carve. The intro `Extract all data` card,
-> the `By instrument` card, and the two metadata cards (Reviewer
-> response metadata + Reviewee response metadata) are wired
-> end-to-end: chips drive query-string params on a real download
-> route, chip state persists per session via `localStorage`,
-> and every download emits an audit event. The full-width
-> **Data shaper** card below the grid ships its full
-> **placeholder UI** — two stacked chip rows (scope ⇒ axis +
-> instrument + response field; content ⇒ per-axis pool of
-> identification + aggregate chips with all the field-scoped
-> behaviour: Name ↔ Email coupling, data-type filtering,
-> `List items` fan-out chip for List fields, `Discrete steps`
-> fan-out chip for low-cardinality numeric fields), the stack
-> of Data shape sub-cards (each with preview row + four
-> ✓ / ✎ / X / + action icons on the same row as a
-> right-anchored `Download` button, always-present blank
-> starter card), and the disabled outer `Zip all` button.
-> All interactions are client-side only; persistence and
-> file generation are deferred — see "Data shaper card" +
-> "Data shaper — row-key contract" below.
+> **Implementation status — fully wired end-to-end (2026-05-30).**
+> Page chrome + skeleton landed in the Extract-data tab carve.
+> Every card on the page is wired: the intro `Extract all data`
+> card, the `By instrument` card, the two metadata cards
+> (Reviewer / Reviewee response metadata), and the full-width
+> `Data shaper` card all drive real download routes. Chip state
+> persists per session via `localStorage` for the canned-lens
+> cards and **per-shape via the `data_shapes` table** for the
+> Data shaper; every download emits an audit event.
+>
+> The Data shaper carries two stacked chip rows (scope ⇒ axis
+> + empty-row drop + Self-review handling + instrument + response
+> field; content ⇒ per-axis pool of identification + aggregate
+> chips with field-scoped behaviour: Name ↔ Email coupling,
+> data-type filtering, `List items` fan-out for List fields,
+> `Discrete steps` fan-out for low-cardinality numeric fields),
+> a stack of Data shape sub-cards (preview row + Save / Edit /
+> Cancel / Delete / +Shape / Download action row), and the
+> outer `Zip all` button.
+>
+> The Self-review handling chip slice (PRs #1642 → #1647 +
+> #1659) and the chip-controlled-drop slice (PRs #1654 → #1659)
+> closed out the wiring, including the cross-card consistency
+> sweep that converted all four empty-row-drop chips to two-
+> state cycling pills with explicit labels per state.
 
 ## Page identity
 
@@ -762,13 +765,13 @@ member-assignment counts on its own).
   no-yellow-lock-card behaviour the rest of the page
   already has will apply.
 
-### Wiring decisions (resolved 2026-05-29)
+### Wiring decisions (resolved 2026-05-29, fully shipped 2026-05-30)
 
-The placeholder UI shipped through #1589 → #1610 covers the
-operator-facing surface; the **wiring slice** still ahead
-turns chip selections into persisted shapes and CSV
-downloads. The decisions below pin the contract that slice
-must honour.
+The placeholder UI shipped through #1589 → #1610 surfaced the
+operator-facing chip vocabulary; the wiring slice (#1626 →
+#1659) turned chip selections into persisted shapes + CSV
+downloads + a chip-controlled drop of empty rows. The
+decisions below pin the contract the slice honoured.
 
 #### Persistence model
 
@@ -778,7 +781,7 @@ can't save two shapes with the same name on the same
 session. Per-session (not per-operator) — every operator
 on the session sees the same shape library.
 
-Columns (working draft; finalise during the wiring slice):
+Columns (final, as of 2026-05-30):
 
 | Column | Purpose |
 |---|---|
