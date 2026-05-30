@@ -890,6 +890,16 @@
     (function () {
       var card = document.getElementById("extract-data-shaper");
       if (!card) return;
+      // Each ``<script>`` block on the page wraps its work in
+      // its own IIFE, so ``sessionId`` defined in the earlier
+      // chip-sync script doesn't ride down into this one.
+      // Re-bind it from the Jinja context so the
+      // ``persistShape`` / ``deleteShapeOnServer`` /
+      // ``Download`` URL builders below have something to
+      // concatenate (without this they emitted
+      // ``/operator/sessions/undefined/...`` and every POST
+      // silently 404'd).
+      var sessionId = {{ session.id | tojson }};
       var relevantSlot = card.querySelector("[data-shaper-relevant-chips]");
       var stack = card.querySelector("[data-shaper-stack]");
       var shapeTemplate = card.querySelector(
