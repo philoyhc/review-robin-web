@@ -1165,7 +1165,20 @@ session metadata + 18G scheduled events + email overrides +
 per-instrument (incl. 18N inline response-field type /
 bounds / visible) + RuleSets + field labels + data shapes.
 
-Plan archived: `guide/archive/extract_data.md`.
+**Follow-on slice queued (proposed 2026-05-30):** three-way
+`Self-review handling` chip
+(`Include self` / `Exclude self` / `Both`) on the two
+metadata cards + Data shaper scope row, surfaced only when
+the session actually contains self-review responses.
+`Both` duplicates the aggregate-column block with `_self` /
+`_noself` suffixes; matching filename suffix. Persistence
+on the Data shaper side adds a new
+`data_shapes.self_review_handling` column + Settings CSV
+round-trip key. Plan stays in `guide/extract_data.md`
+("Self-review handling in summarizing extracts" section)
+until that slice lands; archived after.
+
+Plan (still live): `guide/extract_data.md`.
 Functional spec: `spec/extract_data.md`.
 
 ---

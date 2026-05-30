@@ -1,21 +1,25 @@
 # Extract data — new Operations tab + Session Home card split
 
-> **Shipped 2026-05-29 → 2026-05-30 across PRs #1565 → #1627.**
-> Session Home card split + new **Extract data** Operations
-> tab + per-instrument / reviewer-metadata / reviewee-metadata
-> lenses + the full **Data shaper** (saved `data_shapes` with
-> CRUD routes, file generation, Settings CSV round-trip, and
-> Zip-all integration). Archived to `guide/archive/`
-> 2026-05-30; this doc is preserved as the design record. For
-> current behaviour see `spec/extract_data.md` and the on-page
-> UI; the wiring lives in
-> `app/web/routes_operator/_extract_data.py`,
+> **Mostly shipped 2026-05-29 → 2026-05-30 (PRs #1565 →
+> #1627).** Session Home card split + new **Extract data**
+> Operations tab + per-instrument / reviewer-metadata /
+> reviewee-metadata lenses + the full **Data shaper** (saved
+> `data_shapes` with CRUD routes, file generation, Settings
+> CSV round-trip, and Zip-all integration) all landed. Wiring
+> lives in `app/web/routes_operator/_extract_data.py`,
 > `app/services/data_shapes.py`,
 > `app/services/extracts/data_shape_extract.py`,
 > `app/services/extracts/zip_bundle.py`
 > (`include_data_shapes`), and
 > `app/services/session_config_io/{_serialize,_apply}.py`
 > (`_data_shape_rows` + `_apply_data_shapes`).
+>
+> **Follow-on slice pending (proposed 2026-05-30):**
+> three-way `Self-review handling` chip on the two metadata
+> cards + Data shaper scope row. See *Self-review handling in
+> summarizing extracts (proposed 2026-05-30)* below. Plan
+> stays in `guide/` (not yet archived) until that slice
+> lands.
 >
 > **Original stub header (created 2026-05-29):** Captures the
 > plan to split the current Session Home "Extract data" card
@@ -587,6 +591,128 @@ Same rule applies on per-individual rows (with
 `reviewer` / `reviewee` substituted for the tag combo)
 and on the single summary row (with the whole roster
 substituted).
+
+### Self-review handling in summarizing extracts (proposed 2026-05-30)
+
+Three layers already exist for *whether self-review rows exist
+in the data*:
+
+1. Band 1 rule-set's `exclude_self_reviews` flag drops self-pair
+   assignments at generation time.
+2. Operator can flip individual self-pair assignments to inactive
+   on the Assignments page after generation.
+3. Reviewers may or may not actually submit responses on their
+   self-review rows.
+
+What the summarizing extracts still lack is a fourth, orthogonal,
+**extract-time** control: given the self-review rows that
+do exist, fold them into aggregates or not. This section
+captures the proposal for that control.
+
+**Three-way chip, conditionally surfaced.** Add a single
+three-way `Self-review handling` chip that **only renders when
+the session actually contains one or more self-review rows
+with a response** (i.e., the server-side preflight finds at
+least one row where `is_self_review(reviewer, reviewee)` is
+true on a saved-or-submitted response). On sessions where
+self-reviews were excluded at Band 1 (or where the operator
+deactivated all of them, or where no self-review row carries
+a response), the chip never appears — the operator never sees
+a control that wouldn't change anything.
+
+When it appears, the chip has three mutually exclusive
+states:
+
+| State | Aggregate behaviour | Column-name suffix | File-name suffix |
+|---|---|---|---|
+| **Include self** | Fold self-review responses into the row's `Count` / `Mean` / `Median` / `Min` / `Max` / `Length` exactly as today. | `_self` on every aggregate column. | `_self` appended before the extension. |
+| **Exclude self** | Drop self-review responses from the row's aggregates. `Assigned` also drops the self-pair cells so the denominator stays honest. | `_noself` on every aggregate column. | `_noself` appended before the extension. |
+| **Both** | The response-data column block is **duplicated** — first an include-self block (columns suffixed `_self`), then an exclude-self block (columns suffixed `_noself`), so a single CSV side-by-sides both views. | Both suffixes coexist in the same row. | *(open — see clarifying question below.)* |
+
+Identity columns (`ReviewerName`, `ReviewerEmail`, tag
+columns, `Assigned` — see clarifying question) carry no
+suffix; only the field-scoped aggregate columns get the
+`_self` / `_noself` marker.
+
+**Cards affected.**
+
+- **Reviewer response metadata card** — chip in the existing
+  chip row, separated by `|`. State drives the column suffix
+  + filename suffix on `{code}_reviewer_metadata.csv`.
+- **Reviewee response metadata card** — same shape on
+  `{code}_reviewee_metadata.csv`.
+- **Data shaper** — chip in the **scope row**, after the
+  response-field group, separated by `|`. State persists
+  on the `DataShape` row (new column) so the operator's
+  choice survives navigation + re-download + Settings CSV
+  round-trip.
+- **By-instrument card** — *not affected*. That CSV is wide-
+  format raw (one row per assignment with a per-row
+  `SelfReview` `TRUE` / `FALSE` column already); offline
+  filtering is trivial. Adding the chip there would
+  duplicate machinery that the per-row column already
+  serves.
+
+**Audit event payload.** The `_extracted` events grow a
+`context.self_review_handling` scalar slot
+(`include_self` / `exclude_self` / `both`) on the canonical
+detail envelope. `EVENT_SCHEMAS` entries updated; on
+sessions where the chip didn't render and so wasn't
+exercised, the slot defaults to `include_self` so the
+recorded value still reflects what the file actually
+contained.
+
+**Persistence (Data shaper only).** New column
+`data_shapes.self_review_handling TEXT NOT NULL DEFAULT
+'include_self'` with a check constraint or enum-equivalent
+covering the three states. Alembic migration. `DataShape`
+model + `DataShapePayload` schema pick up the new field.
+`app/services/data_shapes.py` `create_shape` / `update_shape`
+plumb it through.
+
+**Settings CSV round-trip.** New key
+`data_shapes[N].self_review_handling` in `_data_shape_rows`
++ `_apply_data_shapes`. One round-trip test case per state.
+
+**Open clarifying questions** (resolve before the slice
+starts):
+
+1. **`Assigned` column on `Exclude self` / `Both` rows.** On
+   `Exclude self`, `Assigned` drops the self-pair cell so
+   the denominator matches the aggregate scope — agreed
+   above. On `Both`, does `Assigned` ship as one column with
+   no suffix (the value diverges between the two blocks —
+   awkward), or as two columns `Assigned_self` and
+   `Assigned_noself`? Lean: the latter, for honest
+   denominators on each block.
+2. **Filename suffix on `Both`.** Plain
+   `{code}_reviewer_metadata.csv` (the file carries both
+   views and is the comprehensive download), or
+   `{code}_reviewer_metadata_both.csv` for parity with the
+   other two states? Lean: plain — the suffix is for *which
+   slice the file shows*, and `Both` shows both.
+3. **Default state when the chip appears.** Lean
+   `Include self` — matches current behavior on sessions
+   that already have self-review rows, so existing
+   workflows + previously-saved Data shapes don't shift
+   silently. The migration for `data_shapes` defaults to
+   `include_self` for the same reason.
+4. **Per-individual rows on the Data shaper.** When the
+   shape's row identity is per-individual (Name / Email
+   selected), a row's "self-review contribution" is the
+   response that individual entered on their own
+   self-review. The three-way chip controls whether that
+   one cell folds into the row's aggregates — same rule as
+   the metadata cards, applied to the per-individual scope.
+   Per-tag-combo and single-summary rows aggregate across
+   multiple individuals so the rule applies pool-wide.
+
+**Blast radius.** ~1 small PR for the metadata-card side (no
+schema — chip state is one-shot, lives only in the query
+string); ~1 medium PR for the Data shaper side (schema
+migration + `DataShape` field + Settings CSV round-trip +
+saved-state plumbing). The two PRs can land independently;
+the medium PR can land first or second.
 
 ### The three lenses on the new page (legacy framing)
 
