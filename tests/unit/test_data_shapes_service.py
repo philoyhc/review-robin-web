@@ -427,3 +427,79 @@ def test_get_shape_scoped_to_session(db: Session) -> None:
     # the route uses this to reject cross-session access.
     assert data_shapes.get_shape(db, session_b, a_shape.id) is None
     _ = actor_b
+
+
+# --------------------------------------------------------------------------- #
+# Self-review handling chip — PR B
+# --------------------------------------------------------------------------- #
+
+
+def test_create_shape_defaults_self_review_handling_to_include_self(
+    db: Session,
+) -> None:
+    """The chip's persisted state defaults to ``include_self`` so
+    a save through the (PR-A-era) chip-less client preserves
+    today's behaviour."""
+    review_session = _session(db, code="srh-default")
+    actor = _user(db, email="srh-default-actor@x.edu")
+    shape = data_shapes.create_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        **_make_args(),
+    )
+    assert shape.self_review_handling == "include_self"
+
+
+def test_create_shape_accepts_each_valid_state(db: Session) -> None:
+    """All three chip states round-trip through ``create_shape``."""
+    review_session = _session(db, code="srh-states")
+    actor = _user(db, email="srh-states-actor@x.edu")
+    for state in ("include_self", "exclude_self", "both"):
+        shape = data_shapes.create_shape(
+            db,
+            review_session=review_session,
+            actor=actor,
+            **_make_args(name=f"Shape-{state}"),
+            self_review_handling=state,
+        )
+        assert shape.self_review_handling == state
+
+
+def test_create_shape_rejects_unknown_self_review_handling(
+    db: Session,
+) -> None:
+    """A bogus state string raises ``DataShapeValidationError``
+    so the route returns 422 instead of writing junk."""
+    review_session = _session(db, code="srh-bogus")
+    actor = _user(db, email="srh-bogus-actor@x.edu")
+    with pytest.raises(data_shapes.DataShapeValidationError):
+        data_shapes.create_shape(
+            db,
+            review_session=review_session,
+            actor=actor,
+            **_make_args(),
+            self_review_handling="garbage",
+        )
+
+
+def test_update_shape_can_flip_self_review_handling(db: Session) -> None:
+    """The chip cycles on the page; the persisted column follows
+    on Save."""
+    review_session = _session(db, code="srh-update")
+    actor = _user(db, email="srh-update-actor@x.edu")
+    shape = data_shapes.create_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        **_make_args(),
+    )
+    data_shapes.update_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        shape=shape,
+        **_make_args(),
+        self_review_handling="exclude_self",
+    )
+    assert shape.self_review_handling == "exclude_self"

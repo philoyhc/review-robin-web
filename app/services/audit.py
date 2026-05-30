@@ -646,7 +646,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"snapshot", "refs"}
     ),
     "session.data_shape_extracted": EventSchema(
-        _IDENTITY | {"counts", "refs"}
+        _IDENTITY | {"counts", "refs", "context"}
     ),
     # Extract data tab — Reviewer / Reviewee response metadata
     # cards. ``counts.rows`` carries the body row count

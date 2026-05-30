@@ -319,19 +319,51 @@ def compose_shape_header(
     slots: list[str] = json.loads(shape.column_chip_slots)
     scope = _resolve_scope(db, review_session, shape)
     return _compose_header(
-        review_session, shape.axis, slots, scope.anchor_field
+        review_session,
+        shape.axis,
+        slots,
+        scope.anchor_field,
+        self_review_handling=shape.self_review_handling,
     )
 
 
-def _compose_header(
+_IDENTITY_SLOT_SUFFIXES = ("name", "email")
+
+
+def _slot_is_identity(axis: str, slot: str) -> bool:
+    """Identity slots describe the row (name / email / tag-N)
+    and carry no Self-review handling suffix. Aggregate slots
+    (assigned / count / mean / median / min / max / length /
+    list-items / discrete-steps) describe the response pool and
+    take the suffix."""
+    if slot.startswith(f"{axis}:tag-"):
+        return True
+    for suffix in _IDENTITY_SLOT_SUFFIXES:
+        if slot == f"{axis}:{suffix}":
+            return True
+    return False
+
+
+def _data_shape_state_suffix(state: str) -> str:
+    """Per-state column-name suffix for the Data shape extract.
+    Mirrors the metadata-card suffix policy
+    (``self_review_handling_filename_suffix`` in
+    ``entity_metadata_extract.py``) but only used inside the
+    Data shape file-gen — ``both`` is handled by emitting the
+    two single-state headers + columns side by side."""
+    if state == "exclude_self":
+        return "_noself"
+    # ``include_self`` and any future single-state default.
+    return "_self"
+
+
+def _compose_identity_header(
     review_session: ReviewSession,
     axis: str,
     slots: list[str],
-    anchor_field: InstrumentResponseField | None,
-) -> tuple[str, ...]:
-    """One header cell per identification slot + per
-    aggregate slot. Fan-out slots expand to one cell per
-    option / step value."""
+) -> list[str]:
+    """Identity cells (name / email / tag-N) of the header in
+    slot order. Carries no Self-review handling suffix."""
     axis_title = "Reviewer" if axis == "reviewer" else "Reviewee"
     header: list[str] = []
     for slot in slots:
@@ -340,36 +372,94 @@ def _compose_header(
         elif slot == f"{axis}:email":
             header.append(f"{axis_title}Email")
         elif slot.startswith(f"{axis}:tag-"):
-            header.append(_tag_header_label(review_session, axis, slot.split(":", 1)[1]))
-        elif slot == f"{axis}:assigned":
-            header.append("Assigned")
+            header.append(
+                _tag_header_label(
+                    review_session, axis, slot.split(":", 1)[1]
+                )
+            )
+    return header
+
+
+def _compose_aggregate_header(
+    axis: str,
+    slots: list[str],
+    anchor_field: InstrumentResponseField | None,
+    suffix: str,
+) -> list[str]:
+    """Aggregate cells of the header in slot order, suffixed
+    with ``suffix`` (``_self`` / ``_noself``). Fan-out slots
+    (``list-items`` / ``discrete-steps``) expand to one suffixed
+    column per option / step value."""
+    header: list[str] = []
+    for slot in slots:
+        if _slot_is_identity(axis, slot):
+            continue
+        if slot == f"{axis}:assigned":
+            header.append(f"Assigned{suffix}")
         elif slot == f"{axis}:count":
-            header.append("Count")
+            header.append(f"Count{suffix}")
         elif slot == f"{axis}:mean":
-            header.append("Mean")
+            header.append(f"Mean{suffix}")
         elif slot == f"{axis}:median":
-            header.append("Median")
+            header.append(f"Median{suffix}")
         elif slot == f"{axis}:min":
-            header.append("Min")
+            header.append(f"Min{suffix}")
         elif slot == f"{axis}:max":
-            header.append("Max")
+            header.append(f"Max{suffix}")
         elif slot == f"{axis}:length":
-            header.append("Length")
+            header.append(f"Length{suffix}")
         elif slot == f"{axis}:list-items":
             options = (
                 _list_option_values(anchor_field)
                 if anchor_field
                 else []
             )
-            header.extend(options)
+            header.extend(f"{opt}{suffix}" for opt in options)
         elif slot == f"{axis}:discrete-steps":
             steps = (
                 _discrete_step_values(anchor_field)
                 if anchor_field
                 else []
             )
-            header.extend(steps)
-    return tuple(header)
+            header.extend(f"{step}{suffix}" for step in steps)
+    return header
+
+
+def _compose_header(
+    review_session: ReviewSession,
+    axis: str,
+    slots: list[str],
+    anchor_field: InstrumentResponseField | None,
+    self_review_handling: str = "include_self",
+) -> tuple[str, ...]:
+    """One header cell per identification slot + per aggregate
+    slot. Fan-out slots expand to one cell per option / step
+    value.
+
+    Identity cells stay un-suffixed; aggregate cells take a
+    ``_self`` / ``_noself`` suffix per the Self-review handling
+    chip state. ``both`` duplicates the aggregate block — first
+    ``_self``, then ``_noself`` — alongside a single identity
+    block.
+    """
+    identity = _compose_identity_header(review_session, axis, slots)
+    if self_review_handling == "both":
+        aggregates = (
+            _compose_aggregate_header(
+                axis, slots, anchor_field, "_self"
+            )
+            + _compose_aggregate_header(
+                axis, slots, anchor_field, "_noself"
+            )
+        )
+    else:
+        aggregates = _compose_aggregate_header(
+            axis,
+            slots,
+            anchor_field,
+            _data_shape_state_suffix(self_review_handling),
+        )
+    return tuple(identity + aggregates)
 
 
 # --------------------------------------------------------------------------- #
@@ -416,29 +506,7 @@ def build_shape_rows(
             )
         ).scalars()
     )
-
-    # Group key resolver for the reviewer-side asymmetric
-    # dedupe — when a group-scoped instrument fans an answer
-    # across every member-assignment, the reviewer side
-    # collapses them by ``(reviewer, group_key, field_id)``.
-    assignments = list(
-        db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope.instrument_ids)
-                if scope.instrument_ids
-                else Assignment.instrument_id.is_(None),
-            )
-        ).scalars()
-    ) if scope.instrument_ids else []
-    group_key_by_assignment = (
-        responses_service.group_keys(
-            db, assignments=assignments, session_id=review_session.id
-        )
-        if assignments
-        else {}
-    )
+    entity_by_id = {e.id: e for e in entities}
     fields_per_instrument: dict[int, list[int]] = {}
     for fid, fobj in scope.field_by_id.items():
         fields_per_instrument.setdefault(fobj.instrument_id, []).append(fid)
@@ -452,17 +520,147 @@ def build_shape_rows(
             )
         return ("sum",)
 
-    accs: dict[tuple, _Acc] = {}
-    entity_for_key: dict[tuple, object] = {}
-    entity_by_id = {e.id: e for e in entities}
-    for entity in entities:
-        key = _row_key_for_entity(entity)
-        accs.setdefault(key, _Acc())
-        entity_for_key.setdefault(key, entity)
+    # Self-review handling chip — PR B of the chip slice per
+    # ``guide/extract_data.md`` § *Self-review handling*. Each
+    # state is one pass through the assignment + response pool
+    # with an optional ``WHERE NOT is_self_review`` filter; the
+    # ``both`` state runs both passes and emits the aggregate-
+    # column blocks side by side (Q1 / Q2 resolutions).
+    state = shape.self_review_handling
+    states_to_run: tuple[str, ...] = (
+        ("include_self", "exclude_self")
+        if state == "both"
+        else (state,)
+    )
 
-    # Assigned counts — one slot per (entity, scope field).
-    # Reviewer-side dedupe collapses group fan-out.
-    seen_reviewer_assigned: set[tuple[int, int, tuple[str, ...], int]] = set()
+    per_state_accs: dict[str, dict[tuple, _Acc]] = {}
+    for run_state in states_to_run:
+        per_state_accs[run_state] = _build_state_accumulators(
+            db,
+            review_session,
+            axis=axis,
+            scope=scope,
+            entity_by_id=entity_by_id,
+            fields_per_instrument=fields_per_instrument,
+            row_key_for_entity=_row_key_for_entity,
+            exclude_self=(run_state == "exclude_self"),
+        )
+
+    rows: list[tuple[str, ...]] = [
+        _compose_header(
+            review_session,
+            axis,
+            slots,
+            scope.anchor_field,
+            self_review_handling=state,
+        )
+    ]
+
+    def _aggregate_block(row_key: tuple, fallback: _Acc | None = None) -> tuple[str, ...]:
+        """Per-row aggregate cells across every state in
+        ``states_to_run`` — single block for one-state shapes,
+        two blocks (``_self`` then ``_noself`` columns) for
+        ``both``."""
+        cells: list[str] = []
+        for run_state in states_to_run:
+            acc = per_state_accs[run_state].get(row_key)
+            if acc is None:
+                acc = fallback if fallback is not None else _Acc()
+            cells.extend(
+                _aggregate_cells(axis, slots, acc, scope.anchor_field)
+            )
+        return tuple(cells)
+
+    if per_individual:
+        # One row per individual — even if no responses /
+        # assignments accrued to them, the row ships with
+        # zero aggregates (matches the metadata cards'
+        # ``All reviewers`` ON behaviour). Q4's conservative
+        # interpretation: a row whose only response is the now-
+        # excluded self-review surfaces with empty aggregate
+        # cells on ``exclude_self`` (rather than dropping the
+        # row entirely). Pinned for revisit before any change.
+        for entity in entities:
+            key = _row_key_for_entity(entity)
+            id_cells = _entity_tuple_individual(axis, entity, slots)
+            rows.append(id_cells + _aggregate_block(key))
+    elif per_tag_combo:
+        # One row per distinct tag-combo. Use the first entity
+        # carrying that combo as the source for the
+        # identification cells.
+        seen_combos: set[tuple] = set()
+        for entity in entities:
+            key = _row_key_for_entity(entity)
+            if key in seen_combos:
+                continue
+            seen_combos.add(key)
+            tag_cells: list[str] = []
+            for slot in slots:
+                if slot.startswith(f"{axis}:tag-"):
+                    n = slot.rsplit("-", 1)[-1]
+                    tag_cells.append(
+                        getattr(entity, f"tag_{n}", None) or ""
+                    )
+            rows.append(tuple(tag_cells) + _aggregate_block(key))
+    else:
+        # Single summary row aggregating across the whole
+        # roster. The ``(sum,)`` key is shared across all
+        # entities; the per-state accumulators already merged
+        # there.
+        summary_key = ("sum",)
+        rows.append(_aggregate_block(summary_key))
+    return rows
+
+
+def _build_state_accumulators(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    axis: str,
+    scope: "_Scope",
+    entity_by_id: dict[int, object],
+    fields_per_instrument: dict[int, list[int]],
+    row_key_for_entity,
+    exclude_self: bool,
+) -> dict[tuple, _Acc]:
+    """One Self-review handling state's accumulators for the Data
+    shape pipeline. ``exclude_self=True`` adds
+    ``Assignment.is_self_review.is_(False)`` to both the
+    assignment-pool and response queries; the rest of the dedupe
+    + ingest machinery matches the pre-PR-B single-state flow."""
+    assignment_filter = [
+        Assignment.session_id == review_session.id,
+        Assignment.include.is_(True),
+        Assignment.instrument_id.in_(scope.instrument_ids)
+        if scope.instrument_ids
+        else Assignment.instrument_id.is_(None),
+    ]
+    if exclude_self:
+        assignment_filter.append(Assignment.is_self_review.is_(False))
+    assignments = (
+        list(db.execute(select(Assignment).where(*assignment_filter)).scalars())
+        if scope.instrument_ids
+        else []
+    )
+    group_key_by_assignment = (
+        responses_service.group_keys(
+            db, assignments=assignments, session_id=review_session.id
+        )
+        if assignments
+        else {}
+    )
+
+    accs: dict[tuple, _Acc] = {}
+    # Pre-seed every row-key the entity universe could compose,
+    # so per-individual rows still ship with zero aggregates
+    # when nothing accrues to them.
+    for entity in entity_by_id.values():
+        accs.setdefault(row_key_for_entity(entity), _Acc())
+
+    # Assigned counts.
+    seen_reviewer_assigned: set[
+        tuple[int, int, tuple[str, ...], int]
+    ] = set()
     for a in assignments:
         owner_id = (
             a.reviewer_id if axis == "reviewer" else a.reviewee_id
@@ -470,7 +668,7 @@ def build_shape_rows(
         owner = entity_by_id.get(owner_id)
         if owner is None:
             continue
-        key = _row_key_for_entity(owner)
+        key = row_key_for_entity(owner)
         group_key = group_key_by_assignment.get(a.id)
         for fid in fields_per_instrument.get(a.instrument_id, ()):
             if axis == "reviewer" and group_key is not None:
@@ -483,6 +681,13 @@ def build_shape_rows(
     # Response rollup.
     seen_reviewer_response: set[tuple[int, tuple[str, ...], int]] = set()
     if scope.instrument_ids:
+        response_filter = [
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Assignment.instrument_id.in_(scope.instrument_ids),
+        ]
+        if exclude_self:
+            response_filter.append(Assignment.is_self_review.is_(False))
         for a_id, owner_id, fid, value in db.execute(
             select(
                 Assignment.id,
@@ -493,18 +698,14 @@ def build_shape_rows(
                 Response.value,
             )
             .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope.instrument_ids),
-            )
+            .where(*response_filter)
         ):
             owner = entity_by_id.get(owner_id)
             if owner is None or not value:
                 continue
             if fid not in scope.field_ids:
                 continue
-            key = _row_key_for_entity(owner)
+            key = row_key_for_entity(owner)
             group_key = group_key_by_assignment.get(a_id)
             if axis == "reviewer" and group_key is not None:
                 dedupe = (owner_id, group_key, fid)
@@ -513,62 +714,34 @@ def build_shape_rows(
                 seen_reviewer_response.add(dedupe)
             _ingest(accs[key], scope.field_by_id.get(fid), value)
 
-    rows: list[tuple[str, ...]] = [
-        _compose_header(
-            review_session, axis, slots, scope.anchor_field
-        )
-    ]
-    if per_individual:
-        # One row per individual — even if no responses /
-        # assignments accrued to them, the row ships with
-        # zero aggregates (matches the metadata cards'
-        # ``All reviewers`` ON behaviour).
-        for entity in entities:
-            key = _row_key_for_entity(entity)
-            acc = accs.get(key, _Acc())
-            id_cells = _entity_tuple_individual(axis, entity, slots)
-            agg_cells = _aggregate_cells(
-                axis, slots, acc, scope.anchor_field
-            )
-            rows.append(id_cells + tuple(agg_cells))
-    elif per_tag_combo:
-        # One row per distinct tag-combo. Use the first
-        # entity carrying that combo as the source for the
-        # identification cells.
-        seen_combos: set[tuple] = set()
-        for entity in entities:
-            key = _row_key_for_entity(entity)
-            if key in seen_combos:
+    # Roll per-entity accumulators up into the ``(sum,)`` key
+    # when the shape composes a single summary row (no identity
+    # or tag chips).
+    if ("sum",) in accs and len(accs) > 1:
+        summary = _Acc()
+        for key, acc in accs.items():
+            if key == ("sum",):
                 continue
-            seen_combos.add(key)
-            acc = accs[key]
-            tag_cells: list[str] = []
-            for slot in slots:
-                if slot.startswith(f"{axis}:tag-"):
-                    n = slot.rsplit("-", 1)[-1]
-                    tag_cells.append(
-                        getattr(entity, f"tag_{n}", None) or ""
-                    )
-            agg_cells = _aggregate_cells(
-                axis, slots, acc, scope.anchor_field
-            )
-            rows.append(tuple(tag_cells) + tuple(agg_cells))
-    else:
-        # Single summary row aggregating across the whole
-        # roster.
-        summary_acc = _Acc()
-        for acc in accs.values():
-            summary_acc.assigned += acc.assigned
-            summary_acc.numeric_values.extend(acc.numeric_values)
-            summary_acc.string_chars += acc.string_chars
-            summary_acc.string_count += acc.string_count
-            summary_acc.other_count += acc.other_count
+            summary.assigned += acc.assigned
+            summary.numeric_values.extend(acc.numeric_values)
+            summary.string_chars += acc.string_chars
+            summary.string_count += acc.string_count
+            summary.other_count += acc.other_count
             for k, v in acc.fanout_counts.items():
-                summary_acc.fanout_counts[k] = (
-                    summary_acc.fanout_counts.get(k, 0) + v
+                summary.fanout_counts[k] = (
+                    summary.fanout_counts.get(k, 0) + v
                 )
-        agg_cells = _aggregate_cells(
-            axis, slots, summary_acc, scope.anchor_field
-        )
-        rows.append(tuple(agg_cells))
-    return rows
+        # Fold whatever already accumulated into the summary key
+        # (under ``(sum,)`` the entity loop already wrote there).
+        existing = accs[("sum",)]
+        summary.assigned += existing.assigned
+        summary.numeric_values.extend(existing.numeric_values)
+        summary.string_chars += existing.string_chars
+        summary.string_count += existing.string_count
+        summary.other_count += existing.other_count
+        for k, v in existing.fanout_counts.items():
+            summary.fanout_counts[k] = (
+                summary.fanout_counts.get(k, 0) + v
+            )
+        accs[("sum",)] = summary
+    return accs

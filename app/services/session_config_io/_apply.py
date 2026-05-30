@@ -176,6 +176,10 @@ class _DataShapeSpec:
     instrument_short_label: str | None = None
     response_field_key: str | None = None
     column_chip_slots: list[str] = _dataclass_field(default_factory=list)
+    # PR B of the Self-review handling chip slice. Default to
+    # ``include_self`` so a pre-PR-B Settings CSV (which doesn't
+    # carry the row) imports cleanly with today's behaviour.
+    self_review_handling: str = "include_self"
 
 
 @dataclass
@@ -648,6 +652,8 @@ def _apply_data_shape_kv(
                 f"JSON list, got {type(slots).__name__}"
             )
         spec.column_chip_slots = [str(s) for s in slots]
+    elif key == "self_review_handling":
+        spec.self_review_handling = value or "include_self"
     else:
         raise _ParseError(
             f"unknown data_shapes key {key!r} in {field_path!r}"
@@ -1323,6 +1329,17 @@ def _apply_data_shapes(
             )
             else None
         )
+        # ``self_review_handling`` defaults to ``include_self`` on
+        # the ``_DataShapeSpec`` dataclass — pre-PR-B Settings
+        # CSVs (which don't carry the row) import cleanly with
+        # today's behaviour. Unknown strings fall back to the
+        # default so a hand-tampered CSV never crashes the import.
+        valid_srh = {"include_self", "exclude_self", "both"}
+        srh = (
+            spec.self_review_handling
+            if spec.self_review_handling in valid_srh
+            else "include_self"
+        )
         db.add(
             DataShape(
                 session_id=review_session.id,
@@ -1331,6 +1348,7 @@ def _apply_data_shapes(
                 instrument_id=instr.id if instr is not None else None,
                 response_field_id=field.id if field is not None else None,
                 column_chip_slots=json.dumps(spec.column_chip_slots),
+                self_review_handling=srh,
             )
         )
         written += 1

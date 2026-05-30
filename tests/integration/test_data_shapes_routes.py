@@ -262,16 +262,20 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
     # Preview row pre-populated with the **canonical CSV
     # headers** (``ReviewerName`` etc.) — same labels the
     # download row carries — not the raw chip slot
-    # strings.
+    # strings. Aggregate columns carry the Self-review
+    # handling chip's ``_self`` / ``_noself`` suffix per
+    # ``guide/extract_data.md`` § *Self-review handling*
+    # (PR B); ``include_self`` is the default state on a
+    # freshly-saved shape.
     assert ">ReviewerName<" in body
     assert ">ReviewerEmail<" in body
-    assert ">Assigned<" in body
+    assert ">Assigned_self<" in body
     # ``data-shape-column-headers`` carries the JSON-encoded
     # canonical header list — used by the post-Cancel /
     # close-other-editing ``renderSavedPreviewRow`` path.
     assert (
         "data-shape-column-headers='[\"ReviewerName\", "
-        "\"ReviewerEmail\", \"Assigned\"]'"
+        "\"ReviewerEmail\", \"Assigned_self\"]'"
     ) in body
     # The always-present blank initial card does NOT render
     # when shapes exist — operator uses ``+Shape`` to spawn
@@ -321,9 +325,12 @@ def test_download_streams_csv_with_canonical_filename(
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     # Slug strips the non-alphanumeric ``!`` and the space.
+    # Default Self-review handling state (``include_self``) maps
+    # to the ``_self`` filename suffix per PR B of the chip slice
+    # in ``guide/extract_data.md`` § *Self-review handling*.
     assert (
         response.headers["content-disposition"]
-        == 'attachment; filename="dl-name_My_Shape.csv"'
+        == 'attachment; filename="dl-name_My_Shape_self.csv"'
     )
 
 
@@ -369,3 +376,121 @@ def test_download_cross_session_shape_returns_404(
         f"/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Self-review handling chip — PR B
+# --------------------------------------------------------------------------- #
+
+
+def test_post_round_trips_self_review_handling_state(
+    client: TestClient, db: Session
+) -> None:
+    """Posting a payload with ``self_review_handling=exclude_self``
+    persists the value on the row + echoes it back on the
+    response."""
+    review_session = _make_session(client, db, code="srh-post")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(), "self_review_handling": "exclude_self"},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["self_review_handling"] == "exclude_self"
+    db.expire_all()
+    row = db.execute(
+        select(DataShape).where(DataShape.id == body["id"])
+    ).scalar_one()
+    assert row.self_review_handling == "exclude_self"
+
+
+def test_patch_can_flip_self_review_handling(
+    client: TestClient, db: Session
+) -> None:
+    """PATCH updates the persisted state."""
+    review_session = _make_session(client, db, code="srh-patch")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(name="To flip"),
+    ).json()
+    assert created["self_review_handling"] == "include_self"
+    response = client.patch(
+        f"/operator/sessions/{review_session.id}"
+        f"/extract-data/shapes/{created['id']}",
+        json={**_payload(name="To flip"), "self_review_handling": "both"},
+    )
+    assert response.status_code == 200
+    assert response.json()["self_review_handling"] == "both"
+
+
+def test_post_rejects_unknown_self_review_handling(
+    client: TestClient, db: Session
+) -> None:
+    """A bogus state string returns 422 from the service-layer
+    validator."""
+    review_session = _make_session(client, db, code="srh-bogus")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(), "self_review_handling": "garbage"},
+    )
+    assert response.status_code == 422
+
+
+def test_download_filename_carries_state_suffix(
+    client: TestClient, db: Session
+) -> None:
+    """The Self-review handling chip's filename suffix
+    (``_self`` / ``_noself`` / ``_both``) lands between the
+    shape's name-slug and the ``.csv`` extension."""
+    review_session = _make_session(client, db, code="dl-srh")
+    for state, expected_suffix in (
+        ("include_self", "_self"),
+        ("exclude_self", "_noself"),
+        ("both", "_both"),
+    ):
+        created = client.post(
+            f"/operator/sessions/{review_session.id}/extract-data/shapes",
+            json={
+                **_payload(name=f"Shape-{state}"),
+                "self_review_handling": state,
+            },
+        ).json()
+        response = client.get(
+            f"/operator/sessions/{review_session.id}"
+            f"/extract-data/shapes/{created['id']}/download.csv"
+        )
+        assert response.status_code == 200
+        assert (
+            response.headers["content-disposition"]
+            == (
+                f'attachment; filename="dl-srh_Shape-{state}{expected_suffix}.csv"'
+            )
+        )
+
+
+def test_download_audit_event_carries_context_self_review_handling(
+    client: TestClient, db: Session
+) -> None:
+    """The ``session.data_shape_extracted`` audit event picks up
+    the chip state on the ``context`` slot."""
+    from app.db.models import AuditEvent
+
+    review_session = _make_session(client, db, code="srh-aud")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(), "self_review_handling": "both"},
+    ).json()
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/extract-data/shapes/{created['id']}/download.csv"
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.data_shape_extracted",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    detail = event.detail
+    assert detail["context"]["self_review_handling"] == "both"
