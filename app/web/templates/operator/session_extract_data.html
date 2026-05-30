@@ -431,10 +431,12 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:assigned"
             data-shape-header-label="Assigned"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Assigned</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:count"
             data-shape-header-label="Count"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Count</span>
       {# Pipe between the field-independent totals
          (Assigned / Count) and the field-scoped statistics
@@ -456,6 +458,7 @@
               data-shaper-col-chip="{{ slot }}"
               data-shaper-relevant-for="{{ relevant_for }}"
               data-shape-header-label="{{ label }}"
+              data-shape-header-aggregate="true"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       {# Trailing pipe shared by the per-field-options chips
@@ -476,10 +479,12 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:list-items"
             data-shaper-relevant-for="list-items"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">List items</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:discrete-steps"
             data-shaper-relevant-for="discrete-steps"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Discrete steps</span>
     </template>
     <template data-shaper-chip-pool="reviewee">
@@ -499,10 +504,12 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:assigned"
             data-shape-header-label="Assigned"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Assigned</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:count"
             data-shape-header-label="Count"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Count</span>
       <span class="shaper-axis-pipe" aria-hidden="true"
             data-shaper-relevant-for="field-scoped">|</span>
@@ -517,6 +524,7 @@
               data-shaper-col-chip="{{ slot }}"
               data-shaper-relevant-for="{{ relevant_for }}"
               data-shape-header-label="{{ label }}"
+              data-shape-header-aggregate="true"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true"
@@ -524,10 +532,12 @@
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:list-items"
             data-shaper-relevant-for="list-items"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">List items</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:discrete-steps"
             data-shaper-relevant-for="discrete-steps"
+            data-shape-header-aggregate="true"
             role="button" tabindex="0" aria-pressed="false">Discrete steps</span>
     </template>
 
@@ -626,6 +636,7 @@
                 (collapsing to an empty value). #}
              data-shape-column-slots='{{ saved.column_chip_slots | tojson }}'
              data-shape-column-headers='{{ saved.column_headers | tojson }}'
+             data-shape-column-aggregates='{{ saved.column_aggregates | tojson }}'
              data-shape-self-review-handling="{{ saved.self_review_handling }}"
              data-shape-include-empty-rows="{{ 'true' if saved.include_empty_rows else 'false' }}">
           <div class="shaper-preview-scroll">
@@ -645,7 +656,8 @@
                      build pulls matching labels from
                      ``data-shape-header-label`` on each chip. #}
                   {% for header in saved.column_headers %}
-                    <th class="shaper-preview-th">{{ header }}</th>
+                    <th class="shaper-preview-th"
+                        {% if saved.column_aggregates[loop.index0] %}data-aggregate="true"{% endif %}>{{ header }}</th>
                   {% endfor %}
                 </tr>
               </thead>
@@ -1231,6 +1243,15 @@
         chip.textContent = SHAPER_SRH_LABELS[state];
         chip.classList.add("is-selected");
         chip.setAttribute("aria-pressed", "true");
+        // Mirror the chip state on the active sub-card so the
+        // CSS underline rule (keyed on
+        // ``data-shape-self-review-handling="both"``) picks up
+        // the change live as the operator cycles the chip.
+        if (activeShape) {
+          activeShape.setAttribute(
+            "data-shape-self-review-handling", state
+          );
+        }
       }
 
       // Empty-row drop chip on the Data shaper scope row — PR 6
@@ -1358,10 +1379,13 @@
                   )
                 : [];
             }
+            var isAggregate =
+              chip.getAttribute("data-shape-header-aggregate") === "true";
             if (fanValues !== null) {
               fanValues.forEach(function (val) {
                 var th = document.createElement("th");
                 th.className = "shaper-preview-th";
+                if (isAggregate) th.setAttribute("data-aggregate", "true");
                 th.textContent = val;
                 row.appendChild(th);
               });
@@ -1369,11 +1393,12 @@
             }
             var th = document.createElement("th");
             th.className = "shaper-preview-th";
-            // ``data-shape-header-label`` carries the CSV
-            // column header (``ReviewerName`` etc.). Falls
-            // back to the chip's visible text only when the
-            // attribute is missing — every page-rendered
-            // chip should carry it.
+            if (isAggregate) th.setAttribute("data-aggregate", "true");
+            // ``data-shape-header-label`` carries the
+            // preview-table label (``Reviewer Name`` etc.).
+            // Falls back to the chip's visible text only
+            // when the attribute is missing — every page-
+            // rendered chip should carry it.
             th.textContent = (
               chip.getAttribute("data-shape-header-label")
               || chip.textContent.trim()
@@ -2018,6 +2043,10 @@
           "data-shape-column-headers",
           JSON.stringify(data.column_headers || [])
         );
+        shape.setAttribute(
+          "data-shape-column-aggregates",
+          JSON.stringify(data.column_aggregates || [])
+        );
         // Self-review handling chip state (PR C). Falls back to
         // ``include_self`` when the response body predates PR B's
         // wiring; in practice POST / PATCH always echo it back.
@@ -2184,9 +2213,20 @@
           row.appendChild(placeholder);
           return;
         }
-        headers.forEach(function (header) {
+        // Parallel aggregate flags — same length as ``headers``;
+        // used to mark columns the CSV would duplicate under
+        // ``self_review_handling="both"`` so the CSS underline
+        // rule can pick them up.
+        var aggregates = [];
+        try {
+          aggregates = JSON.parse(
+            shape.getAttribute("data-shape-column-aggregates") || "[]"
+          );
+        } catch (e) {}
+        headers.forEach(function (header, idx) {
           var th = document.createElement("th");
           th.className = "shaper-preview-th";
+          if (aggregates[idx]) th.setAttribute("data-aggregate", "true");
           th.textContent = header;
           row.appendChild(th);
         });

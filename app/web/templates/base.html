@@ -1295,15 +1295,48 @@
          operator adds many columns; the table itself stays
          ``width: auto`` so unused horizontal space sits to the
          right. */
+      /* Preview row wraps to a second line when the chip-count
+         pushes its total width past the card's content width
+         rather than scrolling horizontally. The table is
+         flattened to block / flex containers so cells can act
+         as flex children + wrap onto multiple rows. Each cell
+         (``.shaper-preview-th``) stays ``white-space: nowrap``
+         so individual labels don't break mid-word. */
       body.ui-v2 .shaper-preview-scroll {
-        overflow-x: auto;
+        overflow-x: visible;
       }
-      body.ui-v2 .shaper-preview-table {
-        width: auto;
+      body.ui-v2 .shaper-preview-table,
+      body.ui-v2 .shaper-preview-table thead {
+        display: block;
+        width: 100%;
+      }
+      body.ui-v2 .shaper-preview-table tr[data-shape-preview-row] {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
       }
       body.ui-v2 .shaper-preview-th {
+        display: inline-block;
         white-space: nowrap;
         background: var(--bg-muted);
+        padding: 2px var(--space-2);
+      }
+      /* PR 10 of the chip-controlled-drop slice — preview
+         headers that the CSV would duplicate on
+         ``self_review_handling="both"`` (aggregate columns —
+         Assigned / Count / Mean / Median / Min / Max / Length /
+         fan-out columns from List items / Discrete steps) get
+         underlined so the operator can see at a glance which
+         columns the file will fan out. Keyed on the sub-card's
+         ``data-shape-self-review-handling`` attribute; saved
+         cards carry it server-rendered, edit-mode cards have
+         the JS sync it on every SRH chip cycle. Identity
+         columns (Name / Email / Tag-N) never carry
+         ``data-aggregate``, so they're never underlined. */
+      body.ui-v2
+        .data-shape-card[data-shape-self-review-handling="both"]
+        .shaper-preview-th[data-aggregate="true"] {
+        text-decoration: underline;
       }
       /* Empty-state placeholder cell that surfaces inside the
          preview row when no column chips are selected on the

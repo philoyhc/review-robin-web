@@ -29,6 +29,7 @@ from app.services import audit, data_shapes, field_labels
 from app.services.extracts import stream_csv
 from app.services.extracts.data_shape_extract import (
     build_shape_rows,
+    compose_shape_preview_aggregates,
     compose_shape_preview_headers,
 )
 from app.web import breadcrumbs, views
@@ -212,6 +213,15 @@ def session_extract_data(
             "column_headers": list(
                 compose_shape_preview_headers(db, review_session, shape)
             ),
+            # Parallel list of per-header aggregate flags — used
+            # by the preview row to underline columns that the
+            # CSV will duplicate under ``self_review_handling=
+            # "both"``. Same length as ``column_headers``.
+            "column_aggregates": list(
+                compose_shape_preview_aggregates(
+                    db, review_session, shape
+                )
+            ),
             # Self-review handling chip state (PR C wires the
             # UI; PR B persists the column).
             "self_review_handling": shape.self_review_handling,
@@ -285,6 +295,11 @@ def create_data_shape(
             "column_headers": list(
                 compose_shape_preview_headers(db, review_session, shape)
             ),
+            "column_aggregates": list(
+                compose_shape_preview_aggregates(
+                    db, review_session, shape
+                )
+            ),
         },
     )
 
@@ -338,6 +353,11 @@ def update_data_shape(
             "include_empty_rows": shape.include_empty_rows,
             "column_headers": list(
                 compose_shape_preview_headers(db, review_session, shape)
+            ),
+            "column_aggregates": list(
+                compose_shape_preview_aggregates(
+                    db, review_session, shape
+                )
             ),
         },
     )

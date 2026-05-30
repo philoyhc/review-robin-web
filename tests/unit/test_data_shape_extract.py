@@ -24,6 +24,7 @@ from app.db.models import (
 )
 from app.services.extracts.data_shape_extract import (
     build_shape_rows,
+    compose_shape_preview_aggregates,
     compose_shape_preview_headers,
 )
 
@@ -1202,3 +1203,74 @@ def test_preview_headers_for_reviewee_axis_carries_reviewee_titles(
     )
     headers = compose_shape_preview_headers(db, review_session, shape)
     assert headers == ("Reviewee Name", "Reviewee Email")
+
+
+# --------------------------------------------------------------------------- #
+# Preview aggregate flags — mark CSV-duplicated columns for the
+# underline visualisation under ``self_review_handling="both"``.
+# --------------------------------------------------------------------------- #
+
+
+def test_preview_aggregates_identity_columns_are_false(
+    db: Session,
+) -> None:
+    """Name / email / tag-N never duplicate in the CSV — flagged
+    ``False``."""
+    review_session = _session(db, code="agg-identity")
+    shape = _shape(
+        db,
+        review_session,
+        slots=["reviewer:name", "reviewer:email", "reviewer:tag-1"],
+    )
+    flags = compose_shape_preview_aggregates(db, review_session, shape)
+    assert flags == (False, False, False)
+
+
+def test_preview_aggregates_aggregate_columns_are_true(
+    db: Session,
+) -> None:
+    """Assigned / Count / Mean / Min / Max / etc. duplicate in
+    the CSV under ``both`` — flagged ``True``."""
+    review_session = _session(db, code="agg-aggregate")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:assigned",
+            "reviewer:count",
+            "reviewer:mean",
+            "reviewer:min",
+            "reviewer:max",
+        ],
+    )
+    flags = compose_shape_preview_aggregates(db, review_session, shape)
+    assert flags == (True, True, True, True, True)
+
+
+def test_preview_aggregates_mixed_slot_list(db: Session) -> None:
+    """Identity + aggregate slots in the same shape get the
+    parallel flag list aligned position-by-position with the
+    headers."""
+    review_session = _session(db, code="agg-mixed")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:name",
+            "reviewer:email",
+            "reviewer:assigned",
+            "reviewer:mean",
+        ],
+    )
+    headers = compose_shape_preview_headers(db, review_session, shape)
+    flags = compose_shape_preview_aggregates(db, review_session, shape)
+    assert len(headers) == len(flags)
+    assert flags == (False, False, True, True)
