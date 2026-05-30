@@ -69,10 +69,88 @@ from app.services import responses as responses_service
 __all__ = [
     "build_reviewer_metadata",
     "build_reviewee_metadata",
+    "compute_self_review_data_state",
+    "SELF_REVIEW_HANDLING_STATES",
+    "SELF_REVIEW_HANDLING_DEFAULT",
+    "self_review_handling_filename_suffix",
 ]
 
 
 _NUMERIC = ("Integer", "Decimal")
+
+
+# Self-review handling chip — three-state machine documented in
+# ``guide/extract_data.md`` § *Self-review handling in summarizing
+# extracts*. The aggregate-fold rule reads the canonical
+# ``Assignment.is_self_review`` column landed by the consolidation
+# slice (``guide/archive/self_review_consolidate.md``).
+SELF_REVIEW_HANDLING_STATES: tuple[str, str, str] = (
+    "include_self",
+    "exclude_self",
+    "both",
+)
+SELF_REVIEW_HANDLING_DEFAULT = "include_self"
+_SUFFIX_BY_STATE: dict[str, str] = {
+    "include_self": "_self",
+    "exclude_self": "_noself",
+}
+
+
+def self_review_handling_filename_suffix(state: str) -> str:
+    """Per-state filename suffix appended before the ``.csv``
+    extension on the metadata downloads. ``include_self`` → ``_self``,
+    ``exclude_self`` → ``_noself``, ``both`` → ``_both`` per the
+    chip's Q1 / Q2 resolutions."""
+    if state == "both":
+        return "_both"
+    return _SUFFIX_BY_STATE.get(state, "_self")
+
+
+def compute_self_review_data_state(
+    db: Session,
+    *,
+    session_id: int,
+    instrument_ids: set[int] | None = None,
+) -> dict[str, bool]:
+    """Server-side preflight for the chip's locked / selectable
+    state. Returns ``{'has_self': bool, 'has_noself': bool}`` for
+    the active scope.
+
+    ``instrument_ids=None`` ↔ the operator hasn't picked any
+    instrument chips — scope spans every session instrument (the
+    same shape ``_resolve_scope`` uses for the totals-only header).
+    """
+    base = [
+        Assignment.session_id == session_id,
+        Assignment.include.is_(True),
+    ]
+    if instrument_ids:
+        base.append(Assignment.instrument_id.in_(instrument_ids))
+    has_self = (
+        db.execute(
+            select(Assignment.id).where(
+                *base, Assignment.is_self_review.is_(True)
+            ).limit(1)
+        ).scalar()
+        is not None
+    )
+    has_noself = (
+        db.execute(
+            select(Assignment.id).where(
+                *base, Assignment.is_self_review.is_(False)
+            ).limit(1)
+        ).scalar()
+        is not None
+    )
+    return {"has_self": has_self, "has_noself": has_noself}
+
+
+def _column_suffix(state: str) -> str:
+    """Per-column header suffix for the totals + per-field blocks
+    on a single-state extract. ``both`` is handled by composing two
+    single-state passes upstream; the suffix here always reflects
+    the single state being rendered."""
+    return _SUFFIX_BY_STATE.get(state, "_self")
 
 
 # --------------------------------------------------------------------------- #
@@ -264,49 +342,43 @@ def _field_columns(
 # --------------------------------------------------------------------------- #
 
 
+# Identity columns only — ``Assigned`` and ``Count`` are part
+# of the per-state data block now (PR A of the Self-review
+# handling chip slice, per Q1 of ``guide/extract_data.md`` §
+# *Self-review handling*). The per-state block carries
+# ``Assigned_self``/``Count_self`` or ``Assigned_noself``/
+# ``Count_noself`` so the denominators stay honest under
+# self/no-self filtering.
 _REVIEWER_BASE_HEADER: tuple[str, ...] = (
     "ReviewerName",
     "ReviewerEmail",
-    "Assigned",
-    "Count",
 )
 
 
-def build_reviewer_metadata(
+def _reviewer_state_block(
     db: Session,
     review_session: ReviewSession,
     *,
-    instrument_ids: set[int] | None,
-    all_reviewers: bool,
-) -> list[tuple[str, ...]]:
-    """Return the rows (header + body) for the Reviewer response
-    metadata CSV.
+    state: str,
+    field_specs: list[_FieldSpec],
+    scope_ids: set[int],
+    fields_by_instrument: dict[int, list[InstrumentResponseField]],
+    field_by_id: dict[int, InstrumentResponseField],
+    reviewers: list[Reviewer],
+) -> tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]:
+    """One Self-review handling state's worth of data columns for
+    the reviewer side. Returns ``(header_cols, body_by_reviewer,
+    total_count_by_reviewer)``.
 
-    ``instrument_ids`` of ``None`` ships only the two
-    cross-instrument totals (scanning every session instrument).
-    A non-empty set ships per-(instrument, field) blocks after the
-    totals; the totals themselves are scoped to the same set so
-    column denominators line up.
-
-    ``all_reviewers`` False filters body rows to reviewers with at
-    least one non-empty response on any in-scope field.
+    ``state="include_self"`` rolls every ``include=True`` row in
+    (suffix ``_self``); ``"exclude_self"`` filters
+    ``Assignment.is_self_review = False`` (suffix ``_noself``). The
+    ``both`` state composes two passes upstream; this function
+    handles one pass at a time.
     """
-    field_specs, scope_ids, fields_by_instrument, field_by_id = _resolve_scope(
-        db, review_session, instrument_ids
-    )
     selected_field_ids = {spec.field_id for spec in field_specs}
-
-    reviewers = list(
-        db.execute(
-            select(Reviewer)
-            .where(Reviewer.session_id == review_session.id)
-            .order_by(
-                (Reviewer.status != "active").asc(),
-                Reviewer.name,
-                Reviewer.email,
-            )
-        ).scalars()
-    )
+    suffix = _column_suffix(state)
+    exclude_self = state == "exclude_self"
 
     assigned_per_field: dict[int, dict[int, int]] = {
         r.id: {spec.field_id: 0 for spec in field_specs} for r in reviewers
@@ -319,14 +391,15 @@ def build_reviewer_metadata(
     total_count: dict[int, int] = {r.id: 0 for r in reviewers}
 
     if scope_ids:
+        assignment_filter = [
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Assignment.instrument_id.in_(scope_ids),
+        ]
+        if exclude_self:
+            assignment_filter.append(Assignment.is_self_review.is_(False))
         assignments = list(
-            db.execute(
-                select(Assignment).where(
-                    Assignment.session_id == review_session.id,
-                    Assignment.include.is_(True),
-                    Assignment.instrument_id.in_(scope_ids),
-                )
-            ).scalars()
+            db.execute(select(Assignment).where(*assignment_filter)).scalars()
         )
         group_key_by_assignment = responses_service.group_keys(
             db, assignments=assignments, session_id=review_session.id
@@ -359,6 +432,13 @@ def build_reviewer_metadata(
         seen_reviewer_group_response: set[
             tuple[int, tuple[str, ...], int]
         ] = set()
+        response_filter = [
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Assignment.instrument_id.in_(scope_ids),
+        ]
+        if exclude_self:
+            response_filter.append(Assignment.is_self_review.is_(False))
         for assignment_id, reviewer_id, field_id, value in db.execute(
             select(
                 Assignment.id,
@@ -367,11 +447,7 @@ def build_reviewer_metadata(
                 Response.value,
             )
             .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope_ids),
-            )
+            .where(*response_filter)
         ):
             if reviewer_id not in total_count or not value:
                 continue
@@ -389,16 +465,13 @@ def build_reviewer_metadata(
                     value,
                 )
 
-    header: tuple[str, ...] = _REVIEWER_BASE_HEADER + tuple(
-        col for spec in field_specs for col in spec.columns()
-    )
-    rows: list[tuple[str, ...]] = [header]
+    header_cols: tuple[str, ...] = (
+        f"Assigned{suffix}",
+        f"Count{suffix}",
+    ) + tuple(f"{col}{suffix}" for spec in field_specs for col in spec.columns())
+    body_by_reviewer: dict[int, list[str]] = {}
     for r in reviewers:
-        if not all_reviewers and total_count[r.id] == 0:
-            continue
         body: list[str] = [
-            r.name,
-            r.email,
             str(total_assigned[r.id]),
             str(total_count[r.id]),
         ]
@@ -410,6 +483,91 @@ def build_reviewer_metadata(
                     response_acc[r.id],
                 )
             )
+        body_by_reviewer[r.id] = body
+    return header_cols, body_by_reviewer, total_count
+
+
+def build_reviewer_metadata(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    instrument_ids: set[int] | None,
+    all_reviewers: bool,
+    self_review_handling: str = SELF_REVIEW_HANDLING_DEFAULT,
+) -> list[tuple[str, ...]]:
+    """Return the rows (header + body) for the Reviewer response
+    metadata CSV.
+
+    ``instrument_ids`` of ``None`` ships only the two
+    cross-instrument totals (scanning every session instrument).
+    A non-empty set ships per-(instrument, field) blocks after the
+    totals; the totals themselves are scoped to the same set so
+    column denominators line up.
+
+    ``all_reviewers`` False filters body rows to reviewers with at
+    least one non-empty response on any in-scope field. On the
+    ``both`` state a reviewer survives the filter when EITHER the
+    self pool or the non-self pool carries at least one response.
+
+    ``self_review_handling`` ∈ ``{"include_self", "exclude_self",
+    "both"}`` per the Self-review handling chip. Drives the
+    column-name suffix (``_self`` / ``_noself``) and, on
+    ``exclude_self`` / ``both``, the ``WHERE NOT is_self_review``
+    filter on the per-state pool. See ``guide/extract_data.md``
+    § *Self-review handling in summarizing extracts*.
+    """
+    if self_review_handling not in SELF_REVIEW_HANDLING_STATES:
+        self_review_handling = SELF_REVIEW_HANDLING_DEFAULT
+    states_to_run: tuple[str, ...] = (
+        ("include_self", "exclude_self")
+        if self_review_handling == "both"
+        else (self_review_handling,)
+    )
+
+    field_specs, scope_ids, fields_by_instrument, field_by_id = _resolve_scope(
+        db, review_session, instrument_ids
+    )
+    reviewers = list(
+        db.execute(
+            select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(
+                (Reviewer.status != "active").asc(),
+                Reviewer.name,
+                Reviewer.email,
+            )
+        ).scalars()
+    )
+
+    state_blocks: list[
+        tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]
+    ] = []
+    for state in states_to_run:
+        state_blocks.append(
+            _reviewer_state_block(
+                db,
+                review_session,
+                state=state,
+                field_specs=field_specs,
+                scope_ids=scope_ids,
+                fields_by_instrument=fields_by_instrument,
+                field_by_id=field_by_id,
+                reviewers=reviewers,
+            )
+        )
+
+    header: tuple[str, ...] = _REVIEWER_BASE_HEADER + tuple(
+        col for header_cols, _, _ in state_blocks for col in header_cols
+    )
+    rows: list[tuple[str, ...]] = [header]
+    for r in reviewers:
+        if not all_reviewers and not any(
+            total_count[r.id] > 0 for _, _, total_count in state_blocks
+        ):
+            continue
+        body: list[str] = [r.name, r.email]
+        for _, body_by_reviewer, _ in state_blocks:
+            body.extend(body_by_reviewer[r.id])
         rows.append(tuple(body))
     return rows
 
@@ -422,36 +580,25 @@ def build_reviewer_metadata(
 _REVIEWEE_BASE_HEADER: tuple[str, ...] = (
     "RevieweeName",
     "RevieweeEmail",
-    "Assigned",
-    "Count",
 )
 
 
-def build_reviewee_metadata(
+def _reviewee_state_block(
     db: Session,
     review_session: ReviewSession,
     *,
-    instrument_ids: set[int] | None,
-    all_reviewees: bool,
-) -> list[tuple[str, ...]]:
-    """Return the rows (header + body) for the Reviewee response
-    metadata CSV — symmetric to ``build_reviewer_metadata``."""
-    field_specs, scope_ids, fields_by_instrument, field_by_id = _resolve_scope(
-        db, review_session, instrument_ids
-    )
+    state: str,
+    field_specs: list[_FieldSpec],
+    scope_ids: set[int],
+    fields_by_instrument: dict[int, list[InstrumentResponseField]],
+    field_by_id: dict[int, InstrumentResponseField],
+    reviewees: list[Reviewee],
+) -> tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]:
+    """Symmetric to :func:`_reviewer_state_block` — one Self-
+    review handling state's data block for the reviewee side."""
     selected_field_ids = {spec.field_id for spec in field_specs}
-
-    reviewees = list(
-        db.execute(
-            select(Reviewee)
-            .where(Reviewee.session_id == review_session.id)
-            .order_by(
-                (Reviewee.status != "active").asc(),
-                Reviewee.name,
-                Reviewee.email_or_identifier,
-            )
-        ).scalars()
-    )
+    suffix = _column_suffix(state)
+    exclude_self = state == "exclude_self"
 
     assigned_per_field: dict[int, dict[int, int]] = {
         e.id: {spec.field_id: 0 for spec in field_specs} for e in reviewees
@@ -464,14 +611,17 @@ def build_reviewee_metadata(
     total_count: dict[int, int] = {e.id: 0 for e in reviewees}
 
     if scope_ids:
+        assignment_filter = [
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Assignment.instrument_id.in_(scope_ids),
+        ]
+        if exclude_self:
+            assignment_filter.append(Assignment.is_self_review.is_(False))
         for reviewee_id, instrument_id in db.execute(
             select(
                 Assignment.reviewee_id, Assignment.instrument_id
-            ).where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope_ids),
-            )
+            ).where(*assignment_filter)
         ):
             if reviewee_id not in total_assigned:
                 continue
@@ -481,6 +631,13 @@ def build_reviewee_metadata(
                 if f.id in selected_field_ids:
                     per_field[f.id] += 1
 
+        response_filter = [
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Assignment.instrument_id.in_(scope_ids),
+        ]
+        if exclude_self:
+            response_filter.append(Assignment.is_self_review.is_(False))
         for reviewee_id, field_id, value in db.execute(
             select(
                 Assignment.reviewee_id,
@@ -488,11 +645,7 @@ def build_reviewee_metadata(
                 Response.value,
             )
             .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-                Assignment.instrument_id.in_(scope_ids),
-            )
+            .where(*response_filter)
         ):
             if reviewee_id not in total_count or not value:
                 continue
@@ -504,16 +657,13 @@ def build_reviewee_metadata(
                     value,
                 )
 
-    header: tuple[str, ...] = _REVIEWEE_BASE_HEADER + tuple(
-        col for spec in field_specs for col in spec.columns()
-    )
-    rows: list[tuple[str, ...]] = [header]
+    header_cols: tuple[str, ...] = (
+        f"Assigned{suffix}",
+        f"Count{suffix}",
+    ) + tuple(f"{col}{suffix}" for spec in field_specs for col in spec.columns())
+    body_by_reviewee: dict[int, list[str]] = {}
     for e in reviewees:
-        if not all_reviewees and total_count[e.id] == 0:
-            continue
         body: list[str] = [
-            e.name,
-            e.email_or_identifier,
             str(total_assigned[e.id]),
             str(total_count[e.id]),
         ]
@@ -525,5 +675,76 @@ def build_reviewee_metadata(
                     response_acc[e.id],
                 )
             )
+        body_by_reviewee[e.id] = body
+    return header_cols, body_by_reviewee, total_count
+
+
+def build_reviewee_metadata(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    instrument_ids: set[int] | None,
+    all_reviewees: bool,
+    self_review_handling: str = SELF_REVIEW_HANDLING_DEFAULT,
+) -> list[tuple[str, ...]]:
+    """Return the rows (header + body) for the Reviewee response
+    metadata CSV — symmetric to ``build_reviewer_metadata``.
+
+    ``self_review_handling`` ∈ ``{"include_self", "exclude_self",
+    "both"}`` per the chip's state machine; see
+    :func:`build_reviewer_metadata` for the contract.
+    """
+    if self_review_handling not in SELF_REVIEW_HANDLING_STATES:
+        self_review_handling = SELF_REVIEW_HANDLING_DEFAULT
+    states_to_run: tuple[str, ...] = (
+        ("include_self", "exclude_self")
+        if self_review_handling == "both"
+        else (self_review_handling,)
+    )
+
+    field_specs, scope_ids, fields_by_instrument, field_by_id = _resolve_scope(
+        db, review_session, instrument_ids
+    )
+    reviewees = list(
+        db.execute(
+            select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .order_by(
+                (Reviewee.status != "active").asc(),
+                Reviewee.name,
+                Reviewee.email_or_identifier,
+            )
+        ).scalars()
+    )
+
+    state_blocks: list[
+        tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]
+    ] = []
+    for state in states_to_run:
+        state_blocks.append(
+            _reviewee_state_block(
+                db,
+                review_session,
+                state=state,
+                field_specs=field_specs,
+                scope_ids=scope_ids,
+                fields_by_instrument=fields_by_instrument,
+                field_by_id=field_by_id,
+                reviewees=reviewees,
+            )
+        )
+
+    header: tuple[str, ...] = _REVIEWEE_BASE_HEADER + tuple(
+        col for header_cols, _, _ in state_blocks for col in header_cols
+    )
+    rows: list[tuple[str, ...]] = [header]
+    for e in reviewees:
+        if not all_reviewees and not any(
+            total_count[e.id] > 0 for _, _, total_count in state_blocks
+        ):
+            continue
+        body: list[str] = [e.name, e.email_or_identifier]
+        for _, body_by_reviewee, _ in state_blocks:
+            body.extend(body_by_reviewee[e.id])
         rows.append(tuple(body))
     return rows

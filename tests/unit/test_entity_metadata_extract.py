@@ -34,9 +34,12 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.services import assignments as assignments_service
 from app.services.extracts.entity_metadata_extract import (
     build_reviewee_metadata,
     build_reviewer_metadata,
+    compute_self_review_data_state,
+    self_review_handling_filename_suffix,
 )
 
 
@@ -219,8 +222,8 @@ def test_no_instruments_selected_ships_base_header_only(db: Session) -> None:
     assert rows[0] == (
         "ReviewerName",
         "ReviewerEmail",
-        "Assigned",
-        "Count",
+        "Assigned_self",
+        "Count_self",
     )
 
 
@@ -241,12 +244,12 @@ def test_selected_numeric_field_ships_mean_median_min_max(
     )
     header = rows[0]
     expected_tail = (
-        "#1: Peer.Score.Assigned",
-        "#1: Peer.Score.Count",
-        "#1: Peer.Score.Mean",
-        "#1: Peer.Score.Median",
-        "#1: Peer.Score.Min",
-        "#1: Peer.Score.Max",
+        "#1: Peer.Score.Assigned_self",
+        "#1: Peer.Score.Count_self",
+        "#1: Peer.Score.Mean_self",
+        "#1: Peer.Score.Median_self",
+        "#1: Peer.Score.Min_self",
+        "#1: Peer.Score.Max_self",
     )
     assert header[4:] == expected_tail
 
@@ -265,9 +268,9 @@ def test_selected_string_field_ships_length(db: Session) -> None:
         all_reviewers=True,
     )
     assert rows[0][4:] == (
-        "#1: Peer.Notes.Assigned",
-        "#1: Peer.Notes.Count",
-        "#1: Peer.Notes.Length",
+        "#1: Peer.Notes.Assigned_self",
+        "#1: Peer.Notes.Count_self",
+        "#1: Peer.Notes.Length_self",
     )
 
 
@@ -341,8 +344,8 @@ def test_assigned_counts_reviewee_times_fields(db: Session) -> None:
         db, review_session, instrument_ids=None, all_reviewers=True
     )
     rita = _row_by_name(rows, rows[0], "Rita")
-    assert rita["Assigned"] == "4"
-    assert rita["Count"] == "0"
+    assert rita["Assigned_self"] == "4"
+    assert rita["Count_self"] == "0"
 
 
 def test_count_includes_non_empty_responses_only(db: Session) -> None:
@@ -368,8 +371,8 @@ def test_count_includes_non_empty_responses_only(db: Session) -> None:
         db, review_session, instrument_ids=None, all_reviewers=True
     )
     rita = _row_by_name(rows, rows[0], "Rita")
-    assert rita["Count"] == "1"
-    assert rita["Assigned"] == "2"
+    assert rita["Count_self"] == "1"
+    assert rita["Assigned_self"] == "2"
 
 
 def test_numeric_aggregates_compute_from_values(db: Session) -> None:
@@ -398,12 +401,12 @@ def test_numeric_aggregates_compute_from_values(db: Session) -> None:
     )
     rita = _row_by_name(rows, rows[0], "Rita")
     # mean(10,20,40)=23.333…, median=20, min=10, max=40.
-    assert rita["#1: P.S.Mean"].startswith("23.33")
-    assert rita["#1: P.S.Median"] == "20"
-    assert rita["#1: P.S.Min"] == "10"
-    assert rita["#1: P.S.Max"] == "40"
-    assert rita["#1: P.S.Count"] == "3"
-    assert rita["#1: P.S.Assigned"] == "3"
+    assert rita["#1: P.S.Mean_self"].startswith("23.33")
+    assert rita["#1: P.S.Median_self"] == "20"
+    assert rita["#1: P.S.Min_self"] == "10"
+    assert rita["#1: P.S.Max_self"] == "40"
+    assert rita["#1: P.S.Count_self"] == "3"
+    assert rita["#1: P.S.Assigned_self"] == "3"
 
 
 def test_string_length_sums_chars(db: Session) -> None:
@@ -431,8 +434,8 @@ def test_string_length_sums_chars(db: Session) -> None:
         all_reviewers=True,
     )
     rita = _row_by_name(rows, rows[0], "Rita")
-    assert rita["#1: P.N.Length"] == "8"
-    assert rita["#1: P.N.Count"] == "2"
+    assert rita["#1: P.N.Length_self"] == "8"
+    assert rita["#1: P.N.Count_self"] == "2"
 
 
 def test_all_reviewers_false_drops_zero_response_rows(db: Session) -> None:
@@ -493,13 +496,13 @@ def test_reviewee_side_mirrors_reviewer_shape(db: Session) -> None:
     assert rows[0][:4] == (
         "RevieweeName",
         "RevieweeEmail",
-        "Assigned",
-        "Count",
+        "Assigned_self",
+        "Count_self",
     )
     eli_row = _row_by_name(rows, rows[0], "Eli")
-    assert eli_row["Assigned"] == "1"
-    assert eli_row["Count"] == "1"
-    assert eli_row["#1: P.S.Mean"] == "50"
+    assert eli_row["Assigned_self"] == "1"
+    assert eli_row["Count_self"] == "1"
+    assert eli_row["#1: P.S.Mean_self"] == "50"
 
 
 # --------------------------------------------------------------------------- #
@@ -543,10 +546,10 @@ def test_selected_instrument_filter_scopes_totals(db: Session) -> None:
     rita = _row_by_name(rows, rows[0], "Rita")
     # ``Assigned`` totals only the first instrument's slot
     # because that's the only instrument in scope.
-    assert rita["Assigned"] == "1"
+    assert rita["Assigned_self"] == "1"
     # And the per-field block belongs to ``#1: First`` exclusively.
-    assert "#1: First.A.Assigned" in rows[0]
-    assert "#2: Second.B.Assigned" not in rows[0]
+    assert "#1: First.A.Assigned_self" in rows[0]
+    assert "#2: Second.B.Assigned_self" not in rows[0]
 
 
 def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
@@ -607,7 +610,7 @@ def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
         db, review_session, instrument_ids=None, all_reviewers=True
     )
     rob_row = _row_by_name(rows, rows[0], "Rob")
-    assert rob_row["Assigned"] == "12"
+    assert rob_row["Assigned_self"] == "12"
 
 
 def test_group_scoped_reviewer_count_dedupes_too(db: Session) -> None:
@@ -647,11 +650,11 @@ def test_group_scoped_reviewer_count_dedupes_too(db: Session) -> None:
         all_reviewers=True,
     )
     rob_row = _row_by_name(rows, rows[0], "Rob")
-    assert rob_row["Assigned"] == "1"
-    assert rob_row["Count"] == "1"
+    assert rob_row["Assigned_self"] == "1"
+    assert rob_row["Count_self"] == "1"
     # Mean / Min / Max all see the answer once, not three times.
-    assert rob_row["#1: G.X.Count"] == "1"
-    assert rob_row["#1: G.X.Mean"] == "50"
+    assert rob_row["#1: G.X.Count_self"] == "1"
+    assert rob_row["#1: G.X.Mean_self"] == "50"
 
 
 def test_group_scoped_reviewee_does_not_dedupe(db: Session) -> None:
@@ -723,7 +726,7 @@ def test_group_scoped_reviewee_does_not_dedupe(db: Session) -> None:
         db, review_session, instrument_ids=None, all_reviewees=True
     )
     eli_row = _row_by_name(rows, rows[0], "Eli")
-    assert eli_row["Assigned"] == "12"
+    assert eli_row["Assigned_self"] == "12"
 
 
 def test_no_instrument_filter_scans_every_instrument(db: Session) -> None:
@@ -758,10 +761,219 @@ def test_no_instrument_filter_scans_every_instrument(db: Session) -> None:
     )
     rita = _row_by_name(rows, rows[0], "Rita")
     # 2 assignments × 1 field each = 2 Assigned slots.
-    assert rita["Assigned"] == "2"
+    assert rita["Assigned_self"] == "2"
     assert rows[0] == (
         "ReviewerName",
         "ReviewerEmail",
-        "Assigned",
-        "Count",
+        "Assigned_self",
+        "Count_self",
     )
+
+
+# --------------------------------------------------------------------------- #
+# Self-review handling chip — PR A
+# --------------------------------------------------------------------------- #
+
+
+def _seed_self_review_session(
+    db: Session, *, code: str
+) -> tuple[ReviewSession, Reviewer, Reviewee, Reviewee, Instrument, InstrumentResponseField]:
+    """Seed a session with one (Alice→Alice) self-review and one
+    (Alice→Bob) non-self pair on a single-field instrument. The
+    recompute hook fires to populate ``Assignment.is_self_review``
+    per the PR 2 (write paths) of the self-review consolidation
+    slice."""
+    review_session = _session(db, code=code)
+    alice_r = _reviewer(
+        db, review_session, name="Alice", email="alice@example.edu"
+    )
+    alice_e = _reviewee(
+        db,
+        review_session,
+        name="Alice",
+        identifier="alice@example.edu",
+    )
+    bob_e = _reviewee(
+        db, review_session, name="Bob", identifier="bob@example.edu"
+    )
+    instrument = _instrument(
+        db, review_session, short_label="Peer", order=0
+    )
+    field = _field(db, instrument, _NUMERIC, field_key="score", label="Score")
+    a_self = _assignment(
+        db,
+        review_session,
+        reviewer=alice_r,
+        reviewee=alice_e,
+        instrument=instrument,
+    )
+    a_other = _assignment(
+        db,
+        review_session,
+        reviewer=alice_r,
+        reviewee=bob_e,
+        instrument=instrument,
+    )
+    _response(db, assignment=a_self, field=field, value="50")
+    _response(db, assignment=a_other, field=field, value="80")
+    assignments_service.recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
+    return review_session, alice_r, alice_e, bob_e, instrument, field
+
+
+def test_filename_suffix_maps_each_state_to_canonical_token() -> None:
+    """``include_self`` → ``_self``; ``exclude_self`` → ``_noself``;
+    ``both`` → ``_both``. The two non-default tokens drive the
+    downstream-consumer's pool identification."""
+    assert self_review_handling_filename_suffix("include_self") == "_self"
+    assert self_review_handling_filename_suffix("exclude_self") == "_noself"
+    assert self_review_handling_filename_suffix("both") == "_both"
+    # Unknown state falls back to ``_self`` (the default).
+    assert self_review_handling_filename_suffix("garbage") == "_self"
+
+
+def test_include_self_state_carries_self_suffix_and_includes_pair(
+    db: Session,
+) -> None:
+    """Default ``include_self`` state folds every ``include=True``
+    row in (including the self-review pair). Header columns carry
+    the ``_self`` suffix per the always-emit-suffix rule."""
+    review_session, alice_r, _, _, instrument, _ = _seed_self_review_session(
+        db, code="srh-include"
+    )
+    rows = build_reviewer_metadata(
+        db,
+        review_session,
+        instrument_ids={instrument.id},
+        all_reviewers=True,
+        self_review_handling="include_self",
+    )
+    header = rows[0]
+    assert "Assigned_self" in header
+    assert "Count_self" in header
+    assert "Assigned_noself" not in header
+    # Alice's row counts both her self-review and her review of Bob.
+    alice = _row_by_name(rows, header, "Alice")
+    assert alice["Assigned_self"] == "2"
+    assert alice["Count_self"] == "2"
+
+
+def test_exclude_self_state_drops_self_review_pairs(db: Session) -> None:
+    """``exclude_self`` state filters ``WHERE NOT is_self_review``
+    so Alice's self-review pair drops from her aggregates. Headers
+    carry the ``_noself`` suffix."""
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(
+        db, code="srh-exclude"
+    )
+    rows = build_reviewer_metadata(
+        db,
+        review_session,
+        instrument_ids={instrument.id},
+        all_reviewers=True,
+        self_review_handling="exclude_self",
+    )
+    header = rows[0]
+    assert "Assigned_noself" in header
+    assert "Count_noself" in header
+    assert "Assigned_self" not in header
+    alice = _row_by_name(rows, header, "Alice")
+    # One non-self pair (Alice→Bob) survives.
+    assert alice["Assigned_noself"] == "1"
+    assert alice["Count_noself"] == "1"
+
+
+def test_both_state_emits_self_and_noself_blocks_side_by_side(
+    db: Session,
+) -> None:
+    """``both`` state runs two passes and concatenates the column
+    blocks — ``_self`` first, ``_noself`` second — so a single CSV
+    side-by-sides both views (Q1 / Q2 resolutions)."""
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(
+        db, code="srh-both"
+    )
+    rows = build_reviewer_metadata(
+        db,
+        review_session,
+        instrument_ids={instrument.id},
+        all_reviewers=True,
+        self_review_handling="both",
+    )
+    header = rows[0]
+    # Both blocks present; the ``_self`` block precedes ``_noself``.
+    assert "Assigned_self" in header
+    assert "Assigned_noself" in header
+    assert header.index("Assigned_self") < header.index("Assigned_noself")
+    alice = _row_by_name(rows, header, "Alice")
+    assert alice["Assigned_self"] == "2"
+    assert alice["Assigned_noself"] == "1"
+    assert alice["Count_self"] == "2"
+    assert alice["Count_noself"] == "1"
+
+
+def test_reviewee_metadata_honours_state_machine_too(db: Session) -> None:
+    """The reviewee side mirrors the reviewer side — same three
+    states, same suffixes, same filter."""
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(
+        db, code="srh-ree"
+    )
+    rows = build_reviewee_metadata(
+        db,
+        review_session,
+        instrument_ids={instrument.id},
+        all_reviewees=True,
+        self_review_handling="exclude_self",
+    )
+    header = rows[0]
+    assert "Assigned_noself" in header
+    assert "Count_noself" in header
+    alice = _row_by_name(rows, header, "Alice")
+    # Reviewee Alice's self-review row drops; she's left with no
+    # rows about her under the exclude filter.
+    assert alice["Assigned_noself"] == "0"
+    assert alice["Count_noself"] == "0"
+    bob = _row_by_name(rows, header, "Bob")
+    assert bob["Assigned_noself"] == "1"
+    assert bob["Count_noself"] == "1"
+
+
+def test_compute_self_review_data_state_reports_both_pools(
+    db: Session,
+) -> None:
+    """The server-side preflight tells the chip's lock UI which
+    states are selectable. On a session with one self-review
+    pair + one non-self pair, both pools are present."""
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(
+        db, code="srh-preflight-both"
+    )
+    state = compute_self_review_data_state(
+        db, session_id=review_session.id, instrument_ids={instrument.id}
+    )
+    assert state == {"has_self": True, "has_noself": True}
+
+
+def test_compute_self_review_data_state_only_noself_when_no_self_pair(
+    db: Session,
+) -> None:
+    """Session without any included self-review row → ``has_self``
+    flips False so the chip can lock to ``exclude_self``."""
+    review_session = _session(db, code="srh-preflight-noself")
+    rita = _reviewer(
+        db, review_session, name="Rita", email="rita@example.edu"
+    )
+    bob_e = _reviewee(
+        db, review_session, name="Bob", identifier="bob@example.edu"
+    )
+    instrument = _instrument(db, review_session, short_label="P", order=0)
+    _field(db, instrument, _NUMERIC, field_key="score", label="Score")
+    _assignment(
+        db, review_session,
+        reviewer=rita, reviewee=bob_e, instrument=instrument,
+    )
+    assignments_service.recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
+    state = compute_self_review_data_state(
+        db, session_id=review_session.id, instrument_ids={instrument.id}
+    )
+    assert state == {"has_self": False, "has_noself": True}
