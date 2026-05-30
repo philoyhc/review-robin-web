@@ -7,11 +7,15 @@ Section ordering is pinned by the unit-test golden fixture.
 
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    DataShape,
     Instrument,
+    InstrumentResponseField,
     ReviewSession,
     SessionFieldLabel,
     SessionRuleSet,
@@ -75,6 +79,7 @@ def serialize_session_config(
     rows.extend(_instrument_blocks(db, review_session))
     rows.extend(_session_rule_set_rows(db, review_session))
     rows.extend(_field_label_rows(db, review_session))
+    rows.extend(_data_shape_rows(db, review_session))
     return rows
 
 
@@ -528,3 +533,113 @@ def _field_label_rows(
         )
         for lbl in labels
     ]
+
+
+# --------------------------------------------------------------------------- #
+# Section 7 — saved Data shapes (PR 6 of the Data shaper wiring slice)
+# --------------------------------------------------------------------------- #
+
+
+def _data_shape_rows(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    """Serialize each saved Data shape on ``review_session``
+    into the Settings CSV.
+
+    ``instrument_id`` / ``response_field_id`` reference rows
+    that don't have stable identifiers across sessions, so
+    the export side translates them into portable
+    references the importer can resolve on a fresh session:
+
+    * ``instrument_id`` → instrument's ``short_label`` (per
+      the operator-identifier policy — the importer matches
+      by short_label).
+    * ``response_field_id`` → response field's ``field_key``
+      (unique within an instrument).
+
+    Sorted by name for deterministic byte-stable output.
+    """
+    shapes = (
+        db.execute(
+            select(DataShape)
+            .where(DataShape.session_id == review_session.id)
+            .order_by(DataShape.name)
+        )
+        .scalars()
+        .all()
+    )
+
+    # Pre-resolve the FK targets so we can emit the portable
+    # short_label / field_key strings inline.
+    instrument_ids = {
+        s.instrument_id for s in shapes if s.instrument_id is not None
+    }
+    field_ids = {
+        s.response_field_id
+        for s in shapes
+        if s.response_field_id is not None
+    }
+    instr_by_id: dict[int, Instrument] = (
+        {
+            i.id: i
+            for i in db.execute(
+                select(Instrument).where(Instrument.id.in_(instrument_ids))
+            ).scalars()
+        }
+        if instrument_ids
+        else {}
+    )
+    field_by_id: dict[int, InstrumentResponseField] = (
+        {
+            f.id: f
+            for f in db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.id.in_(field_ids)
+                )
+            ).scalars()
+        }
+        if field_ids
+        else {}
+    )
+
+    rows: list[Row] = []
+    for i, shape in enumerate(shapes):
+        prefix = f"data_shapes[{i}]"
+        rows.append(Row(f"{prefix}.name", _str(shape.name), "string"))
+        rows.append(Row(f"{prefix}.axis", _str(shape.axis), "string"))
+        instr_label = ""
+        if shape.instrument_id is not None:
+            instr = instr_by_id.get(shape.instrument_id)
+            if instr is not None:
+                instr_label = (instr.short_label or "").strip()
+        rows.append(
+            Row(
+                f"{prefix}.instrument_short_label",
+                _str(instr_label or None),
+                "string",
+            )
+        )
+        field_key = ""
+        if shape.response_field_id is not None:
+            field = field_by_id.get(shape.response_field_id)
+            if field is not None:
+                field_key = field.field_key
+        rows.append(
+            Row(
+                f"{prefix}.response_field_key",
+                _str(field_key or None),
+                "string",
+            )
+        )
+        try:
+            slots_list = json.loads(shape.column_chip_slots)
+        except (json.JSONDecodeError, TypeError):
+            slots_list = []
+        rows.append(
+            Row(
+                f"{prefix}.column_chip_slots",
+                _json(slots_list),
+                "json",
+            )
+        )
+    return rows
