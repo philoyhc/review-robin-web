@@ -456,7 +456,8 @@
     {# Hidden template for spawning new Data shape sub-cards.
        The JS clones this when ``➕`` is clicked. #}
     <template data-shaper-shape-card-template>
-      <div class="data-shape-card" data-shape data-shape-mode="edit">
+      <div class="data-shape-card" data-shape data-shape-mode="edit"
+           data-shape-selected="true">
         <div class="shaper-preview-scroll">
           <table class="shaper-preview-table">
             <thead>
@@ -512,7 +513,8 @@
        leaves wiring of column-chip drag-reorder + sort-icon
        clicks to the follow-up. #}
     <div data-shaper-stack>
-      <div class="data-shape-card" data-shape data-shape-mode="edit">
+      <div class="data-shape-card" data-shape data-shape-mode="edit"
+           data-shape-selected="true">
         <div class="shaper-preview-scroll">
           <table class="shaper-preview-table">
             <thead>
@@ -794,6 +796,47 @@
 
       function setActiveShape(shape) {
         activeShape = shape;
+        // Visual cue: only the active sub-card carries
+        // ``data-shape-selected="true"``; everything else
+        // in the stack gets ``"false"`` so the
+        // accent-blue border CSS rule only matches the
+        // currently-editing card. The mutex enforced by the
+        // action handlers (see ``editBtn`` / ``addBtn``
+        // below) means at most one sub-card is ever in edit
+        // mode at a time, so the selected state and the
+        // edit-mode state stay locked together.
+        stack.querySelectorAll("[data-shape]").forEach(function (other) {
+          other.setAttribute(
+            "data-shape-selected", other === shape ? "true" : "false"
+          );
+        });
+      }
+
+      function closeOtherEditingShapes(except) {
+        // Per the wiring decisions (spec/extract_data.md
+        // "Edit-icon behaviour"): only one sub-card can be
+        // in edit mode at a time. Flipping another card to
+        // edit (or spawning a new one) silently closes the
+        // currently-editing card — the transient chip
+        // selection is discarded; the wiring slice will
+        // teach this to re-save vs. discard.
+        stack.querySelectorAll("[data-shape]").forEach(function (other) {
+          if (other === except) return;
+          if (other.getAttribute("data-shape-mode") !== "edit") return;
+          var oNameInput = other.querySelector("[data-shape-name]");
+          var oNameDisplay = other.querySelector("[data-shape-name-display]");
+          var oSaveBtn = other.querySelector("[data-shape-save]");
+          var oEditBtn = other.querySelector("[data-shape-edit]");
+          other.setAttribute("data-shape-mode", "saved");
+          if (oNameDisplay) {
+            oNameDisplay.textContent =
+              (oNameInput && oNameInput.value) || "(unnamed shape)";
+            oNameDisplay.style.display = "";
+          }
+          if (oNameInput) oNameInput.style.display = "none";
+          if (oSaveBtn) oSaveBtn.style.display = "none";
+          if (oEditBtn) oEditBtn.style.display = "";
+        });
       }
 
       function previewRowFor(shape) {
@@ -1283,6 +1326,9 @@
         });
 
         editBtn.addEventListener("click", function () {
+          // Active-shape mutex: close every other open
+          // sub-card before flipping this one to edit.
+          closeOtherEditingShapes(shape);
           shape.setAttribute("data-shape-mode", "edit");
           nameInput.style.display = "";
           nameDisplay.style.display = "none";
@@ -1299,11 +1345,26 @@
             // always-present-empty-row pattern.
             return;
           }
-          if (activeShape === shape) setActiveShape(null);
+          var wasSelected = activeShape === shape;
+          var nextSelected = shape.nextElementSibling
+            || shape.previousElementSibling;
           shape.remove();
+          if (wasSelected) {
+            // Transfer the selected state to a neighbour so
+            // the operator always has a clear "current"
+            // sub-card; if the neighbour is in saved mode
+            // we leave it that way (no auto-flip to edit)
+            // — the mutex is about how many CAN be in edit
+            // mode, not how many MUST be.
+            setActiveShape(nextSelected);
+          }
         });
 
         addBtn.addEventListener("click", function () {
+          // Active-shape mutex carries through ``+`` too:
+          // spawning a fresh blank sub-card closes the
+          // currently-editing one.
+          closeOtherEditingShapes(null);
           var fragment = shapeTemplate.content.cloneNode(true);
           var newShape = fragment.querySelector("[data-shape]");
           shape.parentNode.insertBefore(newShape, shape.nextSibling);
