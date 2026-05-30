@@ -269,14 +269,25 @@ def count_self_review_candidates(
 def count_self_reviews_in_assignments(
     db: Session, session_id: int
 ) -> int:
-    """Count saved Assignment rows where reviewer.email matches reviewee identifier."""
-    rows = db.execute(
-        select(Assignment, Reviewer, Reviewee)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(Assignment.session_id == session_id)
-    ).all()
-    return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
+    """Count saved Assignment rows that are self-reviews per the
+    canonical whole-group rule (``spec/assignments.md`` § *Self-
+    review policy*).
+
+    Reads ``Assignment.is_self_review`` directly — the column is
+    the source of truth (PR 3 of
+    ``guide/self_review_consolidate.md``). Pre-consolidation this
+    summed over a pair-level ``is_self_review(reviewer, reviewee)``
+    check, silently missing the non-``(R, R)`` member rows of
+    self-review groups on group-scoped instruments.
+    """
+    return (
+        db.execute(
+            select(func.count(Assignment.id)).where(
+                Assignment.session_id == session_id,
+                Assignment.is_self_review.is_(True),
+            )
+        ).scalar_one()
+    )
 
 
 def classify_self_review(
@@ -418,23 +429,21 @@ def self_review_breakdown_per_instrument(
     checked; all-deactivated → unchecked; mixed →
     ``indeterminate``).
 
-    "Self-review assignment" is group-aware — see
-    :func:`_self_review_assignment_ids`. Instruments with none are
-    absent from the dict.
+    "Self-review assignment" is group-aware — every
+    member-assignment in a group whose reviewer is themselves a
+    member counts (see ``spec/assignments.md`` § *Self-review
+    policy*). Reads the canonical ``Assignment.is_self_review``
+    column directly. Instruments with none are absent from the
+    dict.
     """
     rows = db.execute(
-        select(Assignment, Reviewer, Reviewee)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(Assignment.session_id == session_id)
-    ).all()
-    self_ids = _self_review_assignment_ids(
-        db, session_id=session_id, rows=rows
-    )
+        select(Assignment).where(
+            Assignment.session_id == session_id,
+            Assignment.is_self_review.is_(True),
+        )
+    ).scalars().all()
     out: dict[int, tuple[int, int]] = {}
-    for assignment, _reviewer, _reviewee in rows:
-        if assignment.id not in self_ids:
-            continue
+    for assignment in rows:
         active, deactivated = out.get(assignment.instrument_id, (0, 0))
         if assignment.include:
             active += 1
@@ -469,22 +478,18 @@ def set_instrument_self_reviews_active(
     ``counts.flipped`` + ``context.active`` +
     ``refs.instrument_id``.
     """
+    # Read the canonical column to pick self-review rows on this
+    # instrument. The column is the source of truth post-
+    # consolidation (PR 1/2 of ``guide/self_review_consolidate.md``).
     rows = db.execute(
-        select(Assignment, Reviewer, Reviewee)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(
+        select(Assignment).where(
             Assignment.session_id == review_session.id,
             Assignment.instrument_id == instrument_id,
+            Assignment.is_self_review.is_(True),
         )
-    ).all()
-    self_ids = _self_review_assignment_ids(
-        db, session_id=review_session.id, rows=rows
-    )
+    ).scalars().all()
     flipped = 0
-    for assignment, _reviewer, _reviewee in rows:
-        if assignment.id not in self_ids:
-            continue
+    for assignment in rows:
         if assignment.include != active:
             assignment.include = active
             flipped += 1

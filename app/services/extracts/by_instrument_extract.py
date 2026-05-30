@@ -44,7 +44,6 @@ from app.db.models import (
 )
 from app.services import field_labels
 from app.services import responses as responses_service
-from app.services.assignments import is_self_review
 from app.services.date_formatting import iso_in_zone
 from app.services.instruments import decode_band1_state, decode_group_kind
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
@@ -433,7 +432,6 @@ def _assignment_row(
         )
         reviewee_email = ""
         reviewee_tags = ("", "", "")
-        self_review = "FALSE"
     else:
         reviewee_name = reviewee.name
         reviewee_email = reviewee.email_or_identifier
@@ -442,9 +440,13 @@ def _assignment_row(
             reviewee.tag_2 or "",
             reviewee.tag_3 or "",
         )
-        self_review = (
-            "TRUE" if is_self_review(reviewer, reviewee) else "FALSE"
-        )
+    # Read the canonical column. Pre-consolidation this branch
+    # hardcoded ``FALSE`` for group-scoped rows, silently
+    # mislabelling every self-review group. The whole-group rule
+    # baked into ``Assignment.is_self_review`` (PR 1/2 of
+    # ``guide/self_review_consolidate.md``) is the source of truth
+    # for every flavour.
+    self_review = "TRUE" if assignment.is_self_review else "FALSE"
 
     values: list[str] = []
     saved_at = None
