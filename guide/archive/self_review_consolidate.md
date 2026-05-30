@@ -1,5 +1,22 @@
 # Self-review consolidation — DB column + canonical helper sweep
 
+> **Addendum shipped 2026-05-30 across PRs #1654 → #1657 +
+> this archive close-out.** The "chip-controlled drop of
+> empty rows on the Data shaper + cross-card consistency
+> sweep" addendum below landed in four PRs. New
+> `data_shapes.include_empty_rows` boolean column +
+> scope-row `All rows` ↔ `Rows with data` cycling-pill chip
+> on the Data shaper (PR #1654); placeholder row-count pill
+> from PRs #1651 / #1652 reverted (PR #1656 — see the
+> *Pill plan dropped* callout in the addendum for the cost
+> analysis); two-state cycling-pill conversion of the three
+> existing empty-row-drop chips on By instrument / Reviewer
+> response metadata / Reviewee response metadata (PR #1657);
+> spec / settings-inventory / codebase-assessment /
+> todo-master sweeps + this archive (PR 9). Q4 closed by
+> implication. See `spec/extract_data.md` for the live
+> contract.
+>
 > **Shipped 2026-05-30 across PRs #1633 → #1636.** Five-PR
 > ladder landed in one day. The canonical
 > `Assignment.is_self_review` column is now the single source

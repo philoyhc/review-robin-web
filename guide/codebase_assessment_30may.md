@@ -242,14 +242,18 @@ the dev outbox).
   ``create_all``; only the ``ci-postgres`` job round-trips
   the Alembic chain. That job should be a required status
   check on PRs.
-- **Per-individual rows × `Exclude self` on the Data shaper
-  pinned at conservative interpretation.** PR B
-  (``data_shape_extract.py:578`` module docstring) flags Q4
-  as open: a row whose only response was their own
-  self-review currently surfaces with empty aggregate cells
-  on ``exclude_self``, rather than dropping. Operator UX may
-  prefer dropping such rows entirely; revisit when the
-  surface gets pilot eyes.
+- ~~**Per-individual rows × `Exclude self` on the Data
+  shaper pinned at conservative interpretation.**~~ **Closed
+  2026-05-30 by the chip-controlled-drop slice** (PRs #1654 →
+  #1657 + spec/archive close-out). New per-shape
+  `include_empty_rows` column + scope-row chip
+  (`All rows` ↔ `Rows with data`) lets the operator opt into
+  dropping rows whose accumulator is empty; the Q4 case
+  (self-review-only row × `exclude_self`) closes by
+  implication. Same general policy now drives the empty-row
+  drop on all four Extract data cards. See
+  `guide/archive/self_review_consolidate.md` addendum for the
+  decision matrix + the dropped row-count-pill rationale.
 
 ## 6. Bugs and regressions
 
@@ -326,8 +330,9 @@ housekeeping wave reversed the file-size creep watch-item.
 The two thorough audits this week (Extract data + Settings
 round-trip) both came back clean, with the only follow-up
 actions being the test-coverage closure (done in PR #1647)
-and the open Q4 on per-individual rows × `exclude_self`
-(pinned for pilot feedback).
+and the open Q4 on per-individual rows × `exclude_self` —
+closed 2026-05-30 by the chip-controlled-drop slice
+(PRs #1654 → #1657 + spec/archive close-out).
 
 MVP-functional is two segments away: **14B** (email send,
 the single hard blocker) and **20** (operator-facing docs +
