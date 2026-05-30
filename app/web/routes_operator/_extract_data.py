@@ -10,9 +10,10 @@ downloads is the follow-up.
 from __future__ import annotations
 
 import json
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,12 +25,23 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import data_shapes, field_labels
+from app.services import audit, data_shapes, field_labels
+from app.services.extracts import stream_csv
+from app.services.extracts.data_shape_extract import build_shape_rows
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
+
+
+def _slug_shape_name(name: str) -> str:
+    """Alphanumeric-plus-underscore slug for the shape's
+    filename. Mirrors ``by_instrument_filename_slug`` so the
+    output naming reads consistently. Empty slug after
+    sanitisation falls back to ``shape``."""
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
+    return slug or "shape"
 
 
 # --------------------------------------------------------------------------- #
@@ -303,3 +315,50 @@ def delete_data_shape(
         )
         db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/sessions/{session_id}/extract-data/shapes/{shape_id}/download.csv"
+)
+def download_data_shape(
+    shape_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Stream the saved Data shape's CSV. Filename:
+    ``{code}_{slug(shape.name)}.csv`` per the wiring
+    decisions. Emits ``session.data_shape_extracted`` with
+    ``counts.rows`` (body row count, header excluded) +
+    ``refs.shape_id``."""
+    shape = data_shapes.get_shape(db, review_session, shape_id)
+    if shape is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    rows = build_shape_rows(db, review_session, shape)
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.data_shape_extracted",
+        summary=(
+            f"Extracted Data shape {shape.name!r} for session "
+            f"{review_session.code} ({body_count} rows)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+        refs={"shape_id": shape.id},
+    )
+    db.commit()
+
+    code = (review_session.code or "session").strip() or "session"
+    download_name = f"{code}_{_slug_shape_name(shape.name)}.csv"
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{download_name}"'
+            ),
+        },
+    )

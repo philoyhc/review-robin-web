@@ -275,3 +275,76 @@ def test_page_renders_initial_blank_when_no_shapes_exist(
         'id="extract-data-shaper-zip"'
     )[0]
     assert 'data-shape-mode="edit"' in stack_block
+
+
+# --------------------------------------------------------------------------- #
+# GET download.csv
+# --------------------------------------------------------------------------- #
+
+
+def test_download_streams_csv_with_canonical_filename(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="dl-name")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(
+            name="My Shape!",
+            column_chip_slots=["reviewer:name", "reviewer:email"],
+        ),
+    ).json()
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/extract-data/shapes/{created['id']}/download.csv"
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    # Slug strips the non-alphanumeric ``!`` and the space.
+    assert (
+        response.headers["content-disposition"]
+        == 'attachment; filename="dl-name_My_Shape.csv"'
+    )
+
+
+def test_download_emits_audit_event(
+    client: TestClient, db: Session
+) -> None:
+    from app.db.models import AuditEvent
+
+    review_session = _make_session(client, db, code="dl-aud")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(),
+    ).json()
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/extract-data/shapes/{created['id']}/download.csv"
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.data_shape_extracted",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    detail = event.detail
+    assert detail["refs"]["shape_id"] == created["id"]
+    # Fresh session, no reviewers → 0 body rows.
+    assert detail["counts"]["rows"] == 0
+
+
+def test_download_cross_session_shape_returns_404(
+    client: TestClient, db: Session
+) -> None:
+    session_a = _make_session(client, db, code="dl-a")
+    session_b = _make_session(client, db, code="dl-b")
+    created = client.post(
+        f"/operator/sessions/{session_a.id}/extract-data/shapes",
+        json=_payload(),
+    ).json()
+    response = client.get(
+        f"/operator/sessions/{session_b.id}"
+        f"/extract-data/shapes/{created['id']}/download.csv"
+    )
+    assert response.status_code == 404
