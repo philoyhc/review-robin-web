@@ -3,14 +3,16 @@
 **As of:** the close of **Segment 18N** (housekeeping splits +
 settings round-trip catch-up) plus the full **Extract data**
 slice — Phase 1 (Session Home card split + new Operations tab
-+ Data shaper; PRs #1565 → #1627) and Phase 2 (the *Self-review
-handling* chip; PRs #1642 → #1647) — and the
-**Self-review consolidation** mini-slice (PRs #1633 → #1637)
-that put `Assignment.is_self_review` in as the canonical
-classification column. All shipped 2026-05-28 → 2026-05-30
-(102 PRs merged in 2 days). Numbers taken on `main` at
-`5a23b4d`. Citizen project — single author + AI-agent cadence,
-not yet pilot-deployed.
++ Data shaper; PRs #1565 → #1627), Phase 2 (the *Self-review
+handling* chip; PRs #1642 → #1647), and Phase 3 (the
+*chip-controlled drop of empty rows* + cross-card consistency
+sweep; PRs #1654 → #1661) — and the **Self-review
+consolidation** mini-slice (PRs #1633 → #1637) that put
+`Assignment.is_self_review` in as the canonical classification
+column. All shipped 2026-05-28 → 2026-05-30 (129 PRs merged in
+3 days). Numbers taken on `main` at `acb8618`. Citizen
+project — single author + AI-agent cadence, not yet
+pilot-deployed.
 
 A **standalone** snapshot. Prior snapshot
 `guide/codebase_assessment_28may.md` archives alongside this
@@ -106,6 +108,28 @@ purges, and archival round out the lifecycle.
   #1647 closed three test-coverage gaps the audit flagged.
   Plan archived to ``guide/archive/extract_data.md``.
 
+- **Extract data slice — Phase 3: chip-controlled drop of empty
+  rows + cross-card consistency sweep** (PRs #1654 → #1661,
+  2026-05-30). Generalised the empty-row-drop pattern across
+  all four Extract data cards. The Data shaper picks up a new
+  scope-row cycling-pill chip (``All rows`` ↔ ``Rows with
+  data``); the three existing single-label chips on By
+  instrument / Reviewer metadata / Reviewee metadata convert to
+  two-state cycling pills with explicit labels per state. New
+  per-shape ``data_shapes.include_empty_rows`` boolean column +
+  ``_Acc.is_empty()`` drop predicate in ``build_shape_rows``;
+  Settings CSV round-trip bumps to a 7th row per shape. **Q4
+  closes by implication** — a self-review-only row under
+  ``exclude_self`` surfaces with an empty accumulator and the
+  chip drops it. The placeholder ``Number of data rows: —``
+  pill from PRs #1651 / #1652 was reverted (PR #1656) after
+  cost analysis ruled out live preflight; the drop is visible
+  at Download time. Tail-end polish (PR #1659) unified the
+  preview-table labels across saved + edit modes — identity
+  columns with a space (``Reviewer Name``), aggregates with no
+  self-review suffix, ``both`` no longer duplicates. Plan +
+  addendum archived to ``guide/archive/self_review_consolidate.md``.
+
 The 28may snapshot's "new-model takeover" + "scheduled events"
 + "operator-preview parity" foundations are unchanged. The
 reviewer surface, instrument builder, assignment engine, and
@@ -115,31 +139,30 @@ audit log are all where they were on 28may.
 
 | Area | Files | LOC | Δ from 28may |
 |---|---:|---:|---:|
-| `app/` Python (production) | 137 | 46,082 | +4,626 (+11%) |
-| `app/` Jinja templates | 53 | 19,459 | +2,591 (+15%) |
-| `alembic/` migrations (chain + env) | 70 | 5,872 | +372 (+3 files) |
-| **Production subtotal** | | **~71,400** | **+~7,600 (+12%)** |
-| `tests/` | 193 | 71,996 | +7,525 (+12%) |
-| **Grand total** | | **~143,400** | **+~15,100 (+12%)** |
+| `app/` Python (production) | 145 | 46,220 | +4,764 (+12%) |
+| `app/` Jinja templates | 53 | 19,602 | +2,734 (+16%) |
+| `alembic/` migrations (chain + env) | 71 | 5,922 | +422 (+4 files) |
+| **Production subtotal** | | **~71,700** | **+~7,900 (+12%)** |
+| `tests/` | 206 | 72,546 | +8,075 (+13%) |
+| **Grand total** | | **~144,300** | **+~16,000 (+12%)** |
 
-Test-to-production-Python ratio steady at **~1.56×** (was
-~1.5×). **2,185 tests** passing (was 2,010 on 28may; +175
-tests in two days). Suite **green**, `ruff` **clean**.
+Test-to-production-Python ratio steady at **~1.57×** (was
+~1.5×). **2,206 tests** passing, 18 skipped (was 2,010 on
+28may; +196 tests in three days). Suite **green**, `ruff`
+**clean**.
 
 **File-size creep largely tamed.** 28may flagged 15 files past
 800 LOC and 6 past 1,150; the current count is **16 past 800**
-and **5 past 1,150**. The 28may "biggest two" —
+and **4 past 1,150**. The 28may "biggest two" —
 ``_instrument_crud.py`` (1,928) and
 ``routes_operator/_instruments.py`` (1,497) — both shrank
 substantially via Segment 18N's structural splits (1,097 +
 1,027 respectively). The largest production file is now
-``services/assignments.py`` at **1,426 LOC**. Five files now
+``services/assignments.py`` at **1,426 LOC**. Four files now
 sit above 1,200 LOC: ``assignments.py`` (1,426),
-``session_config_io/_apply.py`` (1,355),
-``routes_reviewer/_surface.py`` (1,269),
-``scheduled_events.py`` (1,231), and
-``instruments/_instrument_crud.py`` (1,097). Watch-item, not
-urgent.
+``session_config_io/_apply.py`` (1,362),
+``routes_reviewer/_surface.py`` (1,269), and
+``scheduled_events.py`` (1,231). Watch-item, not urgent.
 
 ## 3. Functional-spec compliance
 
@@ -335,7 +358,7 @@ round-trip) both came back clean, with the only follow-up
 actions being the test-coverage closure (done in PR #1647)
 and the open Q4 on per-individual rows × `exclude_self` —
 closed 2026-05-30 by the chip-controlled-drop slice
-(PRs #1654 → #1657 + spec/archive close-out).
+(PRs #1654 → #1661).
 
 MVP-functional is two segments away: **14B** (email send,
 the single hard blocker) and **20** (operator-facing docs +
@@ -345,7 +368,7 @@ operational close-out beyond MVP, documented in
 ``guide/deferred_infra.md``.
 
 Citizen-project cadence remains: single author + AI-agent;
-102 PRs merged 2026-05-28 → 2026-05-30 with no rollbacks and
+129 PRs merged 2026-05-28 → 2026-05-30 with no rollbacks and
 two clean post-implementation audits. The pattern that's
 working — plan-doc-first → small-slice PRs → archive on
 close-out → periodic assessment + spec sync — appears to
