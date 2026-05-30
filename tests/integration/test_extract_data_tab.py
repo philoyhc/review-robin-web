@@ -695,3 +695,37 @@ def test_by_instrument_card_renders_selectable_chips(
     )[0]
     assert chip_block.count("is-selected") >= 3
     assert chip_block.count('aria-pressed="true"') >= 3
+
+
+def test_data_shape_row_count_pill_renders(
+    client: TestClient, db: Session
+) -> None:
+    """Each Data shape sub-card carries a placeholder
+    ``Number of data rows`` report pill inside its action row.
+    The pill lives flush left in ``.data-shape-actions`` (via
+    ``margin-right: auto`` in ``base.html``) so the action
+    buttons stay flush right and no new gap appears below the
+    preview table. Counter wires up in a follow-up slice; the
+    placeholder ships ``—`` as the value."""
+    review_session = _make_session(client, db, code="ed-row-count-pill")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    shaper_block = body.split("data-shaper-stack")[1].split(
+        'id="extract-data-shaper-zip"'
+    )[0]
+    # Initial-blank sub-card surfaces the pill once (the placeholder
+    # text is unique enough that the class / attribute repetition on
+    # the pill itself doesn't double-count).
+    assert shaper_block.count(">Number of data rows: —<") == 1
+    assert "data-shape-row-count" in shaper_block
+
+    # Hidden template — the JS clones this for ``+Shape``. Pin
+    # that the pill ships in the clone source too, otherwise
+    # newly spawned shapes would render without the pill.
+    template_block = body.split(
+        "data-shaper-shape-card-template"
+    )[1].split("</template>")[0]
+    assert "data-shape-row-count" in template_block
+    assert "Number of data rows: —" in template_block

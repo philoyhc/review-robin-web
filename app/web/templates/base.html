@@ -1439,6 +1439,18 @@
         flex: 0 0 auto;
         width: 25%;
       }
+      /* Per-shape row-count report pill — sits inside
+         ``.data-shape-actions`` (so the preview table → action
+         row gap stays a single ``margin-top``), flush-left via
+         ``margin-right: auto`` while the rest of the row packs
+         against the right via ``justify-content: flex-end``.
+         Top-aligned in the row so a slightly-taller pill (e.g.
+         if the count wraps) doesn't shift the buttons down. */
+      body.ui-v2 .data-shape-row-count {
+        flex: 0 0 auto;
+        margin-right: auto;
+        align-self: flex-start;
+      }
       body.ui-v2 .data-shape-name-display {
         flex: 0 0 auto;
         font-weight: 600;
