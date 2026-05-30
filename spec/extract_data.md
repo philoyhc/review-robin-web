@@ -17,7 +17,7 @@ The page complements the Session Home **Extract setup** card
 Relationships / Settings CSVs for porting / cloning a session).
 Setup data lives on Home; response data lives here. The split is
 the load-bearing decision behind the page's existence — see
-`guide/extract_data.md` for the rationale.
+`guide/archive/extract_data.md` for the rationale.
 
 > **Implementation status — fully wired end-to-end (2026-05-30).**
 > Page chrome + skeleton landed in the Extract-data tab carve.
@@ -195,9 +195,9 @@ configurable surfaces below.
 | `by-instruments` | `By instruments` | Scope: include the by-instrument CSVs |
 | `reviewer-metadata` | `Reviewer response metadata` | Scope: include the reviewer metadata CSV |
 | `reviewee-metadata` | `Reviewee response metadata` | Scope: include the reviewee metadata CSV |
-| `data-shaper` | `Data shaper` | Scope: include the (forthcoming) Data shaper outputs |
+| `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs |
 
-The chip set is the future scope-filter for the top-level
+The chip set is the scope-filter for the top-level
 `Zip all` zip. Today the button always ships the full
 `responses_bundle.zip` (unified Responses CSV +
 reviewer/reviewee stats + per-instrument long-format files);
@@ -462,13 +462,15 @@ above it cover the common cases without configuration.
 | Button id | `extract-data-shaper-zip` |
 | Button target | `#` (placeholder — `aria-disabled`) |
 
-**Implementation status.** Placeholder UI shipped end-to-
-end through PRs landing 2026-05-29 (#1589 → #1603). The
-chip-driven UX described below is real and survives reload;
-the **file generation** that turns a saved shape into a CSV
-in the top-level `Zip all` bundle is the next wiring slice
-(out of scope for this spec — see "Out of scope" at the
-end of this section).
+**Implementation status.** Fully shipped as of 2026-05-30
+(placeholder chip UI: PRs #1589 → #1603; persistence +
+file-gen wiring: PRs #1626 → #1659). The chip-driven UX,
+shape persistence (`data_shapes` table), and per-shape
+`Download` button (backed by
+`…/shapes/{id}/download.csv`) are all live. The outer
+`Zip all` button on this card still renders
+`aria-disabled="true"` (bundle integration is the
+remaining follow-up — see "Out of scope" below).
 
 ### Two stacked chip rows
 
@@ -706,10 +708,12 @@ Each sub-card carries:
      saved mode + always enabled.
    - **`Cancel`** (`data-shape-cancel`) — enabled only in
      edit mode. Abandons the in-progress edits and unselects
-     the sub-card (flips it to saved mode). Wiring slice
-     will teach this to revert chip selections to the
-     persisted shape state; placeholder is selection-clear
-     only.
+     the sub-card (flips it to saved mode). For saved sub-
+     cards, re-renders the preview row from the persisted
+     column headers (`data-shape-column-headers`) so
+     transient unsaved-chip selections are visually dropped;
+     chip visual state in the scope/content rows is **not**
+     reverted (still open — see "Out of scope" below).
    - **`Delete`** (`data-shape-delete`) — disabled when this
      is the only sub-card in the stack (mirroring the
      Response Fields builder's always-present empty row).
@@ -720,9 +724,12 @@ Each sub-card carries:
      selected target, and closes the previously-editing
      card (per the active-shape mutex).
    - **`Download`** (`data-shape-download`) — sits at the
-     right-most end of the strip. Placeholder until the
-     file-gen wiring slice; currently renders with
-     `href="#"` + `aria-disabled="true"`.
+     right-most end of the strip. Wired for **saved shapes**
+     (those with a `data-shape-id`): JS sets
+     `href="…/shapes/{id}/download.csv"` and
+     `aria-disabled="false"` when a shape id is present.
+     Renders disabled (`href="#"` + `aria-disabled="true"`)
+     for unsaved (brand-new, never-persisted) sub-cards.
 
    Every button gates its enabled state on the active
    shape's validity via a single ``updateButtonStates(shape)``
@@ -734,12 +741,10 @@ the operator an immediate edit target without requiring a
 preceding "Add a shape" click — matching the Band-3
 Response Fields builder's always-present empty row.
 
-### Row-key contract — for the file-gen wiring slice
+### Row-key contract
 
-The shipped chip-toggle behaviour is purely client-side;
-the **row identity** that each selection implies for the
-file-gen pipeline is pinned here as the contract that
-pipeline must honour. Symmetric across axes — swap
+The **row identity** that each chip selection implies for the
+file-gen pipeline. Symmetric across axes — swap
 `reviewer` ↔ `reviewee` throughout.
 
 | Chip selection on the active shape | Row identity of the produced CSV |
@@ -925,11 +930,11 @@ buttons + selected chips (`var(--accent-blue)`). Concretely:
 Driven by a single attribute (`data-shape-selected="true"`
 or equivalent on the editing sub-card) so the JS that
 manages "which sub-card is being edited" only flips one
-attribute and the CSS handles the rest. The cue lands as a
-**visual-only placeholder ahead of the full edit-mode
-restoration logic** (see "Edit-icon behaviour" above) so
-the operator can see the selected-state styling before the
-wiring slice teaches `✎` to swap shapes.
+attribute and the CSS handles the rest. `setActiveShape`
+in the inline JS flips this attribute and the
+`restoreShapeChipState` helper walks the saved shape's
+attributes to re-press the matching chips when the
+operator clicks `Edit` (see "Edit-icon behaviour" above).
 
 #### Group-scoped semantics for tag-aggregate rows
 
@@ -956,6 +961,11 @@ single summary row (with the whole roster substituted).
 
 The wiring slice doesn't cover:
 
+- **Cancel chip-state revert.** `Cancel` on a saved sub-card
+  re-renders the preview row from persisted headers but does
+  not restore the chip visual selections in the scope/content
+  rows. Chip visual state stays at whatever the operator last
+  toggled.
 - **Column-chip drag-to-reorder + sort-icon click** inside
   the preview row. The chips currently render in
   chip-selection order; reorder is a follow-up.
@@ -963,6 +973,10 @@ The wiring slice doesn't cover:
   when the operator clones a session. Possible v2.
 - **Per-operator privacy.** All operators on a session see
   every saved shape — no per-operator scoping.
+- **Data shaper `Zip all` integration.** Each shape's
+  `Download` button is wired; the outer `Zip all` button on
+  the Data shaper card still renders `aria-disabled="true"`
+  (bundle integration is a follow-up).
 
 ## Cross-cutting behaviours
 
@@ -1014,6 +1028,7 @@ valid post-close use case. No yellow lock card wrap.
   unit tests for the discrete-steps helper covering the
   Integer / Decimal / threshold-boundary / non-numeric
   cases.
-- `guide/extract_data.md` — landing plan, design rationale,
-  open-question resolutions, and the Data shaper's
-  pending file-gen + persistence wiring.
+- `guide/archive/extract_data.md` — shipped plan: landing
+  rationale, open-question resolutions, and the wiring
+  decisions for the chip-controlled-drop + self-review-
+  handling slices (archived 2026-05-30).
