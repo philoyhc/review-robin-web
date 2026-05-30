@@ -55,7 +55,7 @@ from app.services import field_labels
 from app.services import responses as responses_service
 
 
-__all__ = ["build_shape_rows"]
+__all__ = ["build_shape_rows", "compose_shape_header"]
 
 
 _NUMERIC = ("Integer", "Decimal")
@@ -302,6 +302,25 @@ def _aggregate_cells(
             for step in steps:
                 cells.append(str(acc.fanout_counts.get(step, 0)))
     return cells
+
+
+def compose_shape_header(
+    db: Session, review_session: ReviewSession, shape: DataShape
+) -> tuple[str, ...]:
+    """Return just the CSV header row for ``shape``.
+
+    Used by the Extract data page route to embed canonical
+    column headers into the server-rendered saved-sub-card
+    preview rows — so the preview ``<th>`` cells read the
+    same way as the eventual download (``ReviewerName``,
+    actual step values, etc.) rather than the raw chip slot
+    strings.
+    """
+    slots: list[str] = json.loads(shape.column_chip_slots)
+    scope = _resolve_scope(db, review_session, shape)
+    return _compose_header(
+        review_session, shape.axis, slots, scope.anchor_field
+    )
 
 
 def _compose_header(
