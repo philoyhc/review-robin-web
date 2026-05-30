@@ -1418,9 +1418,24 @@
         if (deleteBtn) deleteBtn.disabled = isOnlyShape;
         if (addBtn) addBtn.disabled = false;
         if (downloadBtn) {
-          // File-gen pipeline still pending — Download stays
-          // disabled across the page until the wiring slice.
-          downloadBtn.setAttribute("aria-disabled", "true");
+          // ``Download`` enables once the sub-card has a
+          // server-assigned ``data-shape-id`` (i.e. it's
+          // been saved). Until then there's nothing to
+          // extract — the operator must Save first. When
+          // the id is available the anchor points at the
+          // file-gen route ``…/shapes/{id}/download.csv``.
+          var shapeId = shape.getAttribute("data-shape-id");
+          if (shapeId) {
+            downloadBtn.setAttribute(
+              "href",
+              "/operator/sessions/" + sessionId +
+                "/extract-data/shapes/" + shapeId + "/download.csv"
+            );
+            downloadBtn.setAttribute("aria-disabled", "false");
+          } else {
+            downloadBtn.setAttribute("href", "#");
+            downloadBtn.setAttribute("aria-disabled", "true");
+          }
         }
       }
 
