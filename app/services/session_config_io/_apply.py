@@ -180,6 +180,10 @@ class _DataShapeSpec:
     # ``include_self`` so a pre-PR-B Settings CSV (which doesn't
     # carry the row) imports cleanly with today's behaviour.
     self_review_handling: str = "include_self"
+    # PR 6 of the chip-controlled-drop slice. Default ``True`` so
+    # a pre-PR-6 Settings CSV (which doesn't carry the row)
+    # imports cleanly with today's behaviour.
+    include_empty_rows: bool = True
 
 
 @dataclass
@@ -654,6 +658,8 @@ def _apply_data_shape_kv(
         spec.column_chip_slots = [str(s) for s in slots]
     elif key == "self_review_handling":
         spec.self_review_handling = value or "include_self"
+    elif key == "include_empty_rows":
+        spec.include_empty_rows = _parse_bool(value, default=True)
     else:
         raise _ParseError(
             f"unknown data_shapes key {key!r} in {field_path!r}"
@@ -1349,6 +1355,7 @@ def _apply_data_shapes(
                 response_field_id=field.id if field is not None else None,
                 column_chip_slots=json.dumps(spec.column_chip_slots),
                 self_review_handling=srh,
+                include_empty_rows=spec.include_empty_rows,
             )
         )
         written += 1

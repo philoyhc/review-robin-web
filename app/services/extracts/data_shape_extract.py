@@ -85,6 +85,17 @@ class _Acc:
     def count(self) -> int:
         return self.string_count + self.other_count + len(self.numeric_values)
 
+    def is_empty(self) -> bool:
+        """``True`` when no assignments, no responses, and no
+        fan-out counts accrued to this row. Drives the
+        ``include_empty_rows=False`` drop predicate per PR 6 of
+        the chip-controlled-drop slice."""
+        return (
+            self.assigned == 0
+            and self.count == 0
+            and not self.fanout_counts
+        )
+
 
 def _ingest(
     acc: _Acc, field: InstrumentResponseField | None, value: str
@@ -571,17 +582,34 @@ def build_shape_rows(
             )
         return tuple(cells)
 
+    # Empty-row drop chip — PR 6 of the chip-controlled-drop
+    # slice per the self-review consolidation addendum. When
+    # ``include_empty_rows`` is False, drop rows whose every
+    # state's accumulator is empty. For one-state shapes that
+    # collapses to "drop on empty accumulator"; for ``both``
+    # mode, drops only when BOTH ``_self`` and ``_noself``
+    # halves are empty (operator opted into both views, so a
+    # non-empty half keeps the row visible). Single-summary is
+    # always emitted regardless — there's exactly one row, and
+    # an empty CSV would be confusing surface.
+    drop_empty = not shape.include_empty_rows
+
+    def _row_is_empty(row_key: tuple) -> bool:
+        for run_state in states_to_run:
+            acc = per_state_accs[run_state].get(row_key)
+            if acc is not None and not acc.is_empty():
+                return False
+        return True
+
     if per_individual:
-        # One row per individual — even if no responses /
-        # assignments accrued to them, the row ships with
-        # zero aggregates (matches the metadata cards'
-        # ``All reviewers`` ON behaviour). Q4's conservative
-        # interpretation: a row whose only response is the now-
-        # excluded self-review surfaces with empty aggregate
-        # cells on ``exclude_self`` (rather than dropping the
-        # row entirely). Pinned for revisit before any change.
+        # One row per individual — when ``include_empty_rows`` is
+        # True (default), every roster member ships even if no
+        # responses / assignments accrued to them; when False, the
+        # ``_row_is_empty`` predicate drops the empty ones.
         for entity in entities:
             key = _row_key_for_entity(entity)
+            if drop_empty and _row_is_empty(key):
+                continue
             id_cells = _entity_tuple_individual(axis, entity, slots)
             rows.append(id_cells + _aggregate_block(key))
     elif per_tag_combo:
@@ -594,6 +622,8 @@ def build_shape_rows(
             if key in seen_combos:
                 continue
             seen_combos.add(key)
+            if drop_empty and _row_is_empty(key):
+                continue
             tag_cells: list[str] = []
             for slot in slots:
                 if slot.startswith(f"{axis}:tag-"):

@@ -55,6 +55,7 @@ __all__ = [
     "VALID_AXES",
     "VALID_SELF_REVIEW_HANDLING",
     "DEFAULT_SELF_REVIEW_HANDLING",
+    "DEFAULT_INCLUDE_EMPTY_ROWS",
     "list_shapes",
     "get_shape",
     "create_shape",
@@ -70,6 +71,11 @@ VALID_SELF_REVIEW_HANDLING: frozenset[str] = frozenset(
     {"include_self", "exclude_self", "both"}
 )
 DEFAULT_SELF_REVIEW_HANDLING = "include_self"
+# Empty-row drop chip — PR 6 of the chip-controlled-drop slice per
+# the self-review consolidation addendum. ``True`` keeps every
+# relevant row; ``False`` drops empty rows on per-individual /
+# per-tag-combo shapes.
+DEFAULT_INCLUDE_EMPTY_ROWS = True
 
 
 class DataShapeValidationError(ValueError):
@@ -222,6 +228,7 @@ def _audit_snapshot(shape: DataShape) -> dict[str, Any]:
         "response_field_id": shape.response_field_id,
         "column_chip_slots": slots,
         "self_review_handling": shape.self_review_handling,
+        "include_empty_rows": shape.include_empty_rows,
     }
 
 
@@ -241,6 +248,7 @@ def create_shape(
     response_field_id: int | None,
     column_chip_slots: list[str],
     self_review_handling: str = DEFAULT_SELF_REVIEW_HANDLING,
+    include_empty_rows: bool = DEFAULT_INCLUDE_EMPTY_ROWS,
     correlation_id: str | None = None,
 ) -> DataShape:
     """Persist a new shape on ``review_session`` + emit the
@@ -271,6 +279,7 @@ def create_shape(
         response_field_id=response_field_id,
         column_chip_slots=json.dumps(column_chip_slots),
         self_review_handling=self_review_handling,
+        include_empty_rows=include_empty_rows,
         created_by_user_id=actor.id if actor else None,
     )
     db.add(shape)
@@ -310,6 +319,7 @@ def update_shape(
     response_field_id: int | None,
     column_chip_slots: list[str],
     self_review_handling: str = DEFAULT_SELF_REVIEW_HANDLING,
+    include_empty_rows: bool = DEFAULT_INCLUDE_EMPTY_ROWS,
     correlation_id: str | None = None,
 ) -> DataShape:
     """Update an existing shape in place + re-emit the
@@ -337,6 +347,7 @@ def update_shape(
     shape.response_field_id = response_field_id
     shape.column_chip_slots = json.dumps(column_chip_slots)
     shape.self_review_handling = self_review_handling
+    shape.include_empty_rows = include_empty_rows
     try:
         db.flush()
     except IntegrityError as exc:

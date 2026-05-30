@@ -513,3 +513,78 @@ def test_saved_shape_renders_self_review_handling_attr_on_card(
     ).text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-self-review-handling="exclude_self"' in body
+
+
+# --------------------------------------------------------------------------- #
+# Empty-row drop chip — PR 6 of the chip-controlled-drop slice
+# --------------------------------------------------------------------------- #
+
+
+def test_post_round_trips_include_empty_rows_false(
+    client: TestClient, db: Session
+) -> None:
+    """POST with ``include_empty_rows=false`` persists +
+    echoes the value."""
+    review_session = _make_session(client, db, code="ier-post")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(), "include_empty_rows": False},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["include_empty_rows"] is False
+    db.expire_all()
+    row = db.execute(
+        select(DataShape).where(DataShape.id == body["id"])
+    ).scalar_one()
+    assert row.include_empty_rows is False
+
+
+def test_post_defaults_include_empty_rows_to_true(
+    client: TestClient, db: Session
+) -> None:
+    """A payload that omits the field defaults to ``True`` ⇒
+    today's behaviour preserved for chip-less clients."""
+    review_session = _make_session(client, db, code="ier-default")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(),
+    )
+    assert response.status_code == 201
+    assert response.json()["include_empty_rows"] is True
+
+
+def test_patch_can_flip_include_empty_rows(
+    client: TestClient, db: Session
+) -> None:
+    """PATCH updates the persisted state."""
+    review_session = _make_session(client, db, code="ier-patch")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(name="To flip"),
+    ).json()
+    assert created["include_empty_rows"] is True
+    response = client.patch(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes/{created['id']}",
+        json={**_payload(name="To flip"), "include_empty_rows": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["include_empty_rows"] is False
+
+
+def test_saved_shape_renders_include_empty_rows_attr_on_card(
+    client: TestClient, db: Session
+) -> None:
+    """The saved sub-card carries its persisted chip state as
+    ``data-shape-include-empty-rows`` so the JS can sync the
+    chip on Edit + drive the dirty-state Save gate."""
+    review_session = _make_session(client, db, code="ier-render")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={**_payload(name="Dropper"), "include_empty_rows": False},
+    ).json()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert f'data-shape-id="{created["id"]}"' in body
+    assert 'data-shape-include-empty-rows="false"' in body

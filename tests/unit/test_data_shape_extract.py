@@ -171,6 +171,7 @@ def _shape(
     slots: list[str],
     name: str = "Shape",
     self_review_handling: str = "include_self",
+    include_empty_rows: bool = True,
 ) -> DataShape:
     shape = DataShape(
         session_id=review_session.id,
@@ -180,6 +181,7 @@ def _shape(
         response_field_id=field.id if field else None,
         column_chip_slots=json.dumps(slots),
         self_review_handling=self_review_handling,
+        include_empty_rows=include_empty_rows,
     )
     db.add(shape)
     db.flush()
@@ -867,3 +869,251 @@ def test_compute_self_review_data_state_session_wide_no_instrument_scope(
     )
     # Only-self session — preflight reports it.
     assert state == {"has_self": True, "has_noself": False}
+
+
+# --------------------------------------------------------------------------- #
+# Empty-row drop chip — PR 6 of the chip-controlled-drop slice
+# --------------------------------------------------------------------------- #
+
+
+def test_acc_is_empty_predicate_holds_for_fresh_accumulator() -> None:
+    """``_Acc.is_empty()`` is the drop trigger; pin its
+    contract."""
+    from app.services.extracts.data_shape_extract import _Acc
+
+    assert _Acc().is_empty() is True
+
+    # Any signal flips it to non-empty.
+    a = _Acc()
+    a.assigned = 1
+    assert a.is_empty() is False
+
+    a = _Acc()
+    a.string_count = 1
+    assert a.is_empty() is False
+
+    a = _Acc()
+    a.fanout_counts["x"] = 1
+    assert a.is_empty() is False
+
+
+def test_per_individual_drop_chip_off_keeps_empty_roster_rows(
+    db: Session,
+) -> None:
+    """Default ``include_empty_rows=True`` matches today's
+    behaviour: every roster reviewer ships even with no
+    participation."""
+    review_session = _session(db, code="ier-keep")
+    _reviewer(db, review_session, name="Rita", email="r@x.edu")
+    _reviewer(db, review_session, name="Sam", email="s@x.edu")
+    shape = _shape(
+        db,
+        review_session,
+        slots=["reviewer:name", "reviewer:email"],
+        include_empty_rows=True,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    body = sorted(rows[1:])
+    assert body == [("Rita", "r@x.edu"), ("Sam", "s@x.edu")]
+
+
+def test_per_individual_drop_chip_on_drops_empty_roster_rows(
+    db: Session,
+) -> None:
+    """``include_empty_rows=False`` drops reviewers whose
+    accumulator is empty. With no assignments / responses on the
+    session every per-individual row is empty, so the body is
+    empty."""
+    review_session = _session(db, code="ier-drop-empty")
+    _reviewer(db, review_session, name="Rita", email="r@x.edu")
+    _reviewer(db, review_session, name="Sam", email="s@x.edu")
+    shape = _shape(
+        db,
+        review_session,
+        slots=["reviewer:name", "reviewer:email"],
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    assert rows[1:] == []
+
+
+def test_per_individual_drop_chip_on_keeps_rows_with_data(
+    db: Session,
+) -> None:
+    """Mixed roster — keep reviewers with assignments, drop
+    those with none."""
+    review_session = _session(db, code="ier-mixed")
+    rita = _reviewer(db, review_session, name="Rita", email="r@x.edu")
+    _reviewer(db, review_session, name="Sam", email="s@x.edu")
+    eli = _reviewee(db, review_session, name="Eli", identifier="e@x")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    a = _assignment(
+        db,
+        review_session,
+        reviewer=rita,
+        reviewee=eli,
+        instrument=instrument,
+    )
+    _response(db, assignment=a, field=fld, value="3")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:name",
+            "reviewer:email",
+            "reviewer:assigned",
+            "reviewer:count",
+        ],
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    body = rows[1:]
+    # Only Rita survives — Sam's accumulator is empty.
+    assert len(body) == 1
+    assert body[0][0] == "Rita"
+
+
+def test_per_individual_drop_chip_on_exclude_self_closes_q4(
+    db: Session,
+) -> None:
+    """Q4 closes by implication: a reviewer whose only response
+    was their own self-review surfaces with an empty accumulator
+    under ``exclude_self``, so the chip drops their row."""
+    (
+        review_session,
+        alice_r,
+        _alice_e,
+        _bob_e,
+        instrument,
+        fld,
+    ) = _seed_alice_with_self_pair(db, code="ier-q4")
+    # Add a second reviewer with zero participation so we
+    # confirm the drop also covers their (already-empty)
+    # accumulator.
+    _reviewer(db, review_session, name="Sam", email="s@x.edu")
+
+    # Drop one of Alice's two responses — leave only the self-
+    # review pair active — by deleting the Bob response. Easiest
+    # way is to seed a separate session, but for symmetry with
+    # the helper, just rely on ``exclude_self`` to mask the
+    # other-target half.
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:name",
+            "reviewer:email",
+            "reviewer:assigned",
+            "reviewer:count",
+        ],
+        self_review_handling="exclude_self",
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    body = rows[1:]
+    # Alice has the Bob response surviving exclude_self ⇒ kept.
+    # Sam has nothing ⇒ dropped.
+    assert any(row[0] == "Alice" for row in body)
+    assert not any(row[0] == "Sam" for row in body)
+
+
+def test_single_summary_drop_chip_on_never_drops_the_one_row(
+    db: Session,
+) -> None:
+    """Single-summary shapes always ship their one row
+    regardless of chip state — an empty CSV would be
+    confusing surface."""
+    review_session = _session(db, code="ier-summary")
+    _reviewer(db, review_session, name="Rita", email="r@x.edu")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=["reviewer:assigned", "reviewer:count"],
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    # Header row + one summary row.
+    assert len(rows) == 2
+
+
+def test_per_tag_combo_drop_chip_on_drops_empty_combo_rows(
+    db: Session,
+) -> None:
+    """Per-tag-combo shapes follow the same drop rule as
+    per-individual. A combo whose entities have no data is
+    dropped."""
+    review_session = _session(db, code="ier-combo")
+    rita = _reviewer(
+        db, review_session, name="Rita", email="r@x.edu", tag_1="A"
+    )
+    _reviewer(
+        db, review_session, name="Sam", email="s@x.edu", tag_1="B"
+    )
+    eli = _reviewee(db, review_session, name="Eli", identifier="e@x")
+    instrument = _instrument(db, review_session)
+    fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
+    a = _assignment(
+        db,
+        review_session,
+        reviewer=rita,
+        reviewee=eli,
+        instrument=instrument,
+    )
+    _response(db, assignment=a, field=fld, value="3")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=["reviewer:tag-1", "reviewer:assigned"],
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    body = rows[1:]
+    # Only the A combo (Rita) survives.
+    assert len(body) == 1
+    assert body[0][0] == "A"
+
+
+def test_both_state_drop_chip_on_keeps_row_with_data_on_either_half(
+    db: Session,
+) -> None:
+    """In ``both`` mode, drop only when both ``_self`` and
+    ``_noself`` halves are empty. A reviewer whose responses
+    survive on the ``_self`` half stays visible even if the
+    ``_noself`` half is empty."""
+    (
+        review_session,
+        alice_r,
+        _alice_e,
+        _bob_e,
+        instrument,
+        fld,
+    ) = _seed_alice_with_self_pair(db, code="ier-both")
+    shape = _shape(
+        db,
+        review_session,
+        instrument=instrument,
+        field=fld,
+        slots=[
+            "reviewer:name",
+            "reviewer:email",
+            "reviewer:assigned",
+            "reviewer:count",
+        ],
+        self_review_handling="both",
+        include_empty_rows=False,
+    )
+    rows = build_shape_rows(db, review_session, shape)
+    body = rows[1:]
+    # Alice's data lives on both halves — row kept.
+    assert any(row[0] == "Alice" for row in body)

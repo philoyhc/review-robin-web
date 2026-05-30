@@ -697,6 +697,38 @@ def test_by_instrument_card_renders_selectable_chips(
     assert chip_block.count('aria-pressed="true"') >= 3
 
 
+def test_include_empty_rows_chip_renders_on_data_shaper(
+    client: TestClient, db: Session
+) -> None:
+    """PR 6 of the chip-controlled-drop slice — the new
+    ``All rows`` / ``Rows with data`` cycling-pill chip lives
+    on the Data shaper scope row, before the Self-review
+    handling chip. Default state is ``true`` (``All rows``)."""
+    review_session = _make_session(client, db, code="ed-ier-chip")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    shaper_block = body.split('id="extract-data-shaper"')[1].split(
+        "data-shaper-stack"
+    )[0]
+    assert (
+        'data-shaper-include-empty-rows-chip="data-shaper"' in shaper_block
+    )
+    assert 'data-shaper-include-empty-rows-state="true"' in shaper_block
+    assert ">All rows<" in shaper_block
+    # Order: empty-row drop chip lives between the axis chips
+    # and the self-review chip per the spec.
+    reviewee_pos = shaper_block.index('data-shaper-axis-chip="reviewee"')
+    ier_pos = shaper_block.index(
+        'data-shaper-include-empty-rows-chip="data-shaper"'
+    )
+    srh_pos = shaper_block.index(
+        'data-shaper-self-review-chip="data-shaper"'
+    )
+    assert reviewee_pos < ier_pos < srh_pos
+
+
 def test_data_shape_row_count_pill_renders(
     client: TestClient, db: Session
 ) -> None:
