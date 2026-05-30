@@ -767,12 +767,264 @@ plumb it through.
    are the unproblematic cases. Revisit before the Data
    shaper side of the slice starts.
 
-**Blast radius.** ~1 small PR for the metadata-card side (no
-schema — chip state is one-shot, lives only in the query
-string); ~1 medium PR for the Data shaper side (schema
-migration + `DataShape` field + Settings CSV round-trip +
-saved-state plumbing). The two PRs can land independently;
-the medium PR can land first or second.
+### Self-review handling — gap analysis (refreshed 2026-05-30 post-consolidation)
+
+The 5-PR self-review consolidation slice closed
+2026-05-30 (`guide/archive/self_review_consolidate.md`,
+PRs #1633 → #1637). Refreshing the chip plan against the
+codebase as it stands now identifies the precise remaining
+gap.
+
+**Foundation — shipped.** Everything the chip's
+classification rule + bug-fix scope needed is now in place:
+
+* `Assignment.is_self_review` is the canonical column for
+  "is this assignment row a self-review" — written at every
+  write path, recomputed at every edit trigger, gated by
+  the post-regenerate continuous-gate invariant. The chip
+  reads the column directly; no on-the-fly computation
+  needed. (`spec/assignments.md` § *Self-review policy*.)
+* The latent `by_instrument_extract.py:436` `SelfReview =
+  FALSE` hardcode on group-scoped rows retired (PR 3 of
+  the consolidation slice). The wide-format extract now
+  reads the column; the bug-fix admonition in the
+  By-instrument card bullet earlier in this section is the
+  history note.
+
+**Remaining gap — 2-3 small PRs.** All chip / route / file-
+gen / persistence wiring is still TBD. None of the four
+target call sites currently reads / honors a
+`self_review_handling` value (verified via grep across
+`entity_metadata_extract.py`, `data_shape_extract.py`,
+`routes_operator/_extracts.py`, `routes_operator/_extract_data.py`,
+`db/models/data_shape.py`, `services/data_shapes.py`,
+`session_config_io/{_serialize,_apply}.py`, and the
+`session_extract_data.html` template).
+
+#### PR A — Metadata-card chip + filtered extracts
+
+**Scope.** Wires the chip on the Reviewer / Reviewee
+response metadata cards + the matching CSV downloads.
+No schema change (chip state is one-shot, lives only in
+the query string).
+
+**Files.**
+
+* `app/services/extracts/entity_metadata_extract.py` —
+  `build_reviewer_metadata(db, review_session, *,
+  instrument_ids, all_reviewers)` → grow a
+  `self_review_handling: Literal["include_self",
+  "exclude_self", "both"] = "include_self"` parameter.
+  Per-axis aggregate construction filters the response
+  pool by `Assignment.is_self_review` (`include_self` →
+  no filter; `exclude_self` → `WHERE NOT
+  is_self_review`; `both` → run twice, emit two blocks).
+  Column headers gain the `_self` / `_noself` suffix per
+  the always-emit rule. Identity columns
+  (`ReviewerName`, `ReviewerEmail`, tag columns) keep no
+  suffix. `Assigned` and `Count` carry the suffix
+  alongside `Mean` / `Median` / `Min` / `Max` / `Length`
+  (Q1 resolution). Symmetric edits for
+  `build_reviewee_metadata`.
+* `app/web/routes_operator/_extracts.py:379-423` (reviewer
+  route) + `_extracts.py:426-462` (reviewee route) —
+  parse `?self_review_handling=` query param
+  (default `include_self`); pass through to the builder;
+  derive the filename suffix (`{code}_reviewer_metadata{_suffix}.csv`);
+  the data-state preflight runs a cheap server-side query
+  for in-scope (instrument-filtered) `include=True`
+  responses split by `is_self_review` to decide which
+  state is selectable; the response includes a header
+  carrying the chip's data-state for the JS to pick up
+  on re-derivation (or pre-render in the initial Jinja
+  pass — see template).
+* `app/services/audit.py:655-660` — both metadata-event
+  `EventSchema`s grow the orthogonal `context` slot;
+  emit `context={"self_review_handling": <value>}`. (No
+  schema-key add needed — `context` is part of the
+  canonical envelope set.)
+* `app/web/templates/operator/session_extract_data.html` —
+  per-card chip row gains a three-way `Self-review
+  handling` chip (state machine over the data, locked /
+  selectable arms per the table earlier in this section).
+  Initial render computes the chip's state server-side
+  via the same preflight as the route. JS re-derives on
+  every instrument scope-chip toggle so the locked /
+  selectable status doesn't drift; the Download button
+  href picks up the chip's value.
+
+**Tests.**
+
+* `tests/unit/test_entity_metadata_extract.py` (or new) —
+  per state: `include_self`, `exclude_self`, `both`,
+  asserting column shapes + aggregates on a session with
+  a known self-review pair.
+* `tests/integration/test_extracts_reviewer_metadata_route.py` /
+  `_reviewee_metadata_route.py` — assert the filename
+  suffix per state; the chip-locked data-states
+  (only-self / only-non-self / both kinds present);
+  audit-event `context.self_review_handling` slot.
+
+**Sized at ~250-400 LOC.**
+
+#### PR B — Data shaper schema + canonical write/read plumbing
+
+**Scope.** Lands the persistence + file-gen surface for
+the Data shaper's per-shape chip state. The UI wiring
+rides PR C.
+
+**Files.**
+
+* New Alembic migration — `ALTER TABLE data_shapes ADD
+  COLUMN self_review_handling TEXT NOT NULL DEFAULT
+  'include_self'` + a check constraint (or app-layer
+  validation) covering the three valid values. Migration
+  picks a fresh hex-id revision.
+* `app/db/models/data_shape.py` — `self_review_handling:
+  Mapped[str]` field added next to the existing 4
+  operator-facing columns.
+* `app/schemas/data_shapes.py` (or wherever
+  `DataShapePayload` lives) — `self_review_handling:
+  Literal["include_self", "exclude_self", "both"] =
+  "include_self"` validator added; `extra="forbid"`
+  preserved.
+* `app/services/data_shapes.py` — `create_shape` /
+  `update_shape` plumb the field through; validation
+  errors raise `DataShapeValidationError` consistent with
+  the existing axis-validation path.
+* `app/services/extracts/data_shape_extract.py` —
+  `build_shape_rows(db, review_session, shape)` reads
+  `shape.self_review_handling` and applies the same
+  three-state rule the metadata extracts use. The
+  preview-row helpers + `compose_shape_header` emit the
+  `_self` / `_noself` suffixes per shipped rule. The
+  per-individual wrinkle (Q4 in this section) is the
+  one open contract — for PR B, keep the conservative
+  interpretation (per-individual rows surface even when
+  their only response is the now-excluded self-review,
+  with an empty value cell), and pin the final decision
+  in a `Q4 RESOLUTION NEEDED` paragraph in the file's
+  module docstring so the next contributor sees it.
+* `app/web/routes_operator/_extract_data.py` — `GET
+  /sessions/{id}/extract-data/shapes/{shape_id}/download.csv`
+  derives the filename suffix from
+  `shape.self_review_handling`; audit event
+  `session.data_shape_extracted` gains `context.
+  self_review_handling`.
+* `app/services/audit.py:648-650` — `data_shape_extracted`
+  `EventSchema` adds `context` to its envelope.
+* `app/services/session_config_io/_serialize.py` —
+  `_data_shape_rows` emits a new
+  `data_shapes[N].self_review_handling` row per shape.
+* `app/services/session_config_io/_apply.py` —
+  `_DataShapeSpec` gains the field; `_apply_data_shape_kv`
+  parser routes the new key; default value
+  `include_self` when the key is absent (import from a
+  pre-PR-B Settings CSV stays clean).
+
+**Tests.**
+
+* `tests/unit/test_data_shape_model.py` — column default
+  + non-null assertion.
+* `tests/unit/test_data_shapes_service.py` — CRUD with
+  each of the three states; validation rejects unknown
+  strings.
+* `tests/unit/test_data_shape_extract.py` — per-state
+  shape coverage including the `both` column-block
+  duplication.
+* `tests/unit/test_data_shapes_settings_roundtrip.py` —
+  round-trip the new key for each state.
+* `tests/integration/test_data_shapes_routes.py` —
+  POST/PATCH accept the field; download.csv emits the
+  filename suffix.
+
+**Sized at ~400-600 LOC.**
+
+#### PR C — Data shaper UI chip + scope-row wiring
+
+**Scope.** Adds the chip to the Data shaper scope row +
+JS state-machine over the persisted column.
+
+**Files.**
+
+* `app/web/templates/operator/session_extract_data.html` —
+  scope row grows a `Self-review handling` chip after the
+  response-field group, separated by `|`. The chip is a
+  three-state pill cluster (or a single pill that cycles
+  through the three states; pick whichever reads more
+  naturally — both have precedent in the existing chip
+  vocabulary). On render: the server passes
+  `shape.self_review_handling` per sub-card; the JS
+  reflects it. On `Edit` of a saved card,
+  `restoreShapeChipState` syncs the chip; on save,
+  `persistShape` includes the chip value in the payload;
+  on chip toggle, `rebuildPreviewRow` re-derives the
+  preview headers with the new suffixes (data-state
+  preflight runs client-side from a server-pre-computed
+  per-(instrument, field) `has_self / has_noself` map
+  passed as `data-shape-self-review-data-state` JSON).
+  Filename suffix picked up via the existing
+  `data-shape-id`-driven Download anchor (server route
+  already returns the suffix; PR B). The chip carries
+  the same lock-when-no-edit-mode behaviour as the
+  existing scope chips (the
+  `data-shaper-chips-locked="true"` attribute on the
+  outer card already covers it via the CSS rule shipped
+  in #1638).
+* `app/web/routes_operator/_extract_data.py` — page
+  context grows the per-(instrument, field) self-review
+  data-state map for the JS preflight; PATCH/POST
+  response includes the saved `self_review_handling`
+  + the updated `column_headers` so the front-end
+  preview can re-render the suffixed header row.
+
+**Tests.**
+
+* `tests/integration/test_data_shapes_routes.py` — page-
+  render carries the chip + its initial state; saved
+  shapes render the chip in the correct state per
+  persisted column.
+
+**Sized at ~300-500 LOC.**
+
+#### Open question still to resolve before PR B
+
+**Q4 — per-individual rows on the Data shaper.** The
+straightforward read is: the chip controls whether the
+individual's self-review cell folds into their aggregates,
+same rule as the metadata cards. The wrinkle is what
+happens when the individual has *only* their self-review
+response — does the row surface on `Exclude self`? as
+empty? Or does it drop entirely? PR B can ship the
+conservative version (row surfaces; `Count`/`Mean`/etc.
+empty; `Assigned_noself` honest about there being zero
+non-self pairs assigned to that individual on this
+instrument scope), and a later micro-PR can switch to
+"drop the row entirely on `Exclude self`" if that's
+preferred. The doc-only resolution should pin this
+before PR B starts.
+
+#### Sequencing
+
+* **PR A is independent.** Metadata-card chip can land
+  first or last; no schema change, no dependence on PR B.
+* **PR B before PR C.** UI can't read a column that
+  doesn't exist. PR B lands the column; PR C wires the
+  UI. PR B's UI surface stays inert until PR C ships
+  (saved shapes write `include_self` per the default;
+  existing behaviour preserved).
+* **Q4 resolved before PR B starts.** Either a doc-only
+  follow-up to this section (preferred) or a one-line
+  decision pinned at the top of PR B's plan.
+
+#### Blast radius
+
+* PR A: ~250-400 LOC across 4 files + 2 test files.
+* PR B: ~400-600 LOC across 7 files + 5 test files.
+* PR C: ~300-500 LOC across 2 files + 1 test file.
+
+The slice closes when all three PRs ship + this section
+moves into `guide/archive/extract_data.md`.
 
 ### The three lenses on the new page (legacy framing)
 
