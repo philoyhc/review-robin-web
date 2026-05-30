@@ -1375,14 +1375,16 @@
          ``is-selected`` (the chip always reflects the current
          selection — there's no unselected state), so the
          standard accent-blue ``is-selected`` fill stays
-         vibrant even at the locked opacity. Override the fill
-         + text when locked so the chip reads as muted
-         alongside the unselected Reviewer / Reviewee /
-         instrument chips, not as a selected accent. */
+         vibrant even at the locked opacity. When chips lock,
+         repaint the chip with the SAME unselected-pill palette
+         the Reviewer / Reviewee / instrument chips inherit
+         from ``.pill-count`` (``--accent-blue-bg`` light blue
+         + ``--text-primary`` dark text), so all the locked
+         scope-row chips read with one consistent muted look. */
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
         [data-shaper-self-review-chip].is-selected {
-        background: var(--bg-muted);
+        background: var(--accent-blue-bg);
         color: var(--text-primary);
       }
       /* Selected sub-card — the one currently in edit mode.
