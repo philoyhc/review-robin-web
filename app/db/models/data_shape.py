@@ -29,10 +29,12 @@ section in the wiring decisions (lands in a later PR).
 from __future__ import annotations
 
 from sqlalchemy import (
+    Boolean,
     ForeignKey,
     String,
     Text,
     UniqueConstraint,
+    true as sa_true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -93,6 +95,19 @@ class DataShape(Base, TimestampMixin):
         nullable=False,
         server_default="include_self",
         default="include_self",
+    )
+    # Empty-row drop chip — PR 6 of the chip-controlled-drop slice
+    # per the self-review consolidation addendum. ``True`` (default)
+    # surfaces every relevant row including rows whose accumulator
+    # is empty; ``False`` drops empty rows (per-individual / per-
+    # tag-combo row schemes only — single-summary always emits its
+    # one row). Default ``True`` preserves today's behaviour for
+    # existing shapes + chip-less Settings CSV imports.
+    include_empty_rows: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=sa_true(),
+        default=True,
     )
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),

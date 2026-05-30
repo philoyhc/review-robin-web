@@ -70,6 +70,12 @@ class DataShapePayload(BaseModel):
     # navigation, re-download, and Settings CSV round-trip.
     # Validated downstream in ``app/services/data_shapes.py``.
     self_review_handling: str = "include_self"
+    # Empty-row drop chip state — PR 6 of the chip-controlled-drop
+    # slice per the self-review consolidation addendum. ``True``
+    # (default) ships every relevant row, including empty ones;
+    # ``False`` drops empty rows on per-individual / per-tag-combo
+    # shapes (single-summary always emits its one row).
+    include_empty_rows: bool = True
 
 
 def _validation_error_response(
@@ -207,6 +213,10 @@ def session_extract_data(
             # Self-review handling chip state (PR C wires the
             # UI; PR B persists the column).
             "self_review_handling": shape.self_review_handling,
+            # Empty-row drop chip state — PR 6 of the chip-
+            # controlled-drop slice. ``True`` keeps every row;
+            # ``False`` drops empties.
+            "include_empty_rows": shape.include_empty_rows,
         }
         for shape in saved_shapes
     ]
@@ -254,6 +264,7 @@ def create_data_shape(
             response_field_id=payload.response_field_id,
             column_chip_slots=payload.column_chip_slots,
             self_review_handling=payload.self_review_handling,
+            include_empty_rows=payload.include_empty_rows,
         )
     except data_shapes.DataShapeValidationError as exc:
         return _validation_error_response(exc)
@@ -268,6 +279,7 @@ def create_data_shape(
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
             "self_review_handling": shape.self_review_handling,
+            "include_empty_rows": shape.include_empty_rows,
             "column_headers": list(
                 compose_shape_header(db, review_session, shape)
             ),
@@ -306,6 +318,7 @@ def update_data_shape(
             response_field_id=payload.response_field_id,
             column_chip_slots=payload.column_chip_slots,
             self_review_handling=payload.self_review_handling,
+            include_empty_rows=payload.include_empty_rows,
         )
     except data_shapes.DataShapeValidationError as exc:
         return _validation_error_response(exc)
@@ -320,6 +333,7 @@ def update_data_shape(
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
             "self_review_handling": shape.self_review_handling,
+            "include_empty_rows": shape.include_empty_rows,
             "column_headers": list(
                 compose_shape_header(db, review_session, shape)
             ),

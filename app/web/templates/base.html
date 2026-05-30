@@ -1363,27 +1363,36 @@
       /* PR C of the Self-review handling chip slice — the
          scope-row chip joins the chips-lock-when-no-edit-mode
          rule via its own ``data-shaper-self-review-chip``
-         attribute. */
+         attribute. PR 6 of the chip-controlled-drop slice adds
+         the sibling empty-row drop chip
+         (``data-shaper-include-empty-rows-chip``) under the
+         same lock rule. */
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
-        [data-shaper-self-review-chip] {
+        [data-shaper-self-review-chip],
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-include-empty-rows-chip] {
         opacity: 0.4;
         pointer-events: none;
         cursor: default;
       }
-      /* The Self-review handling chip's three states are all
-         ``is-selected`` (the chip always reflects the current
-         selection — there's no unselected state), so the
-         standard accent-blue ``is-selected`` fill stays
+      /* The Self-review handling + empty-row drop chips' states
+         are all ``is-selected`` (the chips always reflect the
+         current selection — there's no unselected state), so
+         the standard accent-blue ``is-selected`` fill stays
          vibrant even at the locked opacity. When chips lock,
-         repaint the chip with the SAME unselected-pill palette
-         the Reviewer / Reviewee / instrument chips inherit
-         from ``.pill-count`` (``--accent-blue-bg`` light blue
+         repaint with the SAME unselected-pill palette the
+         Reviewer / Reviewee / instrument chips inherit from
+         ``.pill-count`` (``--accent-blue-bg`` light blue
          + ``--text-primary`` dark text), so all the locked
          scope-row chips read with one consistent muted look. */
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
-        [data-shaper-self-review-chip].is-selected {
+        [data-shaper-self-review-chip].is-selected,
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-include-empty-rows-chip].is-selected {
         background: var(--accent-blue-bg);
         color: var(--text-primary);
       }

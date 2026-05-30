@@ -654,4 +654,14 @@ def _data_shape_rows(
                 "string",
             )
         )
+        # Empty-row drop chip state — PR 6 of the chip-controlled-
+        # drop slice. Mirrors the Self-review handling row; same
+        # round-trip semantics.
+        rows.append(
+            Row(
+                f"{prefix}.include_empty_rows",
+                _bool(shape.include_empty_rows),
+                "boolean",
+            )
+        )
     return rows

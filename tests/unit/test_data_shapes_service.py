@@ -503,3 +503,63 @@ def test_update_shape_can_flip_self_review_handling(db: Session) -> None:
         self_review_handling="exclude_self",
     )
     assert shape.self_review_handling == "exclude_self"
+
+
+# --------------------------------------------------------------------------- #
+# Empty-row drop chip — PR 6 of the chip-controlled-drop slice
+# --------------------------------------------------------------------------- #
+
+
+def test_create_shape_defaults_include_empty_rows_to_true(
+    db: Session,
+) -> None:
+    """Default ``True`` preserves today's behaviour — every
+    relevant row ships, including empty ones."""
+    review_session = _session(db, code="ier-default")
+    actor = _user(db, email="ier-default-actor@x.edu")
+    shape = data_shapes.create_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        **_make_args(),
+    )
+    assert shape.include_empty_rows is True
+
+
+def test_create_shape_accepts_explicit_include_empty_rows_false(
+    db: Session,
+) -> None:
+    """Operator opt-in to dropping empties round-trips through
+    ``create_shape``."""
+    review_session = _session(db, code="ier-false")
+    actor = _user(db, email="ier-false-actor@x.edu")
+    shape = data_shapes.create_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        **_make_args(),
+        include_empty_rows=False,
+    )
+    assert shape.include_empty_rows is False
+
+
+def test_update_shape_can_flip_include_empty_rows(db: Session) -> None:
+    """The chip cycles on the page; the persisted column follows
+    on Save."""
+    review_session = _session(db, code="ier-update")
+    actor = _user(db, email="ier-update-actor@x.edu")
+    shape = data_shapes.create_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        **_make_args(),
+    )
+    data_shapes.update_shape(
+        db,
+        review_session=review_session,
+        actor=actor,
+        shape=shape,
+        **_make_args(),
+        include_empty_rows=False,
+    )
+    assert shape.include_empty_rows is False

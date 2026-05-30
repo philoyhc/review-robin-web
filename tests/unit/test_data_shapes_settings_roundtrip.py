@@ -147,11 +147,12 @@ def test_export_serialises_all_three_shape_variants(
     _seed_three_shapes(db, review_session)
     rows = session_config_io.serialize_session_config(db, review_session)
     shape_rows = [r for r in rows if r.field.startswith("data_shapes[")]
-    # 6 rows per shape × 3 shapes = 18. The 6 keys are name +
+    # 7 rows per shape × 3 shapes = 21. The 7 keys are name +
     # axis + instrument_short_label + response_field_key +
     # column_chip_slots + self_review_handling (PR B of the
-    # Self-review handling chip slice added the last one).
-    assert len(shape_rows) == 18
+    # Self-review handling chip slice) + include_empty_rows
+    # (PR 6 of the chip-controlled-drop slice).
+    assert len(shape_rows) == 21
     by_field = {r.field: r.value for r in shape_rows}
     # Shapes sorted by name → 0: Per field, 1: Per instrument,
     # 2: Whole roster.
