@@ -165,12 +165,27 @@ class _FieldLabelSpec:
 
 
 @dataclass
+class _DataShapeSpec:
+    """One ``data_shapes[N].*`` row group accumulated during
+    parse. Resolves the portable ``instrument_short_label`` /
+    ``response_field_key`` references at apply time against
+    the imported session's instruments."""
+
+    name: str | None = None
+    axis: str | None = None
+    instrument_short_label: str | None = None
+    response_field_key: str | None = None
+    column_chip_slots: list[str] = _dataclass_field(default_factory=list)
+
+
+@dataclass
 class _ParsedConfig:
     session_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
     email_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
     instruments: dict[int, _InstrumentSpec] = _dataclass_field(default_factory=dict)
     session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(default_factory=dict)
     field_labels: list[_FieldLabelSpec] = _dataclass_field(default_factory=list)
+    data_shapes: dict[int, _DataShapeSpec] = _dataclass_field(default_factory=dict)
 
 
 _VALID_DATA_TYPES = {
@@ -326,6 +341,9 @@ def _route_row(
         return
     if field_path.startswith("field_labels."):
         _apply_field_label_kv(plan, field_path, value)
+        return
+    if field_path.startswith("data_shapes["):
+        _apply_data_shape_kv(plan, field_path, value, data_type)
         return
     # Unknown field path — silently ignore. Defensive: the export
     # is the canonical key vocabulary; future export-side keys
@@ -592,6 +610,54 @@ def _apply_field_label_kv(
         )
 
 
+_RX_DATA_SHAPE = re.compile(r"^data_shapes\[(\d+)\]\.(\w+)$")
+
+
+def _apply_data_shape_kv(
+    plan: _ParsedConfig,
+    field_path: str,
+    value: str,
+    data_type: str,
+) -> None:
+    """Route one ``data_shapes[N].<key>`` row into the
+    ``_DataShapeSpec`` for index N. Recognised keys:
+    ``name`` / ``axis`` / ``instrument_short_label`` /
+    ``response_field_key`` / ``column_chip_slots``. Unknown
+    keys raise ``_ParseError`` so a typo'd hand-edit surfaces."""
+    match = _RX_DATA_SHAPE.match(field_path)
+    if match is None:
+        raise _ParseError(
+            f"unrecognised data_shapes.* key {field_path!r}"
+        )
+    idx = int(match.group(1))
+    key = match.group(2)
+    spec = plan.data_shapes.setdefault(idx, _DataShapeSpec())
+    if key == "name":
+        spec.name = value or None
+    elif key == "axis":
+        spec.axis = value or None
+    elif key == "instrument_short_label":
+        spec.instrument_short_label = value or None
+    elif key == "response_field_key":
+        spec.response_field_key = value or None
+    elif key == "column_chip_slots":
+        slots = _parse_json(value, default=[])
+        if not isinstance(slots, list):
+            raise _ParseError(
+                f"data_shapes[{idx}].column_chip_slots must be a "
+                f"JSON list, got {type(slots).__name__}"
+            )
+        spec.column_chip_slots = [str(s) for s in slots]
+    else:
+        raise _ParseError(
+            f"unknown data_shapes key {key!r} in {field_path!r}"
+        )
+    # ``data_type`` is unused in this branch — every
+    # ``data_shapes`` row's intended interpretation is fixed
+    # by the suffix, not by the column hint.
+    _ = data_type
+
+
 def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
     errors: list[ApplyError] = []
     # RuleSet-name uniqueness within the snapshot.
@@ -807,6 +873,7 @@ def _apply_plan(
         "response_fields": 0,
         "session_rule_sets": 0,
         "field_labels": 0,
+        "data_shapes": 0,
     }
 
     counts["session"] = _apply_session_metadata(review_session, plan)
@@ -826,6 +893,7 @@ def _apply_plan(
     inst_counts = _apply_instruments(db, review_session, plan)
     counts.update(inst_counts)
     counts["field_labels"] = _apply_field_labels(db, review_session, plan)
+    counts["data_shapes"] = _apply_data_shapes(db, review_session, plan)
     db.flush()
 
     if user is not None:
@@ -1191,3 +1259,79 @@ class _ApplyConflict(Exception):
     can't be resolved against the in-progress session state
     (e.g. an unknown RTD reference). The caller's transaction
     handler rolls back."""
+
+
+def _apply_data_shapes(
+    db: Session, review_session: ReviewSession, plan: _ParsedConfig
+) -> int:
+    """Wipe-and-replace the session's saved Data shapes from
+    the CSV plan.
+
+    Resolves portable references
+    (``instrument_short_label`` / ``response_field_key``)
+    against the imported session's just-applied instruments
+    + response fields. Shapes whose references don't resolve
+    silently get those fields zeroed (the shape persists with
+    a widened scope rather than failing the whole import).
+
+    Returns the number of shapes written.
+    """
+    from app.db.models import DataShape
+
+    # Wipe existing shapes — replace semantics align with the
+    # rest of the apply step (instruments / RuleSets / field
+    # labels). Shapes that CASCADED away when instruments
+    # were wiped above are already gone; this pass clears
+    # session-scope-only shapes too.
+    db.execute(
+        DataShape.__table__.delete().where(
+            DataShape.session_id == review_session.id
+        )
+    )
+
+    instr_by_short = {
+        (i.short_label or "").strip(): i
+        for i in review_session.instruments
+        if (i.short_label or "").strip()
+    }
+    field_lookup: dict[tuple[str, str], "InstrumentResponseField"] = {}  # noqa: F821
+    for instrument in review_session.instruments:
+        short = (instrument.short_label or "").strip()
+        if not short:
+            continue
+        for f in instrument.response_fields:
+            field_lookup[(short, f.field_key)] = f
+
+    written = 0
+    for spec in plan.data_shapes.values():
+        if not spec.name or not spec.axis:
+            continue
+        if spec.axis not in ("reviewer", "reviewee"):
+            continue
+        instr = (
+            instr_by_short.get(spec.instrument_short_label.strip())
+            if spec.instrument_short_label
+            else None
+        )
+        field = (
+            field_lookup.get(
+                (spec.instrument_short_label.strip(), spec.response_field_key)
+            )
+            if (
+                spec.instrument_short_label
+                and spec.response_field_key
+            )
+            else None
+        )
+        db.add(
+            DataShape(
+                session_id=review_session.id,
+                name=spec.name,
+                axis=spec.axis,
+                instrument_id=instr.id if instr is not None else None,
+                response_field_id=field.id if field is not None else None,
+                column_chip_slots=json.dumps(spec.column_chip_slots),
+            )
+        )
+        written += 1
+    return written
