@@ -1364,12 +1364,12 @@
       /* Name input + saved-name display sit on the same
          row as the action buttons and ``Download``, flushed
          right with them. ``flex: 0 0 auto`` keeps them from
-         stretching past their content; the 240px width is
-         enough for typical shape names without crowding the
-         button strip. */
+         stretching; the input is bounded to **25% of the
+         sub-card width** so it doesn't crowd the buttons or
+         overshoot to the left on wide cards. */
       body.ui-v2 .data-shape-name-input {
         flex: 0 0 auto;
-        width: 240px;
+        width: 25%;
       }
       body.ui-v2 .data-shape-name-display {
         flex: 0 0 auto;
