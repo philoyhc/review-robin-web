@@ -658,7 +658,7 @@ must honour.
 
 #### Persistence model
 
-A new `data_shape_shapes` table keyed on `(session_id,
+A new `data_shapes` table keyed on `(session_id,
 name)` with `UNIQUE (session_id, name)` so the operator
 can't save two shapes with the same name on the same
 session. Per-session (not per-operator) — every operator
