@@ -368,17 +368,25 @@ metadata cards already use.
       mirror the currently-selected column chips. Toggling a
       column chip on / off adds / removes a `<th>` in the
       currently-active shape card.
-    - **Action row** — name input (collapses to plain text
-      on save) + `✓` save / `✎` edit / `✗` delete / `➕` add
-      icons + a right-anchored `Download` button (pushed
-      via `margin-left: auto`). `✓` and `✎` swap; `✗`
-      removes the card from the stack except when it's the
-      last one (never strip the page of its starting
-      point); `➕` clones a fresh blank card after this one
-      and makes it the active target; `Download` is a
-      placeholder (`href="#"` + `aria-disabled`) until the
-      file-gen wiring slice teaches it to extract this
-      shape's CSV.
+    - **Action row** — name input / display, then a row of
+      normal-sized text buttons: `Save` / `Edit` (mode-
+      toggle slot — `Save` shown in edit mode, `Edit` in
+      saved), `Cancel`, `Delete`, `+Shape`, and a
+      right-anchored `Download` anchor. `Save` stays
+      disabled until the active shape is valid (name
+      non-empty + axis chip on + ≥1 column chip on);
+      clicking it persists the name but **keeps the
+      sub-card in edit mode** (Save does not unselect).
+      `Cancel` is enabled only in edit mode and abandons
+      the in-progress edits + unselects the sub-card.
+      `Delete` is disabled when the sub-card is the only
+      one in the stack. `+Shape` always enabled, closes
+      the currently-editing card before spawning. The
+      whole row's disabled states refresh via a single
+      `updateButtonStates(shape)` helper on every chip
+      toggle / name input / mode flip / card spawn or
+      delete. `Download` stays `aria-disabled` until the
+      file-gen wiring slice.
   - Button: placeholder `Zip all` (`href="#"`,
     `aria-disabled`) at the bottom of the outer card.
   - **Out of scope in this slice** (lands separately):

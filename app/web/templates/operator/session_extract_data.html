@@ -465,39 +465,43 @@
             </thead>
           </table>
         </div>
-        {# Action row — adopts the new-model Response Fields
-           builder's per-row button vocabulary exactly (see
-           ``instruments_index.html`` lines 3833-3843):
-           ``btn secondary`` with ``style="flex: 0 0 auto;
-           padding: 4px 10px;"`` gives the squarish bordered
-           shape; the glyphs are plain ``X`` / ``+`` rather
-           than the heavier ``✗`` / ``➕`` so the row reads
-           the same way as the Response Fields builder. ✓ /
-           ✎ stay as character glyphs (the tick mirrors the
-           Response Fields builder's per-row save button). #}
+        {# Action row — normal-sized text buttons, inline with
+           the name input. ``Save`` / ``Edit`` are mode-toggle
+           siblings (only one is visible at a time); ``Cancel``
+           abandons unsaved edits and unselects the sub-card;
+           ``Delete`` removes the sub-card (disabled when it's
+           the only one in the stack); ``+Shape`` spawns a
+           fresh blank sub-card after this one and makes it
+           the new selected target; ``Download`` (right-
+           anchored via ``margin-left: auto``) is the
+           placeholder per-shape extract button — ``aria-
+           disabled`` until the file-gen wiring slice lands.
+
+           Every button gates its enabled state on the active
+           shape's validity (name non-empty + at least one
+           column chip selected + axis chip on) — see
+           ``updateButtonStates`` below. ``data-shape-cancel``
+           and ``data-shape-add`` are always-on except where
+           the validity check excludes them (e.g. ``Cancel``
+           disabled in saved mode — there's nothing to abandon
+           — and ``Delete`` disabled when this is the only
+           sub-card). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-save title="Save shape">&#10003;</button>
+                  data-shape-save title="Save shape">Save</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px; display: none;"
-                  data-shape-edit title="Edit shape">&#9998;</button>
+                  data-shape-edit title="Edit shape"
+                  style="display: none;">Edit</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-delete title="Delete shape">X</button>
+                  data-shape-cancel
+                  title="Abandon unsaved edits and unselect">Cancel</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-add title="Add another shape below">+</button>
-          {# Download — placeholder; ``aria-disabled`` until
-             the file-gen wiring slice teaches it to extract
-             this shape's CSV. Sits on the same row as the
-             icon group, pushed to the right end via
-             ``margin-left: auto`` so the icons stay grouped
-             tight on the left and the Download button
-             anchors the row's right edge. #}
+                  data-shape-delete title="Delete shape">Delete</button>
+          <button type="button" class="btn secondary"
+                  data-shape-add title="Spawn a new blank shape">+Shape</button>
           <a class="btn secondary"
              data-shape-download
              href="#"
@@ -522,39 +526,43 @@
             </thead>
           </table>
         </div>
-        {# Action row — adopts the new-model Response Fields
-           builder's per-row button vocabulary exactly (see
-           ``instruments_index.html`` lines 3833-3843):
-           ``btn secondary`` with ``style="flex: 0 0 auto;
-           padding: 4px 10px;"`` gives the squarish bordered
-           shape; the glyphs are plain ``X`` / ``+`` rather
-           than the heavier ``✗`` / ``➕`` so the row reads
-           the same way as the Response Fields builder. ✓ /
-           ✎ stay as character glyphs (the tick mirrors the
-           Response Fields builder's per-row save button). #}
+        {# Action row — normal-sized text buttons, inline with
+           the name input. ``Save`` / ``Edit`` are mode-toggle
+           siblings (only one is visible at a time); ``Cancel``
+           abandons unsaved edits and unselects the sub-card;
+           ``Delete`` removes the sub-card (disabled when it's
+           the only one in the stack); ``+Shape`` spawns a
+           fresh blank sub-card after this one and makes it
+           the new selected target; ``Download`` (right-
+           anchored via ``margin-left: auto``) is the
+           placeholder per-shape extract button — ``aria-
+           disabled`` until the file-gen wiring slice lands.
+
+           Every button gates its enabled state on the active
+           shape's validity (name non-empty + at least one
+           column chip selected + axis chip on) — see
+           ``updateButtonStates`` below. ``data-shape-cancel``
+           and ``data-shape-add`` are always-on except where
+           the validity check excludes them (e.g. ``Cancel``
+           disabled in saved mode — there's nothing to abandon
+           — and ``Delete`` disabled when this is the only
+           sub-card). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-save title="Save shape">&#10003;</button>
+                  data-shape-save title="Save shape">Save</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px; display: none;"
-                  data-shape-edit title="Edit shape">&#9998;</button>
+                  data-shape-edit title="Edit shape"
+                  style="display: none;">Edit</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-delete title="Delete shape">X</button>
+                  data-shape-cancel
+                  title="Abandon unsaved edits and unselect">Cancel</button>
           <button type="button" class="btn secondary"
-                  style="flex: 0 0 auto; padding: 4px 10px;"
-                  data-shape-add title="Add another shape below">+</button>
-          {# Download — placeholder; ``aria-disabled`` until
-             the file-gen wiring slice teaches it to extract
-             this shape's CSV. Sits on the same row as the
-             icon group, pushed to the right end via
-             ``margin-left: auto`` so the icons stay grouped
-             tight on the left and the Download button
-             anchors the row's right edge. #}
+                  data-shape-delete title="Delete shape">Delete</button>
+          <button type="button" class="btn secondary"
+                  data-shape-add title="Spawn a new blank shape">+Shape</button>
           <a class="btn secondary"
              data-shape-download
              href="#"
@@ -1301,11 +1309,76 @@
         });
       });
 
+      // Validity check for the Save button — gates the
+      // disabled state per the wiring decisions
+      // (spec/extract_data.md "Validation rules"):
+      // axis chip on AND column chip on AND name non-empty.
+      function shapeIsValid(shape) {
+        if (!shape) return false;
+        var nameInput = shape.querySelector("[data-shape-name]");
+        if (!nameInput || !nameInput.value.trim()) return false;
+        var axisOn = card.querySelector(
+          '[data-shaper-axis-chip][aria-pressed="true"]'
+        );
+        if (!axisOn) return false;
+        var anyCol = relevantSlot.querySelector(
+          '[data-shaper-col-chip][aria-pressed="true"]'
+        );
+        return !!anyCol;
+      }
+
+      // Refresh every action button's disabled state for one
+      // sub-card based on its current mode + the validity
+      // check above. Called on every chip toggle, name input,
+      // mode flip, and card spawn / delete.
+      function updateButtonStates(shape) {
+        if (!shape) return;
+        var mode = shape.getAttribute("data-shape-mode");
+        var isEdit = mode === "edit";
+        var isOnlyShape = stack.querySelectorAll("[data-shape]").length <= 1;
+        var saveBtn = shape.querySelector("[data-shape-save]");
+        var cancelBtn = shape.querySelector("[data-shape-cancel]");
+        var deleteBtn = shape.querySelector("[data-shape-delete]");
+        var addBtn = shape.querySelector("[data-shape-add]");
+        var downloadBtn = shape.querySelector("[data-shape-download]");
+        if (saveBtn) saveBtn.disabled = !(isEdit && shapeIsValid(shape));
+        if (cancelBtn) cancelBtn.disabled = !isEdit;
+        if (deleteBtn) deleteBtn.disabled = isOnlyShape;
+        if (addBtn) addBtn.disabled = false;
+        if (downloadBtn) {
+          // File-gen pipeline still pending — Download stays
+          // disabled across the page until the wiring slice.
+          downloadBtn.setAttribute("aria-disabled", "true");
+        }
+      }
+
+      function updateAllButtonStates() {
+        stack.querySelectorAll("[data-shape]").forEach(updateButtonStates);
+      }
+
+      // Chip toggles drive Save's validity gate — every
+      // ``bindColChip`` / axis-chip / instrument-chip /
+      // field-chip handler ends by calling
+      // ``rebuildPreviewRow`` or its own filter; we wrap them
+      // with a single global hook here so the button states
+      // refresh whenever ANY chip changes. Cleanest way to
+      // catch every chip without threading
+      // ``updateAllButtonStates`` through every existing
+      // handler: a single ``click`` listener on the outer
+      // card that fires after the existing handlers run.
+      card.addEventListener("click", function () {
+        // Defer to next tick so the existing toggle handlers
+        // run first and the ``aria-pressed`` reads reflect
+        // the post-click state.
+        window.setTimeout(updateAllButtonStates, 0);
+      });
+
       function bindShapeCard(shape) {
         var nameInput = shape.querySelector("[data-shape-name]");
         var nameDisplay = shape.querySelector("[data-shape-name-display]");
         var saveBtn = shape.querySelector("[data-shape-save]");
         var editBtn = shape.querySelector("[data-shape-edit]");
+        var cancelBtn = shape.querySelector("[data-shape-cancel]");
         var deleteBtn = shape.querySelector("[data-shape-delete]");
         var addBtn = shape.querySelector("[data-shape-add]");
 
@@ -1315,14 +1388,25 @@
           }
         });
 
+        // Name input keystrokes re-evaluate Save's validity
+        // gate (name non-empty is one of the three checks).
+        if (nameInput) {
+          nameInput.addEventListener("input", function () {
+            updateButtonStates(shape);
+          });
+        }
+
+        // Save = persist the name into the display span but
+        // **stay in edit mode** (per wiring decision: Save
+        // does not unselect). For the placeholder slice
+        // there's no server-side persistence yet — flipping
+        // the display value is the visible feedback. Save
+        // stays disabled until ``shapeIsValid(shape)`` per
+        // the wiring decisions' validation rules.
         saveBtn.addEventListener("click", function () {
-          shape.setAttribute("data-shape-mode", "saved");
-          nameDisplay.textContent = nameInput.value || "(unnamed shape)";
-          nameInput.style.display = "none";
-          nameDisplay.style.display = "";
-          saveBtn.style.display = "none";
-          editBtn.style.display = "";
-          if (activeShape === shape) setActiveShape(null);
+          if (!shapeIsValid(shape)) return;
+          nameDisplay.textContent = nameInput.value;
+          updateAllButtonStates();
         });
 
         editBtn.addEventListener("click", function () {
@@ -1334,17 +1418,34 @@
           nameDisplay.style.display = "none";
           editBtn.style.display = "none";
           saveBtn.style.display = "";
+          cancelBtn.style.display = "";
           setActiveShape(shape);
+          updateAllButtonStates();
+        });
+
+        // Cancel = abandon the in-progress edits + unselect
+        // the sub-card. For the placeholder slice "abandon"
+        // is a no-op (no persisted state to revert to); the
+        // visible effect is the mode flip to saved + the
+        // selected-state clear. The wiring slice will teach
+        // this to revert chip selections to the persisted
+        // shape state.
+        cancelBtn.addEventListener("click", function () {
+          if (cancelBtn.disabled) return;
+          shape.setAttribute("data-shape-mode", "saved");
+          nameDisplay.textContent =
+            nameDisplay.textContent || "(unsaved shape)";
+          nameInput.style.display = "none";
+          nameDisplay.style.display = "";
+          saveBtn.style.display = "none";
+          editBtn.style.display = "";
+          cancelBtn.style.display = "";
+          if (activeShape === shape) setActiveShape(null);
+          updateAllButtonStates();
         });
 
         deleteBtn.addEventListener("click", function () {
-          var allShapes = stack.querySelectorAll("[data-shape]");
-          if (allShapes.length <= 1) {
-            // Never strip the page of its last shape card —
-            // matches the band-3 builder's
-            // always-present-empty-row pattern.
-            return;
-          }
+          if (deleteBtn.disabled) return;
           var wasSelected = activeShape === shape;
           var nextSelected = shape.nextElementSibling
             || shape.previousElementSibling;
@@ -1358,6 +1459,7 @@
             // mode, not how many MUST be.
             setActiveShape(nextSelected);
           }
+          updateAllButtonStates();
         });
 
         addBtn.addEventListener("click", function () {
@@ -1371,6 +1473,7 @@
           bindShapeCard(newShape);
           setActiveShape(newShape);
           rebuildPreviewRow();
+          updateAllButtonStates();
         });
 
         // Hide the (display) span until a save event populates it.
@@ -1380,9 +1483,11 @@
         // table renders visibly on first paint (an empty
         // ``<tr>`` collapses to zero height).
         rebuildPreviewRow(shape);
+        updateButtonStates(shape);
       }
 
       stack.querySelectorAll("[data-shape]").forEach(bindShapeCard);
+      updateAllButtonStates();
     })();
   </script>
 {% endblock %}

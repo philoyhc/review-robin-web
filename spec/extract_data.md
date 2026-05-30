@@ -533,29 +533,46 @@ Each sub-card carries:
    "Pick chips above to compose this shape's columns" —
    keeps the table visible so the operator sees something
    to interact with.
-2. An **action row** with four squarish `btn secondary`
-   icon buttons (matching the Instruments page Response
-   Fields builder pattern — see `instruments_index.html`
-   lines 3833-3843 for the source) followed by a
-   right-anchored `Download` button:
-   - `✓` (`data-shape-save`) — flips the card to saved
-     mode (name input → plain text, `✓` → `✎`).
-   - `✎` (`data-shape-edit`) — flips back to edit mode
-     (the inverse of save).
-   - `X` (`data-shape-delete`) — removes the sub-card from
-     the stack. Never strips the page of its last sub-card:
-     a delete on the final remaining card is a no-op,
-     mirroring the Response Fields builder's always-present
-     empty row.
-   - `+` (`data-shape-add`) — clones a fresh blank sub-card
-     immediately after this one and makes it the active
-     target.
-   - `Download` (`data-shape-download`) — sits on the same
-     row as the icon group, pushed to the right edge via
-     `margin-left: auto`. Placeholder until the file-gen
-     wiring slice teaches it to extract this shape's CSV —
-     currently renders with `href="#"` and
+2. An **action row** with the name input / display followed
+   by a series of normal-sized `btn secondary` text buttons
+   and a right-anchored `Download` anchor. Layout left ➝
+   right:
+   - **Name input** (`data-shape-name`) — visible while the
+     sub-card is in edit mode; collapses behind the saved-
+     name span (`data-shape-name-display`) when not editing.
+   - **`Save` / `Edit`** (`data-shape-save` /
+     `data-shape-edit`) — single mode-toggle slot, only one
+     button visible at a time. `Save` shows in edit mode +
+     stays disabled until the active shape is **valid**
+     (name non-empty + axis chip on + ≥1 column chip on);
+     clicking it persists the name into the display span
+     and **keeps the sub-card in edit mode** (per wiring
+     decision: Save does not unselect). `Edit` shows in
+     saved mode + always enabled.
+   - **`Cancel`** (`data-shape-cancel`) — enabled only in
+     edit mode. Abandons the in-progress edits and unselects
+     the sub-card (flips it to saved mode). Wiring slice
+     will teach this to revert chip selections to the
+     persisted shape state; placeholder is selection-clear
+     only.
+   - **`Delete`** (`data-shape-delete`) — disabled when this
+     is the only sub-card in the stack (mirroring the
+     Response Fields builder's always-present empty row).
+     Otherwise removes the sub-card and transfers the
+     selected state to a neighbour if necessary.
+   - **`+Shape`** (`data-shape-add`) — clones a fresh blank
+     sub-card immediately after this one, makes it the new
+     selected target, and closes the previously-editing
+     card (per the active-shape mutex).
+   - **`Download`** (`data-shape-download`) — right-anchored
+     via `margin-left: auto`. Placeholder until the file-gen
+     wiring slice; currently renders with `href="#"` +
      `aria-disabled="true"`.
+
+   Every button gates its enabled state on the active
+   shape's validity via a single ``updateButtonStates(shape)``
+   helper that runs on every chip toggle, name input,
+   mode flip, and card spawn / delete.
 
 The **always-present blank sub-card** on initial load gives
 the operator an immediate edit target without requiring a
