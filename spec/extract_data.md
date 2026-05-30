@@ -130,6 +130,24 @@ Three families of chip live on the page:
   metadata cards) — `Include metadata` / `All assignment
   rows` on the by-instrument card; `All reviewers` /
   `All reviewees` on the metadata cards.
+- **Self-review handling chip** (metadata cards + Data
+  shaper scope row) — single-pill three-state cycle
+  (`Include self` → `Exclude self` → `Both` → …) shipped
+  in the 2026-05-30 chip slice (PRs #1642 → #1647 — see
+  `guide/archive/extract_data.md`). Drives the column-name
+  suffix (`_self` / `_noself` / `_both`) on every
+  aggregate column, the filename suffix on the download
+  (`{code}_reviewer_metadata{_suffix}.csv` and friends),
+  and the audit-event `context.self_review_handling`
+  slot. The `exclude_self` state adds
+  `Assignment.is_self_review.is_(False)` to the pool
+  query against the canonical column from
+  `guide/archive/self_review_consolidate.md`. On the
+  metadata cards the chip state lives only in the query
+  string (one-shot per download); on the Data shaper it
+  persists per-shape on
+  `data_shapes.self_review_handling` and round-trips
+  through Settings CSV.
 
 Chip ↔ button wiring is uniform across the four wired cards:
 the chip set composes the query string for the card's
@@ -294,6 +312,12 @@ All default-selected.
   meaningful).
 - `?all=0` — set when `All reviewers` / `All reviewees`
   is off.
+- `?self_review_handling=` — `include_self` (default) /
+  `exclude_self` / `both`. Drives the Self-review handling
+  chip's three-state filter + column-name suffix +
+  filename suffix (`_self` / `_noself` / `_both`). Unknown
+  values silently fall through to `include_self` so today's
+  chip-less direct-URL workflows keep working.
 
 **No disable on zero instruments.** Unlike the
 by-instrument card, zero-instrument selection is a valid
@@ -309,12 +333,24 @@ side swaps `ReviewerName` / `ReviewerEmail` for
 
 **Always columns:**
 
+Identity columns stay un-suffixed (they describe the row,
+not the response pool). Aggregate columns — including
+`Assigned` and `Count` — carry the Self-review handling chip
+suffix on every single-state extract, and emit twice on
+`both` (once each for `_self` and `_noself`):
+
 | Column | Meaning |
 |---|---|
 | `ReviewerName` / `RevieweeName` | Roster name. |
 | `ReviewerEmail` / `RevieweeEmail` | Roster email / identifier. |
-| `Assigned` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. |
-| `Count` | Number of those cells with a non-empty response. |
+| `Assigned{_self\|_noself}` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments **AND** the chip's self-review filter. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. |
+| `Count{_self\|_noself}` | Number of those cells with a non-empty response. |
+
+On `?self_review_handling=both` the two aggregate columns
+above expand to four (`Assigned_self`, `Count_self`,
+`Assigned_noself`, `Count_noself`), and each per-(instrument,
+field) block emits twice in the same `_self` → `_noself`
+order.
 
 **Per (instrument, field) column block** (one block per
 selected instrument, for every response field on that
@@ -372,17 +408,26 @@ rollup that ships inside the top-level responses bundle.
 
 ### Audit envelope
 
-Both routes emit a `_IDENTITY | {"counts"}` event with the
-same payload shape:
+Both routes emit a `_IDENTITY | {"counts", "context"}` event
+with the same payload shape:
 
 ```json
 {
   "counts": {
     "rows": <body row count, header excluded>,
     "instruments": <chip selection size, 0 when none selected>
+  },
+  "context": {
+    "self_review_handling": "include_self" | "exclude_self" | "both"
   }
 }
 ```
+
+The `context.self_review_handling` slot records the operator's
+Self-review handling chip state on this download (PR #1642).
+Unknown query-param values fall through to `include_self`
+server-side, so the audit value always reflects what the file
+actually contained.
 
 ## `Data shaper` card
 
@@ -420,7 +465,8 @@ the operator narrows the scope and picks columns.
 
 #### Scope row (top)
 
-Three mutex chip groups separated by vertical pipes (`|`):
+Three mutex chip groups + the Self-review handling chip,
+separated by vertical pipes (`|`):
 
 1. **Axis chip** — `Reviewer` and `Reviewee`, **mutually
    exclusive**. Clicking the off chip deselects whichever
@@ -430,7 +476,21 @@ Three mutex chip groups separated by vertical pipes (`|`):
    little to aggregate. (The `data-shaper-axis-chip="..."`
    attribute drives mount / unmount of the per-axis pool on
    the content row below.)
-2. **Instrument scope chip** — one per session instrument,
+2. **Self-review handling chip** — inline after the axis
+   chips, before the first `|`. Three-state cycle
+   (`Include self` → `Exclude self` → `Both` → …) shipped
+   2026-05-30 (PR #1644). Persists per-shape on the new
+   `data_shapes.self_review_handling` column (see
+   `spec/settings_inventory.md` §9.5). Drives the
+   column-name suffix (`_self` / `_noself` / `_both`) on
+   every aggregate column in the extract, the filename
+   suffix on the download, and the audit-event
+   `context.self_review_handling` slot. Carries
+   `data-shaper-self-review-chip="data-shaper"` so the
+   chips-lock-when-no-edit-mode CSS rule on
+   `[data-shaper-chips-locked="true"]` greys it out
+   alongside the rest of the scope-row chips.
+3. **Instrument scope chip** — one per session instrument,
    labelled `#{N}: {short_label}` exactly like the
    By-instrument card. **Mutually exclusive** — one
    instrument at a time. Selecting an instrument also
@@ -439,7 +499,7 @@ Three mutex chip groups separated by vertical pipes (`|`):
    selected the (eventual) aggregate columns span every
    session instrument, matching the legacy "By reviewer" /
    "By reviewee" framings.
-3. **Response-field scope chip** — one per response field
+4. **Response-field scope chip** — one per response field
    on the selected instrument, **mutually exclusive**, chip
    text = the field's friendly label
    (`field.label` falling back to `field.field_key`).
@@ -713,9 +773,9 @@ Three new event types register against `EVENT_SCHEMAS`:
 
 | Event type | Envelope | Notes |
 |---|---|---|
-| `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, name); `refs.shape_id` carries the row's id. |
+| `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, self_review_handling, name); `refs.shape_id` carries the row's id. |
 | `session.data_shape_deleted` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on DELETE. `snapshot` captures the deleted row's columns so the audit trail can reconstruct what existed pre-delete. |
-| `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted. |
+| `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs", "context"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted; `context.self_review_handling` records the chip state the download was generated under (PR #1643). |
 
 #### Validation rules
 
