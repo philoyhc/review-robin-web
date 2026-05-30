@@ -39,7 +39,7 @@
                 data-extract-all-chip="by-instruments"
                 role="button"
                 tabindex="0"
-                aria-pressed="true">By instruments</span>
+                aria-pressed="true">By instrument</span>
           <span class="pill pill-count tag-chip is-selected"
                 data-extract-all-chip="reviewer-metadata"
                 role="button"
@@ -160,6 +160,19 @@
                 role="button"
                 tabindex="0"
                 aria-pressed="true">All reviewers</span>
+          {# Placeholder for the proposed three-state Self-review
+             handling chip (Include self / Exclude self / Both).
+             Visually inert until the chip slice lands per
+             ``guide/extract_data.md`` § *Self-review handling —
+             gap analysis* PR A. #}
+          <span class="pill pill-count tag-chip"
+                data-self-review-handling-placeholder="reviewer-metadata"
+                role="button"
+                tabindex="-1"
+                aria-disabled="true"
+                aria-pressed="false"
+                title="Self-review handling chip — placeholder; wiring lands in a follow-up PR per guide/extract_data.md."
+                style="opacity: 0.5; cursor: default;">Self-review handling</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
@@ -198,6 +211,17 @@
                 role="button"
                 tabindex="0"
                 aria-pressed="true">All reviewees</span>
+          {# Placeholder for the proposed three-state Self-review
+             handling chip — same shape as the Reviewer metadata
+             card's placeholder. #}
+          <span class="pill pill-count tag-chip"
+                data-self-review-handling-placeholder="reviewee-metadata"
+                role="button"
+                tabindex="-1"
+                aria-disabled="true"
+                aria-pressed="false"
+                title="Self-review handling chip — placeholder; wiring lands in a follow-up PR per guide/extract_data.md."
+                style="opacity: 0.5; cursor: default;">Self-review handling</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
@@ -274,6 +298,18 @@
       <span class="pill pill-count tag-chip"
             data-shaper-axis-chip="reviewee"
             role="button" tabindex="0" aria-pressed="false">Reviewee</span>
+      {# Placeholder for the proposed three-state Self-review
+         handling chip on the Data shaper scope row. Sits between
+         the axis chips and the first ``|`` per the operator's
+         spec note. Inert until the chip slice lands (PR B / PR C
+         in ``guide/extract_data.md`` § *Self-review handling —
+         gap analysis*). #}
+      <span class="pill pill-count tag-chip"
+            data-self-review-handling-placeholder="data-shaper"
+            role="button" tabindex="-1"
+            aria-disabled="true" aria-pressed="false"
+            title="Self-review handling chip — placeholder; wiring lands in a follow-up PR per guide/extract_data.md."
+            style="opacity: 0.5; cursor: default;">Self-review handling</span>
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       {% for instr in instruments %}
         {% set chip_short = (instr.short_label or "").strip() %}

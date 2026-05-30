@@ -536,7 +536,7 @@ def test_extract_all_card_renders_lens_selector_chips(
     ).text
 
     assert 'data-extract-all-chip="by-instruments"' in body
-    assert ">By instruments<" in body
+    assert ">By instrument<" in body
     assert 'data-extract-all-chip="reviewer-metadata"' in body
     assert ">Reviewer response metadata<" in body
     assert 'data-extract-all-chip="reviewee-metadata"' in body
@@ -599,6 +599,65 @@ def test_reviewee_metadata_card_renders_selectable_chips(
     assert ">All reviewees<" in chip_block
     assert chip_block.count("is-selected") == 2
     assert chip_block.count('aria-pressed="true"') == 2
+
+
+def test_self_review_handling_placeholders_render_on_three_cards(
+    client: TestClient, db: Session
+) -> None:
+    """The proposed three-state ``Self-review handling`` chip
+    ships as an inert placeholder on three cards ahead of the
+    chip slice's wiring (PRs A / B / C per
+    ``guide/extract_data.md`` § *Self-review handling — gap
+    analysis*). Placeholders carry a stable
+    ``data-self-review-handling-placeholder="{card}"`` attribute,
+    ``aria-disabled="true"``, and the label text so visual
+    placement is locked in now. Wiring lands later."""
+    review_session = _make_session(client, db, code="ed-self-review-ph")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    # Three placeholders — one per affected card.
+    assert (
+        'data-self-review-handling-placeholder="reviewer-metadata"' in body
+    )
+    assert (
+        'data-self-review-handling-placeholder="reviewee-metadata"' in body
+    )
+    assert (
+        'data-self-review-handling-placeholder="data-shaper"' in body
+    )
+    # Each placeholder is inert and labelled.
+    assert body.count('data-self-review-handling-placeholder=') == 3
+    assert body.count("Self-review handling") >= 3
+    # The Reviewer / Reviewee placeholders are inline AFTER the
+    # ``All reviewers`` / ``All reviewees`` chip (the spec's
+    # "last chip inline" placement).
+    reviewer_block = body.split('id="extract-data-by-reviewer"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert reviewer_block.index(">All reviewers<") < reviewer_block.index(
+        "data-self-review-handling-placeholder"
+    )
+    reviewee_block = body.split('id="extract-data-by-reviewee"')[1].split(
+        "extract-data-card-actions"
+    )[0]
+    assert reviewee_block.index(">All reviewees<") < reviewee_block.index(
+        "data-self-review-handling-placeholder"
+    )
+    # The Data shaper placeholder sits AFTER the Reviewee axis
+    # chip but BEFORE the first axis-row pipe (the spec's
+    # "after Reviewer, Reviewee, just before the first |"
+    # placement).
+    shaper_block = body.split('id="extract-data-shaper"')[1].split(
+        "data-shaper-stack"
+    )[0]
+    reviewee_pos = shaper_block.index('data-shaper-axis-chip="reviewee"')
+    placeholder_pos = shaper_block.index(
+        'data-self-review-handling-placeholder="data-shaper"'
+    )
+    first_pipe_pos = shaper_block.index("shaper-axis-pipe")
+    assert reviewee_pos < placeholder_pos < first_pipe_pos
 
 
 def test_by_instrument_card_renders_selectable_chips(
