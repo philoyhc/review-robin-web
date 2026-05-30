@@ -518,7 +518,7 @@ def test_data_shaper_initial_blank_shape_card(
     assert 'data-shape-selected="true"' in stack_block
     assert "data-shape-preview-row" in stack_block
     assert "data-shape-name" in stack_block
-    for action in ("save", "edit", "delete", "add", "download"):
+    for action in ("save", "edit", "cancel", "delete", "add", "download"):
         assert f"data-shape-{action}" in stack_block
 
 
