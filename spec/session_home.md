@@ -75,7 +75,7 @@ Two-column body below the chrome and status strip.
 
 > **Note.** The right-column card was renamed from "Extract
 > Data" → "Extract Setup" on 2026-05-29 (per
-> `guide/extract_data.md`) to mark it as the porting / archival
+> `guide/archive/extract_data.md`) to mark it as the porting / archival
 > surface — Reviewers / Reviewees / Relationships / Session
 > settings, the inputs Quick Setup can re-ingest. Fine-grained
 > shaping of response data moved to a new **Extract data**
@@ -240,7 +240,7 @@ placement:
 Originally five tiles (Reviewers / Reviewees / Relationships /
 Settings / Responses) plus a zip footer; the Responses tile
 moved to the new **Extract data** Operations-strip tab on
-2026-05-29 (per `guide/extract_data.md`). The Zip-all bundle
+2026-05-29 (per `guide/archive/extract_data.md`). The Zip-all bundle
 slimmed in the same change — it now contains only the four
 setup CSVs and exports as `{code}_setup.zip` (was
 `{code}_bundle.zip`). Response-side downloads — unified

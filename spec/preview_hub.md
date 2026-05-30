@@ -57,8 +57,8 @@ A list of preview cards, one per reviewer-facing artifact. Cards render top-to-b
 
 1. **Invitation email** — the message that brings the reviewer into the session. *Shipped in 11F PR B.*
 2. **Response form** — the page where the reviewer completes their review. *Shipped in 11F PR C as an iframe surface card on the hub; **retired 2026-05-28** in favor of the dedicated operator-side preview route ``/operator/sessions/{id}/preview-surface/{page_n}`` reachable via the "Open full preview" button on the picker card. The form artifact is no longer rendered inline on the hub; the link is the affordance.*
-3. **Reminder email** — the message sent if the reviewer hasn't responded by the configured threshold. *Pending — 11F PR D.*
-4. **Responses-received email** — the confirmation sent after the reviewer submits. *Pending — 11F PR E (coordinates with Segment 11E PR 6's `render_responses_received` follow-on).*
+3. **Reminder email** — the message sent if the reviewer hasn't responded by the configured threshold. *Shipped in 11F PR D.*
+4. **Responses-received email** — the confirmation sent after the reviewer submits. *Shipped in 11F PR E (coordinates with Segment 11E PR 6's `render_responses_received` follow-on).*
 
 The list is **extensible**: new reviewer-facing artifacts added to the system in future segments should appear in this list automatically (or with minimal addition). The hub's structure should not hard-code exactly four artifacts; it should iterate over a registry of reviewer-facing artifacts.
 
