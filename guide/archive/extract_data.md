@@ -1,11 +1,29 @@
 # Extract data — new Operations tab + Session Home card split
 
-> **Stub created 2026-05-29.** Captures the plan to split the
-> current Session Home "Extract data" card into two surfaces:
-> a slimmed-down **Extract setup** card on Session Home
-> (porting-shaped CSVs only), and a new **Extract data** tab in
-> the Operations strip whose job is fine-grained shaping of the
-> response data for offline analysis.
+> **Shipped 2026-05-29 → 2026-05-30 across PRs #1565 → #1627.**
+> Session Home card split + new **Extract data** Operations
+> tab + per-instrument / reviewer-metadata / reviewee-metadata
+> lenses + the full **Data shaper** (saved `data_shapes` with
+> CRUD routes, file generation, Settings CSV round-trip, and
+> Zip-all integration). Archived to `guide/archive/`
+> 2026-05-30; this doc is preserved as the design record. For
+> current behaviour see `spec/extract_data.md` and the on-page
+> UI; the wiring lives in
+> `app/web/routes_operator/_extract_data.py`,
+> `app/services/data_shapes.py`,
+> `app/services/extracts/data_shape_extract.py`,
+> `app/services/extracts/zip_bundle.py`
+> (`include_data_shapes`), and
+> `app/services/session_config_io/{_serialize,_apply}.py`
+> (`_data_shape_rows` + `_apply_data_shapes`).
+>
+> **Original stub header (created 2026-05-29):** Captures the
+> plan to split the current Session Home "Extract data" card
+> into two surfaces: a slimmed-down **Extract setup** card on
+> Session Home (porting-shaped CSVs only), and a new
+> **Extract data** tab in the Operations strip whose job is
+> fine-grained shaping of the response data for offline
+> analysis.
 
 ## Why this exists
 

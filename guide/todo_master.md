@@ -1085,6 +1085,91 @@ sections).
 
 ---
 
+### Extract data — Session Home card split + new Operations tab — done 2026-05-29 → 2026-05-30
+
+Two-pronged surface split. The Session Home **Extract data**
+card became **Extract setup** (porting-shaped CSVs only —
+Reviewers / Reviewees / Relationships / Session settings + a
+four-CSV `{code}_setup.zip`); a new **Extract data** tab
+joined the Operations strip after Responses for fine-grained
+response-data shaping. Lives at
+`/operator/sessions/{id}/extract-data` via
+`app/web/routes_operator/_extract_data.py`.
+
+Page layout: 2-column grid of half-width cards
+(`Extract all data` intro card + `By instrument` lens on the
+left; `Reviewer response metadata` + `Reviewee response
+metadata` on the right) with a full-width **Data shaper**
+below. Reviewer / Reviewee metadata cards moved away from the
+original "by reviewer / by reviewee" lens framing — bulk
+response data trivially reshapes from the by-instrument
+export, so these surfaces ship aggregates instead (`Assigned`
+/ `Count` always; `Mean` / `Median` / `Min` / `Max` for
+numeric fields; `Length` for string fields), with the
+asymmetric group-scoped dedupe rule (reviewer side dedupes
+by `(reviewer-tag-combo, group_key, field_id)`; reviewee side
+counts each member-assignment).
+
+The **Data shaper** is the generalised builder for custom
+column composition. Each shape = one CSV. Two stacked chip
+rows compose the shape: a **scope row** (mutex
+`Reviewer` / `Reviewee` axis + mutex instrument scope + mutex
+response-field scope) and a **content row** (per-axis
+identification chips + aggregate chips that filter by the
+selected field's data type, plus fan-out chips for
+`List items` and `Discrete steps`). Saved shapes persist in
+the new `data_shapes` table (`UNIQUE (session_id, name)`),
+render as `data-shape-mode="saved"` sub-cards on page
+re-render, and survive Settings CSV round-trip via portable
+references (instrument by `short_label`, response field by
+`field_key`).
+
+Shipped across three rolling slices:
+
+- **UI buildout — PRs #1565 → #1614 (~30 PRs).** Card split
+  + Operations-tab landing + Data shaper UI iterated to its
+  final shape (two-row chip layout, mutex chip groups, name
+  ↔ Email coupling, sub-card stack with live preview row,
+  empty-state placeholder).
+- **Wiring slice — PRs #1618 → #1623 (6 PRs).** PR 1
+  (`data_shapes` table + migration `683e99cca6b7`); PR 2
+  (service layer `app/services/data_shapes.py` + three audit
+  events `session.data_shape_saved` / `_deleted` /
+  `_extracted` registered in `EVENT_SCHEMAS`); PR 3 (CRUD
+  routes + JS POST/PATCH/DELETE wiring + server-render of
+  saved shapes); PR 4
+  (`app/services/extracts/data_shape_extract.py` file-gen +
+  `GET .../{shape_id}/download.csv` route + per-shape
+  download); PR 5 (saved shapes fold into the top-level
+  `Zip all` bundle via `build_responses_bundle(include_data_shapes=True)`);
+  PR 6 (Settings CSV round-trip via
+  `_data_shape_rows` in `_serialize.py` +
+  `_apply_data_shapes` in `_apply.py` with portable refs).
+- **Bug-fix follow-ups — PRs #1624 → #1627 (4 PRs).**
+  `sessionId` scoping fix in the second IIFE so save / delete
+  / download stopped 404-ing; preview / name display state
+  machine across Edit / +Shape / Cancel; Jinja `tojson | e`
+  Markup-escape attribute fix (single-quoted attribute);
+  canonical CSV column headers on saved-card preview cells
+  + saved-card preview survival when `+Shape` clears active
+  chips.
+
+Test coverage: 5 new test files (`test_data_shape_model.py`,
+`test_data_shapes_service.py`,
+`tests/integration/test_data_shapes_routes.py`,
+`test_data_shape_extract.py`,
+`test_data_shapes_settings_roundtrip.py`); the existing
+`test_extracts_responses_bundle_route.py` extended for
+`include_data_shapes`. All settings round-trip-tested:
+session metadata + 18G scheduled events + email overrides +
+per-instrument (incl. 18N inline response-field type /
+bounds / visible) + RuleSets + field labels + data shapes.
+
+Plan archived: `guide/archive/extract_data.md`.
+Functional spec: `spec/extract_data.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -1098,13 +1183,12 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**URL remodel, 14B, Extract data, 19, 20** (18K + 18L + 18M
-+ 18N closed 2026-05-28; 18J retired 2026-05-26; URL remodel
-is the ``/reviewer/`` → ``/me/`` aggressive-rename stub best
-landed before 14B Part A; Extract data is the Session Home
-card split + new Operations tab for response-data shaping).
-No global ordering constraints beyond the few dep chains
-called out at the bottom of this file.
+**URL remodel, 14B, 19, 20** (Extract data closed 2026-05-30;
+18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
+2026-05-26; URL remodel is the ``/reviewer/`` → ``/me/``
+aggressive-rename stub best landed before 14B Part A). No
+global ordering constraints beyond the few dep chains called
+out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1139,21 +1223,6 @@ called out at the bottom of this file.
   ``guide/participant_model_upgrade.md`` §5.1 on 2026-05-28
   so the rename can land independently.
   **Plan:** ``guide/url_remodel.md``.
-
-- **Extract data — Session Home card split + new Operations
-  tab** *(stub created 2026-05-29)*. Renames the Session Home
-  **Extract data** card to **Extract setup** (porting-shaped
-  CSVs only — Reviewers / Reviewees / Relationships / Session
-  settings + a four-CSV Zip-all), and adds a new **Extract
-  data** tab to the Operations strip after Responses for
-  fine-grained response-data shaping (by instrument /
-  by reviewer / by reviewee lenses). Aim is to shape the data
-  to facilitate offline analysis — no charts or in-app
-  pivots. Sized at ~3-4 small PRs; independent of the
-  numbered queue. Best landed **after URL remodel** so any
-  internal links to the reviewer surface ship with `/me/`
-  prefixes from day 1.
-  **Plan:** ``guide/extract_data.md``.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
