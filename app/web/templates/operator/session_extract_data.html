@@ -539,7 +539,14 @@
              data-shape-axis="{{ saved.axis }}"
              {% if saved.instrument_id is not none %}data-shape-instrument-id="{{ saved.instrument_id }}"{% endif %}
              {% if saved.response_field_id is not none %}data-shape-response-field-id="{{ saved.response_field_id }}"{% endif %}
-             data-shape-column-slots="{{ saved.column_chip_slots | tojson | e }}">
+             {# Single-quoted attribute so the JSON's double
+                quotes don't conflict — ``tojson`` returns a
+                Markup (safe) string, and ``| e`` no-ops on
+                ``__html__``-bearing values, so the
+                attribute previously rendered with raw
+                double-quotes inside double quotes
+                (collapsing to an empty value). #}
+             data-shape-column-slots='{{ saved.column_chip_slots | tojson }}'>
           <div class="shaper-preview-scroll">
             <table class="shaper-preview-table">
               <thead>

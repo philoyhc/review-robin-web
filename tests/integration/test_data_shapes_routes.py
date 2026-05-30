@@ -248,6 +248,17 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-mode="saved"' in body
     assert 'data-shape-axis="reviewer"' in body
+    # ``data-shape-column-slots`` carries the JSON-encoded
+    # slot list. Rendered into a **single-quoted** attribute
+    # so the JSON's double quotes don't conflict — Jinja's
+    # ``tojson`` filter returns a Markup string that
+    # subsequent ``| e`` no-ops on, so the previous
+    # double-quoted form collapsed to an empty attribute.
+    expected_slots_attr = (
+        'data-shape-column-slots=\'["reviewer:name", '
+        '"reviewer:email", "reviewer:assigned"]\''
+    )
+    assert expected_slots_attr in body
     # Preview row pre-populated with the saved column slots.
     assert ">reviewer:name<" in body
     assert ">reviewer:email<" in body
