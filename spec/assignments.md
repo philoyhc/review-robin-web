@@ -345,6 +345,48 @@ they're "active" is a post-generation toggle. This is the
 user-facing affordance — the operator can flip self-review
 inclusion at any time without re-running Generate.
 
+### Group-scoped instruments — the whole-group rule
+
+On a **group-scoped** instrument (`Instrument.group_kind`
+non-NULL — see *Group-scoped fan-out* below), one logical
+review-of-a-group is stored as **multiple `Assignment` rows**:
+one row per `(reviewer, group_member)` pair, sharing a single
+`group_key`. The reviewer fills out one answer for the whole
+group; the save layer copies that answer onto every member
+row.
+
+The canonical self-review rule under this fan-out is the
+**whole-group rule**: a review of a group counts as a
+self-review iff **the reviewer is themselves a member of the
+group they're reviewing** (i.e., one of the `(R, member)`
+pairs in the group has `member == R` by the `is_self_review`
+identity test). When the rule fires, **every** `Assignment`
+row in that group is a self-review row, not just the `(R, R)`
+member pair. Excluding self-reviews on a group-scoped
+instrument rules the whole group out, not just the `(R, R)`
+cell.
+
+This is what the policy / exclusion machinery already honors
+— `_self_review_assignment_ids` in
+`app/services/assignments.py:282` is the canonical
+implementation and is the function every caller that needs
+"is this assignment row a self-review" should go through.
+On individual-scoped instruments it collapses to the per-row
+`is_self_review(reviewer, reviewee)` test; on group-scoped
+instruments it applies the whole-group rule.
+
+> **Known gap (tracked for follow-up).** The wide-format
+> By-instrument extract today hardcodes `SelfReview = FALSE`
+> on group-scoped rows
+> (`app/services/extracts/by_instrument_extract.py:436`)
+> instead of consulting the canonical helper. It silently
+> mislabels self-review groups. The proposed-2026-05-30
+> Self-review handling chip slice (see
+> `guide/extract_data.md` § *Self-review handling in
+> summarizing extracts*) is the natural carrier for the fix
+> — switching the column over to the whole-group rule at
+> the same time as the new chip lands.
+
 ## Group-scoped fan-out
 
 When `Instrument.group_kind` is non-NULL, the instrument is

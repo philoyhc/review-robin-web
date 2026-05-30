@@ -659,12 +659,16 @@ states:
 |---|---|---|---|
 | **Include self** | Fold self-review responses into the row's `Count` / `Mean` / `Median` / `Min` / `Max` / `Length` exactly as today. | `_self` on every aggregate column. | `_self` appended before the extension. |
 | **Exclude self** | Drop self-review responses from the row's aggregates. `Assigned` also drops the self-pair cells so the denominator stays honest. | `_noself` on every aggregate column. | `_noself` appended before the extension. |
-| **Both** | The response-data column block is **duplicated** — first an include-self block (columns suffixed `_self`), then an exclude-self block (columns suffixed `_noself`), so a single CSV side-by-sides both views. Only selectable when both kinds of data exist in scope. | Both suffixes coexist in the same row. | *(open — see clarifying question below.)* |
+| **Both** | The response-data column block is **duplicated** — first an include-self block (columns suffixed `_self`), then an exclude-self block (columns suffixed `_noself`), so a single CSV side-by-sides both views. Only selectable when both kinds of data exist in scope. | Both suffixes coexist in the same row. | `_both` appended before the extension. |
 
-Identity columns (`ReviewerName`, `ReviewerEmail`, tag
-columns, `Assigned` — see clarifying question) carry no
-suffix; only the field-scoped aggregate columns get the
-`_self` / `_noself` marker.
+`Assigned` and `Count` are **part of the duplicated
+response-data column block** (they're scoped by self / no-self
+just like `Mean` / `Median` / `Min` / `Max` / `Length` — the
+denominator and the cell-count both change between the two
+pools), so they take the same `_self` / `_noself` suffix as
+the field-scoped aggregates. Only the **identity columns**
+(`ReviewerName`, `ReviewerEmail`, tag columns) carry no
+suffix — they describe the row, not the response pool.
 
 **Cards affected.**
 
@@ -678,12 +682,38 @@ suffix; only the field-scoped aggregate columns get the
   on the `DataShape` row (new column) so the operator's
   choice survives navigation + re-download + Settings CSV
   round-trip.
-- **By-instrument card** — *not affected*. That CSV is wide-
-  format raw (one row per assignment with a per-row
-  `SelfReview` `TRUE` / `FALSE` column already); offline
-  filtering is trivial. Adding the chip there would
-  duplicate machinery that the per-row column already
-  serves.
+- **By-instrument card** — *not affected by the chip*. That
+  CSV is wide-format raw (one row per assignment with a
+  per-row `SelfReview` `TRUE` / `FALSE` column already);
+  offline filtering is trivial. Adding the chip there would
+  duplicate machinery the per-row column already serves.
+  **But there's a known latent bug to fix in the same slice
+  while we're here:** the By-instrument extract hardcodes
+  `SelfReview = FALSE` for group-scoped rows (see
+  `app/services/extracts/by_instrument_extract.py:436`),
+  silently mislabelling self-review groups. The fix is to
+  route through the canonical helper (see *Self-review
+  classification* below) so the column reflects the
+  whole-group rule.
+
+**Self-review classification.** The aggregate-fold rule —
+which responses count as self-review for the chip's
+"include / exclude / both" decision — uses the **canonical
+whole-group rule** from `spec/assignments.md` *Self-review
+policy* → *Group-scoped instruments — the whole-group rule*:
+
+- On individual-scoped instruments: a row is self-review iff
+  `is_self_review(reviewer, reviewee)` (case-insensitive
+  email match; FALSE on non-email reviewee identifiers).
+- On group-scoped instruments: the **whole group** is
+  self-review iff the reviewer is themselves a member of the
+  group they're reviewing. Every `Assignment` row in that
+  group counts as self-review, not just the `(R, R)` cell.
+  This matches what the policy / exclusion machinery already
+  does via `_self_review_assignment_ids` in
+  `app/services/assignments.py:282` — the chip should reuse
+  that helper (or a refactored public surface of it) so the
+  rule stays in one place.
 
 **Audit event payload.** The `_extracted` events grow a
 `context.self_review_handling` scalar slot
@@ -706,38 +736,44 @@ plumb it through.
 `data_shapes[N].self_review_handling` in `_data_shape_rows`
 + `_apply_data_shapes`. One round-trip test case per state.
 
-**Open clarifying questions** (resolve before the slice
-starts):
+**Resolved clarifying questions (2026-05-30).**
 
-1. **`Assigned` column on `Exclude self` / `Both` rows.** On
-   `Exclude self`, `Assigned` drops the self-pair cell so
-   the denominator matches the aggregate scope — agreed
-   above. On `Both`, does `Assigned` ship as one column with
-   no suffix (the value diverges between the two blocks —
-   awkward), or as two columns `Assigned_self` and
-   `Assigned_noself`? Lean: the latter, for honest
-   denominators on each block.
-2. **Filename suffix on `Both`.** Plain
-   `{code}_reviewer_metadata.csv` (the file carries both
-   views and is the comprehensive download), or
-   `{code}_reviewer_metadata_both.csv` for parity with the
-   other two states? Lean: plain — the suffix is for *which
-   slice the file shows*, and `Both` shows both.
-3. **Default state when the chip appears.** Lean
-   `Include self` — matches current behavior on sessions
-   that already have self-review rows, so existing
-   workflows + previously-saved Data shapes don't shift
-   silently. The migration for `data_shapes` defaults to
-   `include_self` for the same reason.
+1. **`Assigned` (and `Count`) on `Exclude self` / `Both`
+   rows — part of the duplicated block.** `Assigned` and
+   `Count` are scoped by self / no-self alongside the
+   field-scoped aggregates, so they take the same suffix and
+   participate in the `Both` duplication. On `Both` the file
+   carries `Assigned_self`, `Count_self`, …, then
+   `Assigned_noself`, `Count_noself`, …
+2. **Filename suffix on `Both` — `_both`.** Same shape as
+   the other two states; the suffix tells a downstream
+   consumer at a glance which pool the file represents
+   without opening it.
+3. **Default state when the chip appears (operator-
+   selectable case) — `Include self`.** Matches today's
+   behaviour on sessions that already have self-review rows,
+   so existing workflows + previously-saved Data shapes
+   don't shift silently. The `data_shapes` migration
+   defaults to `include_self` for the same reason.
+
+**Still open — flag for follow-up.**
+
 4. **Per-individual rows on the Data shaper.** When the
    shape's row identity is per-individual (Name / Email
    selected), a row's "self-review contribution" is the
    response that individual entered on their own
-   self-review. The three-way chip controls whether that
-   one cell folds into the row's aggregates — same rule as
-   the metadata cards, applied to the per-individual scope.
-   Per-tag-combo and single-summary rows aggregate across
-   multiple individuals so the rule applies pool-wide.
+   self-review. The straightforward read is: the three-way
+   chip controls whether that one cell folds into the row's
+   aggregates — same rule as the metadata cards, applied to
+   the per-individual scope. But the per-individual case
+   has a wrinkle that needs more thought (does a row whose
+   only response is their own self-review still surface on
+   `Exclude self`? as an empty row? not at all? what about
+   the `Count` denominator on that case?). Per-tag-combo
+   and single-summary rows aggregate across multiple
+   individuals so the rule applies pool-wide there — those
+   are the unproblematic cases. Revisit before the Data
+   shaper side of the slice starts.
 
 **Blast radius.** ~1 small PR for the metadata-card side (no
 schema — chip state is one-shot, lives only in the query
