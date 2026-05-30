@@ -74,7 +74,7 @@ review-robin-web/
 
 The repo intentionally does not commit machine-specific files. You'll need:
 
-### `.env` (required for `/me` and `/me/debug` to work locally)
+### `.env` (required for `/auth/me` and `/auth/me/debug` to work locally)
 
 Copy the template and turn on fake auth so the auth-gated routes return a
 user instead of a 401:
@@ -166,11 +166,11 @@ After the app is running on `http://127.0.0.1:8000/`:
 |-----------------------------|--------------------------------------------------------------|
 | `/health`                   | `200` JSON `{"status": "ok"}`                                |
 | `/`                         | `200` JSON service metadata.                                 |
-| `/me`                       | `200` JSON for the fake user (`is_fake: true`).              |
-| `/me/debug`                 | `200` HTML page; "fake auth" pill shown; "No claims found".  |
+| `/auth/me`                       | `200` JSON for the fake user (`is_fake: true`).              |
+| `/auth/me/debug`                 | `200` HTML page; "fake auth" pill shown; "No claims found".  |
 | `/docs`                     | FastAPI's automatic Swagger UI.                              |
 
-If `/me` returns `401`, your `.env` is missing or `ALLOW_FAKE_AUTH` is not
+If `/auth/me` returns `401`, your `.env` is missing or `ALLOW_FAKE_AUTH` is not
 set to `true`.
 
 ---
@@ -205,7 +205,7 @@ Your venv was created with Python 3.11 or older. Recreate with
 ### `ModuleNotFoundError: No module named 'pytest'`
 Either the venv is not activated or `pip install -e .[dev]` was not run.
 
-### `/me` returns 401 locally
+### `/auth/me` returns 401 locally
 `ALLOW_FAKE_AUTH=true` is missing in `.env`. Easy Auth headers don't exist
 locally, so without fake auth there is no identity to return.
 
@@ -226,7 +226,7 @@ this stage.
 ## 9. Where to look next
 
 - `docs/authentication.md` — how Easy Auth identity is parsed; what the
-  `/me` and `/me/debug` routes do.
+  `/auth/me` and `/auth/me/debug` routes do.
 - `docs/database.md` — model conventions, migration generation rules, the
   cross-dialect type policy, where Postgres lands.
 - `docs/deployment_dev.md` — the dev Azure App Service deployment.

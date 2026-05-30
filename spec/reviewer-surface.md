@@ -976,7 +976,7 @@ Behaviour:
 A single `.banner.banner-warning` explaining the email mismatch,
 followed by a `.btn-pair` with two Secondary anchors:
 
-- **Sign-in details** → `/me/debug` (so the reviewer can confirm
+- **Sign-in details** → `/auth/me/debug` (so the reviewer can confirm
   which account they're signed in as).
 - **Your reviewer dashboard** → `/reviewer`.
 

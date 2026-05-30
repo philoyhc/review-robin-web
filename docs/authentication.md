@@ -47,7 +47,7 @@ to whatever the simple headers provide, rather than raising.
 
 ## Local development: fake auth
 
-Easy Auth headers do not exist when running `uvicorn` locally. To make `/me`
+Easy Auth headers do not exist when running `uvicorn` locally. To make `/auth/me`
 and other authenticated routes usable on a developer machine, the app supports
 a **controlled fake-auth fallback**:
 
@@ -64,7 +64,7 @@ Rules:
 - The default for `allow_fake_auth` is `False`, so deployed environments do
   not accept it unless someone explicitly sets the env var (don't).
 - The resulting user has `is_fake=True` and `provider="fake"`, so it's
-  obvious in `/me` output and in any future audit log.
+  obvious in `/auth/me` output and in any future audit log.
 
 > **Warning:** Fake auth is a development convenience only. Never set
 > `ALLOW_FAKE_AUTH=true` in Azure App Service configuration.
@@ -73,7 +73,7 @@ Rules:
 
 There are two diagnostic surfaces:
 
-### `GET /me` (JSON)
+### `GET /auth/me` (JSON)
 
 Machine-readable identity, useful for scripting and tests:
 
@@ -87,7 +87,7 @@ Machine-readable identity, useful for scripting and tests:
 }
 ```
 
-### `GET /me/debug` (HTML)
+### `GET /auth/me/debug` (HTML)
 
 Human-readable page that renders:
 

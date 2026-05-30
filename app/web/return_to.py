@@ -1,4 +1,4 @@
-"""Return-to-origin helper for detour destinations (About, /me/debug).
+"""Return-to-origin helper for detour destinations (About, /auth/me/debug).
 
 Per `spec/visual_style_rrw.md` "Return-to-origin behavior", these pages
 render a "← Back to {context}" affordance whose target is captured via

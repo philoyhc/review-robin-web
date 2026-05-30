@@ -21,7 +21,7 @@ def _request(headers: dict[str, str] | None = None) -> Request:
     scope = {
         "type": "http",
         "method": "GET",
-        "path": "/me",
+        "path": "/auth/me",
         "headers": raw,
     }
     return Request(scope)
