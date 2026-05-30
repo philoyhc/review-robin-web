@@ -533,10 +533,12 @@ Each sub-card carries:
    "Pick chips above to compose this shape's columns" —
    keeps the table visible so the operator sees something
    to interact with.
-2. An **action row** with the name input / display followed
-   by a series of normal-sized `btn secondary` text buttons
-   and a right-anchored `Download` anchor. Layout left ➝
-   right:
+2. An **action row** flushed to the right edge of the
+   sub-card (`.data-shape-actions` carries
+   `justify-content: flex-end`). The name input / display
+   sits inline with the action buttons + `Download` —
+   they're not split across rows or columns. Layout left ➝
+   right within the right-anchored strip:
    - **Name input** (`data-shape-name`) — visible while the
      sub-card is in edit mode; collapses behind the saved-
      name span (`data-shape-name-display`) when not editing.
@@ -564,10 +566,10 @@ Each sub-card carries:
      sub-card immediately after this one, makes it the new
      selected target, and closes the previously-editing
      card (per the active-shape mutex).
-   - **`Download`** (`data-shape-download`) — right-anchored
-     via `margin-left: auto`. Placeholder until the file-gen
-     wiring slice; currently renders with `href="#"` +
-     `aria-disabled="true"`.
+   - **`Download`** (`data-shape-download`) — sits at the
+     right-most end of the strip. Placeholder until the
+     file-gen wiring slice; currently renders with
+     `href="#"` + `aria-disabled="true"`.
 
    Every button gates its enabled state on the active
    shape's validity via a single ``updateButtonStates(shape)``

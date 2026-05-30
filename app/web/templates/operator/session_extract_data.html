@@ -472,10 +472,15 @@
            ``Delete`` removes the sub-card (disabled when it's
            the only one in the stack); ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
-           the new selected target; ``Download`` (right-
-           anchored via ``margin-left: auto``) is the
-           placeholder per-shape extract button — ``aria-
-           disabled`` until the file-gen wiring slice lands.
+           the new selected target; ``Download`` is the
+           placeholder per-shape extract button (``aria-
+           disabled`` until the file-gen wiring slice lands).
+           The whole row sits flushed right inside the
+           sub-card via ``.data-shape-actions``'s
+           ``justify-content: flex-end`` — the name input is
+           fixed-width (240px) so the row reads as a tight
+           right-anchored strip rather than spanning the
+           card width.
 
            Every button gates its enabled state on the active
            shape's validity (name non-empty + at least one
@@ -505,8 +510,7 @@
           <a class="btn secondary"
              data-shape-download
              href="#"
-             aria-disabled="true"
-             style="margin-left: auto;">Download</a>
+             aria-disabled="true">Download</a>
         </div>
       </div>
     </template>
@@ -533,10 +537,15 @@
            ``Delete`` removes the sub-card (disabled when it's
            the only one in the stack); ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
-           the new selected target; ``Download`` (right-
-           anchored via ``margin-left: auto``) is the
-           placeholder per-shape extract button — ``aria-
-           disabled`` until the file-gen wiring slice lands.
+           the new selected target; ``Download`` is the
+           placeholder per-shape extract button (``aria-
+           disabled`` until the file-gen wiring slice lands).
+           The whole row sits flushed right inside the
+           sub-card via ``.data-shape-actions``'s
+           ``justify-content: flex-end`` — the name input is
+           fixed-width (240px) so the row reads as a tight
+           right-anchored strip rather than spanning the
+           card width.
 
            Every button gates its enabled state on the active
            shape's validity (name non-empty + at least one
@@ -566,8 +575,7 @@
           <a class="btn secondary"
              data-shape-download
              href="#"
-             aria-disabled="true"
-             style="margin-left: auto;">Download</a>
+             aria-disabled="true">Download</a>
         </div>
       </div>
     </div>
