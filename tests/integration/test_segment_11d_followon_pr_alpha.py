@@ -2,7 +2,7 @@
 
 Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR α. The new URL pattern
-(`/reviewer/sessions/{id}/{N}`) lands without visible layout change.
+(`/me/sessions/{id}/{N}`) lands without visible layout change.
 
 Post-Segment-18L the URL slot is the operator-defined page number
 rather than the instrument position; bare URL still 303s to /1.
@@ -107,7 +107,7 @@ def test_non_integer_position_returns_422(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}/abc")
+    response = rae_client.get(f"/me/sessions/{review_session.id}/abc")
     assert response.status_code == 422
 
 
@@ -129,13 +129,13 @@ def test_dashboard_rows_link_to_position_1(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     assert (
-        f'<a href="/reviewer/sessions/{review_session.id}/1">' in body
+        f'<a href="/me/sessions/{review_session.id}/1">' in body
     )
     # The bare URL no longer appears in the dashboard.
     assert (
-        f'href="/reviewer/sessions/{review_session.id}">' not in body
+        f'href="/me/sessions/{review_session.id}">' not in body
     )
 
 
@@ -162,14 +162,14 @@ def test_save_post_url_carries_position(
     ).scalar_one()
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "4"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1"
+        == f"/me/sessions/{review_session.id}/1"
     )
 
 
@@ -209,7 +209,7 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
     # ``current_position`` hint — the redirect target is the bare
     # session URL (which 303s on to /1) or /summary when complete.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
@@ -218,7 +218,7 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/summary"
+        == f"/me/sessions/{review_session.id}/summary"
     )
 
 
@@ -244,12 +244,12 @@ def test_clear_redirect_goes_to_bare_url(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/clear",
+        f"/me/sessions/{review_session.id}/clear",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}"
+        == f"/me/sessions/{review_session.id}"
     )

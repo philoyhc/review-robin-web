@@ -448,7 +448,7 @@ def test_reviewer_surface_shows_help_block_only_for_visible_help_text(
     _activate(operator, db, review_session.id)
 
     reviewer_client = make_client(reviewer_user)
-    body = reviewer_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = reviewer_client.get(f"/me/sessions/{review_session.id}").text
     assert "Score 1 (poor) to 5 (excellent)." in body
     assert "Hidden tip." not in body
 
@@ -470,7 +470,7 @@ def test_reviewer_surface_uses_instrument_description_when_set(
     _activate(operator, db, review_session.id)
 
     reviewer_client = make_client(reviewer_user)
-    body = reviewer_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = reviewer_client.get(f"/me/sessions/{review_session.id}").text
     assert ">Spring Peer Review<" in body
 
 
@@ -499,7 +499,7 @@ def test_reviewer_surface_renders_yes_no_field_added_via_route(
 
     _activate(operator, db, review_session.id)
     reviewer_client = make_client(reviewer_user)
-    body = reviewer_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = reviewer_client.get(f"/me/sessions/{review_session.id}").text
     assert "Decision" in body
     assert 'name="response[' in body
     assert "][decision]" in body
@@ -5202,7 +5202,7 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
     # lives on page 1.
     rae_client = make_client(reviewer_user)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "width: 260px" in body
 
@@ -5430,7 +5430,7 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
 
     rae_client = make_client(reviewer_user)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     flat = " ".join(body.split())
     # The flex row appears after the intro card's closing tags and

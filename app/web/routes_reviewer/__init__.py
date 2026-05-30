@@ -1,11 +1,14 @@
 """Reviewer route package.
 
-Owns the ``/reviewer`` URL prefix and the ``reviewer`` OpenAPI
-tag. Each concern is a sibling sub-module exposing its own
-``router`` (each carries the ``/reviewer`` prefix — the dashboard
-route is the bare prefix root, so the prefix can't live only on
-the parent); this package mounts them all. Split out of the
-single-file ``routes_reviewer.py`` in Segment 17B PR 1.
+Owns the ``/me`` URL prefix and the ``reviewer`` OpenAPI tag
+(folder name stays ``routes_reviewer`` for now —
+``guide/archive/url_remodel.md`` discusses the folder rename
+as optional polish). Each concern is a sibling sub-module
+exposing its own ``router`` (each carries the ``/me`` prefix
+— the dashboard route is the bare prefix root, so the
+prefix can't live only on the parent); this package mounts
+them all. Split out of the single-file ``routes_reviewer.py``
+in Segment 17B PR 1.
 """
 
 from __future__ import annotations

@@ -114,7 +114,7 @@ def test_overview_card_carries_description_and_pills(
         description="Some context for the reviewers.",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'class="card rs-status-panel"' in body
     assert 'class="rs-session-description"' in body
     assert 'class="card rs-description-card"' not in body
@@ -140,7 +140,7 @@ def test_overview_card_renders_when_no_description(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'class="card rs-status-panel"' in body
     # No description paragraph when the session has no description.
     assert 'class="rs-session-description"' not in body
@@ -166,7 +166,7 @@ def test_page_status_pill_is_not_started_on_fresh_session(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'class="rs-page-status-pills"' in body
     # `pill-empty` is the v2 alias mapped to amber for "needs-action"
     # states; matches the spec's pill-class table for not_started.
@@ -199,11 +199,11 @@ def test_page_status_pill_flips_to_in_progress_after_save(
     # ``rating`` field empty. State should land on "in progress" (data
     # exists, but required-fields-filled doesn't apply).
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][comments]": "first thoughts"},
         follow_redirects=False,
     )
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     # `pill-warning` is the v2 alias for "in progress" (amber).
     assert 'class="pill pill-warning">' in body
     assert "#1: in progress" in body
@@ -230,11 +230,11 @@ def test_page_status_pill_flips_to_complete_when_required_filled(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "4"},
         follow_redirects=False,
     )
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'class="pill pill-success">' in body
     assert "#1: complete" in body
 
@@ -267,13 +267,13 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
     )
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     # `pill-success` is the v2 green pill.
     assert 'class="pill pill-success">' in body
     assert "#1: submitted" in body
@@ -304,27 +304,27 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
     ).scalar_one()
     rae_client = make_client(rae)
 
-    fresh = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    fresh = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'class="rs-page-status-pills"' in fresh
     assert "Draft" in fresh
 
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][comments]": "thoughts"},
         follow_redirects=False,
     )
-    saved = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    saved = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "Saved but not submitted" in saved
 
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
     )
     submitted = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Submitted" in submitted
 
@@ -352,16 +352,16 @@ def test_instrument_card_shows_completion_pills(
     ).scalar_one()
     rae_client = make_client(rae)
 
-    fresh = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    fresh = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "Required items completed: 0/1" in fresh
     assert "All items completed: 0/2" in fresh
 
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "4"},
         follow_redirects=False,
     )
-    after = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    after = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "Required items completed: 1/1" in after
     assert "All items completed: 1/2" in after
 

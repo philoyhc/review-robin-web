@@ -130,7 +130,7 @@ def test_table_marker_uses_cookie_name_shape(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -163,10 +163,10 @@ def test_cookie_drives_ssr_initial_row_order(
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "desc"}]),
-        path=f"/reviewer/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.id}",
     )
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
@@ -193,10 +193,10 @@ def test_percent_encoded_cookie_drives_ssr_row_order(
     rae_client.cookies.set(
         cookie_name,
         quote(json.dumps([{"key": "reviewee.name", "dir": "desc"}])),
-        path=f"/reviewer/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.id}",
     )
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     ).text
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
@@ -229,10 +229,10 @@ def test_cookie_overrides_operator_default(
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "asc"}]),
-        path=f"/reviewer/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.id}",
     )
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     body = response.text
     # Cookie's asc wins over operator's desc.
@@ -268,10 +268,10 @@ def test_malformed_cookie_falls_back_to_operator_default(
     rae_client.cookies.set(
         cookie_name,
         "not-json{",
-        path=f"/reviewer/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.id}",
     )
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -304,10 +304,10 @@ def test_cookie_response_key_dropped_server_side(
             {"key": "response:99", "dir": "asc"},
             {"key": "reviewee.name", "dir": "asc"},
         ]),
-        path=f"/reviewer/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.id}",
     )
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     body = response.text
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")

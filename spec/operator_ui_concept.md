@@ -192,7 +192,7 @@ Every operator page (session-scoped or not) renders the same outer chrome before
 - **User card (top right).** "Signed in as {user name}" plus a Sign-out control (`/.auth/logout`).
 - **Breadcrumb trail** (below the app identity) reflecting the page's position in the surface hierarchy. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label.
   - Operator root: `Sessions` → `/operator/sessions`.
-  - Reviewer root: `Reviewer` → `/reviewer` (covered in `spec/reviewer-surface.md`).
+  - Reviewer root: `Reviewer` → `/me` (covered in `spec/reviewer-surface.md`).
 
 Visual treatment (typography, spacing, link colors) is per `spec/visual_style_general.md` ("Breadcrumb", "Links") and `spec/visual_style_rrw.md` (non-session operator top bar).
 

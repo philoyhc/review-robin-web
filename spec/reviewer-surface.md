@@ -1,10 +1,10 @@
 # Reviewer surface — functional + visual spec
 
 Specification of the reviewer-facing app — the pages a signed-in
-reviewer sees when they follow an invitation link or visit `/reviewer`
-directly. The response surface (`/reviewer/sessions/{id}/{page_n}`)
+reviewer sees when they follow an invitation link or visit `/me`
+directly. The response surface (`/me/sessions/{id}/{page_n}`)
 is the page they spend ~all their time on; the dashboard
-(`/reviewer`) and invitation-landing (`/reviewer/invite/{token}`)
+(`/me`) and invitation-landing (`/me/invite/{token}`)
 exist to land them on it.
 
 This spec rewrites the response surface around **multi-instrument
@@ -40,10 +40,10 @@ Cross-references:
 ## URL pattern
 
 ```
-GET  /reviewer/sessions/{session_id}/{page_n}
-POST /reviewer/sessions/{session_id}/{page_n}/save
-POST /reviewer/sessions/{session_id}/submit
-POST /reviewer/sessions/{session_id}/clear
+GET  /me/sessions/{session_id}/{page_n}
+POST /me/sessions/{session_id}/{page_n}/save
+POST /me/sessions/{session_id}/submit
+POST /me/sessions/{session_id}/clear
 ```
 
 `{page_n}` is the **1-indexed operator-defined page number** within the
@@ -55,12 +55,12 @@ instrument position; the multi-page replan reuses the slot for page
 number so single-page sessions stay degenerate — `/1` is the only valid
 page.)
 
-`GET /reviewer/sessions/{id}` (no page) **303s to
-`/reviewer/sessions/{id}/1`** so existing invitation links and dashboard
-rows keep working. Out-of-range pages (e.g. `/reviewer/sessions/5/9` when
+`GET /me/sessions/{id}` (no page) **303s to
+`/me/sessions/{id}/1`** so existing invitation links and dashboard
+rows keep working. Out-of-range pages (e.g. `/me/sessions/5/9` when
 the session has only 2 pages) return **404**.
 
-The reviewer dashboard at `/reviewer` always links each row to `/1`,
+The reviewer dashboard at `/me` always links each row to `/1`,
 since the dashboard summarises the session as a whole and page 1 is a
 safe default landing.
 
@@ -76,7 +76,7 @@ safe default landing.
   upserts that don't belong to this page. On success, 303s back to
   `/{page_n}`.
 - The Submit POST is **session-wide** — no `{page_n}` segment; submits
-  the whole review. On success, 303s to `/reviewer/sessions/{id}`
+  the whole review. On success, 303s to `/me/sessions/{id}`
   (which 303s on to `/1`) or to the summary page when the submit closed
   out the whole session.
 - The Clear POST is **session-wide** — no `{page_n}` segment; wipes
@@ -186,7 +186,7 @@ on explicit Save or Submit.
 ### How the surface works
 
 Post-Segment-18L replan: each page is its own server-rendered
-HTML response. The GET route at `/reviewer/sessions/{id}/{page_n}`
+HTML response. The GET route at `/me/sessions/{id}/{page_n}`
 filters to **only the current page's instruments** (the run between
 the operator-defined `starts_new_page` boundaries) and renders just
 those. Cross-page navigation is plain HTTP — Prev / Next / `Page N`
@@ -211,8 +211,8 @@ completes.
 | **Save** | Page | POST `…/{page_n}/save` | Persist the **current page's** dirty inputs to the database. Greys out when the current page has no dirty inputs. On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' saved state is untouched. |
 | **Page N** | Page | GET `…/{N}` | `<a href>` link — plain HTTP navigation to the target page. Server-side render swaps the response body to that page's instruments. The link for the current page is disabled. Reviewer's typed-but-not-yet-saved values on the current page must be saved first or they are lost on navigation (the `beforeunload` guard fires per the inline JS in the surface). |
-| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
-| **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
+| **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
 
@@ -247,7 +247,7 @@ deferred `beforeunload` warning (see "Designed-for-extensibility").
 The whole editing surface lives inside a single `<form>` whose
 default `action` is `…/{page_n}/save` and `method="post"`. Save
 submits to that default action; Submit overrides via
-`formaction="/reviewer/sessions/{id}/submit"`. Both buttons send
+`formaction="/me/sessions/{id}/submit"`. Both buttons send
 the **entire** form body — every input across every instrument
 group, since they're all in the DOM. The route distinguishes:
 
@@ -794,7 +794,7 @@ In preview mode:
 
 ---
 
-## Dashboard (`/reviewer`)
+## Dashboard (`/me`)
 
 The reviewer's lobby — where they land when signing in directly
 (without an invitation token) or clicking "My Reviews" from the
@@ -806,9 +806,9 @@ sessions show up too, rendered as `not opened`).
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
   session). **Six columns:**
-  - **Session** — link to `/reviewer/sessions/{id}/summary` when
+  - **Session** — link to `/me/sessions/{id}/summary` when
     Reviewer Status is `submitted` (PR B); link to
-    `/reviewer/sessions/{id}/1` for any other state where Session
+    `/me/sessions/{id}/1` for any other state where Session
     Status isn't `not opened`; plain text otherwise.
   - **Start** — `sessions.activated_at` formatted in the
     session's resolved zone, rendered as a `pill-count` chip
@@ -883,7 +883,7 @@ instruments on the page (using the per-session ``#N`` heading
 convention), with the Reviewer Status pill scoped to that page
 (rolled up across the page's instruments) and a matching counter
 chip following the same colour pairing. The deep link in each
-sub-row points at ``/reviewer/sessions/{id}/{page_n}`` so the
+sub-row points at ``/me/sessions/{id}/{page_n}`` so the
 reviewer can jump straight to a specific page. Empty for single-
 page sessions, which covers both single-instrument sessions (the
 byte-identical contract from Segment 15B Slice 6) and multi-
@@ -893,7 +893,7 @@ same ``/{id}/1`` URL).
 
 ---
 
-## Per-session summary (`/reviewer/sessions/{id}/summary`)
+## Per-session summary (`/me/sessions/{id}/summary`)
 
 Segment 17B Phase 2 PR B — a read-only capstone page that
 renders once the reviewer has submitted every assigned row on
@@ -905,14 +905,14 @@ dashboard's Session column once Reviewer Status is
 `submitted`.
 
 - **Gate** — `responses.reviewer_session_state.pill_state ==
-  "submitted"`. Otherwise redirects to `/reviewer` with no
+  "submitted"`. Otherwise redirects to `/me` with no
   flash banner; the reviewer can re-submit from the surface.
 - **H1** — "Your responses — {session.name}".
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
   reviewer's rows.
 - **Action row** — primary "Download my responses (CSV)"
-  button linking to `/reviewer/sessions/{id}/summary.csv` +
+  button linking to `/me/sessions/{id}/summary.csv` +
   a secondary "Your reviewer dashboard" link.
 - **Sections** — one `.card` per instrument the reviewer
   responded on, in `(Instrument.order, Instrument.id)` order.
@@ -925,7 +925,7 @@ dashboard's Session column once Reviewer Status is
   Group-scoped instruments collapse to one row per group with
   the composed group identity in the Reviewee column,
   mirroring the surface's existing collapse logic.
-- **CSV download** — `/reviewer/sessions/{id}/summary.csv`
+- **CSV download** — `/me/sessions/{id}/summary.csv`
   emits `{code}_my_responses.csv` (filename via
   `app.services.extracts.filename`). Same 21-column shape as
   the unified Responses CSV (see `spec/csv_contracts.md`
@@ -936,7 +936,7 @@ dashboard's Session column once Reviewer Status is
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.
 
-### Pre-open page (`/reviewer/sessions/{id}/{page_n}` on a not-yet-ready session)
+### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready session)
 
 Segment 18F Part 2 added a dedicated **pre-open** rendering
 for a reviewer who follows an invitation token (or a
@@ -952,7 +952,7 @@ for the gate semantics.
 
 ---
 
-## Invitation landing (`/reviewer/invite/{token}`)
+## Invitation landing (`/me/invite/{token}`)
 
 Token redemption + identity check. Lookup is by SHA-256 hash; the
 raw token is never persisted, only mailed.
@@ -969,7 +969,7 @@ Behaviour:
 4. On match, stamp `Invitation.opened_at` once (idempotent on
    subsequent visits — only the first call writes), emit one
    `invitation.opened` audit event on first open, and 303 →
-   `/reviewer/sessions/{id}/1`.
+   `/me/sessions/{id}/1`.
 
 ### Invitation-mismatch page
 
@@ -978,7 +978,7 @@ followed by a `.btn-pair` with two Secondary anchors:
 
 - **Sign-in details** → `/auth/me/debug` (so the reviewer can confirm
   which account they're signed in as).
-- **Your reviewer dashboard** → `/reviewer`.
+- **Your reviewer dashboard** → `/me`.
 
 The remedy is to sign out and sign back in with the invited
 account. This is the only reviewer-side page that returns a non-200
@@ -1083,15 +1083,15 @@ makes today + the small follow-on the deferred work needs.
 
 ### Standalone submission-confirmation page
 
-- **Today.** `POST /reviewer/sessions/{id}/submit` 303s to
+- **Today.** `POST /me/sessions/{id}/submit` 303s to
   `…/{page_n}` (no flash). The reviewer reads the post-submit
   signal off the per-page `submitted` pill in the overview card
   and the per-row submitted-timestamp in the status column.
 - **Design call.** The submit route's redirect target is computed via
   a small helper (`submit_redirect_url(review_session, position)`)
   rather than inlined. Today the helper returns
-  `f"/reviewer/sessions/{id}/{page_n}"`. Tomorrow it can return
-  `f"/reviewer/sessions/{id}/submitted"` (session-level thank-you)
+  `f"/me/sessions/{id}/{page_n}"`. Tomorrow it can return
+  `f"/me/sessions/{id}/submitted"` (session-level thank-you)
   without touching any other code path.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
@@ -1160,13 +1160,13 @@ compatible either way:
 
 ## Migration notes
 
-The URL change from `/reviewer/sessions/{id}` to
-`/reviewer/sessions/{id}/{page_n}` is a breaking change for:
+The URL change from `/me/sessions/{id}` to
+`/me/sessions/{id}/{page_n}` is a breaking change for:
 
 - **Existing invitation emails** — already-sent invitation emails
-  embed the old token URL (`/reviewer/invite/{token}`), which redirects
-  via `/reviewer/sessions/{id}` after Easy Auth resolves. The
-  bare-session URL must 303 to `/reviewer/sessions/{id}/1` to keep old
+  embed the old token URL (`/me/invite/{token}`), which redirects
+  via `/me/sessions/{id}` after Easy Auth resolves. The
+  bare-session URL must 303 to `/me/sessions/{id}/1` to keep old
   invitation links working.
 - **Reviewer dashboard rows** — link generation in
   `reviewer/dashboard.html` updates to point at page `1`; the

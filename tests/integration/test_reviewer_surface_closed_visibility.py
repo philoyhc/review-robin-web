@@ -131,13 +131,13 @@ def _submit_rating(
         data[f"response[{aid}][rating]"] = rating_value
         data[f"response[{aid}][comments]"] = comments_value
     save_resp = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data=data,
         follow_redirects=False,
     )
     assert save_resp.status_code in (200, 303), save_resp.text[:500]
     submit_resp = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         follow_redirects=False,
     )
     assert submit_resp.status_code == 303, submit_resp.text[:500]
@@ -212,7 +212,7 @@ def test_close_session_with_show_when_closed_preserves_reviewer_visibility(
     # since the workflow_close just swapped back to Alice.
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # The numeric input renders ``value="5"`` and the comments
     # textarea inlines the text as its text content.
@@ -277,7 +277,7 @@ def test_show_when_closed_flipped_after_close_takes_effect(
     # Reviewer reloads — values should NOT appear yet.
     app.dependency_overrides[get_current_user] = lambda: rae
     body_before = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert 'value="5"' not in body_before
 
@@ -298,7 +298,7 @@ def test_show_when_closed_flipped_after_close_takes_effect(
     # Reviewer reloads again — values must NOW appear.
     app.dependency_overrides[get_current_user] = lambda: rae
     body_after = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert 'value="5"' in body_after, (
         "post-close flip of responses_visible_when_closed should "
@@ -376,14 +376,14 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     # this session. ``link_enabled = session_status != 'not opened'``
     # in _dashboard.py:172 — a "closed" status keeps the link live.
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     # The reviewer's session row carries either /summary (fully
     # submitted) or /1 as the link target. After full submission
     # of one instrument's only assignment, the pill should be
     # ``submitted`` and the link target ``/summary``.
     assert (
-        f'href="/reviewer/sessions/{review_session.id}/summary"' in body
-        or f'href="/reviewer/sessions/{review_session.id}/1"' in body
+        f'href="/me/sessions/{review_session.id}/summary"' in body
+        or f'href="/me/sessions/{review_session.id}/1"' in body
     ), "dashboard must keep an active link into the closed session"
 
 
@@ -423,7 +423,7 @@ def test_close_session_without_show_when_closed_hides_reviewer_values(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # Values must NOT appear — show_values=False on the cell builds
     # ``value=""`` and the comments textarea body is empty.

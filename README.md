@@ -118,7 +118,7 @@ chrome:
   Outbox stays a dev-diagnostic surface reachable via the "View
   outbox" button on Manage Invitations.
 
-**Reviewer surface** — `/reviewer/sessions/{id}/{page}`:
+**Reviewer surface** — `/me/sessions/{id}/{page}`:
 
 - Multi-instrument session as paginated pages within one form;
   each page is one instrument's table of (reviewee × response

@@ -79,13 +79,13 @@ def reviewer_root() -> list[Crumb]:
 
 def reviewer_session(session: ReviewSession) -> list[Crumb]:
     return [
-        ("Reviewer", "/reviewer"),
+        ("Reviewer", "/me"),
         (session.name, None),
     ]
 
 
 def reviewer_invite_mismatch() -> list[Crumb]:
     return [
-        ("Reviewer", "/reviewer"),
+        ("Reviewer", "/me"),
         ("Access denied", None),
     ]

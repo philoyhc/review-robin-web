@@ -165,12 +165,12 @@ State machine: `pending` → `sent` → `opened`. Generate is idempotent
 actions require `session.status == "ready"` (409 otherwise) so the
 emailed link never points at a draft session.
 
-`/reviewer/invite/{token}` requires Easy Auth sign-in (no magic-link
+`/me/invite/{token}` requires Easy Auth sign-in (no magic-link
 anonymous access — that's deferred to Segment 16A). The route looks up
 the invitation by token hash, refuses with **403** + a dedicated page
 if the signed-in user's email doesn't match the invitation's reviewer
 email, and otherwise stamps `opened_at` once and 303s to
-`/reviewer/sessions/{id}`.
+`/me/sessions/{id}`.
 
 The `email_outbox` table (Segment 9.2) is the dev-mode replacement
 for SMTP. Rows synchronously flip `queued → sent` when the operator
@@ -205,7 +205,7 @@ writes a `kind='invitation'` row); the operator's intent always lands
 as a deliverable message in one click. `Invitation.last_reminder_at`
 stamps every successful reminder. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event with `detail.count` and the
-list of invitation/reviewer ids.
+list of invitation/me ids.
 
 ### Pair-level context
 

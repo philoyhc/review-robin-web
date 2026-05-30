@@ -103,7 +103,7 @@ def test_get_in_range_page_returns_200(
         client, db, code="pg-get-1", reviewer_email=rae.email
     )
     rae_client = make_client(rae)
-    resp = rae_client.get(f"/reviewer/sessions/{review_session.id}/1")
+    resp = rae_client.get(f"/me/sessions/{review_session.id}/1")
     assert resp.status_code == 200
 
 
@@ -123,7 +123,7 @@ def test_get_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     resp = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/{bad_page_n}"
+        f"/me/sessions/{review_session.id}/{bad_page_n}"
     )
     assert resp.status_code == 404
 
@@ -144,7 +144,7 @@ def test_save_post_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     resp = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/{bad_page_n}/save",
+        f"/me/sessions/{review_session.id}/{bad_page_n}/save",
         data={},
         follow_redirects=False,
     )

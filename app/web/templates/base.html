@@ -2880,14 +2880,14 @@
         // ``rrw-sort-{surface}-{session_id}[-{instrument_id}]``;
         // the path mirrors the surface prefix.
         //
-        // Map: ``rs`` (reviewer surface) → ``/reviewer/sessions/N``;
+        // Map: ``rs`` (reviewer surface) → ``/me/sessions/N``;
         //      anything else → ``/operator/sessions/N``.
         var match = tableId.match(/^rrw-sort-([^-]+)-(\d+)/);
         if (!match) return '/';
         var surface = match[1];
         var sessionId = match[2];
         if (surface === 'rs') {
-          return '/reviewer/sessions/' + sessionId;
+          return '/me/sessions/' + sessionId;
         }
         return '/operator/sessions/' + sessionId;
       }

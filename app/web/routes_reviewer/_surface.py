@@ -1,5 +1,5 @@
 """Reviewer response surface — the multi-instrument-aware
-review table at ``/reviewer/sessions/{id}/{instrument_position}``,
+review table at ``/me/sessions/{id}/{instrument_position}``,
 its per-page Save, and the session-wide Submit / Clear.
 
 Carved out of the single-file ``routes_reviewer.py`` in Segment
@@ -15,7 +15,7 @@ Reviewer surface — multi-instrument-aware URL pattern (Segment
 - POST /sessions/{id}/clear                   → session-wide
 
 Submit and Clear stay session-wide; their redirect targets are the
-bare session URL ``/reviewer/sessions/{id}`` which 303s on to
+bare session URL ``/me/sessions/{id}`` which 303s on to
 ``/1`` — post-Segment-18L the URL slot is the operator-defined
 page number, so a "go back to where you were" round-trip is no
 longer possible after a session-wide POST.
@@ -62,7 +62,7 @@ from app.web.routes_reviewer._shared import (
     validate_page_n,
 )
 
-router = APIRouter(prefix="/reviewer")
+router = APIRouter(prefix="/me")
 
 
 def _load_assignments_with_relations(
@@ -804,11 +804,11 @@ def _surface_context(
         )
     else:
         prev_page_url = (
-            f"/reviewer/sessions/{review_session.id}/{safe_page_n - 1}"
+            f"/me/sessions/{review_session.id}/{safe_page_n - 1}"
             if safe_page_n > 1 else None
         )
         next_page_url = (
-            f"/reviewer/sessions/{review_session.id}/{safe_page_n + 1}"
+            f"/me/sessions/{review_session.id}/{safe_page_n + 1}"
             if safe_page_n < page_count else None
         )
 
@@ -858,8 +858,8 @@ def submit_redirect_url(
     return the reviewer to "the page they were on".
     """
     if fully_submitted:
-        return f"/reviewer/sessions/{review_session.id}/summary"
-    return f"/reviewer/sessions/{review_session.id}"
+        return f"/me/sessions/{review_session.id}/summary"
+    return f"/me/sessions/{review_session.id}"
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
@@ -869,7 +869,7 @@ def review_surface_default_position(session_id: int) -> RedirectResponse:
     handler; the redirect is harmless without it.
     """
     return RedirectResponse(
-        url=f"/reviewer/sessions/{session_id}/1",
+        url=f"/me/sessions/{session_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1032,7 +1032,7 @@ async def reviewer_save(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}/{page_n}",
+        url=f"/me/sessions/{review_session.id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1114,7 +1114,7 @@ async def reviewer_save_consolidated(
             },
         )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}",
+        url=f"/me/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1230,7 +1230,7 @@ def reviewer_recall(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}/1",
+        url=f"/me/sessions/{review_session.id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1264,6 +1264,6 @@ async def reviewer_clear(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}",
+        url=f"/me/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

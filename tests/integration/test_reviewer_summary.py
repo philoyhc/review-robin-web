@@ -97,12 +97,12 @@ def test_summary_gate_redirects_when_session_not_fully_submitted(
     review_session = _make_ready_session(operator, db, code="summ-gate")
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary",
+        f"/me/sessions/{review_session.id}/summary",
         follow_redirects=False,
     )
     # Not submitted yet → redirect to the reviewer dashboard.
     assert response.status_code == 303
-    assert response.headers["location"] == "/reviewer"
+    assert response.headers["location"] == "/me"
 
 
 def test_summary_renders_after_full_submission(
@@ -119,7 +119,7 @@ def test_summary_renders_after_full_submission(
     rae_client = make_client(rae)
     # Submit; the redirect should already point at the summary.
     submit = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
@@ -127,17 +127,17 @@ def test_summary_renders_after_full_submission(
     )
     assert submit.status_code == 303
     assert submit.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     )
     page = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     )
     assert page.status_code == 200
     body = page.text
     assert "Your responses" in body
     # CSV download button is visible at the top of the page.
     assert (
-        f'/reviewer/sessions/{review_session.id}/summary.csv' in body
+        f'/me/sessions/{review_session.id}/summary.csv' in body
     )
     # The Carol row appears under the (only) instrument section.
     assert "Carol" in body
@@ -162,14 +162,14 @@ def test_summary_csv_streams_reviewer_only_rows(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "3",
         },
         follow_redirects=False,
     )
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.id}/summary.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -199,17 +199,17 @@ def test_dashboard_link_points_at_summary_when_submitted(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,
     )
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     # Session column now anchors at the summary URL, not the
     # surface position.
     assert (
-        f'href="/reviewer/sessions/{review_session.id}/summary"' in body
+        f'href="/me/sessions/{review_session.id}/summary"' in body
     )
 
 
@@ -242,14 +242,14 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
     )
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "<h2 style=\"margin-top: 0;\">Self-eval</h2>" in body
     # No #1 prefix on a single-instrument session.
@@ -284,14 +284,14 @@ def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_labe
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
     )
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert (
         "<h2 style=\"margin-top: 0;\">Custom instrument name</h2>" in body
@@ -397,17 +397,17 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         f"response[{a.id}][rating]": "5" for a in assignments
     }
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data=page_data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         follow_redirects=False,
     )
 
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert (
         "<h2 style=\"margin-top: 0;\">#1: Self-eval</h2>" in body

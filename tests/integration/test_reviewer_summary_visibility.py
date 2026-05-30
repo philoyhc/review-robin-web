@@ -122,12 +122,12 @@ def _submit(
         data[f"response[{aid}][rating]"] = "5"
         data[f"response[{aid}][comments]"] = "Carol did fine work"
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data=data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         follow_redirects=False,
     )
 
@@ -173,7 +173,7 @@ def test_summary_html_hides_column_for_invisible_response_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     # Comments column dropped; its value not rendered.
     assert "Comments" not in body
@@ -199,7 +199,7 @@ def test_summary_html_keeps_column_when_visible(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Rating" in body
     assert "Comments" in body
@@ -225,7 +225,7 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
     _hide_field(db, review_session, "comments")
     app.dependency_overrides[get_current_user] = lambda: rae
     body_hidden = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Carol did fine work" not in body_hidden
 
@@ -244,7 +244,7 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
     db.commit()
 
     body_again = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Comments" in body_again
     assert "Carol did fine work" in body_again
@@ -270,7 +270,7 @@ def test_summary_csv_hides_column_for_invisible_response_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     csv_resp = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     body = csv_resp.text
@@ -299,7 +299,7 @@ def test_summary_csv_keeps_column_when_visible(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     csv_resp = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     body = csv_resp.text
@@ -593,7 +593,7 @@ def test_reviewer_surface_banner_names_dropped_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Some saved responses are no longer collected" in body
     assert "<em>Comments</em>" in body
@@ -621,7 +621,7 @@ def test_reviewer_surface_no_banner_when_no_dropped_fields(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Some saved responses are no longer collected" not in body
 
@@ -646,7 +646,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body_hidden = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Some saved responses are no longer collected" in body_hidden
 
@@ -663,7 +663,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
     db.commit()
 
     body_restored = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Some saved responses are no longer collected" not in body_restored
 
@@ -724,14 +724,14 @@ def test_group_scoped_instrument_visibility_filter_applies(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     summary_html = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Comments" not in summary_html
     assert "Carol did fine work" not in summary_html
     assert "Rating" in summary_html
 
     csv_resp = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     csv_body = csv_resp.text

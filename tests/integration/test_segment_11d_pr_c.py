@@ -86,14 +86,14 @@ def rae() -> AuthenticatedUser:
 def test_reviewer_dashboard_uses_ui_v2_reviewer_body_class(
     client: TestClient,
 ) -> None:
-    body = client.get("/reviewer").text
+    body = client.get("/me").text
     assert '<body class="ui-v2 reviewer">' in body
 
 
 def test_reviewer_dashboard_chrome_drops_about_link_and_version(
     client: TestClient,
 ) -> None:
-    body = client.get("/reviewer").text
+    body = client.get("/me").text
     # Operator-style chrome details are gone from the reviewer top bar.
     assert "Review Robin Web App" not in body
     assert "version dev" not in body
@@ -121,7 +121,7 @@ def test_reviewer_chrome_suppresses_my_reviews_link_with_one_review(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
     assert "My Reviews" not in body
 
 
@@ -150,9 +150,9 @@ def test_reviewer_chrome_renders_my_reviews_link_with_multiple_reviews(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{first.id}").text
+    body = rae_client.get(f"/me/sessions/{first.id}").text
     assert (
-        'class="chrome-link" href="/reviewer">My Reviews</a>' in body
+        'class="chrome-link" href="/me">My Reviews</a>' in body
     )
 
 
@@ -190,12 +190,12 @@ def test_status_icons_use_canonical_classes_not_inline_style(
     # Submit with no values to force the status column to render with
     # the incomplete glyph (show_acknowledge path).
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={f"response[{assignment.id}][rating]": ""},
         follow_redirects=False,
     )
     body = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={},
         follow_redirects=False,
     ).text
@@ -249,12 +249,12 @@ def test_invite_mismatch_renders_banner_warning(
     ).scalar_one()
     import re
 
-    match = re.search(r"/reviewer/invite/([A-Za-z0-9_\-]+)", outbox_row.body)
+    match = re.search(r"/me/invite/([A-Za-z0-9_\-]+)", outbox_row.body)
     assert match is not None
     raw_token = match.group(1)
 
     response = operator.get(
-        f"/reviewer/invite/{raw_token}", follow_redirects=False
+        f"/me/invite/{raw_token}", follow_redirects=False
     )
     assert response.status_code == 403
     body = response.text
@@ -317,7 +317,7 @@ def test_review_surface_renders_h1_and_deadline(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
     assert f"<h1>{review_session.name}</h1>" in body
     # H1 is wrapped in the page-header flex row.
     assert 'class="rs-page-header"' in body
@@ -344,7 +344,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # Two .rs-action-row containers, mirrored top + bottom (PR γ
     # collapsed the previous review-level + page-level rows into a
@@ -358,7 +358,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
     assert (
-        body.count(f'formaction="/reviewer/sessions/{review_session.id}/submit"')
+        body.count(f'formaction="/me/sessions/{review_session.id}/submit"')
         >= 2
     )
 
@@ -384,7 +384,7 @@ def test_review_surface_session_description_renders_in_overview_card(
     db.commit()
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
     assert 'class="card rs-status-panel"' in body
     assert 'class="rs-session-description"' in body
     assert "Please rate each reviewee on the rubric." in body
@@ -408,7 +408,7 @@ def test_review_surface_clear_all_card_is_half_width_flush_right(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
     assert 'class="card danger-zone rs-danger-zone"' in body
     assert "<h2>Clear all responses</h2>" in body
 

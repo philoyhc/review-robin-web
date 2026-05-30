@@ -37,7 +37,7 @@ from app.services import (
 
 
 def _stub_build_url(token: str) -> str:
-    return f"https://example.test/reviewer/invite/{token}"
+    return f"https://example.test/me/invite/{token}"
 
 
 def _seed_session_with_reviewers(

@@ -359,7 +359,7 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
             provider="aad",
         )
     )
-    response = reviewer.get(f"/reviewer/sessions/{session.id}")
+    response = reviewer.get(f"/me/sessions/{session.id}")
     assert response.status_code == 200
     # 02:00 UTC is 10:00 in Singapore — the deadline is converted to
     # the session zone (rendered bare, no zone token), with the
@@ -395,7 +395,7 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
             provider="aad",
         )
     )
-    response = reviewer.get("/reviewer")
+    response = reviewer.get("/me")
     assert response.status_code == 200
     # Post-17B-Phase-2 refinement: the deadline and Start columns
     # render zone-less; the Timezone column carries the GMT

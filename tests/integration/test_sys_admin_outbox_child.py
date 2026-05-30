@@ -120,7 +120,7 @@ def test_outbox_child_page_lists_seeded_rows(
     )
     assert response.status_code == 200
     assert "rae@example.edu" in response.text
-    assert "/reviewer/invite/" in response.text
+    assert "/me/invite/" in response.text
 
 
 def test_outbox_child_page_404s_on_missing_session(

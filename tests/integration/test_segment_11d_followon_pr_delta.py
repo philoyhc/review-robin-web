@@ -146,7 +146,7 @@ def test_inputs_carry_data_rs_saved_value(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # At least one input carries the attribute.
     assert "data-rs-saved-value=" in body
@@ -187,7 +187,7 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
 
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 saved",
             f"response[{page2_assignment.id}][comments]": "page-2 dirty",
@@ -245,7 +245,7 @@ def test_submit_persists_inputs_from_every_group(
 
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 submit",
             f"response[{page2_assignment.id}][comments]": "page-2 submit",

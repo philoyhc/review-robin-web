@@ -29,8 +29,8 @@ DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
 _OPERATOR_SESSIONS = re.compile(r"^/operator/sessions/?$")
 _OPERATOR_SESSION = re.compile(r"^/operator/sessions/(\d+)/?$")
 _OPERATOR_SESSION_TAB = re.compile(r"^/operator/sessions/(\d+)/[A-Za-z0-9_\-]+/?$")
-_REVIEWER_ROOT = re.compile(r"^/reviewer/?$")
-_REVIEWER_SESSION = re.compile(r"^/reviewer/sessions/(\d+)/?$")
+_REVIEWER_ROOT = re.compile(r"^/me/?$")
+_REVIEWER_SESSION = re.compile(r"^/me/sessions/(\d+)/?$")
 
 
 def resolve_return_to(raw: str | None, db: Session) -> ReturnTarget:

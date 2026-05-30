@@ -1,5 +1,5 @@
 """Integration tests for Segment 18L PR 1b (post-replan) — the
-multi-page reviewer surface at ``GET /reviewer/sessions/{id}/{N}``.
+multi-page reviewer surface at ``GET /me/sessions/{id}/{N}``.
 
 The reviewer surface paginates by operator-defined page (one
 boundary per ``Instrument.starts_new_page=true`` from Segment
@@ -122,12 +122,12 @@ def test_bare_url_303s_to_page_1(
     )
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}",
+        f"/me/sessions/{review_session.id}",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     )
 
 
@@ -152,7 +152,7 @@ def test_page_one_renders_first_pages_instruments(
         extra_instruments=2,  # 3 instruments, all on one page (no breaks)
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     # All three instrument sections render on page 1 since no break exists.
     for n in (1, 2, 3):
         assert f'data-rs-position="{n}"' in body
@@ -174,7 +174,7 @@ def test_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/99",
+        f"/me/sessions/{review_session.id}/99",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -219,21 +219,21 @@ def test_page_break_carves_session_into_separate_pages(
 
     # Page 1 has only the first instrument (position 1).
     page1 = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert 'data-rs-position="1"' in page1
     assert 'data-rs-position="2"' not in page1
 
     # Page 2 has only the second (position 2).
     page2 = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.id}/2"
     ).text
     assert 'data-rs-position="1"' not in page2
     assert 'data-rs-position="2"' in page2
 
     # Page 3 doesn't exist.
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/3",
+        f"/me/sessions/{review_session.id}/3",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -260,10 +260,10 @@ def test_form_action_targets_per_page_save_endpoint(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert (
-        f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
+        f'action="/me/sessions/{review_session.id}/1/save"' in body
     )
 
 
@@ -298,13 +298,13 @@ def test_save_303s_back_to_current_page(
     rae_client = make_client(rae)
     # Page 2 save 303s back to /2.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/2/save",
+        f"/me/sessions/{review_session.id}/2/save",
         data={},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.id}/2"
     )
 
 
@@ -347,15 +347,15 @@ def test_multi_page_renders_prev_next_nav(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.id}/2"
     ).text
     # Page 2 of 3 -> Prev to page 1, Next to page 3.
     assert "Page 2 of 3" in body
     assert (
-        f'href="/reviewer/sessions/{review_session.id}/1"' in body
+        f'href="/me/sessions/{review_session.id}/1"' in body
     )
     assert (
-        f'href="/reviewer/sessions/{review_session.id}/3"' in body
+        f'href="/me/sessions/{review_session.id}/3"' in body
     )
 
 
@@ -378,7 +378,7 @@ def test_single_page_session_omits_page_nav(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "Page 1 of" not in body
     assert "Previous page" not in body

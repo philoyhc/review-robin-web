@@ -166,7 +166,7 @@ def test_instrument_heading_uses_short_label_when_set(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "#1: Self-eval" in body
     assert "#2: Peer review" in body
@@ -186,7 +186,7 @@ def test_instrument_heading_falls_back_to_position_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # No trailing colon in the heading itself (the status pills above
     # carry their own ``#N: <state>`` colon — out of scope here).
@@ -219,7 +219,7 @@ def test_instrument_heading_multi_with_short_label_and_description(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # PR γ wrapped the heading in a flex `.rs-instrument-heading` row
     # of bare text; the per-instrument intro grid follow-up moved it
@@ -249,7 +249,7 @@ def test_instrument_heading_multi_short_label_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "<h2>#1: Self-eval</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
@@ -272,7 +272,7 @@ def test_instrument_heading_multi_description_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "<h2>#1</h2>" in body
     assert "Reflect on your own progress." in body
@@ -293,7 +293,7 @@ def test_instrument_heading_multi_neither(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "<h2>#1</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
@@ -358,7 +358,7 @@ def test_instrument_heading_single_short_label_only(
 
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     assert "<h2>Self-eval</h2>" in body
     # No #1 prefix in the *heading* — single-instrument sessions
@@ -407,7 +407,7 @@ def test_save_drops_cross_page_assignment_inputs(
     # POST to /1/save with inputs for both pages — the page-2 entry
     # must be filtered out.
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 ok",
             f"response[{page2_assignment.id}][comments]": "page-2 leak",

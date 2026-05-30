@@ -199,10 +199,10 @@ def test_no_write_form_in_preview(
         f"/operator/sessions/{session.id}/preview-surface/1"
     ).text
     # No reviewer save endpoint as a form action.
-    assert f'action="/reviewer/sessions/{session.id}/1/save"' not in body
+    assert f'action="/me/sessions/{session.id}/1/save"' not in body
     # No session-wide submit formaction either.
     assert (
-        f'formaction="/reviewer/sessions/{session.id}/submit"' not in body
+        f'formaction="/me/sessions/{session.id}/submit"' not in body
     )
 
 
@@ -267,7 +267,7 @@ def test_multi_page_nav_links_point_at_operator_preview(
     next_href = f'href="/operator/sessions/{session.id}/preview-surface/2"'
     assert next_href in body1
     # Prev/Next URLs point at operator route, not reviewer.
-    assert f'href="/reviewer/sessions/{session.id}/2"' not in body1
+    assert f'href="/me/sessions/{session.id}/2"' not in body1
     # Page counter renders.
     assert "Page 1 of 2" in body1
 

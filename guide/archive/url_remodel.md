@@ -1,5 +1,17 @@
 # URL remodel — `/reviewer/` → `/me/` (aggressive plan)
 
+> **Shipped 2026-05-30 in two PRs.** PR A (#1668) moved the
+> existing `/me` JSON debug endpoint to `/auth/me` +
+> `/auth/me/debug`, freeing the namespace. PR B (this archive
+> close-out) flipped the four ``routes_reviewer/`` router
+> prefixes from `/reviewer` to `/me` and bulk-renamed every
+> callsite (~340 occurrences across code, templates, tests, and
+> spec). Single-author beta, no compatibility shim, no email
+> regressions (Segment 14B not yet sending). Folder name
+> ``app/web/routes_reviewer/`` stays — optional polish for
+> later if the participant features rename it to
+> ``routes_participant/``.
+>
 > **Stub created 2026-05-28.** Captures the aggressive
 > hard-rename plan for the participant-side URL prefix,
 > assuming the app is in beta with no real users to worry

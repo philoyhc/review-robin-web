@@ -167,7 +167,7 @@ into the Session Home context builder. Reuses
 **Ships.**
 
 - A debounced `fetch` to the existing
-  `POST /reviewer/sessions/{id}/{position}/save` endpoint on cell
+  `POST /me/sessions/{id}/{position}/save` endpoint on cell
   blur / change, sitting alongside (or replacing) the per-page
   form Save.
 - Per-cell status indicator — in-flight / saved / failed.
