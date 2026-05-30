@@ -187,7 +187,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Regression guard for Slice 3's ``{% if not preview_mode %}``
-    wrappers — the reviewer's normal /reviewer/sessions/{id} surface
+    wrappers — the reviewer's normal /me/sessions/{id} surface
     must still render Save / Submit / Discard / Clear (and no preview
     banner)."""
     operator = make_client(alice)
@@ -198,15 +198,15 @@ def test_reviewer_side_surface_still_renders_write_path(
 
     reviewer_client = make_client(reviewer_user)
     body = reviewer_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
 
     assert "Preview — not visible to reviewers" not in body
     assert ">Save</button>" in body
     assert (
-        f'formaction="/reviewer/sessions/{review_session.id}/submit"' in body
+        f'formaction="/me/sessions/{review_session.id}/submit"' in body
     )
     assert ">Discard</a>" in body
     assert (
-        f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
+        f'action="/me/sessions/{review_session.id}/1/save"' in body
     )

@@ -123,7 +123,7 @@ def test_pair_context_renders_as_separate_columns(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     body = response.text
@@ -151,7 +151,7 @@ def test_pair_context_no_longer_renders_inside_identity_cell(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     assert "P1:" not in response.text
@@ -194,7 +194,7 @@ def test_profile_link_renders_as_anchor(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     body = response.text
@@ -237,7 +237,7 @@ def test_profile_link_empty_renders_empty_cell(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     assert '>Profile<' in response.text

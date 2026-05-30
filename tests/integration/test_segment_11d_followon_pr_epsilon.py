@@ -152,7 +152,7 @@ def test_submit_missing_carries_page_number_for_each_gap(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 only",
             f"response[{page2_assignment.id}][comments]": "page-2 only",
@@ -187,7 +187,7 @@ def test_submit_missing_only_on_page_two_still_carries_page_number(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -222,7 +222,7 @@ def test_missing_required_renders_in_full_width_card(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -258,7 +258,7 @@ def test_missing_required_card_uses_two_column_list(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -292,7 +292,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -300,7 +300,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).text
     assert "data-rs-missing-dismiss" in body
     assert (
-        f'href="/reviewer/sessions/{review_session.id}/1">\n          Cancel\n        </a>'
+        f'href="/me/sessions/{review_session.id}/1">\n          Cancel\n        </a>'
         in body
     )
     # Submit is a hard gate when required fields are missing; the
@@ -322,7 +322,7 @@ def test_missing_required_card_absent_when_no_gaps(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     ).text
     # The CSS rule for `.rs-missing-card` is always in the inline
     # stylesheet; assert on the element class + dismiss data attr's

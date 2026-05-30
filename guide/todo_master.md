@@ -646,7 +646,7 @@ shipped 2026-05-16: per-cell `show_values` gating, instrument-level
 and assorted markup hygiene. **Phase 2** shipped 2026-05-20: the
 read-only capstone summary page rendered once every assigned row
 is submitted, including the "Recall my submission" return-to-form
-flow (POST `/reviewer/sessions/{id}/recall` nulls `submitted_at`
+flow (POST `/me/sessions/{id}/recall` nulls `submitted_at`
 on every Response row for the reviewer and 303s back to `/1`),
 column-width parity with `Instrument.column_widths`, and group-row
 identity composition that walks every visible `reviewee.tag_*`
@@ -963,7 +963,7 @@ action row + page nav into single top/bottom rows, rename
 per-instrument status pills to ``#N {short_label}``. The reviewer
 surface paginates by operator-defined pages (one page per run of
 instruments between Segment 18M page breaks), each at its own
-URL ``/reviewer/sessions/{id}/{page_n}``. The original lock
+URL ``/me/sessions/{id}/{page_n}``. The original lock
 called for a single-page-all-instruments model; PR #1522 reshaped
 mid-flight into the multi-page model. PR 2 (per-instrument
 heading-state card) was dropped — the operator opens/closes whole
@@ -1354,8 +1354,8 @@ doc — pick one and start when ready. Schedule items:
 **URL remodel, 14B, 19, 20** (Self-review consolidation
 closed 2026-05-30; Extract data closed 2026-05-30; 18K +
 18L + 18M + 18N closed 2026-05-28; 18J retired 2026-05-26;
-URL remodel is the ``/reviewer/`` → ``/me/`` aggressive-
-rename stub best landed before 14B Part A). No global
+URL remodel ``/reviewer/`` → ``/me/`` shipped 2026-05-30 in
+two PRs ahead of 14B Part A). No global
 ordering constraints beyond the few dep chains called out
 at the bottom of this file.
 
@@ -1381,17 +1381,16 @@ at the bottom of this file.
 
 #### Stubs
 
-- **URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
-  rename)** *(stub created 2026-05-28)*. Independent prep for
-  the participant-model arc; doesn't depend on or block any
-  participant feature. One small PR sized at ~1-2 hours of
-  mechanical work (no compatibility shim — beta-state-no-real-
-  users assumption). Best landed **before 14B Part A** so the
-  invitation URLs that go out for real on day 1 ship with the
-  future-correct URL prefix. Lifted out of
-  ``guide/participant_model_upgrade.md`` §5.1 on 2026-05-28
-  so the rename can land independently.
-  **Plan:** ``guide/url_remodel.md``.
+- ~~**URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
+  rename)**~~ — **shipped 2026-05-30 in PRs #1668 + the rename
+  PR**. Two-PR slice. PR A moved the existing ``/me`` JSON +
+  ``/me/debug`` debug endpoints to ``/auth/me`` +
+  ``/auth/me/debug``, freeing the namespace. PR B flipped the
+  four ``routes_reviewer/`` router prefixes from ``/reviewer``
+  to ``/me`` and bulk-renamed ~340 callsites across code,
+  templates, tests, and spec. Folder name
+  ``app/web/routes_reviewer/`` stays — optional polish for
+  later. **Plan archived:** ``guide/archive/url_remodel.md``.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial

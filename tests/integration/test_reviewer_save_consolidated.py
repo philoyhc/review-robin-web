@@ -1,8 +1,8 @@
 """Integration tests for Segment 18L PR 1a — the consolidated
-reviewer-save endpoint at ``POST /reviewer/sessions/{id}/save``.
+reviewer-save endpoint at ``POST /me/sessions/{id}/save``.
 
 PR 1a adds the route additively; the existing positional save at
-``POST /reviewer/sessions/{id}/{position}/save`` keeps working
+``POST /me/sessions/{id}/{position}/save`` keeps working
 until PR 1b deletes it. These tests pin the new endpoint's
 contract: walks every upsert in the payload, emits a single
 ``responses.saved`` audit row with the new ``counts`` keys
@@ -138,7 +138,7 @@ def test_consolidated_save_persists_and_redirects_to_bare_url(
     ).scalar_one()
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/me/sessions/{review_session.id}/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "good work",
@@ -147,7 +147,7 @@ def test_consolidated_save_persists_and_redirects_to_bare_url(
     )
     assert response.status_code == 303, response.text
     assert response.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
 
 
@@ -177,7 +177,7 @@ def test_consolidated_save_emits_audit_row_with_new_counts_keys(
 
     before = _audit_count(db, "responses.saved")
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/me/sessions/{review_session.id}/save",
         data={
             f"response[{assignment.id}][rating]": "5",
             f"response[{assignment.id}][comments]": "wonderful",
@@ -237,7 +237,7 @@ def test_consolidated_save_handles_multi_instrument_payload(
         payload[f"response[{a.id}][rating]"] = "3"
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/me/sessions/{review_session.id}/save",
         data=payload,
         follow_redirects=False,
     )
@@ -284,7 +284,7 @@ def test_consolidated_save_returns_400_on_validation_errors(
     ).scalar_one()
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/me/sessions/{review_session.id}/save",
         data={
             # Rating expects 1-5; "bad" should fail validation.
             f"response[{assignment.id}][rating]": "bad",

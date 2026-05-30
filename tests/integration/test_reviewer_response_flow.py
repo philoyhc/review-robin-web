@@ -119,7 +119,7 @@ def test_dashboard_lists_only_sessions_where_user_is_active_reviewer(
     )
 
     rae_client = make_client(rae)
-    response = rae_client.get("/reviewer")
+    response = rae_client.get("/me")
 
     assert response.status_code == 200
     assert "Rae-Session" in response.text or matched.name in response.text
@@ -147,7 +147,7 @@ def test_dashboard_skips_inactive_reviewer_rows(
     db.commit()
 
     rae_client = make_client(rae)
-    response = rae_client.get("/reviewer")
+    response = rae_client.get("/me")
 
     assert response.status_code == 200
     assert "Rae-Inactive" not in response.text
@@ -190,7 +190,7 @@ def test_surface_renders_pair_context_and_default_fields(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     assert "Carol" in response.text
@@ -230,7 +230,7 @@ def test_surface_help_text_renders_as_inline_list(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    body = make_client(rae).get(f"/reviewer/sessions/{review_session.id}").text
+    body = make_client(rae).get(f"/me/sessions/{review_session.id}").text
     del rae_client
 
     # Single help item still renders as a half-width card inside the
@@ -281,7 +281,7 @@ def test_surface_help_text_multi_items_render_in_grid(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     # Help cards live in their own `.rs-help-grid` row below the
     # heading card's `.rs-intro-grid`; they no longer share a row
@@ -317,7 +317,7 @@ def test_surface_does_not_wrap_groups_in_outer_card(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     assert '<div class="rs-card">' not in body
     assert ".rs-card {" not in body  # CSS rule also removed
@@ -345,7 +345,7 @@ def test_surface_status_column_hidden_pre_submission(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     # The trailing status column has no marker text; the easiest pin is the
     # presence of its container styles. Pre-submission, neither the empty
@@ -371,7 +371,7 @@ def test_surface_applies_column_classes_by_response_type(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     # Default seeded fields: 1-to-5int Rating (numeric → rs-narrow) +
     # Long_text Comments (textarea → rs-textlong).
@@ -409,7 +409,7 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
 
     rae_client = make_client(rae)
     body_default = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     ).text
 
     # Default seeded Comments is max_length=2000 → at default
@@ -440,7 +440,7 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
     comments.validation = validation
     db.flush()
     body_narrow = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     ).text
     # 300 max → typical 150 / 28 chars/row (default 224px) =
     # ceil(5.36) = 6.
@@ -454,7 +454,7 @@ def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
     instrument.column_widths = widths
     db.flush()
     body_wide = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     ).text
     assert 'rows="2"' in body_wide
 
@@ -478,7 +478,7 @@ def test_surface_dedupes_reviewee_name_and_email_display_fields(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     # Reviewee column header is present (always rendered). The
     # PR 3 sort scaffolding wraps the label between the tag's
@@ -521,7 +521,7 @@ def test_surface_single_instrument_no_description_renders_no_heading(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     assert "instrument_4" not in response.text
@@ -557,7 +557,7 @@ def test_surface_filters_out_excluded_assignments(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     assert "Carol" not in response.text
@@ -585,7 +585,7 @@ def test_save_draft_persists_and_reload_shows_values(
     ).scalar_one()
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "good work",
@@ -594,10 +594,10 @@ def test_save_draft_persists_and_reload_shows_values(
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     )
 
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    page = rae_client.get(f"/me/sessions/{review_session.id}")
     assert 'value="4"' in page.text
     assert "good work" in page.text
 
@@ -622,7 +622,7 @@ def test_surface_renders_constraint_hints_for_integer_and_string_fields(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'title="1 to 5, steps of 1"' in body
     assert 'placeholder="0 to 2000 char"' in body
 
@@ -661,7 +661,7 @@ def test_surface_renders_help_contact_line_when_set(
     # Activate so the reviewer surface is reachable.
     _activate(operator, db, review_session)
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "Questions? Contact Prof X" in body
 
 
@@ -684,7 +684,7 @@ def test_surface_renders_constraint_summary_row_above_table(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "rs-constraints" in body
     assert "<strong>Rating</strong> (1-5, steps of 1)" in body
     assert "<strong>Comments</strong> (0-2000 char)" in body
@@ -714,7 +714,7 @@ def test_numeric_input_carries_step_data_attrs_for_js_validity(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'data-rs-step="1"' in body
     assert 'data-rs-step-anchor="1"' in body
     assert 'step="any"' in body
@@ -747,7 +747,7 @@ def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "77"},
         follow_redirects=False,
     )
@@ -757,7 +757,7 @@ def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     assert "Must be at most 5" in body
     assert 'value="77"' in body
     # No persisted row.
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    page = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'value="77"' not in page
 
 
@@ -782,7 +782,7 @@ def test_save_persists_valid_and_rejects_invalid_in_same_batch(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "9",
             f"response[{assignment.id}][comments]": "looks good",
@@ -790,7 +790,7 @@ def test_save_persists_valid_and_rejects_invalid_in_same_batch(
         follow_redirects=False,
     )
     assert response.status_code == 400
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    page = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     # Valid one persisted; invalid one did not.
     assert "looks good" in page
     assert 'value="9"' not in page
@@ -818,7 +818,7 @@ def test_submit_blocks_on_validation_error(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={
             f"response[{assignment.id}][rating]": "0",
         },
@@ -853,7 +853,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     ).scalar_one()
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -862,7 +862,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     # 17B Phase 2 PR B — submit closes out the single-assignment
     # session so the redirect lands on the summary page.
     assert response.headers["location"].endswith(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     )
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
@@ -887,7 +887,7 @@ def test_submit_with_missing_required_warns_without_audit(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={},
         follow_redirects=False,
     )
@@ -927,7 +927,7 @@ def test_submit_with_missing_required_stays_blocked_even_with_legacy_acknowledge
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={"acknowledge_missing": "true"},
         follow_redirects=False,
     )
@@ -959,13 +959,13 @@ def test_clear_all_with_confirm_deletes_responses(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/clear",
+        f"/me/sessions/{review_session.id}/clear",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -993,7 +993,7 @@ def test_clear_all_without_confirm_400s(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/clear",
+        f"/me/sessions/{review_session.id}/clear",
         data={},
         follow_redirects=False,
     )
@@ -1019,7 +1019,7 @@ def test_resubmit_after_edit_refreshes_submitted_at(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={f"response[{assignment.id}][rating]": "3"},
         follow_redirects=False,
     )
@@ -1029,7 +1029,7 @@ def test_resubmit_after_edit_refreshes_submitted_at(
     assert len(first_events) == 1
 
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -1058,7 +1058,7 @@ def test_cancel_link_renders_last_saved_values(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "saved comment",
@@ -1066,7 +1066,7 @@ def test_cancel_link_renders_last_saved_values(
         follow_redirects=False,
     )
 
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    page = rae_client.get(f"/me/sessions/{review_session.id}")
     assert "saved comment" in page.text
     assert 'value="4"' in page.text
 
@@ -1096,8 +1096,8 @@ def test_other_session_url_returns_403(
     )
 
     rae_client = make_client(rae)
-    own = rae_client.get(f"/reviewer/sessions/{rae_session.id}")
-    other = rae_client.get(f"/reviewer/sessions/{other_session.id}")
+    own = rae_client.get(f"/me/sessions/{rae_session.id}")
+    other = rae_client.get(f"/me/sessions/{other_session.id}")
     assert own.status_code == 200
     assert other.status_code == 403
 
@@ -1123,7 +1123,7 @@ def test_inactive_reviewer_row_403s_on_surface(
     db.commit()
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
     assert response.status_code == 403
 
 
@@ -1163,7 +1163,7 @@ def test_save_drops_foreign_assignment_id_from_post(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{rae_session.id}/1/save",
+        f"/me/sessions/{rae_session.id}/1/save",
         data={
             f"response[{foreign_assignment.id}][rating]": "4",
             f"response[{foreign_assignment.id}][comments]": "tampered",
@@ -1199,7 +1199,7 @@ def test_reviewer_surface_response_inputs_carry_aria_labels(
     )
 
     rae_client = make_client(rae)
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    page = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert page.status_code == 200
     assert 'aria-label="' in page.text
@@ -1224,7 +1224,7 @@ def test_reviewer_surface_table_headers_have_scope(
     )
 
     rae_client = make_client(rae)
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    page = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert page.status_code == 200
     assert '<th scope="col"' in page.text
@@ -1248,7 +1248,7 @@ def test_base_layout_has_skip_link_and_main_landmark(
     )
 
     rae_client = make_client(rae)
-    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    page = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert page.status_code == 200
     assert '<a class="skip-link" href="#main-content">' in page.text
@@ -1323,7 +1323,7 @@ def test_group_instrument_save_fans_out_to_all_members(
     # Segment 18L: single-page-default session keeps every instrument
     # on page 1, so /1/save accepts inputs for any instrument.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{first.id}][rating]": "4",
             f"response[{first.id}][comments]": "team did well",
@@ -1420,7 +1420,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     # lives on page 1.
     # Answer the Team A group (keyed to Carol's assignment).
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -1439,7 +1439,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
 
     # Answering the Team B group leaves Team A's answer intact.
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Dan'].id}][rating]": "2"},
         follow_redirects=False,
     )
@@ -1526,7 +1526,7 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
     # Reviewer answers the Team A group → fans to Carol + Eve.
     rae_client = make_client(rae)
     saved = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -1647,7 +1647,7 @@ def test_tag_change_into_answered_group_refans_the_answer(
     rae_client = make_client(rae)
     # Reviewer answers Team A (via Carol) and Team B (via Dan).
     saved = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data={
             f"response[{by_reviewee['Carol'].id}][rating]": "5",
             f"response[{by_reviewee['Dan'].id}][rating]": "3",
@@ -1685,7 +1685,7 @@ def test_tag_change_into_answered_group_refans_the_answer(
 
     # The surface still surfaces Team B's answer.
     page = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     )
     marker = f"rrw-sort-rs-{review_session.id}-{group.id}"
     table = page.text[
@@ -2113,7 +2113,7 @@ def test_group_instrument_surface_renders_one_row_per_group(
     # lives on page 1.
     rae_client = make_client(rae)
     page = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     )
     assert page.status_code == 200
 
@@ -2256,7 +2256,7 @@ def test_surface_hides_response_field_when_visible_false(
     db.commit()
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.id}")
 
     assert response.status_code == 200
     # Rating (visible) still renders; Comments (hidden) does not.

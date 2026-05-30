@@ -2,11 +2,11 @@
 
 Segment 17B Phase 2 PR B. Carries:
 
-- ``GET /reviewer/sessions/{id}/summary`` — read-only HTML
+- ``GET /me/sessions/{id}/summary`` — read-only HTML
   summary with one section per instrument the reviewer
   responded on. Gated on having submitted every assigned row;
   otherwise redirects back to the dashboard.
-- ``GET /reviewer/sessions/{id}/summary.csv`` —
+- ``GET /me/sessions/{id}/summary.csv`` —
   ``{code}_my_responses.csv`` download, reuses the 18H Part 2
   per-instrument extract infrastructure scoped to one reviewer.
 """
@@ -36,7 +36,7 @@ from app.web.routes_reviewer._shared import (
 )
 from app.web.views._reviewer_summary import build_reviewer_summary_context
 
-router = APIRouter(prefix="/reviewer")
+router = APIRouter(prefix="/me")
 
 
 def _is_session_fully_submitted(
@@ -73,7 +73,7 @@ def reviewer_session_summary(
     ):
         # Not all rows submitted — redirect to the dashboard.
         return RedirectResponse(
-            url="/reviewer",
+            url="/me",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     summary = build_reviewer_summary_context(
@@ -125,7 +125,7 @@ def reviewer_session_summary_csv(
         db, reviewer=reviewer, session_id=review_session.id
     ):
         return RedirectResponse(
-            url="/reviewer",
+            url="/me",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     download_name = filename(review_session, "my_responses")

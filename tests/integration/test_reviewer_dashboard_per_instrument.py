@@ -4,7 +4,7 @@ reviewer page (Segment 18L multi-page surface).
 Segment 15B Slice 6 introduced per-instrument sub-rows; Segment
 18L's multi-page reviewer surface (one page per run of instruments
 between Segment 18M page breaks) repointed the deep link at
-``/reviewer/sessions/{id}/{page_n}``, so the sub-rows now reflect
+``/me/sessions/{id}/{page_n}``, so the sub-rows now reflect
 *pages* rather than individual instruments.
 
 Tests pin:
@@ -19,7 +19,7 @@ Tests pin:
   instruments.
 - Per-page "no assignments" surfaces when every instrument on
   the page has zero assignments for this reviewer.
-- Per-page link points at ``/reviewer/sessions/{id}/{page_n}``.
+- Per-page link points at ``/me/sessions/{id}/{page_n}``.
 """
 from __future__ import annotations
 
@@ -175,7 +175,7 @@ def test_single_instrument_dashboard_renders_no_sub_rows(
     _activate(operator, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
 
     assert review_session.name in body
     # The sub-row markup is absent.
@@ -220,7 +220,7 @@ def test_multi_instrument_single_page_dashboard_renders_no_sub_rows(
     _activate(operator, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
 
     # Single page (no break) → no sub-row markup.
     assert "dashboard-page-row" not in body
@@ -233,7 +233,7 @@ def test_multi_page_dashboard_renders_one_sub_row_per_page(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Two instruments split across two pages (page break on the
-    second) → two sub-rows, each linking to ``/reviewer/.../{page_n}``
+    second) → two sub-rows, each linking to ``/me/.../{page_n}``
     and labelled ``"Page N: #n {short_label}, ..."``."""
 
     operator = make_client(alice)
@@ -266,7 +266,7 @@ def test_multi_page_dashboard_renders_one_sub_row_per_page(
     _activate(operator, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
 
     # Two sub-rows.
     assert body.count("dashboard-page-row") == 2
@@ -284,7 +284,7 @@ def test_multi_page_dashboard_renders_deep_link_to_page_url(
 ) -> None:
     """When the session is fully activated and ``link_enabled``,
     each per-page sub-row renders an ``<a href>`` pointing at
-    ``/reviewer/sessions/{id}/{page_n}`` — not the older per-
+    ``/me/sessions/{id}/{page_n}`` — not the older per-
     instrument-position URL the dashboard used pre-18L."""
     operator = make_client(alice)
     review_session = _make_session_with_pair(
@@ -327,9 +327,9 @@ def test_multi_page_dashboard_renders_deep_link_to_page_url(
         )
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
-    assert f'href="/reviewer/sessions/{review_session.id}/1"' in body
-    assert f'href="/reviewer/sessions/{review_session.id}/2"' in body
+    body = rae_client.get("/me").text
+    assert f'href="/me/sessions/{review_session.id}/1"' in body
+    assert f'href="/me/sessions/{review_session.id}/2"' in body
 
 
 def test_sub_row_state_rolls_up_per_page(
@@ -385,7 +385,7 @@ def test_sub_row_state_rolls_up_per_page(
     _activate(operator, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
 
     # Both sub-rows render in page order: page 1 (first instrument)
     # then page 2 (peer survey).
@@ -437,7 +437,7 @@ def test_sub_row_renders_no_assignments_state_when_reviewer_excluded(
     _activate(operator, review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
 
     assert "no assignments" in body
     sub_rows = body.split('class="dashboard-page-row"')
@@ -470,7 +470,7 @@ def test_lobby_renders_five_column_header(
         db, review_session=review_session, instrument=instrument
     )
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     assert "<th>Session</th>" in body
     assert "<th>Start</th>" in body
     assert "<th>End</th>" in body
@@ -496,12 +496,12 @@ def test_lobby_pre_ready_session_renders_not_opened_unlinked(
         db, review_session=review_session, instrument=instrument
     )
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     assert ">not opened</span>" in body
     # The Session column should not link the session name when the
     # session isn't opened — the row carries the name as plain text.
     assert (
-        f'<a href="/reviewer/sessions/{review_session.id}/1">'
+        f'<a href="/me/sessions/{review_session.id}/1">'
         not in body
     )
 
@@ -531,10 +531,10 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
     db.refresh(review_session)
 
     rae_client = make_client(rae)
-    body = rae_client.get("/reviewer").text
+    body = rae_client.get("/me").text
     assert ">open</span>" in body
     assert (
-        f'<a href="/reviewer/sessions/{review_session.id}/1">' in body
+        f'<a href="/me/sessions/{review_session.id}/1">' in body
     )
     # ``activated_at`` is stamped on the first activation.
     assert review_session.activated_at is not None

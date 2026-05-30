@@ -323,24 +323,28 @@ The participant-model headcount goes from three URL-bearing
 roles (sys admin / operator / reviewer) to five (add reviewee +
 observer). The decision **don't introduce `/reviewee/` or
 `/observer/` URL prefixes — fold every participant role into a
-meta-lobby at `/me/`** is captured in `guide/url_remodel.md`,
-along with the blast-radius analysis and a one-PR aggressive-
-rename execution plan (assumes beta — no real users, no email-
-outbox rows in flight, no compatibility shim required).
+meta-lobby at `/me/`** shipped 2026-05-30 via the URL remodel
+slice (`guide/archive/url_remodel.md`): PR A moved the existing
+`/me` JSON debug endpoint to `/auth/me`; PR B flipped the four
+``routes_reviewer/`` router prefixes from `/reviewer` to `/me`
+and bulk-renamed every callsite (~340 occurrences across code,
+templates, tests, and spec).
 
-The summary: ``/me/`` becomes the participant landing,
-``/me/sessions/{id}/{page}`` the per-session participant surface
-(role-tabbed once the reviewee + observer features ship);
-``/operator/`` + ``/operator/sys-admin/`` stay unchanged for
-administrative surfaces. The rename can land independently of
-any participant-arc feature — best landed before 14B Part A so
-the invitation URLs that go out for real on day 1 ship with the
-future-correct URL.
+The shipped layout:
 
-See ``guide/url_remodel.md`` for the full reasoning, the
-"why drop ``/reviewee/`` / ``/observer/``" notes, the per-
-session role-tab design, the blast-radius table, and the
-execution checklist.
+- ``/me/`` — reviewer landing today (the participant meta-
+  lobby spec lands when the reviewee + observer features
+  ship; for now it's the dashboard).
+- ``/me/sessions/{id}/{page}`` — the per-session participant
+  surface (role-tabbed once reviewee + observer features
+  ship; reviewer-mode-only today).
+- ``/operator/`` + ``/operator/sys-admin/`` — administrative
+  surfaces, unchanged.
+
+See ``guide/archive/url_remodel.md`` for the historical
+reasoning behind the URL-shape decisions, the "why drop
+``/reviewee/`` / ``/observer/``" notes, and the per-session
+role-tab design.
 
 ## 6. Acknowledgement & notifications
 

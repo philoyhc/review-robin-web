@@ -47,7 +47,7 @@ detailed contracts.
 
 | File | Covers |
 |---|---|
-| `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). |
+| `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/me/sessions/{id}/{position}`), dashboard (`/me`), and invitation landing (`/me/invite/{token}`). |
 | `sort_by_reviewee.md` | Reviewer-surface sort UX (Segment 13B) — operator default sort via Display Fields, plus the reviewer-side clickable column headers with live-only persistence. |
 
 ## Visual / UI vocabulary

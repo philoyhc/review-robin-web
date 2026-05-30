@@ -35,11 +35,11 @@
     {% else %}
       <button class="btn" type="submit" data-rs-save>Save</button>
       <a class="btn secondary"
-         href="/reviewer/sessions/{{ session.id }}/{{ current_page_n }}"
+         href="/me/sessions/{{ session.id }}/{{ current_page_n }}"
          data-rs-discard>Discard</a>
       <button class="btn"
               type="submit"
-              formaction="/reviewer/sessions/{{ session.id }}/submit">
+              formaction="/me/sessions/{{ session.id }}/submit">
         Submit
       </button>
     {% endif %}

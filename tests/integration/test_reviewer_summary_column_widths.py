@@ -122,12 +122,12 @@ def _submit(
         data[f"response[{aid}][rating]"] = "5"
         data[f"response[{aid}][comments]"] = "ok"
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data=data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         follow_redirects=False,
     )
 
@@ -150,7 +150,7 @@ def test_summary_table_no_colgroup_when_widths_unset(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "<colgroup>" not in body
     # ``base.html`` carries a CSS rule ``table.rs-group-table {
@@ -207,7 +207,7 @@ def test_summary_table_emits_col_widths_from_instrument(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
 
     # ``<colgroup>`` is present, with the explicit widths for
@@ -258,7 +258,7 @@ def test_summary_table_partial_widths_only_styles_set_columns(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     # Identity column lacks an explicit width — it must NOT
     # carry a ``style="width:...px"`` attribute on any of its
@@ -293,7 +293,7 @@ def test_summary_per_reviewee_identity_carries_name_and_email(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "<strong>Carol</strong>" in body
     assert "<code>carol@example.edu</code>" in body
@@ -361,7 +361,7 @@ def test_summary_includes_visible_display_field_columns(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     # The display column header AND Carol's tag value land
     # on the summary, same as the surface would render.
@@ -437,7 +437,7 @@ def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     # The composed tag line carries BOTH the boundary tag value
     # ("Cohort A") and the non-boundary one ("Senior"), wrapped
@@ -473,7 +473,7 @@ def test_summary_numeric_column_header_carries_rs_narrow(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     # The Rating header sits inside a ``<th class="rs-narrow">``
     # cell; the asterisk lives inside the same cell.

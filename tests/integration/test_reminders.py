@@ -87,11 +87,11 @@ def _ready_session(
     return session
 
 
-_INVITE_URL_RE = re.compile(r"https?://\S+/reviewer/invite/[A-Za-z0-9_\-]+")
+_INVITE_URL_RE = re.compile(r"https?://\S+/me/invite/[A-Za-z0-9_\-]+")
 
 
 def _extract_token(body: str) -> str:
-    match = re.search(r"/reviewer/invite/([A-Za-z0-9_\-]+)", body)
+    match = re.search(r"/me/invite/([A-Za-z0-9_\-]+)", body)
     assert match is not None, body
     return match.group(1)
 
@@ -237,7 +237,7 @@ def test_remind_incomplete_targets_only_incomplete(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{session.id}/submit",
+        f"/me/sessions/{session.id}/submit",
         data={f"response[{rae_assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -389,7 +389,7 @@ def test_submitted_with_warn_override_classified_incomplete(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{session.id}/submit",
+        f"/me/sessions/{session.id}/submit",
         data={
             f"response[{assignment.id}][comments]": "fine",
         },
@@ -436,7 +436,7 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{session.id}/submit",
+        f"/me/sessions/{session.id}/submit",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )

@@ -136,7 +136,7 @@ def test_no_sort_spec_renders_three_rows(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -162,7 +162,7 @@ def test_sort_spec_orders_rows_ascending_by_name(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     body = response.text
     # Alphabetical: Alpha, Bravo, Charlie.
@@ -188,7 +188,7 @@ def test_sort_spec_orders_rows_descending_by_name(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
@@ -214,7 +214,7 @@ def test_empty_sort_spec_renders_insertion_order(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -239,7 +239,7 @@ def test_reviewer_surface_renders_sortable_header_scaffolding(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -274,7 +274,7 @@ def test_reviewer_surface_response_field_headers_carry_sort_type(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -306,7 +306,7 @@ def test_reviewer_surface_no_override_preserves_operator_sort(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -338,7 +338,7 @@ def test_stale_display_field_id_skipped_silently(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.id}"
     )
     assert response.status_code == 200
     body = response.text

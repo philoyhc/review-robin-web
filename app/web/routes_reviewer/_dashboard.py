@@ -31,7 +31,7 @@ from app.web import breadcrumbs
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
-router = APIRouter(prefix="/reviewer")
+router = APIRouter(prefix="/me")
 
 
 def _to_utc(value: datetime) -> datetime:
@@ -54,7 +54,7 @@ class DashboardPageRow:
     Segment 15B Slice 6 introduced per-instrument sub-rows; Segment
     18L's multi-page reviewer surface (one page per run of
     instruments between Segment 18M page breaks) repointed the deep
-    link at ``/reviewer/sessions/{id}/{page_n}`` rather than the
+    link at ``/me/sessions/{id}/{page_n}`` rather than the
     per-instrument position, so the sub-rows now reflect *pages*
     rather than individual instruments.
 
@@ -73,7 +73,7 @@ class DashboardPageRow:
       heading uses). Bare ``"Page N"`` falls back when an
       instrument has no ``short_label`` *or* ``name``.
     - ``page_n`` — 1-based page index. Lands in
-      ``/reviewer/sessions/{id}/{page_n}``.
+      ``/me/sessions/{id}/{page_n}``.
     - ``state`` — ``"not started"`` / ``"in progress"`` /
       ``"submitted"`` / ``"no assignments"``. Rolled up from the
       page's instruments via :func:`_rollup_page_state` — mixed
@@ -219,9 +219,9 @@ def reviewer_dashboard(
                 # page when the reviewer has submitted everything.
                 "link_enabled": session_status != "not opened",
                 "link_target": (
-                    f"/reviewer/sessions/{review_session.id}/summary"
+                    f"/me/sessions/{review_session.id}/summary"
                     if pill.state == "submitted"
-                    else f"/reviewer/sessions/{review_session.id}/1"
+                    else f"/me/sessions/{review_session.id}/1"
                 ),
                 "start_text": (
                     date_formatting.format_datetime(

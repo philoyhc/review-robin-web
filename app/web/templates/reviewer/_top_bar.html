@@ -20,8 +20,8 @@
   {% if user %}
     <div class="chrome-user">
       <div>Signed in as {{ user.display_name or user.email }}{% if user.is_sys_admin %} (sys admin){% endif %}</div>
-      {% if (reviewer_review_count|default(0)) > 1 and request.url.path != "/reviewer" %}
-        <a class="chrome-link" href="/reviewer">My Reviews</a>
+      {% if (reviewer_review_count|default(0)) > 1 and request.url.path != "/me" %}
+        <a class="chrome-link" href="/me">My Reviews</a>
       {% endif %}
       <a class="signout" href="/.auth/logout">Sign out</a>
     </div>

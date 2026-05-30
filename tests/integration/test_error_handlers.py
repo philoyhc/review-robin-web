@@ -127,7 +127,7 @@ def test_invalid_invitation_token_renders_friendly_404(db: Session) -> None:
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
     try:
-        resp = TestClient(app).get("/reviewer/invite/bogus-token")
+        resp = TestClient(app).get("/me/invite/bogus-token")
     finally:
         app.dependency_overrides.clear()
 

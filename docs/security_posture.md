@@ -42,7 +42,7 @@ the dependencies above; no route trusts a client-supplied actor id.
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
 | Reviewer surface + save/submit/clear | `require_reviewer_in_session` | |
-| `/reviewer/invite/{token}` | identity + token lookup | Email-mismatch → dedicated 403 page. |
+| `/me/invite/{token}` | identity + token lookup | Email-mismatch → dedicated 403 page. |
 
 POST endpoints verified not to trust client-side identifiers:
 reviewer `save`/`submit` build the assignment index from

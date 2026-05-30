@@ -20,7 +20,7 @@ from app.web.routes_reviewer._shared import (
     reviewer_review_count_for_user,
 )
 
-router = APIRouter(prefix="/reviewer")
+router = APIRouter(prefix="/me")
 
 
 @router.get("/invite/{token}", name="reviewer_invite", response_class=HTMLResponse)
@@ -67,6 +67,6 @@ def reviewer_invite(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}",
+        url=f"/me/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

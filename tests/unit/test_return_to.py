@@ -52,15 +52,15 @@ def test_operator_session_with_unknown_id_falls_back(db: Session) -> None:
 
 
 def test_reviewer_root_resolves_to_your_reviews(db: Session) -> None:
-    target = resolve_return_to("/reviewer", db)
-    assert target.url == "/reviewer"
+    target = resolve_return_to("/me", db)
+    assert target.url == "/me"
     assert target.label == "your reviews"
 
 
 def test_reviewer_session_resolves_to_session_name(db: Session) -> None:
     session = _seed_session(db, name="Reviewer Session")
-    target = resolve_return_to(f"/reviewer/sessions/{session.id}", db)
-    assert target.url == f"/reviewer/sessions/{session.id}"
+    target = resolve_return_to(f"/me/sessions/{session.id}", db)
+    assert target.url == f"/me/sessions/{session.id}"
     assert target.label == "Reviewer Session"
 
 

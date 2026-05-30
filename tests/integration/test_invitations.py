@@ -216,7 +216,7 @@ def test_reviewer_pre_open_page_renders_for_validated_session(
         provider="aad",
     )
     rae_client = make_client(rae)
-    page = rae_client.get(f"/reviewer/sessions/{session.id}/1")
+    page = rae_client.get(f"/me/sessions/{session.id}/1")
     assert page.status_code == 200
     body = page.text
     assert "<title>Review opens later" in body
@@ -249,7 +249,7 @@ def test_send_writes_outbox_and_flips_to_sent(
     assert outbox.status == "sent"
     assert outbox.sent_at is not None
     assert outbox.to_email == "rae@example.edu"
-    assert "/reviewer/invite/" in outbox.body  # raw token URL embedded
+    assert "/me/invite/" in outbox.body  # raw token URL embedded
 
 
 def test_send_all_writes_one_outbox_per_pending(
@@ -309,7 +309,7 @@ def test_regenerate_rotates_token_and_resets_status(
 
 
 def _extract_invite_token(outbox_body: str) -> str:
-    match = re.search(r"/reviewer/invite/([A-Za-z0-9_\-]+)", outbox_body)
+    match = re.search(r"/me/invite/([A-Za-z0-9_\-]+)", outbox_body)
     assert match is not None, f"could not find invite URL in: {outbox_body!r}"
     return match.group(1)
 
@@ -338,9 +338,9 @@ def test_token_url_with_matching_email_stamps_opened_and_redirects(
     )
     rae_client = make_client(rae)
 
-    response = rae_client.get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
+    response = rae_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
     assert response.status_code == 303
-    assert response.headers["location"] == f"/reviewer/sessions/{session.id}"
+    assert response.headers["location"] == f"/me/sessions/{session.id}"
 
     db.refresh(invitation)
     assert invitation.status == "opened"
@@ -370,11 +370,11 @@ def test_token_url_repeat_visit_does_not_restamp(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     rae_client = make_client(rae)
-    rae_client.get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
+    rae_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
     db.refresh(invitation)
     first_opened_at = invitation.opened_at
-    rae_client.get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
-    rae_client.get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
+    rae_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
+    rae_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
     db.refresh(invitation)
     assert invitation.opened_at == first_opened_at
 
@@ -402,7 +402,7 @@ def test_token_url_with_mismatched_email_returns_403(
         principal_id="eve-oid", email="eve@example.edu", name="Eve", provider="aad"
     )
     eve_client = make_client(eve)
-    response = eve_client.get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
+    response = eve_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
     assert response.status_code == 403
     assert "belongs to someone else" in response.text
 
@@ -411,7 +411,7 @@ def test_token_url_with_mismatched_email_returns_403(
 
 
 def test_token_url_with_unknown_token_returns_404(client: TestClient) -> None:
-    response = client.get("/reviewer/invite/not-a-real-token", follow_redirects=False)
+    response = client.get("/me/invite/not-a-real-token", follow_redirects=False)
     assert response.status_code == 404
 
 
@@ -523,7 +523,7 @@ def test_record_open_audit_event_written(
     rae = AuthenticatedUser(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
-    make_client(rae).get(f"/reviewer/invite/{raw_token}", follow_redirects=False)
+    make_client(rae).get(f"/me/invite/{raw_token}", follow_redirects=False)
 
     opened = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "invitation.opened")
@@ -686,7 +686,7 @@ def test_invitation_reviewer_detail_renders(
     body = client.get(
         f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail"
     ).text
-    assert "/reviewer/invite/" in body
+    assert "/me/invite/" in body
 
 
 def test_per_row_remind_redirects_to_invitations_page(

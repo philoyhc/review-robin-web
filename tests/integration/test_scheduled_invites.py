@@ -36,7 +36,7 @@ from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
 def _stub_build_url(token: str) -> str:
-    return f"https://example.test/reviewer/invite/{token}"
+    return f"https://example.test/me/invite/{token}"
 
 
 def _seed_session_with_reviewers(

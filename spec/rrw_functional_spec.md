@@ -579,13 +579,13 @@ disabled in deployed environments.
 Reviewers sign in through the same institutional identity layer.
 Two entry paths exist:
 
-- **Direct session link** (`/reviewer/sessions/{id}`). The signed-
+- **Direct session link** (`/me/sessions/{id}`). The signed-
   in user's email must case-insensitively match an active
   reviewer row on that session. Mismatch produces a friendly
   account-mismatch banner pointing the user at their account-debug
   page.
 
-- **Unique invitation link** (`/reviewer/invite/{token}`). The
+- **Unique invitation link** (`/me/invite/{token}`). The
   token is per-reviewer, per-session, one-shot redemption to a
   durable session URL. The token is hashed at rest — only the
   hash is stored; the raw token lives only in the email body.
@@ -1125,7 +1125,7 @@ A reviewer reaches their work through one of two entry points
 
 After sign-in, the reviewer lands on:
 
-- The **reviewer dashboard** (`/reviewer`) — a list of sessions
+- The **reviewer dashboard** (`/me`) — a list of sessions
   the signed-in identity is invited to or active in, with one
   card per session showing session name, deadline, status,
   and a "Open review" button.
@@ -1153,7 +1153,7 @@ pointing them at their account-debug page.
 
 ### 10.3 Review surface
 
-The review surface (`/reviewer/sessions/{id}/{page}`) is a
+The review surface (`/me/sessions/{id}/{page}`) is a
 **dense tabular form** — one row per reviewee (or one row per
 group, for group-scoped instruments) and one column per
 display field plus one column per response field.

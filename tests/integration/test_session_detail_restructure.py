@@ -295,7 +295,7 @@ def _seed_responses(client: TestClient, db: Session) -> tuple[ReviewSession, int
             select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalar_one()
         response = rae_client.post(
-            f"/reviewer/sessions/{review_session.id}/1/save",
+            f"/me/sessions/{review_session.id}/1/save",
             data={
                 f"response[{assignment.id}][rating]": "4",
                 f"response[{assignment.id}][comments]": "ok",

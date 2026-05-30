@@ -72,7 +72,7 @@ def test_reviewer_chrome_renders_lighter_top_bar_with_no_breadcrumb(
     """Reviewer pages render the lighter "Review Robin" chrome variant
     (Segment 11D PR C, D2): no version string, no /about link, and no
     breadcrumb. The user card and sign-out remain."""
-    response = client.get("/reviewer")
+    response = client.get("/me")
     assert response.status_code == 200
     body = response.text
     assert "Review Robin Web App" not in body
@@ -125,7 +125,7 @@ def test_breadcrumb_is_suppressed_on_reviewer_root(
     """Reviewer pages don't carry the operator-style breadcrumb
     (Segment 11D PR C, D2). The chrome's H1 + the user menu together
     orient the reviewer."""
-    response = client.get("/reviewer")
+    response = client.get("/me")
     body = response.text
     assert 'class="breadcrumb"' not in body
     assert '<span aria-current="page">Reviewer</span>' not in body

@@ -308,7 +308,7 @@ def test_reviewer_save_403_when_session_draft(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -335,7 +335,7 @@ def test_reviewer_save_403_when_instrument_closed_manually(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -357,7 +357,7 @@ def test_reviewer_save_403_when_deadline_passed(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -384,7 +384,7 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "secret-comment",
@@ -403,7 +403,7 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
         reason="manual",
     )
 
-    page = rae_client.get(f"/reviewer/sessions/{session.id}")
+    page = rae_client.get(f"/me/sessions/{session.id}")
     assert page.status_code == 200
     assert "secret-comment" not in page.text
     assert "no longer accepting responses" in page.text.lower()
@@ -415,7 +415,7 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
         user=user,
         visible=True,
     )
-    page = rae_client.get(f"/reviewer/sessions/{session.id}")
+    page = rae_client.get(f"/me/sessions/{session.id}")
     assert "secret-comment" in page.text
 
 
@@ -433,9 +433,9 @@ def test_lazy_deadline_close_fires_once(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     rae_client = make_client(rae)
-    rae_client.get(f"/reviewer/sessions/{session.id}")
-    rae_client.get(f"/reviewer/sessions/{session.id}")
-    rae_client.get(f"/reviewer/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.id}")
 
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
@@ -475,7 +475,7 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     rae_client = make_client(rae)
-    rae_client.get(f"/reviewer/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.id}")
 
     deadline_events = db.execute(
         select(AuditEvent).where(

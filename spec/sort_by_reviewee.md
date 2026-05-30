@@ -122,7 +122,7 @@ The reviewer's override **spans both display and response columns**. Sort by dis
 **Persistence: per-browser cookie.** As shipped 2026-05-12
 (Part 2 PR 5), the reviewer-side override persists in a
 `rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped to
-`/reviewer/sessions/{id}`. The cookie carries the canonical
+`/me/sessions/{id}`. The cookie carries the canonical
 `[{"key": "...", "dir": "asc|desc"}, ...]` shape, **percent-encoded**
 (the browser primitive writes it via `encodeURIComponent`); the
 server reads it at render time, `unquote()`-s the raw value

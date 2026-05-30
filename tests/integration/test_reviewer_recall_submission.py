@@ -117,12 +117,12 @@ def _submit(
         data[f"response[{aid}][rating]"] = "5"
         data[f"response[{aid}][comments]"] = "fine"
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.id}/1/save",
         data=data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.id}/submit",
         follow_redirects=False,
     )
 
@@ -136,7 +136,7 @@ def test_recall_button_renders_on_summary_when_session_is_ready(
 ) -> None:
     """While the session is ``ready`` the summary page carries a
     ``Recall my submission`` button posting to
-    ``/reviewer/sessions/{id}/recall``."""
+    ``/me/sessions/{id}/recall``."""
     review_session = _seed_session_with_rae_and_one_reviewee(
         client, db, code="recall-button", reviewer_email=rae.email
     )
@@ -146,11 +146,11 @@ def test_recall_button_renders_on_summary_when_session_is_ready(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Recall my submission" in body
     assert (
-        f'action="/reviewer/sessions/{review_session.id}/recall"' in body
+        f'action="/me/sessions/{review_session.id}/recall"' in body
     )
 
 
@@ -180,7 +180,7 @@ def test_recall_button_hidden_on_summary_when_session_is_expired(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.id}/summary"
     ).text
     assert "Recall my submission" not in body
 
@@ -216,12 +216,12 @@ def test_recall_post_nulls_submitted_at_and_lands_on_form(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     resp = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.id}/recall",
         follow_redirects=False,
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == (
-        f"/reviewer/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.id}/1"
     )
 
     # Same rows, ``submitted_at`` now None; values intact.
@@ -274,7 +274,7 @@ def test_recall_post_403s_when_session_is_expired(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     resp = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.id}/recall",
         follow_redirects=False,
     )
     assert resp.status_code == 403
@@ -297,7 +297,7 @@ def test_recall_then_resubmit_round_trips_the_submitted_at_stamp(
     _submit(rae_client, review_session, db)
     app.dependency_overrides[get_current_user] = lambda: rae
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.id}/recall",
         follow_redirects=False,
     )
 

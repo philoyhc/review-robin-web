@@ -1,6 +1,6 @@
 """Operator-side full preview of the reviewer surface (Segment 18Q).
 
-Mirror of the reviewer's ``GET /reviewer/sessions/{id}/{page_n}`` for
+Mirror of the reviewer's ``GET /me/sessions/{id}/{page_n}`` for
 the operator: renders the same ``reviewer/review_surface.html``
 template against the same ``_surface_context`` plumbing, but bypasses
 the deadline / acceptance gates and rewrites the action-row Prev/Next

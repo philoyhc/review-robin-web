@@ -457,7 +457,7 @@ def has_sent_invitations(db: Session, session_id: int) -> bool:
 
 REMINDER_KIND = "reminder"
 
-_INVITE_URL_PATTERN = re.compile(r"https?://\S+/reviewer/invite/[A-Za-z0-9_\-]+")
+_INVITE_URL_PATTERN = re.compile(r"https?://\S+/me/invite/[A-Za-z0-9_\-]+")
 
 
 def most_recent_invitation_url(
