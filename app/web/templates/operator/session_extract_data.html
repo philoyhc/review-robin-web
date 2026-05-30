@@ -736,6 +736,7 @@
             "reviewee_metadata",
             "all-reviewees"
           );
+          syncTopZipAllButton();
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
@@ -822,7 +823,31 @@
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
+      // Top-level Zip-all button — the intro card's
+      // ``Data shaper`` chip drives ``?data_shapes=0`` when
+      // off so the bundle skips folding in each saved
+      // shape's CSV. The other three intro-card chips
+      // (``By instruments`` / Reviewer / Reviewee metadata)
+      // are placeholder for the eventual scope split — they
+      // don't currently affect the URL.
+      function syncTopZipAllButton() {
+        var btn = document.getElementById("extract-data-zip-all");
+        if (!btn) return;
+        var shaperChip = document.querySelector(
+          '[data-extract-all-chip="data-shaper"]'
+        );
+        var includeShapes =
+          !shaperChip ||
+          shaperChip.getAttribute("aria-pressed") === "true";
+        var base =
+          "/operator/sessions/" + sessionId +
+          "/export/responses_bundle.zip";
+        btn.setAttribute(
+          "href", includeShapes ? base : base + "?data_shapes=0"
+        );
+      }
       syncByInstrumentButton();
+      syncTopZipAllButton();
       syncMetadataButton(
         "data-reviewer-metadata-chip",
         "extract-data-reviewer-metadata-zip",

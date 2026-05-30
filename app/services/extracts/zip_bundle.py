@@ -92,8 +92,24 @@ def build_setup_bundle(
     return buffer, counts
 
 
+def _shape_filename_slug(name: str) -> str:
+    """Filesystem-safe slug for a saved Data shape's
+    filename inside the responses bundle. Mirrors
+    ``_slug_shape_name`` in the route layer + the
+    ``by_instrument_filename_slug`` shape: alphanumerics +
+    ``-`` + ``_``, collapsing other runs to ``_``. Empty
+    slug falls back to ``shape``."""
+    import re
+
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
+    return slug or "shape"
+
+
 def build_responses_bundle(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    include_data_shapes: bool = True,
 ) -> tuple[bytes, dict[str, int]]:
     """Build the responses-only zip for ``review_session``.
 
@@ -102,8 +118,17 @@ def build_responses_bundle(
     ``session.responses_bundle_extracted`` audit envelope.
     Members: the unified ``responses.csv`` + ``reviewer_stats.csv``
     + ``reviewee_stats.csv`` + one ``instrument_{n}.csv`` per
-    instrument.
+    instrument, plus (when ``include_data_shapes``) one CSV per
+    saved Data shape named ``{code}_{slug(name)}.csv``. The
+    Data shaper chip on the intro card drives the
+    ``include_data_shapes`` flag via a ``?data_shapes=0``
+    query param on the route.
     """
+    from app.db.models import DataShape
+    from app.services.extracts.data_shape_extract import (
+        build_shape_rows,
+    )
+
     responses = list(serialize_responses(db, review_session))
     reviewer_stats, reviewee_stats = build_entity_stats(
         db, review_session
@@ -129,6 +154,29 @@ def build_responses_bundle(
             )
         )
 
+    data_shape_count = 0
+    if include_data_shapes:
+        shapes = list(
+            db.execute(
+                select(DataShape)
+                .where(DataShape.session_id == review_session.id)
+                .order_by(DataShape.name)
+            ).scalars()
+        )
+        used_slugs: set[str] = set()
+        for shape in shapes:
+            base_slug = _shape_filename_slug(shape.name)
+            candidate = base_slug
+            n = 2
+            while candidate in used_slugs or candidate in members:
+                candidate = f"{base_slug}_{n}"
+                n += 1
+            used_slugs.add(candidate)
+            members[candidate] = list(
+                build_shape_rows(db, review_session, shape)
+            )
+            data_shape_count += 1
+
     buffer = _write_archive(review_session, members)
 
     counts = {
@@ -138,6 +186,7 @@ def build_responses_bundle(
         "reviewer_stats": max(0, len(reviewer_stats) - 1),
         "reviewee_stats": max(0, len(reviewee_stats) - 1),
         "instrument_files": len(instruments),
+        "data_shapes": data_shape_count,
     }
     return buffer, counts
 

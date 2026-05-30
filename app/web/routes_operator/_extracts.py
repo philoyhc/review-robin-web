@@ -270,6 +270,7 @@ def export_bundle_zip(
 
 @router.get("/sessions/{session_id}/export/responses_bundle.zip")
 def export_responses_bundle_zip(
+    data_shapes: int = Query(default=1),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -278,11 +279,19 @@ def export_responses_bundle_zip(
     Responses CSV + reviewer/reviewee stats + one per-instrument
     CSV in one archive. Built fully in memory.
 
+    ``?data_shapes=0`` excludes the saved Data shape CSVs
+    from the bundle — driven by the intro card's
+    ``Data shaper`` chip. Default (chip on) includes every
+    saved shape, one CSV each named
+    ``{code}_{slug(name)}.csv``.
+
     Filename: ``{code}_responses.zip``. Per
     ``guide/extract_data.md`` the per-card lens downloads are
     the fine-grained alternative; this button is the one-click
     "all response files" shortcut."""
-    zip_bytes, counts = build_responses_bundle(db, review_session)
+    zip_bytes, counts = build_responses_bundle(
+        db, review_session, include_data_shapes=(data_shapes != 0)
+    )
 
     audit.write_event(
         db,
