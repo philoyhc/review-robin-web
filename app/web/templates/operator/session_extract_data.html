@@ -546,6 +546,13 @@
            — and ``Delete`` disabled when this is the only
            sub-card). #}
         <div class="data-shape-actions">
+          {# Placeholder report pill — flush left, top-aligned, in
+             the same row as the action buttons so it doesn't
+             introduce a new gap below the preview table. The
+             counter wires up in a follow-up slice; until then it
+             renders ``—`` so it's clearly a placeholder. #}
+          <span class="pill pill-count data-shape-row-count"
+                data-shape-row-count>Number of data rows: —</span>
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
@@ -623,6 +630,8 @@
             </table>
           </div>
           <div class="data-shape-actions">
+            <span class="pill pill-count data-shape-row-count"
+                  data-shape-row-count>Number of data rows: —</span>
             <input type="text" class="data-shape-name-input"
                    data-shape-name placeholder="Name this shape"
                    value="{{ saved.name }}" style="display: none;">
@@ -691,6 +700,8 @@
            — and ``Delete`` disabled when this is the only
            sub-card). #}
         <div class="data-shape-actions">
+          <span class="pill pill-count data-shape-row-count"
+                data-shape-row-count>Number of data rows: —</span>
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
           <span class="data-shape-name-display" data-shape-name-display></span>
