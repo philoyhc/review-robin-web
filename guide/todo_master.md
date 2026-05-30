@@ -1168,11 +1168,15 @@ bounds / visible) + RuleSets + field labels + data shapes.
 **Follow-on slice queued (proposed 2026-05-30):** three-way
 `Self-review handling` chip
 (`Include self` / `Exclude self` / `Both`) on the two
-metadata cards + Data shaper scope row, surfaced only when
-the session actually contains self-review responses.
-`Both` duplicates the aggregate-column block with `_self` /
-`_noself` suffixes; matching filename suffix. Persistence
-on the Data shaper side adds a new
+metadata cards + Data shaper scope row. Always surfaced
+whenever the scope holds any response data; states the
+in-scope data can't support are auto-locked (only non-self
+data → `Exclude self` locked; only self data → `Include self`
+locked; both kinds → full three-way selectable). `_self` /
+`_noself` column-name + filename suffixes always emit so the
+CSV schema stays stable for downstream consumers. `Both`
+duplicates the aggregate-column block with both suffixes.
+Persistence on the Data shaper side adds a new
 `data_shapes.self_review_handling` column + Settings CSV
 round-trip key. Plan stays in `guide/extract_data.md`
 ("Self-review handling in summarizing extracts" section)

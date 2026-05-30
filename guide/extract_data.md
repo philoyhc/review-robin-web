@@ -621,19 +621,36 @@ responses that exist on `include=True` rows, fold them into
 aggregates or not. This section captures the proposal for
 that control.
 
-**Three-way chip, conditionally surfaced.** Add a single
-three-way `Self-review handling` chip that **only renders
-when the session actually contains one or more
-included-and-answered self-review rows** (server-side
-preflight: at least one `Response` whose
-`Assignment.include=True` and where
-`is_self_review(reviewer, reviewee)` returns `True` and
-whose value is non-null). On sessions where every
-self-review pair sits inactive (e.g. `self_reviews_active=False`
-or the operator deactivated each self-pair individually) or
-where no active self-review pair carries a response yet,
-the chip never appears — the operator never sees a control
-that wouldn't change anything.
+**Three-way chip, always surfaced (state-machine over data).**
+The `Self-review handling` chip is **always present** on the
+two metadata cards + the Data shaper scope row whenever any
+response data exists at all — but which of its three states
+is operator-selectable depends on what kind of data exists
+in scope:
+
+| Data state in scope | Chip behaviour |
+|---|---|
+| **Both self-review and non-self-review responses present** | Full three-way chip, all three states selectable. Operator picks `Include self` / `Exclude self` / `Both`. |
+| **Only non-self-review responses present** (no included-and-answered self-review rows) | Chip surfaces with `Exclude self` pre-selected and **locked** — the operator can see what state the file will ship in but can't switch to `Include self` (would emit empty) or `Both` (would emit one empty block). |
+| **Only self-review responses present** (every non-self pair is `include=False` or unanswered — pathological, but valid) | Chip surfaces with `Include self` pre-selected and **locked**, same rationale. |
+| **No responses present at all** | The whole card / shape has nothing to export; chip irrelevant. |
+
+The chip's tri-state is computed server-side from the
+included-row response pool, scoped the same way the
+aggregates are (the active card's instrument scope, the
+active shape's instrument + response-field + axis scope).
+Toggling another scope chip may change the data state and
+therefore the chip's locked / unlocked status; the JS
+re-derives it on every scope-chip change so the UI doesn't
+drift.
+
+**Column-name + filename suffixes always present.** The
+`_self` / `_noself` suffix lands on every aggregate column
+**regardless of whether the chip was operator-selectable or
+locked** — so the CSV schema is stable for downstream
+consumers (a pandas script doesn't have to inspect the
+session config to know what kind of pool the column
+represents). Same goes for the filename suffix.
 
 When it appears, the chip has three mutually exclusive
 states:
@@ -642,7 +659,7 @@ states:
 |---|---|---|---|
 | **Include self** | Fold self-review responses into the row's `Count` / `Mean` / `Median` / `Min` / `Max` / `Length` exactly as today. | `_self` on every aggregate column. | `_self` appended before the extension. |
 | **Exclude self** | Drop self-review responses from the row's aggregates. `Assigned` also drops the self-pair cells so the denominator stays honest. | `_noself` on every aggregate column. | `_noself` appended before the extension. |
-| **Both** | The response-data column block is **duplicated** — first an include-self block (columns suffixed `_self`), then an exclude-self block (columns suffixed `_noself`), so a single CSV side-by-sides both views. | Both suffixes coexist in the same row. | *(open — see clarifying question below.)* |
+| **Both** | The response-data column block is **duplicated** — first an include-self block (columns suffixed `_self`), then an exclude-self block (columns suffixed `_noself`), so a single CSV side-by-sides both views. Only selectable when both kinds of data exist in scope. | Both suffixes coexist in the same row. | *(open — see clarifying question below.)* |
 
 Identity columns (`ReviewerName`, `ReviewerEmail`, tag
 columns, `Assigned` — see clarifying question) carry no
