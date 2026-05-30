@@ -1326,17 +1326,21 @@
          ``self_review_handling="both"`` (aggregate columns —
          Assigned / Count / Mean / Median / Min / Max / Length /
          fan-out columns from List items / Discrete steps) get
-         underlined so the operator can see at a glance which
-         columns the file will fan out. Keyed on the sub-card's
+         a thick grey bottom edge so the operator can see at a
+         glance which columns the file will fan out. Mimics the
+         page chrome's active-tab marker (a coloured bar at the
+         bottom edge). Drawn via ``box-shadow: inset`` so there's
+         no layout shift between aggregate and non-aggregate
+         cells. Keyed on the sub-card's
          ``data-shape-self-review-handling`` attribute; saved
          cards carry it server-rendered, edit-mode cards have
          the JS sync it on every SRH chip cycle. Identity
          columns (Name / Email / Tag-N) never carry
-         ``data-aggregate``, so they're never underlined. */
+         ``data-aggregate``, so they're never marked. */
       body.ui-v2
         .data-shape-card[data-shape-self-review-handling="both"]
         .shaper-preview-th[data-aggregate="true"] {
-        text-decoration: underline;
+        box-shadow: inset 0 -3px 0 var(--text-secondary);
       }
       /* Empty-state placeholder cell that surfaces inside the
          preview row when no column chips are selected on the
