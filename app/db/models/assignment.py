@@ -42,6 +42,15 @@ class Assignment(Base):
         ForeignKey("instruments.id"), index=True, nullable=False
     )
     include: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # ``True`` iff this assignment row is a self-review per the canonical
+    # whole-group rule (``spec/assignments.md`` § *Self-review policy*).
+    # Computed via ``assignments.classify_self_review`` at write time and
+    # whenever the underlying composition changes (reviewer/reviewee identity
+    # edits, reviewee tag edits affecting group composition, instrument
+    # ``group_kind`` edits). See ``guide/self_review_consolidate.md``.
+    is_self_review: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     # ``context: JSON`` retired in 15D PR 6b. ``pair_context_*`` keys
     # lifted to the ``relationships`` table; ``assignment_context_*``
     # keys retired entirely (operator-typed via the manual CSV only).
