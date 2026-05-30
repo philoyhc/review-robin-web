@@ -936,7 +936,17 @@
       );
       if (!relevantSlot || !stack || !shapeTemplate) return;
 
-      var activeShape = stack.querySelector("[data-shape]");
+      // Active shape = the one currently in edit mode. The page
+      // either renders with one always-present blank edit-mode
+      // sub-card (no shapes saved yet) OR with one-or-more
+      // ``saved`` sub-cards and no edit-mode card. In the second
+      // case ``activeShape`` is null on first load so the chips
+      // start locked (cleared + grayed) — there's no target to
+      // toggle against until the operator clicks ``Edit`` on a
+      // saved card or ``+Shape``.
+      var activeShape = stack.querySelector(
+        '[data-shape][data-shape-mode="edit"]'
+      );
 
       function setActiveShape(shape) {
         activeShape = shape;
@@ -954,6 +964,24 @@
             "data-shape-selected", other === shape ? "true" : "false"
           );
         });
+        // Chips lock when no sub-card is in edit mode — the
+        // selector row has nothing to target, so the chips
+        // clear their selection and gray out (CSS) +
+        // short-circuit their toggle handlers (JS guard via
+        // ``chipsLocked``). Re-enabling on a fresh active
+        // shape happens here so every entry point
+        // (``Edit`` / ``+Shape`` / ``Delete``-and-fallback)
+        // re-arms the row consistently.
+        if (shape) {
+          card.setAttribute("data-shaper-chips-locked", "false");
+        } else {
+          clearAllSelectionChips();
+          card.setAttribute("data-shaper-chips-locked", "true");
+        }
+      }
+
+      function chipsLocked() {
+        return card.getAttribute("data-shaper-chips-locked") === "true";
       }
 
       function closeOtherEditingShapes(except) {
@@ -1084,6 +1112,7 @@
 
       function bindColChip(chip) {
         function toggle() {
+          if (chipsLocked()) return;
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           chip.classList.toggle("is-selected", pressed);
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
@@ -1322,6 +1351,7 @@
 
       function bindFieldChip(chip) {
         function toggle() {
+          if (chipsLocked()) return;
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           if (pressed && fieldSlot) {
             fieldSlot
@@ -1397,6 +1427,7 @@
       );
       instrumentChips.forEach(function (chip) {
         function toggle() {
+          if (chipsLocked()) return;
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           if (pressed) {
             instrumentChips.forEach(function (other) {
@@ -1426,6 +1457,7 @@
 
       card.querySelectorAll("[data-shaper-axis-chip]").forEach(function (chip) {
         function toggle() {
+          if (chipsLocked()) return;
           var pressed = chip.getAttribute("aria-pressed") !== "true";
           var axis = chip.getAttribute("data-shaper-axis-chip");
           if (pressed && MUTEX_AXES.indexOf(axis) !== -1) {
@@ -1476,6 +1508,52 @@
         return !!anyCol;
       }
 
+      // Has the active edit-mode shape diverged from what was
+      // last persisted? Save's disabled state turns on this so
+      // a no-op Save doesn't round-trip an unchanged shape.
+      // For brand-new (never-saved) sub-cards (``data-shape-id``
+      // absent) every editable state counts as ``unsaved`` —
+      // ``shapeIsValid`` is the only gate.
+      function hasUnsavedChanges(shape) {
+        if (!shape) return false;
+        if (!shape.getAttribute("data-shape-id")) return true;
+        var nameInput = shape.querySelector("[data-shape-name]");
+        var nameDisplay = shape.querySelector("[data-shape-name-display]");
+        var savedName = nameDisplay
+          ? (nameDisplay.textContent || "").trim()
+          : "";
+        var currentName = nameInput
+          ? (nameInput.value || "").trim()
+          : "";
+        if (currentName !== savedName) return true;
+        if ((currentAxis() || "") !== (shape.getAttribute("data-shape-axis") || "")) {
+          return true;
+        }
+        var savedInstrumentRaw = shape.getAttribute("data-shape-instrument-id");
+        var savedInstrument = savedInstrumentRaw
+          ? parseInt(savedInstrumentRaw, 10)
+          : null;
+        if (currentInstrumentId() !== savedInstrument) return true;
+        var savedFieldRaw = shape.getAttribute("data-shape-response-field-id");
+        var savedField = savedFieldRaw
+          ? parseInt(savedFieldRaw, 10)
+          : null;
+        if (currentFieldId() !== savedField) return true;
+        var savedSlotsRaw = shape.getAttribute("data-shape-column-slots") || "[]";
+        var savedSlots;
+        try {
+          savedSlots = JSON.parse(savedSlotsRaw);
+        } catch (e) {
+          savedSlots = [];
+        }
+        var currentSlots = currentColumnSlots();
+        if (savedSlots.length !== currentSlots.length) return true;
+        for (var i = 0; i < savedSlots.length; i++) {
+          if (savedSlots[i] !== currentSlots[i]) return true;
+        }
+        return false;
+      }
+
       // Refresh every action button's disabled state for one
       // sub-card based on its current mode + the validity
       // check above. Called on every chip toggle, name input,
@@ -1484,15 +1562,26 @@
         if (!shape) return;
         var mode = shape.getAttribute("data-shape-mode");
         var isEdit = mode === "edit";
-        var isOnlyShape = stack.querySelectorAll("[data-shape]").length <= 1;
         var saveBtn = shape.querySelector("[data-shape-save]");
         var cancelBtn = shape.querySelector("[data-shape-cancel]");
         var deleteBtn = shape.querySelector("[data-shape-delete]");
         var addBtn = shape.querySelector("[data-shape-add]");
         var downloadBtn = shape.querySelector("[data-shape-download]");
-        if (saveBtn) saveBtn.disabled = !(isEdit && shapeIsValid(shape));
+        // Save: enabled only when the shape is valid AND the
+        // current state diverges from the persisted state. For
+        // never-saved sub-cards ``hasUnsavedChanges`` returns
+        // true (anything is new), so validity is the only gate.
+        if (saveBtn) {
+          saveBtn.disabled = !(
+            isEdit && shapeIsValid(shape) && hasUnsavedChanges(shape)
+          );
+        }
         if (cancelBtn) cancelBtn.disabled = !isEdit;
-        if (deleteBtn) deleteBtn.disabled = isOnlyShape;
+        // Delete is always available — clicking it on the only
+        // sub-card clears it (deleteBtn handler swaps in a fresh
+        // blank from the template), matching the "reset to
+        // empty card" affordance an operator expects.
+        if (deleteBtn) deleteBtn.disabled = false;
         if (addBtn) addBtn.disabled = false;
         if (downloadBtn) {
           // ``Download`` enables once the sub-card has a
@@ -1919,7 +2008,26 @@
           // Idempotent on the server side so a stale local
           // ``data-shape-id`` doesn't 404 — it just no-ops.
           deleteShapeOnServer(shape);
+          var isOnlyShape = stack.querySelectorAll("[data-shape]").length <= 1;
           var wasSelected = activeShape === shape;
+          if (isOnlyShape) {
+            // Reset the only sub-card to a fresh blank instead
+            // of removing it — clears the deleted card and
+            // shows an empty edit-mode card in its place so
+            // the operator has an immediate target to compose
+            // a new shape against. Matches the always-present-
+            // empty-card pattern the page renders on first
+            // load when no shapes exist server-side.
+            var fragment = shapeTemplate.content.cloneNode(true);
+            var freshShape = fragment.querySelector("[data-shape]");
+            shape.parentNode.replaceChild(freshShape, shape);
+            bindShapeCard(freshShape);
+            clearAllSelectionChips();
+            setActiveShape(freshShape);
+            rebuildPreviewRow();
+            updateAllButtonStates();
+            return;
+          }
           var nextSelected = shape.nextElementSibling
             || shape.previousElementSibling;
           shape.remove();
@@ -1973,6 +2081,10 @@
       }
 
       stack.querySelectorAll("[data-shape]").forEach(bindShapeCard);
+      // Sync the chip-lock + Save-validity gates to the initial
+      // active-shape state (null when only saved cards exist;
+      // the always-present blank edit-mode card otherwise).
+      setActiveShape(activeShape);
       updateAllButtonStates();
     })();
   </script>
