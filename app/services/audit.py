@@ -630,6 +630,24 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.by_instrument_bundle_extracted": EventSchema(
         _IDENTITY | {"counts"}
     ),
+    # Extract data tab — Data shaper card saved-shape
+    # lifecycle. Per the wiring decisions in
+    # ``spec/extract_data.md`` "Audit events":
+    # ``snapshot`` mirrors the shape row's columns
+    # (axis / instrument_id / response_field_id / name /
+    # column_chip_slots) so the audit log can reconstruct
+    # what existed pre-edit / pre-delete; ``refs.shape_id``
+    # carries the row id. ``data_shape_extracted`` carries
+    # ``counts.rows`` for the body row count.
+    "session.data_shape_saved": EventSchema(
+        _IDENTITY | {"snapshot", "refs"}
+    ),
+    "session.data_shape_deleted": EventSchema(
+        _IDENTITY | {"snapshot", "refs"}
+    ),
+    "session.data_shape_extracted": EventSchema(
+        _IDENTITY | {"counts", "refs"}
+    ),
     # Extract data tab — Reviewer / Reviewee response metadata
     # cards. ``counts.rows`` carries the body row count
     # (header excluded); ``counts.instruments`` carries the chip
