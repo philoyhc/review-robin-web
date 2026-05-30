@@ -119,7 +119,7 @@ Filtered to actual `/reviewer/` surface URLs (excluding
 | Area | Files | Occurrences |
 |---|---:|---:|
 | Production code (`app/`) | 9 | 31 |
-| Templates (`app/web/templates/`) | 9 | 16 |
+| Templates (`app/web/templates/`) | 8 | 16 |
 | Tests | 33 | 290 |
 | Live spec / docs | ~10 | low |
 | **Total** | ~60 | ~340 |
@@ -180,7 +180,7 @@ wrong.
 5. Update live spec / docs:
    - ``spec/reviewer-surface.md`` URL-pattern section
    - ``docs/status.md`` mentions of the surface URL (if any)
-   - ``guide/codebase_assessment_28may.md`` if it references the URL
+   - ``guide/codebase_assessment_30may.md`` if it references the URL
    - ``guide/participant_model_upgrade.md`` §5 / §5.1 — trim
      the migration sketch to "shipped; see
      guide/archive/url_remodel.md" once this doc is archived.
@@ -243,6 +243,6 @@ snapshots, not living documentation.
 
 - ``guide/participant_model_upgrade.md`` §5 — the participant
   arc this URL prep sets up.
-- ``guide/codebase_assessment_28may.md`` — the watch list this
+- ``guide/codebase_assessment_30may.md`` — the watch list this
   doesn't appear on (URL renames don't show up as code-health
   flags; this is a forward-looking prep).
