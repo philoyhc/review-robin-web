@@ -1187,6 +1187,87 @@ Functional spec: `spec/extract_data.md`.
 
 ---
 
+### Self-review consolidation — DB column + canonical helper sweep — done 2026-05-30
+
+Five-PR ladder that put `Assignment.is_self_review` in as the
+single source of truth for self-review classification, retired
+every ad-hoc on-the-fly computation, and fixed the latent
+By-instrument extract bug that silently mislabelled every
+self-review group on group-scoped instruments.
+
+The motivation: the rule lived in three places in code (the
+pair-level `is_self_review` helper, the whole-group-aware
+`_self_review_assignment_ids` helper, and a hardcoded `FALSE`
+in `app/services/extracts/by_instrument_extract.py:436`), with
+the by-instrument extract bypassing both helpers and the
+pair-level helper being silently wrong on group-scoped rows.
+Every new consumer had to pick a helper, and the wrong choice
+was easy to make.
+
+Resolution: compute the answer once at write time via the
+canonical `assignments.classify_self_review` helper, persist
+it as the `Assignment.is_self_review` column, keep it current
+via `assignments.recompute_self_review_classification` at every
+write path + edit trigger, and gate it with the
+`assignments.verify_self_review_classification` continuous-
+gate invariant in `replace_assignments`. Every downstream
+reader consumes the column. The pair-level helper survives
+only for the rule-engine desugar paths that operate on unsaved
+pair candidates (where no `Assignment` row exists yet).
+
+Shipped across **five small PRs in one day** (2026-05-30):
+
+- **PR 1 (#1633) — Schema + canonical helper.** New
+  `assignments.is_self_review BOOL NOT NULL DEFAULT FALSE`
+  column. Alembic migration ``b4e8c2a9d1f6`` with self-
+  contained per-session backfill via the canonical rule (no
+  ``app.services`` imports). New public
+  `classify_self_review(db, session_id=, rows=)` returns
+  ``{assignment_id: is_self_review}`` for the passed-in
+  rows; ``_self_review_assignment_ids`` becomes a thin
+  set-of-ids wrapper. Lands inert. 11 new tests.
+- **PR 2 (#1634) — Write paths + 8 recompute hooks.** New
+  ``recompute_self_review_classification(db, session_id=)``
+  helper. Wired into ``replace_assignments``,
+  ``create_instrument`` clone, ``replicate_instrument``,
+  ``set_group_boundary`` / ``set_unit_of_review``, the
+  reviewer email edit, the reviewee identifier / boundary
+  tag edit, and ``reconcile_group_responses_for_relationship_change``.
+  9 new tests.
+- **PR 3 (#1635) — Switch readers + bug fix.** Every
+  consumer now reads the column: ``by_instrument_extract.py``
+  (the latent ``FALSE`` hardcode retires —
+  **bug fixed**), ``responses_extract.py``,
+  ``count_self_reviews_in_assignments``,
+  ``self_review_breakdown_per_instrument``, and
+  ``set_instrument_self_reviews_active``. 2 new regression
+  tests pin the bug fix.
+- **PR 4 (#1636) — Continuous-gate invariant + sweeps.** New
+  read-only ``verify_self_review_classification`` returns
+  drift triples. ``replace_assignments`` calls it after
+  recompute — strict in tests (``AssertionError`` on
+  drift), log + auto-correct in production. Sanity-sweep
+  call-site annotations document why the four remaining
+  pair-level callers are intentional (unsaved-pair-candidate
+  paths). ``spec/assignments.md`` names the column as
+  source of truth; ``guide/extract_data.md`` drops the
+  bug-fix scope from the queued Self-review chip section.
+  4 new tests.
+- **PR 5 — Archive + close-out** (this entry). Plan moved
+  to ``guide/archive/self_review_consolidate.md``; the
+  guide / archive index pair swept.
+
+Net tests added: **26**. Full suite: **2151 passed**,
+ruff clean. No reader computes self-review on the fly
+anywhere downstream; every write path keeps the column
+current; the continuous-gate invariant guards future write-
+path bugs.
+
+Plan archived: `guide/archive/self_review_consolidate.md`.
+Canonical rule: `spec/assignments.md` § *Self-review policy*.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -1200,11 +1281,9 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**Self-review consolidation (next up), URL remodel, 14B,
-19, 20** (Extract data closed 2026-05-30; 18K + 18L + 18M +
-18N closed 2026-05-28; 18J retired 2026-05-26;
-Self-review consolidation is sequenced ahead of the queued
-*Self-review handling* chip slice in `extract_data.md`;
+**URL remodel, 14B, 19, 20** (Self-review consolidation
+closed 2026-05-30; Extract data closed 2026-05-30; 18K +
+18L + 18M + 18N closed 2026-05-28; 18J retired 2026-05-26;
 URL remodel is the ``/reviewer/`` → ``/me/`` aggressive-
 rename stub best landed before 14B Part A). No global
 ordering constraints beyond the few dep chains called out
@@ -1231,22 +1310,6 @@ at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
-
-- **Self-review consolidation — DB column + canonical helper
-  sweep** *(stub created 2026-05-30)*. Adds an
-  ``Assignment.is_self_review`` boolean column written at
-  Assignment-creation time via the canonical whole-group rule
-  (per ``spec/assignments.md`` *Group-scoped instruments —
-  the whole-group rule*) and read by every downstream
-  consumer. Fixes the latent
-  ``by_instrument_extract.py:436`` bug that hardcodes
-  ``SelfReview = FALSE`` on group-scoped rows along the way.
-  Sequenced **ahead of** the queued *Self-review handling*
-  chip slice in ``extract_data.md`` so the chip can read the
-  column from day 1 instead of refactoring later. Sized at
-  5 small PRs (schema + backfill → write hooks → read switch
-  → invariant + sweep → archive).
-  **Plan:** ``guide/self_review_consolidate.md``.
 
 - **URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
   rename)** *(stub created 2026-05-28)*. Independent prep for

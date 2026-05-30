@@ -1,14 +1,37 @@
 # Self-review consolidation — DB column + canonical helper sweep
 
-> **Stub created 2026-05-30.** Plans the work to consolidate
-> all self-review classification onto a single source of truth:
-> a new `Assignment.is_self_review` boolean column, written at
-> Assignment-creation time via the canonical whole-group rule,
-> consumed by every downstream caller (extracts, exclusion
-> machinery, audit counters). Sequenced **ahead of** the
-> proposed-2026-05-30 *Self-review handling* chip slice (see
-> `guide/extract_data.md`) so the chip can read the column
-> from day 1.
+> **Shipped 2026-05-30 across PRs #1633 → #1636.** Five-PR
+> ladder landed in one day. The canonical
+> `Assignment.is_self_review` column is now the single source
+> of truth for self-review classification: written at
+> assignment-creation time + every edit trigger via
+> `assignments.classify_self_review` →
+> `recompute_self_review_classification`, consumed by every
+> downstream reader (extracts, audit counters, the per-
+> instrument Self-review pill + bulk toggle), and gated by the
+> `verify_self_review_classification` continuous-gate invariant
+> in `replace_assignments` (strict in tests, log + auto-correct
+> in production). The whole-group rule from
+> `spec/assignments.md` § *Self-review policy* is now applied
+> everywhere — including the wide-format By-instrument extract,
+> which pre-PR-3 hardcoded `SelfReview = FALSE` on group-scoped
+> rows and silently mislabelled every self-review group.
+>
+> **PR ladder:** #1633 (schema + canonical helper, backfilled
+> inert) → #1634 (write paths + 8 recompute hooks) → #1635
+> (read sites switched + latent By-instrument bug fixed) →
+> #1636 (continuous-gate invariant + spec + plan-doc sweeps) →
+> archive close-out.
+>
+> **Original stub header (created 2026-05-30):** Plans the work
+> to consolidate all self-review classification onto a single
+> source of truth: a new `Assignment.is_self_review` boolean
+> column, written at Assignment-creation time via the canonical
+> whole-group rule, consumed by every downstream caller
+> (extracts, exclusion machinery, audit counters). Sequenced
+> **ahead of** the proposed-2026-05-30 *Self-review handling*
+> chip slice (see `guide/extract_data.md`) so the chip can read
+> the column from day 1.
 
 ## Why this exists
 
