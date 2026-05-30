@@ -1371,6 +1371,20 @@
         pointer-events: none;
         cursor: default;
       }
+      /* The Self-review handling chip's three states are all
+         ``is-selected`` (the chip always reflects the current
+         selection — there's no unselected state), so the
+         standard accent-blue ``is-selected`` fill stays
+         vibrant even at the locked opacity. Override the fill
+         + text when locked so the chip reads as muted
+         alongside the unselected Reviewer / Reviewee /
+         instrument chips, not as a selected accent. */
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-self-review-chip].is-selected {
+        background: var(--bg-muted);
+        color: var(--text-primary);
+      }
       /* Selected sub-card — the one currently in edit mode.
          Border switches to the accent-blue used for primary
          buttons + selected chips so the operator can see
