@@ -1200,12 +1200,15 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**URL remodel, 14B, 19, 20** (Extract data closed 2026-05-30;
-18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
-2026-05-26; URL remodel is the ``/reviewer/`` → ``/me/``
-aggressive-rename stub best landed before 14B Part A). No
-global ordering constraints beyond the few dep chains called
-out at the bottom of this file.
+**Self-review consolidation (next up), URL remodel, 14B,
+19, 20** (Extract data closed 2026-05-30; 18K + 18L + 18M +
+18N closed 2026-05-28; 18J retired 2026-05-26;
+Self-review consolidation is sequenced ahead of the queued
+*Self-review handling* chip slice in `extract_data.md`;
+URL remodel is the ``/reviewer/`` → ``/me/`` aggressive-
+rename stub best landed before 14B Part A). No global
+ordering constraints beyond the few dep chains called out
+at the bottom of this file.
 
 #### Numbered queue
 
@@ -1228,6 +1231,22 @@ out at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
+
+- **Self-review consolidation — DB column + canonical helper
+  sweep** *(stub created 2026-05-30)*. Adds an
+  ``Assignment.is_self_review`` boolean column written at
+  Assignment-creation time via the canonical whole-group rule
+  (per ``spec/assignments.md`` *Group-scoped instruments —
+  the whole-group rule*) and read by every downstream
+  consumer. Fixes the latent
+  ``by_instrument_extract.py:436`` bug that hardcodes
+  ``SelfReview = FALSE`` on group-scoped rows along the way.
+  Sequenced **ahead of** the queued *Self-review handling*
+  chip slice in ``extract_data.md`` so the chip can read the
+  column from day 1 instead of refactoring later. Sized at
+  5 small PRs (schema + backfill → write hooks → read switch
+  → invariant + sweep → archive).
+  **Plan:** ``guide/self_review_consolidate.md``.
 
 - **URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
   rename)** *(stub created 2026-05-28)*. Independent prep for
