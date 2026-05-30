@@ -118,3 +118,57 @@ def test_extract_data_page_surfaces_zip_all_button(
         f'href="/operator/sessions/{review_session.id}'
         f'/export/responses_bundle.zip"' in body
     )
+
+
+def test_bundle_folds_in_saved_data_shapes(
+    client: TestClient, db: Session
+) -> None:
+    """With the intro card's ``Data shaper`` chip default-on,
+    every saved Data shape on the session contributes a
+    ``{code}_{slug(name)}.csv`` member to the zip."""
+    review_session = _make_session(client, db, code="rb-shapes")
+    client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={
+            "name": "My Shape",
+            "axis": "reviewer",
+            "instrument_id": None,
+            "response_field_id": None,
+            "column_chip_slots": ["reviewer:name", "reviewer:email"],
+        },
+    )
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/responses_bundle.zip"
+    )
+    assert response.status_code == 200
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = set(archive.namelist())
+    # Slug strips the space.
+    assert "rb-shapes_My_Shape.csv" in names
+
+
+def test_data_shapes_zero_excludes_shapes(
+    client: TestClient, db: Session
+) -> None:
+    """``?data_shapes=0`` drops the saved-shape members
+    from the bundle (driven by the intro card's
+    ``Data shaper`` chip when off)."""
+    review_session = _make_session(client, db, code="rb-excl")
+    client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={
+            "name": "Hidden",
+            "axis": "reviewer",
+            "instrument_id": None,
+            "response_field_id": None,
+            "column_chip_slots": ["reviewer:name"],
+        },
+    )
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/responses_bundle.zip?data_shapes=0"
+    )
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    names = set(archive.namelist())
+    assert "rb-excl_Hidden.csv" not in names
