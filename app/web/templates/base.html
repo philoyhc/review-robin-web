@@ -1448,30 +1448,6 @@
         flex: 0 0 auto;
         width: 25%;
       }
-      /* Per-shape row-count report pill — sits inside
-         ``.data-shape-actions`` (so the preview table → action
-         row gap stays a single ``margin-top``), flush-left so
-         the pill's outer edge aligns with the preview table's
-         outer left edge (both are direct children of the card
-         with the same horizontal padding inset). The rest of
-         the row packs against the right via the parent's
-         ``justify-content: flex-end``. Top-aligned in the row
-         so a slightly-taller pill (e.g. if the count wraps)
-         doesn't shift the buttons down.
-
-         The selector deliberately bumps specificity to
-         (0,3,0) by anchoring on ``.data-shape-actions`` — the
-         base ``body.ui-v2 .pill { margin-right: var(--space-1); }``
-         rule below has matching (0,2,0) specificity but appears
-         later in source order, so without the extra hop its
-         ``margin-right`` would win and ``justify-content:
-         flex-end`` would pack the pill to the right with the
-         buttons. */
-      body.ui-v2 .data-shape-actions .data-shape-row-count {
-        flex: 0 0 auto;
-        margin: 0 auto 0 0;
-        align-self: flex-start;
-      }
       body.ui-v2 .data-shape-name-display {
         flex: 0 0 auto;
         font-weight: 600;
