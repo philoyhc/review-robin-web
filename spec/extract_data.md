@@ -628,12 +628,15 @@ Each sub-card carries:
 
 1. A **preview row** — a `<table class="shaper-preview-
    table">` whose `<thead><tr>` mirrors the currently-
-   selected column chips on the active shape. Cells are
-   `width: auto` so each header sizes to its label.
-   Empty-state placeholder (muted italic) reads
-   "Pick chips above to compose this shape's columns" —
-   keeps the table visible so the operator sees something
-   to interact with.
+   selected column chips on the active shape. Cells size to
+   their content; on overflow the row **wraps onto a second
+   line** rather than scrolling horizontally (the table is
+   flattened to flex-wrap on `<tr data-shape-preview-row>`,
+   each cell stays `white-space: nowrap` so individual
+   labels don't break mid-word). Empty-state placeholder
+   (muted italic) reads "Pick chips above to compose this
+   shape's columns" — keeps the table visible so the
+   operator sees something to interact with.
 
    **Preview labels diverge from CSV headers.** The preview
    is a descriptive aid for what the operator selected, not
@@ -650,6 +653,39 @@ Each sub-card carries:
    ``app/services/extracts/data_shape_extract.py``; CSV
    generation continues to call ``_compose_header``
    directly from ``build_shape_rows``.
+
+   **CSV-duplicated columns get a thick grey bottom edge
+   under ``Self-review: Both``.** Each `<th>` carries
+   `data-aggregate="true"` on aggregate columns (Assigned,
+   Count, Mean, Median, Min, Max, Length, fan-out columns
+   from List items / Discrete steps); identity columns
+   (Name, Email, Tag-N) never do. CSS keys off the sub-
+   card's ``data-shape-current-self-review-handling="both"``
+   attribute to draw a 3px grey bar at the cell's bottom edge
+   (matches the page chrome's active-tab marker pattern,
+   drawn via ``box-shadow: inset`` so there's no layout
+   shift). The marker flips live as the operator cycles the
+   chip. Source: ``compose_shape_preview_aggregates``
+   returns a parallel ``tuple[bool, ...]`` (same length as
+   the headers) that drives the per-cell flag both on
+   server render and through ``data-shape-column-aggregates``
+   for the JS Cancel-restore path.
+
+   **Saved vs. live self-review state on the sub-card.** Two
+   attributes ride on each `.data-shape-card`:
+
+   - ``data-shape-self-review-handling`` — the **saved**
+     state (mirrors the persisted column). Server-rendered
+     on saved cards; updated only when ``applySavedShapeAttrs``
+     runs after a successful Save. The dirty-state gate
+     (``hasUnsavedChanges``) reads this for its comparison.
+   - ``data-shape-current-self-review-handling`` — the
+     **live** chip state. Server-rendered to match the saved
+     value initially; updated on every
+     ``setShaperSelfReviewState`` call. The CSS duplicated-
+     column marker keys off this attribute so chip cycles
+     flip the visual immediately without touching the
+     dirty-state gate.
 2. An **action row** flushed to the right edge of the
    sub-card (`.data-shape-actions` carries
    `justify-content: flex-end`). The name input / display
