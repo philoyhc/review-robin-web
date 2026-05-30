@@ -1199,7 +1199,7 @@ Functional spec: `spec/extract_data.md`.
 
 ---
 
-### Chip-controlled drop of empty rows + cross-card consistency sweep — done 2026-05-30 (PRs #1654 → #1657 + this entry)
+### Chip-controlled drop of empty rows + cross-card consistency sweep — done 2026-05-30 (PRs #1654 → #1659)
 
 Generalised the empty-row drop pattern across all four
 Extract data cards. The Data shaper picks up a new
@@ -1238,12 +1238,20 @@ drops it without bespoke attributable-comparison machinery.
   the three existing chips. Each carries `data-label-on` /
   `data-label-off`; the page JS swaps `textContent` on
   toggle. URL contract (`?all=0` / `?all_rows=0`) untouched.
-- **PR 9 (this entry)** — Spec sweep
+- **PR 9 (#1658)** — Spec sweep
   (`spec/extract_data.md` chip vocabulary + Data shaper
   scope row + persistence model + audit envelope;
   `spec/settings_inventory.md` §9.5 + §10 CSV coverage);
   Q4 flag struck from `guide/codebase_assessment_30may.md`;
   `guide/self_review_consolidate.md` addendum closed out.
+- **Polish (#1659)** — Preview-table labels unified across
+  saved + edit modes via new
+  ``compose_shape_preview_headers``: identity columns
+  surface with a space (``Reviewer Name`` / ``Reviewer
+  Email`` etc.), aggregate columns drop the Self-review
+  handling suffix, and ``self_review_handling="both"``
+  emits a single block in the preview. CSV header
+  generation unchanged.
 
 Plan archived: `guide/archive/self_review_consolidate.md`.
 

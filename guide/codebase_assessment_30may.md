@@ -245,15 +245,18 @@ the dev outbox).
 - ~~**Per-individual rows × `Exclude self` on the Data
   shaper pinned at conservative interpretation.**~~ **Closed
   2026-05-30 by the chip-controlled-drop slice** (PRs #1654 →
-  #1657 + spec/archive close-out). New per-shape
-  `include_empty_rows` column + scope-row chip
-  (`All rows` ↔ `Rows with data`) lets the operator opt into
-  dropping rows whose accumulator is empty; the Q4 case
-  (self-review-only row × `exclude_self`) closes by
-  implication. Same general policy now drives the empty-row
-  drop on all four Extract data cards. See
-  `guide/archive/self_review_consolidate.md` addendum for the
-  decision matrix + the dropped row-count-pill rationale.
+  #1659). New per-shape `include_empty_rows` column +
+  scope-row chip (`All rows` ↔ `Rows with data`) lets the
+  operator opt into dropping rows whose accumulator is
+  empty; the Q4 case (self-review-only row × `exclude_self`)
+  closes by implication. Same general policy now drives the
+  empty-row drop on all four Extract data cards (cycling-
+  pill chips with explicit labels per state). Preview-table
+  labels unified across saved + edit modes as a polish at
+  the tail end (#1659). See
+  `guide/archive/self_review_consolidate.md` addendum for
+  the decision matrix + the dropped row-count-pill
+  rationale.
 
 ## 6. Bugs and regressions
 
