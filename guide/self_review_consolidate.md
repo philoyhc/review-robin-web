@@ -456,10 +456,7 @@ column as its single source of truth.
 > per-individual row's only response was the reviewer's own
 > self-review, `exclude_self` surfaces the row with empty
 > aggregate cells rather than dropping it. The 2026-05-30
-> codebase assessment flagged it for revisit. PR #1651
-> (placeholder `Number of data rows: —` pill on each Data shape
-> sub-card) and PR #1652 (flush-left CSS fix) prepared the
-> visible surface that makes any drop legible to the operator.
+> codebase assessment flagged it for revisit.
 >
 > **The decision.** Generalise away from "auto-fire on
 > `exclude_self`" to a separate, operator-controlled chip that
@@ -480,6 +477,21 @@ column as its single source of truth.
 > the Data shaper in line *and* relabels the other three
 > chips to the two-state cycling-pill semantics so the
 > surface reads symmetrically across all four cards.
+>
+> **Pill plan dropped (2026-05-30).** PR #1651 / #1652 shipped
+> a placeholder `Number of data rows: —` pill on each Data
+> shape sub-card, on the theory that PR 7 would wire it to a
+> live row-count preflight. Walking through the cost in a
+> medium-sized session (1,000 reviewers × 5-peer + 5-group
+> reviews × 2 fields ≈ 10K assignments + 20K responses)
+> exposed the problem: server-rendered counts cost
+> ~150-300ms per saved shape per page load, and live JS
+> preflight on every chip toggle multiplies the cost further.
+> Dropped entirely. The chip's drop is visible at Download
+> time (operator sees the file); a lighter-touch snapshot or
+> on-demand recount can layer in later if pilot use justifies
+> it. PR 7 below now reverts the placeholder pill instead of
+> wiring it.
 >
 > **Chip labels (axis-neutral on Data shaper, axis-aware
 > elsewhere).** Two-state cycling pill on each card:
@@ -520,9 +532,10 @@ otherwise they stay, exactly as today.
 
 ### PR ladder
 
-**Four PRs across one focused stretch.**
+**Four PRs across one focused stretch.** PR 6 shipped
+2026-05-30 in #1654; PRs 7-9 remain.
 
-#### PR 6 — `include_empty_rows` column + extract drop + Data shaper chip
+#### PR 6 — `include_empty_rows` column + extract drop + Data shaper chip — **shipped #1654**
 
 **Scope.** Full vertical slice — no silent CSV change. The
 chip ships at the same time as the extract pipeline change so
@@ -530,9 +543,8 @@ default behaviour stays put and the new behaviour is
 operator-driven from day 1.
 
 - `DataShape.include_empty_rows: Mapped[bool]` column, default
-  `True`. Alembic migration with `server_default="true"` (no
-  backfill needed — existing shapes get `True` and surface no
-  change).
+  `True`. Alembic migration `d8e4c3a1b5f6` (server_default
+  `true`, no backfill needed).
 - `DataShapePayload` accepts `include_empty_rows: bool = True`;
   `_validate` allows it; `_serialize` writes it as the 7th CSV
   row per shape; `_apply` parses it.
@@ -542,70 +554,38 @@ operator-driven from day 1.
   False`, drop body rows whose `_Acc.is_empty()` (per-individual
   / per-tag-combo). On `both`, drop when both halves are empty.
   Single-summary unaffected.
-- New scope-row chip on the Data shaper, **placed before** the
-  Self-review handling chip in the chip-row order. Two-state
-  cycling pill: `All rows` (default, `include_empty_rows=True`)
-  ↔ `Rows with data` (`include_empty_rows=False`). Persists via
-  the existing PATCH route.
+- New scope-row chip on the Data shaper, placed before the
+  Self-review handling chip. Two-state cycling pill: `All rows`
+  (default) ↔ `Rows with data`. Persists via the existing
+  PATCH route.
 
-**Tests.**
-- Service: per-individual + chip OFF + roster member with no
-  participation → row dropped; with `_Acc` non-empty → row
-  kept. Per-tag-combo same. Single-summary unaffected.
-- Service: per-individual + chip OFF + `exclude_self` +
-  reviewer whose only response was their own self-review →
-  row dropped (closes Q4 by implication).
-- Service: `both` + chip OFF + row with `_self` data but no
-  `_noself` data → row kept (only drops when both halves
-  empty).
-- Persistence: `include_empty_rows` round-trips through
-  POST / PATCH / GET; defaults to `True`.
-- CSV round-trip: serialize → import preserves the
-  per-shape `include_empty_rows` value.
-- Route: PATCH that toggles the chip persists; render shows
-  the right initial chip state on saved sub-cards.
+Q4 closes by implication for any operator who flips the chip.
 
-**Done when.** Operator can flip the chip on any Data shape
-sub-card to drop empty rows; default behaviour unchanged.
-Pill still shows `—` (PR 7 wires the count).
+#### PR 7 — Revert the placeholder row-count pill — **next**
 
-#### PR 7 — Server-rendered row count on the pill + JS live-preflight
+**Scope.** Back out PR #1651 / #1652. The pill was a visibility
+surface for a live-preflight slice we've since dropped (see
+"Pill plan dropped" callout above). Removing it tightens the
+Data shape sub-card surface and avoids carrying a dead
+placeholder.
 
-**Scope.** Pill goes from placeholder to live counter. Makes
-the drop visible.
+- Remove the `Number of data rows: —` `<span>` from all three
+  Data shape sub-card variants (the hidden `<template>` clone
+  source, the saved-shape loop, the initial-blank fallback) in
+  `app/web/templates/operator/session_extract_data.html`.
+- Remove the `.data-shape-row-count` CSS rule from
+  `app/web/templates/base.html`.
+- Remove `test_data_shape_row_count_pill_renders` from
+  `tests/integration/test_extract_data_tab.py`.
+- No service, route, or model surface touched.
 
-- Add `count_shape_rows(db, session, shape) -> int` in
-  `data_shape_extract.py` (re-uses `build_shape_rows` and
-  returns `len(rows) - 1`).
-- `app/web/views/_extract_data.py` adapter: each saved shape
-  carries `row_count: int`. Template renders
-  `Number of data rows: {{ saved.row_count }}` for saved sub-
-  cards.
-- New route: `POST /operator/sessions/{id}/data-shapes/preflight`
-  taking the same payload shape as `DataShapePayload`
-  (axis / slots / scope / self_review_handling /
-  include_empty_rows), returning `{"row_count": N}`. Uses
-  an in-memory `DataShape` shim so it doesn't have to be
-  persisted to be counted.
-- Page JS: on every chip toggle inside an edit-mode sub-card
-  (debounced ~300ms), serialize the active chip state to the
-  preflight payload, update the pill text with the returned
-  count. Edit-mode pill renders `—` in the brief in-flight
-  window.
+**Tests.** Existing chip / save / download tests cover the
+restored action row. The deleted test is the only one keyed
+off the pill's presence.
 
-**Tests.**
-- View adapter: saved shape's `row_count` matches
-  `count_shape_rows` output.
-- Template render: saved sub-card surfaces the live count
-  (no longer `—`).
-- New preflight route: smoke (`200 OK` + `{"row_count": int}`);
-  drop case (count drops when chip flips to `Rows with data`
-  on a session with empty-row entities); authorization
-  (non-operator → 403).
-
-**Done when.** Operator sees the per-shape row count update
-live as they toggle chips. Flipping the `Drop empty` chip
-visibly decrements the count.
+**Done when.** The action row on every Data shape sub-card
+shows only the Save / Edit / Cancel / Delete / +Shape /
+Download buttons — no leading pill. Tests pass.
 
 #### PR 8 — Two-state cycling-pill conversion of the three existing chips
 
@@ -647,29 +627,30 @@ each state. Surface symmetry across cards.
   the chip vocabulary: drop the Q4 conservative-interpretation
   flag; document the `Drop empty` chip as the general policy
   knob; show the decision matrix above.
-- `spec/extract_data.md` — pill is part of every Data shape
-  sub-card's surface contract; note the wire-up route.
 - `spec/extract_data.md` — relabel the three existing
   empty-row-drop chips per the table above; note the
-  consistency-sweep rationale.
+  consistency-sweep rationale. Note that the `Number of data
+  rows` pill is **not** part of the Data shape sub-card
+  contract (the placeholder shipped + reverted; the chip
+  exposes the drop intent and the file makes it observable).
 - `spec/settings_inventory.md` §9.5 `data_shapes` — add
   `include_empty_rows` row; bump §10 CSV coverage by one
   key.
 - This file → `guide/archive/self_review_consolidate.md`
   with an addendum banner: "Addendum shipped 2026-XX-XX
-  in PRs #NNNN → #NNNN — chip-controlled drop of empty rows
-  + cross-card consistency sweep + visible per-shape row
-  count."
+  in PRs #1654 → #NNNN — chip-controlled drop of empty rows
+  + cross-card consistency sweep. Pill plan dropped — see
+  the Why-this-exists callout for the cost analysis."
 - `guide/todo_master.md` — Done entry summarising the
-  chip-controlled-drop slice + the row-count pill + the
-  consistency sweep.
+  chip-controlled-drop slice + the consistency sweep + the
+  pill drop.
 - `guide/codebase_assessment_30may.md` — strike the Q4
   conservative-interpretation flag (the assessment surfaced
-  the need; the addendum closes it).
+  the need; the addendum closes it via PR 6).
 
 **Done when.** The Q4 pin is gone from the codebase
-assessment, the spec reflects the new contract, and the plan
-is archived.
+assessment, the spec reflects the new contract (chip-
+controlled drop, no pill), and the plan is archived.
 
 ### Risks and open questions
 
@@ -681,28 +662,19 @@ is archived.
    label / `data-state` model changes. Existing tests that
    key off `is-selected` / `aria-pressed` need their
    selectors updated; the URL-contract tests are untouched.
-2. **Preflight cost on PR 7.** Every chip toggle in an
-   edit-mode sub-card fires a preflight POST. Debounce
-   ~300ms (matches the typical extract-data card chip
-   debounce). If chip-state churn becomes hot, consider
-   caching the accumulator within the request.
-3. **Authorization on the preflight route.** Re-uses
-   `require_session_operator` like the existing data-shape
-   routes; same permission model. Non-operator → 403, same
-   as POST / PATCH / DELETE.
-4. **Pill on the initial-blank sub-card.** Stays at `—` —
-   no validated shape state to count against. Same for
-   edit-mode cards mid-toggle (in-flight preflight window).
-5. **Test-database `_Acc` empty-state semantics.** Verify
-   `_Acc()` (no responses, no assignments) tests as empty
-   via `is_empty()` — this is the predicate the drop logic
-   keys off, so a regression-guard unit test in PR 6 is
-   cheap insurance.
-6. **Default direction on `include_empty_rows`.** `True`
+2. **Drop is not directly visible until Download.** Without
+   the pill, an operator who flips the chip OFF sees no
+   immediate indicator that rows will drop — they find out
+   when they download the CSV (or compare against the
+   `All rows` version). Acceptable for the pre-MVP single
+   operator. If pilot use shows this matters, a lighter-
+   touch snapshot column (`last_row_count: int | None` set
+   on Download) layers in cleanly without per-render cost.
+3. **Default direction on `include_empty_rows`.** `True`
    (= "All rows") matches today's behaviour and the metadata
    cards' default. Migration server-default + payload
    default both `True`. No-op for any existing operator.
-7. **Cross-card chip label drift.** The three existing
+4. **Cross-card chip label drift.** The three existing
    chips currently surface a single label that's accurate
    in the ON state but ambiguous in the OFF state ("All
    reviewers" with `aria-pressed="false"` reads as "not all
@@ -714,23 +686,15 @@ is archived.
 
 - **Independent of every other queued item** (URL remodel,
   14B, 19, 20). No cross-dependencies.
-- **4 PRs across one focused stretch** — slightly longer
-  ladder than the original 5-PR self-review consolidation
-  but each PR is small (PR 6 + 7 are vertical slices, PR 8
-  is a UI sweep, PR 9 is docs).
-- **PR 6 ships first** — full vertical slice (column +
-  extract drop + chip), so no silent CSV change at any
-  point. Operator opts in to dropping; default behaviour
-  preserved.
-- **PR 7 second** — wires the pill so the drop becomes
-  visible. PR 6's chip is functional but the pill still
-  shows `—`; one PR's worth of "operator drops empty rows
-  but has to download the file to confirm the count" is
-  acceptable.
-- **PR 8 third** — the cross-card consistency sweep can
-  ship any time after PR 6 (it depends on the new chip's
-  two-state cycling-pill pattern as the reference
-  implementation). Could also ship before if needed.
+- **4 PRs across one focused stretch.** PR 6 shipped
+  2026-05-30 (#1654); PR 7 reverts the placeholder pill;
+  PR 8 sweeps the three existing chips into the cycling-pill
+  pattern; PR 9 is docs.
+- **PR 7 can ship any time.** The placeholder pill is inert —
+  removing it has no functional impact, just tidies the
+  surface.
+- **PR 8 third** — UI sweep depending only on the cycling-
+  pill pattern already in PR 6 as the reference.
 - **PR 9 last** — closes Q4 + archives the plan.
 
 ### Done when
@@ -740,9 +704,10 @@ is archived.
 - Flipping the chip drops rows whose `_Acc.is_empty()` on
   per-individual / per-tag-combo shapes; single-summary
   unaffected; `both` drops only when both halves are empty.
-- The per-shape row-count pill renders a live integer
-  (server-rendered on saved sub-cards; JS-preflight-driven
-  on edit-mode sub-cards).
+- The placeholder `Number of data rows: —` pill is gone
+  from every Data shape sub-card (template, saved-shape
+  loop, initial-blank fallback) along with its CSS and
+  test.
 - The three existing empty-row-drop chips on By instrument
   / Reviewer response metadata / Reviewee response metadata
   read as two-state cycling pills with explicit labels per
