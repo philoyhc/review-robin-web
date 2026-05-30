@@ -345,23 +345,31 @@
        ``Tag 1`` / ``Tag 2`` / ``Tag 3`` defaults when no
        override is set. #}
     <template data-shaper-chip-pool="reviewer">
-      {% for slot, label in [
-          ("reviewer:name", "Reviewer Name"),
-          ("reviewer:email", "Reviewer Email"),
-          ("reviewer:tag-1", reviewer_tag_labels[0]),
-          ("reviewer:tag-2", reviewer_tag_labels[1]),
-          ("reviewer:tag-3", reviewer_tag_labels[2]),
+      {# ``label`` = visible chip text (operator-facing);
+         ``header`` = the CSV column header the eventual
+         download row carries — used by ``rebuildPreviewRow``
+         via ``data-shape-header-label`` so the preview
+         ``<th>`` cells read the same way as the CSV. #}
+      {% for slot, label, header in [
+          ("reviewer:name", "Reviewer Name", "ReviewerName"),
+          ("reviewer:email", "Reviewer Email", "ReviewerEmail"),
+          ("reviewer:tag-1", reviewer_tag_labels[0], reviewer_tag_labels[0]),
+          ("reviewer:tag-2", reviewer_tag_labels[1], reviewer_tag_labels[1]),
+          ("reviewer:tag-3", reviewer_tag_labels[2], reviewer_tag_labels[2]),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
+              data-shape-header-label="{{ header }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:assigned"
+            data-shape-header-label="Assigned"
             role="button" tabindex="0" aria-pressed="false">Assigned</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewer:count"
+            data-shape-header-label="Count"
             role="button" tabindex="0" aria-pressed="false">Count</span>
       {# Pipe between the field-independent totals
          (Assigned / Count) and the field-scoped statistics
@@ -382,6 +390,7 @@
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
               data-shaper-relevant-for="{{ relevant_for }}"
+              data-shape-header-label="{{ label }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       {# Trailing pipe shared by the per-field-options chips
@@ -409,23 +418,26 @@
             role="button" tabindex="0" aria-pressed="false">Discrete steps</span>
     </template>
     <template data-shaper-chip-pool="reviewee">
-      {% for slot, label in [
-          ("reviewee:name", "Reviewee Name"),
-          ("reviewee:email", "Reviewee Email"),
-          ("reviewee:tag-1", reviewee_tag_labels[0]),
-          ("reviewee:tag-2", reviewee_tag_labels[1]),
-          ("reviewee:tag-3", reviewee_tag_labels[2]),
+      {% for slot, label, header in [
+          ("reviewee:name", "Reviewee Name", "RevieweeName"),
+          ("reviewee:email", "Reviewee Email", "RevieweeEmail"),
+          ("reviewee:tag-1", reviewee_tag_labels[0], reviewee_tag_labels[0]),
+          ("reviewee:tag-2", reviewee_tag_labels[1], reviewee_tag_labels[1]),
+          ("reviewee:tag-3", reviewee_tag_labels[2], reviewee_tag_labels[2]),
       ] %}
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
+              data-shape-header-label="{{ header }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true">|</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:assigned"
+            data-shape-header-label="Assigned"
             role="button" tabindex="0" aria-pressed="false">Assigned</span>
       <span class="pill pill-count tag-chip"
             data-shaper-col-chip="reviewee:count"
+            data-shape-header-label="Count"
             role="button" tabindex="0" aria-pressed="false">Count</span>
       <span class="shaper-axis-pipe" aria-hidden="true"
             data-shaper-relevant-for="field-scoped">|</span>
@@ -439,6 +451,7 @@
         <span class="pill pill-count tag-chip"
               data-shaper-col-chip="{{ slot }}"
               data-shaper-relevant-for="{{ relevant_for }}"
+              data-shape-header-label="{{ label }}"
               role="button" tabindex="0" aria-pressed="false">{{ label }}</span>
       {% endfor %}
       <span class="shaper-axis-pipe" aria-hidden="true"
@@ -546,13 +559,22 @@
                 attribute previously rendered with raw
                 double-quotes inside double quotes
                 (collapsing to an empty value). #}
-             data-shape-column-slots='{{ saved.column_chip_slots | tojson }}'>
+             data-shape-column-slots='{{ saved.column_chip_slots | tojson }}'
+             data-shape-column-headers='{{ saved.column_headers | tojson }}'>
           <div class="shaper-preview-scroll">
             <table class="shaper-preview-table">
               <thead>
                 <tr data-shape-preview-row>
-                  {% for slot in saved.column_chip_slots %}
-                    <th class="shaper-preview-th">{{ slot }}</th>
+                  {# Server-rendered preview headers use the
+                     canonical CSV column labels (``ReviewerName``,
+                     resolved tag labels, raw step / option
+                     values for fan-out chips) — same as what
+                     the eventual download row carries. The
+                     JS-driven build (when this card flips into
+                     edit mode) uses ``data-shape-header-label``
+                     on each chip to match. #}
+                  {% for header in saved.column_headers %}
+                    <th class="shaper-preview-th">{{ header }}</th>
                   {% endfor %}
                 </tr>
               </thead>
@@ -980,13 +1002,12 @@
       function rebuildPreviewRow(targetShape) {
         var shape = targetShape || activeShape;
         if (!shape) return;
-        // Saved sub-cards keep their server-rendered
-        // ``<th>`` cells until the operator clicks Edit —
-        // ``setActiveShape`` runs first, then
-        // ``restoreShapeChipState`` flips chips which fires
-        // this function for the now-active card. Non-active
-        // saved cards keep what the route emitted.
-        if (shape !== activeShape) return;
+        // Only edit-mode sub-cards source their preview row
+        // from the live chip selection. Saved-mode cards
+        // keep their server-rendered (or post-save) cells —
+        // ``renderSavedPreviewRow`` is the dedicated path
+        // for those.
+        if (shape.getAttribute("data-shape-mode") !== "edit") return;
         var row = previewRowFor(shape);
         row.innerHTML = "";
         var any = false;
@@ -1036,7 +1057,15 @@
             }
             var th = document.createElement("th");
             th.className = "shaper-preview-th";
-            th.textContent = chip.textContent.trim();
+            // ``data-shape-header-label`` carries the CSV
+            // column header (``ReviewerName`` etc.). Falls
+            // back to the chip's visible text only when the
+            // attribute is missing — every page-rendered
+            // chip should carry it.
+            th.textContent = (
+              chip.getAttribute("data-shape-header-label")
+              || chip.textContent.trim()
+            );
             row.appendChild(th);
           });
         if (!any) {
@@ -1598,6 +1627,10 @@
           "data-shape-column-slots",
           JSON.stringify(data.column_chip_slots || [])
         );
+        shape.setAttribute(
+          "data-shape-column-headers",
+          JSON.stringify(data.column_headers || [])
+        );
       }
 
       function persistShape(shape) {
@@ -1702,13 +1735,26 @@
         var row = previewRowFor(shape);
         if (!row) return;
         row.innerHTML = "";
-        var slots = [];
+        // ``data-shape-column-headers`` carries the canonical
+        // CSV header for each preview cell — same labels the
+        // download row would show. Falls back to the raw
+        // chip-slot strings only when the attribute is
+        // missing (legacy bundles or a brand-new card that
+        // hasn't been saved yet).
+        var headers = [];
         try {
-          slots = JSON.parse(
-            shape.getAttribute("data-shape-column-slots") || "[]"
+          headers = JSON.parse(
+            shape.getAttribute("data-shape-column-headers") || "[]"
           );
         } catch (e) {}
-        if (!slots.length) {
+        if (!headers.length) {
+          try {
+            headers = JSON.parse(
+              shape.getAttribute("data-shape-column-slots") || "[]"
+            );
+          } catch (e) {}
+        }
+        if (!headers.length) {
           var placeholder = document.createElement("th");
           placeholder.className =
             "shaper-preview-th shaper-preview-placeholder";
@@ -1717,10 +1763,10 @@
           row.appendChild(placeholder);
           return;
         }
-        slots.forEach(function (slot) {
+        headers.forEach(function (header) {
           var th = document.createElement("th");
           th.className = "shaper-preview-th";
-          th.textContent = slot;
+          th.textContent = header;
           row.appendChild(th);
         });
       }

@@ -259,10 +259,20 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
         '"reviewer:email", "reviewer:assigned"]\''
     )
     assert expected_slots_attr in body
-    # Preview row pre-populated with the saved column slots.
-    assert ">reviewer:name<" in body
-    assert ">reviewer:email<" in body
-    assert ">reviewer:assigned<" in body
+    # Preview row pre-populated with the **canonical CSV
+    # headers** (``ReviewerName`` etc.) — same labels the
+    # download row carries — not the raw chip slot
+    # strings.
+    assert ">ReviewerName<" in body
+    assert ">ReviewerEmail<" in body
+    assert ">Assigned<" in body
+    # ``data-shape-column-headers`` carries the JSON-encoded
+    # canonical header list — used by the post-Cancel /
+    # close-other-editing ``renderSavedPreviewRow`` path.
+    assert (
+        "data-shape-column-headers='[\"ReviewerName\", "
+        "\"ReviewerEmail\", \"Assigned\"]'"
+    ) in body
     # The always-present blank initial card does NOT render
     # when shapes exist — operator uses ``+Shape`` to spawn
     # a new editable card if they want one.
