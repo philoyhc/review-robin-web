@@ -1340,6 +1340,30 @@
         margin-top: var(--space-2);
         background: var(--bg-card, #fff);
       }
+      /* When no Data shape sub-card is in edit mode, the Data
+         shaper's selector chips (scope row + content row) lock:
+         visually grayed and click/keyboard-inert. Without an
+         active shape there's nothing to toggle chip state onto,
+         so the chips have no editable target. The JS chip
+         ``toggle`` handlers also short-circuit when this
+         attribute is set (defence-in-depth against keyboard
+         activation). */
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-axis-chip],
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-instrument-chip],
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-field-chip],
+      body.ui-v2
+        #extract-data-shaper[data-shaper-chips-locked="true"]
+        [data-shaper-col-chip] {
+        opacity: 0.4;
+        pointer-events: none;
+        cursor: default;
+      }
       /* Selected sub-card — the one currently in edit mode.
          Border switches to the accent-blue used for primary
          buttons + selected chips so the operator can see
