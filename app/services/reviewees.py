@@ -287,6 +287,24 @@ def update_reviewee(
         },
     )
 
+    # ``Assignment.is_self_review`` is keyed off
+    # ``reviewee.email_or_identifier`` (via the canonical helper)
+    # AND off the reviewee's boundary tags (via the whole-group
+    # rule). Either kind of change can shift the classification —
+    # recompute against the whole session if any of those fields
+    # moved.
+    if any(
+        f in changes
+        for f in ("email_or_identifier", "tag_1", "tag_2", "tag_3")
+    ):
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=reviewee.session_id
+        )
+
     audit.write_event(
         db,
         event_type="reviewee.updated",
