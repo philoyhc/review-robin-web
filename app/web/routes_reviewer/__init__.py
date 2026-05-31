@@ -15,11 +15,24 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.web.routes_reviewer import _dashboard, _invite, _summary, _surface
+from app.web.routes_reviewer import (
+    _collation,
+    _dashboard,
+    _invite,
+    _results,
+    _summary,
+    _surface,
+)
 
 router = APIRouter(tags=["reviewer"])
 router.include_router(_dashboard.router)
 router.include_router(_summary.router)
+# Results / collation must be mounted before ``_surface`` — the
+# surface's ``/sessions/{id}/{page_n}`` swallows any second
+# path segment, so the literal ``/results`` and ``/collation``
+# routes need to register first for FastAPI's in-order match.
+router.include_router(_results.router)
+router.include_router(_collation.router)
 router.include_router(_surface.router)
 router.include_router(_invite.router)
 
