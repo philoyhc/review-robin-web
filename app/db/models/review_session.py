@@ -120,12 +120,18 @@ class ReviewSession(Base, TimestampMixin):
     retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     retention_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
-    # Participant-model Phase 1 — per-session toggles for the two
-    # optional Setup tabs. Default ``False``: today's behaviour is
-    # operator opts in. The Setup-nav conditional render and
-    # lock-on-data wiring lands in the Phase 3 toggle slice (W6);
-    # the column itself ships inert here. See
-    # ``guide/participant_model_upgrade.md`` §3.8.
+    # Participant-model — per-session toggles for the two
+    # optional Setup tabs. Default ``False``: operators opt in
+    # via the User interface settings card on Session Edit
+    # Details (and the create-new-session form). Setup-nav
+    # conditionally renders the tabs;
+    # ``require_relationships_enabled_session`` /
+    # ``require_observers_enabled_session`` 404 deep links when
+    # the corresponding flag is off; lock-on-data check at the
+    # service layer rejects True→False flips while rows exist;
+    # ``session.feature_toggled`` audit event fires on flip. See
+    # ``guide/participant_model_upgrade.md`` §3.8 + W6 entry in
+    # ``guide/participant_model_prep.md``.
     relationships_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default=false()
     )
