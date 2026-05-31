@@ -12,121 +12,126 @@
   </div>
 
   {# Placeholder Setup-Observers page (Phase 2 placeholder P1 in
-     ``guide/participant_model_prep.md``). Mirrors the Reviewers
-     page's two-column shape — observers list + upload on the
-     left, operator actions + danger zone on the right — but
-     every interactive control is rendered inert pending the
+     ``guide/participant_model_prep.md``). Layout:
+       - Top row: Upload (left) + Operator actions (right) —
+         ``.bottom-grid`` half-and-half.
+       - Middle: Observers table, full width — the 6-column
+         table needs the breathing room.
+       - Bottom row: empty spacer (left) + Danger Zone (right)
+         so the destructive control sits half-width per the
+         operator-UI concept.
+     Every interactive control is rendered inert pending the
      Observer roster slice (W10). #}
-  <div class="page-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start;">
 
-    <div style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-3);">
-      <div class="card" id="observers-list">
-        <h2 style="margin-top: 0;">Observers</h2>
-        <p class="form-help">
-          People who view collated responses without submitting any
-          themselves.
-        </p>
-        <table>
-          <thead>
-            <tr>
-              <th class="row-select-cell">
-                <input type="checkbox" aria-label="Select all observers" disabled>
-              </th>
-              <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
-                  aria-label="Sort by Name"
-                  onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-              <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
-                  aria-label="Sort by Email"
-                  onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-              <th class="rrw-sortable" data-sort-key="tag_1">Tag1<button type="button" class="rrw-sort-btn"
-                  aria-label="Sort by Tag1"
-                  onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-              <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
-                  aria-label="Sort by Status"
-                  onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-              <th class="rrw-sortable" data-sort-key="updated_at">Updated<button type="button" class="rrw-sort-btn"
-                  aria-label="Sort by Updated"
-                  onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-            </tr>
-          </thead>
-          <tbody>
-          {% if observers %}
-            {% for observer in observers %}
-              <tr>
-                <td class="row-select-cell">
-                  <input type="checkbox" class="observer-select" disabled>
-                </td>
-                <td>{{ observer.display_name or "—" }}</td>
-                <td><code>{{ observer.email }}</code></td>
-                <td>{{ observer.tag_1 or "—" }}</td>
-                <td>{{ observer.status }}</td>
-                <td data-sort-value="{{ observer.updated_at.isoformat() }}">
-                  {{ observer.updated_at | format_datetime }}
-                </td>
-              </tr>
-            {% endfor %}
-          {% else %}
-            {# Mock data row — placeholder visualization until the
-               Observer roster slice (W10) wires real imports. #}
-            <tr class="muted">
-              <td class="row-select-cell">
-                <input type="checkbox" disabled>
-              </td>
-              <td>Jane Doe</td>
-              <td><code>jane.doe@example.org</code></td>
-              <td>committee</td>
-              <td>active</td>
-              <td>31 May 2026, 09:00</td>
-            </tr>
-          {% endif %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card" id="observers-upload">
-        <h2 style="margin-top: 0;">Upload observers</h2>
-        <p class="form-help">
-          CSV file in UTF-8, max {{ 5000 }} rows. Required column:
-          <code>ObserverEmail</code>. Optional columns:
-          <code>ObserverName</code>, <code>ObserverTag1</code>.
-          Other columns are ignored.
-        </p>
-        <input type="file" accept=".csv,text/csv" aria-label="CSV file" disabled>
-        <div class="btn-pair" style="margin-top: 20px;">
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true">Upload</button>
-        </div>
+  <div class="bottom-grid">
+    <div class="card" id="observers-upload">
+      <h2 style="margin-top: 0;">Upload observers</h2>
+      <p class="form-help">
+        CSV file in UTF-8, max {{ 5000 }} rows. Required column:
+        <code>ObserverEmail</code>. Optional columns:
+        <code>ObserverName</code>, <code>ObserverTag1</code>.
+        Other columns are ignored.
+      </p>
+      <input type="file" accept=".csv,text/csv" aria-label="CSV file" disabled>
+      <div class="btn-pair" style="margin-top: 20px;">
+        <button class="btn secondary" type="button"
+                disabled aria-disabled="true">Upload</button>
       </div>
     </div>
 
-    <div style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-3);">
-      <div class="card operator-actions-card" id="observers-actions">
-        <h2 style="margin-top: 0;">Operator actions</h2>
-        <p class="form-help">
-          Bulk activate / inactivate observer rows. Wiring follows
-          the Observer roster slice.
-        </p>
-        <div class="btn-pair" style="margin-top: var(--space-3);">
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true">Activate</button>
-        </div>
-      </div>
-
-      <div class="card danger-zone" id="observers-danger">
-        <h2 style="margin-top: 0;">Danger Zone</h2>
-        <p class="form-help">
-          Permanently delete every observer row for this session.
-        </p>
-        <p>
-          <button class="btn destructive" type="button"
-                  disabled aria-disabled="true">Delete all observers</button>
-        </p>
+    <div class="card operator-actions-card" id="observers-actions">
+      <h2 style="margin-top: 0;">Operator actions</h2>
+      <p class="form-help">
+        Bulk activate / inactivate observer rows. Wiring follows
+        the Observer roster slice.
+      </p>
+      <div class="btn-pair" style="margin-top: var(--space-3);">
+        <button class="btn secondary" type="button"
+                disabled aria-disabled="true">Edit</button>
+        <button class="btn secondary" type="button"
+                disabled aria-disabled="true">Inactivate</button>
+        <button class="btn secondary" type="button"
+                disabled aria-disabled="true">Activate</button>
       </div>
     </div>
+  </div>
 
+  <div class="card" id="observers-list">
+    <h2 style="margin-top: 0;">Observers</h2>
+    <p class="form-help">
+      People who view collated responses without submitting any
+      themselves.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th class="row-select-cell">
+            <input type="checkbox" aria-label="Select all observers" disabled>
+          </th>
+          <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Name"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Email"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="tag_1">Tag1<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Tag1"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Status"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="updated_at">Updated<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Updated"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% if observers %}
+        {% for observer in observers %}
+          <tr>
+            <td class="row-select-cell">
+              <input type="checkbox" class="observer-select" disabled>
+            </td>
+            <td>{{ observer.display_name or "—" }}</td>
+            <td><code>{{ observer.email }}</code></td>
+            <td>{{ observer.tag_1 or "—" }}</td>
+            <td>{{ observer.status }}</td>
+            <td data-sort-value="{{ observer.updated_at.isoformat() }}">
+              {{ observer.updated_at | format_datetime }}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        {# Mock data row — placeholder visualization until the
+           Observer roster slice (W10) wires real imports. #}
+        <tr class="muted">
+          <td class="row-select-cell">
+            <input type="checkbox" disabled>
+          </td>
+          <td>Jane Doe</td>
+          <td><code>jane.doe@example.org</code></td>
+          <td>committee</td>
+          <td>active</td>
+          <td>31 May 2026, 09:00</td>
+        </tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bottom-grid">
+    {# Empty spacer keeps Danger Zone half-width and flush-right
+       per the operator-UI concept. #}
+    <div></div>
+    <div class="card danger-zone" id="observers-danger">
+      <h2 style="margin-top: 0;">Danger Zone</h2>
+      <p class="form-help">
+        Permanently delete every observer row for this session.
+      </p>
+      <p>
+        <button class="btn destructive" type="button"
+                disabled aria-disabled="true">Delete all observers</button>
+      </p>
+    </div>
   </div>
 {% endblock %}
