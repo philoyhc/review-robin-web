@@ -49,9 +49,10 @@
           {# Right column — Help contact + Timezone side by side
              on top, then the schedule + offset sub-grid. Live:
              Start / End (datetime anchors) + Auto-send invites /
-             reminders (offsets). Participants-platform fields
-             (``responses_release_at`` / ``release_until_offset``)
-             ride along as disabled placeholders for segments 21+. #}
+             reminders (offsets); Release-from
+             (``responses_release_at``) anchor +
+             Release-until (``release_until_offset``) duration —
+             participant-model viewing window (W14). #}
           <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
             <div>
               <label for="help_contact">Help contact (optional)</label>
@@ -87,8 +88,8 @@
 
               <label for="responses_release_at">Release responses from (optional)</label>
               <input type="datetime-local" id="responses_release_at"
-                     name="responses_release_at" disabled
-                     placeholder="Reviewees see responses — Participants platform">
+                     name="responses_release_at"
+                     value="{{ responses_release_at_input_value }}">
             </div>
             <div>
               <label for="invite_offsets">Auto-send invites (optional)</label>
@@ -103,8 +104,9 @@
 
               <label for="release_until_offset">Release responses until (optional)</label>
               <input type="text" id="release_until_offset"
-                     name="release_until_offset" disabled
-                     placeholder="Reviewee viewing closes — Participants platform">
+                     name="release_until_offset"
+                     value="{{ release_until_offset_input_value }}"
+                     placeholder="e.g. P30D, P7D, PT4H">
             </div>
           </div>
         </div>

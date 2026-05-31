@@ -83,12 +83,12 @@ Phase 3.
 | # | Placeholder | Ref | Notes |
 |---|---|---|---|
 | P1 | Empty Observers Setup page | §3.1 | ✓ shipped (#1686, polish via #1687–#1692). Two-column page grid (Upload + Operator actions row above; full-width Observers table; Danger Zone half-width below). Observers table has 6 columns (select-checkbox / Name / Email / Tag1 / Status / Updated) with per-column sort; rendering reads `observers` directly so seeded rows display in place of the mock row. |
-| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | Three audience rows (Reviewee / Peer reviewer / Observer) render with disabled toggles and a "Authoring coming soon" hint. |
-| P3 | Session-schedule authoring card on Settings | §3.4 | Four datetime inputs render disabled, anchored at the 18G columns. Read-only display of any existing values. |
-| P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | ⚠ partially shipped — Session Settings side fully wired via #1685 (User interface settings card on Session Edit Details: checkboxes inside the main edit form, dirty Save, persisted on submit, lock-on-data UI). **Remaining:** the same two-checkbox card on the New Session creation form. |
-| P5 | Empty `/me/sessions/{id}/results` page | §5 | Reviewee landing renders "Your results will appear here when released." Gated on `require_reviewee_in_session` (which can be the no-op pre-position version from W2). |
-| P6 | Empty `/me/sessions/{id}/collation` page | §5 | Observer landing renders the same shape with "Collation will appear here once released." |
-| P7 | Role-pill column on the `/me/` lobby table | §5 | ✓ shipped (#1684). Three CSS classes (`.pill-role-reviewer` blue / `.pill-role-reviewee` green / `.pill-role-observer` amber) under `body.ui-v2`. View adapter passes `"roles": ["reviewer"]` per item today; the cross-role query (W18) populates the list with the real role mix later. New columns "View responses" + "Until" added as placeholder em-dashes — they light up with the reviewee `/results` + observer `/collation` surfaces. |
+| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | ✓ shipped (#1656). Lives on the Instruments page as the Band 3 section of each instrument card (`instruments_index.html:3620`). Two-column card — left: a `Visibility` table with four audience rows (Operator / Reviewers / Reviewees / Observers); right: the response-fields editor. Operator + Reviewers rows are static pills (`Raw responses` / `Always` and `Raw responses` / `While session ongoing`). Reviewees + Observers rows render toggleable audience chips defaulting unselected; their What (Raw / Summarized / Anonymized) and When (While review ongoing / After release) cycle chips render muted at 0.4 opacity until the audience is selected. The whole block is wrapped in `inert aria-hidden="true"` outside edit mode. All click handlers are placeholder onclick stubs (`newModelToggleAudience` / `newModelCycleButton`) — nothing persists; W15 lights this up by wiring the chips to `instrument_view_policies`. Note: the placeholder uses "Reviewers" + adds an "Operator" row, whereas the schema's `audience` column is `reviewee` / `peer_reviewer` / `observer` — the vocabulary will reconcile at W15. |
+| P3 | Session-schedule authoring card on Settings | §3.4 | ✓ shipped (#1656). Lives on the Session Edit Details page (`session_edit.html`) and the New Session form (`session_new.html`) as the right-hand column of the Edit Session Details card — six inputs in a 2-col sub-grid: Start (`scheduled_activate_at`) + End (`deadline`) + Release-responses-from (`responses_release_at`) in the left sub-column; Auto-send-invites (`invite_offsets`) + Auto-send-reminders (`reminder_offsets`) + Release-responses-until (`release_until_offset`) in the right. Note: the two operator-platform datetime fields (Start + End) ship fully wired since Segment 18G, and the two offset inputs since 18G Parts 2/3 — only the two participant-platform fields (`responses_release_at`, `release_until_offset`) render `disabled` with the "Participants platform" placeholder hint. W14 unlocks those two and persists them onto the existing 18G columns. |
+| P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | ✓ shipped (#1685 + #1705). Session Settings side via #1685 (User interface settings card on Session Edit Details: checkboxes inside the main edit form, dirty Save, persisted on submit, lock-on-data UI). New Session form side via #1705 (same card placed above the Quick Setup card; values flow through `SessionCreate` to `sessions.create_session` so the toggles persist on session creation). |
+| P5 | Empty `/me/sessions/{id}/results` page | §5 | ✓ shipped (#1713). Mirrors the reviewer surface chrome — `<h1>{{ session.name }}</h1>` + inline caption "Results of the review" + the standard `rs-status-panel` description card. Gated on `require_reviewee_in_session` (W2). Mount-order note: registered before `_surface` in `routes_reviewer/__init__.py` so the catch-all `/me/sessions/{id}/{page_n}` doesn't swallow the literal `/results` segment. Role-navigator chips added in #1715. |
+| P6 | Empty `/me/sessions/{id}/collation` page | §5 | ✓ shipped (#1713). Same shape as P5 with caption "Observer view of the session". Gated on `require_observer_in_session` (W3). Same mount-order rule as P5. Role-navigator chips added in #1715. |
+| P7 | Role-pill column on the `/me/` lobby table | §5 | ✓ shipped (#1684); refined through this session's stream. Three CSS classes (`.pill-role-reviewer` blue / `.pill-role-reviewee` green / `.pill-role-observer` amber) under `body.ui-v2`. The dedicated Roles column was folded into the Session cell — pills now render on a second line directly beneath the session name (#1712) — and the cross-role query populating the pill list shipped via W18 (#1709). Session-name + per-pill links land on the appropriate role surface via the priority ladder Reviewer → Reviewee → Observer with per-role reachability gates (#1714). "View responses" + "Until" stay as placeholder em-dashes pending W16 / W17. |
 
 Surfaces deliberately **not** in Phase 2 (defer to Phase 3 because
 the inert form would mislead users):
@@ -113,21 +113,21 @@ Lights up the placeholders.
 | W1 | `is_email_identified(reviewee)` helper | §3.2 | ✓ shipped (PR 2) | Lives in `app/services/participants.py`. |
 | W2 | `require_reviewee_in_session` dependency | §4 | ✓ shipped (PR 2) | Defined in `app/web/deps.py`; no route mounts it yet. |
 | W3 | `require_observer_in_session` dependency | §4 | ✓ shipped (PR 2) | Defined in `app/web/deps.py`; no route mounts it yet. |
-| W4 | `app/services/participants.py` cross-role query | §5 | ⚠ shape stub | `ParticipantSession` dataclass + `sessions_for_user` signature shipped; body returns `[]`. The real union query lands with W18. |
+| W4 | `app/services/participants.py` cross-role query | §5 | ⚠ shape stub remains | `ParticipantSession` dataclass + `sessions_for_user` signature shipped; body still returns `[]`. W18 (#1709) shipped the union inline in `routes_reviewer/_dashboard.py` rather than through `participants.sessions_for_user`; the stub can be retired or back-filled to call the dashboard's path as a follow-up cleanup. |
 | W5 | `app/services/collation.py` service | §7 | ⚠ | Pure code can pre-position; rendering needs `instrument_view_policies` rows from W15. |
 | W6 | Per-session toggle wiring | §3.8 | ✓ shipped (#1685 + #1686) | Both flags wired end-to-end: Setup nav reads `relationships_enabled` / `observers_enabled` and conditionally renders the tabs; new `require_relationships_enabled_session` + `require_observers_enabled_session` route gates return 404 when the flag is off; lock-on-data check at the service layer rejects True→False flips when rows exist (so a direct API call can't bypass the disabled UI); `session.feature_toggled` audit event fires when either flag flips. No migration backfill — operator confirmed FALSE for all existing sessions per S7. |
 | W7 | Visibility-policy resolver | §3.3 | ✘ | View-time join through `instrument_id` to `instrument_view_policies`. Drives what reviewees / observers see on W17 / W18. |
 | W8 | Reviewee-reachability warning on Validate page | §3.3 | ✘ | Cross-cutting soft warning; calls W1. |
 | W9 | Friendly-label retirement | §3.7 | ✓ shipped (#1680) | Reviewee identity slots (Name / Email_Identifier / Profile) dropped from the editor + Settings-CSV allowlist; alembic `c8d4e9f1a2b3` deletes persisted override rows. Reviewer side already had only tag slots — no change needed. |
-| W10 | Observer CSV importer + Setup-page table population + sort + friendly-label resolver | §3.1 | ✘ | The slice that turns P1 into a real Setup page. Mirrors the reviewer importer patterns. |
+| W10 | Observer CSV importer + Setup-page table population + sort + friendly-label resolver | §3.1 | ✓ shipped (#1706) | Turns P1 into a functional Setup page. `app/services/observers.py` carries `create_observer` / `update_observer` / `bulk_inactivate` / `bulk_reactivate` with `ObserverOperationError` and audit envelopes; `csv_imports.parse_observer_csv` + `save_observers` + `delete_all_observers` + `existing_observer_count` reuse the shared `_save` / `_delete_all` infra; `ObserverImportRow` lives in `app/schemas/imports.py`; `observers.imported` registered in `EVENT_SCHEMAS`; `OBSERVERS_STATUS_OPTIONS` / `filter_observers_rows` / `observers_search_options` in `app/web/views/_filters.py`; `_setup_observers.py` has the full route surface (page / create / update / bulk in-/reactivate / delete-all / import); template refit to live UI with Upload + Operator actions + preview table + Danger Zone. Single-tag observer keeps the friendly-label editor card out of scope. |
 | W11 | Reviewer `profile_link` surface mirror | §3.9 | ⚠ partially shipped (#1680) | Quick Setup (CSV import via `parse_reviewer_csv` + `ReviewerImportRow`) and Extract Settings (`reviewers_extract.HEADER` + per-row serialize) wired. **Remaining:** services/reviewers create+update normalisation, Setup-Reviewers template + route, field labels default entry, display fields (label / CSV name / `ALLOWED_SOURCES` / seeding), view adapter, reviewer-summary cell styling. |
 | W12 | Quick Setup Observer slot submission | §3.8 | ✘ | Wired Quick Setup card surface; persists to `observers`. |
 | W13 | Extract Setup observer shapes | §3.8 | ✘ | Observer roster CSV (and any later observer-specific extracts) become selectable when S8 = TRUE. |
-| W14 | Session schedule authoring | §3.4 | ✘ | Wires P3's disabled inputs; persists to the 18G columns; integrates with the 18G scheduler. |
+| W14 | Session schedule authoring | §3.4 | ✓ shipped | Wires P3's two disabled inputs: `responses_release_at` (datetime-local, parsed via `scheduled_events.parse_and_validate_responses_release_at` — no minimum-lead floor since the operator can backdate Release-from) + `release_until_offset` (ISO 8601 duration string via `scheduled_events.parse_and_validate_release_until_offset` — positive only, magnitude cap 365 days). Both fields ride on `SessionCreate` end-to-end through `sessions.create_session` / `sessions.update_session`, with the latter diffing them for `session.updated` audit emission. The Edit form prefills both via `responses_release_at_input_value` / `release_until_offset_input_value`. The §8.2.2 anchor-null rule (offset inert when anchor is unset) stays enforced at view time — W16 / W17 will pick it up at the reviewee results / observer collation surfaces. |
 | W15 | Band 3 visibility-policy editor | §3.3 | ✘ | Wires P2's disabled toggles; persists to `instrument_view_policies`; emits `instrument.view_policy_set` audit events. |
 | W16 | Reviewee results surface | §5 | ✘ | Wires P5: resolves visibility policy via W7, renders the collation in the policy's form, gates on the `results_open_at` window. |
 | W17 | Observer collation surface | §5 | ✘ | Wires P6: resolves visibility policy via W7, filters by observer `tag_1`. |
-| W18 | Unified `/me/` lobby cross-role query | §5 | ✘ | Wires P7's pill column with real data via W4; broadens the existing dashboard query. |
+| W18 | Unified `/me/` lobby cross-role query | §5 | ✓ shipped (#1709, polish #1712 / #1714 / #1715) | The `/me` dashboard now unions three roster lookups (reviewer / email-identified reviewee / observer, active rows only, case-insensitive email match) and emits one row per session the user touches with the full role list. Reviewer-specific fields (per-reviewer pill, deep link, per-page sub-rows) populate only when the user is an active reviewer; reviewee / observer-only rows show "—" in the Reviewer status column. Session-name + per-pill links resolve by priority Reviewer → Reviewee → Observer with per-role reachability gates (#1714); pills fold into the Session cell (#1712); the same cross-role navigator chip strip appears on each role-specific surface so the user can swap roles without going back to `/me` (#1715). Lives inline in `_dashboard.py` for now — see W4 for the unfinished move into `participants.sessions_for_user`. |
 | W19 | `Acknowledge` flow | §6 | ✘ | Button + handler on /results; writes to S9; emits `results.acknowledged`; surfaces to operator. |
 | W20 | Reviewee / observer email notifications | §6 | ✘ | Gated on Segment 14B. Results-ready notices, acknowledgement nudges. |
 | W21 | Magic-link landing for reviewees / observers | §4 | ✘ | Blocked on the `invitations`-extensibility design call. |
@@ -140,6 +140,19 @@ Lights up the placeholders.
   S7, S8, S9, S10, S11. Alembic migration `b3e7d2a4c8f1`.
 - **Phase 1 helper / dependency stubs** (PR #1679) — W1, W2,
   W3, W4 as dead code / shape-only.
+- **Band 3 visibility-policy placeholder** (PR #1656) — P2
+  shipped. Four-row table inside each instrument card's Band
+  3 section; Operator + Reviewers rows fixed, Reviewees +
+  Observers rows toggleable with muted cycle chips. Inert
+  outside edit mode. W15 wires the chips to
+  `instrument_view_policies`.
+- **Session-schedule disabled-placeholder inputs** (PR #1656)
+  — P3 shipped. `responses_release_at` (datetime-local) and
+  `release_until_offset` (text) render disabled inside the
+  Edit Session Details card's right-hand column on both
+  `session_edit.html` and `session_new.html`, alongside the
+  18G-wired Start / End / invite-offsets / reminder-offsets
+  inputs. W14 unlocks them onto the existing 18G columns.
 - **§3.7 friendly-label retirement + §3.9 partial**
   (PR #1680):
   - W9 friendly-label retirement (reviewee identity slots
@@ -168,6 +181,41 @@ Lights up the placeholders.
   on Setup pages and Session Home; gaps now uniform 16px
   vertical / 20px horizontal across `.bottom-grid` /
   `.bottom-left` / `.extract-data-grid` / `.extract-data-column`.
+- **Per-session feature toggles — New Session form side**
+  (PR #1705) — P4 completed. Same User interface settings
+  card from Session Edit Details placed above the Quick
+  Setup card on the create form; `relationships_enabled` /
+  `observers_enabled` flow through `SessionCreate` to
+  `sessions.create_session` so the toggles persist at
+  creation time.
+- **Observers Setup page CRUD** (PR #1706) — W10 shipped.
+  `app/services/observers.py` + `csv_imports` observer
+  shapes + `ObserverImportRow` + `observers.imported` audit
+  + filter/search helpers + full `_setup_observers.py`
+  route surface; the page replaces P1's inert shell with
+  Upload + Operator actions + preview table + Danger Zone.
+- **`/me` cross-role union** (PR #1709) — W18 shipped.
+  `_dashboard.py` unions the three rosters; reviewee /
+  observer-only rows now appear on `/me` with their role
+  pills; reviewer-specific columns gate on `pill is not None`.
+- **Operator lobby owner-only access regression test**
+  (PR #1710) — pins the contract: only SessionOperator
+  members + sys-admins reach `/operator/*`; participant
+  rosters never confer operator access.
+- **`/me` polish stream** (PRs #1712, #1714, #1715) — folds
+  the Roles column into the Session cell (#1712); adds
+  role-aware + reachability-gated links from the
+  session-name + per-pill anchors on `/me` (#1714); adds
+  the role-navigator chip strip below the session-name
+  header on every role-specific surface so the user can
+  swap roles without going back to `/me` (#1715).
+- **Reviewee + observer placeholder surfaces**
+  (PR #1713) — P5 + P6 shipped. `/me/sessions/{id}/results`
+  and `/me/sessions/{id}/collation` render the reviewer-
+  surface chrome (header + inline caption + optional
+  description card), gated by `require_reviewee_in_session`
+  / `require_observer_in_session`. Real body content lands
+  with W16 / W17.
 
 Each subsequent Phase 2 / Phase 3 slice lights up a subset of
 the Phase 1 schema without doing its own migration.
