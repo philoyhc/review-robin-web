@@ -50,21 +50,40 @@ assigned reviewees, submits responses.
   reviewer's review list, response form per instrument,
   submission confirmation, error / expired states.
 
-### 3. Reviewee (forward-looking, currently not an audience)
+### 3. Reviewee (participant-model Phase 1 — partially live)
 
-Currently the reviewee does not enter the system. They are subjects
-of review, not participants in it; they may not even be aware they
-are being reviewed (depending on the use case — confidential peer
-review, hiring committees).
+The reviewee is now entering the system as a participant
+audience. Phase 1 (PR #1706 / participant_model_prep) has:
 
-Some envisioned future scenarios — non-confidential peer review,
-360-degree feedback, results-sharing flows — would introduce
-reviewee-facing surfaces (results notifications, feedback
-acknowledgement, etc.). At that point the reviewee becomes a third
-live audience with its own auth and identity assumptions.
+- An `Observer` model and per-session `observers` table with a
+  dedicated CRUD Setup page (gated by `session.observers_enabled`).
+- A `require_reviewee_in_session` gate in `app/web/deps.py` that
+  matches a signed-in user to an active Reviewee row by
+  case-insensitive email equality.
+- A placeholder **Reviewee Results** page at
+  `GET /me/sessions/{id}/results` — reviewer-surface chrome with
+  no body content yet. Full content lands with W16.
 
-Not in scope for current work. Recorded so the design doesn't
-foreclose this direction.
+Identity match: `reviewee.email_or_identifier` must parse as a
+valid email to confer access (confidential reviewees — non-email
+identifiers — never grant access; the surface stays unavailable
+by construction per `participants.is_email_identified`).
+
+### 3b. Observer (participant-model Phase 1 — partially live)
+
+The observer audience can view collated results across the whole
+session (as opposed to a reviewee who sees only their own
+results). Phase 1 has:
+
+- An `Observer` model and per-session `observers` table with a
+  dedicated CRUD Setup page (gated by `session.observers_enabled`).
+- A `require_observer_in_session` gate in `app/web/deps.py`.
+- A placeholder **Observer Collation** page at
+  `GET /me/sessions/{id}/collation` — reviewer-surface chrome with
+  no body content yet. Full content lands with W17.
+
+Observers are always email-identified (`observers.email` is NOT
+NULL); no parse check is needed before identity matching.
 
 ### 4. System administrator
 
@@ -258,7 +277,9 @@ navigation patterns are audience-specific.
 |---|---|---|---|
 | Operator (in session) | Per-session pages | Heavy: two-row chrome, status strip, lifecycle context | Rich: Setup pages, Operations pages, sub-pages |
 | Operator (out of session) | App-level pages | Light: minimal top bar, user menu | Sparse: Sessions, About, Settings |
-| Reviewer | Response surface | Light: page header, optional instrument tabs | Sparse: review list, response form, confirmation |
+| Reviewer | Response surface | Light: page header, role-navigator chips | Sparse: `/me` dashboard, response form, summary |
+| Reviewee (Phase 1+) | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (W16 body content pending) |
+| Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` (W17 body content pending) |
 
 The discipline: **components are universal, chrome is audience-
 local.** A submit button looks the same to operators and reviewers.

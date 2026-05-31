@@ -18,7 +18,7 @@ The "what is this thing?" layer. Read these first when onboarding.
 | File | Covers |
 |---|---|
 | `rrw_functional_spec.md` | Technology-neutral functional contract — what Review Robin Web is meant to do in user and concept terms. The canonical entry point for new readers; per-subsystem specs add implementation detail on top of this foundation. Aligned with the system as of 2026-05-22. |
-| `audience_and_identity_model.md` | Who uses Review Robin — operator / reviewer audiences, plus forward-looking reviewee and sysadmin. Auth posture and customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
+| `audience_and_identity_model.md` | Who uses Review Robin — operator / reviewer audiences; reviewee and observer (Phase 1 partially live — placeholder surfaces, access gates, CRUD roster); sysadmin. Auth posture and customization boundaries. The "highest-ranking" doc on identity / audience decisions. |
 | `architecture.md` | Domain entities, three-layer split (routes → services → models), conceptual hierarchy, pair-level context (post-15D `relationships` table), audit-event detail schema (canonical envelopes, strict-mode gate). |
 | `lifecycle.md` | Session state machine (`draft` ↔ `validated` ↔ `ready`, plus reserved `expired` / `archived`), transition services, `_require_editable` + `_require_response_loss_ack` route gates, `invalidate_if_validated` service-layer hook, per-instrument open/close + visibility-when-closed + lazy deadline-close, UI lock-card pattern, and the audit events emitted at each transition. |
 
@@ -34,7 +34,7 @@ detailed contracts.
 | `workflow_card.md` | Workflow card — the single persistent action card at the top of every session-scoped operator page (Session Home + Operations row). Ten-state cascade, uniform five-stage stepper, Activate session super-button + warnings detour + failure rollback, right-column status / errors aside. |
 | `sessions_overview.md` | Sessions lobby (`/operator/sessions`) — sortable table, tag filter + search, per-row expander (rename / tag / clone / purge-and-archive), and the archived-sessions child page (Segment 18A rebuild). |
 | `session_home.md` | Session Home / Control Panel — Workflow card, Extract Setup card, Quick Setup card, Session Details, Danger Zone. |
-| `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships) — shared body shape, visibility-toggle pattern, per-page column orders. |
+| `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships / Observers) — shared body shape, visibility-toggle pattern, per-page column orders. Observers page gate (`observers_enabled`), Observer preview-table column order, Observer CSV import contract. |
 | `instruments.md` | The Instrument entity and the per-session Instruments operator page — per-instrument card (Identity / Bands 1+2+3 / Action row), the "Not set" pill safety gate on Band 1, group-scoped variant (`group_kind` encoding + group identity composition), Response Type Definitions card, editing flow. Consolidates the pre-2026-05-26 `instruments.md` + `instrument_builder.md` + the operator-card / model-side half of `group_scoped_instruments.md` (all kept under `spec/archive/`). |
 | `quick_setup_card_spec.md` | Quick Setup card on Session Home — four-slot CSV upload (Reviewers / Reviewees / Relationships / Settings) with shared confirm + cascade + lifecycle-lock semantics. |
 | `preview_hub.md` | Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
@@ -48,7 +48,7 @@ detailed contracts.
 
 | File | Covers |
 |---|---|
-| `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/me/sessions/{id}/{position}`), dashboard (`/me`), and invitation landing (`/me/invite/{token}`). |
+| `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/me/sessions/{id}/{page_n}`), dashboard (`/me`) with cross-role union and 8-column table, role-navigator chip strip (shared across four surfaces), reviewer summary, reviewee results placeholder (`/me/sessions/{id}/results`), observer collation placeholder (`/me/sessions/{id}/collation`), and invitation landing (`/me/invite/{token}`). |
 | `sort_by_reviewee.md` | Reviewer-surface sort UX (Segment 13B) — operator default sort via Display Fields, plus the reviewer-side clickable column headers with live-only persistence. |
 
 ## Visual / UI vocabulary

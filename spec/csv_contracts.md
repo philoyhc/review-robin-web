@@ -1,10 +1,11 @@
 # CSV contracts — spec
 
 **The column shapes and parsing rules that govern every CSV the
-operator extracts or uploads.** Five extract paths and four
+operator extracts or uploads.** Multiple extract paths and five
 import paths share a small library of primitives and a strict
-round-trip guarantee on the four roster-shaped pairs (Reviewers,
-Reviewees, Relationships, Settings).
+round-trip guarantee on the four main roster-shaped pairs
+(Reviewers, Reviewees, Relationships, Settings). Observers has a
+wired importer but no extract tile yet.
 
 When the code drifts from this spec, fix the code. Each extract
 file pins its `HEADER` tuple as a module constant; each importer
@@ -291,6 +292,30 @@ already-loaded session rosters. Required: `ReviewerEmail`,
 **Save:** `save_relationships(db, session, rows)` wipe-and-replace,
 then call `seed_display_fields_from_assignments` (legacy-named
 helper that reads from `relationships.tag_N` post-15D PR 6b).
+
+### 3.2b Observers — `csv_imports.py`
+
+Shipped PR #1706. `parse_observer_csv(content: bytes) -> ParseResult`
+and `save_observers(db, session, rows, *, user, correlation_id)`.
+
+**Required columns:** `ObserverEmail`.
+**Optional columns:** `ObserverName`, `ObserverTag1`.
+
+**Per-row validation:**
+
+| Rule | Detection |
+|---|---|
+| Required cell present | Empty `ObserverEmail` → per-row error. |
+| Email format | `_parse_email` rejects malformed strings. |
+| Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
+
+**Save:** `save_observers(...)` wipe-and-replace within the session's
+observer roster. Emits `observers.imported` audit event on success.
+Bulk delete: `delete_all_observers(db, session, *, user,
+correlation_id)` — emits `observers.deleted_all`.
+
+No extract counterpart yet — the Observers CSV download tile is not
+yet exposed in the operator UI.
 
 ### 3.3 Settings — `session_config_io/` (two-phase apply)
 
