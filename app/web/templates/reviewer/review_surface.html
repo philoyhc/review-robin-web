@@ -53,6 +53,13 @@
     {% endif %}
   </div>
 
+  {# Role-navigator chips below the header — suppressed in the
+     operator preview (preview_mode), which reuses this template
+     but isn't a participant-facing view. #}
+  {% if not preview_mode %}
+    {% include "reviewer/_role_chips.html" %}
+  {% endif %}
+
   {# Reviewer-surface overview card — the session description, the
      transient session-closed banner, and the per-page status pills,
      rolled into one full-width card. Omitted only when there is

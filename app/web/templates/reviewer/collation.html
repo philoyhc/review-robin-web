@@ -17,6 +17,8 @@
     <span>Observer view of the session</span>
   </div>
 
+  {% include "reviewer/_role_chips.html" %}
+
   {% if session.description %}
     <div class="card rs-status-panel">
       <p class="rs-session-description">{{ session.description }}</p>

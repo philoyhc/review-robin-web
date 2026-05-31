@@ -2209,6 +2209,29 @@
         background: var(--accent-amber-bg);
         color: var(--accent-amber-dark);
       }
+      /* Role-navigator chip strip below the session-name header
+         on each role-specific ``/me`` surface (review surface,
+         summary, results, collation). The chip matching the
+         current page renders full-colour and unclickable; the
+         other roles the user holds render muted and link out. */
+      body.ui-v2 .rs-role-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        margin: 0 0 var(--space-4) 0;
+      }
+      body.ui-v2 .rs-role-nav .rs-role-nav-muted {
+        background: var(--surface-2, #f3f4f6);
+        color: var(--text-muted);
+        text-decoration: none;
+      }
+      body.ui-v2 .rs-role-nav a.rs-role-nav-muted:hover {
+        color: var(--text-primary);
+        text-decoration: underline;
+      }
+      body.ui-v2 .rs-role-nav .rs-role-nav-active {
+        font-weight: 600;
+      }
       /* Banners — single .banner shell + four semantic variants.
          Defined for completeness; not rendered on this page. */
       body.ui-v2 .banner {
