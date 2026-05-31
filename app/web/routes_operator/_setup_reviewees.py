@@ -457,11 +457,10 @@ def reviewees_delete_all(
 
 # Allowlist of (form_param, source_field) the reviewee label editor
 # accepts, mirroring ``app.services.field_labels._VALID_SOURCE_FIELDS``
-# (Segment 15A Slice 3) — identity fields plus the three tags.
+# (Segment 15A Slice 3). Identity columns retired 2026-05-31 per
+# ``guide/participant_model_upgrade.md`` §3.7 — only the three tag
+# slots remain.
 _REVIEWEE_SLOTS: tuple[tuple[str, str], ...] = (
-    ("name", "name"),
-    ("email_or_identifier", "email_or_identifier"),
-    ("profile_link", "profile_link"),
     ("tag_1", "tag_1"),
     ("tag_2", "tag_2"),
     ("tag_3", "tag_3"),
@@ -478,7 +477,12 @@ async def reviewees_save_field_labels(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Save the six reviewee labels (identity + tags) for this session."""
+    """Save the three reviewee tag labels for this session.
+
+    Identity columns (Name / Email_Identifier / Profile) retired
+    2026-05-31 per upgrade-doc §3.7; form fields for those names
+    are silently ignored if submitted.
+    """
     form = await request.form()
     submitted = {
         param: str(form.get(param, "")) for param, _ in _REVIEWEE_SLOTS

@@ -163,10 +163,14 @@ def test_apply_rejects_unknown_field_labels_source_field(
     )
 
 
-def test_apply_accepts_new_reviewee_identity_slots(db: Session) -> None:
-    """The widened allowlist accepts the new reviewee identity
-    slots (``name`` / ``email_or_identifier`` / ``profile_link``)
-    that 15A brings into scope."""
+def test_apply_rejects_retired_reviewee_identity_slots(
+    db: Session,
+) -> None:
+    """The reviewee identity slots
+    (``name`` / ``email_or_identifier`` / ``profile_link``) retired
+    2026-05-31 per upgrade-doc §3.7 — Settings-CSV imports for those
+    slots now error rather than persist a no-longer-rendered
+    override."""
     review_session, _ = _make_session(db, "csv-fl-identity")
     rows = [
         Row(
@@ -186,5 +190,9 @@ def test_apply_accepts_new_reviewee_identity_slots(db: Session) -> None:
         ),
     ]
     result = apply_session_config(db, review_session, rows)
-    assert result.errors == []
-    assert result.counts["field_labels"] == 3
+    assert len(result.errors) == 3
+    assert all(
+        "source_field" in err.message and "reviewee" in err.message
+        for err in result.errors
+    )
+    assert result.counts.get("field_labels", 0) == 0

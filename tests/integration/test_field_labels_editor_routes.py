@@ -181,19 +181,21 @@ def test_reviewers_page_renders_editor_disabled_when_ready(
     assert "data-field-labels-cancel" not in body
 
 
-# ── Reviewees route (six slots) ─────────────────────────────────────────
+# ── Reviewees route (three tag slots) ───────────────────────────────────
+#
+# Identity columns (Name / Email_Identifier / Profile) retired
+# 2026-05-31 per guide/participant_model_upgrade.md §3.7. Only the
+# three tag slots remain; identity-slot form fields are silently
+# ignored if submitted.
 
 
-def test_reviewees_save_upserts_six_slots(
+def test_reviewees_save_upserts_three_tag_slots(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, "fle-revee")
     response = client.post(
         f"/operator/sessions/{review_session.id}/reviewees/field-labels",
         data={
-            "name": "Student name",
-            "email_or_identifier": "Student ID",
-            "profile_link": "Photo",
             "tag_1": "Lab section",
             "tag_2": "",
             "tag_3": "Year",
@@ -204,32 +206,49 @@ def test_reviewees_save_upserts_six_slots(
     rows = _rows(db, review_session.id)
     pairs = {(r.source_field, r.label) for r in rows}
     assert pairs == {
-        ("name", "Student name"),
-        ("email_or_identifier", "Student ID"),
-        ("profile_link", "Photo"),
         ("tag_1", "Lab section"),
         ("tag_3", "Year"),
     }
 
 
-def test_reviewees_page_renders_two_rows_six_inputs(
+def test_reviewees_save_silently_ignores_retired_identity_slots(
+    client: TestClient, db: Session
+) -> None:
+    """Form fields for the retired identity slots (Name / Email /
+    Profile) are silently ignored — the route iterates the allowlist
+    and never reads the form field for an unknown slot."""
+    review_session = _make_session(client, db, "fle-revee-retired")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/field-labels",
+        data={
+            "name": "Student name",
+            "email_or_identifier": "Student ID",
+            "profile_link": "Photo",
+            "tag_1": "Lab section",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    rows = _rows(db, review_session.id)
+    # Only the tag slot persisted; identity slots silently dropped.
+    pairs = {(r.source_field, r.label) for r in rows}
+    assert pairs == {("tag_1", "Lab section")}
+
+
+def test_reviewees_page_renders_one_row_three_inputs(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, "fle-revee-render")
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewees"
     ).text
-    assert "Reviewee field labels" in body
-    # Six inputs total — three identity, three tag.
-    for name in (
-        "name",
-        "email_or_identifier",
-        "profile_link",
-        "tag_1",
-        "tag_2",
-        "tag_3",
-    ):
+    assert "Reviewee tag labels" in body
+    # Three inputs total — the three tag slots.
+    for name in ("tag_1", "tag_2", "tag_3"):
         assert f'name="{name}"' in body
+    # Retired identity slots no longer present as form inputs.
+    for name in ("name", "email_or_identifier", "profile_link"):
+        assert f'name="{name}"' not in body
 
 
 # ── Relationships route (pair_context, "1" / "2" / "3") ──────────────────

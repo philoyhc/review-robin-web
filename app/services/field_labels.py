@@ -68,18 +68,17 @@ _DEFAULT_LABELS: dict[tuple[str, str], str] = {
 # enum gate, so this map is the only validation layer for what a
 # session may rename. Mirrored by ``_VALID_FL_SOURCE_FIELDS`` in
 # ``app/services/session_config_io/`` for Settings-CSV import.
+#
+# Friendly-label affordance retired for the reviewee fixed columns
+# (Name / Email_Identifier / Profile) on 2026-05-31 per
+# ``guide/participant_model_upgrade.md`` §3.7 — those columns mean
+# what they say and operators renaming them added no signal.
+# ``_DEFAULT_LABELS`` retains the canonical strings so display
+# callers (table headers, etc.) still resolve to "Name" / "Email"
+# / "Profile"; only the *override* path is closed.
 _VALID_SOURCE_FIELDS: dict[str, frozenset[str]] = {
     "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),
-    "reviewee": frozenset(
-        {
-            "name",
-            "email_or_identifier",
-            "tag_1",
-            "tag_2",
-            "tag_3",
-            "profile_link",
-        }
-    ),
+    "reviewee": frozenset({"tag_1", "tag_2", "tag_3"}),
     "pair_context": frozenset({"1", "2", "3"}),
 }
 

@@ -254,6 +254,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             ReviewerImportRow(
                 name=name,
                 email=email,
+                profile_link=_none_if_blank(raw, "PhotoLink"),
                 tag_1=_none_if_blank(raw, "ReviewerTag1"),
                 tag_2=_none_if_blank(raw, "ReviewerTag2"),
                 tag_3=_none_if_blank(raw, "ReviewerTag3"),
@@ -513,6 +514,7 @@ def _reviewer_to_kwargs(row: ReviewerImportRow, session_id: int) -> dict[str, An
         "session_id": session_id,
         "name": row.name,
         "email": row.email,
+        "profile_link": row.profile_link,
         "tag_1": row.tag_1,
         "tag_2": row.tag_2,
         "tag_3": row.tag_3,
