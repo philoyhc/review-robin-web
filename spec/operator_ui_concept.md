@@ -77,14 +77,21 @@ The five surfaces where the operator does the work needed to make the session ru
 | Reviewers | `session_reviewers.html` | `/sessions/{id}/reviewers` |
 | Reviewees | `session_reviewees.html` | `/sessions/{id}/reviewees` |
 | Relationships | `session_relationships.html` | `/sessions/{id}/relationships` |
+| Observers | `session_observers.html` | `/sessions/{id}/observers` |
 | Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
 | Email Template | `session_setupinvite.html` | `/sessions/{id}/setupinvite` |
+
+**Observers page gate.** The Observers tab is only visible in the
+Setup chrome and only routes to a page (rather than 404) when
+`session.observers_enabled == True`. The operator sets this toggle
+via the **User interface settings** card on the Create Session form
+or the Edit Session Details page.
 
 The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (shipped in Segment 11E): per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
 **Relationships** carries pair-level context — the `relationships` table seeded in Segment 13E PR 2 and lit up by the Setup page in Segment 15D PR 2. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names (15D PR 3 / PR 4) plus an `active` / `inactive` status. The page mirrors Reviewers / Reviewees — CSV upload, "Fields with data" pill row, preview table with per-row authoring, Danger Zone.
 
-The Reviewers / Reviewees / Relationships pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → a half-width `bottom-grid` pairing the friendly-label editor with the **Operator actions card** → preview table with a leftmost checkbox column, visibility toggles, clickable sort headers and a right-end Updated column → upload-and-Danger-Zone grid). The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, and the Segment 15F per-row Edit / Add / bulk authoring surface — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+The Reviewers / Reviewees / Relationships pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → a half-width `bottom-grid` pairing the friendly-label editor with the **Operator actions card** → preview table with a leftmost checkbox column, visibility toggles, clickable sort headers and a right-end Updated column → upload-and-Danger-Zone grid). The Observers page shares the same shape minus the friendly-label editor and the "Fields with data" pill row (observers have a simpler fixed schema). The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the Segment 15F per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 The **sort affordance** is the rrw-sort primitive shipped 2026-05-12 in Segment 13B Part 2. Any operator table that wants clickable sort headers opts in via a small annotation contract on the `<table>` + `<th>`s + `<td>`s; the shared JS in `base.html` + cookie persistence layer take care of state. Today's adopters: Reviewers / Reviewees / Relationships (Setup row) + the Operations Assignments table. Per-instrument `sort_display_fields` on the reviewer surface is a separate but compatible mechanism — the operator picks a default for reviewers via the Sort column on the Instruments Display Fields card; reviewers override live via the same header buttons. Functional spec at `spec/sort_by_reviewee.md`.
 
@@ -155,10 +162,15 @@ The chrome that implements P1–P4. Visual implementation details (colors, tints
 A double-height **Home** anchor on the left, two rows of phase tabs to its right:
 
 ```
-┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
+┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]
 │  Home  │
 └────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses]
 ```
+
+The Observers tab renders conditionally — only when
+`session.observers_enabled == True`. When disabled the tab is
+hidden from the chrome so the Setup row stays uncluttered for
+sessions that don't use observers.
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.
 - **Row labels** ("SETUP", "OPERATIONS") sit at the left edge of each row. Labels carry the row-identity job; row tints reinforce but shouldn't be the only signal.
@@ -212,13 +224,13 @@ The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Wo
 
 Single-page form. No session top nav (the session doesn't exist yet); breadcrumb reads `Sessions → Create New Session`.
 
-Fields: Name (required, max 255), Code (required, max 64; unique per operator), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default; Segment 18B PR 4), Deadline (optional, datetime-local — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). Action row: **Create session** (Primary) submits to `POST /operator/sessions` → inserts the session + a `SessionOperator` row + a `session.created` audit event + 303 to `/operator/sessions/{id}`. **Cancel** (Secondary) → `/operator/sessions`.
+Fields: Name (required, max 255), Code (required, max 64; unique per operator), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default; Segment 18B PR 4), Deadline (optional, datetime-local — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). The Schedule sub-grid also surfaces **Release responses from** (`responses_release_at`) and **Release responses until** (`release_until_offset`) — both wired end-to-end since PR #1716. A **User interface settings** card above the Quick Setup card carries two checkboxes: **Enable Relationships tab** (`relationships_enabled`) and **Enable Observers tab** (`observers_enabled`); both default unchecked. Action row: **Create session** (Primary) submits to `POST /operator/sessions` → inserts the session + a `SessionOperator` row + a `session.created` audit event + 303 to `/operator/sessions/{id}`. **Cancel** (Secondary) → `/operator/sessions`.
 
 ### `/operator/sessions/{id}/edit` — Edit session
 
 Same shape as the create form, with pre-populated values; no session top nav (it's a meta-edit, sub-page of Home). Breadcrumb is `Sessions → {session.name} → Edit Session`.
 
-Same fields as create (Name, Code, Timezone, Deadline, Description, Help contact), pre-filled — the Timezone field was folded in from the former standalone Display timezone card in Segment 18B PR 5, so the display zone is now lifecycle-gated like the rest of the form. Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field (plus a `session.display_timezone_set` event when the zone changes), invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
+Same fields as create (Name, Code, Timezone, Deadline, Description, Help contact), pre-filled — the Timezone field was folded in from the former standalone Display timezone card in Segment 18B PR 5, so the display zone is now lifecycle-gated like the rest of the form. The Schedule sub-grid includes **Release responses from** and **Release responses until** (both wired end-to-end since PR #1716). The page also carries a **User interface settings** card with **Enable Relationships tab** and **Enable Observers tab** checkboxes, mirroring the Create Session form (added PR #1705). Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field (plus a `session.display_timezone_set` event when the zone changes), invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
 
 The route returns **HTTP 409** when the session is `ready` — operators must Revert to draft first via the Workflow card.
 

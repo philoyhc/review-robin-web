@@ -5,6 +5,7 @@ Review Robin Web is organized around explicit domain entities:
 - sessions
 - reviewers
 - reviewees
+- observers
 - instruments
 - assignments
 - responses
@@ -12,6 +13,17 @@ Review Robin Web is organized around explicit domain entities:
 - audit events
 - exports
 - retention actions
+
+**Participant-model context.** The three participant rosters —
+reviewers, reviewees, and observers — are per-session tables whose
+rows are matched to a signed-in user by case-insensitive email.
+`observers` (landed inert in Phase 1; full CRUD wired in PR #1706)
+is the third audience: participants who view collated results
+without filling out response forms. Its Setup page is gated by
+`session.observers_enabled`; the collation surface at
+`/me/sessions/{id}/collation` is its reviewer-facing entry point
+(placeholder body, gated by `require_observer_in_session` in
+`app/web/deps.py`).
 
 ## Conceptual hierarchy
 
@@ -481,6 +493,22 @@ canonical "no payload" marker.
 | `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
 | `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
 
+**Observer roster events** (registered in `EVENT_SCHEMAS` as part
+of the participant-model Phase 1 work — PR #1706):
+
+| Event type | Envelope(s) |
+|---|---|
+| `observer.created` | `snapshot` (+ identity) |
+| `observer.updated` | `changes` + `refs` (+ identity) |
+| `observer.bulk_inactivated` / `.bulk_reactivated` | `snapshot` (+ identity) |
+| `observers.imported` | `counts` + `context` (+ identity) |
+| `observers.deleted_all` | `counts` (+ identity) |
+
+The `observer.created` and `observers.imported` events emit
+in `app/services/observers.py` and `app/services/csv_imports.py`
+respectively, following the same per-row / bulk-replace pattern
+as the `reviewer.*` / `reviewers.*` family.
+
 ### Cutover
 
 Rows written **before 2026-05-07** use legacy per-emitter
@@ -494,6 +522,23 @@ rewritten, since the audit log is append-only.
 The `audit_events.created_at` timestamp is the cutover
 boundary the audit-export consumer (Segment 12B) reads to
 decide which shape to interpret.
+
+## Access-control invariants
+
+- **Operator lobby gate** — `GET /operator/*` is gated by
+  `require_operator` / `require_session_operator` in
+  `app/web/deps.py`. A user's membership in **any participant
+  roster** (reviewer, reviewee, or observer) never confers
+  operator access; only a `session_operators` row or
+  `users.is_sys_admin` does. This invariant is pinned by a
+  regression test in
+  `tests/integration/test_operator_lobby_access_gate.py`
+  (PR #1710).
+
+- **Participant gates** — `require_reviewee_in_session` /
+  `require_observer_in_session` gate the reviewee results and
+  observer collation routes. The reviewer write-path gates
+  (`require_reviewer_in_session`) remain unchanged.
 
 ## Implementation principles
 

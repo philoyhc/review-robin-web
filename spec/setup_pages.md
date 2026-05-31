@@ -8,15 +8,24 @@ surfaces reachable from the chrome's Setup row:
 | Reviewers | `/operator/sessions/{id}/reviewers` | `session_reviewers.html` |
 | Reviewees | `/operator/sessions/{id}/reviewees` | `session_reviewees.html` |
 | Relationships | `/operator/sessions/{id}/relationships` | `session_relationships.html` |
+| Observers | `/operator/sessions/{id}/observers` | `session_observers.html` |
 | Instruments | `/operator/sessions/{id}/instruments` | `instruments_index.html` |
 | Email Template | `/operator/sessions/{id}/setupinvite` | `session_setupinvite.html` |
 
 Each Setup Page follows the same shell (chrome + Setup row +
-status strip + a body of cards). The Reviewers, Reviewees, and
-Relationships pages additionally render a **preview table** of the
-session's current rows that all share a common visibility-toggle
-pattern; this spec covers that shared pattern alongside the
-per-page idiosyncrasies.
+status strip + a body of cards). The Reviewers, Reviewees,
+Relationships, and Observers pages additionally render a **preview
+table** of the session's current rows that all share a common
+visibility-toggle pattern; this spec covers that shared pattern
+alongside the per-page idiosyncrasies.
+
+**Observers page gate.** The Observers Setup page routes
+(`app/web/routes_operator/_setup_observers.py`) are gated by
+`require_observers_enabled_session` — the page returns 404 until
+the operator enables observers via the **User interface settings**
+card on the Create Session form or Edit Session Details page. When
+`session.observers_enabled` is `True` the page renders with the
+same CRUD shape as Reviewers / Reviewees.
 
 **Assignments retired from Setup row in Segment 15D PR 6a.** The
 page moved to the Operations row and is no longer a per-entity
@@ -276,10 +285,12 @@ id server-side. Add is disabled with a hint when either roster
 is empty — a pairwise relationship needs both sides.
 
 Mutating service modules: `app/services/reviewers.py` /
-`reviewees.py` and the per-row mutators on `relationships.py`.
+`reviewees.py` / `observers.py` and the per-row mutators on
+`relationships.py`.
 Audit events: `reviewer.created` / `.updated` /
 `.bulk_inactivated` / `.bulk_reactivated` and the parallel
-`reviewee.*` / `relationship.*` families.
+`reviewee.*` / `relationship.*` / `observer.*` families
+(all registered in `EVENT_SCHEMAS` in `app/services/audit.py`).
 
 ## Reviewers page (`session_reviewers.html`)
 
@@ -405,6 +416,70 @@ CSV: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`,
 `Status` — same six columns the importer accepts). Round-trip is
 byte-stable on the export's own output. The Extract Data card on
 Session Home carries the corresponding Download button.
+
+## Observers page (`session_observers.html`)
+
+The Observers page is the third participant-roster Setup page. It
+mirrors the Reviewers / Reviewees shape with a simpler model:
+`email` is the required identity (NOT NULL, unique per session),
+`display_name` is an optional human-facing label, and a single
+`tag_1` is the only categorical axis (no `tag_2` / `tag_3`). The
+page is **gate-hidden by default** — it is only reachable (and
+only rendered in the Setup chrome navigation) when
+`session.observers_enabled == True`.
+
+### Body layout
+
+The Observers page renders, top-to-bottom:
+
+1. Chrome (`session-nav-card` partial with `Observers` highlighted
+   in the Setup row).
+2. Status strip (`session_setup_status_row` partial).
+3. Yellow **lock card** (when the session is Activated) with the
+   standard "revert to draft" Revert form.
+4. **Upload card (left) + Operator actions card (right)** — a
+   `.bottom-grid` pair. Hidden when the session is locked or a
+   row is being edited / added.
+   - **Upload card** (`#upload-csv`): CSV file in UTF-8, max 5 000
+     rows. Required column: `ObserverEmail`. Optional columns:
+     `ObserverName`, `ObserverTag1`. Destructive replace path
+     (existing rows are wiped on import).
+   - **Operator actions card**: search box + status filter
+     (`all` / `active` / `inactive`) + selection-driven
+     Edit / Inactivate / Activate / Add-new-row button row.
+     Same 200-row (500-when-filtered) cap. Same
+     selection-preservation post-action redirect contract.
+5. **Preview table** — always renders when observers exist (or
+   when Add mode is active).
+6. **Danger Zone card** — "Delete all observers". Only rendered
+   when at least one observer exists and the session is not
+   Activated.
+
+There is no friendly-label editor (observers have no renamable
+label slots) and no "Fields with data" pill row above the table —
+the tag schema is fixed at one slot.
+
+### Preview table
+
+| # | Column | Toggle? | Notes |
+|---|---|---|---|
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all |
+| 1 | Email | — | `observer.email` in `<code>` |
+| 2 | Name | — | `observer.display_name`; `—` when null |
+| 3 | Tag | — | `observer.tag_1`; `—` when null |
+| 4 | Status | — | `observer.status` |
+| 5 | Updated | — | `observer.updated_at` (`%Y-%m-%d %H:%M`) |
+
+### CSV import
+
+Route: `POST /operator/sessions/{id}/observers/import`. Parsed by
+`csv_imports.parse_observer_csv` / `csv_imports.save_observers` in
+`app/services/csv_imports.py`. CSV schema: `ObserverEmail`
+required; `ObserverName`, `ObserverTag1` optional. Emits
+`observers.imported` audit event on success.
+
+Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
+— emits `observers.deleted_all`.
 
 ## Out of scope for these pages
 

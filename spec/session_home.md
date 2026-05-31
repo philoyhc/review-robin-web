@@ -388,16 +388,21 @@ heading; the card title *is* the session:
   Details** card, the
   form fields sit above a half-width inner grid carrying two
   side-by-side cards: the **Schedule timeline** preview on the
-  left and the **Owners** card on the right. The **Danger Zone**
-  card (Delete Data + Delete Session) sits in the bottom-right
-  of the Edit page's outer half-grid alongside the form — moved
-  here from Session Home on 2026-05-22 (commit b490825). Save + Cancel
-  buttons render at the bottom of the outer card; both start
-  `disabled` and enable only when an input has changed
-  (inline dirty-tracking JS, with Cancel resetting the form
-  to its loaded values in-place). Save POST redirects back to
-  the Edit page rather than Home so the operator can verify
-  the change in place.
+  left and the **Owners** card on the right. The form also
+  carries a **User interface settings** card (PR #1705) with
+  two checkboxes — **Enable Relationships tab**
+  (`relationships_enabled`) and **Enable Observers tab**
+  (`observers_enabled`) — so the operator can opt in to those
+  optional Setup tabs at any point after session creation. The
+  **Danger Zone** card (Delete Data + Delete Session) sits in
+  the bottom-right of the Edit page's outer half-grid alongside
+  the form — moved here from Session Home on 2026-05-22 (commit
+  b490825). Save + Cancel buttons render at the bottom of the
+  outer card; both start `disabled` and enable only when an
+  input has changed (inline dirty-tracking JS, with Cancel
+  resetting the form to its loaded values in-place). Save POST
+  redirects back to the Edit page rather than Home so the
+  operator can verify the change in place.
 - **Owners** card (Segment 16B PR 2) — current co-owners + an
   Add-owner typeahead picker over the workspace operator
   allowlist. Doesn't render on Session Home itself:

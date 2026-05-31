@@ -103,8 +103,10 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `invite_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `scheduled_activate_at` (Segment 18G Part 0b / Part 2). Each entry resolves to a fire moment `scheduled_activate_at + offset` for the auto-send-invites trigger. Editor entries are comma-separated; per-entry save-time rules: must parse as ISO 8601 duration, must be negative (fires before Start), `\|offset\| >=` `REVIEWER_NOTICE_MIN_HOURS`, `\|offset\| <=` 10 days, resolved fire moment `>= now + SCHEDULED_OPERATIONAL_LEAD_HOURS`. Inert when `scheduled_activate_at` is unset (§8.2.2 anchor-null). |
 | `reminder_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `deadline` (Segment 18G Part 0b / Part 3). Each entry resolves to a fire moment `deadline + offset` for the auto-send-reminders trigger. Same per-entry rules as `invite_offsets` (must be negative; 10-day magnitude cap; lead-time + notice-gap minimums). Inert when `deadline` is unset. |
 | `archive_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `deadline` (Segment 18G Part 0b / Part 4, pre-positioned inert). Resolves to `deadline + archive_offset` for the auto-archive trigger. Editor default `P30D`. Not yet wired — Part 4 outstanding. |
-| `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor (Segment 18G Part 0a, pre-positioned inert for the Participants platform — segments 21+). |
-| `release_until_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `responses_release_at` (Segment 18G Part 0b, pre-positioned inert for the Participants platform). |
+| `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor — the moment reviewees / observers can start viewing collated results. Editor sits in the Schedule sub-grid of Create / Edit Session (wired end-to-end in W14 / PR #1716). Save-time validator `parse_and_validate_responses_release_at` converts a `datetime-local` value to UTC; **no minimum lead-time floor** (the operator can backdate to "immediately viewable"). |
+| `release_until_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `responses_release_at` — closes the viewing window at `responses_release_at + release_until_offset`. Editor in the Schedule sub-grid alongside Release-from (wired in W14 / PR #1716). Save-time validator `parse_and_validate_release_until_offset` in `app/services/scheduled_events.py` enforces positive-only (must close after it opens), magnitude cap = 365 days. Inert when `responses_release_at` is NULL (§8.2.2 anchor-null rule — enforced at view time, not save time). Hint copy: `e.g. P30D, P7D, PT4H`. |
+| `relationships_enabled` | `Boolean` | Per-session toggle enabling the Relationships Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `False`, the Relationships Setup page is not yet gated (the Relationships tab is always shown); the toggle currently controls the Observers tab gate and is pre-positioned for a future Setup-nav conditional. |
+| `observers_enabled` | `Boolean` | Per-session toggle enabling the Observers Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Observers tab appears in the Setup chrome and `GET /operator/sessions/{id}/observers` resolves; when `False` that route returns 404 (gated by `require_observers_enabled_session` in `app/web/routes_operator/_shared.py`). |
 | `retention_exception` | `Boolean \| None` | Per-session opt-out of the deployment retention policy (Segment 18G Part 0c, pre-positioned inert; consumer Part 5 outstanding). |
 | `retention_overrides` | `JSON \| None` | Per-session retention-policy overrides (Segment 18G Part 0c, pre-positioned inert). Recognised keys: `response_days`, `audit_days`, `archived_days`, `delete_after_archive` (ISO 8601 duration anchored on the system-stamped archive timestamp). |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
@@ -256,19 +258,22 @@ auto-copy seed mechanism in PR #1405).
 
 ---
 
-## 5. Per-reviewer / per-reviewee / per-pair data
+## 5. Per-reviewer / per-reviewee / per-pair / per-observer data
 
-Stored on `reviewers`, `reviewees`, and `relationships` tables.
-Owned by the session. Tags are operator-determined; status is a
-mix of operator action (soft-delete via Inactivate, deferred to
-Segment 15F) and system state.
+Stored on `reviewers`, `reviewees`, `relationships`, and `observers`
+tables. Owned by the session. Tags are operator-determined; status
+is a mix of operator action (soft-delete via Inactivate) and system
+state.
 
 **Surface:** Setup Pages — `/operator/sessions/{id}/reviewers`,
-`/operator/sessions/{id}/reviewees`, and
-`/operator/sessions/{id}/relationships`. Bulk-populated via Quick
-Setup or per-entity CSV; managed inline — per-row Edit / Add /
+`/operator/sessions/{id}/reviewees`,
+`/operator/sessions/{id}/relationships`, and
+`/operator/sessions/{id}/observers` (gated by
+`session.observers_enabled`). Bulk-populated via Quick Setup or
+per-entity CSV; managed inline — per-row Edit / Add /
 bulk inactivate-reactivate shipped in Segment 15F
 (`guide/archive/segment_15F_enhanced_setup_pages.md`).
+Observer per-row CRUD shipped in PR #1706.
 
 ### Reviewer
 
@@ -306,9 +311,23 @@ dropped in 15D PR 6b.
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form pair-context labels. Consumed by the rule-based engine via the eager `pair_context_lookup` dict (15D PR 4). Surfaced as the third Ctx-toggle group on the Assignments preview table. |
 | `status` | `String(32)` | `active` / `inactive`. Defaults to `active`. |
 
+### Observer (PR #1706)
+
+Per-session observer rows — one per audience member who will view
+collated results. Identity is `email` (required, NOT NULL, unique
+per session). Unlike reviewers / reviewees, observers are not
+enrolled in the reviewer response surface.
+
+| Field | Type | Notes |
+|---|---|---|
+| `email` | `String(320)` | Required. Unique per session (case-insensitive check at service layer in `app/services/observers.py`). |
+| `display_name` | `String(255)` | Optional human-facing label. |
+| `status` | `String(32)` | `active` / `inactive`. Managed via per-row Edit / bulk inactivate-reactivate on the Observers Setup page. |
+| `tag_1` | `String(255)` | Single free-form label (no `tag_2` / `tag_3`). |
+
 **Canonical spec:** `spec/setup_pages.md` (Reviewers / Reviewees /
-Relationships preview tables, column toggles, per-page column
-orders).
+Relationships / Observers preview tables, column toggles, per-page
+column orders).
 
 ---
 
@@ -545,11 +564,11 @@ The five CSVs split the work three ways:
 | § | Section | In CSV? | Where / why |
 |---|---------|---------|-------------|
 | §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
-| §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, plus the eight 18G scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `release_until_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, and the eight 18G columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). Added to the export by Segment 18D PR E2; 18G columns added by Segment 18N PR 5 (catch-up pass after 18G shipped its lifecycle automation without updating the round-trip). |
+| §2 | Per-session metadata | ✅ All (feature-toggles pending) | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, plus the eight 18G scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `release_until_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). `relationships_enabled` / `observers_enabled` (participant-model Phase 1 feature toggles) are not yet in the Settings CSV round-trip. On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** (applied only when the destination field is blank); every other slot — `display_timezone`, `self_reviews_active`, and the eight 18G columns — is **force-applied** because each is session config, not operator-typed identity, and the fallback rule would never fire (a created session always has them set). Added to the export by Segment 18D PR E2; 18G columns added by Segment 18N PR 5 (catch-up pass after 18G shipped its lifecycle automation without updating the round-trip). |
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
 | §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the source of truth for a pinned instrument; the legacy fallback to the latest `assignments.generated` audit row's `refs.rule_set_id` retired alongside seeded RuleSets in Wave 5 PR 5.2. Inline response-field type + bounds + visible added by Segment 18N PR 5 (the serializer hadn't been updated after 18J Wave 2 PR iii-b4 retired the RTD table and moved type / bounds inline — every response field was silently losing its semantic bounds on round-trip for ~2 weeks); `column_widths` / `starts_new_page` / `band2_state` added by the same PR. |
 | §4.5 | Per-session RTDs (retired) | — | Section retired with the `response_type_definitions` table in PR #1454. Numeric / string / List bounds are now inline columns on `instrument_response_fields` (covered under §4; round-tripped via Segment 18N PR 5). |
-| §5 | Reviewers / Reviewees / Relationships | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` audit-event paths). Relationships shipped in 12A-3 PR 1 (importer was already shipped in 15D PR 1). |
+| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All (Observers CSV pending) | Reviewers / Reviewees / Relationships each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` audit-event paths). Observers have a wired importer (`observers.imported` audit event) but no dedicated Extract Data tile yet — the `{code}_observers.csv` download is not yet exposed in the UI. |
 | §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |

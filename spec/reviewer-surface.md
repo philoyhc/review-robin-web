@@ -738,6 +738,13 @@ use the same rule.
 A user can have at most one active `Reviewer` row per session. A
 session can have multiple reviewers, each tied to a distinct user.
 
+The same **case-insensitive email equality** rule applies to
+`Reviewee.email_or_identifier` (for `require_reviewee_in_session`)
+and `Observer.email` (for `require_observer_in_session`) — see
+`app/web/deps.py`. The `/me` dashboard uses the same pattern for
+its cross-role union query (inline in
+`app/web/routes_reviewer/_dashboard.py`).
+
 ---
 
 ## Operator preview mode
@@ -796,44 +803,81 @@ In preview mode:
 
 ## Dashboard (`/me`)
 
-The reviewer's lobby — where they land when signing in directly
-(without an invitation token) or clicking "My Reviews" from the
-chrome on a session surface. Lists every session the signed-in
-user is an active reviewer on, regardless of session lifecycle
-state (Segment 17B Phase 2 PR A widened the query so pre-ready
-sessions show up too, rendered as `not opened`).
+The participant lobby — where a signed-in user lands directly (no
+invitation token) or via "My Reviews" from any session-scoped
+chrome. Lists **every session the signed-in user touches in any
+participant role** (reviewer / reviewee / observer), as a
+cross-role union (PR #1709). The query hits all three rosters
+(`reviewers`, `reviewees`, `observers`) with case-insensitive email
+matching; only `status == "active"` rows contribute; the result is
+deduplicated per session and sorted by `session.updated_at`
+descending.
+
+Reviewer-specific columns (Reviewer status, deep-link target,
+per-page sub-rows) populate only when the user is an active
+reviewer on that session; reviewee-/observer-only rows show `—` in
+those cells.
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
-  session). **Six columns:**
-  - **Session** — link to `/me/sessions/{id}/summary` when
-    Reviewer Status is `submitted` (PR B); link to
-    `/me/sessions/{id}/1` for any other state where Session
-    Status isn't `not opened`; plain text otherwise.
+  session). **Eight columns:**
+  - **Session** — session name, with per-role pills on a second
+    line below it (PR #1712). The session name itself links to
+    the highest-priority reachable role in order Reviewer →
+    Reviewee → Observer (first role whose `enabled == True`);
+    plain text when no role is reachable. Each role pill is an
+    `<a class="pill pill-role-{role}">` anchor when reachable,
+    a plain `<span>` otherwise.
   - **Start** — `sessions.activated_at` formatted in the
     session's resolved zone, rendered as a `pill-count` chip
-    (neutral data); `<span class="muted">—</span>` when the
-    session has not yet been activated. Segment 18G's scheduled
-    activation will fill the same column with the planned open
-    time pre-activation and the actual stamp afterwards, no
-    re-plumbing.
+    (neutral data); `<span class="muted">—</span>` when null.
   - **End** — `session.deadline` formatted in the session zone,
     rendered as a `pill-error` chip (red) once `now() >=
     deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
+  - **View responses** — placeholder; renders `<span
+    class="muted">—</span>` today. Will surface the
+    `responses_release_at` / `release_until_offset` access
+    window link once W16 / W17 land.
+  - **Until** — placeholder; renders `<span
+    class="muted">—</span>` today. Will show the computed
+    close time of the results-viewing window once wired.
   - **Timezone** — `pill-count` chip carrying the compact
     GMT-offset (e.g. `GMT+8`) with the raw IANA id (e.g.
-    `Asia/Singapore`) on hover via `<abbr title="...">`,
-    mirroring the operator Sessions lobby's pattern.
+    `Asia/Singapore`) on hover via `<abbr title="...">`.
   - **Session status** — pill (`not opened` / `open` /
-    `closed`) — see vocabulary below.
+    `closed`) — see vocabulary below. For reviewer rows:
+    computed via `lifecycle.session_status_for_reviewer`.
+    For reviewee / observer-only rows: computed from session
+    lifecycle alone (no reviewer-assignment check).
   - **Reviewer status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows;
-    plus a paired `(completed_rows / total_assignments)` chip
-    in the same colour so the row reads at a glance.
-- **Empty state** — when the user has no active reviewer rows
-  in any session: a single `.card` with `.muted` text "You have
-  no pending reviews ({user.email})."
+    plus a paired `(N/M)` chip in the same colour. Renders `—`
+    when the user is a reviewee / observer only.
+- **Empty state** — when the user has no active roster rows
+  in any session in any role: a single `.card` with `.muted`
+  text "You have no pending reviews ({user.email})."
+
+### Cross-role union and reachability
+
+The route (`app/web/routes_reviewer/_dashboard.py`
+`reviewer_dashboard`) builds `role_links` per session — one entry
+per role the user holds:
+
+| Role | Target URL | Reachable today |
+|---|---|---|
+| `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
+| `reviewee` | `/me/sessions/{id}/results` | always `True` (W16 will add `responses_release_at` gate) |
+| `observer` | `/me/sessions/{id}/collation` | always `True` (W17 will add similar gate) |
+
+The session-name link uses the first reachable role in priority
+order (Reviewer → Reviewee → Observer). Unreachable roles render
+as inert `<span>` pills.
+
+Note: `app/services/participants.py::sessions_for_user` still
+returns `[]` and is not called by the dashboard route. The
+cross-role union is inline in `_dashboard.py`; a future cleanup
+could move it to the service layer.
 
 ### Session-status pill vocabulary
 
@@ -949,6 +993,87 @@ hasn't opened yet, the deadline + zone when one is set, and a
 link back to the reviewer dashboard. See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
+
+---
+
+## Reviewee results placeholder (`/me/sessions/{id}/results`)
+
+PR #1713 — `GET /me/sessions/{id}/results`.
+
+**Gate** — `require_reviewee_in_session` in `app/web/deps.py`:
+the authenticated user must have an active Reviewee row whose
+`email_or_identifier` is a valid email matching the user's email
+(case-insensitive). Confidential reviewees (non-email identifiers)
+never grant access. On mismatch: **HTTP 403**.
+
+**Current state** — reviewer-surface chrome (`reviewer/results.html`)
+with an `rs-status-panel` description card. Body content (collated
+results render) lands with W16. The page already receives the
+`role_chips` context variable so the role-navigator chip strip
+renders correctly from day one.
+
+Route: `app/web/routes_reviewer/_results.py`. Registered before
+the catch-all `_surface` routes in
+`app/web/routes_reviewer/__init__.py` so `/results` is not
+captured as a `{page_n}` value.
+
+---
+
+## Observer collation placeholder (`/me/sessions/{id}/collation`)
+
+PR #1713 — `GET /me/sessions/{id}/collation`.
+
+**Gate** — `require_observer_in_session` in `app/web/deps.py`:
+the authenticated user must have an active Observer row whose
+`email` matches (case-insensitive). On mismatch: **HTTP 403**.
+
+**Current state** — reviewer-surface chrome (`reviewer/collation.html`)
+with an `rs-status-panel` description card. Body content (cross-
+reviewee collation render) lands with W17.
+
+Route: `app/web/routes_reviewer/_collation.py`. Also registered
+before the `_surface` catch-all.
+
+---
+
+## Role-navigator chip strip
+
+PR #1715 — shared partial rendered below the session-name H1 on
+four role-specific surfaces: the response surface
+(`review_surface.html`), the summary page (`summary.html`),
+the results page (`results.html`), and the collation page
+(`collation.html`).
+
+**Template partial** — `reviewer/_role_chips.html`. Included in
+each of the four surfaces; suppressed in `preview_mode` on the
+reviewer surface (operator preview doesn't have role context).
+
+**Builder** — `build_role_chips(db, *, user, review_session,
+active_role)` in `app/web/routes_reviewer/_shared.py`. Queries
+all three rosters for the signed-in user's email
+(case-insensitive, `status == "active"` only), constructs a chip
+list in `_ROLE_PRIORITY` order (`reviewer` → `reviewee` →
+`observer`), and returns only the roles the user actually holds.
+
+Each chip carries:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `role` | `str` | `"reviewer"` / `"reviewee"` / `"observer"` |
+| `target` | `str` | URL this chip links to (only used when `active == False` and `enabled == True`) |
+| `active` | `bool` | `True` for the current surface's role — full colour, no anchor |
+| `enabled` | `bool` | `True` when the role's surface is currently reachable |
+
+**CSS** — `.rs-role-nav` strip in `base.html` with
+`.rs-role-nav-active` (full colour, current role) and
+`.rs-role-nav-muted` (greyed-out, disabled or inactive role)
+modifiers.
+
+Reachability mirrors the dashboard's `role_links.enabled` logic:
+reviewer is reachable when `session_status != "not opened"`;
+reviewee and observer surfaces are always reachable today (W16 /
+W17 will add `responses_release_at` + `release_until_offset` gates
+later).
 
 ---
 
