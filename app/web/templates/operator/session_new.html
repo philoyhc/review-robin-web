@@ -136,6 +136,40 @@
     })();
   </script>
 
+  {# User interface settings — per-session feature toggles
+     gating which optional Setup tabs render. Mirrors the card on
+     Session Edit Details (``session_edit.html``). Sits above the
+     Quick Setup card on the new-session page. There's no session
+     row yet, so neither checkbox is ever locked-on-data. Inputs
+     associate with ``create-session-form`` above via ``form=`` so
+     the values submit alongside the session details and feed
+     ``POST /operator/sessions``. #}
+  <div class="bottom-grid">
+    <div>
+      <div class="card" id="user-interface-settings">
+        <h3 style="margin-top: 0;">User interface settings</h3>
+        <p class="muted">
+          Per-session toggles for the optional Setup tabs.
+        </p>
+        <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
+          <label>
+            <input type="checkbox"
+                   name="relationships_enabled"
+                   form="create-session-form">
+            Relationships tab and page
+          </label>
+          <label>
+            <input type="checkbox"
+                   name="observers_enabled"
+                   form="create-session-form">
+            Observers tab and page
+          </label>
+        </div>
+      </div>
+    </div>
+    <div></div>
+  </div>
+
   {# Quick setup (optional) — half-width card on the bottom-left.
      Always unlocked (no Lock / Unlock button) and counts are
      always 0 because there's no session row yet. The slot inputs

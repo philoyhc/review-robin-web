@@ -67,6 +67,8 @@ async def create_session(
     reminder_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
+    relationships_enabled: bool = Form(default=False),
+    observers_enabled: bool = Form(default=False),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
@@ -153,6 +155,8 @@ async def create_session(
         scheduled_activate_at=parsed_scheduled_activate_at,
         invite_offsets=parsed_invite_offsets,
         reminder_offsets=parsed_reminder_offsets,
+        relationships_enabled=relationships_enabled,
+        observers_enabled=observers_enabled,
     )
     review_session = sessions.create_session(
         db,
