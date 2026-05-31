@@ -214,19 +214,13 @@ _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 # ``app.services.field_labels._VALID_SOURCE_FIELDS``. The DB column
 # is permissive (VARCHAR(64) with no enum gate); this map is the
 # only validation layer that keeps the table aligned with the
-# 12-slot intent on import.
+# friendly-label intent on import. Reviewee identity fields
+# (Name / Email_Identifier / Profile) dropped 2026-05-31 alongside
+# the editor retirement (``guide/participant_model_upgrade.md``
+# §3.7); Settings-CSV imports for those slots are now rejected.
 _VALID_FL_SOURCE_FIELDS: dict[str, frozenset[str]] = {
     "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),
-    "reviewee": frozenset(
-        {
-            "name",
-            "email_or_identifier",
-            "tag_1",
-            "tag_2",
-            "tag_3",
-            "profile_link",
-        }
-    ),
+    "reviewee": frozenset({"tag_1", "tag_2", "tag_3"}),
     "pair_context": frozenset({"1", "2", "3"}),
 }
 

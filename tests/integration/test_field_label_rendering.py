@@ -11,6 +11,7 @@ up the friendly label.
 """
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -110,30 +111,20 @@ def test_reviewers_page_renders_two_line_when_override_set(
 # ── Reviewees Setup page ─────────────────────────────────────────────────
 
 
-def test_reviewees_page_renders_friendly_label_on_identity_slots(
+def test_reviewees_page_renders_canonical_labels_on_identity_slots(
     client: TestClient, db: Session
 ) -> None:
+    """The reviewee identity slots
+    (``name`` / ``email_or_identifier`` / ``profile_link``) retired
+    the friendly-label affordance 2026-05-31 per upgrade-doc §3.7.
+    The page still renders the canonical defaults
+    (``Name`` / ``Email`` / ``Profile``); operators can no longer
+    override them, so no friendly-label / canonical-subtext pair
+    appears for these slots."""
     review_session = _make_session(client, db, "fl-revee-identity")
-    actor = _actor(db)
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="reviewee",
-        source_field="name",
-        label="Student name",
-        user=actor,
-    )
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="reviewee",
-        source_field="email_or_identifier",
-        label="Student ID",
-        user=actor,
-    )
     csv = (
-        "RevieweeName,RevieweeEmail\n"
-        "Carol,carol@example.edu\n"
+        "RevieweeName,RevieweeEmail,PhotoLink\n"
+        "Carol,carol@example.edu,https://example.org/c.png\n"
     )
     client.post(
         f"/operator/sessions/{review_session.id}/reviewees/import",
@@ -143,10 +134,57 @@ def test_reviewees_page_renders_friendly_label_on_identity_slots(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewees"
     ).text
-    assert "Student name" in body
-    assert 'class="field-label-canonical">Name</span>' in body
-    assert "Student ID" in body
-    assert 'class="field-label-canonical">Email</span>' in body
+    # Canonical defaults render; the override-subtext span never
+    # appears for the identity slots because no override can exist.
+    assert ">Name<" in body
+    assert ">Email<" in body
+    assert ">Profile<" in body
+    assert (
+        'class="field-label-canonical">Name</span>' not in body
+    )
+    assert (
+        'class="field-label-canonical">Email</span>' not in body
+    )
+    assert (
+        'class="field-label-canonical">Profile</span>' not in body
+    )
+
+
+def test_upsert_rejects_retired_reviewee_identity_slots(
+    client: TestClient, db: Session
+) -> None:
+    """Retired slots — ``name`` / ``email_or_identifier`` /
+    ``profile_link`` — raise ``FieldLabelSourceError`` on upsert.
+    The defaults still resolve through ``field_labels.resolve``
+    (the resolver is permissive on read by design)."""
+    review_session = _make_session(client, db, "fl-revee-retired")
+    actor = _actor(db)
+    for source_field in ("name", "email_or_identifier", "profile_link"):
+        with pytest.raises(field_labels.FieldLabelSourceError):
+            field_labels.upsert(
+                db,
+                review_session,
+                source_type="reviewee",
+                source_field=source_field,
+                label="should not persist",
+                user=actor,
+            )
+    # Read path stays permissive — resolver still returns canonical
+    # defaults so display surfaces keep working.
+    assert (
+        field_labels.resolve(review_session, "reviewee", "name")
+        == "Name"
+    )
+    assert (
+        field_labels.resolve(
+            review_session, "reviewee", "email_or_identifier"
+        )
+        == "Email"
+    )
+    assert (
+        field_labels.resolve(review_session, "reviewee", "profile_link")
+        == "Profile"
+    )
 
 
 # ── Relationships Setup page ─────────────────────────────────────────────

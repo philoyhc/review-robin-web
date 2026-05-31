@@ -23,6 +23,20 @@ def test_valid_reviewer_csv_parses_two_rows() -> None:
     assert result.rows[1].tag_1 is None
 
 
+def test_valid_reviewer_csv_with_photolink_populates_profile_link() -> None:
+    csv_text = (
+        "ReviewerName,ReviewerEmail,PhotoLink\n"
+        "Carol,carol@example.edu,https://example.edu/c.jpg\n"
+        "Dan,dan@example.edu,\n"
+    )
+    result = parse_reviewer_csv(_b(csv_text))
+
+    assert result.issues == []
+    assert len(result.rows) == 2
+    assert result.rows[0].profile_link == "https://example.edu/c.jpg"
+    assert result.rows[1].profile_link is None
+
+
 def test_reviewer_missing_email_column_blocks() -> None:
     csv_text = "ReviewerName,Department\nAlice,Math\n"
 

@@ -6,6 +6,10 @@ matches the existing reviewer importer
 round-trips with the upload flow on the Reviewers Manage page
 and the Quick Setup card without conversion.
 
+The ``PhotoLink`` column maps to ``Reviewer.profile_link``,
+mirroring ``reviewees_extract.PhotoLink`` per participant-model
+upgrade §3.9 (Reviewer / Reviewee parity).
+
 Both ``status="active"`` and ``status="inactive"`` rows are
 included — the importer treats inactive rows as inactive on the
 next session anyway, so excluding them would lose state on the
@@ -35,6 +39,7 @@ HEADER: tuple[str, ...] = (
     "ReviewerTag1",
     "ReviewerTag2",
     "ReviewerTag3",
+    "PhotoLink",
 )
 
 
@@ -75,4 +80,5 @@ def serialize_reviewers(
             reviewer.tag_1 or "",
             reviewer.tag_2 or "",
             reviewer.tag_3 or "",
+            reviewer.profile_link or "",
         )

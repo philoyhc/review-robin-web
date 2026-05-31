@@ -46,6 +46,7 @@ def _add(
     name: str,
     email: str,
     status: str = "active",
+    profile_link: str | None = None,
     tag_1: str | None = None,
     tag_2: str | None = None,
     tag_3: str | None = None,
@@ -56,6 +57,7 @@ def _add(
             name=name,
             email=email,
             status=status,
+            profile_link=profile_link,
             tag_1=tag_1,
             tag_2=tag_2,
             tag_3=tag_3,
@@ -80,10 +82,32 @@ def test_per_row_shape_matches_importer_columns(db: Session) -> None:
         tag_1="cohort-a",
         tag_2="2026",
         tag_3=None,
+        profile_link="https://example.org/alex.png",
     )
     rows = list(serialize_reviewers(db, review_session))
     assert rows[0] == HEADER
-    assert rows[1] == ("Alex Adams", "alex@example.edu", "cohort-a", "2026", "")
+    assert rows[1] == (
+        "Alex Adams",
+        "alex@example.edu",
+        "cohort-a",
+        "2026",
+        "",
+        "https://example.org/alex.png",
+    )
+
+
+def test_per_row_shape_empty_profile_link_yields_blank(
+    db: Session,
+) -> None:
+    review_session = _session(db, code="shape-blank")
+    _add(
+        db,
+        review_session,
+        name="Bea",
+        email="bea@example.edu",
+    )
+    rows = list(serialize_reviewers(db, review_session))
+    assert rows[1] == ("Bea", "bea@example.edu", "", "", "", "")
 
 
 def test_active_rows_lead_then_alphabetical(db: Session) -> None:
@@ -116,6 +140,7 @@ def test_round_trip_through_existing_importer(db: Session) -> None:
         email="alex@example.edu",
         tag_1="cohort-a",
         tag_2="2026",
+        profile_link="https://example.org/alex.png",
     )
     _add(db, a, name="Bob Brown", email="bob@example.edu", tag_3="lead")
 
@@ -127,6 +152,10 @@ def test_round_trip_through_existing_importer(db: Session) -> None:
     assert [r.email for r in parsed] == ["alex@example.edu", "bob@example.edu"]
     assert [r.tag_1 for r in parsed] == ["cohort-a", None]
     assert [r.tag_3 for r in parsed] == [None, "lead"]
+    assert [r.profile_link for r in parsed] == [
+        "https://example.org/alex.png",
+        None,
+    ]
 
 
 def _join_to_bytes(rows: object) -> bytes:
