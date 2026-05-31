@@ -15,13 +15,27 @@ already-existing schema?
 A change pre-positions when it can land **before** its owning slice
 with zero user-visible effect:
 
-- additive nullable / defaulted column → ✔
-- new empty table → ✔
-- new audit event-type registration in `EVENT_SCHEMAS` → ✔
-- new dependency / helper / service stub (dead code) → ✔
-- migration backfill on existing rows → ✘ (lights up behavior)
-- UI affordance (template / route / nav change) → ✘
-- removal of an existing UI affordance → ✘
+- additive nullable / defaulted column → pre-positions
+- new empty table → pre-positions
+- new audit event-type registration in `EVENT_SCHEMAS` → pre-positions
+- new dependency / helper / service stub (dead code) → pre-positions
+- migration backfill on existing rows → does **not** pre-position
+  (lights up behavior)
+- UI affordance (template / route / nav change) → does **not** pre-position
+- removal of an existing UI affordance → does **not** pre-position
+
+## Column markers (used in the tables below)
+
+The "Pre-position?" column uses four markers. They are distinct from
+each other on purpose — readers should not conflate "candidate" with
+"done":
+
+| Marker | Meaning |
+|---|---|
+| **✔** | **Candidate** — not yet on disk; can ship in a prep slice. |
+| **✓ already exists** | **Done** — already pre-positioned (typically by an earlier segment); participant model just consumes. |
+| **⚠** | **Partial / open question** — resolve before pre-positioning. |
+| **✘** | **Cannot pre-position** — UI change, behavior change, or removal; ships with owning slice. |
 
 ## Schema changes
 
