@@ -32,7 +32,7 @@ with zero user-visible effect:
 | S3 | `sessions.opens_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Lands on `sessions.scheduled_activate_at` (18G Part 0a). The participant model consumes that column; no migration needed. |
 | S4 | `sessions.responses_close_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Reuse `sessions.deadline` per §3.4 lean. No new column. |
 | S5 | `sessions.results_open_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Lands on `sessions.responses_release_at` (18G Part 0a — pre-positioned inert *explicitly for the participant model*; see the inline comment in `app/db/models/review_session.py`). |
-| S6 | `sessions.results_close_at` (DateTime tz, NULL) | §3.4 | ⚠ | 18G chose an anchor + offset shape: `responses_release_at` (S5) + `release_until_offset` (ISO 8601 duration). Participant model can derive close time from those instead of adding an absolute column — or add the absolute column for symmetry. Resolve before pre-positioning. |
+| S6 | `sessions.results_close_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Derived from `sessions.responses_release_at` (S5) + `sessions.release_until_offset` (18G Part 0b — ISO 8601 duration). Participant model follows the 18G anchor + offset pattern; no separate absolute column. |
 | S7 | `sessions.relationships_enabled` (Boolean, default FALSE) | §3.8 | ⚠ | Column ships inert ✔; **backfill** (existing-relationships → TRUE) must wait for the toggle slice or existing sessions lose the tab once UI reads the flag. |
 | S8 | `sessions.observers_enabled` (Boolean, default FALSE) | §3.8 | ✔ | No backfill (no observer rows exist yet). |
 | S9 | `reviewees.results_acknowledged_at` (DateTime tz, NULL) | §6 | ✔ | Per §6 leaning toward column over a `result_acknowledgements` table. |
@@ -91,8 +91,9 @@ for audit completeness so the team can see the full surface.
 Rolling up the ✔ rows:
 
 - **Schema** — S1, S2, S8, S9, S10 (all unconditionally inert).
-  S3 / S4 / S5 are already on disk (18G Part 0a); no migration
-  needed. S6 / S7 wait on open questions.
+  S3 / S4 / S5 / S6 are already on disk via 18G Part 0a/0b;
+  no migration needed for the schedule story. S7 waits on the
+  backfill-timing decision.
 - **Code** — H1, H2, H3, H4 (dead code, no callers yet).
 
 That's roughly one Alembic migration + one helpers commit. Zero
@@ -103,7 +104,6 @@ subset of these without doing its own schema work.
 
 | Block | What it needs |
 |---|---|
-| S6 (`results_close_at`) | Decide: derive from `responses_release_at` + `release_until_offset` (18G pattern), or add an absolute column for symmetry with the other schedule timestamps. |
 | S7 backfill | Defer to the per-session-toggle slice; the column itself can pre-position now. |
 | Magic-link schema shape | Design call on `invitations` extensibility (polymorphic FK vs sibling tables vs discriminator). |
 
