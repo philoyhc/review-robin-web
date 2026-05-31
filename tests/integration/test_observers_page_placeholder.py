@@ -146,15 +146,27 @@ def test_observers_page_renders_inert_controls(
 # ── List card states ─────────────────────────────────────────────────
 
 
-def test_observers_list_renders_empty_state(
+def test_observers_list_renders_mock_row_when_empty(
     client: TestClient, db: Session
 ) -> None:
+    """When no observers exist, the list card still renders the
+    four-column table with a mock placeholder row so operators
+    can preview the eventual shape."""
     review_session = _make_session(client, db, "obs-empty")
     _enable_observers(db, review_session)
     body = client.get(
         f"/operator/sessions/{review_session.id}/observers"
     ).text
-    assert "No observers yet" in body
+    # The four column headers — Name / Email / Tag1 / Status.
+    assert "<th>Name</th>" in body
+    assert "<th>Email</th>" in body
+    assert "<th>Tag1</th>" in body
+    assert "<th>Status</th>" in body
+    # Mock row content.
+    assert "Jane Doe" in body
+    assert "jane.doe@example.org" in body
+    assert ">committee<" in body
+    assert ">active<" in body
 
 
 def test_observers_list_renders_seeded_rows(
@@ -162,7 +174,7 @@ def test_observers_list_renders_seeded_rows(
 ) -> None:
     """The page reads from the ``observers`` table directly so a
     row seeded outside the (not-yet-wired) upload flow still
-    shows. Sort by email."""
+    shows in place of the mock row."""
     review_session = _make_session(client, db, "obs-seeded")
     _enable_observers(db, review_session)
     db.add_all(
@@ -191,6 +203,8 @@ def test_observers_list_renders_seeded_rows(
     assert ">committee<" in body
     # Empty-tag row shows "—" placeholder for the tag column.
     assert ">—<" in body
+    # Mock row gone now that real rows exist.
+    assert "Jane Doe" not in body
 
 
 # ── Chrome ───────────────────────────────────────────────────────────
