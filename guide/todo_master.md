@@ -1338,6 +1338,78 @@ Canonical rule: `spec/assignments.md` § *Self-review policy*.
 
 ---
 
+### Participants Model Prep — done 2026-05-30 → 2026-05-31 (PRs #1671 → #1680)
+
+Foundation for the post-MVP participant-model arc
+(`guide/participant_model_upgrade.md`). Lands the inert schema,
+dead-code helpers, and small standalone retirements / parity
+gaps ahead of any named segment. The participant-model
+**surface slices** (Phases 2 / 3 in
+`guide/participant_model_prep.md`) remain unscheduled.
+
+Three slices:
+
+- **Design** (PRs #1671 → #1677). Locked
+  `guide/participant_model_upgrade.md` across §§3.1 (observers,
+  single tag), 3.2 (reviewee-identity helper — no schema rename),
+  3.3 (visibility policy + Validate-page reachability warning),
+  3.4 (schedule columns — already on disk via 18G Part 0),
+  3.5 (audit events), 3.7 (friendly-label retirement), 3.8
+  (per-session feature toggles), 3.9 (Reviewer / Reviewee
+  `profile_link` parity), 4 (auth posture + magic links — schema
+  TBD), 5 (`/me/` lobby + role pills, `/me/sessions/{id}/results`,
+  `/me/sessions/{id}/collation`). The implementation-phase audit
+  at `guide/participant_model_prep.md` was restructured in PR
+  #1677 from a pre-position framing to **(1) Schema → (2) UI
+  placeholders → (3) Wiring & logic** so subsequent prep work
+  can land linearly.
+
+- **Phase 1 schema + audit allowlist** (PR #1678). Alembic
+  `b3e7d2a4c8f1` lands `observers` + `instrument_view_policies`
+  tables, `sessions.relationships_enabled` /
+  `.observers_enabled` booleans (default FALSE; existing
+  sessions backfill FALSE per operator call —
+  no extant sessions populate Relationships),
+  `reviewees.results_acknowledged_at`, and
+  `reviewers.profile_link`. Audit `EVENT_SCHEMAS` gains the
+  `observer.*` family (mirroring `reviewer.*` naming) plus
+  `instrument.view_policy_set`, `session.schedule_set`,
+  `session.feature_toggled`, `results.released`,
+  `results.acknowledged`. All inert — no emitters yet.
+
+- **Phase 1 helper + dependency stubs** (PR #1679). New
+  `app/services/participants.py` with
+  `is_email_identified(reviewee)` (surface-gating predicate per
+  §3.2) + `ParticipantSession` dataclass +
+  `sessions_for_user(user, db)` shape stub returning `[]`. New
+  `require_reviewee_in_session` + `require_observer_in_session`
+  in `app/web/deps.py`, mirroring the reviewer pattern;
+  reviewee dep uses `is_email_identified` so confidential
+  reviewees stay denied by construction. Dead code; no
+  consumers yet.
+
+- **First slice past prep** (PR #1680). Two upgrade-doc items
+  folded into one PR:
+  - §3.7 **friendly-label retirement** — Reviewees Setup page
+    drops the rename affordance for the three identity columns
+    (Name / Email_Identifier / Profile); Settings-CSV imports
+    for those slots now error; alembic `c8d4e9f1a2b3` deletes
+    persisted overrides so the resolver stops returning stale
+    rename strings.
+  - §3.9 **partial** — Reviewer PhotoLink wired through Quick
+    Setup (`parse_reviewer_csv` + `ReviewerImportRow` +
+    `_reviewer_to_kwargs`) and Extract Settings
+    (`reviewers_extract.HEADER` + per-row serialize). Remaining
+    surface mirror (services/reviewers create+update,
+    Setup-Reviewers template + route, field labels, display
+    fields, view adapter, reviewer-summary cell styling)
+    explicitly deferred.
+
+**Plans:** `guide/participant_model_upgrade.md` (design) +
+`guide/participant_model_prep.md` (implementation-phase audit).
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -1412,11 +1484,17 @@ at the bottom of this file.
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
 > **Beyond the MVP — segments 21+.** This file tracks the
-> current review-platform MVP only (segments **1–20**). The
-> **participant-model upgrade** (segments **21–30+**) is
-> deliberately out of scope here; its standing design guidance
-> is `guide/participant_model_upgrade.md`, and a dedicated todo
-> file is started if and when that work begins.
+> current review-platform MVP (segments **1–20**) plus the
+> **Participants Model Prep** items now landing ahead of the
+> full segments 21+ work (see the matching Done entry above).
+> The participant-model **surface slices** (Phases 2 / 3 of
+> `guide/participant_model_prep.md` — the `/me/` lobby with
+> role pills, the `/results` / `/collation` surfaces, the
+> visibility-policy editor, observer roster, the toggle-driven
+> Setup nav, etc.) remain unscheduled in this file. The
+> umbrella design lives at `guide/participant_model_upgrade.md`;
+> a dedicated todo file will be started when the surface slices
+> are scoped.
 
 ### Sequencing notes
 

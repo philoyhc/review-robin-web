@@ -118,9 +118,9 @@ Lights up the placeholders.
 | W6 | Per-session toggle wiring | §3.8 | ✘ | Setup nav reads S7 / S8; route guards (404 when off); lock-on-data check on the Settings card; migration backfill `relationships_enabled = TRUE` for sessions with existing rows. |
 | W7 | Visibility-policy resolver | §3.3 | ✘ | View-time join through `instrument_id` to `instrument_view_policies`. Drives what reviewees / observers see on W17 / W18. |
 | W8 | Reviewee-reachability warning on Validate page | §3.3 | ✘ | Cross-cutting soft warning; calls W1. |
-| W9 | Friendly-label retirement | §3.7 | ✘ | Removal — strip the rename affordance from Setup-Reviewers / Setup-Reviewees for fixed columns. Verify CSV-import header matching first. |
+| W9 | Friendly-label retirement | §3.7 | ✓ shipped (#1680) | Reviewee identity slots (Name / Email_Identifier / Profile) dropped from the editor + Settings-CSV allowlist; alembic `c8d4e9f1a2b3` deletes persisted override rows. Reviewer side already had only tag slots — no change needed. |
 | W10 | Observer CSV importer + Setup-page table population + sort + friendly-label resolver | §3.1 | ✘ | The slice that turns P1 into a real Setup page. Mirrors the reviewer importer patterns. |
-| W11 | Reviewer `profile_link` surface mirror | §3.9 | ✘ | One coordinated slice: services, CSV import/export, Setup-Reviewers template + route, Quick Setup, field labels, display fields, view adapter, tests. The column from S11 lights up only when this lands. |
+| W11 | Reviewer `profile_link` surface mirror | §3.9 | ⚠ partially shipped (#1680) | Quick Setup (CSV import via `parse_reviewer_csv` + `ReviewerImportRow`) and Extract Settings (`reviewers_extract.HEADER` + per-row serialize) wired. **Remaining:** services/reviewers create+update normalisation, Setup-Reviewers template + route, field labels default entry, display fields (label / CSV name / `ALLOWED_SOURCES` / seeding), view adapter, reviewer-summary cell styling. |
 | W12 | Quick Setup Observer slot submission | §3.8 | ✘ | Wired Quick Setup card surface; persists to `observers`. |
 | W13 | Extract Setup observer shapes | §3.8 | ✘ | Observer roster CSV (and any later observer-specific extracts) become selectable when S8 = TRUE. |
 | W14 | Session schedule authoring | §3.4 | ✘ | Wires P3's disabled inputs; persists to the 18G columns; integrates with the 18G scheduler. |
@@ -134,17 +134,21 @@ Lights up the placeholders.
 
 ---
 
-## Phase 1 prep — shipped
+## What's shipped
 
-Phase 1 landed across two PRs:
-
-- **PR #1678** — schema + audit allowlist (S1, S2, S7, S8, S9,
-  S10, S11). Alembic migration `b3e7d2a4c8f1`.
-- **PR (this one)** — helper / dependency stubs (W1, W2, W3, W4
-  as shape-only).
+- **Phase 1 schema + audit allowlist** (PR #1678) — S1, S2,
+  S7, S8, S9, S10, S11. Alembic migration `b3e7d2a4c8f1`.
+- **Phase 1 helper / dependency stubs** (PR #1679) — W1, W2,
+  W3, W4 as dead code / shape-only.
+- **First slice past prep** (PR #1680):
+  - W9 friendly-label retirement (reviewee identity slots
+    retired; alembic `c8d4e9f1a2b3` drops persisted overrides).
+  - W11 partial — Reviewer PhotoLink wired through Quick Setup
+    (CSV import) + Extract Settings (CSV output). Remaining
+    surface-mirror touchpoints listed inline on the W11 row.
 
 Each subsequent Phase 2 / Phase 3 slice lights up a subset of
-these without doing its own schema work.
+the Phase 1 schema without doing its own migration.
 
 ## Items still blocking later phases
 
