@@ -73,6 +73,9 @@
             <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Status"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="roles">My roles<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by My roles"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
             <th>Tags</th>
             <th class="col-shrink">
               <input type="checkbox"
@@ -113,6 +116,16 @@
               <td>
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>
+              {% set s_roles = roles_by_session.get(s.id, []) %}
+              <td data-sort-value="{{ s_roles | join(' ') }}">
+                {% if s_roles %}
+                  {% for role in s_roles %}
+                    <span class="pill pill-count">{{ role }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
               <td>
                 {% set s_tags = tags_by_session.get(s.id, []) %}
                 {% if s_tags %}
@@ -135,7 +148,7 @@
             </tr>
           {% endfor %}
           <tr class="sessions-no-match" style="display: none;">
-            <td colspan="9">No sessions match.</td>
+            <td colspan="10">No sessions match.</td>
           </tr>
           </tbody>
         </table>
@@ -148,7 +161,7 @@
        disabled; only the selection-management buttons are wired. #}
     <template id="single-session-expander">
       <tr class="session-expander session-expander-single">
-        <td colspan="9">
+        <td colspan="10">
           <div class="session-expander-body">
             <p class="session-expander-title">
               Session: <strong data-expander-session-name></strong>
@@ -202,7 +215,7 @@
     </template>
     <template id="bulk-expander">
       <tr class="session-expander session-expander-bulk">
-        <td colspan="9">
+        <td colspan="10">
           <div class="session-expander-body">
             <p class="session-expander-title">
               <strong data-expander-count></strong> sessions selected
@@ -375,7 +388,7 @@
             code: cells[1].textContent.trim(),
             deadline: row.getAttribute("data-deadline") || "",
             tags: Array.prototype.slice
-              .call(cells[7].querySelectorAll(".pill"))
+              .call(cells[8].querySelectorAll(".pill"))
               .map(function (p) { return p.textContent.trim(); })
               .join(", "),
           };

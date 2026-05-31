@@ -36,7 +36,7 @@ router = APIRouter()
 # ``rrw-sortable`` primitive with the Setup preview tables.
 _LOBBY_SORT_KEYS = {
     "name", "code", "created_by", "created", "deadline", "timezone",
-    "status",
+    "status", "roles",
 }
 # The archived-sessions table shows an "Archived" column where the
 # lobby shows "Deadline" — backed by ``updated_at`` (an archived
@@ -89,15 +89,27 @@ def list_sessions(
     # ones live on their own child page (Segment 18A Part 3). The
     # stats above still count them so the "archived" pill is accurate.
     review_sessions = [s for s in all_sessions if s.status != "archived"]
+    session_ids = [s.id for s in review_sessions]
+    # Per-session role labels for the current user — derived from
+    # email match against the reviewers / reviewees / observers
+    # rosters. Drives the lobby's Roles column and its sort.
+    roles_by_session = sessions.roles_for_user_in_sessions(
+        db, user_email=user.email, session_ids=session_ids
+    )
+
+    def _resolve_sort(s: ReviewSession, key: str):
+        if key == "roles":
+            return " ".join(roles_by_session.get(s.id, []))
+        return _session_sort_value(s, key)
+
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name="rrw-sort-lobby",
         valid_keys=_LOBBY_SORT_KEYS,
     )
     review_sessions = views.apply_cookie_sort(
-        review_sessions, sort_spec, value_resolver=_session_sort_value
+        review_sessions, sort_spec, value_resolver=_resolve_sort
     )
-    session_ids = [s.id for s in review_sessions]
     return _templates.TemplateResponse(
         request,
         "operator/sessions_list.html",
@@ -107,6 +119,7 @@ def list_sessions(
             "lobby_stats": lobby_stats,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
             "lobby_tags": session_tags.vocabulary(db, session_ids),
+            "roles_by_session": roles_by_session,
             "breadcrumbs": breadcrumbs.operator_root(),
         },
     )
