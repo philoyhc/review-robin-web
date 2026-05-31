@@ -83,7 +83,7 @@ Phase 3.
 | # | Placeholder | Ref | Notes |
 |---|---|---|---|
 | P1 | Empty Observers Setup page | §3.1 | ✓ shipped (#1686, polish via #1687–#1692). Two-column page grid (Upload + Operator actions row above; full-width Observers table; Danger Zone half-width below). Observers table has 6 columns (select-checkbox / Name / Email / Tag1 / Status / Updated) with per-column sort; rendering reads `observers` directly so seeded rows display in place of the mock row. |
-| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | Three audience rows (Reviewee / Peer reviewer / Observer) render with disabled toggles and a "Authoring coming soon" hint. |
+| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | ✓ shipped (#1656). Lives on the Instruments page as the Band 3 section of each instrument card (`instruments_index.html:3620`). Two-column card — left: a `Visibility` table with four audience rows (Operator / Reviewers / Reviewees / Observers); right: the response-fields editor. Operator + Reviewers rows are static pills (`Raw responses` / `Always` and `Raw responses` / `While session ongoing`). Reviewees + Observers rows render toggleable audience chips defaulting unselected; their What (Raw / Summarized / Anonymized) and When (While review ongoing / After release) cycle chips render muted at 0.4 opacity until the audience is selected. The whole block is wrapped in `inert aria-hidden="true"` outside edit mode. All click handlers are placeholder onclick stubs (`newModelToggleAudience` / `newModelCycleButton`) — nothing persists; W15 lights this up by wiring the chips to `instrument_view_policies`. Note: the placeholder uses "Reviewers" + adds an "Operator" row, whereas the schema's `audience` column is `reviewee` / `peer_reviewer` / `observer` — the vocabulary will reconcile at W15. |
 | P3 | Session-schedule authoring card on Settings | §3.4 | Four datetime inputs render disabled, anchored at the 18G columns. Read-only display of any existing values. |
 | P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | ✓ shipped (#1685 + #1705). Session Settings side via #1685 (User interface settings card on Session Edit Details: checkboxes inside the main edit form, dirty Save, persisted on submit, lock-on-data UI). New Session form side via #1705 (same card placed above the Quick Setup card; values flow through `SessionCreate` to `sessions.create_session` so the toggles persist on session creation). |
 | P5 | Empty `/me/sessions/{id}/results` page | §5 | ✓ shipped (#1713). Mirrors the reviewer surface chrome — `<h1>{{ session.name }}</h1>` + inline caption "Results of the review" + the standard `rs-status-panel` description card. Gated on `require_reviewee_in_session` (W2). Mount-order note: registered before `_surface` in `routes_reviewer/__init__.py` so the catch-all `/me/sessions/{id}/{page_n}` doesn't swallow the literal `/results` segment. Role-navigator chips added in #1715. |
@@ -140,6 +140,12 @@ Lights up the placeholders.
   S7, S8, S9, S10, S11. Alembic migration `b3e7d2a4c8f1`.
 - **Phase 1 helper / dependency stubs** (PR #1679) — W1, W2,
   W3, W4 as dead code / shape-only.
+- **Band 3 visibility-policy placeholder** (PR #1656) — P2
+  shipped. Four-row table inside each instrument card's Band
+  3 section; Operator + Reviewers rows fixed, Reviewees +
+  Observers rows toggleable with muted cycle chips. Inert
+  outside edit mode. W15 wires the chips to
+  `instrument_view_policies`.
 - **§3.7 friendly-label retirement + §3.9 partial**
   (PR #1680):
   - W9 friendly-label retirement (reviewee identity slots
