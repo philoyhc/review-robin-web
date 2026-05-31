@@ -122,18 +122,25 @@ def test_observers_page_renders_inert_controls(
 ) -> None:
     """Every interactive control is ``disabled`` on the placeholder
     page — clicking does nothing until the Observer roster slice
-    wires the routes."""
+    wires the routes. Button styles + labels mirror the Reviewers
+    page (``btn secondary`` for Upload + bulk actions,
+    ``btn destructive`` for the Danger Zone delete)."""
     review_session = _make_session(client, db, "obs-inert")
     _enable_observers(db, review_session)
     body = client.get(
         f"/operator/sessions/{review_session.id}/observers"
     ).text
-    assert 'type="file" accept=".csv" disabled' in body
-    # All three action buttons disabled.
-    assert body.count("disabled>Upload</button>") == 1
-    assert body.count("disabled>Activate selected</button>") == 1
-    assert body.count("disabled>Deactivate selected</button>") == 1
-    assert body.count("disabled>Delete all observers</button>") == 1
+    assert 'type="file" accept=".csv,text/csv" aria-label="CSV file" disabled' in body
+    # Each interactive button is btn-secondary (Upload + bulk
+    # actions) or btn-destructive (Danger Zone), and disabled.
+    assert "disabled aria-disabled=\"true\">Upload</button>" in body
+    assert "disabled aria-disabled=\"true\">Edit</button>" in body
+    assert "disabled aria-disabled=\"true\">Inactivate</button>" in body
+    assert "disabled aria-disabled=\"true\">Activate</button>" in body
+    assert (
+        'class="btn destructive"' in body
+        and "disabled aria-disabled=\"true\">Delete all observers</button>" in body
+    )
 
 
 # ── List card states ─────────────────────────────────────────────────
