@@ -1338,6 +1338,30 @@ Canonical rule: `spec/assignments.md` § *Self-review policy*.
 
 ---
 
+### URL remodel — `/reviewer/` → `/me/` aggressive hard rename — done 2026-05-30 (PRs #1668, #1669)
+
+Two-PR slice flipping the reviewer-facing URL prefix from
+`/reviewer/` to `/me/` and clearing the namespace for the
+participant-model surfaces that follow.
+
+- **PR A (#1668)** — moves the existing `/me` JSON +
+  `/me/debug` debug endpoints to `/auth/me` + `/auth/me/debug`,
+  freeing the `/me` namespace ahead of PR B.
+- **PR B (#1669)** — flips the four `routes_reviewer/`
+  router prefixes from `/reviewer` to `/me` and bulk-renames
+  ~340 callsites across code, templates, tests, and spec.
+
+Folder name `app/web/routes_reviewer/` stays unchanged —
+optional polish for a later sweep. The participant-model
+surfaces shipped post this slice (placeholder `/me/sessions/
+{id}/results` + `/me/sessions/{id}/collation`, the cross-role
+`/me` dashboard union, the role-navigator chip strip) all
+land on the freed namespace.
+
+Plan archived: `guide/archive/url_remodel.md`.
+
+---
+
 ### Participants Model Prep — done 2026-05-30 → 2026-05-31 (PRs #1671 → #1680)
 
 Foundation for the post-MVP participant-model arc
@@ -1527,13 +1551,12 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**URL remodel, 14B, 19, 20** (Self-review consolidation
-closed 2026-05-30; Extract data closed 2026-05-30; 18K +
-18L + 18M + 18N closed 2026-05-28; 18J retired 2026-05-26;
-URL remodel ``/reviewer/`` → ``/me/`` shipped 2026-05-30 in
-two PRs ahead of 14B Part A). No global
-ordering constraints beyond the few dep chains called out
-at the bottom of this file.
+**14B, 19, 20** (Self-review consolidation closed 2026-05-30;
+Extract data closed 2026-05-30; URL remodel
+``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
+18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
+2026-05-26). No global ordering constraints beyond the few
+dep chains called out at the bottom of this file.
 
 #### Numbered queue
 
@@ -1556,17 +1579,6 @@ at the bottom of this file.
    **Functional spec:** `spec/email_infra_options.md`.
 
 #### Stubs
-
-- ~~**URL remodel — ``/reviewer/`` → ``/me/`` (aggressive hard
-  rename)**~~ — **shipped 2026-05-30 in PRs #1668 + the rename
-  PR**. Two-PR slice. PR A moved the existing ``/me`` JSON +
-  ``/me/debug`` debug endpoints to ``/auth/me`` +
-  ``/auth/me/debug``, freeing the namespace. PR B flipped the
-  four ``routes_reviewer/`` router prefixes from ``/reviewer``
-  to ``/me`` and bulk-renamed ~340 callsites across code,
-  templates, tests, and spec. Folder name
-  ``app/web/routes_reviewer/`` stays — optional polish for
-  later. **Plan archived:** ``guide/archive/url_remodel.md``.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
