@@ -127,6 +127,21 @@
           Per-session settings that change what appears in the
           operator Setup nav.
         </p>
+        {# Placeholder checkboxes — visual only. The persistence
+           wiring (writes to sessions.relationships_enabled /
+           .observers_enabled, shipped inert in PR #1678) +
+           Setup-nav conditional render land with the toggle
+           slice (W6 in guide/participant_model_prep.md). #}
+        <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
+          <label>
+            <input type="checkbox" disabled>
+            Relationships tab and page
+          </label>
+          <label>
+            <input type="checkbox" disabled>
+            Observers tab and page
+          </label>
+        </div>
         </div>
         <div class="card edit-half-card" id="owners">
         <h3 style="margin-top: 0;">Owners</h3>
