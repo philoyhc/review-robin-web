@@ -33,16 +33,36 @@
               {% endif %}
               {# Cross-role pill stack rendered on the line below
                  the session name — keeps the row compact and
-                 anchors the roles to the session they apply to. #}
+                 anchors the roles to the session they apply to.
+                 Each pill becomes an ``<a>`` when its surface is
+                 currently reachable; otherwise it renders as a
+                 plain ``<span>``. The session-name link above
+                 already points at the highest-priority reachable
+                 role (Reviewer → Reviewee → Observer), so single-
+                 role users see name and pill leading to the same
+                 page. #}
               {% if item.roles %}
                 <div style="margin-top: 4px;">
                   {% for role in item.roles %}
+                    {% set role_link = item.role_links.get(role) %}
                     {% if role == "reviewer" %}
-                      <span class="pill pill-role-reviewer">Reviewer</span>
+                      {% if role_link and role_link.enabled %}
+                        <a class="pill pill-role-reviewer" href="{{ role_link.target }}">Reviewer</a>
+                      {% else %}
+                        <span class="pill pill-role-reviewer">Reviewer</span>
+                      {% endif %}
                     {% elif role == "reviewee" %}
-                      <span class="pill pill-role-reviewee">Reviewee</span>
+                      {% if role_link and role_link.enabled %}
+                        <a class="pill pill-role-reviewee" href="{{ role_link.target }}">Reviewee</a>
+                      {% else %}
+                        <span class="pill pill-role-reviewee">Reviewee</span>
+                      {% endif %}
                     {% elif role == "observer" %}
-                      <span class="pill pill-role-observer">Observer</span>
+                      {% if role_link and role_link.enabled %}
+                        <a class="pill pill-role-observer" href="{{ role_link.target }}">Observer</a>
+                      {% else %}
+                        <span class="pill pill-role-observer">Observer</span>
+                      {% endif %}
                     {% endif %}
                   {% endfor %}
                 </div>
