@@ -227,6 +227,15 @@ the Phase 1 schema without doing its own migration.
 | S7 backfill (W6) | Resolved — backfilled FALSE per operator call (no extant sessions populate Relationships); the W6 toggle slice now just wires Setup-nav gating + lock-on-data behavior on top of the column. |
 | Magic-link schema shape | Design call on `invitations` extensibility (polymorphic FK vs sibling tables vs discriminator). Blocks W21 entirely. |
 
+## Loose ends to attend to
+
+Drift / parity / cleanup work that's not blocking but should be folded into the appropriate next slice (or its own follow-on PR).
+
+| # | Item | Notes |
+|---|---|---|
+| L1 | Retire or back-fill `app/services/participants.py::sessions_for_user` | The function is W4's planned home for the cross-role union, but body still returns `[]`. The real query landed inline in `app/web/routes_reviewer/_dashboard.py` (W18 / PR #1709) instead of going through this helper. Pick one: (a) delete `sessions_for_user` + the `ParticipantSession` dataclass and update W4 to call the cleanup done, or (b) move the dashboard's inline union into `sessions_for_user` and reroute `_dashboard.py` to call it. Either way, the spec drift in `spec/reviewer-surface.md` (which currently notes this as a gap) closes. |
+| L2 | Update Extract / Quick Setup round-trip for Observers | The Observer roster is now a first-class Setup page (W10 / PR #1706) but neither the Extract Setup nor the Quick Setup card covers it. Two follow-ons:<br>• **Extract**: ship an Observers extract tile + CSV export route paralleling Reviewers / Reviewees (the spec sweep in PR #1719 flagged §2 "Five extracts" as already an undercount; this is the missing sixth). Mirrors the existing `serialize_reviewers` / `serialize_reviewees` shape; ObserverEmail / ObserverName / ObserverTag1 column set per `parse_observer_csv` so a port round-trips. Tracked separately as W13 (Extract Setup observer shapes) — fold the round-trip closure here.<br>• **Quick Setup**: ship the Observer slot (file-upload only, behind the `observers_enabled` toggle) so a fresh session can ingest observers alongside the other rosters from the Create New Session screen. Tracked separately as W12 — call out the Quick Setup roundtrip story when W12 lands so the Settings importer / config CSV stay aligned. |
+
 ## Cross-references
 
 - `guide/participant_model_upgrade.md` — full design rationale, schema
