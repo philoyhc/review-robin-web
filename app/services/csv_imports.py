@@ -9,8 +9,9 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, Reviewer, ReviewSession, User
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.schemas.imports import (
+    ObserverImportRow,
     RelationshipImportRow,
     ReviewerImportRow,
     RevieweeImportRow,
@@ -32,6 +33,7 @@ class ParseResult:
     rows: (
         list[ReviewerImportRow]
         | list[RevieweeImportRow]
+        | list[ObserverImportRow]
         | list[RelationshipImportRow]
     )
     issues: list[ValidationIssue]
@@ -363,6 +365,91 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
     return ParseResult(rows=parsed, issues=issues)
 
 
+def parse_observer_csv(content: bytes) -> ParseResult:
+    """Parse an Observers CSV upload. Required column:
+    ``ObserverEmail``. Optional columns: ``ObserverName``,
+    ``ObserverTag1``. Other columns are ignored.
+
+    Observers carry a single ``tag_1`` (not three) per the model
+    note in ``app/db/models/observer.py``. Email is the auth-
+    bearing identity and is required + strict-shape-validated;
+    duplicate emails within the same CSV are blocking errors.
+    """
+    source = "observers"
+    issues: list[ValidationIssue] = []
+
+    text, decode_issue = decode_csv(content, source)
+    if decode_issue is not None:
+        return ParseResult(rows=[], issues=[decode_issue])
+    assert text is not None
+
+    raw_rows, count_issue = _read_dict_rows(text, source)
+    if count_issue is not None:
+        return ParseResult(rows=[], issues=[count_issue])
+    assert raw_rows is not None
+
+    reader = csv.DictReader(io.StringIO(text))
+    fieldnames = list(reader.fieldnames or [])
+
+    issues.extend(
+        _missing_columns_issues(fieldnames, ["ObserverEmail"], source)
+    )
+    if issues:
+        return ParseResult(rows=[], issues=issues)
+
+    parsed: list[ObserverImportRow] = []
+    seen_emails: dict[str, int] = {}
+
+    for index, raw in enumerate(raw_rows, start=1):
+        email = _cell(raw, "ObserverEmail")
+        if not email:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="ObserverEmail",
+                    message="ObserverEmail is required",
+                )
+            )
+            continue
+        email_check = _parse_email(
+            email,
+            strict=True,
+            source=source,
+            row_number=index,
+            field="ObserverEmail",
+        )
+        if isinstance(email_check, ValidationIssue):
+            issues.append(email_check)
+            continue
+        prior = seen_emails.get(email.lower())
+        if prior is not None:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="ObserverEmail",
+                    message=(
+                        f"Duplicate ObserverEmail '{email}' "
+                        f"(also on row {prior})"
+                    ),
+                )
+            )
+            continue
+        seen_emails[email.lower()] = index
+        parsed.append(
+            ObserverImportRow(
+                email=email,
+                display_name=_none_if_blank(raw, "ObserverName"),
+                tag_1=_none_if_blank(raw, "ObserverTag1"),
+            )
+        )
+
+    return ParseResult(rows=parsed, issues=issues)
+
+
 def check_cross_table_identity(
     db: Session,
     *,
@@ -451,7 +538,15 @@ def existing_reviewee_count(db: Session, session_id: int) -> int:
     return _count(db, Reviewee, session_id)
 
 
-def _count(db: Session, model: type[Reviewer] | type[Reviewee], session_id: int) -> int:
+def existing_observer_count(db: Session, session_id: int) -> int:
+    return _count(db, Observer, session_id)
+
+
+def _count(
+    db: Session,
+    model: type[Reviewer] | type[Reviewee] | type[Observer],
+    session_id: int,
+) -> int:
     stmt = select(model.id).where(model.session_id == session_id)
     return len(db.execute(stmt).all())
 
@@ -507,6 +602,38 @@ def save_reviewees(
     if seed_display_fields_from_reviewees(db, session):
         db.commit()
     return result
+
+
+def save_observers(
+    db: Session,
+    *,
+    session: ReviewSession,
+    user: User,
+    rows: list[ObserverImportRow],
+    filename: str,
+    correlation_id: str,
+) -> tuple[int, int]:
+    return _save(
+        db,
+        session=session,
+        user=user,
+        model=Observer,
+        rows=rows,
+        event_type="observers.imported",
+        source_label="observers",
+        filename=filename,
+        correlation_id=correlation_id,
+        to_kwargs=_observer_to_kwargs,
+    )
+
+
+def _observer_to_kwargs(row: ObserverImportRow, session_id: int) -> dict[str, Any]:
+    return {
+        "session_id": session_id,
+        "email": row.email,
+        "display_name": row.display_name,
+        "tag_1": row.tag_1,
+    }
 
 
 def _reviewer_to_kwargs(row: ReviewerImportRow, session_id: int) -> dict[str, Any]:
@@ -641,6 +768,24 @@ def delete_all_reviewees(
         model=Reviewee,
         event_type="reviewees.deleted_all",
         source_label="reviewees",
+        correlation_id=correlation_id,
+    )
+
+
+def delete_all_observers(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> tuple[int, int]:
+    return _delete_all(
+        db,
+        review_session=review_session,
+        user=user,
+        model=Observer,
+        event_type="observers.deleted_all",
+        source_label="observers",
         correlation_id=correlation_id,
     )
 

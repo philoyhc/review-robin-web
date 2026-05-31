@@ -4,6 +4,10 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
+  {% set edit_mode = (edit_id is not none) or add_mode %}
+  {% set observers_base_url =
+        "/operator/sessions/" ~ session.id ~ "/observers" %}
+
   <div class="session-nav-card">
     {% with current_page = "Observers" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -11,127 +15,379 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Placeholder Setup-Observers page (Phase 2 placeholder P1 in
-     ``guide/participant_model_prep.md``). Layout:
-       - Top row: Upload (left) + Operator actions (right) —
-         ``.bottom-grid`` half-and-half.
-       - Middle: Observers table, full width — the 6-column
-         table needs the breathing room.
-       - Bottom row: empty spacer (left) + Danger Zone (right)
-         so the destructive control sits half-width per the
-         operator-UI concept.
-     Every interactive control is rendered inert pending the
-     Observer roster slice (W10). #}
+  {% if is_ready %}
+    <div class="card lock">
+      <p style="margin: 0 0 12px 0;">
+        The observers cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="observers">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required
+                   data-delete-confirm="revert">
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn alert" type="submit"
+                  data-delete-btn="revert"
+                  disabled aria-disabled="true">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
 
+  {# Top row: Upload card (left) + Operator actions card (right).
+     Half-and-half via .bottom-grid. Both hidden while the
+     session is ready (read-only) or while a row is being
+     edited / added. #}
+  {% if not is_ready %}
   <div class="bottom-grid">
-    <div class="card" id="observers-upload">
-      <h2 style="margin-top: 0;">Upload observers</h2>
+    <section class="card" id="upload-csv">
+      <h2 style="margin-top: 0;">Upload Observers</h2>
       <p class="form-help">
         CSV file in UTF-8, max {{ 5000 }} rows. Required column:
         <code>ObserverEmail</code>. Optional columns:
         <code>ObserverName</code>, <code>ObserverTag1</code>.
         Other columns are ignored.
       </p>
-      <input type="file" accept=".csv,text/csv" aria-label="CSV file" disabled>
-      <div class="btn-pair" style="margin-top: 20px;">
-        <button class="btn secondary" type="button"
-                disabled aria-disabled="true">Upload</button>
-      </div>
-    </div>
 
-    <div class="card operator-actions-card" id="observers-actions">
+      {% include "operator/partials/validation_results.html" %}
+
+      <form method="post"
+            action="{{ observers_base_url }}/import"
+            enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept=".csv,text/csv"
+               aria-label="CSV file" required>
+
+        {% if existing_count and existing_count > 0 %}
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required
+                     data-delete-confirm="replace-observers">
+              Yes, replace the existing
+              <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
+            </label>
+          </p>
+        {% endif %}
+
+        <div class="btn-pair" style="margin-top: 20px;">
+          {% if existing_count and existing_count > 0 %}
+            <button class="btn secondary" type="submit"
+                    data-delete-btn="replace-observers"
+                    disabled aria-disabled="true">Upload</button>
+          {% else %}
+            <button class="btn secondary" type="submit">Upload</button>
+          {% endif %}
+        </div>
+      </form>
+    </section>
+
+    <div class="card operator-actions-card">
       <h2 style="margin-top: 0;">Operator actions</h2>
-      <p class="form-help">
-        Bulk activate / inactivate observer rows. Wiring follows
-        the Observer roster slice.
-      </p>
-      <div class="btn-pair" style="margin-top: var(--space-3);">
-        <button class="btn secondary" type="button"
-                disabled aria-disabled="true">Edit</button>
-        <button class="btn secondary" type="button"
-                disabled aria-disabled="true">Inactivate</button>
-        <button class="btn secondary" type="button"
-                disabled aria-disabled="true">Activate</button>
+      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
+        <form method="get"
+              action="{{ observers_base_url }}"
+              class="operator-actions-filter">
+          <div class="filter-row">
+            <label class="filter-status">
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="filter-search">
+              Search:
+              <input type="text"
+                     name="q"
+                     list="observers-search-options"
+                     value="{{ filter_search }}"
+                     autocomplete="off"
+                     placeholder="Observer name or email">
+              <datalist id="observers-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+            </label>
+          </div>
+          <div class="filter-actions">
+            {% if displayed_row_count != total_row_count %}
+              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+            {% endif %}
+            {% if filter_status != "all" or filter_search %}
+              <a class="btn secondary"
+                 href="{{ observers_base_url }}">Clear</a>
+            {% endif %}
+            <span class="pill pill-count"
+                  id="observers-selected-count" hidden>0 selected</span>
+            <button class="btn secondary" type="button"
+                    id="observers-edit-btn"
+                    disabled aria-disabled="true">Edit</button>
+            <button class="btn secondary" type="submit"
+                    id="observers-inactivate-btn"
+                    form="observers-bulk-form"
+                    formaction="{{ observers_base_url }}/bulk-inactivate"
+                    disabled aria-disabled="true">Inactivate</button>
+            <button class="btn secondary" type="submit"
+                    id="observers-reactivate-btn"
+                    form="observers-bulk-form"
+                    formaction="{{ observers_base_url }}/bulk-reactivate"
+                    disabled aria-disabled="true">Activate</button>
+            {% if edit_mode %}
+              <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+            {% else %}
+              <a class="btn secondary"
+                 href="{{ observers_base_url }}?add=1">Add new row</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Search</button>
+          </div>
+        </form>
       </div>
+      {% if edit_mode %}
+        <hr class="operator-actions-divider">
+        <h2>{{ "Add new observer" if add_mode else "Edit observer" }}</h2>
+        {% if edit_error %}
+          <p class="banner banner-error">{{ edit_error }}</p>
+        {% endif %}
+        <p class="form-help">
+          {% if add_mode %}
+            Fill in the new row below, then Save.
+          {% else %}
+            Edit the highlighted row below, then Save.
+          {% endif %}
+        </p>
+        <div style="display: flex; justify-content: flex-end;
+                    gap: 12px; margin-top: var(--space-3);">
+          <button class="btn primary" type="submit"
+                  form="observer-edit-form">Save</button>
+          <a class="btn secondary"
+             href="{{ observers_base_url }}">Cancel</a>
+        </div>
+      {% endif %}
     </div>
   </div>
+  {% endif %}
 
-  <div class="card" id="observers-list">
-    <h2 style="margin-top: 0;">Observers</h2>
-    <p class="form-help">
-      People who view collated responses without submitting any
-      themselves.
-    </p>
-    <table>
-      <thead>
+  {# Hidden form shells the table checkboxes / edit inputs attach
+     to via ``form=``. #}
+  {% if edit_mode %}
+    {% set edit_action = observers_base_url ~ "/create" if add_mode
+          else observers_base_url ~ "/" ~ edit_id ~ "/update" %}
+    <form id="observer-edit-form" method="post" action="{{ edit_action }}">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
+      <input type="hidden" name="filter_q" value="{{ filter_search }}">
+    </form>
+  {% elif not is_ready %}
+    <form id="observers-bulk-form" method="post"
+          action="{{ observers_base_url }}/bulk-inactivate">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
+      <input type="hidden" name="filter_q" value="{{ filter_search }}">
+    </form>
+  {% endif %}
+
+  {# Preview table — full-width, always rendered (mirrors the
+     placeholder layout). When the filter matches nothing, render
+     a muted notice instead of a stub row. #}
+  {% if observers or add_mode %}
+    {% set selectable = not edit_mode and not is_ready %}
+    <div class="card">
+      <table id="observers-table">
+        <thead>
         <tr>
           <th class="row-select-cell">
-            <input type="checkbox" aria-label="Select all observers" disabled>
+            {% if selectable %}
+              <input type="checkbox" id="observers-select-all"
+                     aria-label="Select all observers">
+            {% endif %}
           </th>
-          <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Name"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Email"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="tag_1">Tag1<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag1"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Status"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="updated_at">Updated<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Updated"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Tag1</th>
+          <th>Status</th>
+          <th>Updated</th>
         </tr>
-      </thead>
-      <tbody>
-      {% if observers %}
-        {% for observer in observers %}
-          <tr>
-            <td class="row-select-cell">
-              <input type="checkbox" class="observer-select" disabled>
+        </thead>
+        <tbody>
+        {% if add_mode %}
+          <tr class="observer-edit-row">
+            <td class="row-select-cell"></td>
+            <td><input type="text" name="display_name"
+                       form="observer-edit-form"
+                       value="{{ edit_values.display_name }}"
+                       maxlength="255" placeholder="Name (optional)"></td>
+            <td><input type="email" name="email" form="observer-edit-form"
+                       value="{{ edit_values.email }}" maxlength="320"
+                       placeholder="Email" required></td>
+            <td><input type="text" name="tag_1" form="observer-edit-form"
+                       value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+            <td>
+              <select name="status" form="observer-edit-form">
+                <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+              </select>
             </td>
-            <td>{{ observer.display_name or "—" }}</td>
-            <td><code>{{ observer.email }}</code></td>
-            <td>{{ observer.tag_1 or "—" }}</td>
-            <td>{{ observer.status }}</td>
-            <td data-sort-value="{{ observer.updated_at.isoformat() }}">
-              {{ observer.updated_at | format_datetime }}
-            </td>
+            <td class="muted">—</td>
           </tr>
+        {% endif %}
+        {% for observer in observers %}
+          {% if edit_id is not none and observer.id == edit_id %}
+            <tr class="observer-edit-row" id="observer-row-{{ observer.id }}">
+              <td class="row-select-cell"></td>
+              <td><input type="text" name="display_name"
+                         form="observer-edit-form"
+                         value="{{ edit_values.display_name }}"
+                         maxlength="255" placeholder="Name (optional)"></td>
+              <td><input type="email" name="email" form="observer-edit-form"
+                         value="{{ edit_values.email }}" maxlength="320"
+                         required></td>
+              <td><input type="text" name="tag_1" form="observer-edit-form"
+                         value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+              <td>
+                <select name="status" form="observer-edit-form">
+                  <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                  <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+                </select>
+              </td>
+              <td>{{ observer.updated_at | format_datetime }}</td>
+            </tr>
+          {% else %}
+            <tr id="observer-row-{{ observer.id }}">
+              <td class="row-select-cell">
+                {% if selectable %}
+                  <input type="checkbox" class="observer-select"
+                         name="observer_ids" value="{{ observer.id }}"
+                         form="observers-bulk-form"
+                         {% if observer.id in selected_ids %}checked{% endif %}
+                         aria-label="Select {{ observer.display_name or observer.email }}">
+                {% endif %}
+              </td>
+              <td>{{ observer.display_name or "—" }}</td>
+              <td><code>{{ observer.email }}</code></td>
+              <td>{{ observer.tag_1 or "" }}</td>
+              <td>
+                <span class="pill {{ 'pill-info' if observer.status == 'active' else 'pill-empty' }}">{{ observer.status }}</span>
+              </td>
+              <td>{{ observer.updated_at | format_datetime }}</td>
+            </tr>
+          {% endif %}
         {% endfor %}
-      {% else %}
-        {# Mock data row — placeholder visualization until the
-           Observer roster slice (W10) wires real imports. #}
-        <tr class="muted">
-          <td class="row-select-cell">
-            <input type="checkbox" disabled>
-          </td>
-          <td>Jane Doe</td>
-          <td><code>jane.doe@example.org</code></td>
-          <td>committee</td>
-          <td>active</td>
-          <td>31 May 2026, 09:00</td>
-        </tr>
-      {% endif %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="bottom-grid">
-    {# Empty spacer keeps Danger Zone half-width and flush-right
-       per the operator-UI concept. #}
-    <div></div>
-    <div class="card danger-zone" id="observers-danger">
-      <h2 style="margin-top: 0;">Danger Zone</h2>
-      <p class="form-help">
-        Permanently delete every observer row for this session.
-      </p>
-      <p>
-        <button class="btn destructive" type="button"
-                disabled aria-disabled="true">Delete all observers</button>
+        </tbody>
+      </table>
+    </div>
+  {% elif total_row_count > 0 %}
+    <div class="card">
+      <p class="muted">No observers match the current filter.</p>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">
+        No observers yet. Upload a CSV or add a row to get started.
       </p>
     </div>
-  </div>
+  {% endif %}
+
+  {# Selection → action-button state binding. Only runs in the
+     interactive non-edit / non-ready state. #}
+  {% if not edit_mode and not is_ready %}
+    <script>
+      (function () {
+        var editBtn = document.getElementById("observers-edit-btn");
+        var inactivateBtn = document.getElementById("observers-inactivate-btn");
+        var reactivateBtn = document.getElementById("observers-reactivate-btn");
+        var countPill = document.getElementById("observers-selected-count");
+        var selectAll = document.getElementById("observers-select-all");
+        if (!editBtn) return;
+        function boxes() {
+          return document.querySelectorAll(".observer-select");
+        }
+        function countChecked() {
+          var all = boxes();
+          var n = 0;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) n++;
+          }
+          return n;
+        }
+        function setBtn(btn, disabled) {
+          btn.disabled = disabled;
+          if (disabled) {
+            btn.setAttribute("aria-disabled", "true");
+          } else {
+            btn.removeAttribute("aria-disabled");
+          }
+        }
+        function refresh() {
+          var all = boxes();
+          var n = countChecked();
+          setBtn(editBtn, n !== 1);
+          setBtn(inactivateBtn, n === 0);
+          setBtn(reactivateBtn, n === 0);
+          countPill.textContent = n + " selected";
+          countPill.hidden = (n === 0);
+          if (selectAll) {
+            selectAll.checked = (n > 0 && n === all.length);
+          }
+        }
+        document.addEventListener("change", function (e) {
+          var t = e.target;
+          if (!t) return;
+          if (t === selectAll) {
+            var all = boxes();
+            for (var i = 0; i < all.length; i++) {
+              all[i].checked = selectAll.checked;
+            }
+            refresh();
+          } else if (t.classList &&
+                     t.classList.contains("observer-select")) {
+            refresh();
+          }
+        });
+        editBtn.addEventListener("click", function () {
+          var all = boxes();
+          var picked = null;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) {
+              if (picked !== null) return;
+              picked = all[i];
+            }
+          }
+          if (picked === null) return;
+          window.location =
+            {{ observers_base_url | tojson }} + "?edit_id=" + picked.value;
+        });
+        refresh();
+      })();
+    </script>
+  {% endif %}
+
+  {# Bottom row: empty spacer + Danger Zone, half-and-half. #}
+  {% if not is_ready and not edit_mode and total_row_count > 0 %}
+    <div class="bottom-grid">
+      <div></div>
+      <div class="card danger-zone">
+        <h2 style="margin-top: 0;">Danger Zone</h2>
+        <form method="post" action="{{ observers_base_url }}/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="delete-all">
+              Yes, delete the existing
+              <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
+            </label>
+          </p>
+          <p>
+            <button class="btn destructive" type="submit"
+                    data-delete-btn="delete-all"
+                    disabled aria-disabled="true">Delete all observers</button>
+          </p>
+        </form>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}

@@ -601,6 +601,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "observer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "observers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "observers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "instrument.view_policy_set": EventSchema(
         _IDENTITY | {"changes", "refs"}

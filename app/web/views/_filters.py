@@ -26,7 +26,7 @@ import re
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
 
-from app.db.models import Relationship, Reviewee, Reviewer
+from app.db.models import Observer, Relationship, Reviewee, Reviewer
 
 # Cap for the per-page `<datalist>` autocomplete options. Decision 14
 # in ``guide/segment_15F_enhanced_setup_pages.md`` — the
@@ -288,6 +288,61 @@ def reviewees_search_options(rows: list[Reviewee]) -> list[str]:
     ``REVIEWERS_DATALIST_CAP`` per decision 14."""
     labels = sorted(
         (f"{r.name} ({r.email_or_identifier})" for r in rows),
+        key=str.casefold,
+    )
+    return labels[:REVIEWERS_DATALIST_CAP]
+
+
+# Status filter options for the Observers Setup page. Mirrors the
+# reviewer / reviewee shape — observers carry the same active /
+# inactive status flag.
+OBSERVERS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+)
+
+
+def filter_observers_rows(
+    rows: list[Observer], *, status: str, search: str
+) -> list[Observer]:
+    """Apply status + search filters to an Observer list.
+
+    ``status`` is one of ``OBSERVERS_STATUS_OPTIONS`` keys
+    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` is
+    matched case-insensitively against the observer's display
+    name or email; when the value looks like a
+    ``"Name (email)"`` typeahead pick, the bracketed email is
+    used for an exact match instead."""
+    out = list(rows)
+    valid_status = {key for key, _ in OBSERVERS_STATUS_OPTIONS}
+    if status in valid_status:
+        out = [o for o in out if o.status == status]
+    needle = search.strip()
+    if needle:
+        tail = _extract_filter_label_tail(needle)
+        if tail is not None and "@" in tail:
+            picked = tail.casefold()
+            out = [o for o in out if o.email.casefold() == picked]
+        else:
+            out = [
+                o
+                for o in out
+                if _matches_search(o.display_name or "", needle)
+                or _matches_search(o.email, needle)
+            ]
+    return out
+
+
+def observers_search_options(rows: list[Observer]) -> list[str]:
+    """``"Name (email)"`` labels for the Observers page
+    typeahead. Sorted alphabetically; capped at
+    ``REVIEWERS_DATALIST_CAP``. Falls back to bare email when no
+    display name is set."""
+    labels = sorted(
+        (
+            f"{o.display_name} ({o.email})" if o.display_name else o.email
+            for o in rows
+        ),
         key=str.casefold,
     )
     return labels[:REVIEWERS_DATALIST_CAP]
