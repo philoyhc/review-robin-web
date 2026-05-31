@@ -206,6 +206,33 @@ Default on instrument create: all three audiences `enabled =
 FALSE` (today's behaviour — operator-only). The operator opts
 each audience in deliberately.
 
+**Reviewee-reachability warning (validation pass, not the Band 3
+editor).** The Band 3 visibility editor stays roster-unaware —
+it lets the operator author *which audience and what form*
+without forcing them to also reason about roster realities.
+The cross-cutting check that *N reviewees on this session
+can't authenticate* belongs on the **Validate page** as a
+soft warning, not on the per-instrument card:
+
+> If any instrument on the session has `reviewee` visibility
+> enabled **and** any reviewee on the session is not
+> email-identified (`is_email_identified(reviewee)` is false —
+> §3.2), surface:
+>
+> *"`<N>` of `<total>` reviewees have no email identification
+> and will not be able to view results. Affected
+> instruments: …"*
+
+It's a warning, not an error — the confidential-subject case
+is by design, and the operator may deliberately enable a
+policy that only the email-identified subset of reviewees can
+use. One pass over the session's reviewees at validate-time;
+no materialization. **Observers need a separate treatment**
+— observer reachability is a different problem (every observer
+must have an email by §3.1, so the failure mode is roster
+import / cleanup, not a policy-vs-roster mismatch) and is
+spec'd when the observer surface lands.
+
 ### 3.4 Session schedule columns
 
 Four timestamps on `sessions`, all nullable (NULL = "no
