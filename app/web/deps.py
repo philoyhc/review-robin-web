@@ -8,10 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings as default_settings
-from app.db.models import Reviewer, ReviewSession, User
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.logging_config import get_logger
-from app.services import operator_settings, permissions, sessions
+from app.services import operator_settings, participants, permissions, sessions
 
 log = get_logger(__name__)
 
@@ -229,6 +229,115 @@ def require_reviewer_in_session(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not an active reviewer in this session",
+        )
+    _stash_session_timezone(request, review_session)
+    return matched, review_session
+
+
+def require_reviewee_in_session(
+    session_id: int,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> tuple[Reviewee, ReviewSession]:
+    """403 unless the authenticated user has an active Reviewee row
+    in the session whose ``email_or_identifier`` parses as an email
+    matching the user's email (case-insensitive).
+
+    Confidential reviewees — those whose identifier is not a valid
+    email — never grant access; the surface stays unavailable by
+    construction (``guide/participant_model_upgrade.md`` §3.2).
+    Reviewee rows whose ``status`` is anything other than ``active``
+    do not grant access.
+
+    Phase 1 stub — defined but not referenced by any route yet. The
+    reviewee results surface (Phase 3 W16) wires this in as its
+    auth gate.
+    """
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    user_email = (user.email or "").casefold()
+    candidates = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == session_id,
+            Reviewee.status == "active",
+        )
+    ).scalars()
+    matched: Reviewee | None = None
+    for r in candidates:
+        if not participants.is_email_identified(r):
+            continue
+        if r.email_or_identifier.casefold() == user_email:
+            matched = r
+            break
+    if matched is None:
+        log.warning(
+            "permission denied",
+            extra={
+                "gate": "require_reviewee_in_session",
+                "user_id": user.id,
+                "session_id": session_id,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not an active reviewee in this session",
+        )
+    _stash_session_timezone(request, review_session)
+    return matched, review_session
+
+
+def require_observer_in_session(
+    session_id: int,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> tuple[Observer, ReviewSession]:
+    """403 unless the authenticated user has an active Observer row
+    in the session.
+
+    Identity match is case-insensitive email equality. Observer rows
+    whose ``status`` is anything other than ``active`` do not grant
+    access. Unlike reviewees, observers always carry an email
+    (``observers.email`` is NOT NULL) so no parse check is needed.
+
+    Phase 1 stub — defined but not referenced by any route yet. The
+    observer collation surface (Phase 3 W17) wires this in.
+    """
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    user_email = (user.email or "").casefold()
+    candidates = db.execute(
+        select(Observer).where(
+            Observer.session_id == session_id,
+            Observer.status == "active",
+        )
+    ).scalars()
+    matched: Observer | None = None
+    for o in candidates:
+        if o.email.casefold() == user_email:
+            matched = o
+            break
+    if matched is None:
+        log.warning(
+            "permission denied",
+            extra={
+                "gate": "require_observer_in_session",
+                "user_id": user.id,
+                "session_id": session_id,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not an active observer in this session",
         )
     _stash_session_timezone(request, review_session)
     return matched, review_session

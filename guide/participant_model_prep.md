@@ -38,17 +38,17 @@ inert additive migrations that land first.
 
 | # | Change | Ref | Pre-position? | Notes |
 |---|---|---|---|---|
-| S1 | New `observers` table | §3.1 | ✔ | Single `tag_1` column. Empty until roster slice. |
-| S2 | New `instrument_view_policies` table | §3.3 | ✔ | Empty until policy-authoring slice. |
+| S1 | New `observers` table | §3.1 | ✓ shipped (#1678) | Single `tag_1` column. Empty until roster slice. |
+| S2 | New `instrument_view_policies` table | §3.3 | ✓ shipped (#1678) | Empty until policy-authoring slice. |
 | S3 | `sessions.opens_at` (DateTime tz, NULL) | §3.4 | ✓ already exists | Lands on `sessions.scheduled_activate_at` (18G Part 0a). The participant model consumes that column; no migration needed. |
 | S4 | `sessions.responses_close_at` (DateTime tz, NULL) | §3.4 | ✓ already exists | Reuse `sessions.deadline` per §3.4 lean. No new column. |
 | S5 | `sessions.results_open_at` (DateTime tz, NULL) | §3.4 | ✓ already exists | Lands on `sessions.responses_release_at` (18G Part 0a — pre-positioned inert *explicitly for the participant model*; see the inline comment in `app/db/models/review_session.py`). |
 | S6 | `sessions.results_close_at` (DateTime tz, NULL) | §3.4 | ✓ already exists | Derived from `sessions.responses_release_at` (S5) + `sessions.release_until_offset` (18G Part 0b — ISO 8601 duration). Follows the 18G anchor + offset pattern; no separate absolute column. |
-| S7 | `sessions.relationships_enabled` (Boolean, default FALSE) | §3.8 | ⚠ | Column ships inert ✔; **backfill** (existing-relationships → TRUE) must wait for the toggle slice or existing sessions lose the tab once UI reads the flag. |
-| S8 | `sessions.observers_enabled` (Boolean, default FALSE) | §3.8 | ✔ | No backfill (no observer rows exist yet). |
-| S9 | `reviewees.results_acknowledged_at` (DateTime tz, NULL) | §6 | ✔ | Per §6 leaning toward column over a `result_acknowledgements` table. |
-| S10 | Register new event types in `EVENT_SCHEMAS` | §3.5 | ✔ | `instrument.view_policy_set`, `session.schedule_set`, `observer.added` / `.removed` / `.bulk_*`, `results.released`, `results.acknowledged`, `session.feature_toggled`. Allowlist entries only; no emission yet. |
-| S11 | `reviewers.profile_link` (String(2000), NULL) | §3.9 | ✔ | Mirrors `reviewees.profile_link`. Column add pre-positions cleanly; the ~12-file surface mirror is Phase 3 wiring (W11). |
+| S7 | `sessions.relationships_enabled` (Boolean, default FALSE) | §3.8 | ✓ shipped (#1678) | Backfill resolved to FALSE per operator call (no extant sessions populate Relationships). The toggle slice (W6) wires the Setup-nav gating. |
+| S8 | `sessions.observers_enabled` (Boolean, default FALSE) | §3.8 | ✓ shipped (#1678) | No backfill needed. |
+| S9 | `reviewees.results_acknowledged_at` (DateTime tz, NULL) | §6 | ✓ shipped (#1678) | Per §6 leaning toward column over a `result_acknowledgements` table. |
+| S10 | Register new event types in `EVENT_SCHEMAS` | §3.5 | ✓ shipped (#1678) | `observer.created / .updated / .bulk_inactivated / .bulk_reactivated`, `observers.deleted_all`, `instrument.view_policy_set`, `session.schedule_set`, `session.feature_toggled`, `results.released`, `results.acknowledged`. Allowlist entries only; no emission yet. |
+| S11 | `reviewers.profile_link` (String(2000), NULL) | §3.9 | ✓ shipped (#1678) | Mirrors `reviewees.profile_link`. Column shipped; the ~12-file surface mirror is Phase 3 wiring (W11). |
 
 **Not added** (per §3.6): nothing on `assignments`; no `participants`
 identity table.
@@ -110,10 +110,10 @@ Lights up the placeholders.
 
 | # | Item | Ref | Pre-position? | Notes |
 |---|---|---|---|---|
-| W1 | `is_email_identified(reviewee)` helper | §3.2 | ✔ | Pure code; ships as dead code in Phase 1 prep. |
-| W2 | `require_reviewee_in_session` dependency | §4 | ✔ | Defined but unused until P5 / W17 lights it up. |
-| W3 | `require_observer_in_session` dependency | §4 | ✔ | Defined but unused until P6 / W18 lights it up. |
-| W4 | `app/services/participants.py` cross-role query | §5 | ✔ | Defined but unused until W19 broadens `/me/`. |
+| W1 | `is_email_identified(reviewee)` helper | §3.2 | ✓ shipped (PR 2) | Lives in `app/services/participants.py`. |
+| W2 | `require_reviewee_in_session` dependency | §4 | ✓ shipped (PR 2) | Defined in `app/web/deps.py`; no route mounts it yet. |
+| W3 | `require_observer_in_session` dependency | §4 | ✓ shipped (PR 2) | Defined in `app/web/deps.py`; no route mounts it yet. |
+| W4 | `app/services/participants.py` cross-role query | §5 | ⚠ shape stub | `ParticipantSession` dataclass + `sessions_for_user` signature shipped; body returns `[]`. The real union query lands with W18. |
 | W5 | `app/services/collation.py` service | §7 | ⚠ | Pure code can pre-position; rendering needs `instrument_view_policies` rows from W15. |
 | W6 | Per-session toggle wiring | §3.8 | ✘ | Setup nav reads S7 / S8; route guards (404 when off); lock-on-data check on the Settings card; migration backfill `relationships_enabled = TRUE` for sessions with existing rows. |
 | W7 | Visibility-policy resolver | §3.3 | ✘ | View-time join through `instrument_id` to `instrument_view_policies`. Drives what reviewees / observers see on W17 / W18. |
@@ -134,25 +134,23 @@ Lights up the placeholders.
 
 ---
 
-## What could ship as a Phase 1 prep PR
+## Phase 1 prep — shipped
 
-Rolling up the ✔ rows across all three phases — these are the items
-that can land *today* as one coordinated prep PR with zero
-user-visible change:
+Phase 1 landed across two PRs:
 
-- **Schema** — S1, S2, S8, S9, S10, S11 (all unconditionally inert).
-  S3 / S4 / S5 / S6 are already on disk; no migration needed.
-- **Wiring stubs** — W1, W2, W3, W4 (dead code, no callers yet).
+- **PR #1678** — schema + audit allowlist (S1, S2, S7, S8, S9,
+  S10, S11). Alembic migration `b3e7d2a4c8f1`.
+- **PR (this one)** — helper / dependency stubs (W1, W2, W3, W4
+  as shape-only).
 
-That's roughly one Alembic migration + one helpers commit. Each
-Phase 2 / Phase 3 slice then lights up a subset of these without
-doing its own schema work.
+Each subsequent Phase 2 / Phase 3 slice lights up a subset of
+these without doing its own schema work.
 
-## Items blocking the prep PR
+## Items still blocking later phases
 
 | Block | What it needs |
 |---|---|
-| S7 backfill (W6) | Defer to the W6 toggle slice; the S7 column itself can pre-position now. |
+| S7 backfill (W6) | Resolved — backfilled FALSE per operator call (no extant sessions populate Relationships); the W6 toggle slice now just wires Setup-nav gating + lock-on-data behavior on top of the column. |
 | Magic-link schema shape | Design call on `invitations` extensibility (polymorphic FK vs sibling tables vs discriminator). Blocks W21 entirely. |
 
 ## Cross-references
