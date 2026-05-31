@@ -56,9 +56,10 @@
           <code>ObserverName</code>, <code>ObserverTag1</code>.
           Other columns are ignored.
         </p>
-        <input type="file" accept=".csv" disabled>
-        <div class="btn-pair" style="margin-top: var(--space-3);">
-          <button type="button" class="btn" disabled>Upload</button>
+        <input type="file" accept=".csv,text/csv" aria-label="CSV file" disabled>
+        <div class="btn-pair" style="margin-top: 20px;">
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Upload</button>
         </div>
       </div>
     </div>
@@ -67,12 +68,16 @@
       <div class="card operator-actions-card" id="observers-actions">
         <h2 style="margin-top: 0;">Operator actions</h2>
         <p class="form-help">
-          Bulk activate / deactivate observer rows. Wiring follows
+          Bulk activate / inactivate observer rows. Wiring follows
           the Observer roster slice.
         </p>
         <div class="btn-pair" style="margin-top: var(--space-3);">
-          <button type="button" class="btn" disabled>Activate selected</button>
-          <button type="button" class="btn secondary" disabled>Deactivate selected</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Edit</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Activate</button>
         </div>
       </div>
 
@@ -81,9 +86,10 @@
         <p class="form-help">
           Permanently delete every observer row for this session.
         </p>
-        <div class="btn-pair" style="margin-top: var(--space-3);">
-          <button type="button" class="btn danger" disabled>Delete all observers</button>
-        </div>
+        <p>
+          <button class="btn destructive" type="button"
+                  disabled aria-disabled="true">Delete all observers</button>
+        </p>
       </div>
     </div>
 
