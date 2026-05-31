@@ -21,6 +21,19 @@ class RevieweeImportRow(BaseModel):
     tag_3: str | None = None
 
 
+class ObserverImportRow(BaseModel):
+    """Per-row attribute shape produced by the Observers CSV
+    parser. ``email`` is required and bears the auth-identity for
+    the observer surface; ``display_name`` and ``tag_1`` are
+    optional. Mirrors the single-tag shape of
+    ``app/db/models/observer.py``.
+    """
+
+    email: str
+    display_name: str | None = None
+    tag_1: str | None = None
+
+
 class RelationshipImportRow(BaseModel):
     """Per-pair attribute row resolved against the session's existing
     rosters at import time. ``reviewer_id`` / ``reviewee_id`` carry
