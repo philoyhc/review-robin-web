@@ -289,34 +289,71 @@ def reviewer_dashboard(
             session_status = lifecycle.session_status_for_reviewer(
                 db, reviewer=reviewer, review_session=review_session
             )
-            link_enabled = session_status != "not opened"
-            link_target = (
-                f"/me/sessions/{review_session.id}/summary"
-                if pill.state == "submitted"
-                else f"/me/sessions/{review_session.id}/1"
-            )
             page_rows = _build_dashboard_page_rows(
                 db, reviewer, review_session
             )
         else:
             # Reviewee / observer-only row — the reviewer surface
             # doesn't apply, so the per-reviewer pill / page-row
-            # state stays empty and the Session name renders as
-            # plain text. The reviewee results surface (W16) and
-            # observer collation surface (W17) will eventually
-            # turn ``link_target`` into a real link for those
-            # roles; today both are placeholders in the template.
+            # state stays empty. The Session-status column still
+            # populates from session lifecycle.
             pill = None
             session_status = _non_reviewer_session_status(review_session)
-            link_enabled = False
-            link_target = None
             page_rows = []
+
+        # Per-role link map for both the per-pill anchor and the
+        # session-name's prioritised target. The session name
+        # picks the first reachable role in this priority order
+        # (Reviewer → Reviewee → Observer): reviewer carries
+        # active work and a deadline, the other two are
+        # read-only views, so a multi-role user lands on the
+        # actionable page by default. Pills give the explicit
+        # escape hatch to the other surfaces.
+        role_links: dict[str, dict[str, object]] = {}
+        if reviewer is not None:
+            role_links["reviewer"] = {
+                "target": (
+                    f"/me/sessions/{review_session.id}/summary"
+                    if pill is not None and pill.state == "submitted"
+                    else f"/me/sessions/{review_session.id}/1"
+                ),
+                # Same datetime gate the route used previously —
+                # the reviewer surface 403s / redirects until the
+                # session is at least once activated.
+                "enabled": session_status != "not opened",
+            }
+        if "reviewee" in roles:
+            role_links["reviewee"] = {
+                "target": f"/me/sessions/{review_session.id}/results",
+                # W16 will gate this on
+                # ``responses_release_at`` + ``release_until_offset``;
+                # today the placeholder accepts any active reviewee.
+                "enabled": True,
+            }
+        if "observer" in roles:
+            role_links["observer"] = {
+                "target": f"/me/sessions/{review_session.id}/collation",
+                # W17 will gate this similarly to the reviewee
+                # link; today the placeholder accepts any active
+                # observer.
+                "enabled": True,
+            }
+
+        link_target: str | None = None
+        link_enabled = False
+        for priority_role in ("reviewer", "reviewee", "observer"):
+            candidate = role_links.get(priority_role)
+            if candidate and candidate["enabled"]:
+                link_target = candidate["target"]  # type: ignore[assignment]
+                link_enabled = True
+                break
 
         items.append(
             {
                 "reviewer": reviewer,
                 "session": review_session,
                 "roles": roles,
+                "role_links": role_links,
                 "pill": pill,
                 "session_status": session_status,
                 "link_enabled": link_enabled,
