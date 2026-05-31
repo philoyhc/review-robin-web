@@ -45,6 +45,15 @@ class SessionCreate(BaseModel):
     # ``guide/participant_model_upgrade.md`` §3.8.
     relationships_enabled: bool = False
     observers_enabled: bool = False
+    # Participant-model Phase 3 (W14) — Release-responses window.
+    # ``responses_release_at`` is the moment reviewees / observers
+    # can start viewing collated responses; ``release_until_offset``
+    # is the ISO 8601 duration (positive) anchoring the close. Per
+    # the §8.2.2 anchor-null rule, the offset is inert whenever the
+    # anchor is unset. Both columns ride pre-positioned schema
+    # (Segment 18G Part 0a / 0b).
+    responses_release_at: datetime | None = None
+    release_until_offset: str | None = None
 
 
 class SessionRead(BaseModel):

@@ -69,6 +69,8 @@ async def create_session(
     help_contact: str | None = Form(default=None),
     relationships_enabled: bool = Form(default=False),
     observers_enabled: bool = Form(default=False),
+    responses_release_at: str | None = Form(default=None),
+    release_until_offset: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
@@ -145,6 +147,24 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # Participant-model W14 — Release-responses anchor + offset.
+    try:
+        parsed_responses_release_at = (
+            scheduled_events.parse_and_validate_responses_release_at(
+                responses_release_at, timezone_name=timezone_name
+            )
+        )
+        parsed_release_until_offset = (
+            scheduled_events.parse_and_validate_release_until_offset(
+                release_until_offset
+            )
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     payload = SessionCreate(
         name=name,
         code=code,
@@ -157,6 +177,8 @@ async def create_session(
         reminder_offsets=parsed_reminder_offsets,
         relationships_enabled=relationships_enabled,
         observers_enabled=observers_enabled,
+        responses_release_at=parsed_responses_release_at,
+        release_until_offset=parsed_release_until_offset,
     )
     review_session = sessions.create_session(
         db,
