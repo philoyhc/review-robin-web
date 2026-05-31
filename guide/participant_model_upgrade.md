@@ -9,9 +9,27 @@ where response visibility is explicit, governed data.
 This is the umbrella document for the post-MVP arc. It is **not**
 a segment plan and carries no PR ladder: fine-grained
 implementation plans (`segment_21_*.md`, `segment_22_*.md`, …)
-are written when specific work is scheduled. Nothing is
-scheduled yet — this doc records the design direction so it is
+are written when specific work is scheduled. The surface slices
+(Phases 2 / 3 of `guide/participant_model_prep.md`) are still
+unscheduled — this doc records the design direction so it is
 not foreclosed and so the eventual segments share a foundation.
+
+## Status snapshot
+
+Prep work has started landing ahead of any named segment. As of
+2026-05-31:
+
+- **Design** locked across §§3.1, 3.2, 3.3, 3.5, 3.7, 3.8, 3.9,
+  4, 5 (PRs #1671 → #1677).
+- **Phase 1 schema + audit allowlist** shipped (PR #1678) —
+  every ✓ row in `guide/participant_model_prep.md` Phase 1.
+- **Phase 1 dead-code helpers + dependency stubs** shipped
+  (PR #1679) — W1 / W2 / W3 / W4 callable, no consumers yet.
+- **§3.7 friendly-label retirement** + **§3.9 partial** (Quick
+  Setup + Extract for Reviewer PhotoLink) shipped (PR #1680).
+
+The detailed audit lives at `guide/participant_model_prep.md`;
+this doc stays the rationale-and-design surface.
 
 ## Roadmap numbering
 
@@ -19,11 +37,15 @@ A convention for how the project's work is numbered:
 
 - **Segments 1–20** — the MVP of the *current* review-platform
   model (operator configures, reviewer responds). Tracked in
-  `guide/todo_master.md`, which covers this MVP band **only**.
+  `guide/todo_master.md`.
+- **Participants Model Prep** — the inert schema, dead-code
+  helpers, and small standalone retirements / parity gaps that
+  ship ahead of any named segment. Tracked in `todo_master.md`'s
+  Done section.
 - **Segments 21–30 (and beyond)** — the **participant-model
-  upgrade** described here. Deliberately **not** tracked in
-  `todo_master.md`; a dedicated todo file is started if and
-  when this work begins. Each future segment gets its own
+  upgrade** surface slices (Phases 2 / 3 of the prep audit).
+  Not yet scheduled; a dedicated todo file is started if and
+  when that work begins. Each future segment gets its own
   `segment_2X_*.md` plan when it is scoped.
 
 ---
