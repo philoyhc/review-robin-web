@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     AuditEvent,
     Observer,
     Relationship,
-    Reviewee,
-    Reviewer,
     ReviewSession,
     SessionOperator,
     User,
@@ -109,64 +107,6 @@ def create_session(
     db.commit()
     db.refresh(review_session)
     return review_session
-
-
-# Ordered list of role labels for the sessions-lobby Roles
-# column — the same order applies across the helper's output and
-# the template's pill rendering so multi-role rows are
-# deterministic.
-_ROLE_LABELS: tuple[str, ...] = ("Reviewer", "Reviewee", "Observer")
-
-
-def roles_for_user_in_sessions(
-    db: Session,
-    *,
-    user_email: str,
-    session_ids: list[int],
-) -> dict[int, list[str]]:
-    """For each session id, return the ordered list of role labels
-    the user holds based on a case-insensitive email match against
-    the reviewers, reviewees, and observers rosters. Labels render
-    in ``_ROLE_LABELS`` order (Reviewer → Reviewee → Observer);
-    missing sessions get an empty list."""
-    result: dict[int, list[str]] = {sid: [] for sid in session_ids}
-    if not session_ids:
-        return result
-    needle = (user_email or "").strip().lower()
-    if not needle:
-        return result
-
-    hits_by_role: dict[str, set[int]] = {label: set() for label in _ROLE_LABELS}
-
-    reviewer_hits = db.execute(
-        select(Reviewer.session_id).where(
-            Reviewer.session_id.in_(session_ids),
-            func.lower(Reviewer.email) == needle,
-        )
-    ).scalars().all()
-    hits_by_role["Reviewer"].update(reviewer_hits)
-
-    reviewee_hits = db.execute(
-        select(Reviewee.session_id).where(
-            Reviewee.session_id.in_(session_ids),
-            func.lower(Reviewee.email_or_identifier) == needle,
-        )
-    ).scalars().all()
-    hits_by_role["Reviewee"].update(reviewee_hits)
-
-    observer_hits = db.execute(
-        select(Observer.session_id).where(
-            Observer.session_id.in_(session_ids),
-            func.lower(Observer.email) == needle,
-        )
-    ).scalars().all()
-    hits_by_role["Observer"].update(observer_hits)
-
-    for sid in session_ids:
-        for label in _ROLE_LABELS:
-            if sid in hits_by_role[label]:
-                result[sid].append(label)
-    return result
 
 
 def list_for_user(db: Session, user: User) -> list[ReviewSession]:
