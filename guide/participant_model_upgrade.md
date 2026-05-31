@@ -84,7 +84,7 @@ engine as-is.
 
 ## 3. New data structures
 
-The core of the design. Four additions; all follow the
+The core of the design. Five additions; all follow the
 established additive-migration playbook (13D / 13E / 13F) —
 nullable / defaulted columns and new tables that ship **inert**,
 each lit up by its owning slice. Reviewee identity (§3.2)
@@ -102,19 +102,29 @@ observers
   email           String(320)  NOT NULL    (a reachable identity)
   display_name    String        NULL
   status          String(16)   NOT NULL    'active' | 'inactive'
-  tag1/tag2/tag3  String        NULL       (filter slots, mirrors reviewers)
+  tag_1           String        NULL       (filter slot for visibility scoping;
+                                             see "tags" note below)
   created_at / updated_at
   UNIQUE (session_id, email)
 ```
 
 Mirrors the `reviewers` shape deliberately so the importer,
 the Setup-page table, the friendly-label resolver, and the
-sort primitive all extend with no new patterns. Observers carry
-**at least one tag** so they can be categorized — the
+sort primitive all extend with no new patterns. Observers
+carry **one tag** so they can be categorized — the
 per-instrument visibility policy (§3.3) can scope an observer
 viewing-grant to a tag, so only observers of a given category
-see a given instrument's responses. Three tag slots mirror
-`reviewers`; one is the minimum that has to be meaningful.
+see a given instrument's responses.
+
+**Why one tag, not three.** Observer use cases today are
+single-axis ("committee" / "hr_partner" / "department_head")
+and don't need the multi-axis predicates the reviewer / pair
+tag slots support. One tag is the starting shape;
+cross-cutting observer-visibility filters are deferred and
+**additive if a real case appears** — add `tag_2` / `tag_3`
+later, mirror the reviewer pattern. The column name `tag_1`
+(rather than `tag`) is kept on purpose so that future
+expansion is a pure addition rather than a rename.
 
 ### 3.2 Reviewee identity — `email_or_identifier` is enough
 
@@ -282,6 +292,9 @@ canonical-envelope convention:
   viewable for a session (snapshot envelope).
 - `results.acknowledged` — a reviewee marks their results seen
   (§6).
+- `session.feature_toggled` — operator flips
+  `relationships_enabled` or `observers_enabled` (§3.8; changes
+  envelope; carries which flag and its old / new value).
 
 ### 3.6 What does *not* get a new structure
 
@@ -332,6 +345,66 @@ label of Name / Email / Identifier / Profile. If headers
 match on canonical names only, retirement is purely UI
 cleanup. If they match on friendly labels, the import side
 has to switch to canonical matching first.
+
+### 3.8 Per-session feature toggles — Relationships, Observers
+
+Two boolean columns on `sessions`, both default `FALSE`:
+
+```
+sessions
+  + relationships_enabled  Boolean  NOT NULL  default FALSE
+  + observers_enabled      Boolean  NOT NULL  default FALSE
+```
+
+These drive what appears in the operator Setup nav. The core
+tabs — Reviewers, Reviewees, Instruments, Assignments,
+Settings — stay always-on; they're the minimum to run a
+session end to end. Relationships and Observers are
+**conditional**, gated by these two columns. The togglable
+set is deliberately closed (see §11).
+
+**Authoring.** A small card with two checkboxes appears on:
+
+- the **New Session** creation form, and
+- the **Session Settings / Edit Details** page.
+
+Default-unchecked. Checking either flag exposes the
+corresponding Setup tab and the corresponding Quick Setup
+slot (see below).
+
+**Lock-on-data.** Once at least one row exists in the
+relevant roster (any row in `relationships` for the session →
+Relationships flag locked; any row in `observers` → Observers
+flag locked), the checkbox is disabled with a tooltip:
+*"Has configured data — delete all rows to disable."* This
+prevents accidental hiding of data the operator already
+invested in. To re-disable, the operator must explicitly
+empty the roster first.
+
+**Route guards.** When a flag is `FALSE`, GET / POST routes
+under `/operator/sessions/{id}/setup/relationships` (or
+`/setup/observers`) return **404**. A deep link to a disabled
+tab is genuinely not there — cleaner than a redirect.
+
+**Quick Setup integration.** The Quick Setup card on Session
+Home surfaces an Observer slot when `observers_enabled =
+TRUE` — same paste-roster shape as the Reviewer slot,
+matching the lock-on-nav behavior documented in
+`spec/quick_setup_card_spec.md`. Relationships does *not*
+get a Quick Setup slot — relationships authoring is heavier
+than the paste-roster shape supports; it stays
+tab-only.
+
+**Extract Setup integration.** Observer-related extract
+shapes (at minimum, observer roster CSV) become selectable on
+the Extract Setup card when `observers_enabled = TRUE`. The
+reviewer / reviewee shapes are always present, unchanged.
+
+**Migration backfill.** Sessions with existing relationship
+rows get `relationships_enabled = TRUE` on migration so the
+tab doesn't disappear on existing operators. Observers have
+no backfill — the column ships inert; no rows exist yet
+anywhere.
 
 ## 4. Auth posture & magic links
 
@@ -516,7 +589,13 @@ into `segment_2X_*.md` plans once scoped. Each line is
 plausibly one segment (some may split or merge):
 
 - Schema prep — the §3 additions as inert additive migrations.
-- Observer roster — importer + Setup page.
+- Per-session feature toggles (§3.8) — `relationships_enabled`
+  / `observers_enabled` columns, settings card on New Session
+  + Session Details, lock-on-data, route guards, migration
+  backfill. Ships before Observer roster so Observers slots
+  into the toggle from day one.
+- Observer roster — importer + Setup page (+ Quick Setup +
+  Extract Setup integration per §3.8).
 - Reviewee identity helper — `is_email_identified(reviewee)`
   + `require_reviewee_in_session`. No schema change (§3.2).
 - Friendly-label retirement for fixed roster columns (§3.7).
@@ -543,6 +622,14 @@ plausibly one segment (some may split or merge):
 - **Reviewee / observer self-service roster edits** — they do
   not manage their own rows; that stays operator-only.
 - **Multi-tenancy / cross-workspace identity** — unchanged.
+- **The Setup-nav togglable set is closed.** Only
+  Relationships and Observers are per-session optional via
+  §3.8. Reviewers, Reviewees, Instruments, Assignments, and
+  Settings are the minimum to run a session end to end —
+  they stay always-on. Resist future "should this be optional
+  too?" temptations unless a feature genuinely belongs in the
+  same advanced / not-essential bucket; the goal of §3.8 is a
+  closed list, not a feature-flag framework.
 - **Excel / `.xlsx` import-export.** Considered and set aside.
   CSV stays the interchange format throughout; when several
   files must travel together they go in a zip container (the
