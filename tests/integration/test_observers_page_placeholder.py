@@ -150,23 +150,30 @@ def test_observers_list_renders_mock_row_when_empty(
     client: TestClient, db: Session
 ) -> None:
     """When no observers exist, the list card still renders the
-    four-column table with a mock placeholder row so operators
-    can preview the eventual shape."""
+    six-column table with a mock placeholder row so operators
+    can preview the eventual shape (checkbox / Name / Email /
+    Tag1 / Status / Updated)."""
     review_session = _make_session(client, db, "obs-empty")
     _enable_observers(db, review_session)
     body = client.get(
         f"/operator/sessions/{review_session.id}/observers"
     ).text
-    # The four column headers — Name / Email / Tag1 / Status.
-    assert "<th>Name</th>" in body
-    assert "<th>Email</th>" in body
-    assert "<th>Tag1</th>" in body
-    assert "<th>Status</th>" in body
+    # Five sortable column headers; checkbox column is not
+    # sortable.
+    assert 'data-sort-key="name"' in body
+    assert 'data-sort-key="email"' in body
+    assert 'data-sort-key="tag_1"' in body
+    assert 'data-sort-key="status"' in body
+    assert 'data-sort-key="updated_at"' in body
+    assert "<th>Name</th>" not in body  # all data columns now sortable
+    # Checkbox column carries the select-all checkbox.
+    assert 'aria-label="Select all observers"' in body
     # Mock row content.
     assert "Jane Doe" in body
     assert "jane.doe@example.org" in body
     assert ">committee<" in body
     assert ">active<" in body
+    assert "31 May 2026" in body
 
 
 def test_observers_list_renders_seeded_rows(
@@ -203,8 +210,13 @@ def test_observers_list_renders_seeded_rows(
     assert ">committee<" in body
     # Empty-tag row shows "—" placeholder for the tag column.
     assert ">—<" in body
+    # Updated column renders the per-row updated_at via the
+    # format_datetime filter — sort-value is the ISO timestamp.
+    assert "data-sort-value=" in body
     # Mock row gone now that real rows exist.
     assert "Jane Doe" not in body
+    # Per-row select checkbox renders for each observer.
+    assert body.count('class="observer-select"') == 2
 
 
 # ── Chrome ───────────────────────────────────────────────────────────
