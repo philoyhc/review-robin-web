@@ -294,25 +294,37 @@ three participant audiences:
 
 ## 5. Surfaces
 
-- **Reviewee results surface** — read-only. For each
-  instrument whose `reviewee` policy is enabled, renders the
-  collation of feedback about the signed-in reviewee, in the
-  policy's form (per-line/summarized × identified/de-identified).
-  Nothing shows for confidential instruments or before
-  `results_open_at`.
-- **Observer surface** — read-only collation view across the
-  instruments whose `observer` policy is enabled *and* whose
-  `observer_tag` (if set) matches the signed-in observer's
-  tags.
-- **Unified participant landing** — one entry point. For the
-  signed-in identity it resolves every role across every
-  session: review forms to complete (reviewer), results to
-  read (reviewee), collations to observe (observer). A
-  360-degree self-assessment falls out naturally — it is just
-  an assignment row whose reviewer and reviewee are the same
-  person (the existing `self_reviews_active` path), seen on the
-  landing as both a form to fill and, later, an input to one's
-  own collation. No special "self-assessment" structure.
+- **Reviewee results surface** at `/me/sessions/{id}/results`
+  — read-only. For each instrument whose `reviewee` policy is
+  enabled, renders the collation of feedback about the
+  signed-in reviewee, in the policy's form (per-line/summarized
+  × identified/de-identified). Nothing shows for confidential
+  instruments or before `results_open_at`.
+- **Observer surface** at `/me/sessions/{id}/collation` —
+  read-only collation view across the instruments whose
+  `observer` policy is enabled *and* whose `observer_tag` (if
+  set) matches the signed-in observer's tags.
+- **Unified participant landing** at `/me/` — one entry point.
+  A single table lists every session the signed-in identity
+  touches, across roles. Each row carries one or more **role
+  pills** (Reviewer / Reviewee / Observer) tagging how the
+  identity is involved in that session; the pills are
+  click-targets that route to the per-role surface (reviewer
+  paging at `/me/sessions/{id}/{page_n}`, reviewee results at
+  `/me/sessions/{id}/results`, observer collation at
+  `/me/sessions/{id}/collation`). The lobby query is the union
+  `Reviewer ∪ Reviewee ∪ Observer` filtered to the signed-in
+  identity (matched case-insensitively against
+  `reviewers.email` / `reviewees.contact_email` /
+  `observers.email`) — a new helper in
+  `app/services/participants.py`, since today's dashboard
+  query (`app/web/routes_reviewer/_dashboard.py`) is
+  reviewer-only. A 360-degree self-assessment falls out
+  naturally — it is just an assignment row whose reviewer and
+  reviewee are the same person (the existing
+  `self_reviews_active` path), seen on the landing as a row
+  carrying both Reviewer and Reviewee pills. No special
+  "self-assessment" structure.
 
 Chrome stays light and audience-local per the identity spec;
 components stay universal.
@@ -332,12 +344,26 @@ templates, tests, and spec).
 
 The shipped layout:
 
-- ``/me/`` — reviewer landing today (the participant meta-
-  lobby spec lands when the reviewee + observer features
-  ship; for now it's the dashboard).
-- ``/me/sessions/{id}/{page}`` — the per-session participant
-  surface (role-tabbed once reviewee + observer features
-  ship; reviewer-mode-only today).
+- ``/me/`` — reviewer landing today; **becomes the unified
+  participant lobby** (§5) when the reviewee + observer
+  features ship — same URL, broadened query, role-pill column
+  added to the existing table.
+- ``/me/sessions/{id}/{page_n}`` — the reviewer per-page
+  response surface. Unchanged.
+- ``/me/sessions/{id}/summary`` — the **reviewer's**
+  post-submission read-only summary, gated on full submission
+  (`app/web/routes_reviewer/_summary.py`). Stays
+  reviewer-only; the reviewee and observer collations get
+  distinct paths (next two bullets) rather than role-branching
+  this handler.
+- ``/me/sessions/{id}/results`` — **new.** Reviewee
+  collation surface (§5). Gated on
+  `require_reviewee_in_session` and on the session's
+  `results_open_at` window.
+- ``/me/sessions/{id}/collation`` — **new.** Observer
+  collation surface (§5). Gated on
+  `require_observer_in_session` and on the session's
+  `results_open_at` window.
 - ``/operator/`` + ``/operator/sys-admin/`` — administrative
   surfaces, unchanged.
 
@@ -426,9 +452,12 @@ plausibly one segment (some may split or merge):
 - Per-instrument visibility-policy authoring.
 - Session schedule authoring + 18G integration.
 - Collation service — summarization + de-identification.
-- Reviewee results surface.
-- Observer surface.
-- Unified participant landing.
+- Reviewee results surface at ``/me/sessions/{id}/results``.
+- Observer surface at ``/me/sessions/{id}/collation``.
+- Unified participant landing — broaden the existing ``/me/``
+  dashboard query to the cross-role union and add the
+  role-pill column to the table; ships paired with (or after)
+  the surfaces above so the pills route to live pages.
 - Acknowledgement + notifications (gated on 14B).
 
 ## 11. Out of scope
