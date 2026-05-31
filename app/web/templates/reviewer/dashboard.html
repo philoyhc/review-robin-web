@@ -104,16 +104,22 @@
               {# Pair the (N/M) counter's colour with the reviewer
                  status pill so the row's progress reads at a
                  glance: blue = nothing yet, amber = mid-flight,
-                 green = done. #}
-              {% if item.pill.state == "submitted" %}
-                <span class="pill pill-success">submitted</span>
-                <span class="pill pill-success">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
-              {% elif item.pill.state == "in progress" %}
-                <span class="pill pill-warning">in progress</span>
-                <span class="pill pill-warning">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
+                 green = done. Empty cell when the row's user is
+                 a reviewee / observer only — the reviewer-status
+                 column doesn't apply. #}
+              {% if item.pill %}
+                {% if item.pill.state == "submitted" %}
+                  <span class="pill pill-success">submitted</span>
+                  <span class="pill pill-success">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
+                {% elif item.pill.state == "in progress" %}
+                  <span class="pill pill-warning">in progress</span>
+                  <span class="pill pill-warning">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
+                {% else %}
+                  <span class="pill pill-info">not started</span>
+                  <span class="pill pill-info">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
+                {% endif %}
               {% else %}
-                <span class="pill pill-info">not started</span>
-                <span class="pill pill-info">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>
+                <span class="muted">—</span>
               {% endif %}
             </td>
           </tr>

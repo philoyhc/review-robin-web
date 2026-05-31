@@ -18,10 +18,10 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewer, ReviewSession, User
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import responses as responses_service
@@ -178,59 +178,149 @@ def _build_dashboard_page_rows(
     return rows
 
 
+def _non_reviewer_session_status(review_session: ReviewSession) -> str:
+    """Session-status label for ``/me`` rows where the user is a
+    reviewee / observer only — no reviewer-specific assignment
+    check applies. Mirrors the reviewer flavour's
+    not-opened / open / closed vocabulary so the column reads
+    uniformly across role mixes."""
+    if lifecycle.is_expired(review_session):
+        return "closed"
+    if lifecycle.is_ready(review_session):
+        return "open"
+    return "not opened"
+
+
 @router.get("", response_class=HTMLResponse)
 def reviewer_dashboard(
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    """The ``/me`` participant landing page — one row per session
+    the signed-in user touches in any participant role
+    (reviewer / reviewee / observer). The Roles column carries
+    every matching label; reviewer-specific columns
+    (Reviewer status, deep links, per-page sub-rows) populate
+    only when the user is an active reviewer on that session.
+
+    Cross-role union per
+    ``guide/participant_model_upgrade.md`` §3.2: case-insensitive
+    email match against the reviewers / email-identified
+    reviewees / observers rosters. Inactive rows are excluded —
+    deactivation is the operator's "soft remove"."""
     user_email = (user.email or "").casefold()
-    rows = list(
+    if not user_email:
+        return _templates.TemplateResponse(
+            request,
+            "reviewer/dashboard.html",
+            {
+                "user": user,
+                "items": [],
+                "reviewer_review_count": 0,
+                "breadcrumbs": breadcrumbs.reviewer_root(),
+            },
+        )
+
+    reviewer_rows = list(
         db.execute(
             select(Reviewer, ReviewSession)
             .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
-            .where(Reviewer.status == "active")
-            .order_by(ReviewSession.updated_at.desc())
+            .where(
+                Reviewer.status == "active",
+                func.lower(Reviewer.email) == user_email,
+            )
         ).all()
     )
+    reviewee_rows = list(
+        db.execute(
+            select(Reviewee, ReviewSession)
+            .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
+            .where(
+                Reviewee.status == "active",
+                func.lower(Reviewee.email_or_identifier) == user_email,
+            )
+        ).all()
+    )
+    observer_rows = list(
+        db.execute(
+            select(Observer, ReviewSession)
+            .join(ReviewSession, ReviewSession.id == Observer.session_id)
+            .where(
+                Observer.status == "active",
+                func.lower(Observer.email) == user_email,
+            )
+        ).all()
+    )
+
+    sessions_by_id: dict[int, ReviewSession] = {}
+    reviewer_by_session: dict[int, Reviewer] = {}
+    roles_by_session: dict[int, list[str]] = {}
+
+    def _add(s: ReviewSession, role: str) -> None:
+        sessions_by_id[s.id] = s
+        if role not in roles_by_session.setdefault(s.id, []):
+            roles_by_session[s.id].append(role)
+
+    for reviewer, s in reviewer_rows:
+        reviewer_by_session[s.id] = reviewer
+        _add(s, "reviewer")
+    for _reviewee, s in reviewee_rows:
+        _add(s, "reviewee")
+    for _observer, s in observer_rows:
+        _add(s, "observer")
+
+    ordered = sorted(
+        sessions_by_id.values(),
+        key=lambda s: s.updated_at,
+        reverse=True,
+    )
+
     items = []
-    for reviewer, review_session in rows:
-        if reviewer.email.casefold() != user_email:
-            continue
-        pill = responses_service.session_pill_for_reviewer(
-            db, reviewer=reviewer, session_id=review_session.id
-        )
-        session_status = lifecycle.session_status_for_reviewer(
-            db, reviewer=reviewer, review_session=review_session
-        )
+    for review_session in ordered:
+        roles = roles_by_session[review_session.id]
+        reviewer = reviewer_by_session.get(review_session.id)
         session_zone = sessions_service.resolve_session_timezone(review_session)
+
+        if reviewer is not None:
+            pill = responses_service.session_pill_for_reviewer(
+                db, reviewer=reviewer, session_id=review_session.id
+            )
+            session_status = lifecycle.session_status_for_reviewer(
+                db, reviewer=reviewer, review_session=review_session
+            )
+            link_enabled = session_status != "not opened"
+            link_target = (
+                f"/me/sessions/{review_session.id}/summary"
+                if pill.state == "submitted"
+                else f"/me/sessions/{review_session.id}/1"
+            )
+            page_rows = _build_dashboard_page_rows(
+                db, reviewer, review_session
+            )
+        else:
+            # Reviewee / observer-only row — the reviewer surface
+            # doesn't apply, so the per-reviewer pill / page-row
+            # state stays empty and the Session name renders as
+            # plain text. The reviewee results surface (W16) and
+            # observer collation surface (W17) will eventually
+            # turn ``link_target`` into a real link for those
+            # roles; today both are placeholders in the template.
+            pill = None
+            session_status = _non_reviewer_session_status(review_session)
+            link_enabled = False
+            link_target = None
+            page_rows = []
+
         items.append(
             {
                 "reviewer": reviewer,
                 "session": review_session,
-                # Per-row role list driving the Roles column's
-                # pill stack. Reviewer-only today because the
-                # query joins ``reviewers`` only; the cross-role
-                # union (W18 in guide/participant_model_prep.md)
-                # will populate this from
-                # ``app.services.participants.sessions_for_user``
-                # so a row can carry multiple pills.
-                "roles": ["reviewer"],
+                "roles": roles,
                 "pill": pill,
                 "session_status": session_status,
-                # The Session column links to the response surface
-                # whenever the session is at least once activated —
-                # ``open`` for the live form, ``closed`` for the
-                # read-only post-deadline view. ``not opened``
-                # renders the name as plain text. 17B Phase 2 PR B
-                # swaps the link target to the per-session summary
-                # page when the reviewer has submitted everything.
-                "link_enabled": session_status != "not opened",
-                "link_target": (
-                    f"/me/sessions/{review_session.id}/summary"
-                    if pill.state == "submitted"
-                    else f"/me/sessions/{review_session.id}/1"
-                ),
+                "link_enabled": link_enabled,
+                "link_target": link_target,
                 "start_text": (
                     date_formatting.format_datetime(
                         review_session.activated_at, session_zone
@@ -250,18 +340,11 @@ def reviewer_dashboard(
                     and _to_utc(review_session.deadline)
                     <= datetime.now(timezone.utc)
                 ),
-                # Timezone column (Start/End render zone-less now;
-                # this carries the GMT-offset chip + IANA hover, the
-                # operator lobby's pattern). Mirror that template
-                # by computing the offset relative to ``deadline``
-                # when set, falling back to "now".
                 "timezone_gmt_offset": date_formatting.gmt_offset_label(
                     session_zone, at=review_session.deadline
                 ),
                 "timezone_iana": session_zone,
-                "page_rows": _build_dashboard_page_rows(
-                    db, reviewer, review_session
-                ),
+                "page_rows": page_rows,
             }
         )
     return _templates.TemplateResponse(
