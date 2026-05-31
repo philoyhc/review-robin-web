@@ -153,3 +153,66 @@ def test_lobby_roles_isolated_per_session(
     assert 'data-sort-value="Reviewer"' in body
     # The non-match row carries an empty data-sort-value.
     assert 'data-sort-value=""' in body
+
+
+def test_lobby_roles_end_to_end_via_ui_routes(
+    client: TestClient, db: Session
+) -> None:
+    """Walks the same flow an operator would use in the browser:
+    create a session, opt the Observers tab on, then add the
+    signed-in user to each of the three rosters via the real UI
+    routes (not direct DB inserts). The lobby should reflect all
+    three role pills.
+
+    Pins the regression where reviewer matched but reviewee /
+    observer didn't reach the lobby."""
+    review_session = _make_session(client, db, "e2e")
+
+    # Flip observers_enabled via the Edit form so the Observers
+    # routes are reachable.
+    client.post(
+        f"/operator/sessions/{review_session.id}/edit",
+        data={
+            "name": review_session.name,
+            "code": review_session.code,
+            "description": "",
+            "display_timezone": "",
+            "observers_enabled": "true",
+        },
+        follow_redirects=False,
+    )
+
+    # Reviewer
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/create",
+        data={
+            "name": "Alice",
+            "email": "alice@example.edu",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    # Reviewee
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/create",
+        data={
+            "name": "Alice",
+            "email_or_identifier": "alice@example.edu",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    # Observer
+    client.post(
+        f"/operator/sessions/{review_session.id}/observers/create",
+        data={
+            "email": "alice@example.edu",
+            "display_name": "Alice",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'data-sort-value="Reviewer Reviewee Observer"' in body
+
