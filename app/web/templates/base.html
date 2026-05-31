@@ -742,7 +742,15 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 20px;
-        align-items: start;
+        /* ``stretch`` (the grid default) so a shorter card grows
+           to match the taller one in the same row — otherwise
+           ``align-items: start`` leaves visible empty space
+           below the shorter card, making the gap between the
+           shorter card's bottom border and the next sibling
+           below the grid look larger than other inter-card
+           gaps on the page. Mirrors ``.page-grid``'s alignment
+           treatment. */
+        align-items: stretch;
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
@@ -989,18 +997,6 @@
       body.ui-v2 .card h2 {
         margin: 0 0 var(--space-3) 0;
       }
-      /* Zero the browser-default ``margin-block-end: 1em`` on
-         <form>. Hidden form shells (e.g. the
-         ``*-bulk-form`` shells the Reviewers / Reviewees /
-         Relationships pages park between the bottom-grid above
-         the data table and the data-table card itself) would
-         otherwise add ~16px of extra gap on top of the
-         bottom-grid's margin-bottom — producing a visibly
-         larger inter-card gap there than between other cards.
-         The codebase already zeroes form margin in many
-         scoped contexts (.operator-actions-card form, etc.);
-         this lifts the convention to a global default. */
-      body.ui-v2 form { margin: 0; }
       body.ui-v2 .card.lock {
         border-color: var(--accent-amber-dark);
         background: var(--accent-amber-bg);
