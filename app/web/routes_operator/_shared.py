@@ -179,6 +179,17 @@ def require_relationships_enabled_session(
     return review_session
 
 
+def require_observers_enabled_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """Route gate for the per-session ``observers_enabled``
+    toggle — symmetric to ``require_relationships_enabled_session``.
+    """
+    if not review_session.observers_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return review_session
+
+
 def _require_response_loss_ack(
     db: Session, review_session: ReviewSession, ack: str | None
 ) -> None:
