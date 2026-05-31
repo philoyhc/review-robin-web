@@ -22,6 +22,7 @@ class Reviewer(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
+    profile_link: Mapped[str | None] = mapped_column(String(2000))
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
     tag_1: Mapped[str | None] = mapped_column(String(255))
     tag_2: Mapped[str | None] = mapped_column(String(255))

@@ -589,6 +589,26 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "relationship.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    # Participant-model Phase 1 — event-schema allowlist entries
+    # for the post-MVP arc. Registered here ahead of any emitter
+    # (so adding the emitter in a later slice is a one-line code
+    # change, not a schema decision). Mirrors the
+    # ``reviewer.*`` / ``reviewers.*`` family naming for the
+    # observer roster; the ``session.*`` and ``results.*``
+    # additions are participant-model-specific. See
+    # ``guide/participant_model_upgrade.md`` §3.5.
+    "observer.created": EventSchema(_IDENTITY | {"snapshot"}),
+    "observer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "observers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "instrument.view_policy_set": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
+    "session.schedule_set": EventSchema(_IDENTITY | {"changes"}),
+    "session.feature_toggled": EventSchema(_IDENTITY | {"changes"}),
+    "results.released": EventSchema(_IDENTITY | {"snapshot"}),
+    "results.acknowledged": EventSchema(_IDENTITY | {"snapshot", "refs"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
     # Segment 18B PR 2 — per-operator default display timezone.

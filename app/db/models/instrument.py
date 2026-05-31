@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         InstrumentDisplayField,
         InstrumentResponseField,
     )
+    from app.db.models.instrument_view_policy import InstrumentViewPolicy
     from app.db.models.review_session import ReviewSession
 
 
@@ -184,6 +185,10 @@ class Instrument(Base, TimestampMixin):
         order_by="InstrumentResponseField.order",
     )
     assignments: Mapped[list[Assignment]] = relationship(
+        back_populates="instrument",
+        cascade="all, delete-orphan",
+    )
+    view_policies: Mapped[list[InstrumentViewPolicy]] = relationship(
         back_populates="instrument",
         cascade="all, delete-orphan",
     )
