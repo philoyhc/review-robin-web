@@ -163,6 +163,22 @@ def _require_editable(review_session: ReviewSession) -> None:
         )
 
 
+def require_relationships_enabled_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """Route gate for the per-session ``relationships_enabled``
+    toggle (``guide/participant_model_upgrade.md`` §3.8).
+
+    Returns 404 when the feature is off so deep links to a tab
+    the operator hasn't enabled cleanly miss rather than render
+    an orphan page. Wraps ``require_session_operator`` so the
+    permission check still runs first.
+    """
+    if not review_session.relationships_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return review_session
+
+
 def _require_response_loss_ack(
     db: Session, review_session: ReviewSession, ack: str | None
 ) -> None:

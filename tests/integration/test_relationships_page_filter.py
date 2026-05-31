@@ -23,9 +23,12 @@ def _make_session(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
+    review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+    review_session.relationships_enabled = True
+    db.commit()
+    return review_session
 
 
 def _seed(

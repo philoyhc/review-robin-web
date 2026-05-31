@@ -34,8 +34,14 @@
        href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
     <a class="nav-tab{% if current_page == 'Reviewees' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+    {# Relationships is an optional Setup tab — gated by the
+       per-session ``relationships_enabled`` toggle on Edit
+       Session Details (User interface settings card).
+       ``guide/participant_model_upgrade.md`` §3.8. #}
+    {% if session.relationships_enabled %}
     <a class="nav-tab{% if current_page == 'Relationships' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/relationships">Relationships</a>
+    {% endif %}
     <a class="nav-tab{% if current_page == 'Instruments' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
     <a class="nav-tab{% if current_page == 'Email Template' %} active{% endif %}"

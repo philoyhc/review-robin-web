@@ -38,6 +38,8 @@ def _make_session(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+    review_session.relationships_enabled = True
+    db.commit()
     if status != "draft":
         review_session.status = status
         db.commit()

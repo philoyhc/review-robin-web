@@ -34,7 +34,6 @@ from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
-    require_session_operator,
 )
 from app.web.routes_operator._shared import (
     _SETUP_DEFAULT_CAP,
@@ -42,6 +41,7 @@ from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
     _require_editable,
     _save_field_labels,
+    require_relationships_enabled_session,
     _templates,
 )
 
@@ -62,7 +62,7 @@ def relationships_list(
     edit_id: int | None = None,
     add: int = 0,
     selected: list[int] = Query(default=[]),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -90,7 +90,7 @@ async def relationships_import_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -142,7 +142,7 @@ async def relationships_import_submit(
 @router.post("/sessions/{session_id}/relationships/delete-all")
 def relationships_delete_all(
     confirm: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -191,7 +191,7 @@ def relationships_create(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -279,7 +279,7 @@ def relationships_update(
     status_value: str = Form(default="active", alias="status"),
     filter_search_by: str = Form(default="reviewer"),
     filter_q: str = Form(default=""),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -363,7 +363,7 @@ def relationships_bulk_inactivate(
     relationship_ids: list[int] = Form(default=[]),
     filter_search_by: str = Form(default="reviewer"),
     filter_q: str = Form(default=""),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -392,7 +392,7 @@ def relationships_bulk_reactivate(
     relationship_ids: list[int] = Form(default=[]),
     filter_search_by: str = Form(default="reviewer"),
     filter_q: str = Form(default=""),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -650,7 +650,7 @@ _PAIR_CONTEXT_SLOTS: tuple[tuple[str, str], ...] = (
 )
 async def relationships_save_field_labels(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

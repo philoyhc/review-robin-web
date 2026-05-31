@@ -3,7 +3,14 @@ from __future__ import annotations
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
+from app.db.models import (
+    AuditEvent,
+    Observer,
+    Relationship,
+    ReviewSession,
+    SessionOperator,
+    User,
+)
 from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
 from app.services import audit, operator_settings, session_lifecycle as lifecycle
@@ -155,12 +162,39 @@ def update_session(
         "scheduled_activate_at",
         "invite_offsets",
         "reminder_offsets",
+        "relationships_enabled",
+        "observers_enabled",
     ):
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)
         if old != new:
             diffs[field_name] = [old, new]
             setattr(review_session, field_name, new)
+    db.flush()
+
+    # Lock-on-data — once a roster has rows, the corresponding
+    # toggle cannot flip True→False (it would orphan the data).
+    # The Edit Session UI renders the checkbox `disabled` in this
+    # state, so the form simply omits the field; but a direct
+    # API call could still attempt the flip. Silent no-op for
+    # safety. See ``guide/participant_model_upgrade.md`` §3.8
+    # "Lock-on-data".
+    if "relationships_enabled" in diffs:
+        old, new = diffs["relationships_enabled"]
+        if old is True and new is False and _has_relationships(
+            db, review_session.id
+        ):
+            review_session.relationships_enabled = True
+            del diffs["relationships_enabled"]
+    # Observers symmetric — defensive even though the table ships
+    # empty today; future operators may flip after populating.
+    if "observers_enabled" in diffs:
+        old, new = diffs["observers_enabled"]
+        if old is True and new is False and _has_observers(
+            db, review_session.id
+        ):
+            review_session.observers_enabled = True
+            del diffs["observers_enabled"]
     db.flush()
 
     # 18G Part 1 — when scheduled_activate_at changes, also emit a
@@ -204,6 +238,27 @@ def update_session(
             payload=audit.changes(
                 {"reminder_offsets": diffs["reminder_offsets"]}
             ),
+            correlation_id=correlation_id,
+        )
+    # Participant-model §3.8 — dedicated event when either of the
+    # per-session feature toggles flips. Carries only the toggle
+    # changes; the general ``session.updated`` still records them
+    # alongside other field edits in the same save.
+    toggle_changes = {
+        f: diffs[f]
+        for f in ("relationships_enabled", "observers_enabled")
+        if f in diffs
+    }
+    if toggle_changes:
+        audit.write_event(
+            db,
+            event_type="session.feature_toggled",
+            summary=(
+                f"Session {review_session.code} feature toggle(s) updated"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes(toggle_changes),
             correlation_id=correlation_id,
         )
 
@@ -321,3 +376,32 @@ def delete_session(
             "correlation_id": correlation_id,
         },
     )
+
+
+
+def _has_relationships(db: Session, session_id: int) -> bool:
+    """True iff any ``relationships`` row exists for the session.
+
+    Drives the lock-on-data check in ``update_session`` for the
+    ``relationships_enabled`` toggle — once data is configured,
+    the operator cannot flip the toggle off (it would orphan the
+    data) without first deleting the rows.
+    """
+    return db.execute(
+        select(Relationship.id)
+        .where(Relationship.session_id == session_id)
+        .limit(1)
+    ).scalar_one_or_none() is not None
+
+
+def _has_observers(db: Session, session_id: int) -> bool:
+    """True iff any ``observers`` row exists for the session.
+
+    Symmetric helper to ``_has_relationships`` for the
+    ``observers_enabled`` toggle.
+    """
+    return db.execute(
+        select(Observer.id)
+        .where(Observer.session_id == session_id)
+        .limit(1)
+    ).scalar_one_or_none() is not None

@@ -43,6 +43,8 @@ def _operator_creates_session_with_pair(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+    review_session.relationships_enabled = True
+    db.commit()
     operator_client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
