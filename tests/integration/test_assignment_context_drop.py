@@ -83,6 +83,8 @@ def test_lazy_seed_fires_from_relationships_save(
             ReviewSession.code == "lazy-seed-rel"
         )
     ).scalar_one()
+    review_session.relationships_enabled = True
+    db.commit()
 
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",

@@ -38,6 +38,13 @@ class SessionCreate(BaseModel):
     # ``invite_offsets``. Inert via the §8.2.2 anchor-null rule
     # when ``deadline`` is unset.
     reminder_offsets: list[str] | None = None
+    # Participant-model Phase 2 — per-session feature toggles
+    # gating the optional Setup tabs. Both default ``False``;
+    # operators opt in via the User interface settings card on
+    # Session Edit Details. See
+    # ``guide/participant_model_upgrade.md`` §3.8.
+    relationships_enabled: bool = False
+    observers_enabled: bool = False
 
 
 class SessionRead(BaseModel):

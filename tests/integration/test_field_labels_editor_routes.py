@@ -31,9 +31,12 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
+    review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+    review_session.relationships_enabled = True
+    db.commit()
+    return review_session
 
 
 def _actor(db: Session) -> User:

@@ -206,6 +206,17 @@ def session_edit_form(
             "schedule_timeline_rows": views.build_schedule_timeline(
                 review_session, session_timezone
             ),
+            # Participant-model §3.8 — lock-on-data signals for the
+            # User interface settings card. Each ``True`` disables the
+            # corresponding checkbox in the UI; the service-layer
+            # toggle handler also rejects True→False flips when rows
+            # exist, so direct API calls can't bypass the lock.
+            "has_relationships": sessions._has_relationships(
+                db, review_session.id
+            ),
+            "has_observers": sessions._has_observers(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
@@ -224,6 +235,8 @@ def session_edit_submit(
     reminder_offsets: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
+    relationships_enabled: bool = Form(default=False),
+    observers_enabled: bool = Form(default=False),
     review_session: ReviewSession = Depends(
         require_sys_admin_or_session_operator
     ),
@@ -323,6 +336,8 @@ def session_edit_submit(
         scheduled_activate_at=parsed_scheduled_activate_at,
         invite_offsets=parsed_invite_offsets,
         reminder_offsets=parsed_reminder_offsets,
+        relationships_enabled=relationships_enabled,
+        observers_enabled=observers_enabled,
     )
     sessions.update_session(
         db,

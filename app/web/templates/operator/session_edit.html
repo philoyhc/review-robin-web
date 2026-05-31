@@ -121,28 +121,6 @@
        form via the `form=` attribute. #}
     <div class="edit-half-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin-top: 20px;">
       <div style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-3);">
-        <div class="card edit-half-card" id="chrome-settings">
-        <h3 style="margin-top: 0;">Chrome settings</h3>
-        <p class="muted">
-          Per-session settings that change what appears in the
-          operator Setup nav.
-        </p>
-        {# Placeholder checkboxes — visual only. The persistence
-           wiring (writes to sessions.relationships_enabled /
-           .observers_enabled, shipped inert in PR #1678) +
-           Setup-nav conditional render land with the toggle
-           slice (W6 in guide/participant_model_prep.md). #}
-        <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
-          <label>
-            <input type="checkbox" disabled>
-            Relationships tab and page
-          </label>
-          <label>
-            <input type="checkbox" disabled>
-            Observers tab and page
-          </label>
-        </div>
-        </div>
         <div class="card edit-half-card" id="owners">
         <h3 style="margin-top: 0;">Owners</h3>
         <p class="muted">
@@ -250,6 +228,39 @@
             first.
           </p>
         {% endif %}
+        </div>
+
+        {# User interface settings — per-session feature toggles
+           gating which optional Setup tabs render. Sits below
+           Owners on the left column. Inputs use ``form=`` to
+           associate with the main edit-session-form so they
+           dirty the form and persist on Save. Each checkbox
+           renders disabled when the corresponding roster has
+           configured rows — see ``guide/participant_model_upgrade.md``
+           §3.8 lock-on-data. #}
+        <div class="card edit-half-card" id="user-interface-settings">
+          <h3 style="margin-top: 0;">User interface settings</h3>
+          <p class="muted">
+            Per-session toggles for the optional Setup tabs.
+          </p>
+          <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
+            <label{% if has_relationships %} title="Has configured data — delete all rows to disable"{% endif %}>
+              <input type="checkbox"
+                     name="relationships_enabled"
+                     form="edit-session-form"
+                     {% if session.relationships_enabled %}checked{% endif %}
+                     {% if has_relationships %}disabled{% endif %}>
+              Relationships tab and page
+            </label>
+            <label{% if has_observers %} title="Has configured data — delete all rows to disable"{% endif %}>
+              <input type="checkbox"
+                     name="observers_enabled"
+                     form="edit-session-form"
+                     {% if session.observers_enabled %}checked{% endif %}
+                     {% if has_observers %}disabled{% endif %}>
+              Observers tab and page
+            </label>
+          </div>
         </div>
 
         {# Save / Cancel below Owners on the left half. Buttons
@@ -375,13 +386,24 @@
       const cancelBtn = document.getElementById("edit-cancel-btn");
       if (!form || !saveBtn || !cancelBtn) return;
 
-      const fields = form.querySelectorAll("input[name], textarea[name], select[name]");
+      // ``form.elements`` includes form-associated controls that
+      // sit *outside* the <form> tag and bind via ``form="..."``
+      // (e.g. the User interface settings checkboxes below
+      // Owners). ``querySelectorAll`` would miss those.
+      const fields = Array.from(form.elements).filter((el) => {
+        return el.name && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT");
+      });
       const initial = new Map();
-      fields.forEach((el) => { initial.set(el, el.value); });
+      fields.forEach((el) => {
+        initial.set(el, el.type === "checkbox" ? el.checked : el.value);
+      });
 
+      function currentValue(el) {
+        return el.type === "checkbox" ? el.checked : el.value;
+      }
       function isDirty() {
         for (const el of fields) {
-          if (el.value !== initial.get(el)) return true;
+          if (currentValue(el) !== initial.get(el)) return true;
         }
         return false;
       }
@@ -390,10 +412,23 @@
         saveBtn.disabled = !dirty;
         cancelBtn.disabled = !dirty;
       }
-      form.addEventListener("input", refresh);
-      form.addEventListener("change", refresh);
+      // Listen on document for the checkboxes that sit outside the
+      // form element; events from inside the form still bubble up.
+      document.addEventListener("input", function (ev) {
+        if (fields.includes(ev.target)) refresh();
+      });
+      document.addEventListener("change", function (ev) {
+        if (fields.includes(ev.target)) refresh();
+      });
       cancelBtn.addEventListener("click", function () {
-        fields.forEach((el) => { el.value = initial.get(el); });
+        fields.forEach((el) => {
+          const initialValue = initial.get(el);
+          if (el.type === "checkbox") {
+            el.checked = initialValue;
+          } else {
+            el.value = initialValue;
+          }
+        });
         refresh();
       });
     })();
