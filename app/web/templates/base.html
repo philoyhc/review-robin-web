@@ -758,14 +758,14 @@
       .bottom-left {
         display: flex;
         flex-direction: column;
-        /* No flex ``gap``: cards inside .bottom-left already carry
-           ``margin-bottom: var(--space-4)`` (16px) — the
-           ``body.ui-v2 .card`` rule wins over
-           ``.bottom-grid .card { margin-bottom: 0 }`` on specificity
-           (0,2,1 vs 0,2,0). Setting a flex gap here stacks on top
-           of that margin and doubles the perceived vertical gap
-           between adjacent cards (e.g. Quick Setup ↔ Extract
-           Setup on Session Home). */
+        /* Vertical gap between cards stacked in a .bottom-left
+           column (Session Home: Workflow ↔ Session Details on
+           the left, Quick Setup ↔ Extract Setup on the right).
+           Cards inside .bottom-grid have ``margin-bottom: 0``,
+           so this gap is the sole source of inter-card spacing
+           here. 20px matches the horizontal ``column-gap`` on
+           the surrounding ``.bottom-grid``. */
+        gap: 20px;
       }
       .fill-col {
         display: flex;
@@ -992,7 +992,15 @@
         border-radius: var(--radius-card);
         background: var(--bg-page);
         padding: var(--space-4);
-        margin-bottom: var(--space-4);
+        /* No margin-bottom here: it was producing a doubled
+           vertical gap on the Setup pages (the cards' margin
+           compounded with ``.bottom-grid``'s own margin and the
+           ``align-items: start`` alignment offset). Cards now
+           rely on their wrapper's flex/grid gap or their
+           sibling's margin for vertical spacing. Specifically,
+           ``.bottom-left`` (Session Home's column wrapper)
+           carries its own ``gap`` so Quick Setup and Extract
+           Setup cards still sit apart. */
       }
       /* Page-grid / bottom-grid wrappers default to a 20px
          margin-bottom (off the spacing scale) — bring them onto
