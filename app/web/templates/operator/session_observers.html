@@ -26,26 +26,33 @@
           People who view collated responses without submitting any
           themselves.
         </p>
-        {% if observers %}
-          <table>
-            <tr>
-              <th>Email</th>
-              <th>Display name</th>
-              <th>Tag</th>
-            </tr>
+        <table>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Tag1</th>
+            <th>Status</th>
+          </tr>
+          {% if observers %}
             {% for observer in observers %}
               <tr>
-                <td><code>{{ observer.email }}</code></td>
                 <td>{{ observer.display_name or "—" }}</td>
+                <td><code>{{ observer.email }}</code></td>
                 <td>{{ observer.tag_1 or "—" }}</td>
+                <td>{{ observer.status }}</td>
               </tr>
             {% endfor %}
-          </table>
-        {% else %}
-          <p class="muted" style="margin-bottom: 0;">
-            No observers yet — use Upload observers below to add some.
-          </p>
-        {% endif %}
+          {% else %}
+            {# Mock data row — placeholder visualization until the
+               Observer roster slice (W10) wires real imports. #}
+            <tr class="muted">
+              <td>Jane Doe</td>
+              <td><code>jane.doe@example.org</code></td>
+              <td>committee</td>
+              <td>active</td>
+            </tr>
+          {% endif %}
+        </table>
       </div>
 
       <div class="card" id="observers-upload">
