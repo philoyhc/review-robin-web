@@ -51,7 +51,10 @@
       <div class="card" id="observers-upload">
         <h2 style="margin-top: 0;">Upload observers</h2>
         <p class="form-help">
-          CSV with columns ObserverName, ObserverEmail, ObserverTag.
+          CSV file in UTF-8, max {{ 5000 }} rows. Required column:
+          <code>ObserverEmail</code>. Optional columns:
+          <code>ObserverName</code>, <code>ObserverTag1</code>.
+          Other columns are ignored.
         </p>
         <input type="file" accept=".csv" disabled>
         <div class="btn-pair" style="margin-top: var(--space-3);">
