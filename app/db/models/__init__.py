@@ -4,7 +4,9 @@ from app.db.models.data_shape import DataShape
 from app.db.models.email_outbox import EmailOutbox
 from app.db.models.instrument import Instrument
 from app.db.models.instrument_field import InstrumentDisplayField, InstrumentResponseField
+from app.db.models.instrument_view_policy import InstrumentViewPolicy
 from app.db.models.invitation import Invitation
+from app.db.models.observer import Observer
 from app.db.models.relationship import Relationship
 from app.db.models.response import Response
 # Per-session ``response_type_definitions`` table retired 2026-05-26.
@@ -32,7 +34,9 @@ __all__ = [
     "Instrument",
     "InstrumentDisplayField",
     "InstrumentResponseField",
+    "InstrumentViewPolicy",
     "Invitation",
+    "Observer",
     "Relationship",
     "Response",
     "ReviewSession",

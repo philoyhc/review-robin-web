@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -26,6 +27,9 @@ class Reviewee(Base, TimestampMixin):
     tag_1: Mapped[str | None] = mapped_column(String(255))
     tag_2: Mapped[str | None] = mapped_column(String(255))
     tag_3: Mapped[str | None] = mapped_column(String(255))
+    results_acknowledged_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     session: Mapped[ReviewSession] = relationship(back_populates="reviewees")
     assignments: Mapped[list[Assignment]] = relationship(

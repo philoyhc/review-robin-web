@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, true
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, false, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.db.models.email_outbox import EmailOutbox
     from app.db.models.instrument import Instrument
     from app.db.models.invitation import Invitation
+    from app.db.models.observer import Observer
     from app.db.models.reviewee import Reviewee
     from app.db.models.reviewer import Reviewer
     from app.db.models.session_field_label import SessionFieldLabel
@@ -119,6 +120,19 @@ class ReviewSession(Base, TimestampMixin):
     retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     retention_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Participant-model Phase 1 — per-session toggles for the two
+    # optional Setup tabs. Default ``False``: today's behaviour is
+    # operator opts in. The Setup-nav conditional render and
+    # lock-on-data wiring lands in the Phase 3 toggle slice (W6);
+    # the column itself ships inert here. See
+    # ``guide/participant_model_upgrade.md`` §3.8.
+    relationships_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default=false()
+    )
+    observers_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default=false()
+    )
+
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
     )
@@ -133,6 +147,10 @@ class ReviewSession(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     reviewees: Mapped[list[Reviewee]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    observers: Mapped[list[Observer]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
     )
