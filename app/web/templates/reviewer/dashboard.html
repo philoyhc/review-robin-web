@@ -12,7 +12,6 @@
     <div class="card">
       <table>
         <tr>
-          <th>Roles</th>
           <th>Session</th>
           <th>Start</th>
           <th>End</th>
@@ -25,26 +24,28 @@
         {% for item in items %}
           <tr>
             <td>
-              {# Cross-role pill stack — a row can carry multiple
-                 pills once the lobby cross-role query (W18) lands;
-                 reviewer-only today. #}
-              {% for role in item.roles %}
-                {% if role == "reviewer" %}
-                  <span class="pill pill-role-reviewer">Reviewer</span>
-                {% elif role == "reviewee" %}
-                  <span class="pill pill-role-reviewee">Reviewee</span>
-                {% elif role == "observer" %}
-                  <span class="pill pill-role-observer">Observer</span>
-                {% endif %}
-              {% endfor %}
-            </td>
-            <td>
               {% if item.link_enabled %}
                 <a href="{{ item.link_target }}">
                   {{ item.session.name }}
                 </a>
               {% else %}
                 {{ item.session.name }}
+              {% endif %}
+              {# Cross-role pill stack rendered on the line below
+                 the session name — keeps the row compact and
+                 anchors the roles to the session they apply to. #}
+              {% if item.roles %}
+                <div style="margin-top: 4px;">
+                  {% for role in item.roles %}
+                    {% if role == "reviewer" %}
+                      <span class="pill pill-role-reviewer">Reviewer</span>
+                    {% elif role == "reviewee" %}
+                      <span class="pill pill-role-reviewee">Reviewee</span>
+                    {% elif role == "observer" %}
+                      <span class="pill pill-role-observer">Observer</span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
               {% endif %}
             </td>
             <td>
@@ -133,9 +134,6 @@
              parent session row at the same ``/1`` URL). #}
           {% for sub in item.page_rows %}
             <tr class="dashboard-page-row">
-              {# Roles column on a sub-row stays empty — the parent
-                 row carries the role pills. #}
-              <td></td>
               <td class="muted" style="padding-left: 24px;">
                 ↳
                 {% if item.link_enabled %}
