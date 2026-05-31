@@ -1410,6 +1410,110 @@ Three slices:
 
 ---
 
+### Participant-model surface slices — Phase 2 + Phase 3 (partial) — done 2026-05-30 → 2026-05-31 (PRs #1684 → #1717)
+
+Continues the prep stream from PRs #1671 → #1680, building
+out the participant-model **surface** slices on top of the
+inert Phase 1 schema and helper stubs. Closes Phase 2
+placeholders P1 / P2 / P3 / P4 / P5 / P6 / P7 and Phase 3
+wiring W6 / W9 / W10 / W14 / W18 from
+`guide/participant_model_prep.md`. Unshipped after this
+stream: W4 stub (functionality landed inline in
+`_dashboard.py` instead of `participants.sessions_for_user`),
+W5 / W7 / W8 / W11 (partial) / W12 / W13 / W15 / W16 /
+W17 / W19 / W20 / W21.
+
+- **`/me/` lobby cross-role union** (PR **#1684** layout +
+  **#1709** query + **#1712** fold + **#1714** linking +
+  **#1715** chips). Dashboard route was scoped to active
+  reviewers only; now unions reviewer + email-identified
+  reviewee + observer rosters (case-insensitive email match,
+  active rows only) and emits one row per session the user
+  touches. Role pills render on a second line beneath the
+  session name (no dedicated Roles column); session-name +
+  per-pill links route to the appropriate surface via
+  priority Reviewer → Reviewee → Observer with per-role
+  reachability gates. Each `/me/sessions/{id}/*` surface
+  (review_surface, summary, results, collation) carries a
+  role-navigator chip strip below the header so a multi-
+  role user can swap surfaces without going back to `/me`;
+  shared `build_role_chips` helper + `_role_chips.html`
+  partial + `.rs-role-nav-active` / `.rs-role-nav-muted`
+  styles.
+
+- **Per-session feature toggles — both sides** (PR **#1685**
+  Session Edit + **#1705** New Session form). Two-checkbox
+  "User interface settings" card (Relationships tab /
+  Observers tab) on Session Edit Details and New Session
+  forms; values flow through `SessionCreate` end-to-end.
+  Setup nav reads the flags and gates the tabs;
+  `require_relationships_enabled_session` +
+  `require_observers_enabled_session` 404 deep links when
+  off; lock-on-data check rejects True→False flips when
+  rows exist; `session.feature_toggled` audit event fires
+  on flip.
+
+- **Observers Setup page — CRUD** (PR **#1686** placeholder +
+  **#1687** → **#1692** polish + PR **#1706** CRUD).
+  `/operator/sessions/{id}/observers` (gated on
+  `observers_enabled`) ships as a fully functional Setup-
+  roster page mirroring Reviewers / Reviewees.
+  `app/services/observers.py` (create / update /
+  bulk in-/reactivate + `ObserverOperationError`),
+  `csv_imports.parse_observer_csv` / `save_observers` /
+  `delete_all_observers` / `existing_observer_count`,
+  `ObserverImportRow`, `observers.imported` audit event,
+  `OBSERVERS_STATUS_OPTIONS` / `filter_observers_rows` /
+  `observers_search_options` view helpers; full route
+  surface (page + create + update + bulk in-/reactivate +
+  delete-all + import). Single-tag observer keeps the
+  friendly-label editor card out of scope.
+
+- **Reviewee + observer placeholder surfaces** (PR **#1713** +
+  **#1715** chips). `GET /me/sessions/{id}/results` and
+  `GET /me/sessions/{id}/collation` render the reviewer-
+  surface chrome (h1 + inline caption + `rs-status-panel`
+  description card), gated by `require_reviewee_in_session`
+  / `require_observer_in_session`. Real body content lands
+  with W16 / W17. Mount-order trap: registered **before**
+  `_surface` in `routes_reviewer/__init__.py` so the
+  catch-all `/me/sessions/{id}/{page_n}` doesn't swallow
+  `/results` / `/collation`.
+
+- **W14 — Session schedule authoring** (PR **#1716**). Wires
+  the previously-disabled `responses_release_at` (datetime-
+  local) and `release_until_offset` (ISO 8601 duration)
+  inputs on both Session Edit and New Session forms. New
+  validators `parse_and_validate_responses_release_at` (no
+  min-lead floor — operator can backdate) +
+  `parse_and_validate_release_until_offset` (positive-only,
+  365-day cap) in `scheduled_events.py`; `SessionCreate`
+  schema fields; persistence + diff in `create_session` /
+  `update_session`; route layer parses + threads both.
+  Anchor-null inertness (§8.2.2) stays enforced at view
+  time.
+
+- **Polish + safety** (PR **#1693** → **#1703** card-spacing
+  audit + PR **#1710** operator-lobby access gate
+  regression test + PR **#1717** schedule sub-grid row
+  alignment). Inter-card gaps unified at 16px vertical /
+  20px horizontal across `.bottom-grid` / `.bottom-left` /
+  `.extract-data-grid` / `.extract-data-column`. Regression
+  test pins the contract: only SessionOperator owners +
+  sys-admins reach `/operator/*`; reviewer / reviewee /
+  observer roster membership confers no operator access.
+  Schedule sub-grid restructured as 3-row × 2-col with
+  `grid-auto-flow: column` so End ↔ Auto-send reminders
+  and Release responses from ↔ Release responses until
+  align row-for-row.
+
+**Plans:** `guide/participant_model_upgrade.md` (design) +
+`guide/participant_model_prep.md` (implementation-phase
+audit — markers + "What's shipped" swept through PR #1717
+in this stream).
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -1485,16 +1589,29 @@ at the bottom of this file.
 
 > **Beyond the MVP — segments 21+.** This file tracks the
 > current review-platform MVP (segments **1–20**) plus the
-> **Participants Model Prep** items now landing ahead of the
-> full segments 21+ work (see the matching Done entry above).
-> The participant-model **surface slices** (Phases 2 / 3 of
-> `guide/participant_model_prep.md` — the `/me/` lobby with
-> role pills, the `/results` / `/collation` surfaces, the
-> visibility-policy editor, observer roster, the toggle-driven
-> Setup nav, etc.) remain unscheduled in this file. The
-> umbrella design lives at `guide/participant_model_upgrade.md`;
-> a dedicated todo file will be started when the surface slices
-> are scoped.
+> **Participants Model Prep + Phase 2 / Phase 3 surface
+> slices** now landing ahead of the full segments 21+ work
+> (see the matching Done entries above). All seven Phase 2
+> placeholders (P1–P7) are shipped, along with W6 toggle
+> wiring, W9 friendly-label retirement, W10 Observer CRUD,
+> W14 session-schedule authoring (Release-from / Release-
+> until), and W18 cross-role `/me` lobby union. **Still
+> unscheduled in this file** (each tracked individually in
+> `guide/participant_model_prep.md`): the visibility-policy
+> resolver + editor (W7 / W15), the reviewee-reachability
+> warning on Validate (W8), reviewer `profile_link` surface
+> mirror finish (W11 partial), Quick Setup Observer slot
+> submission (W12), Extract Setup observer shapes (W13),
+> reviewee results / observer collation real-body wiring
+> (W16 / W17), Acknowledge flow (W19), participant-side
+> email notifications (W20 — gated on Segment 14B), and
+> magic-link landings (W21 — blocked on the
+> `invitations`-extensibility design call). The umbrella
+> design lives at `guide/participant_model_upgrade.md`; the
+> implementation-phase audit at
+> `guide/participant_model_prep.md` carries current marker
+> state; a dedicated todo file will be started when the
+> remaining surface slices are scoped.
 
 ### Sequencing notes
 
