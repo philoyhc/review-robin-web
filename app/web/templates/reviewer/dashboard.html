@@ -12,15 +12,32 @@
     <div class="card">
       <table>
         <tr>
+          <th>Roles</th>
           <th>Session</th>
           <th>Start</th>
           <th>End</th>
+          <th>View responses</th>
+          <th>Until</th>
           <th>Timezone</th>
           <th>Session status</th>
           <th>Reviewer status</th>
         </tr>
         {% for item in items %}
           <tr>
+            <td>
+              {# Cross-role pill stack — a row can carry multiple
+                 pills once the lobby cross-role query (W18) lands;
+                 reviewer-only today. #}
+              {% for role in item.roles %}
+                {% if role == "reviewer" %}
+                  <span class="pill pill-role-reviewer">Reviewer</span>
+                {% elif role == "reviewee" %}
+                  <span class="pill pill-role-reviewee">Reviewee</span>
+                {% elif role == "observer" %}
+                  <span class="pill pill-role-observer">Observer</span>
+                {% endif %}
+              {% endfor %}
+            </td>
             <td>
               {% if item.link_enabled %}
                 <a href="{{ item.link_target }}">
@@ -52,6 +69,20 @@
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
+            </td>
+            <td>
+              {# View responses — placeholder. Populates once the
+                 reviewee results surface (/me/sessions/{id}/results)
+                 + observer collation surface
+                 (/me/sessions/{id}/collation) wire up via W16 / W17. #}
+              <span class="muted">—</span>
+            </td>
+            <td>
+              {# Until — placeholder. Will show
+                 ``responses_release_at + release_until_offset``
+                 (the 18G anchor+offset close time) once the
+                 view-responses access window wires up. #}
+              <span class="muted">—</span>
             </td>
             <td>
               <span class="pill pill-count">
@@ -96,6 +127,9 @@
              parent session row at the same ``/1`` URL). #}
           {% for sub in item.page_rows %}
             <tr class="dashboard-page-row">
+              {# Roles column on a sub-row stays empty — the parent
+                 row carries the role pills. #}
+              <td></td>
               <td class="muted" style="padding-left: 24px;">
                 ↳
                 {% if item.link_enabled %}
@@ -106,6 +140,11 @@
                   {{ sub.label }}
                 {% endif %}
               </td>
+              {# Start / End / View responses / Until / Timezone /
+                 Session status — empty on the sub-row; the
+                 parent row owns those values. #}
+              <td></td>
+              <td></td>
               <td></td>
               <td></td>
               <td></td>

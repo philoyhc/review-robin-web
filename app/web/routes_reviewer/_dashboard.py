@@ -208,6 +208,14 @@ def reviewer_dashboard(
             {
                 "reviewer": reviewer,
                 "session": review_session,
+                # Per-row role list driving the Roles column's
+                # pill stack. Reviewer-only today because the
+                # query joins ``reviewers`` only; the cross-role
+                # union (W18 in guide/participant_model_prep.md)
+                # will populate this from
+                # ``app.services.participants.sessions_for_user``
+                # so a row can carry multiple pills.
+                "roles": ["reviewer"],
                 "pill": pill,
                 "session_status": session_status,
                 # The Session column links to the response surface

@@ -2166,6 +2166,23 @@
         background: var(--accent-green-bg);
         color: var(--accent-green);
       }
+      /* Role pills for the /me/ lobby cross-role column. The
+         dashboard query is reviewer-only today; the three
+         classes are pre-positioned so the participant-model
+         surface slices (lobby cross-role query — W18) can paint
+         multiple pills per row without further CSS work. */
+      body.ui-v2 .pill-role-reviewer {
+        background: var(--accent-blue-bg);
+        color: var(--accent-blue-dark);
+      }
+      body.ui-v2 .pill-role-reviewee {
+        background: var(--accent-green-bg);
+        color: var(--accent-green);
+      }
+      body.ui-v2 .pill-role-observer {
+        background: var(--accent-amber-bg);
+        color: var(--accent-amber-dark);
+      }
       /* Banners — single .banner shell + four semantic variants.
          Defined for completeness; not rendered on this page. */
       body.ui-v2 .banner {
