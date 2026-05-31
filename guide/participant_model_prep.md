@@ -82,13 +82,13 @@ Phase 3.
 
 | # | Placeholder | Ref | Notes |
 |---|---|---|---|
-| P1 | Empty Observers Setup page | §3.1 | Page renders with column headers + a "No observers yet" empty state. No add / import affordance. Operators see the page shape. |
+| P1 | Empty Observers Setup page | §3.1 | ✓ shipped (#1686, polish via #1687–#1692). Two-column page grid (Upload + Operator actions row above; full-width Observers table; Danger Zone half-width below). Observers table has 6 columns (select-checkbox / Name / Email / Tag1 / Status / Updated) with per-column sort; rendering reads `observers` directly so seeded rows display in place of the mock row. |
 | P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | Three audience rows (Reviewee / Peer reviewer / Observer) render with disabled toggles and a "Authoring coming soon" hint. |
 | P3 | Session-schedule authoring card on Settings | §3.4 | Four datetime inputs render disabled, anchored at the 18G columns. Read-only display of any existing values. |
-| P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | Checkboxes render, default-unchecked. Submission persists silently to the S7 / S8 columns but the Setup nav doesn't yet read them — Phase 3 wires the gate. |
+| P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | ⚠ partially shipped — Session Settings side fully wired via #1685 (User interface settings card on Session Edit Details: checkboxes inside the main edit form, dirty Save, persisted on submit, lock-on-data UI). **Remaining:** the same two-checkbox card on the New Session creation form. |
 | P5 | Empty `/me/sessions/{id}/results` page | §5 | Reviewee landing renders "Your results will appear here when released." Gated on `require_reviewee_in_session` (which can be the no-op pre-position version from W2). |
 | P6 | Empty `/me/sessions/{id}/collation` page | §5 | Observer landing renders the same shape with "Collation will appear here once released." |
-| P7 | Role-pill column on the `/me/` lobby table | §5 | Column appears in the existing dashboard table; renders a single "Reviewer" pill on every row since the query is reviewer-only today. Phase 3 broadens the query and the column carries real values. |
+| P7 | Role-pill column on the `/me/` lobby table | §5 | ✓ shipped (#1684). Three CSS classes (`.pill-role-reviewer` blue / `.pill-role-reviewee` green / `.pill-role-observer` amber) under `body.ui-v2`. View adapter passes `"roles": ["reviewer"]` per item today; the cross-role query (W18) populates the list with the real role mix later. New columns "View responses" + "Until" added as placeholder em-dashes — they light up with the reviewee `/results` + observer `/collation` surfaces. |
 
 Surfaces deliberately **not** in Phase 2 (defer to Phase 3 because
 the inert form would mislead users):
@@ -115,7 +115,7 @@ Lights up the placeholders.
 | W3 | `require_observer_in_session` dependency | §4 | ✓ shipped (PR 2) | Defined in `app/web/deps.py`; no route mounts it yet. |
 | W4 | `app/services/participants.py` cross-role query | §5 | ⚠ shape stub | `ParticipantSession` dataclass + `sessions_for_user` signature shipped; body returns `[]`. The real union query lands with W18. |
 | W5 | `app/services/collation.py` service | §7 | ⚠ | Pure code can pre-position; rendering needs `instrument_view_policies` rows from W15. |
-| W6 | Per-session toggle wiring | §3.8 | ✘ | Setup nav reads S7 / S8; route guards (404 when off); lock-on-data check on the Settings card; migration backfill `relationships_enabled = TRUE` for sessions with existing rows. |
+| W6 | Per-session toggle wiring | §3.8 | ✓ shipped (#1685 + #1686) | Both flags wired end-to-end: Setup nav reads `relationships_enabled` / `observers_enabled` and conditionally renders the tabs; new `require_relationships_enabled_session` + `require_observers_enabled_session` route gates return 404 when the flag is off; lock-on-data check at the service layer rejects True→False flips when rows exist (so a direct API call can't bypass the disabled UI); `session.feature_toggled` audit event fires when either flag flips. No migration backfill — operator confirmed FALSE for all existing sessions per S7. |
 | W7 | Visibility-policy resolver | §3.3 | ✘ | View-time join through `instrument_id` to `instrument_view_policies`. Drives what reviewees / observers see on W17 / W18. |
 | W8 | Reviewee-reachability warning on Validate page | §3.3 | ✘ | Cross-cutting soft warning; calls W1. |
 | W9 | Friendly-label retirement | §3.7 | ✓ shipped (#1680) | Reviewee identity slots (Name / Email_Identifier / Profile) dropped from the editor + Settings-CSV allowlist; alembic `c8d4e9f1a2b3` deletes persisted override rows. Reviewer side already had only tag slots — no change needed. |
@@ -140,12 +140,34 @@ Lights up the placeholders.
   S7, S8, S9, S10, S11. Alembic migration `b3e7d2a4c8f1`.
 - **Phase 1 helper / dependency stubs** (PR #1679) — W1, W2,
   W3, W4 as dead code / shape-only.
-- **First slice past prep** (PR #1680):
+- **§3.7 friendly-label retirement + §3.9 partial**
+  (PR #1680):
   - W9 friendly-label retirement (reviewee identity slots
-    retired; alembic `c8d4e9f1a2b3` drops persisted overrides).
-  - W11 partial — Reviewer PhotoLink wired through Quick Setup
-    (CSV import) + Extract Settings (CSV output). Remaining
-    surface-mirror touchpoints listed inline on the W11 row.
+    retired; alembic `c8d4e9f1a2b3` drops persisted
+    overrides).
+  - W11 partial — Reviewer PhotoLink wired through Quick
+    Setup (CSV import) + Extract Settings (CSV output).
+    Remaining surface-mirror touchpoints listed inline on
+    the W11 row.
+- **`/me/` lobby cross-role layout** (PR #1684) — P7
+  shipped. New columns + role-pill stack ready for the
+  cross-role query (W18) to populate.
+- **Per-session feature toggles — Session Settings side**
+  (PR #1685) — P4 partial (Session Settings card fully
+  wired) + W6 Relationships side.
+- **Observers placeholder Setup page + nav gating**
+  (PR #1686) — P1 shipped; W6 Observers side completes the
+  toggle wiring.
+- **Observers page polish** (PRs #1687 → #1692) — help-text
+  styling alignment with Reviewers/Reviewees, button-style
+  conventions, Upload-card column-list parity (ObserverTag1),
+  full-width data-table layout, 6-column sortable table with
+  mock row + select-checkbox + Updated column.
+- **Card-spacing audit** (PRs #1693 → #1703) — diagnosed
+  and resolved the doubled / mismatched inter-card gaps
+  on Setup pages and Session Home; gaps now uniform 16px
+  vertical / 20px horizontal across `.bottom-grid` /
+  `.bottom-left` / `.extract-data-grid` / `.extract-data-column`.
 
 Each subsequent Phase 2 / Phase 3 slice lights up a subset of
 the Phase 1 schema without doing its own migration.

@@ -27,6 +27,16 @@ Prep work has started landing ahead of any named segment. As of
   (PR #1679) — W1 / W2 / W3 / W4 callable, no consumers yet.
 - **§3.7 friendly-label retirement** + **§3.9 partial** (Quick
   Setup + Extract for Reviewer PhotoLink) shipped (PR #1680).
+- **§5 lobby column shell** shipped (PR #1684) — the unified
+  participant landing's role-pill column + placeholder
+  "View responses" / "Until" cells are in place; the
+  cross-role query (W18) populates them later.
+- **§3.8 per-session feature toggles wired end-to-end** —
+  Session Settings card with the two checkboxes + Setup-nav
+  gating + 404 route guards + lock-on-data (PR #1685);
+  Observers placeholder Setup page sits behind the toggle
+  (PR #1686); follow-on polish on the Observers card layout
+  + button + spacing conventions across PRs #1687 → #1703.
 
 The detailed audit lives at `guide/participant_model_prep.md`;
 this doc stays the rationale-and-design surface.
