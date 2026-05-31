@@ -749,7 +749,13 @@
       .bottom-left {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        /* Match the canonical inter-card vertical gap
+           (``body.ui-v2 .card`` carries ``margin-bottom:
+           var(--space-4)`` = 16px). Was 20px historically and
+           produced a visibly larger gap on Session Home between
+           the Quick Setup and Extract Setup cards than between
+           any other adjacent card pair on the page. */
+        gap: var(--space-4);
       }
       .fill-col {
         display: flex;
