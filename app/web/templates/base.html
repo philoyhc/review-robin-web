@@ -742,15 +742,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 20px;
-        /* ``stretch`` (the grid default) so a shorter card grows
-           to match the taller one in the same row — otherwise
-           ``align-items: start`` leaves visible empty space
-           below the shorter card, making the gap between the
-           shorter card's bottom border and the next sibling
-           below the grid look larger than other inter-card
-           gaps on the page. Mirrors ``.page-grid``'s alignment
-           treatment. */
-        align-items: stretch;
+        align-items: start;
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
