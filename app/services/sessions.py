@@ -48,6 +48,11 @@ def create_session(
         # anchored on ``deadline``. Same per-entry rules apply at
         # save time against the deadline anchor.
         reminder_offsets=payload.reminder_offsets,
+        # Participant-model Phase 2 — per-session feature toggles
+        # mirrored from the User interface settings card on the
+        # Create / Edit Session pages.
+        relationships_enabled=payload.relationships_enabled,
+        observers_enabled=payload.observers_enabled,
         created_by_user_id=user.id,
         # 18B PR 3 / PR 4: the per-session display timezone. The
         # Create Session form submits an explicit zone (defaulted to
