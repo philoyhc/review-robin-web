@@ -140,7 +140,7 @@ def test_lobby_roles_isolated_per_session(
     """A reviewer match in session A doesn't bleed into the row
     for session B."""
     s_match = _make_session(client, db, "match")
-    s_other = _make_session(client, db, "other")
+    _make_session(client, db, "other")
     db.add(
         Reviewer(
             session_id=s_match.id,
