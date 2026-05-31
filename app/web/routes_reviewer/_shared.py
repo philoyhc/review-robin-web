@@ -14,11 +14,22 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import and_, not_, select
+from sqlalchemy import and_, func, not_, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import Instrument, InstrumentDisplayField, Reviewer, User
+from app.db.models import (
+    Instrument,
+    InstrumentDisplayField,
+    Observer,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
+from app.services import participants
+from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.date_filters import (
     display_timezone_context_processor,
@@ -94,6 +105,117 @@ def reviewer_review_count_for_user(db: Session, user: User) -> int:
         select(Reviewer).where(Reviewer.status == "active")
     ).scalars()
     return sum(1 for r in rows if r.email.casefold() == target)
+
+
+# Ordered priority for the role-navigator chips on every
+# role-specific surface (review surface / summary / results /
+# collation). Reviewer carries the active work + deadline, so
+# it leads; reviewee + observer follow as read-only views.
+_ROLE_PRIORITY: tuple[str, ...] = ("reviewer", "reviewee", "observer")
+
+
+def build_role_chips(
+    db: Session,
+    *,
+    user: User,
+    review_session: ReviewSession,
+    active_role: str,
+) -> list[dict[str, object]]:
+    """Build the role-navigator chip list rendered below the
+    session-name header on each role-specific surface.
+
+    For every role the signed-in user holds on this session
+    (case-insensitive email match against the reviewers /
+    email-identified reviewees / observers rosters, ``status =
+    active`` only), emit one chip carrying:
+
+    - ``role`` — ``"reviewer"`` / ``"reviewee"`` / ``"observer"``.
+    - ``target`` — the URL the chip links to (used only when
+      ``active`` is ``False`` and ``enabled`` is ``True``).
+    - ``active`` — ``True`` for the current surface's role —
+      that chip renders in full colour and carries no link.
+    - ``enabled`` — ``True`` when the role's surface is
+      currently reachable. Reviewer ``not opened`` flips this
+      ``False`` so the chip greys without a link; reviewee /
+      observer surfaces are always reachable today (the W16 /
+      W17 gates will land later).
+
+    Chips render in :data:`_ROLE_PRIORITY` order regardless of
+    which role is active, so the lineup is consistent across
+    surfaces."""
+    user_email = (user.email or "").casefold()
+    if not user_email:
+        return []
+
+    reviewer = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id,
+            Reviewer.status == "active",
+            func.lower(Reviewer.email) == user_email,
+        )
+    ).scalar_one_or_none()
+
+    reviewee_match = None
+    for r in db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.status == "active",
+        )
+    ).scalars():
+        if not participants.is_email_identified(r):
+            continue
+        if r.email_or_identifier.casefold() == user_email:
+            reviewee_match = r
+            break
+
+    observer = db.execute(
+        select(Observer).where(
+            Observer.session_id == review_session.id,
+            Observer.status == "active",
+            func.lower(Observer.email) == user_email,
+        )
+    ).scalar_one_or_none()
+
+    role_targets: dict[str, dict[str, object]] = {}
+    if reviewer is not None:
+        pill = responses_service.session_pill_for_reviewer(
+            db, reviewer=reviewer, session_id=review_session.id
+        )
+        session_status = lifecycle.session_status_for_reviewer(
+            db, reviewer=reviewer, review_session=review_session
+        )
+        role_targets["reviewer"] = {
+            "target": (
+                f"/me/sessions/{review_session.id}/summary"
+                if pill.state == "submitted"
+                else f"/me/sessions/{review_session.id}/1"
+            ),
+            "enabled": session_status != "not opened",
+        }
+    if reviewee_match is not None:
+        role_targets["reviewee"] = {
+            "target": f"/me/sessions/{review_session.id}/results",
+            "enabled": True,
+        }
+    if observer is not None:
+        role_targets["observer"] = {
+            "target": f"/me/sessions/{review_session.id}/collation",
+            "enabled": True,
+        }
+
+    chips: list[dict[str, object]] = []
+    for role in _ROLE_PRIORITY:
+        if role not in role_targets:
+            continue
+        chips.append(
+            {
+                "role": role,
+                "target": role_targets[role]["target"],
+                "enabled": role_targets[role]["enabled"],
+                "active": role == active_role,
+            }
+        )
+    return chips
 
 
 _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD = not_(

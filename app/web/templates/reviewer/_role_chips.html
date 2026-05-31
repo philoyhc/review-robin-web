@@ -1,0 +1,32 @@
+{# Role-navigator chips rendered below the session-name header on
+   each role-specific ``/me`` surface (review surface, summary,
+   results, collation). One chip per role the signed-in user
+   holds on this session; the chip matching the current page
+   renders full-colour without a link, the others render muted
+   and link to their own surface.
+
+   Required context:
+     - ``role_chips``: list of dicts produced by
+       :func:`app.web.routes_reviewer._shared.build_role_chips`.
+       Each entry carries ``role`` (one of ``"reviewer"`` /
+       ``"reviewee"`` / ``"observer"``), ``target`` (URL),
+       ``active`` (bool), ``enabled`` (bool). Chips arrive in
+       priority order — Reviewer → Reviewee → Observer.
+
+   Renders nothing when ``role_chips`` is empty (the safety
+   case — a surface route's gate should have rejected the
+   request before this point). #}
+{% if role_chips %}
+  <div class="rs-role-nav">
+    {% for chip in role_chips %}
+      {% set label = chip.role | capitalize %}
+      {% if chip.active %}
+        <span class="pill pill-role-{{ chip.role }} rs-role-nav-active">{{ label }}</span>
+      {% elif chip.enabled %}
+        <a class="pill pill-role-{{ chip.role }} rs-role-nav-muted" href="{{ chip.target }}">{{ label }}</a>
+      {% else %}
+        <span class="pill pill-role-{{ chip.role }} rs-role-nav-muted">{{ label }}</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}

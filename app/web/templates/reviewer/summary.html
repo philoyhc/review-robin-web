@@ -13,6 +13,8 @@
 {% block content %}
   <h1>Your responses — {{ session.name }}</h1>
 
+  {% include "reviewer/_role_chips.html" %}
+
   {% if submitted_at_text %}
     <p class="muted">
       Submitted on {{ submitted_at_text }} ({{ submitted_at_zone_label }}).
