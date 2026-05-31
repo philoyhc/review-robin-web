@@ -749,13 +749,14 @@
       .bottom-left {
         display: flex;
         flex-direction: column;
-        /* Match the canonical inter-card vertical gap
-           (``body.ui-v2 .card`` carries ``margin-bottom:
-           var(--space-4)`` = 16px). Was 20px historically and
-           produced a visibly larger gap on Session Home between
-           the Quick Setup and Extract Setup cards than between
-           any other adjacent card pair on the page. */
-        gap: var(--space-4);
+        /* No flex ``gap``: cards inside .bottom-left already carry
+           ``margin-bottom: var(--space-4)`` (16px) — the
+           ``body.ui-v2 .card`` rule wins over
+           ``.bottom-grid .card { margin-bottom: 0 }`` on specificity
+           (0,2,1 vs 0,2,0). Setting a flex gap here stacks on top
+           of that margin and doubles the perceived vertical gap
+           between adjacent cards (e.g. Quick Setup ↔ Extract
+           Setup on Session Home). */
       }
       .fill-col {
         display: flex;
