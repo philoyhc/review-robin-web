@@ -1,0 +1,25 @@
+{# Observer collation placeholder surface — the page lights up
+   the ``/me/sessions/{id}/collation`` URL behind
+   ``require_observer_in_session``. Today it's the chrome only;
+   the cross-reviewee collation body lands with W17 per
+   ``guide/participant_model_upgrade.md`` §3.2. Mirrors the
+   reviewer surface's page header + session-description card. #}
+{% extends "base.html" %}
+
+{% block title %}{{ session.name }} — Collation — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2 reviewer{% endblock %}
+{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+
+{% block content %}
+  <div class="rs-page-header">
+    <h1>{{ session.name }}</h1>
+    <span>Observer view of the session</span>
+  </div>
+
+  {% if session.description %}
+    <div class="card rs-status-panel">
+      <p class="rs-session-description">{{ session.description }}</p>
+    </div>
+  {% endif %}
+{% endblock %}
