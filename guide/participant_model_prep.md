@@ -15,13 +15,27 @@ already-existing schema?
 A change pre-positions when it can land **before** its owning slice
 with zero user-visible effect:
 
-- additive nullable / defaulted column → ✔
-- new empty table → ✔
-- new audit event-type registration in `EVENT_SCHEMAS` → ✔
-- new dependency / helper / service stub (dead code) → ✔
-- migration backfill on existing rows → ✘ (lights up behavior)
-- UI affordance (template / route / nav change) → ✘
-- removal of an existing UI affordance → ✘
+- additive nullable / defaulted column → pre-positions
+- new empty table → pre-positions
+- new audit event-type registration in `EVENT_SCHEMAS` → pre-positions
+- new dependency / helper / service stub (dead code) → pre-positions
+- migration backfill on existing rows → does **not** pre-position
+  (lights up behavior)
+- UI affordance (template / route / nav change) → does **not** pre-position
+- removal of an existing UI affordance → does **not** pre-position
+
+## Column markers (used in the tables below)
+
+The "Pre-position?" column uses four markers. They are distinct from
+each other on purpose — readers should not conflate "candidate" with
+"done":
+
+| Marker | Meaning |
+|---|---|
+| **✔** | **Candidate** — not yet on disk; can ship in a prep slice. |
+| **✓ already exists** | **Done** — already pre-positioned (typically by an earlier segment); participant model just consumes. |
+| **⚠** | **Partial / open question** — resolve before pre-positioning. |
+| **✘** | **Cannot pre-position** — UI change, behavior change, or removal; ships with owning slice. |
 
 ## Schema changes
 
@@ -29,10 +43,10 @@ with zero user-visible effect:
 |---|---|---|---|---|
 | S1 | New `observers` table | §3.1 | ✔ | Single `tag_1` column. Empty until roster slice. |
 | S2 | New `instrument_view_policies` table | §3.3 | ✔ | Empty until policy-authoring slice. |
-| S3 | `sessions.opens_at` (DateTime tz, NULL) | §3.4 | ✔ | NULL = today's manual-driven behavior. |
-| S4 | `sessions.responses_close_at` (DateTime tz, NULL) | §3.4 | ⚠ | Open question (§9): may reuse existing `deadline` instead of adding this column. Resolve before pre-positioning. |
-| S5 | `sessions.results_open_at` (DateTime tz, NULL) | §3.4 | ✔ | |
-| S6 | `sessions.results_close_at` (DateTime tz, NULL) | §3.4 | ✔ | |
+| S3 | `sessions.opens_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Lands on `sessions.scheduled_activate_at` (18G Part 0a). The participant model consumes that column; no migration needed. |
+| S4 | `sessions.responses_close_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Reuse `sessions.deadline` per §3.4 lean. No new column. |
+| S5 | `sessions.results_open_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Lands on `sessions.responses_release_at` (18G Part 0a — pre-positioned inert *explicitly for the participant model*; see the inline comment in `app/db/models/review_session.py`). |
+| S6 | `sessions.results_close_at` (DateTime tz, NULL) | §3.4 | ✓ **already exists** | Derived from `sessions.responses_release_at` (S5) + `sessions.release_until_offset` (18G Part 0b — ISO 8601 duration). Participant model follows the 18G anchor + offset pattern; no separate absolute column. |
 | S7 | `sessions.relationships_enabled` (Boolean, default FALSE) | §3.8 | ⚠ | Column ships inert ✔; **backfill** (existing-relationships → TRUE) must wait for the toggle slice or existing sessions lose the tab once UI reads the flag. |
 | S8 | `sessions.observers_enabled` (Boolean, default FALSE) | §3.8 | ✔ | No backfill (no observer rows exist yet). |
 | S9 | `reviewees.results_acknowledged_at` (DateTime tz, NULL) | §6 | ✔ | Per §6 leaning toward column over a `result_acknowledgements` table. |
@@ -40,6 +54,13 @@ with zero user-visible effect:
 
 **Not added** (per §3.6): nothing on `assignments`; no `participants`
 identity table.
+
+**Already pre-positioned by Segment 18G Part 0** (see
+`app/db/models/review_session.py`): `scheduled_activate_at`,
+`responses_release_at`, `release_until_offset`, plus the anchor /
+offset / retention scaffolding. The participant model consumes these
+as-is — the entire §3.4 schedule story is already on disk and just
+needs the slice that lights it up.
 
 **Magic-link extension** (§4): the existing `invitations` table is
 reviewer-keyed. Extending tokened landings to reviewees / observers
@@ -83,8 +104,10 @@ for audit completeness so the team can see the full surface.
 
 Rolling up the ✔ rows:
 
-- **Schema** — S1, S2, S3, S5, S6, S8, S9, S10 (all unconditionally
-  inert). Plus S4 / S7 once their open questions resolve.
+- **Schema** — S1, S2, S8, S9, S10 (all unconditionally inert).
+  S3 / S4 / S5 / S6 are already on disk via 18G Part 0a/0b;
+  no migration needed for the schedule story. S7 waits on the
+  backfill-timing decision.
 - **Code** — H1, H2, H3, H4 (dead code, no callers yet).
 
 That's roughly one Alembic migration + one helpers commit. Zero
@@ -95,7 +118,6 @@ subset of these without doing its own schema work.
 
 | Block | What it needs |
 |---|---|
-| S4 (`responses_close_at`) | Decide §9 open question — reuse `deadline` or add column. |
 | S7 backfill | Defer to the per-session-toggle slice; the column itself can pre-position now. |
 | Magic-link schema shape | Design call on `invitations` extensibility (polymorphic FK vs sibling tables vs discriminator). |
 
