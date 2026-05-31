@@ -77,18 +77,19 @@ engine as-is.
    audiences may view the responses and in what form.
 2. **A session schedule** — open / close / results-availability
    windows.
-3. **Observers, and reviewee identity** — observers do not
-   exist at all today; reviewees exist but have no reachable
-   identity for a surface.
+3. **Observers** — they do not exist at all today.
+   (Reviewee identity needs no new structure — see §3.2.)
 4. **Magic-link participation** — an in-scope optional auth
    affordance for all three participant audiences (§4).
 
 ## 3. New data structures
 
-The core of the design. Five additions; all follow the
+The core of the design. Four additions; all follow the
 established additive-migration playbook (13D / 13E / 13F) —
 nullable / defaulted columns and new tables that ship **inert**,
-each lit up by its owning slice.
+each lit up by its owning slice. Reviewee identity (§3.2)
+needs no schema change — only a helper. The friendly-label
+retirement (§3.7) is a removal that lands in the same band.
 
 ### 3.1 `observers` — the new participant roster
 
@@ -115,24 +116,36 @@ viewing-grant to a tag, so only observers of a given category
 see a given instrument's responses. Three tag slots mirror
 `reviewers`; one is the minimum that has to be meaningful.
 
-### 3.2 Reviewee identity — a reachable email
+### 3.2 Reviewee identity — `email_or_identifier` is enough
 
-`reviewees.email_or_identifier` is explicitly allowed to be a
-non-email identifier today, so it cannot be the auth key for a
-reviewee surface. Add:
+`reviewees.email_or_identifier` already covers every case the
+participant model needs — **no schema change required**:
 
-```
-reviewees
-  + contact_email   String(320)  NULL    (reachable identity; NULL = no surface)
-```
+- Reviewers always have a valid email (`reviewers.email`).
+- If a reviewee is the same human as a reviewer, the same
+  identity carries across both rosters; there's no plausible
+  case where the same person has an email under one role but
+  not the other.
+- So `email_or_identifier` *being a valid email* is exactly
+  the condition for "this reviewee can authenticate to a
+  `/results` surface." A reviewee whose value is a non-email
+  identifier has no inbox to authenticate against — the
+  confidential / unaware-reviewee use case continues to work
+  by construction.
 
-A reviewee with no `contact_email` simply has no surface — the
-confidential / unaware-reviewee use case stays the untouched
-default. `email_or_identifier` keeps its current role
-(display + self-review matching); `contact_email` is the new,
-separate, auth-bearing field. Observers get `email` directly
-(§3.1) because an observer with no identity has no reason to
-exist.
+What the participant model adds is a single helper —
+`is_email_identified(reviewee)` (an email-format check on
+`email_or_identifier`) — used by `require_reviewee_in_session`
+(§4) as the surface-gating predicate. No new column on
+`reviewees`, no new column on `reviewers`, no rename.
+
+Observers are different: an observer's identity *is* the
+visibility grant, so `observers.email` is required and
+auth-bearing (§3.1).
+
+**Self-review matching** continues to compare
+`reviewer.email` against `reviewee.email_or_identifier`
+case-insensitively, unchanged from today.
 
 ### 3.3 `instrument_view_policies` — who sees responses, how
 
@@ -257,11 +270,41 @@ canonical-envelope convention:
 - **A `participants` identity table.** The unified
   participant surface (§5) is a *query* over the existing
   identity spine — `users.email` matched against
-  `reviewers.email` / `reviewees.contact_email` /
-  `observers.email` — not a new table. Operators and reviewers
+  `reviewers.email` / `reviewees.email_or_identifier` /
+  `observers.email` — not a new table. A reviewee whose
+  `email_or_identifier` is a non-email identifier simply
+  never matches a `users.email` row, which is exactly the
+  desired "no surface" outcome. Operators and reviewers
   already get a `users` row on first Easy Auth sign-in;
   reviewees and observers join that spine through their email
   columns.
+
+### 3.7 Friendly-label retirement for fixed columns
+
+Beta feedback: the friendly-label affordance on the Reviewer /
+Reviewee **Name**, **Email**, **Identifier**, and **Profile**
+columns is redundant — those columns mean what they say, and
+operators renaming them adds no signal. The
+actively-used friendly labels are the **tag columns** (`tag_1`
+/ `tag_2` / `tag_3`), which name domain categories the
+operator brings (e.g. "Department", "Cohort").
+
+The cleanup, scoped to land alongside the §3.2 split rather
+than as a standalone refactor:
+
+- Narrow the friendly-label feature to the tag columns only.
+- Stop rendering the rename affordance for fixed columns on
+  the Setup-Reviewers / Setup-Reviewees pages.
+- Persisted custom labels for those columns are dropped on
+  the migration — they were redundant; no data loss in any
+  meaningful sense.
+
+**Before retiring**: verify no CSV-import column-mapping
+flow recognises operator import headers via the friendly
+label of Name / Email / Identifier / Profile. If headers
+match on canonical names only, retirement is purely UI
+cleanup. If they match on friendly labels, the import side
+has to switch to canonical matching first.
 
 ## 4. Auth posture & magic links
 
@@ -286,7 +329,8 @@ three participant audiences:
   operator-selectable affordance rather than an undocumented
   fallback.
 - Reviewee and observer surfaces otherwise gate on Easy Auth
-  identity matched to `reviewees.contact_email` /
+  identity matched to `reviewees.email_or_identifier`
+  (when the value parses as an email — see §3.2) /
   `observers.email` case-insensitively — the mechanism
   `require_reviewer_in_session` already uses. New dependencies
   `require_reviewee_in_session` / `require_observer_in_session`
@@ -315,7 +359,7 @@ three participant audiences:
   `/me/sessions/{id}/collation`). The lobby query is the union
   `Reviewer ∪ Reviewee ∪ Observer` filtered to the signed-in
   identity (matched case-insensitively against
-  `reviewers.email` / `reviewees.contact_email` /
+  `reviewers.email` / `reviewees.email_or_identifier` /
   `observers.email`) — a new helper in
   `app/services/participants.py`, since today's dashboard
   query (`app/web/routes_reviewer/_dashboard.py`) is
@@ -446,7 +490,9 @@ plausibly one segment (some may split or merge):
 
 - Schema prep — the §3 additions as inert additive migrations.
 - Observer roster — importer + Setup page.
-- Reviewee identity — `contact_email` + `require_reviewee_in_session`.
+- Reviewee identity helper — `is_email_identified(reviewee)`
+  + `require_reviewee_in_session`. No schema change (§3.2).
+- Friendly-label retirement for fixed roster columns (§3.7).
 - Magic-link affordance — extend the tokened-landing path to
   reviewees / observers; operator-selectable per session.
 - Per-instrument visibility-policy authoring.
