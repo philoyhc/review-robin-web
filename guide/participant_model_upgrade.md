@@ -77,18 +77,19 @@ engine as-is.
    audiences may view the responses and in what form.
 2. **A session schedule** — open / close / results-availability
    windows.
-3. **Observers, and reviewee identity** — observers do not
-   exist at all today; reviewees exist but have no reachable
-   identity for a surface.
+3. **Observers** — they do not exist at all today.
+   (Reviewee identity needs no new structure — see §3.2.)
 4. **Magic-link participation** — an in-scope optional auth
    affordance for all three participant audiences (§4).
 
 ## 3. New data structures
 
-The core of the design. Five additions; all follow the
+The core of the design. Four additions; all follow the
 established additive-migration playbook (13D / 13E / 13F) —
 nullable / defaulted columns and new tables that ship **inert**,
-each lit up by its owning slice.
+each lit up by its owning slice. Reviewee identity (§3.2)
+needs no schema change — only a helper. The friendly-label
+retirement (§3.7) is a removal that lands in the same band.
 
 ### 3.1 `observers` — the new participant roster
 
@@ -115,70 +116,36 @@ viewing-grant to a tag, so only observers of a given category
 see a given instrument's responses. Three tag slots mirror
 `reviewers`; one is the minimum that has to be meaningful.
 
-### 3.2 Reviewer / reviewee identity columns — split, then symmetric
+### 3.2 Reviewee identity — `email_or_identifier` is enough
 
-`reviewees.email_or_identifier` is a hybrid: it may hold an
-email address (reachable, auth-capable) or a non-email
-identifier (display-only, never an auth key). Today's
-single-column shape suited the reviewer-only auth world; the
-participant model needs the email separated out so the
-reviewee surface can gate on it. Split the column, and — for
-symmetry — give the reviewer roster the same shape:
+`reviewees.email_or_identifier` already covers every case the
+participant model needs — **no schema change required**:
 
-```
-reviewees
-  email_or_identifier  →  RENAME to identifier (String(320), NOT NULL)
-                                                still display +
-                                                self-review matching
-  + email              String(320)  NULL          auth key for /results;
-                                                  NULL = no surface
-reviewers
-  + identifier         String(320)  NULL          optional display alias /
-                                                  employee ID; no auth role
-```
+- Reviewers always have a valid email (`reviewers.email`).
+- If a reviewee is the same human as a reviewer, the same
+  identity carries across both rosters; there's no plausible
+  case where the same person has an email under one role but
+  not the other.
+- So `email_or_identifier` *being a valid email* is exactly
+  the condition for "this reviewee can authenticate to a
+  `/results` surface." A reviewee whose value is a non-email
+  identifier has no inbox to authenticate against — the
+  confidential / unaware-reviewee use case continues to work
+  by construction.
 
-One mental model across roles:
+What the participant model adds is a single helper —
+`is_email_identified(reviewee)` (an email-format check on
+`email_or_identifier`) — used by `require_reviewee_in_session`
+(§4) as the surface-gating predicate. No new column on
+`reviewees`, no new column on `reviewers`, no rename.
 
-| Role     | `email`                       | `identifier`              |
-|----------|-------------------------------|---------------------------|
-| Reviewer | required (auth key)           | nullable (display alias)  |
-| Reviewee | nullable (auth key; NULL = no surface) | required (display + self-review matching) |
-| Observer | required (auth key) — §3.1    | — (not introduced; no display-without-auth use case today) |
+Observers are different: an observer's identity *is* the
+visibility grant, so `observers.email` is required and
+auth-bearing (§3.1).
 
-The only asymmetry is which column is nullable, and that
-encodes the real semantic difference: reviewers always have a
-surface (they fill forms), reviewees may be confidential
-subjects with no reachable identity.
-
-**Surface-gating predicate.** A reviewee may access
-`/me/sessions/{id}/results` iff `reviewees.email IS NOT NULL`
-*and* the signed-in identity's email matches it
-(case-insensitively). The auth dependency
-`require_reviewee_in_session` (§4) enforces both halves. The
-"confidential / unaware-reviewee" use case is simply a row
-with `email = NULL` — no surface ever appears, by
-construction.
-
-**Self-review matching** stays axis-aligned: match
-`reviewer.email` against `reviewee.email`, and (separately)
-`reviewer.identifier` against `reviewee.identifier`. No
-cross-axis matching — an email and an identifier are
-different things even if their string contents coincide.
-
-**Migration cost.** The rename touches every reference to
-`email_or_identifier` (services, CSV contracts, importers,
-templates, self-review matching, view adapters). Worth it
-because the participants-model band is already opening the
-door for new columns; doing the rename inside that band
-keeps the churn contained. **Don't do this rename as a
-standalone refactor** — its only payoff is symmetry with the
-new columns.
-
-`reviewers.identifier` will mostly stay null in practice. It
-earns its keep through symmetry (one mental model, one
-importer shape, one row adapter) more than through unique
-features — flag this honestly rather than overselling its
-utility.
+**Self-review matching** continues to compare
+`reviewer.email` against `reviewee.email_or_identifier`
+case-insensitively, unchanged from today.
 
 ### 3.3 `instrument_view_policies` — who sees responses, how
 
@@ -303,8 +270,11 @@ canonical-envelope convention:
 - **A `participants` identity table.** The unified
   participant surface (§5) is a *query* over the existing
   identity spine — `users.email` matched against
-  `reviewers.email` / `reviewees.email` /
-  `observers.email` — not a new table. Operators and reviewers
+  `reviewers.email` / `reviewees.email_or_identifier` /
+  `observers.email` — not a new table. A reviewee whose
+  `email_or_identifier` is a non-email identifier simply
+  never matches a `users.email` row, which is exactly the
+  desired "no surface" outcome. Operators and reviewers
   already get a `users` row on first Easy Auth sign-in;
   reviewees and observers join that spine through their email
   columns.
@@ -359,7 +329,8 @@ three participant audiences:
   operator-selectable affordance rather than an undocumented
   fallback.
 - Reviewee and observer surfaces otherwise gate on Easy Auth
-  identity matched to `reviewees.email` /
+  identity matched to `reviewees.email_or_identifier`
+  (when the value parses as an email — see §3.2) /
   `observers.email` case-insensitively — the mechanism
   `require_reviewer_in_session` already uses. New dependencies
   `require_reviewee_in_session` / `require_observer_in_session`
@@ -388,7 +359,7 @@ three participant audiences:
   `/me/sessions/{id}/collation`). The lobby query is the union
   `Reviewer ∪ Reviewee ∪ Observer` filtered to the signed-in
   identity (matched case-insensitively against
-  `reviewers.email` / `reviewees.email` /
+  `reviewers.email` / `reviewees.email_or_identifier` /
   `observers.email`) — a new helper in
   `app/services/participants.py`, since today's dashboard
   query (`app/web/routes_reviewer/_dashboard.py`) is
@@ -519,11 +490,9 @@ plausibly one segment (some may split or merge):
 
 - Schema prep — the §3 additions as inert additive migrations.
 - Observer roster — importer + Setup page.
-- Reviewer / reviewee identity split + symmetry — rename
-  `reviewees.email_or_identifier` → `identifier`, add nullable
-  `reviewees.email` (auth key) and `reviewers.identifier`
-  (display alias); land the friendly-label retirement (§3.7)
-  in the same band; introduce `require_reviewee_in_session`.
+- Reviewee identity helper — `is_email_identified(reviewee)`
+  + `require_reviewee_in_session`. No schema change (§3.2).
+- Friendly-label retirement for fixed roster columns (§3.7).
 - Magic-link affordance — extend the tokened-landing path to
   reviewees / observers; operator-selectable per session.
 - Per-instrument visibility-policy authoring.
