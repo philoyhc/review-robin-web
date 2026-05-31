@@ -84,7 +84,7 @@ engine as-is.
 
 ## 3. New data structures
 
-The core of the design. Five additions; all follow the
+The core of the design. Six additions; all follow the
 established additive-migration playbook (13D / 13E / 13F) —
 nullable / defaulted columns and new tables that ship **inert**,
 each lit up by its owning slice. Reviewee identity (§3.2)
@@ -406,6 +406,62 @@ tab doesn't disappear on existing operators. Observers have
 no backfill — the column ships inert; no rows exist yet
 anywhere.
 
+### 3.9 Reviewer `profile_link` parity
+
+Today, `reviewees` carry a `profile_link` (a free-form URL,
+rendered as a clickable link wherever the reviewee surfaces);
+`reviewers` do not. §3.7 already implicitly assumed parity
+when it spoke of retiring the friendly-label affordance for
+the "Reviewer / Reviewee … Profile columns" — close the gap
+by mirroring the column onto the reviewer side.
+
+```
+reviewers
+  + profile_link  String(2000)  NULL    (matches reviewees.profile_link)
+```
+
+**Pre-position vs slice work.** The column itself
+pre-positions cleanly as an inert nullable addition. The
+surrounding surface mirror is non-trivial — `profile_link`
+already touches roughly twelve files for reviewees:
+
+- `app/services/reviewers.py` (create + update normalisation,
+  audit-event payloads),
+- `app/schemas/imports.py` (`ReviewerImportRow`),
+- `app/services/csv_imports.py` (header parse +
+  `_reviewer_to_kwargs`),
+- `app/services/extracts/reviewers_extract.py` (export
+  header + serialisation),
+- `app/web/templates/operator/session_reviewers.html`
+  (visibility toggle, table cell, edit-form inputs),
+- `app/web/routes_operator/_setup_reviewers.py` (form
+  handlers, edit-mode prep, slot tuple),
+- `app/services/session_config_io/_apply.py` (Quick Setup
+  reviewer frozenset),
+- `app/services/field_labels.py` (default label entry —
+  `("reviewer", "profile_link"): "Profile"`),
+- `app/services/instruments/_display_fields.py` (label map,
+  CSV name map, `ALLOWED_SOURCES`, seeding logic),
+- `app/web/views/_setup.py` (CSV-header → field mapping),
+- plus the reviewer-surface display path
+  (`app/web/views/_reviewer_summary.py` and
+  `routes_reviewer/_surface.py`) — the `is_profile_link`
+  cell-styling check is field-name-keyed, so it should
+  pick up the reviewer column without code changes; verify
+  in the slice,
+- and the corresponding test files.
+
+The implementation is "small in concept, large in surface
+area" — one coordinated PR rather than many small ones. The
+column add can sit inert in the prep migration; the surface
+mirror is its own slice and lights up immediately on land
+(there's no useful intermediate state — half-wired CSV import
+or template breaks the page).
+
+No new audit-event type required — the existing
+`reviewer.created` snapshot and `reviewer.updated` changes
+envelopes pick up the new field automatically.
+
 ## 4. Auth posture & magic links
 
 Per `spec/audience_and_identity_model.md` the standing posture
@@ -598,6 +654,8 @@ plausibly one segment (some may split or merge):
   Extract Setup integration per §3.8).
 - Reviewee identity helper — `is_email_identified(reviewee)`
   + `require_reviewee_in_session`. No schema change (§3.2).
+- Reviewer `profile_link` parity (§3.9) — column add +
+  ~12-file surface mirror in one coordinated slice.
 - Friendly-label retirement for fixed roster columns (§3.7).
 - Magic-link affordance — extend the tokened-landing path to
   reviewees / observers; operator-selectable per session.

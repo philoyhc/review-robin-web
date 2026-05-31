@@ -51,6 +51,7 @@ each other on purpose — readers should not conflate "candidate" with
 | S8 | `sessions.observers_enabled` (Boolean, default FALSE) | §3.8 | ✔ | No backfill (no observer rows exist yet). |
 | S9 | `reviewees.results_acknowledged_at` (DateTime tz, NULL) | §6 | ✔ | Per §6 leaning toward column over a `result_acknowledgements` table. |
 | S10 | Register new event types in `EVENT_SCHEMAS` | §3.5 | ✔ | `instrument.view_policy_set`, `session.schedule_set`, `observer.added` / `.removed` / `.bulk_*`, `results.released`, `results.acknowledged`, `session.feature_toggled`. Allowlist entries only; no emission yet. |
+| S11 | `reviewers.profile_link` (String(2000), NULL) | §3.9 | ✔ | Mirrors `reviewees.profile_link`. Column add pre-positions cleanly; the ~12-file surface mirror is slice work (U16). |
 
 **Not added** (per §3.6): nothing on `assignments`; no `participants`
 identity table.
@@ -89,6 +90,7 @@ for audit completeness so the team can see the full surface.
 | U13 | `Acknowledge` button on /results | §6 | Reviewee surface (or follow-up) |
 | U14 | Reviewee / observer email notifications | §6 | Notifications (gated on Segment 14B) |
 | U15 | Magic-link landing for reviewees / observers | §4 | Magic-link affordance |
+| U16 | Reviewer `profile_link` surface mirror — services, CSV import/export, Setup-Reviewers template + route, Quick Setup, field labels, display fields, view adapter, tests | §3.9 | Reviewer `profile_link` parity (one coordinated slice; the column from S11 lights up only when the surface mirror lands) |
 
 ## Helpers / dependencies / services (code, not schema)
 
@@ -104,10 +106,10 @@ for audit completeness so the team can see the full surface.
 
 Rolling up the ✔ rows:
 
-- **Schema** — S1, S2, S8, S9, S10 (all unconditionally inert).
-  S3 / S4 / S5 / S6 are already on disk via 18G Part 0a/0b;
-  no migration needed for the schedule story. S7 waits on the
-  backfill-timing decision.
+- **Schema** — S1, S2, S8, S9, S10, S11 (all unconditionally
+  inert). S3 / S4 / S5 / S6 are already on disk via 18G Part
+  0a/0b; no migration needed for the schedule story. S7
+  waits on the backfill-timing decision.
 - **Code** — H1, H2, H3, H4 (dead code, no callers yet).
 
 That's roughly one Alembic migration + one helpers commit. Zero
