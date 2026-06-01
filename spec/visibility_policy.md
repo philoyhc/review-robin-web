@@ -114,11 +114,26 @@ instrument_view_policies
   id              PK
   instrument_id   FK -> instruments.id    (indexed, NOT NULL)
   audience        String(16)  NOT NULL    'reviewee' | 'peer_reviewer' | 'observer'
+
+  -- Per-window mode pairs (S14 — expand step). NULL ≡ "off in
+  -- this window". (aggregated, identified) is the reserved-
+  -- incoherent combo and rejected by the service.
+  while_ongoing_granularity     String(16)  NULL  'row' | 'aggregated'
+  while_ongoing_identification  String(16)  NULL  'identified' | 'deidentified'
+  after_release_granularity     String(16)  NULL  'row' | 'aggregated'
+  after_release_identification  String(16)  NULL  'identified' | 'deidentified'
+
+  -- Legacy single-mode encoding (W15 + S12). Retained during
+  -- the S14 expand step; the service mirror-writes both shapes
+  -- so the read path can flip independently. Drops with the
+  -- contract-step PR after the editor + route + view-adapter
+  -- swap.
   enabled         Boolean     NOT NULL    default FALSE
   granularity     String(16)  NOT NULL    'row' | 'aggregated'
   identification  String(16)  NOT NULL    'identified' | 'deidentified'
   visible_when    String(16)    NULL      'while_ongoing' | 'after_release' |
                                           'throughout' | 'always' (reserved)
+
   observer_tag    String        NULL      (observer audience only — restrict the
                                            grant to observers carrying this tag;
                                            NULL = all observers on the session)

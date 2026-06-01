@@ -218,11 +218,44 @@ def upsert_policy(
         )
     ).scalar_one_or_none()
 
+    # S14 — mirror-write the per-window pair columns alongside
+    # the legacy (enabled, granularity, identification,
+    # visible_when) quadruple. The pairs encode the audience's
+    # mode in each window; NULL ≡ "off in this window".
+    # ``always`` is treated as ``throughout`` (sets both pairs)
+    # — the legacy reserved-for-operator value never reached
+    # the participant-facing audiences in practice.
+    if not enabled:
+        per_window_pairs = {
+            "while_ongoing_granularity": None,
+            "while_ongoing_identification": None,
+            "after_release_granularity": None,
+            "after_release_identification": None,
+        }
+    else:
+        sets_while = visible_when in ("while_ongoing", "throughout", "always")
+        sets_after = visible_when in ("after_release", "throughout", "always")
+        per_window_pairs = {
+            "while_ongoing_granularity": (
+                granularity if sets_while else None
+            ),
+            "while_ongoing_identification": (
+                identification if sets_while else None
+            ),
+            "after_release_granularity": (
+                granularity if sets_after else None
+            ),
+            "after_release_identification": (
+                identification if sets_after else None
+            ),
+        }
+
     proposed = {
         "enabled": enabled,
         "granularity": granularity,
         "identification": identification,
         "visible_when": visible_when,
+        **per_window_pairs,
         "observer_tag": observer_tag,
     }
     changes: dict[str, list[object]] = {}
