@@ -80,6 +80,15 @@ def test_valid_modes_for_cell_locks_per_audience() -> None:
         )
         == frozenset({"raw"})
     )
+    # peer_reviewer after_release: off / Raw / Anonymized
+    # summaries. ``anonymized`` is intentionally excluded —
+    # anonymising one's own work against oneself is incoherent.
+    assert (
+        visibility_policies.valid_modes_for_cell(
+            "peer_reviewer", "after_release"
+        )
+        == frozenset({None, "raw", "summarized"})
+    )
     assert (
         visibility_policies.valid_modes_for_cell(
             "reviewee", "while_ongoing"
@@ -92,6 +101,29 @@ def test_valid_modes_for_cell_locks_per_audience() -> None:
         )
         == frozenset({None, "raw", "anonymized", "summarized"})
     )
+
+
+def test_upsert_policy_accepts_peer_reviewer_summarized_after_release(
+    db: Session,
+) -> None:
+    """Reviewer Responses-released accepts ``summarized`` — the
+    'Anonymized summaries' mode that aggregates across the
+    reviewees the reviewer reviewed on this instrument."""
+    review_session, instrument, user = _setup(db)
+    row, _ = visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="peer_reviewer",
+        while_ongoing_mode="raw",
+        after_release_mode="summarized",
+        user=user,
+    )
+    db.commit()
+    assert row.while_ongoing_granularity == "row"
+    assert row.while_ongoing_identification == "identified"
+    assert row.after_release_granularity == "aggregated"
+    assert row.after_release_identification == "deidentified"
 
 
 def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:

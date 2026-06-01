@@ -68,9 +68,14 @@ This fallback is the resolver's responsibility; the policy row carries `aggregat
 
 ### 2.2 Peer reviewer special case
 
-The peer-reviewer audience's form is **fixed at Raw** (`granularity = row`, `identification = identified`). The operator-facing UI exposes only the **When** chip for the Peer reviewer row; the **What** cell renders as a static "Raw responses" pill.
+The peer-reviewer audience is constrained per window:
 
-Rationale: the scope rule (§1.1) restricts a reviewer to their own submitted responses on this instrument. Aggregating one row to itself or anonymising one's own work are both meaningless, so the schema's other form values aren't useful here. The schema columns accept any value; the editor + service simply don't surface them.
+| Window | Allowed modes |
+|---|---|
+| Session ongoing (`while_ongoing`) | **Raw only** — the baseline self-view-during-session guarantee. The editor renders this cell as a static "Raw responses" pill; the operator cannot turn it off. |
+| Responses released (`after_release`) | `None` (off) / **Raw** / **Anonymized summaries** (`summarized`). The reviewer either sees nothing, their own raw submissions read-only (no recall / resubmit), or an Anonymized summary aggregating across the reviewees they reviewed on this instrument. |
+
+`Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) is meaningful because a reviewer who reviewed multiple reviewees has a multi-row fan-out of their own responses, which the summary aggregates. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
 
 ---
 

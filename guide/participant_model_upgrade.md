@@ -333,6 +333,22 @@ parked, not actively in design, because the same use case
 might be served by an Operator- or Observer-published report
 instead.
 
+**Reviewer post-release modes.** During the session
+(`while_ongoing`) the reviewer is locked at Raw (the baseline
+self-view guarantee — they keep visibility of what they wrote
+while the review is in flight). After release
+(`after_release`) the operator picks one of three modes for
+the Reviewer row: ``—`` (off; default — today's behaviour),
+``Raw`` (keep showing the reviewer their own submissions
+read-only — no recall / resubmit), or ``Anonymized summaries``
+(an aggregate across the reviewees the reviewer reviewed on
+this instrument; useful when the reviewer reviewed multiple
+people and the operator wants to give the reviewer a sense of
+the shape of their own contribution without exposing
+individual rows back). ``Anonymized`` (row + deidentified) is
+deliberately **not** offered for Reviewer — anonymising one's
+own work against oneself is incoherent.
+
 Three orthogonal axes per grant — two **form** axes (what the
 audience sees) plus one **window** axis (when):
 
