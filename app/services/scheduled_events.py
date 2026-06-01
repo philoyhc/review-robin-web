@@ -1235,15 +1235,16 @@ def parse_and_validate_reminder_offsets(
 # Trigger: Participants-platform release window                               #
 # --------------------------------------------------------------------------- #
 #
-# Anchor: ``responses_release_at`` (the moment reviewees / observers can
-# start viewing collated responses). Offset: ``release_until_offset``
-# (ISO 8601 duration, positive — when viewing closes).
+# Anchor: ``responses_release_at`` (the moment reviewees / observers
+# can start viewing collated responses). Close datetime:
+# ``responses_release_until`` (absolute; NULL ⇒ open-ended). S12
+# retired the original ``release_until_offset`` ISO 8601 duration in
+# favour of the absolute datetime so the scheduled-close form input
+# and the operator's Stop release button can write the same column.
 #
-# The §8.2.2 anchor-null rule applies: ``release_until_offset`` is
-# inert whenever ``responses_release_at`` is NULL. No scheduled-event
-# observer reads these columns today — the schema is the participant-
-# model surface (W14 wired them; W16 / W17 will consume them at view
-# time).
+# The §8.2.2 anchor-null rule applies: ``responses_release_until``
+# is inert whenever ``responses_release_at`` is NULL — you can't
+# have an end without a start.
 
 
 def parse_and_validate_responses_release_at(
@@ -1271,47 +1272,52 @@ def parse_and_validate_responses_release_at(
 
 
 # Cap the viewing window at one year — enough room for any realistic
-# review-results retention while still rejecting obvious typos
-# (``P9999D``).
+# review-results retention while still rejecting obvious operator
+# typos (a 2030 datetime on a 2026 release).
 _RELEASE_WINDOW_MAX = timedelta(days=365)
 
 
-def parse_and_validate_release_until_offset(
+def parse_and_validate_responses_release_until(
     raw: str | None,
-) -> str | None:
-    """Parse a release-window-length ISO 8601 duration string and
-    enforce the save-time rules.
+    *,
+    timezone_name: str,
+    responses_release_at: datetime | None,
+) -> datetime | None:
+    """Parse a ``datetime-local`` form value into a UTC-aware
+    datetime for the responses-release close.
 
     Returns ``None`` when ``raw`` is empty. Raises
-    :class:`ScheduledActivateError` on a malformed string, a
-    zero / negative duration (the window must close *after* it
-    opens), or a duration exceeding :data:`_RELEASE_WINDOW_MAX`.
+    :class:`ScheduledActivateError` on a malformed string, on a value
+    that lands at or before ``responses_release_at`` (the window must
+    close *after* it opens), or on a value more than
+    :data:`_RELEASE_WINDOW_MAX` after ``responses_release_at``.
 
-    The §8.2.2 anchor-null rule (this offset is inert when
-    ``responses_release_at`` is unset) is enforced at view time,
-    not save time, so persisting a release_until_offset without a
-    release-at anchor is allowed and harmless.
+    When ``responses_release_at`` is ``None`` (anchor-null state per
+    §8.2.2), the close is accepted as-is without an ordering /
+    magnitude check — the view-time resolver treats the window as
+    inert. Persisting an until without an anchor is allowed and
+    harmless; the operator may set the anchor later on the same form.
     """
-    if raw is None:
-        return None
-    entry = raw.strip()
-    if not entry:
+    if not raw:
         return None
     try:
-        delta = parse_iso_duration(entry)
+        parsed = date_formatting.parse_local_datetime(raw, timezone_name)
     except ValueError as exc:
         raise ScheduledActivateError(
-            f"Release responses until {entry!r} is not a valid ISO 8601 "
-            f"duration"
+            "Release responses until must be a valid datetime"
         ) from exc
-    if delta <= timedelta(0):
-        raise ScheduledActivateError(
-            f"Release responses until {entry!r} must be positive — "
-            f"the viewing window closes after it opens (e.g. P30D)."
-        )
-    if delta > _RELEASE_WINDOW_MAX:
-        raise ScheduledActivateError(
-            f"Release responses until {entry!r} exceeds the "
-            f"{_RELEASE_WINDOW_MAX.days}-day maximum window length."
-        )
-    return entry
+    parsed_aware = _ensure_aware_utc(parsed)
+    if responses_release_at is not None:
+        anchor_aware = _ensure_aware_utc(responses_release_at)
+        if parsed_aware <= anchor_aware:
+            raise ScheduledActivateError(
+                "Release responses until must be after Release "
+                "responses from."
+            )
+        if parsed_aware - anchor_aware > _RELEASE_WINDOW_MAX:
+            raise ScheduledActivateError(
+                f"Release responses until must be within "
+                f"{_RELEASE_WINDOW_MAX.days} days of Release responses "
+                f"from."
+            )
+    return parsed_aware

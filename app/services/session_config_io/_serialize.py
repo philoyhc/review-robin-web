@@ -162,9 +162,12 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             "string",
         ),
         Row(
-            "session.release_until_offset",
-            _str(review_session.release_until_offset),
-            "string",
+            "session.responses_release_until",
+            iso_in_zone(
+                review_session.responses_release_until,
+                resolve_session_timezone(review_session),
+            ),
+            "datetime",
         ),
         Row(
             "session.retention_exception",

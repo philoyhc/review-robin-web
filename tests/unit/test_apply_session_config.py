@@ -432,7 +432,7 @@ def _populated_round_trip_session(
     review_session.invite_offsets = ["-7d", "-1d"]
     review_session.reminder_offsets = ["-3d", "-1d", "-12h"]
     review_session.archive_offset = "+30d"
-    review_session.release_until_offset = "+14d"
+    review_session.responses_release_until = dt.datetime(2026, 7, 14, 23, 59)
     review_session.retention_exception = True
     review_session.retention_overrides = {"audit_log_days": 365}
 
@@ -506,7 +506,7 @@ def test_round_trip_carries_18g_scheduled_event_columns(db: Session) -> None:
     assert dst.invite_offsets == src.invite_offsets
     assert dst.reminder_offsets == src.reminder_offsets
     assert dst.archive_offset == src.archive_offset
-    assert dst.release_until_offset == src.release_until_offset
+    assert dst.responses_release_until == src.responses_release_until
     assert dst.retention_exception == src.retention_exception
     assert dst.retention_overrides == src.retention_overrides
 
@@ -664,7 +664,7 @@ def test_round_trip_empty_18g_fields_stays_empty(db: Session) -> None:
     assert dst.invite_offsets is None
     assert dst.reminder_offsets is None
     assert dst.archive_offset is None
-    assert dst.release_until_offset is None
+    assert dst.responses_release_until is None
     assert dst.retention_exception is None
     assert dst.retention_overrides is None
 

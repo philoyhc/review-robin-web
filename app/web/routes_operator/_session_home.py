@@ -201,16 +201,18 @@ def session_edit_form(
             "reminder_offsets_input_value": ", ".join(
                 review_session.reminder_offsets or []
             ),
-            # Participant-model W14 — prefill the Release-from
-            # datetime + Release-until offset inputs from the
-            # persisted columns (None / "" ⇒ empty).
+            # Participant-model W14 + S12 — prefill the Release-from
+            # and Release-until datetime inputs from the persisted
+            # columns (None ⇒ empty).
             "responses_release_at_input_value": (
                 date_formatting.format_datetime_local(
                     review_session.responses_release_at, session_timezone
                 )
             ),
-            "release_until_offset_input_value": (
-                review_session.release_until_offset or ""
+            "responses_release_until_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.responses_release_until, session_timezone
+                )
             ),
             # 18G PR 2B: read-only Schedule timeline preview rendered
             # beneath the form when any anchor / offset is set.
@@ -249,7 +251,7 @@ def session_edit_submit(
     relationships_enabled: bool = Form(default=False),
     observers_enabled: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
-    release_until_offset: str | None = Form(default=None),
+    responses_release_until: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_sys_admin_or_session_operator
     ),
@@ -332,16 +334,20 @@ def session_edit_submit(
             detail=str(exc),
         ) from exc
 
-    # Participant-model W14: Release-responses anchor + offset.
+    # Participant-model W14 + S12: Release-responses anchor + close
+    # datetime. Until is validated against the (possibly freshly-
+    # edited) anchor.
     try:
         parsed_responses_release_at = (
             scheduled_events.parse_and_validate_responses_release_at(
                 responses_release_at, timezone_name=timezone_name
             )
         )
-        parsed_release_until_offset = (
-            scheduled_events.parse_and_validate_release_until_offset(
-                release_until_offset
+        parsed_responses_release_until = (
+            scheduled_events.parse_and_validate_responses_release_until(
+                responses_release_until,
+                timezone_name=timezone_name,
+                responses_release_at=parsed_responses_release_at,
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -370,7 +376,7 @@ def session_edit_submit(
         relationships_enabled=relationships_enabled,
         observers_enabled=observers_enabled,
         responses_release_at=parsed_responses_release_at,
-        release_until_offset=parsed_release_until_offset,
+        responses_release_until=parsed_responses_release_until,
     )
     sessions.update_session(
         db,

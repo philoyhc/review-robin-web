@@ -70,7 +70,7 @@ async def create_session(
     relationships_enabled: bool = Form(default=False),
     observers_enabled: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
-    release_until_offset: str | None = Form(default=None),
+    responses_release_until: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
@@ -147,16 +147,20 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
-    # Participant-model W14 — Release-responses anchor + offset.
+    # Participant-model W14 + S12 — Release-responses anchor +
+    # close datetime. Until is validated against the (possibly
+    # freshly-set) anchor.
     try:
         parsed_responses_release_at = (
             scheduled_events.parse_and_validate_responses_release_at(
                 responses_release_at, timezone_name=timezone_name
             )
         )
-        parsed_release_until_offset = (
-            scheduled_events.parse_and_validate_release_until_offset(
-                release_until_offset
+        parsed_responses_release_until = (
+            scheduled_events.parse_and_validate_responses_release_until(
+                responses_release_until,
+                timezone_name=timezone_name,
+                responses_release_at=parsed_responses_release_at,
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -178,7 +182,7 @@ async def create_session(
         relationships_enabled=relationships_enabled,
         observers_enabled=observers_enabled,
         responses_release_at=parsed_responses_release_at,
-        release_until_offset=parsed_release_until_offset,
+        responses_release_until=parsed_responses_release_until,
     )
     review_session = sessions.create_session(
         db,
