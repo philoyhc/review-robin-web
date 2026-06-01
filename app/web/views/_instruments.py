@@ -920,7 +920,7 @@ _REVIEWER_VP_MODE_LABELS: dict[str | None, str] = {
     None: "—",
     "raw": "Raw responses",
     "anonymized": "Anonymized responses",
-    "summarized": "Summarized responses",
+    "summarized": "Anonymized summaries",
 }
 
 
@@ -939,10 +939,12 @@ def build_reviewer_visibility_rows(
     the operator-side ``Raw responses`` / ``Anonymized
     responses`` / ``Summarized responses`` / ``—`` vocabulary so
     the reviewer reads the same words the operator authored
-    against. Observers are intentionally omitted — they're
-    internal admin-side viewers and the reviewer doesn't need to
-    reason about them (the card's heading suffix "(other than
-    admin)" makes that explicit).
+    against — except that ``summarized`` renders as "Anonymized
+    summaries" to read more naturally to non-operators. Observers
+    are intentionally omitted — they're internal admin-side
+    viewers and the reviewer doesn't need to reason about them
+    (the card's heading suffix "(other than admin)" makes that
+    explicit).
     """
     result: dict[int, list[dict[str, str]]] = {}
     audiences: list[tuple[str, str]] = [

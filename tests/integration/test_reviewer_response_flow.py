@@ -2333,5 +2333,8 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     assert "<td style=\"padding: 4px 8px;\">You</td>" in flat
     assert "<td style=\"padding: 4px 8px;\">Reviewees</td>" in flat
     assert "<td style=\"padding: 4px 8px;\">Observers</td>" not in flat
-    # The reviewee after-release cell shows Summarized.
-    assert "Summarized responses" in body
+    # The reviewee after-release cell shows the Summarized mode,
+    # which the reviewer-facing vocabulary names "Anonymized
+    # summaries" (operators see "summarized" as the encoded mode;
+    # the reviewer-surface wording is gentler).
+    assert "Anonymized summaries" in body

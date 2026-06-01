@@ -5700,6 +5700,13 @@ def test_save_dirty_tracking_catches_band1_pill_clicks(
         # dispatch input/change. Without this, sort-order edits
         # silently fail to persist because Save stays disabled.
         ".sort-btn",
+        # Band 3 visibility chips (``newModelCycleVisibilityCell``)
+        # mutate per-(audience, window) hidden inputs that ride
+        # the dfsave form. Chip click mutates ``input.value``, so
+        # no input/change fires; without this, changing a
+        # visibility cell leaves Save disabled and the policy
+        # can't be persisted.
+        "[data-new-model-vp-cycle-audience]",
     ):
         assert selector in init_block, (
             f"dirty-tracker click handler is missing selector {selector}; "
