@@ -568,7 +568,7 @@ The five CSVs split the work three ways:
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
 | §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `responses_visible_when_closed` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (18M page-break flag) / `band2_state` (Band 2 chip selections + sample-reviewee pick + sample-group-member-ids). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible`. **Per display field:** `source_type` / `source_field` / `visible`. `deadline_closed_at` is machine-derived (excluded). `rule_set_id` is the source of truth for a pinned instrument; the legacy fallback to the latest `assignments.generated` audit row's `refs.rule_set_id` retired alongside seeded RuleSets in Wave 5 PR 5.2. Inline response-field type + bounds + visible added by Segment 18N PR 5 (the serializer hadn't been updated after 18J Wave 2 PR iii-b4 retired the RTD table and moved type / bounds inline — every response field was silently losing its semantic bounds on round-trip for ~2 weeks); `column_widths` / `starts_new_page` / `band2_state` added by the same PR. |
 | §4.5 | Per-session RTDs (retired) | — | Section retired with the `response_type_definitions` table in PR #1454. Numeric / string / List bounds are now inline columns on `instrument_response_fields` (covered under §4; round-tripped via Segment 18N PR 5). |
-| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All (Observers CSV pending) | Reviewers / Reviewees / Relationships each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` audit-event paths). Observers have a wired importer (`observers.imported` audit event) but no dedicated Extract Data tile yet — the `{code}_observers.csv` download is not yet exposed in the UI. |
+| §5 | Reviewers / Reviewees / Relationships / Observers | ✅ All | Reviewers / Reviewees / Relationships / Observers each in their own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` / `observers.imported` audit-event paths). The `{code}_observers.csv` download is exposed on the Extract Setup card (conditionally, when `observers_enabled`) via `GET /operator/sessions/{id}/export/observers.csv` (W13, PR #1755); the Zip-all bundle includes it when the toggle is on. |
 | §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
@@ -581,10 +581,12 @@ The five CSVs split the work three ways:
 
 ### Deferred follow-ons
 
-- **Zip bundle** — single `/export.zip` covering all CSVs in
-  one click. Deferred follow-on of the 12A-1 export track;
-  orthogonal to the import side, which always reads a single
-  Settings CSV per upload.
+- ~~**Zip bundle**~~ — shipped. Two bundles are now live: the setup
+  bundle (`{code}_setup.zip`, all setup CSVs including Observers
+  when enabled) via the Extract Setup card's Zip-all tile, and the
+  responses bundle (`{code}_responses.zip`) via the Extract data
+  Operations tab. The import side always reads a single Settings
+  CSV per upload.
 - ~~**Operator-library RTD / RuleSet portability**~~ —
   retired 2026-05-25 alongside the operator-library tier (Wave
   5 PR 5.2). Workspace-scoped portability was meant to anchor

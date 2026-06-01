@@ -225,17 +225,21 @@ Notes specific to Session Home:
 ### 2. Extract Setup card (right column, below Quick Setup)
 
 The card for porting / archiving — the CSVs Quick Setup can
-re-ingest. Four live per-entity download tiles plus a Zip-all
-bundle, arranged in two columns mirroring the Quick Setup slot
+re-ingest. Four always-present per-entity download tiles, plus a
+conditional Observers tile when `observers_enabled`, plus a Zip-all
+bundle — arranged in two columns mirroring the Quick Setup slot
 placement:
 
-| Tile | DOM column | Wired by |
-|---|---|---|
-| Reviewers | col 1, top | 12A-1 PR 2 (#717) |
-| Reviewees | col 1, bottom | 12A-1 PR 2 (#717) |
-| Relationships | col 2, top | 12A-3 PR 1 (#779) |
-| Settings  | col 2, middle | 12A-1 PR 1 (#713) |
-| Zip all | col 2, bottom | 18D PR E1 |
+| Tile | DOM column | Condition | Wired by |
+|---|---|---|---|
+| Reviewers | col 1, top | always | 12A-1 PR 2 (#717) |
+| Reviewees | col 1, bottom | always | 12A-1 PR 2 (#717) |
+| Relationships | col 2, top | always | 12A-3 PR 1 (#779) |
+| Observers | col 2, second | `observers_enabled` | W13, PR #1755 |
+| Settings  | col 2, third | always | 12A-1 PR 1 (#713) |
+| Zip all | col 2, bottom | always | 18D PR E1 |
+
+The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`.
 
 Originally five tiles (Reviewers / Reviewees / Relationships /
 Settings / Responses) plus a zip footer; the Responses tile
@@ -471,12 +475,14 @@ work.
 Cards that have graduated out of the placeholder pattern:
 
 - **Quick Setup** graduated in Segment 11H — now ships as a full
-  four-slot card (`_quick_setup_card.html`) with every slot wired
+  five-slot card (`_quick_setup_card.html`) with every slot wired
   (Reviewers / Reviewees in 11J, Relationships in 15D PR 7c,
-  Settings in 12A-3 PR 4).
+  Settings in 12A-3 PR 4, Observers W12 PR #1754; Observers slot
+  conditional on `observers_enabled`).
 - **Extract Data** graduated across the 12A landings — now ships
-  five live tiles plus an inert zip-all bundle footer
-  (`_extract_data_card.html`). See §2 above for the tile table.
+  four always-present tiles plus a conditional Observers tile plus
+  a Zip-all bundle footer (`_extract_data_card.html`). See §2
+  above for the tile table.
 - **Rule Based Assignment** (on the Assignments page, not Home)
   graduated across Segments 13A → 13A-1 — now ships as a wired
   card via `_rule_based_card.html` with a live RuleSet dropdown
@@ -486,11 +492,11 @@ Cards that have graduated out of the placeholder pattern:
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
-| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (all four slots wired; default-locked) | Live (5 tiles) |
-| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (all four slots wired; default-locked) | Live (5 tiles) |
-| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (all four slots wired; default-locked) | Live (5 tiles) |
-| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) |
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
+| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 
 The **Danger Zone** card (Delete Data + Delete Session) lives on
 the Edit Session Details page, not Home, as of 2026-05-22. Its

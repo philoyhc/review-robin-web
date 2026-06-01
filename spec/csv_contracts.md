@@ -3,9 +3,11 @@
 **The column shapes and parsing rules that govern every CSV the
 operator extracts or uploads.** Multiple extract paths and five
 import paths share a small library of primitives and a strict
-round-trip guarantee on the four main roster-shaped pairs
-(Reviewers, Reviewees, Relationships, Settings). Observers has a
-wired importer but no extract tile yet.
+round-trip guarantee on the five main roster-shaped pairs
+(Reviewers, Reviewees, Relationships, Observers, Settings).
+Observers has both a wired importer and an extract (W13, PR #1755);
+its tile is conditionally shown on the Extract Setup card when
+`observers_enabled`.
 
 When the code drifts from this spec, fix the code. Each extract
 file pins its `HEADER` tuple as a module constant; each importer
@@ -70,6 +72,7 @@ is byte-stable.
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
+| 6 | `PhotoLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `PhotoLink` column (W11, PR #1756). |
 
 `Status` is **not** exported (reviewers carry a `status` column
 internally but the roster CSV doesn't surface it; it is edited
@@ -314,8 +317,7 @@ observer roster. Emits `observers.imported` audit event on success.
 Bulk delete: `delete_all_observers(db, session, *, user,
 correlation_id)` — emits `observers.deleted_all`.
 
-No extract counterpart yet — the Observers CSV download tile is not
-yet exposed in the operator UI.
+**Extract counterpart:** `app/services/extracts/observers_extract.py` (W13, PR #1755). The extract uses the same column shape as the importer. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Extract Setup card renders the Observers tile conditionally when `observers_enabled=True`; the Zip-all bundle includes `{code}_observers.csv` on the same gate.
 
 ### 3.3 Settings — `session_config_io/` (two-phase apply)
 
