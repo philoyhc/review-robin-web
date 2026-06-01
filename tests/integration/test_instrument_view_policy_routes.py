@@ -23,10 +23,10 @@ Per-(audience, window) cell rules:
 - ``observer`` in either window: any of the three modes or
   ``None``.
 
-Legacy columns (``enabled`` / ``granularity`` /
-``identification`` / ``visible_when``) get mirror-written from
-the per-window state so a rolled-back deploy still reads
-sensible values; they retire in the contract-step PR.
+The legacy ``enabled`` / ``granularity`` / ``identification`` /
+``visible_when`` quadruple was dropped in the contract-step PR
+once the per-window pairs carried the operator's intent end-to-
+end.
 """
 
 from __future__ import annotations
@@ -129,11 +129,6 @@ def test_upsert_policy_insert_writes_per_window_pairs(db: Session) -> None:
     assert row.while_ongoing_identification is None
     assert row.after_release_granularity == "row"
     assert row.after_release_identification == "deidentified"
-    # Legacy mirror — sensible representative + visible_when.
-    assert row.enabled is True
-    assert row.granularity == "row"
-    assert row.identification == "deidentified"
-    assert row.visible_when == "after_release"
     events = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "instrument.view_policy_set"
@@ -143,7 +138,6 @@ def test_upsert_policy_insert_writes_per_window_pairs(db: Session) -> None:
     # Insert paints every column as a change.
     assert "while_ongoing_granularity" in changes
     assert "after_release_granularity" in changes
-    assert "enabled" in changes
 
 
 def test_upsert_policy_throughout_when_both_windows_set(
@@ -161,11 +155,9 @@ def test_upsert_policy_throughout_when_both_windows_set(
     )
     db.commit()
     assert row.while_ongoing_granularity == "aggregated"
+    assert row.while_ongoing_identification == "deidentified"
     assert row.after_release_granularity == "aggregated"
-    # Legacy mirror — both windows same mode collapses to
-    # visible_when="throughout".
-    assert row.enabled is True
-    assert row.visible_when == "throughout"
+    assert row.after_release_identification == "deidentified"
 
 
 def test_upsert_policy_both_none_disables(db: Session) -> None:
@@ -196,12 +188,7 @@ def test_upsert_policy_both_none_disables(db: Session) -> None:
     db.commit()
     assert row.while_ongoing_granularity is None
     assert row.after_release_granularity is None
-    assert row.enabled is False
-    assert row.visible_when is None
-    # Changes recorded the flip on both the pair column + the
-    # legacy mirror.
     assert "after_release_granularity" in changes
-    assert "enabled" in changes
 
 
 def test_upsert_policy_no_op_emits_no_audit(db: Session) -> None:

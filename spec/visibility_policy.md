@@ -103,7 +103,7 @@ A policy with `visible_when = "after_release"` and no anchor is **inert** — th
 
 ### 3.3 Archive overrides
 
-When `sessions.status = "archived"`, the resolver returns `enabled = FALSE` for every non-operator audience regardless of `visible_when` or window state. No schema change — pure view-time gate. Mirrors how archive retires a session out of reviewer reach today.
+When `sessions.status = "archived"`, the resolver treats every per-window pair as `(NULL, NULL)` ≡ off for every non-operator audience regardless of window state. No schema change — pure view-time gate. Mirrors how archive retires a session out of reviewer reach today.
 
 ---
 
@@ -115,24 +115,13 @@ instrument_view_policies
   instrument_id   FK -> instruments.id    (indexed, NOT NULL)
   audience        String(16)  NOT NULL    'reviewee' | 'peer_reviewer' | 'observer'
 
-  -- Per-window mode pairs (S14 — expand step). NULL ≡ "off in
-  -- this window". (aggregated, identified) is the reserved-
-  -- incoherent combo and rejected by the service.
-  while_ongoing_granularity     String(16)  NULL  'row' | 'aggregated'
-  while_ongoing_identification  String(16)  NULL  'identified' | 'deidentified'
-  after_release_granularity     String(16)  NULL  'row' | 'aggregated'
-  after_release_identification  String(16)  NULL  'identified' | 'deidentified'
-
-  -- Legacy single-mode encoding (W15 + S12). Retained during
-  -- the S14 expand step; the service mirror-writes both shapes
-  -- so the read path can flip independently. Drops with the
-  -- contract-step PR after the editor + route + view-adapter
-  -- swap.
-  enabled         Boolean     NOT NULL    default FALSE
-  granularity     String(16)  NOT NULL    'row' | 'aggregated'
-  identification  String(16)  NOT NULL    'identified' | 'deidentified'
-  visible_when    String(16)    NULL      'while_ongoing' | 'after_release' |
-                                          'throughout' | 'always' (reserved)
+  -- Per-window mode pairs. NULL in both members ≡ "off in this
+  -- window". (aggregated, identified) is the reserved-incoherent
+  -- combo and rejected by the service.
+  while_ongoing_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
+  while_ongoing_identification  String(16)  NULL  'identified' | 'deidentified' | NULL
+  after_release_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
+  after_release_identification  String(16)  NULL  'identified' | 'deidentified' | NULL
 
   observer_tag    String        NULL      (observer audience only — restrict the
                                            grant to observers carrying this tag;
@@ -143,12 +132,13 @@ instrument_view_policies
 ```
 
 - One row per (instrument, audience). Upserts cover both the create and update cases.
-- Rows for a disabled audience are still written so the operator's last chosen form / window survive a toggle-off / toggle-on cycle.
+- Rows with both windows off (all four pair columns NULL) persist so the operator's `observer_tag` choice survives a toggle-everything-off / toggle-back-on cycle.
 - `observer_tag` only carries meaning when `audience = "observer"`; the service layer enforces NULL otherwise (no DB CHECK constraint).
+- The legacy single-mode encoding (`enabled` / `granularity` / `identification` / `visible_when`) shipped with Phase 1 and retired in the S14 contract step (Alembic `b8f4c2a91d35`) once the per-window pairs carried the operator's intent end-to-end.
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as `enabled = FALSE` — instrument is invisible to that audience. The operator opts each audience in deliberately on the Band 3 editor.
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the Band 3 editor.
 
 ---
 
@@ -169,8 +159,9 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Slice | What | Status |
 |---|---|---|
 | S2 (PR #1678) | `instrument_view_policies` table | ✓ shipped |
-| S12 (PR #1724) | `visible_when` column | ✓ shipped |
+| S12 (PR #1724) | `visible_when` column (retired in S14 contract) | ✓ shipped, then retired |
 | W15 — Band 3 editor (persistence half) | `app/services/visibility_policies.py` (mode encoder / decoder + per-audience vocabulary + `upsert_policy` + `upsert_many`); `POST /operator/sessions/{id}/instruments/{instrument_id}/view-policy`; Band 3 template rewired with Save button + persisted prefill; `build_instruments_context` carries `band3_visibility_by_instrument`. | ✓ shipped |
+| S14 — per-window mode pairs + Band 3 column-axis swap | Alembic `a7e3b1d92c64` (expand) adds the four pair columns; PR #1730 swaps service + route + view + template to read / write the pair columns and rebuilds Band 3 as 3 audiences × 2 windows of mode chips; Alembic `b8f4c2a91d35` (contract) drops the legacy `enabled` / `granularity` / `identification` / `visible_when` quadruple. | ✓ shipped |
 | W7 — Resolver | Reads policies + applies the scope rules; consumed by W16 / W17 surfaces. | ✘ pending |
 | W16 — Reviewee `/results` body | Renders the policy-permitted content. | ✘ pending |
 | W17 — Observer `/collation` body | Renders the policy-permitted content. | ✘ pending |

@@ -199,20 +199,32 @@ view time (no materialization — see §3.6).
 
 ```
 instrument_view_policies
-  id              PK
-  instrument_id   FK -> instruments.id    (indexed, NOT NULL)
-  audience        String(16)  NOT NULL    'reviewee' | 'peer_reviewer' | 'observer'
-  enabled         Boolean     NOT NULL    default FALSE
-  granularity     String(16)  NOT NULL    'row' | 'aggregated'
-  identification  String(16)  NOT NULL    'identified' | 'deidentified'
-  visible_when    String(16)    NULL      (added in S12 — see participant_model_prep.md)
-                                          'while_ongoing' | 'after_release' |
-                                          'throughout' | 'always'
-  observer_tag    String        NULL      (observer audience only — restrict the
-                                           grant to observers carrying this tag;
-                                           NULL = all observers on the session)
+  id                              PK
+  instrument_id                   FK -> instruments.id    (indexed, NOT NULL)
+  audience                        String(16)  NOT NULL    'reviewee' | 'peer_reviewer' | 'observer'
+  while_ongoing_granularity       String(16)    NULL      'row' | 'aggregated' | NULL
+  while_ongoing_identification    String(16)    NULL      'identified' | 'deidentified' | NULL
+  after_release_granularity       String(16)    NULL      'row' | 'aggregated' | NULL
+  after_release_identification    String(16)    NULL      'identified' | 'deidentified' | NULL
+  observer_tag                    String        NULL      (observer audience only — restrict the
+                                                           grant to observers carrying this tag;
+                                                           NULL = all observers on the session)
   UNIQUE (instrument_id, audience)
 ```
+
+Each per-window `(granularity, identification)` pair encodes the
+audience's mode in that window. **Both members NULL ≡ "off in
+this window"**; the audience can't view this instrument during
+that window. A row with both windows off is the explicit "this
+audience cannot view this instrument in any form" state; a
+missing row reads identically. `(aggregated, identified)` is
+reserved-incoherent and rejected by the service.
+
+The original `enabled` / `granularity` / `identification` /
+`visible_when` quadruple shipped with Phase 1 and retired with
+S14's contract step (Alembic `b8f4c2a91d35`) once the per-window
+pairs carried the operator's intent end-to-end. See
+`spec/visibility_policy.md` for the full functional contract.
 
 Up to three rows per instrument — one per configurable
 audience:
@@ -285,12 +297,11 @@ Three orthogonal axes per grant — two **form** axes (what the
 audience sees) plus one **window** axis (when):
 
 - `granularity` — `row` (each reviewer's response shown as its
-  own line) or `aggregated` (summarised — see §7).
+  own line) or `aggregated` (summarised — see §7). `NULL` ≡
+  "off in this window".
 - `identification` — `identified` (the responding reviewer's
   name is shown) or `deidentified` (responses shown without
-  attribution).
-- `visible_when` — which session-level window applies to this
-  grant. See **Visibility windows** below.
+  attribution). `NULL` ≡ "off in this window".
 
 The two form axes are not all four combinations open — only
 three modes are coherent for a participant audience:
@@ -300,24 +311,24 @@ three modes are coherent for a participant audience:
 | Raw | `row` | `identified` |
 | Anonymized | `row` | `deidentified` |
 | Summarized | `aggregated` | `deidentified` |
+| (off this window) | `NULL` | `NULL` |
 
 `aggregated` + `identified` is incoherent ("average Alice"
 isn't a thing); the service rejects it. The Band 3 editor
 presents three named modes; the encoder maps each onto the
 two columns.
 
-**Visibility windows (`visible_when`).** The operator picks one
-of four window values per grant. Three are reachable by the
-non-operator audiences in this table; `always` is reserved
-for the operator (who isn't an audience row — see paragraph
-above).
+**Visibility windows.** Each policy row carries two per-window
+pair slots (`while_ongoing_*` + `after_release_*`); the
+operator picks a mode per window cell. Setting both windows to
+the same mode is the operator-facing "Throughout" shape.
+`always` is reserved for the operator (who isn't an audience
+row — see paragraph above) and has no schema slot today.
 
-| `visible_when` | Window | Drawn from |
-|---|---|---|
-| `while_ongoing` | `[sessions.activated_at, sessions.deadline)` | Session lifecycle — the same window the reviewer surface stays reachable in. |
-| `after_release` | `[sessions.responses_release_at, sessions.responses_release_until)` | The Release-responses window authored on Session Edit Details / Create New Session. Originally W14 (PR #1716) wired `release_until_offset` here; S12 retires the offset in favour of an absolute `responses_release_until` datetime that the form input and the Stop button share. |
-| `throughout` | Union of the two windows above | Resolver returns true if *either* window is currently open. Useful when the operator wants results visible both during the review and after release without authoring two policy rows. |
-| `always` | Unconditional | Reserved — operator-only semantics today; the column accepts it for forward-compatibility (e.g. a future per-instrument `peer_reviewer` always-on knob). |
+| Window | Drawn from |
+|---|---|
+| `while_ongoing` | `[sessions.activated_at, sessions.deadline)` — session lifecycle, the same window the reviewer surface stays reachable in. |
+| `after_release` | `[sessions.responses_release_at, sessions.responses_release_until)` — the Release-responses window authored on Session Edit Details / Create New Session. Originally W14 (PR #1716) wired `release_until_offset` here; S12 retires the offset in favour of an absolute `responses_release_until` datetime that the form input and the Stop button share. |
 
 **Operator buttons for the After-release window.** The
 `after_release` window is bracketed by two datetime columns on
@@ -338,8 +349,8 @@ to the same `responses_release_until` column; the difference
 between "schedule a future close" and "stop now" is just the
 audit event the writer emits, not which column is touched.
 
-View-time predicate, used by the resolver for both
-`after_release` and the after-release half of `throughout`:
+View-time predicate, used by the resolver for the
+`after_release` window:
 
 > *Release window is open* ⇔ `responses_release_at IS NOT NULL`
 > AND `now() ≥ responses_release_at` AND
@@ -347,14 +358,14 @@ View-time predicate, used by the resolver for both
 > responses_release_until`).
 
 **Archive forces zero visibility.** When `sessions.status =
-'archived'`, the resolver returns `enabled = FALSE` for every
-non-operator audience regardless of `visible_when`. No schema
+'archived'`, the resolver treats every per-window pair as
+`(NULL, NULL)` for every non-operator audience. No schema
 change — pure view-time gate, mirrors how archive retires a
 session out of reviewer reach today.
 
 This subsumes any "confidential instrument" flag: a
 *confidential* instrument is simply one whose `reviewee` policy
-row is `enabled = FALSE`. Confidentiality is the absence of a
+row has both windows off. Confidentiality is the absence of a
 viewing grant.
 
 Default on instrument create: all three audiences `enabled =
@@ -484,9 +495,10 @@ New emitters, registered in `audit.EVENT_SCHEMAS` per the 11K
 canonical-envelope convention:
 
 - `instrument.view_policy_set` — operator changes a visibility
-  grant (changes envelope). Covers any axis: `enabled`,
-  `granularity`, `identification`, `visible_when`,
-  `observer_tag`.
+  grant (changes envelope). Covers any axis: the four per-window
+  pair columns (`while_ongoing_granularity` /
+  `while_ongoing_identification` / `after_release_granularity` /
+  `after_release_identification`) and `observer_tag`.
 - `session.schedule_set` — operator sets / clears a schedule
   window.
 - `session.responses_released` (S12) — operator pressed
