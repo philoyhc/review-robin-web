@@ -896,6 +896,77 @@ def _band3_visibility_states_for(
     return result
 
 
+# Reviewer-surface "Who can see what you wrote" transparency table.
+# Renders read-only next to the per-instrument intro card, showing
+# the persisted visibility policy from the reviewer's POV — three
+# rows (You / Reviewees / Observers) × two windows (Session ongoing
+# / Responses released). NULL ≡ "off in this window" renders as
+# the em-dash placeholder; the (audience, window) cells the
+# operator can't author are pinned to their baseline label
+# regardless of stored state (Reviewers Session-ongoing always
+# Raw, Reviewees Session-ongoing always off).
+_REVIEWER_VP_MODE_LABELS: dict[str | None, str] = {
+    None: "—",
+    "raw": "Raw responses",
+    "anonymized": "Anonymized responses",
+    "summarized": "Summarized responses",
+}
+
+
+def build_reviewer_visibility_rows(
+    db: Session, instruments: list[Instrument]
+) -> dict[int, list[dict[str, str]]]:
+    """Build the read-only transparency table for the reviewer
+    surface — one row per audience (``You`` / ``Reviewees`` /
+    ``Observers``), label strings for each window. Returns
+    ``{instrument_id: [row, ...]}``.
+
+    Each row dict carries ``audience_label`` /
+    ``while_ongoing_label`` / ``after_release_label``. Audiences
+    with no persisted policy row fall back to
+    :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels mirror
+    the operator-side ``Raw responses`` / ``Anonymized
+    responses`` / ``Summarized responses`` / ``—`` vocabulary so
+    the reviewer reads the same words the operator authored
+    against.
+    """
+    result: dict[int, list[dict[str, str]]] = {}
+    audiences: list[tuple[str, str]] = [
+        ("peer_reviewer", "You"),
+        ("reviewee", "Reviewees"),
+        ("observer", "Observers"),
+    ]
+    for instrument in instruments:
+        persisted = visibility_policies.list_for_instrument(
+            db, instrument.id
+        )
+        rows: list[dict[str, str]] = []
+        for audience, label in audiences:
+            row = persisted.get(audience)
+            defaults = _BAND3_VISIBILITY_DEFAULTS[audience]
+            if row is None:
+                wo_mode = defaults["while_ongoing_mode"]
+                ar_mode = defaults["after_release_mode"]
+            else:
+                wo_mode = _decode_pair_to_mode(
+                    row.while_ongoing_granularity,
+                    row.while_ongoing_identification,
+                )
+                ar_mode = _decode_pair_to_mode(
+                    row.after_release_granularity,
+                    row.after_release_identification,
+                )
+            rows.append(
+                {
+                    "audience_label": label,
+                    "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
+                    "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],
+                }
+            )
+        result[instrument.id] = rows
+    return result
+
+
 def _new_model_band2_states_for(
     db: Session, instruments: list[Instrument]
 ) -> dict[int, dict[str, Any]]:

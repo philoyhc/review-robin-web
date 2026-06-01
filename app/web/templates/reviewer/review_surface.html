@@ -189,17 +189,50 @@
         <section class="rs-instrument-group"
                  data-rs-position="{{ group.position }}">
         {# Per-instrument intro: heading card (short label + description)
-           sits alone in its own half-width slot. Help text cards
-           start in their own 2-col grid below — they don't share a
-           row with the heading. #}
-        {% if group.heading.title %}
+           in column 1; "Who can see what you wrote" transparency
+           table in column 2. Help text cards start in their own
+           2-col grid below — they don't share a row with the
+           heading. #}
+        {% if group.heading.title or group.visibility_rows %}
           <div class="rs-intro-grid">
             <div class="card rs-instrument-card">
-              <h2>{{ group.heading.title }}</h2>
-              {% if group.heading.subtitle %}
-                <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+              {% if group.heading.title %}
+                <h2>{{ group.heading.title }}</h2>
+                {% if group.heading.subtitle %}
+                  <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                {% endif %}
               {% endif %}
             </div>
+            {# Visibility-policy transparency card. Read-only mirror
+               of the operator's Band 3 policy for this instrument —
+               one row per audience (You / Reviewees / Observers)
+               × two windows (Session ongoing / Responses released).
+               ``—`` means "this audience can't view your responses
+               in that window". #}
+            {% if group.visibility_rows %}
+              <div class="card rs-instrument-card"
+                   data-rs-visibility-policy-card>
+                <h3 style="margin: 0 0 8px 0;">Who can see what you wrote</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="text-align: left;">
+                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for vp in group.visibility_rows %}
+                      <tr>
+                        <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
+                        <td style="padding: 4px 8px;">{{ vp.while_ongoing_label }}</td>
+                        <td style="padding: 4px 8px;">{{ vp.after_release_label }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endif %}
           </div>
         {% endif %}
         {% if group.help_block_items %}
