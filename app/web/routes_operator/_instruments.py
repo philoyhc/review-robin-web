@@ -499,14 +499,20 @@ async def instrument_view_policy_save(
 ) -> RedirectResponse:
     """Save the Band 3 visibility-policy table for one instrument.
 
-    Form payload: per audience in ``peer_reviewer`` / ``reviewee``
-    / ``observer``, three named slots —
-    ``{audience}_enabled`` (checkbox; "true" when ticked),
-    ``{audience}_mode`` (``raw`` / ``anonymized`` /
-    ``summarized``), and ``{audience}_visible_when``
-    (``while_ongoing`` / ``after_release`` / ``throughout``).
-    The service layer rejects values outside the per-audience
-    vocabulary so a direct API call can't bypass the editor.
+    Form payload — for each audience in
+    ``peer_reviewer`` / ``reviewee`` / ``observer``, two slots:
+
+    - ``{audience}_while_ongoing_mode`` — empty / ``"raw"`` /
+      ``"anonymized"`` / ``"summarized"``. Empty means "off in
+      this window".
+    - ``{audience}_after_release_mode`` — same vocabulary.
+
+    Per-(audience, window) cell rules are validated by
+    :func:`visibility_policies._validate_per_window` —
+    Reviewer Session-ongoing must be ``raw`` (baseline always
+    on); Reviewee Session-ongoing must be empty (the strict
+    per-pair flow rule); Observer accepts any mode in either
+    window. Anything outside those sets 422s.
     """
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
@@ -514,22 +520,26 @@ async def instrument_view_policy_save(
 
     rows: list[dict[str, object]] = []
     for audience in visibility_policies.AUDIENCES:
-        enabled = (form.get(f"{audience}_enabled") or "").lower() == "true"
-        mode = (form.get(f"{audience}_mode") or "").strip()
-        visible_when = (
-            form.get(f"{audience}_visible_when") or ""
-        ).strip()
-        if not mode or not visible_when:
-            # An audience the editor didn't render — skip rather
+        while_ongoing_raw = form.get(f"{audience}_while_ongoing_mode")
+        after_release_raw = form.get(f"{audience}_after_release_mode")
+        if while_ongoing_raw is None and after_release_raw is None:
+            # The editor didn't render this audience — skip rather
             # than reject. Lets future audience additions roll out
             # without a coordinated form-payload change.
             continue
         rows.append(
             {
                 "audience": audience,
-                "enabled": enabled,
-                "mode": mode,
-                "visible_when": visible_when,
+                "while_ongoing_mode": (
+                    (str(while_ongoing_raw).strip() or None)
+                    if while_ongoing_raw is not None
+                    else None
+                ),
+                "after_release_mode": (
+                    (str(after_release_raw).strip() or None)
+                    if after_release_raw is not None
+                    else None
+                ),
             }
         )
 

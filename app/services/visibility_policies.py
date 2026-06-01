@@ -75,6 +75,52 @@ REVIEWEE_OBSERVER_WHENS: frozenset[str] = frozenset(
 )
 
 
+# Per-audience-per-window valid modes for the redesigned Band 3
+# editor (W15 follow-on). Each entry's value set is the modes the
+# operator may pick for that (audience, window) cell; ``None``
+# means "off in this window" and is always allowed except where
+# noted.
+#
+# - peer_reviewer Session-ongoing: **always Raw** — the operator
+#   cannot turn the reviewer's own-work-during-session view off
+#   (it's the baseline; mirrors how Operator always sees
+#   everything). Editor renders this cell as a static "Raw
+#   responses" pill.
+# - peer_reviewer Responses-released: ``None`` or ``raw``.
+# - reviewee Session-ongoing: **always off** — the strict
+#   per-pair flow says reviewees don't see responses while the
+#   review is in flight. Editor renders this cell as a static
+#   "—" pill.
+# - reviewee Responses-released: any of the three modes or off.
+# - observer (both windows): any of the three modes or off.
+
+_PER_CELL_VALID_MODES: dict[tuple[str, str], frozenset[str | None]] = {
+    ("peer_reviewer", "while_ongoing"): frozenset({"raw"}),
+    ("peer_reviewer", "after_release"): frozenset({None, "raw"}),
+    ("reviewee", "while_ongoing"): frozenset({None}),
+    ("reviewee", "after_release"): frozenset(
+        {None, "raw", "anonymized", "summarized"}
+    ),
+    ("observer", "while_ongoing"): frozenset(
+        {None, "raw", "anonymized", "summarized"}
+    ),
+    ("observer", "after_release"): frozenset(
+        {None, "raw", "anonymized", "summarized"}
+    ),
+}
+
+
+def valid_modes_for_cell(
+    audience: str, window: str
+) -> frozenset[str | None]:
+    """Return the set of allowed modes for the ``(audience,
+    window)`` cell in the Band 3 editor. Includes ``None`` when
+    "off in this window" is a permitted state. Used by the
+    editor / view-adapter to drive the chip cycle, and by the
+    service-layer validator below."""
+    return _PER_CELL_VALID_MODES[(audience, window)]
+
+
 class VisibilityPolicyError(ValueError):
     """Raised when a visibility-policy upsert violates an invariant.
 
@@ -180,37 +226,129 @@ def list_for_instrument(
     return {row.audience: row for row in rows}
 
 
+def _validate_per_window(
+    *,
+    audience: str,
+    while_ongoing_mode: str | None,
+    after_release_mode: str | None,
+    observer_tag: str | None,
+) -> None:
+    """Per-(audience, window) cell validation for the redesigned
+    Band 3 editor. Same error codes as :func:`_validate` so the
+    route translates uniformly to 422."""
+    if audience not in AUDIENCES:
+        raise VisibilityPolicyError(
+            "invalid_audience",
+            f"audience must be one of {sorted(AUDIENCES)}; got "
+            f"{audience!r}.",
+        )
+    for window_name, mode in (
+        ("while_ongoing", while_ongoing_mode),
+        ("after_release", after_release_mode),
+    ):
+        allowed = _PER_CELL_VALID_MODES[(audience, window_name)]
+        if mode not in allowed:
+            raise VisibilityPolicyError(
+                "invalid_mode",
+                f"audience {audience!r} {window_name} cell only "
+                f"accepts modes in "
+                f"{sorted(repr(v) for v in allowed)}; got {mode!r}.",
+            )
+    if observer_tag is not None and audience != "observer":
+        raise VisibilityPolicyError(
+            "observer_tag_misuse",
+            "observer_tag is only meaningful for the observer "
+            "audience.",
+        )
+
+
 def upsert_policy(
     db: Session,
     *,
     review_session: ReviewSession,
     instrument: Instrument,
     audience: str,
-    enabled: bool,
-    mode: str,
-    visible_when: str,
+    while_ongoing_mode: str | None,
+    after_release_mode: str | None,
     observer_tag: str | None = None,
     user: User,
     correlation_id: str | None = None,
 ) -> tuple[InstrumentViewPolicy, dict[str, list[object]]]:
     """Insert or update the ``(instrument, audience)`` row.
 
+    Per-window mode semantics:
+
+    - ``while_ongoing_mode`` — the audience's mode during
+      ``[sessions.activated_at, sessions.deadline)``. ``None``
+      means "off in this window".
+    - ``after_release_mode`` — the audience's mode during
+      ``[sessions.responses_release_at,
+      sessions.responses_release_until)``. ``None`` means "off
+      in this window".
+    - Both ``None`` ⇒ this audience cannot view this instrument
+      in any form. Both same value ⇒ the legacy
+      ``visible_when = "throughout"`` shape.
+
     Returns the persisted row plus a ``changes`` dict (empty when
     no field changed). Only emits ``instrument.view_policy_set``
     when ``changes`` is non-empty.
 
-    Validates the per-audience vocabulary; the caller's route
-    layer should translate :class:`VisibilityPolicyError` to HTTP
-    422.
+    Validates per-(audience, window) — Reviewer Session-ongoing
+    must be ``"raw"`` (baseline self-view always on); Reviewee
+    Session-ongoing must be ``None``; the others accept the
+    three coherent modes plus ``None``.
+
+    Mirror-writes the legacy ``enabled`` / ``granularity`` /
+    ``identification`` / ``visible_when`` columns from the
+    per-window state, so a rolled-back deploy keeps seeing
+    sensible values. The legacy columns retire in the contract-
+    step PR after this slice ships.
     """
-    _validate(
+    _validate_per_window(
         audience=audience,
-        mode=mode,
-        visible_when=visible_when,
+        while_ongoing_mode=while_ongoing_mode,
+        after_release_mode=after_release_mode,
         observer_tag=observer_tag,
     )
 
-    granularity, identification = encode_mode(mode)
+    while_ongoing_pair: tuple[str | None, str | None] = (None, None)
+    after_release_pair: tuple[str | None, str | None] = (None, None)
+    if while_ongoing_mode is not None:
+        while_ongoing_pair = encode_mode(while_ongoing_mode)
+    if after_release_mode is not None:
+        after_release_pair = encode_mode(after_release_mode)
+
+    # Mirror-write the legacy quadruple from the new per-window
+    # state. ``enabled`` is True iff either window is on; the
+    # single-mode encoding picks a representative (the
+    # while_ongoing mode when present, else the after_release
+    # mode) — observer can in principle pick different modes per
+    # window, which the single-mode legacy schema can't represent
+    # losslessly; the read path moves off the legacy columns this
+    # slice, and the contract-step PR drops them.
+    any_enabled = (
+        while_ongoing_mode is not None or after_release_mode is not None
+    )
+    if not any_enabled:
+        legacy_mode = "raw"  # placeholder for the NOT NULL columns
+        legacy_granularity, legacy_identification = encode_mode(legacy_mode)
+        legacy_visible_when: str | None = None
+    else:
+        representative = while_ongoing_mode or after_release_mode
+        legacy_mode = representative  # type: ignore[assignment]
+        legacy_granularity, legacy_identification = encode_mode(
+            legacy_mode  # type: ignore[arg-type]
+        )
+        if (
+            while_ongoing_mode is not None
+            and after_release_mode is not None
+        ):
+            legacy_visible_when = "throughout"
+        elif while_ongoing_mode is not None:
+            legacy_visible_when = "while_ongoing"
+        else:
+            legacy_visible_when = "after_release"
+
     existing = db.execute(
         select(InstrumentViewPolicy).where(
             InstrumentViewPolicy.instrument_id == instrument.id,
@@ -218,44 +356,15 @@ def upsert_policy(
         )
     ).scalar_one_or_none()
 
-    # S14 — mirror-write the per-window pair columns alongside
-    # the legacy (enabled, granularity, identification,
-    # visible_when) quadruple. The pairs encode the audience's
-    # mode in each window; NULL ≡ "off in this window".
-    # ``always`` is treated as ``throughout`` (sets both pairs)
-    # — the legacy reserved-for-operator value never reached
-    # the participant-facing audiences in practice.
-    if not enabled:
-        per_window_pairs = {
-            "while_ongoing_granularity": None,
-            "while_ongoing_identification": None,
-            "after_release_granularity": None,
-            "after_release_identification": None,
-        }
-    else:
-        sets_while = visible_when in ("while_ongoing", "throughout", "always")
-        sets_after = visible_when in ("after_release", "throughout", "always")
-        per_window_pairs = {
-            "while_ongoing_granularity": (
-                granularity if sets_while else None
-            ),
-            "while_ongoing_identification": (
-                identification if sets_while else None
-            ),
-            "after_release_granularity": (
-                granularity if sets_after else None
-            ),
-            "after_release_identification": (
-                identification if sets_after else None
-            ),
-        }
-
     proposed = {
-        "enabled": enabled,
-        "granularity": granularity,
-        "identification": identification,
-        "visible_when": visible_when,
-        **per_window_pairs,
+        "enabled": any_enabled,
+        "granularity": legacy_granularity,
+        "identification": legacy_identification,
+        "visible_when": legacy_visible_when,
+        "while_ongoing_granularity": while_ongoing_pair[0],
+        "while_ongoing_identification": while_ongoing_pair[1],
+        "after_release_granularity": after_release_pair[0],
+        "after_release_identification": after_release_pair[1],
         "observer_tag": observer_tag,
     }
     changes: dict[str, list[object]] = {}
@@ -318,16 +427,27 @@ def upsert_many(
     correlation_id: str | None = None,
 ) -> list[tuple[str, dict[str, list[object]]]]:
     """Upsert several audience rows in one call. ``rows`` is an
-    iterable of dicts with keys ``audience`` / ``enabled`` /
-    ``mode`` / ``visible_when`` / optional ``observer_tag``.
+    iterable of dicts with keys ``audience`` /
+    ``while_ongoing_mode`` / ``after_release_mode`` / optional
+    ``observer_tag``. Each mode value is either ``None``
+    ("off in this window") or one of the operator-facing labels
+    ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
+
     Validation is per-row — the first violation raises; rows
-    already applied stay flushed because the route layer wraps the
-    whole save in a transaction. Returns the list of
+    already applied stay flushed because the route layer wraps
+    the whole save in a transaction. Returns the list of
     ``(audience, changes)`` pairs in input order; ``changes`` is
     empty when the row was a no-op.
 
     Commits the transaction at the end (matches the rest of the
     services package's commit-at-the-edge convention)."""
+
+    def _mode_or_none(value: object) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
     result: list[tuple[str, dict[str, list[object]]]] = []
     for row in rows:
         _, changes = upsert_policy(
@@ -335,9 +455,8 @@ def upsert_many(
             review_session=review_session,
             instrument=instrument,
             audience=str(row["audience"]),
-            enabled=bool(row["enabled"]),
-            mode=str(row["mode"]),
-            visible_when=str(row["visible_when"]),
+            while_ongoing_mode=_mode_or_none(row.get("while_ongoing_mode")),
+            after_release_mode=_mode_or_none(row.get("after_release_mode")),
             observer_tag=(
                 str(row["observer_tag"])
                 if row.get("observer_tag") is not None

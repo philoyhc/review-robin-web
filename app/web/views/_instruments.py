@@ -812,32 +812,51 @@ def build_instruments_context(
 
 # Per-audience UI defaults for the Band 3 visibility editor when
 # no row exists yet on ``instrument_view_policies`` for that
-# audience. The default mode for ``peer_reviewer`` is locked at
-# ``raw`` (the UI greys the What chip); the default
-# ``visible_when`` mirrors the placeholder template's pre-S12
-# selection — ``while_ongoing`` for peer_reviewer (the legacy
-# "While session ongoing" pill), ``after_release`` for reviewee /
-# observer (the placeholder's "After release" cycle default).
+# audience. Encoded as the per-window mode pair the redesigned
+# editor reads — ``None`` ≡ "off in this window".
+#
+# - peer_reviewer: while_ongoing is ALWAYS Raw (the baseline
+#   self-view-during-session guarantee — not editable by the
+#   operator). after_release defaults off; the operator opts
+#   in to a post-release raw view.
+# - reviewee + observer: both windows default off; the operator
+#   opts in deliberately.
+
 _BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
     "peer_reviewer": {
-        "enabled": False,
-        "mode": "raw",
-        "visible_when": "while_ongoing",
+        "while_ongoing_mode": "raw",
+        "after_release_mode": None,
         "observer_tag": None,
     },
     "reviewee": {
-        "enabled": False,
-        "mode": "anonymized",
-        "visible_when": "after_release",
+        "while_ongoing_mode": None,
+        "after_release_mode": None,
         "observer_tag": None,
     },
     "observer": {
-        "enabled": False,
-        "mode": "anonymized",
-        "visible_when": "after_release",
+        "while_ongoing_mode": None,
+        "after_release_mode": None,
         "observer_tag": None,
     },
 }
+
+
+def _decode_pair_to_mode(
+    granularity: str | None, identification: str | None
+) -> str | None:
+    """Decode the per-window ``(granularity, identification)``
+    pair into an operator-facing mode. ``None`` (either side)
+    means "off in this window". The reserved-incoherent
+    ``aggregated``+``identified`` pair falls back to ``None`` so
+    a corrupt row renders as "off" rather than 500ing on render."""
+    if granularity is None or identification is None:
+        return None
+    try:
+        return visibility_policies.decode_mode(
+            granularity, identification
+        )
+    except visibility_policies.VisibilityPolicyError:
+        return None
 
 
 def _band3_visibility_states_for(
@@ -845,9 +864,10 @@ def _band3_visibility_states_for(
 ) -> dict[int, dict[str, dict[str, object]]]:
     """Build the Band 3 visibility editor state for every instrument
     on the page. Returns ``{instrument_id: {audience: state}}``
-    where ``state`` is a dict carrying ``enabled`` / ``mode`` /
-    ``visible_when`` / ``observer_tag``. Audiences with no
-    persisted row fall back to
+    where ``state`` is a dict carrying ``while_ongoing_mode`` /
+    ``after_release_mode`` / ``observer_tag``. Each mode is one
+    of ``None`` / ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
+    Audiences with no persisted row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`."""
     result: dict[int, dict[str, dict[str, object]]] = {}
     for instrument in instruments:
@@ -861,22 +881,14 @@ def _band3_visibility_states_for(
             if row is None:
                 per_audience[audience] = dict(defaults)
                 continue
-            try:
-                mode = visibility_policies.decode_mode(
-                    row.granularity, row.identification
-                )
-            except visibility_policies.VisibilityPolicyError:
-                # The reserved-incoherent (aggregated, identified)
-                # combo is rejected by upsert, but the column
-                # types accept it — fall back to defaults rather
-                # than 500 on render.
-                mode = str(defaults["mode"])
             per_audience[audience] = {
-                "enabled": bool(row.enabled),
-                "mode": mode,
-                "visible_when": (
-                    row.visible_when
-                    or str(defaults["visible_when"])
+                "while_ongoing_mode": _decode_pair_to_mode(
+                    row.while_ongoing_granularity,
+                    row.while_ongoing_identification,
+                ),
+                "after_release_mode": _decode_pair_to_mode(
+                    row.after_release_granularity,
+                    row.after_release_identification,
                 ),
                 "observer_tag": row.observer_tag,
             }
