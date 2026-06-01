@@ -1694,21 +1694,25 @@ W17 as a documentation merge (no separate code surface).
   when the toggle is on; the Zip-all bundle picks up an
   `{code}_observers.csv` member. Closes L2 (Observers
   round-trip Setup → Quick Setup → Extract → bundle).
-- **W11 in-scope — Reviewer `profile_link` Setup mirror**
-  (PR **#1756**). `services/reviewers.create_reviewer` +
-  `update_reviewer` accept the new kwarg and run it through
-  the same blank-→-None normaliser as the tag slots; audit
-  snapshot picks it up. Setup-Reviewers route wires the form
-  param through create + update; `edit_values` carry it on
-  validation-error re-renders. Template Profile-link column
-  mirrors the Reviewees treatment: hidden when no row has
-  data, visible in edit mode or when at least one row carries
-  a link. `field_labels` defaults map gains
+- **W11 — Reviewer `profile_link` affordance**
+  (PR **#1756**, completing the work started in PR #1680).
+  `services/reviewers.create_reviewer` + `update_reviewer`
+  accept the new kwarg and run it through the same blank-
+  →-None normaliser as the tag slots; audit snapshot picks
+  it up. Setup-Reviewers route wires the form param through
+  create + update; `edit_values` carry it on validation-
+  error re-renders. Template Profile-link column mirrors
+  the Reviewees treatment: hidden when no row has data,
+  visible in edit mode or when at least one row carries a
+  link. `field_labels` defaults map gains
   `("reviewer", "profile_link"): "Profile"`; override path
-  stays closed. Out-of-scope items (display-fields
-  `ALLOWED_SOURCES` / seeding; operator-side reviewer-summary
-  cell styling) folded back into the remainder doc's W11
-  row — different surface design calls.
+  stays closed. **Decision logged 2026-06-01**: W11 is the
+  affordance — the column on the model, CSV round-trip,
+  Setup-page form / preview, and friendly label. Where else
+  to surface the link (e.g. as a display-fields source for
+  the reviewee `/results` identity column, or on the
+  operator's reviewer-detail surface) is a future design
+  call left open; no further W11 work pending.
 - **L1 cleanup — retire dead `sessions_for_user` stub**
   (PR **#1757**). `ParticipantSession` dataclass +
   `sessions_for_user` function deleted from

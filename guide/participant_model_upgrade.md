@@ -91,12 +91,15 @@ Prep work has been landing ahead of any named segment. As of
   rule (severity = warning, non-blocking) flags active
   reviewees whose `email_or_identifier` isn't a deliverable
   email, since the `/results` surface needs email auth.
-- **§3.9 reviewer `profile_link` Setup mirror** shipped (W11
-  in-scope / PR #1756). Services / Setup route + template /
-  friendly label / preview-column visibility align with the
-  reviewee treatment. Two out-of-scope touchpoints
-  (display-fields seeding + operator-side reviewer-summary
-  cell styling) stay parked.
+- **§3.9 reviewer `profile_link` affordance** shipped (W11 /
+  PR #1680 + #1756). The column on the model, CSV round-trip,
+  Setup-page form / preview, and friendly label all mirror
+  the reviewee treatment. Where else to surface the link
+  (e.g. as a display-fields source for the reviewee `/results`
+  identity column, or on the operator's reviewer-detail
+  surface) is left as a future design call — the affordance
+  is the deliverable; placement is decided when a specific
+  surface needs it.
 - **§7 observer `/collation` body** still pending (W17, with
   the supporting service module W5 bundled).
 
@@ -1113,7 +1116,7 @@ subset is in `guide/participant_model_remainder.md`.
 | W8 | Reviewee-reachability warning on Validate | ✓ shipped (#1758) |
 | W9 | Friendly-label retirement on reviewee identity slots | ✓ shipped (#1680) |
 | W10 | Observer CSV importer + Setup page wiring | ✓ shipped (#1706) |
-| W11 | Reviewer `profile_link` surface mirror | ⚠ Setup mirror shipped (#1680 + #1756); display-fields seeding + operator reviewer-summary cell parked — see `_remainder.md` |
+| W11 | Reviewer `profile_link` surface mirror | ✓ shipped (#1680 + #1756). The affordance is in place — column on the model, CSV round-trip, Setup-page form / preview, friendly label. Where else to surface it (display-fields seeding for the reviewee `/results` identity column, operator's reviewer-detail cell styling) is a future design call left open. |
 | W12 | Quick Setup Observer slot | ✓ shipped (#1754) |
 | W13 | Extract Setup observer shapes | ✓ shipped (#1755) |
 | W14 | Session schedule authoring | ✓ shipped (#1716, S12 reshape after) |
