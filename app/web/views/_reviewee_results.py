@@ -131,12 +131,17 @@ def build_reviewee_results_context(
     """Build the read-only results context for one reviewee.
 
     Walks the session's instruments in positional order. For each
-    instrument, asks ``visibility_policies.resolve_mode`` whether
-    the ``reviewee`` audience currently has any visibility; if
-    not (or if the resolver returns a mode other than ``"raw"``
-    in this slice), the instrument is omitted. When the
-    resolver returns ``"raw"``, emits a section with one row per
-    reviewer who responded about this reviewee.
+    instrument, the section renders whenever the operator has
+    authored Raw on the ``reviewee`` policy for at least one
+    window (Session-ongoing or Responses-released); other modes
+    don't render in this slice. **Submitted values** only fill
+    in when the corresponding window is currently open —
+    otherwise the cells stay empty so the reviewee can see who
+    the would-be reviewers are without prematurely seeing their
+    responses. Operators can therefore author Raw before
+    setting the release-from anchor and still get the empty-
+    rows preview surface; once the anchor passes, the values
+    arrive automatically.
     """
     # Archive forces every audience off — short-circuit before
     # touching the policy table.
@@ -158,21 +163,52 @@ def build_reviewee_results_context(
         ).scalars()
     )
 
-    # Per-instrument visibility resolution. Skip the instrument
-    # entirely when the reviewee can't see anything right now, or
-    # when the mode is anything other than "raw" in this slice.
+    # Per-instrument visibility resolution. Two gates:
+    #
+    # - **Structure gate** (``instrument_mode``): does the
+    #   operator's reviewee policy have ``raw`` authored on any
+    #   window? If yes, the section renders. ``anonymized`` and
+    #   ``summarized`` ship in follow-on slices; in this slice
+    #   any non-Raw policy still skips the instrument so we don't
+    #   render an unmediated row.
+    # - **Value gate** (``instrument_values_visible``): is the
+    #   relevant window currently open? Only then do submitted
+    #   values surface in the cells. When the window is closed
+    #   (operator authored Raw but hasn't set / hasn't reached
+    #   ``responses_release_at``), the section still renders the
+    #   reviewer-row scaffolding but every value cell stays
+    #   muted-empty.
     instrument_mode: dict[int, str] = {}
+    instrument_values_visible: dict[int, bool] = {}
     for instrument in instruments:
         policy_rows = visibility_policies.list_for_instrument(
             db, instrument.id
         )
-        mode = visibility_policies.resolve_mode(
-            policy_rows.get("reviewee"),
+        policy = policy_rows.get("reviewee")
+        if policy is None:
+            continue
+        while_mode = visibility_policies.decode_pair_to_mode(
+            policy.while_ongoing_granularity,
+            policy.while_ongoing_identification,
+        )
+        after_mode = visibility_policies.decode_pair_to_mode(
+            policy.after_release_granularity,
+            policy.after_release_identification,
+        )
+        authored_modes = {m for m in (while_mode, after_mode) if m}
+        if "raw" not in authored_modes:
+            continue
+        # In this slice, ``anonymized`` / ``summarized`` co-authored
+        # on the other window don't change the Raw render — they
+        # only kick in once their own surfaces ship. Treat the
+        # instrument as Raw-mode if Raw is authored on any window.
+        instrument_mode[instrument.id] = "raw"
+        active_mode = visibility_policies.resolve_mode(
+            policy,
             while_ongoing_open=while_ongoing_open,
             after_release_open=after_release_open,
         )
-        if mode == "raw":
-            instrument_mode[instrument.id] = mode
+        instrument_values_visible[instrument.id] = active_mode == "raw"
 
     if not instrument_mode:
         return RevieweeResultsContext(
@@ -254,34 +290,48 @@ def build_reviewee_results_context(
             order_list.append(reviewer.id)
 
     # Pull every **submitted** response keyed about this
-    # reviewee (or about a group this reviewee belongs to). Same
+    # reviewee (or about a group this reviewee belongs to),
+    # restricted to instruments where the value gate
+    # (``instrument_values_visible``) is currently open. Same
     # join chain as the reviewer summary's, scope inverted to
     # ``Assignment.reviewee_id``. Draft rows
     # (``submitted_at IS NULL``) are excluded — the reviewer
     # identity still surfaces above, but the value cells stay
-    # empty until the reviewer hits Submit.
-    response_rows = list(
-        db.execute(
-            select(
-                Response,
-                Reviewer,
-                Instrument,
-                InstrumentResponseField,
-            )
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-            .join(Instrument, Assignment.instrument_id == Instrument.id)
-            .join(
-                InstrumentResponseField,
-                Response.response_field_id == InstrumentResponseField.id,
-            )
-            .where(Assignment.session_id == review_session.id)
-            .where(Assignment.reviewee_id == reviewee.id)
-            .where(Assignment.include.is_(True))
-            .where(Assignment.instrument_id.in_(instrument_mode.keys()))
-            .where(Response.submitted_at.is_not(None))
-        ).all()
-    )
+    # empty until the reviewer hits Submit AND the window opens.
+    instrument_ids_with_values_visible = {
+        iid
+        for iid, visible in instrument_values_visible.items()
+        if visible
+    }
+    if instrument_ids_with_values_visible:
+        response_rows = list(
+            db.execute(
+                select(
+                    Response,
+                    Reviewer,
+                    Instrument,
+                    InstrumentResponseField,
+                )
+                .join(Assignment, Response.assignment_id == Assignment.id)
+                .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+                .join(Instrument, Assignment.instrument_id == Instrument.id)
+                .join(
+                    InstrumentResponseField,
+                    Response.response_field_id == InstrumentResponseField.id,
+                )
+                .where(Assignment.session_id == review_session.id)
+                .where(Assignment.reviewee_id == reviewee.id)
+                .where(Assignment.include.is_(True))
+                .where(
+                    Assignment.instrument_id.in_(
+                        instrument_ids_with_values_visible
+                    )
+                )
+                .where(Response.submitted_at.is_not(None))
+            ).all()
+        )
+    else:
+        response_rows = []
 
     # Index submitted values by (instrument_id, reviewer_id,
     # field_id). Group-scoped instruments fan out the same value
