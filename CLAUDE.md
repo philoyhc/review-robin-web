@@ -51,7 +51,7 @@ fix) into the same PR.
 Run all of these from the repository root with the project virtualenv activated (`pip install -e .[dev]` once).
 
 ```bash
-pytest                                   # full suite (SQLite, ~12s)
+pytest                                   # full suite (SQLite, ~35s with -n auto)
 pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
@@ -65,6 +65,8 @@ uvicorn app.main:app --reload            # local dev server on http://127.0.0.1:
 ```
 
 `pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
+
+**Migration portability matters.** Alembic migrations run against both SQLite (default; tests) and Postgres 16 (production + the `ci-postgres` job). SQLite is more permissive than Postgres in several places that have bitten us — `BOOLEAN DEFAULT 1` (use `sa.true()` / `sa.false()`), `WHERE bool_col = 1` (use `IS TRUE`), FK constraints not enforced at `DROP TABLE` time (drop FKs explicitly first, or recreate them on downgrade), and index / FK name mismatches between upgrade and downgrade (use the *original* names so downgrades further back in the chain can drop them). The `ci-postgres` job runs `alembic upgrade head` *and* the full `downgrade base + upgrade head` round-trip, so every migration must survive both directions on Postgres.
 
 Local auth shortcut: set `ALLOW_FAKE_AUTH=true` plus `FAKE_AUTH_EMAIL`/`FAKE_AUTH_NAME` in `.env`. In deployed environments Azure Easy Auth supplies the identity headers and this flag must remain `false`.
 
@@ -80,19 +82,29 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    feature area into sibling sub-modules (`_lobby.py`,
    `_settings.py`, `_session_home.py`, `_quick_setup.py`,
    `_setup_reviewers.py`, `_setup_reviewees.py`,
-   `_setup_relationships.py`, `_setup_invite.py`,
-   `_assignments.py`, `_rule_builder.py`, `_operations.py`,
+   `_setup_relationships.py`, `_setup_observers.py`,
+   `_setup_invite.py`, `_assignments.py`, `_operations.py`,
    `_preview_surface.py`, `_workflow.py`, `_instruments.py`,
    `_instruments_band2.py` + `_instruments_pagination.py`
    (Segment 18N PR 3 carve — Band 2 routes + 18M page-break /
-   reorder routes), `_extracts.py`, `_sys_admin.py`), with shared
-   plumbing (the `Jinja2Templates` instance, lifecycle / edit-lock
-   guards, Quick Setup cookie naming, the cross-slice Setup-roster
+   reorder routes), `_extracts.py`, `_extract_data.py` (the
+   Operations-strip Extract data tab — per-instrument lens
+   cards + Data shaper), `_sys_admin.py`), with shared plumbing
+   (the `Jinja2Templates` instance, lifecycle / edit-lock guards,
+   Quick Setup cookie naming, the cross-slice Setup-roster
    import / redirect / field-label helpers, and per-instrument
    resolver + redirect helpers shared by the three instruments
    slices) in `_shared.py`. New operator routes belong in their
    feature-area sub-module. Slices import only from `_shared.py`
-   and from outside the package — no slice-to-slice imports. See
+   and from outside the package — no slice-to-slice imports. The
+   reviewer-side package (`app/web/routes_reviewer/`) carries the
+   participant-facing surfaces under the `/me/` prefix: `_dashboard.py`
+   (the cross-role lobby), `_surface.py` (the multi-page response
+   form), `_summary.py` (post-submit summary), `_results.py` (the
+   reviewee `/me/sessions/{id}/results` body), `_collation.py`
+   (the observer `/me/sessions/{id}/collation` placeholder —
+   body wiring paused; see `guide/observers.md`), `_invite.py`
+   (magic-link landing), `_shared.py`. See
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
 2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The two big service packages are `app/services/instruments/` (split by concern: `_state.py` cross-slice plumbing including `_instrument_label`, `_display_fields.py`, `_response_fields.py` incl. `bulk_save_fields` + `validation_block_from_inline`, `_band1.py` link-rule editor, `_band2.py` Band 2 state save + Band 3 dual-write [Segment 18N PR 2 carve], `_pagination.py` 18M reorder + page-break helpers [Segment 18N PR 2 carve], `_instrument_crud.py` lifecycle + group/unit-of-review + column-widths + bulk toggles, `_field_presets.py`) and `app/services/responses/` (`_core.py` save / submit / state-rollup, `_group_reconciliation.py` Segment 13C / 18H group fan-out + reconcile machinery [Segment 18N PR 4 carve]). Each package's `__init__.py` re-exports the public surface so callers write `from app.services import instruments` / `from app.services import responses` unchanged. The Response Type Definitions slice (`_rtds.py`) retired 2026-05-26 alongside the `response_type_definitions` table. See `guide/archive/major_refactor.md` §12.A.
@@ -100,7 +112,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
 
 A small but important fourth seam:
 
-- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_rule_builder.py`, `_assignments.py`, `_audit_log.py`, `_sort.py`, `_workflow_card.py`); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
+- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_assignments.py`, `_audit_log.py`, `_sort.py`, `_workflow_card.py`, `_reviewer_summary.py` (reviewer post-submit summary), `_reviewee_results.py` (reviewee `/results` body — Raw / Anonymized / Summarized aggregate primitives in `_summarize_field`)); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
 
 ### Audit events
 
@@ -122,7 +134,8 @@ reject it.
 
 - `app/auth/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends) into an `AuthenticatedUser`. When `ALLOW_FAKE_AUTH=true`, a fake user is injected.
 - `app/web/deps.py` exposes `get_current_user` and `get_or_create_user` (the latter ensures the auth principal has a row in `users`). Routes depend on these, not on the headers directly.
-- Operator authorization goes through `require_session_operator` (also in `deps.py`), which combines `get_or_create_user` with a per-session permission check from `app/services/permissions.py`.
+- **Operator authorization** goes through `require_session_operator` (in `deps.py`), which combines `get_or_create_user` with a per-session permission check from `app/services/permissions.py`.
+- **Participant authorization** goes through `require_reviewee_in_session` (W2) or `require_observer_in_session` (W3) for the reviewee `/me/sessions/{id}/results` and observer `/me/sessions/{id}/collation` surfaces. Both match the signed-in user's email (case-insensitive) against the session's roster + gate on `Reviewee.status` / `Observer.status` being `"active"`. Reviewees with non-email identifiers (anonymous IDs for analysis-only sessions) fail the reachability check — flagged on the Validate page by the `reviewees.unreachable_for_results` soft warning (W8).
 
 ### Templating conventions
 
@@ -192,8 +205,13 @@ reject it.
 - **`spec/assignments.md`** — Assignment engine + the Assignments operator page. Rule model, where the rule lives (Band 1 only post-Wave-5), synthetic Full Matrix default, self-review policy, group-scoped fan-out, reconcile + regenerate. (Replaces the retired `rule_based_assignment.md`; pre-2026-05-26 doc preserved at `spec/archive/rule_based_assignment.md`.)
 - **`spec/instruments.md`** — Instrument entity + per-session Instruments operator page. Per-instrument card (Identity / Bands 1+2+3), "Not set" pill safety gate, group-scoped variant, Response Type Definitions card. (Consolidates the retired `instrument_builder.md` + `group_scoped_instruments.md`; pre-2026-05-26 docs preserved at `spec/archive/`.)
 - **`spec/settings_inventory.md`** — Single-stop index of every operator- / per-session setting Review Robin Web persists, plus the browser-local UI-state primitives (cookies / localStorage / URL params).
+- **`spec/visibility_policy.md`** — Per-instrument visibility policy (the 3 × 2 chip grid: Reviewers / Reviewees / Observers × Session-ongoing / Responses-released; Raw / Anonymized / Summarized modes; `instrument_view_policies` storage; `resolve_mode` view-time resolver). Cited by both the reviewee `/results` and the (paused) observer `/collation` surfaces.
+- **`spec/participant_model.md`** — Active spec covering the participant-model behavior shipped 2026-05-30 → 2026-06-01: observer roster + per-session toggle + reviewee `/results` body across all three modes + Acknowledge gesture. The umbrella design rationale + the S/P/W identifier glossary live in `guide/archive/participant_model_upgrade.md` (Appendix A); outstanding work is logged in `guide/observers.md` (W17/W5, paused) and `guide/segment_14B_email_infrastructure.md` appendix (W20/W21).
+- **`spec/audience_and_identity_model.md`** — Audience taxonomy (operator / reviewer / reviewee / observer / sysadmin) and auth posture.
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence. (The earlier `unfinished_business.md` catalog retired 2026-05-10 once all open items shipped or got absorbed into named segments; lives at `guide/archive/unfinished_business.md` for historical reference.)
+- **`guide/observers.md`** — Standing notes for the observer participant role; observer-collation body wiring (W17 + the supporting W5 service module) paused 2026-06-01 while use scenarios are rethought.
+- **`guide/codebase_assessment_*.md`** — Snapshot of code state vs spec. Only the latest stays here; older snapshots retire to `guide/archive/`. The 2026-06-01 snapshot's Appendix §9 has concrete file-split proposals for the three production files at or near the 18N housekeeping threshold (`assignments.py`, `scheduled_events.py`, `session_config_io/_apply.py`).
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 
