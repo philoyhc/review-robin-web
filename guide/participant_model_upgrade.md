@@ -251,6 +251,36 @@ resolver. The schema's job is to record which audiences are
 enabled, in what form, and during which window; *scope* is
 intrinsic.
 
+**Scope of the visibility policy — strictly per-pair flow.**
+The visibility policy governs **the information flow from
+reviewers to the reviewees they are reviewing** (and the
+mirrors of that flow back to the reviewer themselves and out
+to the relevant observers). It is deliberately **not** a
+mechanism for surfacing cross-cohort summaries — e.g.
+"every reviewer sees the cohort-wide average of every
+instrument, anonymised". Those use cases can come up and are
+worth supporting later, but they belong to a separate
+mechanism — an **Operator- or Observer-published report**
+that someone with cohort-wide standing explicitly makes
+available to one or more audiences. Keeping the two
+mechanisms separate avoids loading the per-instrument
+audience policy with cohort-aggregate semantics it isn't
+shaped for (e.g. a reviewer who reviewed only Alice would
+otherwise need to see "summarised across all reviewees" they
+have no pairwise connection to). The pairwise flow is small,
+local, and the resolver can be implemented cleanly against
+each (reviewer, reviewee) edge; cohort-aggregate publication
+is a separate slice if and when it lands.
+
+As a corollary, the **Reviewer scope is strictly self-only**
+in the policy table: a reviewer's grant covers only the
+responses they themselves keyed in. A future operator-level
+"Self only / All peers" toggle (a `peer_scope` column) is
+sketched as **S13** in `guide/participant_model_prep.md` —
+parked, not actively in design, because the same use case
+might be served by an Operator- or Observer-published report
+instead.
+
 Three orthogonal axes per grant — two **form** axes (what the
 audience sees) plus one **window** axis (when):
 
