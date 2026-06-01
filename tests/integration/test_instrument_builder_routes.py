@@ -4511,7 +4511,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     intro_marker = f'data-instrument-id="{new_model.id}"'
     intro_idx = flat.find(intro_marker)
     assert intro_idx != -1
-    intro_block = flat[intro_idx : intro_idx + 8000]
+    intro_block = flat[intro_idx : intro_idx + 4000]
     assert "#2:" in intro_block
     # short_label renders inside the view span (alongside the
     # # prefix); description renders inside the view paragraph.
@@ -4568,7 +4568,7 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
-    intro_block = flat[intro_idx : intro_idx + 8000]
+    intro_block = flat[intro_idx : intro_idx + 3000]
     # Heading still renders (#2: Reflection — source seed
     # instrument is #1). 2026-05-28 follow-on dropped the
     # explicit ``style="font-weight: inherit;"`` on the view
@@ -4619,7 +4619,7 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     flat = " ".join(body.split())
     assert "Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
-    intro_block = flat[intro_idx : intro_idx + 8000]
+    intro_block = flat[intro_idx : intro_idx + 2500]
     assert 'class="pill pill-success"' in intro_block
 
 

@@ -467,18 +467,13 @@ def test_instruments_page_reflects_persisted_state(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # The observer-while_ongoing / -after_release hidden inputs
-    # carry the persisted values. Indentation-agnostic to keep
-    # the assertion robust against template reflows.
-    import re
-
-    def _vp_value(audience_window: str) -> str | None:
-        match = re.search(
-            rf'data-new-model-vp-input="{re.escape(audience_window)}"\s*'
-            rf'value="([^"]*)"',
-            body,
-        )
-        return match.group(1) if match else None
-
-    assert _vp_value("observer-while_ongoing") == "summarized"
-    assert _vp_value("observer-after_release") == "raw"
+    # The observer-while_ongoing hidden input carries the
+    # persisted value.
+    assert (
+        'name="observer_while_ongoing_mode"\n                   data-new-model-vp-input="observer-while_ongoing"\n                   value="summarized"'
+        in body
+    )
+    assert (
+        'name="observer_after_release_mode"\n                   data-new-model-vp-input="observer-after_release"\n                   value="raw"'
+        in body
+    )
