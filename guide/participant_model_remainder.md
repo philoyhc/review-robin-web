@@ -24,7 +24,6 @@ Last refreshed 2026-06-01 after the Observers round-trip stream
 
 | # | Item | Ref | Marker | Notes |
 |---|---|---|---|---|
-| W8 | Reviewee-reachability warning on Validate page | §3.3 | ✘ | Cross-cutting soft warning; calls `is_email_identified()` (W1, shipped). Surface the warning on the Validate page for reviewees with no recoverable email. |
 | W11 | Reviewer `profile_link` — out-of-scope touchpoints | §3.9 | ⚠ partial | Quick Setup CSV import + Extract Settings shipped (#1680); services/reviewers + Setup-Reviewers + field labels + preview-table column shipped (#1756). **Remaining (different design call):** display-fields `ALLOWED_SOURCES` / seeding (the display-fields system is reviewer-form-facing and shows reviewee data; reviewer `profile_link` doesn't naturally fit), reviewer-summary cell styling on the operator's reviewer detail surface. Pull from the remainder when either surface is in scope. |
 | W17 + W5 | Observer collation surface + supporting service | §5 + §7 | ✘ | Wires P6: resolves visibility policy via `visibility_policies.resolve_mode` (W7, shipped), filters by observer `tag_1`. W5 (`app/services/collation.py`) is the supporting service module and lands alongside — no useful pre-positioning since W17 is its sole consumer. Most of the visibility plumbing is now done so W17 can ride on it. |
 | W20 | Reviewee / observer email notifications | §6 | ✘ blocked | Gated on Segment 14B email infrastructure. Results-ready notices, acknowledgement nudges. |
@@ -44,6 +43,7 @@ Last refreshed 2026-06-01 after the Observers round-trip stream
 - **W16** Reviewee results surface — full body shipped across PRs #1737–#1749, covering the three modes (raw, anonymized, summarized) with per-data-type aggregates (mean / median / min / max for numerical, frequency + percentage for List, total + average character length for String) and zero-response label scaffolding.
 - **W19** `Acknowledge` flow — shipped in PR #1750. Bottom Acknowledge card on /results with checkbox-gated button + header pill + idempotent POST + `reviewee.results_acknowledged` audit event.
 - **W11 (in-scope)** Reviewer `profile_link` Setup mirror — shipped in PR #1756. Services / Setup route + template / friendly label / preview-column visibility all align with the reviewee treatment; out-of-scope items folded back into the W11 row above.
+- **W8** Reviewee-reachability warning on Validate — rule `reviewees.unreachable_for_results` registered (severity = warning, gate = setup). Counts active reviewees whose `email_or_identifier` doesn't parse as a deliverable email; one umbrella warning with fix link to Reviewees Setup. Non-blocking — anonymous-identifier sessions stay activatable.
 
 ## Loose-end log
 
