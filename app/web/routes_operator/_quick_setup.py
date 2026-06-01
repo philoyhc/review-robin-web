@@ -74,6 +74,7 @@ async def create_session(
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
+    observers_file: UploadFile | None = File(default=None),
     settings_file: UploadFile | None = File(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -274,6 +275,18 @@ async def create_session(
         if reason is not None:
             return quick_setup_error_redirect("relationships", reason)
         last_fragment = "#quick-setup-relationships"
+
+    if observers_file is not None and observers_file.filename:
+        reason = await _run_quick_setup_observers(
+            file=observers_file,
+            confirm_replace="true",
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("observers", reason)
+        last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
         reason = await _run_quick_setup_settings(
@@ -564,6 +577,87 @@ async def _run_quick_setup_relationships(
     return None
 
 
+@router.post(
+    "/sessions/{session_id}/quick-setup/observers",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_observers_submit(
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Quick Setup card Observers-slot handler. Mirrors the
+    Relationships per-slot route — no response-loss
+    acknowledgement check, since observer rows don't cascade
+    delete reviewer responses."""
+
+    home_url = f"/operator/sessions/{review_session.id}"
+    fragment = "#quick-setup-observers"
+    error_reason = await _run_quick_setup_observers(
+        file=file,
+        confirm_replace=confirm_replace,
+        review_session=review_session,
+        user=user,
+        db=db,
+    )
+    if error_reason is not None:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error=observers"
+                f"&quick_setup_reason={error_reason}{fragment}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _run_quick_setup_observers(
+    *,
+    file: UploadFile,
+    confirm_replace: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> str | None:
+    """Reusable Observers-slot pipeline shared by the per-slot
+    route and the consolidated ``submit-all`` handler. Returns the
+    ``quick_setup_reason`` token on failure, ``None`` on success.
+
+    No cross-table identity check (observers don't share an
+    identity space with reviewers / reviewees) and no
+    response-loss ack (no cascade)."""
+
+    if not lifecycle.is_editable(review_session):
+        return "lifecycle"
+
+    content = await file.read()
+    result = csv_imports.parse_observer_csv(content)
+    if result.is_blocked or any(
+        issue.severity == "error" for issue in result.issues
+    ):
+        return "parse"
+
+    existing = csv_imports.existing_observer_count(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return "needs_confirm"
+
+    csv_imports.save_observers(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return None
+
+
 async def _run_quick_setup_import(
     *,
     file: UploadFile,
@@ -634,6 +728,7 @@ async def quick_setup_submit_all(
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
+    observers_file: UploadFile | None = File(default=None),
     settings_file: UploadFile | None = File(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -722,6 +817,18 @@ async def quick_setup_submit_all(
         if reason is not None:
             return error_redirect("relationships", reason)
         last_fragment = "#quick-setup-relationships"
+
+    if observers_file is not None and observers_file.filename:
+        reason = await _run_quick_setup_observers(
+            file=observers_file,
+            confirm_replace=confirm_replace,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return error_redirect("observers", reason)
+        last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
         reason = await _run_quick_setup_settings(

@@ -91,6 +91,7 @@ def test_build_new_session_quick_setup_context_shape() -> None:
         "reviewers",
         "reviewees",
         "relationships",
+        "observers",
         "settings",
     ]
     assert all(slot.is_wired is False for slot in context.slots)
