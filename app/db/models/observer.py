@@ -19,14 +19,14 @@ class Observer(Base, TimestampMixin):
     no new patterns. ``email`` is the auth-bearing identity; an
     observer with no email has no reason to exist (unlike
     reviewees, whose confidential-subject case keeps the value
-    NULL — see ``guide/participant_model_upgrade.md`` §3.1).
+    NULL — see ``guide/archive/participant_model_upgrade.md`` §3.1).
 
     Single ``tag_1`` (not three) — observer use cases today are
     single-axis. Column name kept as ``tag_1`` so a future
     multi-tag extension is a pure addition rather than a rename
     (§3.1 "Why one tag, not three").
 
-    Lands inert per ``guide/participant_model_upgrade.md`` Phase 1;
+    Lands inert per ``guide/archive/participant_model_upgrade.md`` Phase 1;
     the Observer Setup page, Quick Setup slot, and surface
     populate this table in Phase 2 / Phase 3.
     """

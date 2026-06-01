@@ -1,5 +1,5 @@
 """Shared test helpers for the participant-model per-session
-feature toggles (``guide/participant_model_upgrade.md`` §3.8).
+feature toggles (``guide/archive/participant_model_upgrade.md`` §3.8).
 
 The toggles default to ``False`` so the Relationships tab + route
 guard ship hidden until an operator opts in via the User

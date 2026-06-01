@@ -5,7 +5,7 @@ in its post-contract-step shape: per-window
 ``(granularity, identification)`` pairs only, no
 ``enabled`` / ``visible_when`` quadruple.
 
-See ``guide/participant_model_upgrade.md`` §3.3 and
+See ``guide/archive/participant_model_upgrade.md`` §3.3 and
 ``spec/visibility_policy.md``.
 """
 

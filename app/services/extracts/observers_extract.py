@@ -7,7 +7,7 @@ file round-trips with the Observers Setup-page Upload card and the
 Quick Setup card's observers slot without conversion.
 
 Closes the Extract Setup leg of L2 from
-``guide/participant_model_remainder.md``.
+``guide/archive/participant_model_remainder.md``.
 """
 
 from __future__ import annotations

@@ -111,7 +111,7 @@ class ReviewSession(Base, TimestampMixin):
     # (ISO 8601 duration). Both the Edit / Create form's "Release
     # responses until" input and the operator's Stop release button
     # write here; Release responses now clears it so the window
-    # re-opens open-ended. See ``guide/participant_model_upgrade.md``
+    # re-opens open-ended. See ``guide/archive/participant_model_upgrade.md``
     # §3.3 + §3.4.
     responses_release_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -139,8 +139,8 @@ class ReviewSession(Base, TimestampMixin):
     # the corresponding flag is off; lock-on-data check at the
     # service layer rejects True→False flips while rows exist;
     # ``session.feature_toggled`` audit event fires on flip. See
-    # ``guide/participant_model_upgrade.md`` §3.8 + W6 entry in
-    # ``guide/participant_model_upgrade.md``.
+    # ``guide/archive/participant_model_upgrade.md`` §3.8 + W6 entry in
+    # ``guide/archive/participant_model_upgrade.md``.
     relationships_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default=false()
     )

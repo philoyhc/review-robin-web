@@ -73,7 +73,7 @@ def reviewer_dashboard(
     only when the user is an active reviewer on that session.
 
     Cross-role union per
-    ``guide/participant_model_upgrade.md`` §3.2: case-insensitive
+    ``guide/archive/participant_model_upgrade.md`` §3.2: case-insensitive
     email match against the reviewers / email-identified
     reviewees / observers rosters. Inactive rows are excluded —
     deactivation is the operator's "soft remove"."""

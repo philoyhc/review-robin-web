@@ -1365,16 +1365,16 @@ Plan archived: `guide/archive/url_remodel.md`.
 ### Participants Model Prep — done 2026-05-30 → 2026-05-31 (PRs #1671 → #1680)
 
 Foundation for the post-MVP participant-model arc
-(`guide/participant_model_upgrade.md`). Lands the inert schema,
+(`guide/archive/participant_model_upgrade.md`). Lands the inert schema,
 dead-code helpers, and small standalone retirements / parity
 gaps ahead of any named segment. The participant-model
 **surface slices** (Phases 2 / 3 in
-`guide/participant_model_upgrade.md`) remain unscheduled.
+`guide/archive/participant_model_upgrade.md`) remain unscheduled.
 
 Three slices:
 
 - **Design** (PRs #1671 → #1677). Locked
-  `guide/participant_model_upgrade.md` across §§3.1 (observers,
+  `guide/archive/participant_model_upgrade.md` across §§3.1 (observers,
   single tag), 3.2 (reviewee-identity helper — no schema rename),
   3.3 (visibility policy + Validate-page reachability warning),
   3.4 (schedule columns — already on disk via 18G Part 0),
@@ -1383,7 +1383,7 @@ Three slices:
   `profile_link` parity), 4 (auth posture + magic links — schema
   TBD), 5 (`/me/` lobby + role pills, `/me/sessions/{id}/results`,
   `/me/sessions/{id}/collation`). The implementation-phase audit
-  at `guide/participant_model_upgrade.md` was restructured in PR
+  at `guide/archive/participant_model_upgrade.md` was restructured in PR
   #1677 from a pre-position framing to **(1) Schema → (2) UI
   placeholders → (3) Wiring & logic** so subsequent prep work
   can land linearly.
@@ -1429,7 +1429,7 @@ Three slices:
     fields, view adapter, reviewer-summary cell styling)
     explicitly deferred.
 
-**Plans:** `guide/participant_model_upgrade.md` (design +
+**Plans:** `guide/archive/participant_model_upgrade.md` (design +
 Appendix A's implementation-phase audit).
 
 ---
@@ -1441,7 +1441,7 @@ out the participant-model **surface** slices on top of the
 inert Phase 1 schema and helper stubs. Closes Phase 2
 placeholders P1 / P2 / P3 / P4 / P5 / P6 / P7 and Phase 3
 wiring W6 / W9 / W10 / W14 / W18 from
-`guide/participant_model_upgrade.md`. Unshipped after this
+`guide/archive/participant_model_upgrade.md`. Unshipped after this
 stream: W4 stub (functionality landed inline in
 `_dashboard.py` instead of `participants.sessions_for_user`),
 W5 / W7 / W8 / W11 (partial) / W12 / W13 / W15 / W16 /
@@ -1531,7 +1531,7 @@ W17 / W19 / W20 / W21.
   and Release responses from ↔ Release responses until
   align row-for-row.
 
-**Plans:** `guide/participant_model_upgrade.md` (design +
+**Plans:** `guide/archive/participant_model_upgrade.md` (design +
 Appendix A's implementation-phase audit — markers swept
 through PR #1717 in this stream).
 
@@ -1649,7 +1649,7 @@ this stream the reviewee-side viewing surface is fully wired
   from `_dashboard.py`; 6 sub-row tests retired (3 sibling
   lobby-shape tests kept).
 - **Participant-model remainder doc** (PR **#1752**). New
-  `guide/participant_model_remainder.md` — focused filter on
+  `guide/archive/participant_model_remainder.md` — focused filter on
   `_prep.md` listing only the outstanding W items (W5, W8,
   W11 partial, W12, W13, W17, W20, W21), the two loose ends
   (L1, L2), and the magic-link schema blocker. `_prep.md`
@@ -1665,7 +1665,7 @@ reviewee side on Setup, the Validate page surfaces a soft
 warning for non-email reviewees, and the dead
 `sessions_for_user` stub finally goes. Closes W8 / W11 (in
 scope) / W12 / W13 / L1 / L2 from
-`guide/participant_model_remainder.md`; W5 collapsed into
+`guide/archive/participant_model_remainder.md`; W5 collapsed into
 W17 as a documentation merge (no separate code surface).
 
 - **W12 Quick Setup Observers slot** (PR **#1754**). Right

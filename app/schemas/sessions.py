@@ -42,7 +42,7 @@ class SessionCreate(BaseModel):
     # gating the optional Setup tabs. Both default ``False``;
     # operators opt in via the User interface settings card on
     # Session Edit Details. See
-    # ``guide/participant_model_upgrade.md`` §3.8.
+    # ``guide/archive/participant_model_upgrade.md`` §3.8.
     relationships_enabled: bool = False
     observers_enabled: bool = False
     # Participant-model Phase 3 (W14 + S12) — Release-responses
@@ -56,7 +56,7 @@ class SessionCreate(BaseModel):
     # the §8.2.2 anchor-null rule. S12 retired the original
     # ``release_until_offset`` (ISO 8601 duration) in favour of
     # this absolute datetime — see
-    # ``guide/participant_model_upgrade.md`` §3.3 + §3.4.
+    # ``guide/archive/participant_model_upgrade.md`` §3.3 + §3.4.
     responses_release_at: datetime | None = None
     responses_release_until: datetime | None = None
 

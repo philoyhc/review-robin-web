@@ -3,8 +3,8 @@
 authored on the Session Edit Details page's User interface
 settings card.
 
-See ``guide/participant_model_upgrade.md`` §3.8 +
-``guide/participant_model_upgrade.md`` row W6.
+See ``guide/archive/participant_model_upgrade.md`` §3.8 +
+``guide/archive/participant_model_upgrade.md`` row W6.
 """
 
 from __future__ import annotations

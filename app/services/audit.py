@@ -601,7 +601,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # ``reviewer.*`` / ``reviewers.*`` family naming for the
     # observer roster; the ``session.*`` and ``results.*``
     # additions are participant-model-specific. See
-    # ``guide/participant_model_upgrade.md`` §3.5.
+    # ``guide/archive/participant_model_upgrade.md`` §3.5.
     "observer.created": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),

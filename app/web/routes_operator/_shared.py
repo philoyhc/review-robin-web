@@ -167,7 +167,7 @@ def require_relationships_enabled_session(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> ReviewSession:
     """Route gate for the per-session ``relationships_enabled``
-    toggle (``guide/participant_model_upgrade.md`` §3.8).
+    toggle (``guide/archive/participant_model_upgrade.md`` §3.8).
 
     Returns 404 when the feature is off so deep links to a tab
     the operator hasn't enabled cleanly miss rather than render

@@ -6,7 +6,7 @@ Placeholder shell that lights up the URL behind
 reaches the page; everyone else gets 403 / 404 from the gate.
 Today the body is just the chrome — the cross-reviewee
 collation render lands with W17 per
-``guide/participant_model_upgrade.md`` §3.2.
+``guide/archive/participant_model_upgrade.md`` §3.2.
 """
 
 from __future__ import annotations

@@ -458,7 +458,7 @@ def reviewees_delete_all(
 # Allowlist of (form_param, source_field) the reviewee label editor
 # accepts, mirroring ``app.services.field_labels._VALID_SOURCE_FIELDS``
 # (Segment 15A Slice 3). Identity columns retired 2026-05-31 per
-# ``guide/participant_model_upgrade.md`` §3.7 — only the three tag
+# ``guide/archive/participant_model_upgrade.md`` §3.7 — only the three tag
 # slots remain.
 _REVIEWEE_SLOTS: tuple[tuple[str, str], ...] = (
     ("tag_1", "tag_1"),

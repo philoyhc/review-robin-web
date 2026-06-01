@@ -2,7 +2,7 @@
 
 The cross-cutting **participant** surface contract: how the three rosters (reviewer / reviewee / observer) compose into a single user-facing surface family at `/me`, how identity matching works, and where the participant-facing pages plug into the existing reviewer chrome. This doc is the entry point for the participant model — the per-page contracts live in their own specs and are linked inline.
 
-The umbrella design (rationale, future visibility-policy / acknowledge / magic-link arcs) lives in `guide/participant_model_upgrade.md`. This file documents **what is live today** in terms a surface reader can rely on.
+The umbrella design (rationale, future visibility-policy / acknowledge / magic-link arcs) lives in `guide/archive/participant_model_upgrade.md`. This file documents **what is live today** in terms a surface reader can rely on.
 
 ---
 
@@ -165,7 +165,7 @@ These hold across the participant-model surface and are pinned by regression tes
 
 ## 9. Future work
 
-The participant-model upgrade has a small remaining tail. See `guide/participant_model_remainder.md` for the short list; the next-most-relevant items in priority order:
+The participant-model upgrade has a small remaining tail. See `guide/archive/participant_model_remainder.md` for the short list; the next-most-relevant items in priority order:
 
 | Item | What's missing |
 |---|---|
@@ -177,8 +177,8 @@ The participant-model upgrade has a small remaining tail. See `guide/participant
 
 ## Cross-references
 
-- `guide/participant_model_upgrade.md` — full design rationale + phase plan. Appendix A carries the S / P / W identifier glossary with per-item status + PR pointers.
-- `guide/participant_model_remainder.md` — short list of items still to ship or still blocked.
+- `guide/archive/participant_model_upgrade.md` — full design rationale + phase plan. Appendix A carries the S / P / W identifier glossary with per-item status + PR pointers.
+- `guide/archive/participant_model_remainder.md` — short list of items still to ship or still blocked.
 - `spec/audience_and_identity_model.md` — audience taxonomy (operator / reviewer / reviewee / observer / sysadmin); auth posture.
 - `spec/setup_pages.md` — Observers page contract.
 - `spec/reviewer-surface.md` — `/me` dashboard + reviewer-surface chrome; the role-pill + role-navigator integration points live here.

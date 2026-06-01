@@ -5,7 +5,7 @@ into. Covers ``is_email_identified`` (W1). The earlier
 2026-06-01 alongside the cross-role lobby cleanup (L1 from the
 participant-model remainder doc) — W18 built the union inline in
 ``_dashboard.py`` and never consumed the stub. See
-``guide/participant_model_upgrade.md`` §3.2 (and Appendix A
+``guide/archive/participant_model_upgrade.md`` §3.2 (and Appendix A
 row W1).
 """
 
