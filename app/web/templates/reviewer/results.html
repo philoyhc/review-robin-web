@@ -65,15 +65,29 @@
                 {% endfor %}
               </tr>
             </thead>
+            {# When the operator picked "Anonymized summaries"
+               (the ``summarized`` mode), every identification
+               cell — the Reviewer column + every display-field
+               cell — collapses to the muted em-dash so the
+               reviewee can read the values without learning who
+               said what. The response value cells below stay
+               unchanged in either mode. #}
+            {% set _identify = section.mode != "summarized" %}
             <tbody>
             {% for row in section.rows %}
               <tr>
                 <td class="rs-reviewee">
-                  <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}
+                  {% if _identify %}
+                    <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
                 </td>
                 {% for cell in row.display_cells %}
                   <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
-                    {% if cell.is_profile_link %}
+                    {% if not _identify %}
+                      <span class="muted">—</span>
+                    {% elif cell.is_profile_link %}
                       {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
                     {% else %}
                       {{ cell.value or "" }}
