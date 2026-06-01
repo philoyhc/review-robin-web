@@ -216,3 +216,64 @@ def test_session_name_is_plain_text_when_no_role_reachable(
     # No href anywhere in the row for this session — neither
     # session-name link nor pill anchor.
     assert f'href="/me/sessions/{review_session.id}' not in body
+
+
+# ── Session status pill styling ──────────────────────────────────────
+
+
+def test_session_status_pills_are_visibly_styled(
+    client: TestClient, db: Session
+) -> None:
+    """Each of the three Session-status states renders as a clearly
+    pill-styled span — ``open`` green, ``not opened`` light-blue,
+    ``closed`` red (matching the past-deadline pill in the End
+    column). Earlier renders used the muted
+    ``pill-lifecycle-archived`` grey for ``closed``, which read
+    as plain text on a glance.
+
+    Uses reviewee-only rows so the non-reviewer status path
+    fires (``_non_reviewer_session_status`` — pure
+    ``is_ready`` / ``is_expired`` peek; no assignment fan-out
+    needed)."""
+    # "not opened" — fresh session, no activation (draft).
+    s_draft = _make_session(client, db, code="status-draft")
+    db.add(
+        Reviewee(
+            session_id=s_draft.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    # "open" — second session, lifecycle flipped to ``ready``.
+    s_open = _make_session(client, db, code="status-open")
+    s_open.status = "ready"
+    db.add(
+        Reviewee(
+            session_id=s_open.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    # "closed" — third session, lifecycle ``expired``.
+    s_closed = _make_session(client, db, code="status-closed")
+    s_closed.status = "expired"
+    db.add(
+        Reviewee(
+            session_id=s_closed.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+
+    body = client.get("/me").text
+    assert '<span class="pill pill-info">not opened</span>' in body
+    assert '<span class="pill pill-success">open</span>' in body
+    assert '<span class="pill pill-error">closed</span>' in body
+    # The earlier muted-grey treatment retired — the regression
+    # guard pins the new prominent treatment. The CSS rule for
+    # ``.pill-lifecycle-archived`` still ships in base.html for
+    # other surfaces (e.g. the operator archive lobby), so the
+    # check looks for the class on a rendered element rather
+    # than its mere presence in the stylesheet.
+    assert 'class="pill pill-lifecycle-archived"' not in body

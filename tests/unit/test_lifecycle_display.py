@@ -16,7 +16,7 @@ from app.services.lifecycle_display import (
         ("draft", "Draft"),
         ("validated", "Validated"),
         ("ready", "Activated"),
-        ("expired", "Expired"),
+        ("expired", "Closed"),
         ("archived", "Archived"),
     ],
 )
@@ -26,12 +26,13 @@ def test_lifecycle_display_label_for_known_states(
     assert lifecycle_display_label(enum_value) == expected
 
 
-def test_lifecycle_display_label_only_overrides_ready() -> None:
-    """The mapping only diverges from ``str.capitalize`` for the
-    ``ready`` enum (per spec/session_home.md). Adding any other entry
-    should be a deliberate spec change, so the test pins the current
-    set."""
-    assert DISPLAY_LABELS == {"ready": "Activated"}
+def test_lifecycle_display_label_overrides_are_locked_in() -> None:
+    """The mapping diverges from ``str.capitalize`` only for the
+    two enums where the raw label reads poorly to operators
+    (per spec/session_home.md + the operator-lobby "Closed"
+    rename). Adding any other entry should be a deliberate spec
+    change, so the test pins the current set."""
+    assert DISPLAY_LABELS == {"ready": "Activated", "expired": "Closed"}
 
 
 def test_lifecycle_display_label_falls_through_unknown() -> None:

@@ -1,10 +1,21 @@
 """Lifecycle enum -> user-visible display label mapping.
 
 Single source of truth for translating ``ReviewSession.status`` enum
-values into the strings operators read. Per ``spec/session_home.md``,
-the only divergence today is ``ready -> "Activated"`` (the enum reads
-as "ready to be activated" rather than "currently running"); other
-states pass through with their first letter capitalised.
+values into the strings operators read. Divergences from the raw
+enum:
+
+- ``ready`` → ``"Activated"`` — the enum reads as "ready to be
+  activated" rather than "currently running" (per
+  ``spec/session_home.md``).
+- ``expired`` → ``"Closed"`` — "expired" carries a "stale, no
+  longer valid" connotation in everyday English that doesn't fit
+  what the state actually means (response window is over, but
+  the session and its data are intact). "Closed" reads as the
+  neutral "the window has shut" the state describes, and
+  matches the reviewer-surface dashboard's ``closed`` Session-
+  status pill.
+
+Other states pass through with their first letter capitalised.
 
 Used as a Jinja filter (``lifecycle_label``) wherever a template
 renders the enum in user-visible copy. URL slugs, query params, API
@@ -16,6 +27,7 @@ from __future__ import annotations
 
 DISPLAY_LABELS: dict[str, str] = {
     "ready": "Activated",
+    "expired": "Closed",
 }
 
 

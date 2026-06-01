@@ -114,9 +114,12 @@
               {% if item.session_status == "open" %}
                 <span class="pill pill-success">open</span>
               {% elif item.session_status == "closed" %}
-                {# Closed: muted grey rather than amber — the
-                   window is over, not "needs attention". #}
-                <span class="pill pill-lifecycle-archived">closed</span>
+                {# Closed: red, matching the past-deadline pill in
+                   the End column above — both signal "the window
+                   has closed for this reviewer". Earlier renders
+                   used the muted ``pill-lifecycle-archived`` grey
+                   which read as plain text rather than a pill. #}
+                <span class="pill pill-error">closed</span>
               {% else %}
                 <span class="pill pill-info">not opened</span>
               {% endif %}
