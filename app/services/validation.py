@@ -28,6 +28,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
+from app.services.participants import is_email_identified
 
 
 # --------------------------------------------------------------------------- #
@@ -165,6 +166,44 @@ def _check_reviewees_duplicate_id(
                 message=f"Duplicate reviewee identifier '{ident}' ({len(dupes)} rows)",
                 fix_anchor=f"#reviewee-row-{dupes[0].id}",
             )
+
+
+def _check_reviewees_unreachable_for_results(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """W8 — soft warning when any reviewee's ``email_or_identifier``
+    isn't a deliverable email. The ``/me/sessions/{id}/results``
+    surface gates on ``is_email_identified`` (W2 dependency); a
+    reviewee with a non-email handle has no inbox to authenticate
+    against and so won't see the responses written about them.
+
+    Non-blocking — the operator may have non-email reviewees on
+    purpose (anonymous IDs for analysis-only). The warning just
+    surfaces the implication so they decide knowingly."""
+    reviewees = (
+        db.execute(
+            select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .where(Reviewee.status == "active")
+        )
+        .scalars()
+        .all()
+    )
+    unreachable = [r for r in reviewees if not is_email_identified(r)]
+    if not unreachable:
+        return
+    noun = "reviewee" if len(unreachable) == 1 else "reviewees"
+    yield ValidationIssue(
+        severity=Severity.warning,
+        source="reviewees",
+        field="email_or_identifier",
+        message=(
+            f"{len(unreachable)} {noun} cannot view their results: "
+            "identifier is not an email so /me/sessions/.../results "
+            "stays unreachable for them."
+        ),
+        fix_anchor=f"#reviewee-row-{unreachable[0].id}",
+    )
 
 
 def _check_instruments_no_fields(
@@ -703,6 +742,23 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_reviewees_url,
         fix_page_label="Reviewees Setup",
         check=_check_reviewees_duplicate_id,
+    ),
+    ValidationRule(
+        key="reviewees.unreachable_for_results",
+        source="reviewees",
+        severity=Severity.warning,
+        why=(
+            "The /me/sessions/{id}/results surface gates on the "
+            "reviewee's identifier being a deliverable email — "
+            "without one, the reviewee can't authenticate and so "
+            "won't see the responses written about them. Non-blocking "
+            "in case the operator is intentionally using anonymous "
+            "identifiers (analysis-only sessions); the warning just "
+            "names the implication."
+        ),
+        fix_url=_reviewees_url,
+        fix_page_label="Reviewees Setup",
+        check=_check_reviewees_unreachable_for_results,
     ),
     ValidationRule(
         key="instruments.no_fields",

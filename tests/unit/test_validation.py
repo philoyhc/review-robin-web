@@ -208,3 +208,112 @@ def test_no_display_fields_warning_fires_when_response_fields_exist(
     assert len(warns) == 1
     assert warns[0].severity is Severity.warning
     assert warns[0].fix_anchor == f"#instrument-{instrument.id}"
+
+
+# --------------------------------------------------------------------------- #
+# W8 — reviewees-unreachable-for-results soft warning.
+# --------------------------------------------------------------------------- #
+
+
+def test_unreachable_warning_fires_for_non_email_identifiers(
+    db: Session,
+) -> None:
+    """Soft warning when at least one active reviewee's identifier
+    isn't a deliverable email — the /me/sessions/{id}/results
+    surface requires email auth, so those reviewees can't view
+    their results."""
+    user = _user(db)
+    session = _session(db, user)
+    db.add(Reviewer(session_id=session.id, name="Alice", email="alice@example.edu"))
+    db.add(
+        Reviewee(
+            session_id=session.id,
+            name="Carol",
+            email_or_identifier="carol@example.edu",
+        )
+    )
+    bad = Reviewee(
+        session_id=session.id,
+        name="Anon",
+        email_or_identifier="anon-007",
+    )
+    db.add(bad)
+    db.flush()
+
+    issues = validate_session_setup(db, session)
+    warns = [
+        i
+        for i in issues
+        if i.rule_key == "reviewees.unreachable_for_results"
+    ]
+    assert len(warns) == 1
+    assert warns[0].severity is Severity.warning
+    assert warns[0].fix_anchor == f"#reviewee-row-{bad.id}"
+    assert "1 reviewee" in warns[0].message
+
+
+def test_unreachable_warning_silent_when_all_reviewees_are_email_identified(
+    db: Session,
+) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    db.add(Reviewer(session_id=session.id, name="Alice", email="alice@example.edu"))
+    db.add(
+        Reviewee(
+            session_id=session.id,
+            name="Carol",
+            email_or_identifier="carol@example.edu",
+        )
+    )
+    db.flush()
+
+    issues = validate_session_setup(db, session)
+    warns = [
+        i
+        for i in issues
+        if i.rule_key == "reviewees.unreachable_for_results"
+    ]
+    assert warns == []
+
+
+def test_unreachable_warning_pluralises_and_only_counts_active(
+    db: Session,
+) -> None:
+    """Inactive reviewees don't contribute to the count — the
+    operator already deselected them. Plural form on 2+."""
+    user = _user(db)
+    session = _session(db, user)
+    db.add(Reviewer(session_id=session.id, name="Alice", email="alice@example.edu"))
+    db.add(
+        Reviewee(
+            session_id=session.id,
+            name="Anon1",
+            email_or_identifier="anon-1",
+        )
+    )
+    db.add(
+        Reviewee(
+            session_id=session.id,
+            name="Anon2",
+            email_or_identifier="anon-2",
+        )
+    )
+    db.add(
+        Reviewee(
+            session_id=session.id,
+            name="Anon3",
+            email_or_identifier="anon-3",
+            status="inactive",
+        )
+    )
+    db.flush()
+
+    issues = validate_session_setup(db, session)
+    warns = [
+        i
+        for i in issues
+        if i.rule_key == "reviewees.unreachable_for_results"
+    ]
+    assert len(warns) == 1
+    # Inactive Anon3 excluded; plural noun for the two remaining.
+    assert "2 reviewees" in warns[0].message
