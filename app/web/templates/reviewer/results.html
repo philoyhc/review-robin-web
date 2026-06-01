@@ -58,15 +58,11 @@
                 {% for cell in section.summarized_row.field_cells %}
                   <td>
                     {% if cell.data_type in ("Integer", "Decimal") %}
-                      {% if cell.response_count > 0 %}
-                        Average: {{ cell.average }}<br>
-                        Median: {{ cell.median }}<br>
-                        Min: {{ cell.min_value }}<br>
-                        Max: {{ cell.max_value }}<br>
-                        (based on {{ cell.response_count }} responses)
-                      {% else %}
-                        <span class="muted">(based on 0 responses)</span>
-                      {% endif %}
+                      Average: {% if cell.response_count > 0 %}{{ cell.average }}{% else %}<span class="muted">—</span>{% endif %}<br>
+                      Median: {% if cell.response_count > 0 %}{{ cell.median }}{% else %}<span class="muted">—</span>{% endif %}<br>
+                      Min: {% if cell.response_count > 0 %}{{ cell.min_value }}{% else %}<span class="muted">—</span>{% endif %}<br>
+                      Max: {% if cell.response_count > 0 %}{{ cell.max_value }}{% else %}<span class="muted">—</span>{% endif %}<br>
+                      <span class="muted">(based on {{ cell.response_count }} responses)</span>
                     {% elif cell.data_type == "List" %}
                       {% if cell.frequencies %}
                         {% for choice, count, pct in cell.frequencies %}
@@ -76,13 +72,9 @@
                         <span class="muted">No list options defined.</span>
                       {% endif %}
                     {% else %}
-                      {% if cell.response_count > 0 %}
-                        Total length: {{ cell.total_length }} characters<br>
-                        Average length: {{ cell.average_length }} characters<br>
-                        (based on {{ cell.response_count }} responses)
-                      {% else %}
-                        <span class="muted">(based on 0 responses)</span>
-                      {% endif %}
+                      Total length: {{ cell.total_length }} characters<br>
+                      Average length: {% if cell.response_count > 0 %}{{ cell.average_length }} characters{% else %}<span class="muted">—</span>{% endif %}<br>
+                      <span class="muted">(based on {{ cell.response_count }} responses)</span>
                     {% endif %}
                   </td>
                 {% endfor %}
