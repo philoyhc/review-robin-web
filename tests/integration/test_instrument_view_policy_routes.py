@@ -322,7 +322,11 @@ def test_list_for_instrument_returns_persisted_audiences_only(
     assert row.after_release_identification == "deidentified"
 
 
-# ── Route-level: POST /instruments/{id}/view-policy ──────────────────
+# ── Route-level: visibility hitches a ride on POST /fields/save ──────
+# The standalone /view-policy endpoint retired once the operator
+# card's main Save button took over persistence. Hidden visibility
+# inputs in the Band 3 chip table carry ``form="dfsave-<id>"`` so
+# they land in the same POST as Band 1 / column widths / etc.
 
 
 def _alice_session(
@@ -353,7 +357,7 @@ def test_route_save_persists_three_audiences(
     review_session = _alice_session(client, db, code="vp-route")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/view-policy",
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
         data={
             "peer_reviewer_while_ongoing_mode": "raw",
             "peer_reviewer_after_release_mode": "raw",
@@ -389,7 +393,7 @@ def test_route_save_rejects_reviewee_session_ongoing_with_mode(
     review_session = _alice_session(client, db, code="vp-bad-cell")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/view-policy",
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
         data={
             "reviewee_while_ongoing_mode": "raw",
             "reviewee_after_release_mode": "anonymized",
@@ -407,7 +411,7 @@ def test_route_save_skips_audiences_with_missing_slots(
     review_session = _alice_session(client, db, code="vp-partial")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/view-policy",
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
         data={
             "reviewee_while_ongoing_mode": "",
             "reviewee_after_release_mode": "anonymized",
@@ -434,19 +438,19 @@ def test_instruments_page_renders_per_window_form(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert (
-        f'action="/operator/sessions/{review_session.id}/instruments/{instrument.id}/view-policy"'
-        in body
-    )
-    # Hidden inputs for all three audiences × two windows render.
+    # Hidden inputs hitch a ride on the card's main Save form via
+    # ``form="dfsave-<id>"`` — no standalone visibility submit.
+    assert f'form="dfsave-{instrument.id}"' in body
     for audience in ("peer_reviewer", "reviewee", "observer"):
         for window in ("while_ongoing", "after_release"):
             assert f'name="{audience}_{window}_mode"' in body
+    # The dedicated "Save visibility" button retired in favour of
+    # the card-level Save button.
+    assert "Save visibility" not in body
     # Per-cell static-pill anchors.
     assert "Reviewers" in body
     assert "Reviewees" in body
     assert "Observers" in body
-    # New column headings.
     assert "Session ongoing" in body
     assert "Responses released" in body
 
@@ -454,10 +458,12 @@ def test_instruments_page_renders_per_window_form(
 def test_instruments_page_reflects_persisted_state(
     client: TestClient, db: Session
 ) -> None:
+    import re
+
     review_session = _alice_session(client, db, code="vp-prefill")
     instrument = _instrument_for(db, review_session)
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/view-policy",
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
         data={
             "observer_while_ongoing_mode": "summarized",
             "observer_after_release_mode": "raw",
@@ -467,13 +473,14 @@ def test_instruments_page_reflects_persisted_state(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # The observer-while_ongoing hidden input carries the
-    # persisted value.
-    assert (
-        'name="observer_while_ongoing_mode"\n                   data-new-model-vp-input="observer-while_ongoing"\n                   value="summarized"'
-        in body
-    )
-    assert (
-        'name="observer_after_release_mode"\n                   data-new-model-vp-input="observer-after_release"\n                   value="raw"'
-        in body
-    )
+
+    def _vp_value(audience_window: str) -> str | None:
+        match = re.search(
+            rf'data-new-model-vp-input="{re.escape(audience_window)}"\s*'
+            rf'value="([^"]*)"',
+            body,
+        )
+        return match.group(1) if match else None
+
+    assert _vp_value("observer-while_ongoing") == "summarized"
+    assert _vp_value("observer-after_release") == "raw"

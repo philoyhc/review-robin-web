@@ -807,6 +807,14 @@ def build_instruments_context(
         "band3_visibility_by_instrument": _band3_visibility_states_for(
             db, instruments
         ),
+        # Reviewer-surface "Who can see what you wrote (other than
+        # admin)" rows, served back to the operator's Band 2 intro
+        # grid as a preview alongside the description card. Same
+        # shape the reviewer surface renders — two rows (You /
+        # Reviewees) × two windows.
+        "band2_preview_visibility_rows_by_instrument": (
+            build_reviewer_visibility_rows(db, instruments)
+        ),
     }
 
 
@@ -896,15 +904,18 @@ def _band3_visibility_states_for(
     return result
 
 
-# Reviewer-surface "Who can see what you wrote" transparency table.
-# Renders read-only next to the per-instrument intro card, showing
-# the persisted visibility policy from the reviewer's POV — three
-# rows (You / Reviewees / Observers) × two windows (Session ongoing
-# / Responses released). NULL ≡ "off in this window" renders as
-# the em-dash placeholder; the (audience, window) cells the
-# operator can't author are pinned to their baseline label
-# regardless of stored state (Reviewers Session-ongoing always
-# Raw, Reviewees Session-ongoing always off).
+# Reviewer-surface "Who can see what you wrote (other than admin)"
+# transparency table. Renders read-only next to the per-instrument
+# intro card, showing the persisted visibility policy from the
+# reviewer's POV — two rows (You / Reviewees) × two windows
+# (Session ongoing / Responses released). Observers are omitted
+# because they're internal admin-side viewers and the reviewer
+# doesn't need to reason about them; the heading suffix
+# "(other than admin)" makes that explicit. NULL ≡ "off in this
+# window" renders as the em-dash placeholder; (audience, window)
+# cells the operator can't author are pinned to their baseline
+# label regardless of stored state (Reviewers Session-ongoing
+# always Raw, Reviewees Session-ongoing always off).
 _REVIEWER_VP_MODE_LABELS: dict[str | None, str] = {
     None: "—",
     "raw": "Raw responses",
@@ -917,8 +928,8 @@ def build_reviewer_visibility_rows(
     db: Session, instruments: list[Instrument]
 ) -> dict[int, list[dict[str, str]]]:
     """Build the read-only transparency table for the reviewer
-    surface — one row per audience (``You`` / ``Reviewees`` /
-    ``Observers``), label strings for each window. Returns
+    surface — one row per non-admin audience (``You`` /
+    ``Reviewees``), label strings for each window. Returns
     ``{instrument_id: [row, ...]}``.
 
     Each row dict carries ``audience_label`` /
@@ -928,13 +939,15 @@ def build_reviewer_visibility_rows(
     the operator-side ``Raw responses`` / ``Anonymized
     responses`` / ``Summarized responses`` / ``—`` vocabulary so
     the reviewer reads the same words the operator authored
-    against.
+    against. Observers are intentionally omitted — they're
+    internal admin-side viewers and the reviewer doesn't need to
+    reason about them (the card's heading suffix "(other than
+    admin)" makes that explicit).
     """
     result: dict[int, list[dict[str, str]]] = {}
     audiences: list[tuple[str, str]] = [
         ("peer_reviewer", "You"),
         ("reviewee", "Reviewees"),
-        ("observer", "Observers"),
     ]
     for instrument in instruments:
         persisted = visibility_policies.list_for_instrument(

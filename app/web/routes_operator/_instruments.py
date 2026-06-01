@@ -486,83 +486,6 @@ def instrument_move_display_field(
     )
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/view-policy"
-)
-async def instrument_view_policy_save(
-    request: Request,
-    bundle: tuple[Instrument, ReviewSession] = Depends(
-        _require_instrument_in_session
-    ),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Save the Band 3 visibility-policy table for one instrument.
-
-    Form payload — for each audience in
-    ``peer_reviewer`` / ``reviewee`` / ``observer``, two slots:
-
-    - ``{audience}_while_ongoing_mode`` — empty / ``"raw"`` /
-      ``"anonymized"`` / ``"summarized"``. Empty means "off in
-      this window".
-    - ``{audience}_after_release_mode`` — same vocabulary.
-
-    Per-(audience, window) cell rules are validated by
-    :func:`visibility_policies._validate_per_window` —
-    Reviewer Session-ongoing must be ``raw`` (baseline always
-    on); Reviewee Session-ongoing must be empty (the strict
-    per-pair flow rule); Observer accepts any mode in either
-    window. Anything outside those sets 422s.
-    """
-    instrument, review_session = bundle
-    _require_instrument_editable(review_session)
-    form = await request.form()
-
-    rows: list[dict[str, object]] = []
-    for audience in visibility_policies.AUDIENCES:
-        while_ongoing_raw = form.get(f"{audience}_while_ongoing_mode")
-        after_release_raw = form.get(f"{audience}_after_release_mode")
-        if while_ongoing_raw is None and after_release_raw is None:
-            # The editor didn't render this audience — skip rather
-            # than reject. Lets future audience additions roll out
-            # without a coordinated form-payload change.
-            continue
-        rows.append(
-            {
-                "audience": audience,
-                "while_ongoing_mode": (
-                    (str(while_ongoing_raw).strip() or None)
-                    if while_ongoing_raw is not None
-                    else None
-                ),
-                "after_release_mode": (
-                    (str(after_release_raw).strip() or None)
-                    if after_release_raw is not None
-                    else None
-                ),
-            }
-        )
-
-    try:
-        visibility_policies.upsert_many(
-            db,
-            review_session=review_session,
-            instrument=instrument,
-            rows=rows,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except visibility_policies.VisibilityPolicyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=exc.message,
-        ) from exc
-
-    return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
-    )
-
-
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields/save")
 async def instrument_bulk_save_fields(
     request: Request,
@@ -711,6 +634,46 @@ async def instrument_bulk_save_fields(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
+            ) from exc
+    # Visibility-policy editor hitches a ride on this form (the
+    # standalone "Save visibility" button retired — the Band 3
+    # chips' hidden inputs carry ``form="dfsave-<id>"`` so they
+    # land here alongside the rest of the card's state).
+    vp_rows: list[dict[str, object]] = []
+    for audience in visibility_policies.AUDIENCES:
+        wo_raw = form.get(f"{audience}_while_ongoing_mode")
+        ar_raw = form.get(f"{audience}_after_release_mode")
+        if wo_raw is None and ar_raw is None:
+            continue
+        vp_rows.append(
+            {
+                "audience": audience,
+                "while_ongoing_mode": (
+                    (str(wo_raw).strip() or None)
+                    if wo_raw is not None
+                    else None
+                ),
+                "after_release_mode": (
+                    (str(ar_raw).strip() or None)
+                    if ar_raw is not None
+                    else None
+                ),
+            }
+        )
+    if vp_rows:
+        try:
+            visibility_policies.upsert_many(
+                db,
+                review_session=review_session,
+                instrument=instrument,
+                rows=vp_rows,
+                user=user,
+                correlation_id=request_correlation_id(),
+            )
+        except visibility_policies.VisibilityPolicyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=exc.message,
             ) from exc
     db.commit()
     # Wave 4 PR 2 — preserve ``?editing=<id>`` so Save doesn't

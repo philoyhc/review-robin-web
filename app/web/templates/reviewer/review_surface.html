@@ -205,14 +205,16 @@
             </div>
             {# Visibility-policy transparency card. Read-only mirror
                of the operator's Band 3 policy for this instrument —
-               one row per audience (You / Reviewees / Observers)
-               × two windows (Session ongoing / Responses released).
+               one row per non-admin audience (You / Reviewees) ×
+               two windows (Session ongoing / Responses released).
                ``—`` means "this audience can't view your responses
-               in that window". #}
+               in that window". Observers are intentionally
+               omitted — they're admin-side viewers; the heading
+               suffix "(other than admin)" makes that explicit. #}
             {% if group.visibility_rows %}
               <div class="card rs-instrument-card"
                    data-rs-visibility-policy-card>
-                <h3 style="margin: 0 0 8px 0;">Who can see what you wrote</h3>
+                <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">

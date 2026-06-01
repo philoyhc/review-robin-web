@@ -2275,10 +2275,11 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The reviewer surface renders a read-only "Who can see what
-    you wrote" card next to each instrument's heading card,
-    reflecting the operator's persisted Band 3 policy. Audiences
-    with no row fall back to defaults — for the Observer audience
-    that's both windows off (em-dash)."""
+    you wrote (other than admin)" card next to each instrument's
+    heading card, reflecting the operator's persisted Band 3
+    policy. Observers are intentionally omitted — they're the
+    admin-side audience and the suffix "(other than admin)" makes
+    that explicit."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -2294,9 +2295,10 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     operator_user = db.execute(
         select(User).where(User.email == "alice@example.edu")
     ).scalar_one()
-    # Reviewees: Summarized after release; Observers: Raw both
-    # windows; peer_reviewer: take the baseline (Raw ongoing, off
-    # after release).
+    # Reviewees: Summarized after release; Observer policy
+    # authored too — should NOT appear on the reviewer surface
+    # (admin-side audience). peer_reviewer takes the baseline
+    # (Raw ongoing, off after release).
     visibility_policies.upsert_policy(
         db,
         review_session=review_session,
@@ -2322,17 +2324,14 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
     assert "data-rs-visibility-policy-card" in body
-    assert "Who can see what you wrote" in body
+    assert "Who can see what you wrote (other than admin)" in body
     # Column headings.
     assert "Session ongoing" in body
     assert "Responses released" in body
-    # Three audience labels in the table.
+    # Two audience labels in the table — Observers omitted.
     flat = " ".join(body.split())
     assert "<td style=\"padding: 4px 8px;\">You</td>" in flat
     assert "<td style=\"padding: 4px 8px;\">Reviewees</td>" in flat
-    assert "<td style=\"padding: 4px 8px;\">Observers</td>" in flat
-    # The reviewee Session-ongoing cell shows the em-dash (strict
-    # per-pair flow); after-release shows Summarized.
+    assert "<td style=\"padding: 4px 8px;\">Observers</td>" not in flat
+    # The reviewee after-release cell shows Summarized.
     assert "Summarized responses" in body
-    # The observer-row shows Raw in both cells.
-    assert "Raw responses" in body

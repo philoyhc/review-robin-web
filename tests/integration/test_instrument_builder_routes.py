@@ -5855,9 +5855,12 @@ def test_heading_row_omits_save_and_cancel_in_view_mode(
     # rendered Cancel buttons (the JS selector uses the bare
     # ``[data-new-model-cancel]`` form, no ``="``).
     assert f'data-new-model-cancel="{new_model.id}"' not in flat
-    # ``form="dfsave-<id>"`` is unique to the Save button (the
-    # dfsave form definition only renders in edit mode).
-    assert f'form="dfsave-{new_model.id}"' not in flat
+    # ``<button form="dfsave-<id>"`` is unique to the Save button.
+    # (Band 3 visibility hidden inputs also reference
+    # ``form="dfsave-<id>"`` so they ride along on Save — those
+    # are ``<input``, not ``<button``, so the button-prefixed
+    # check still isolates the rendered Save submit.)
+    assert f'<button form="dfsave-{new_model.id}"' not in flat
 
 
 def test_band3_row_pending_visual_css_ships_in_base(
@@ -5972,10 +5975,11 @@ def test_action_row_button_order_in_view_mode(
     # view mode. The marker strings appear elsewhere in inline JS
     # source, so check the actual rendered button-attribute syntax.
     assert 'data-new-model-cancel="' not in flat
-    # Save button is identified by ``form="dfsave-<id>" ... data-
-    # new-model-save`` — check the form binding absence (Save is
-    # the only thing that targets dfsave-<id>).
-    assert f'form="dfsave-{new_model.id}"' not in flat
+    # Save button is identified by ``<button form="dfsave-<id>"``.
+    # Band 3 visibility hidden ``<input>``s also reference
+    # ``form="dfsave-<id>"`` so they ride along on Save; the
+    # button-prefixed check isolates the rendered Save submit.
+    assert f'<button form="dfsave-{new_model.id}"' not in flat
 
     # Anchor on the action-row Unlock toggle for this instrument
     # (rfind because the heading row now renders a convenience
