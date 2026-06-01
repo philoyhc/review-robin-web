@@ -53,6 +53,7 @@ _DEFAULT_LABELS: dict[tuple[str, str], str] = {
     ("reviewer", "tag_1"): "Tag 1",
     ("reviewer", "tag_2"): "Tag 2",
     ("reviewer", "tag_3"): "Tag 3",
+    ("reviewer", "profile_link"): "Profile",
     ("reviewee", "name"): "Name",
     ("reviewee", "email_or_identifier"): "Email",
     ("reviewee", "tag_1"): "Tag 1",

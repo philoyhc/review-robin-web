@@ -116,6 +116,7 @@ def create_reviewer(
     review_session: ReviewSession,
     name: str,
     email: str,
+    profile_link: str | None = None,
     tag_1: str | None = None,
     tag_2: str | None = None,
     tag_3: str | None = None,
@@ -129,6 +130,7 @@ def create_reviewer(
     clean_name = _normalised_name(name)
     clean_email = _normalised_email(email)
     clean_status = _normalised_status(status)
+    clean_profile_link = _normalised_tag(profile_link)
     clean_tag_1 = _normalised_tag(tag_1)
     clean_tag_2 = _normalised_tag(tag_2)
     clean_tag_3 = _normalised_tag(tag_3)
@@ -151,6 +153,7 @@ def create_reviewer(
         session_id=review_session.id,
         name=clean_name,
         email=clean_email,
+        profile_link=clean_profile_link,
         status=clean_status,
         tag_1=clean_tag_1,
         tag_2=clean_tag_2,
@@ -170,6 +173,7 @@ def create_reviewer(
                 "reviewer_id": reviewer.id,
                 "name": clean_name,
                 "email": clean_email,
+                "profile_link": clean_profile_link,
                 "status": clean_status,
                 "tag_1": clean_tag_1,
                 "tag_2": clean_tag_2,
@@ -191,6 +195,7 @@ def update_reviewer(
     reviewer: Reviewer,
     name: str | object = _UNSET,
     email: str | object = _UNSET,
+    profile_link: str | None | object = _UNSET,
     tag_1: str | None | object = _UNSET,
     tag_2: str | None | object = _UNSET,
     tag_3: str | None | object = _UNSET,
@@ -209,6 +214,10 @@ def update_reviewer(
         proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
     if status is not _UNSET:
         proposed["status"] = _normalised_status(status)  # type: ignore[arg-type]
+    if profile_link is not _UNSET:
+        proposed["profile_link"] = _normalised_tag(
+            profile_link  # type: ignore[arg-type]
+        )
     if tag_1 is not _UNSET:
         proposed["tag_1"] = _normalised_tag(tag_1)  # type: ignore[arg-type]
     if tag_2 is not _UNSET:
