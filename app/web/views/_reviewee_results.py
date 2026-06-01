@@ -18,14 +18,15 @@ differences are intentional:
   themselves. The reviewee already knows it's about them; what
   they want to see is who said what.
 - **Visibility policy gate** — instruments are filtered through
-  the persisted ``reviewee`` policy. Two modes render in this
-  slice: ``raw`` (full identification + values) and
-  ``anonymized`` (same table, identification cells dashed,
-  values still shown). ``summarized`` (per-data-type aggregation
-  — the operator-facing "Anonymized summaries" chip) is a
-  different render shape and ships in a later slice. An
-  instrument with no row, or with both windows off, contributes
-  nothing.
+  the persisted ``reviewee`` policy. Three modes render: ``raw``
+  (full identification + values), ``anonymized`` (same table,
+  identification cells dashed, values still shown) and
+  ``summarized`` (per-data-type aggregation — the operator-
+  facing "Anonymized summaries" chip; identification columns
+  collapse into a single counts cell, rows collapse into one,
+  each response field renders an aggregate keyed by its
+  ``data_type``). An instrument with no row, or with both
+  windows off, contributes nothing.
 - **Window gate** — even when the policy says Raw or Anonymized,
   the relevant session-level window must be currently open for
   values to surface. Pre-release (anchor not yet set / not yet
@@ -97,6 +98,42 @@ class ResultsRow:
 
 
 @dataclass(frozen=True)
+class SummarizedFieldCell:
+    """Per-field aggregate cell in a ``summarized`` section.
+
+    ``data_type`` drives the template render branch:
+
+    - ``"Integer"`` / ``"Decimal"`` — numeric average over
+      non-empty submitted values. ``average`` is the rounded
+      mean (None when ``response_count`` is zero);
+      ``response_count`` is how many values fed the mean.
+    - ``"List"`` — raw frequency of each list option. Every
+      option declared on the field surfaces (so a zero stays
+      visible) in field-declaration order.
+    - ``"String"`` — not aggregated; the template renders the
+      "cannot be summarized" placeholder.
+    """
+
+    data_type: str
+    average: float | None = None
+    response_count: int = 0
+    frequencies: tuple[tuple[str, int], ...] = ()
+
+
+@dataclass(frozen=True)
+class SummarizedRow:
+    """The single aggregate row that replaces per-reviewer rows
+    in ``summarized`` mode. The identification cell carries the
+    two counts (reviewers assigned + reviewers with any non-empty
+    submitted value); ``field_cells`` are aligned 1:1 with the
+    section's ``field_cols`` list."""
+
+    reviewers_assigned: int
+    reviewers_with_responses: int
+    field_cells: list[SummarizedFieldCell]
+
+
+@dataclass(frozen=True)
 class ResultsSection:
     """One per-instrument section on the reviewee results page.
 
@@ -119,9 +156,13 @@ class ResultsSection:
     # chip) shows the same table but every identification cell
     # (Reviewer name + email + display-field values like tags)
     # renders as the muted em-dash placeholder. ``"summarized"``
-    # — aggregation — is a separate render shape and ships
-    # later; it isn't surfaced in this slice.
+    # (the operator's "Anonymized summaries" chip) collapses
+    # identification into a single counts cell, rows into one,
+    # and renders per-data-type aggregates in each response-field
+    # column; ``rows`` is empty and ``summarized_row`` carries
+    # the aggregate payload.
     mode: str = "raw"
+    summarized_row: SummarizedRow | None = None
 
 
 @dataclass(frozen=True)
@@ -131,6 +172,53 @@ class RevieweeResultsContext:
 
     session: ReviewSession
     sections: list[ResultsSection]
+
+
+def _summarize_field(
+    field: InstrumentResponseField, raw_values: list[str]
+) -> SummarizedFieldCell:
+    """Per-data-type aggregation for one response field's
+    submitted values. ``raw_values`` is the list of non-empty
+    submitted strings keyed for this field across every assigned
+    reviewer for this instrument-reviewee pair."""
+    data_type = field.data_type
+    if data_type in ("Integer", "Decimal"):
+        parsed: list[float] = []
+        for value in raw_values:
+            try:
+                parsed.append(float(value))
+            except (TypeError, ValueError):
+                continue
+        if not parsed:
+            return SummarizedFieldCell(data_type=data_type)
+        mean = sum(parsed) / len(parsed)
+        return SummarizedFieldCell(
+            data_type=data_type,
+            average=round(mean, 2),
+            response_count=len(parsed),
+        )
+    if data_type == "List":
+        choices_csv = field._inline_list_csv or ""
+        choices = [
+            opt.strip() for opt in choices_csv.split(",") if opt.strip()
+        ]
+        counts: dict[str, int] = {choice: 0 for choice in choices}
+        for value in raw_values:
+            if value in counts:
+                counts[value] += 1
+            else:
+                # Stored value that no longer matches a declared
+                # choice (e.g. the operator edited the option set
+                # after responses landed). Surface it so the
+                # aggregate stays faithful to what's in the table.
+                counts.setdefault(value, 0)
+                counts[value] += 1
+        return SummarizedFieldCell(
+            data_type=data_type,
+            frequencies=tuple(counts.items()),
+        )
+    # String + anything else: not summarizable.
+    return SummarizedFieldCell(data_type=data_type or "String")
 
 
 def build_reviewee_results_context(
@@ -189,28 +277,29 @@ def build_reviewee_results_context(
     # Per-instrument visibility resolution. Two gates:
     #
     # - **Structure gate** (``instrument_mode``): does the
-    #   operator's reviewee policy have ``raw`` or ``anonymized``
-    #   authored on any window? If yes, the section renders.
-    #   ``summarized`` (the operator-facing "Anonymized
-    #   summaries" chip) ships in a later slice — it's per-data-
-    #   type aggregation, a different render shape, not the
-    #   per-row table with identification dashed.
+    #   operator's reviewee policy have ``raw``, ``anonymized``,
+    #   or ``summarized`` authored on any window? If yes, the
+    #   section renders.
     # - **Value gate** (``instrument_values_visible``): is the
     #   relevant window currently open? Only then do submitted
     #   values surface in the cells. When the window is closed
-    #   (operator authored Raw / Anonymized responses but hasn't
-    #   set / hasn't reached ``responses_release_at``), the
-    #   section still renders the reviewer-row scaffolding but
-    #   every value cell stays muted-empty.
+    #   (operator authored a mode but hasn't set / hasn't reached
+    #   ``responses_release_at``), Raw + Anonymized sections
+    #   still render the reviewer-row scaffolding with muted-
+    #   empty value cells; Summarized sections skip rendering
+    #   entirely because the aggregate has nothing to show without
+    #   underlying values.
     #
     # ``anonymized`` (the operator-facing "Anonymized responses"
     # chip) renders the same per-reviewer table shape as Raw —
     # but every identification cell (Reviewer name + email + any
     # display-field cell) is replaced with the muted em-dash so
     # the reviewee can read the values without learning who said
-    # what. The section's ``mode`` carries the picked mode through
-    # to the template's per-cell branch.
-    _RENDERED_MODES = {"raw", "anonymized"}
+    # what. ``summarized`` (the "Anonymized summaries" chip) is
+    # a different render shape — one summary row with per-field
+    # aggregates. The section's ``mode`` carries the picked mode
+    # through to the template's per-cell branch.
+    _RENDERED_MODES = {"raw", "anonymized", "summarized"}
     instrument_mode: dict[int, str] = {}
     instrument_values_visible: dict[int, bool] = {}
     for instrument in instruments:
@@ -229,17 +318,18 @@ def build_reviewee_results_context(
             policy.after_release_identification,
         )
         authored_modes = {m for m in (while_mode, after_mode) if m}
-        # ``raw`` wins when co-authored alongside ``anonymized``
-        # on different windows — Raw is the more permissive
-        # rendering, the operator opted in to it for at least one
-        # window, and the value gate below picks whichever mode
-        # the open window carries (so a window-closed
-        # ``after_release_mode = anonymized`` still falls back to
-        # the dashed-identity render once its window opens).
+        # ``raw`` wins when co-authored alongside ``anonymized`` /
+        # ``summarized`` on different windows — Raw is the most
+        # permissive rendering, the operator opted in to it for
+        # at least one window, and the value gate below picks
+        # whichever mode the open window carries. ``anonymized``
+        # likewise beats ``summarized`` (more cell-level detail).
         if "raw" in authored_modes:
             picked_mode = "raw"
         elif "anonymized" in authored_modes:
             picked_mode = "anonymized"
+        elif "summarized" in authored_modes:
+            picked_mode = "summarized"
         else:
             continue
         # Once the operator has *explicitly closed* the after-
@@ -514,50 +604,94 @@ def build_reviewee_results_context(
             or any(col.width_px is not None for col in field_cols)
         )
 
-        # Sort rows by reviewer name so the reading order is
-        # stable + alphabetical.
-        ordered_reviewer_ids = sorted(
-            row_order[instrument.id],
-            key=lambda rid: (
-                (reviewer_by_id[rid].name or "").lower(),
-                rid,
-            ),
-        )
+        picked_mode = instrument_mode[instrument.id]
         section_rows: list[ResultsRow] = []
-        for reviewer_id in ordered_reviewer_ids:
-            reviewer = reviewer_by_id[reviewer_id]
-            values = [
-                cells.get((instrument.id, reviewer_id, f.id), "")
-                for f in fields
-            ]
-            display_cells: list[SummaryDisplayCell] = []
-            assignment = representative_assignment.get(
-                (instrument.id, reviewer_id)
+        summarized_row: SummarizedRow | None = None
+        if picked_mode == "summarized":
+            # Collapse identification + rows into a single
+            # aggregate row. Identity cell carries the two
+            # counts; field cells carry per-data-type aggregates
+            # (see :class:`SummarizedFieldCell`). The display-
+            # field column list is dropped from the rendered
+            # table — per spec the identification columns
+            # collapse into the counts cell.
+            reviewers_assigned = len(row_order[instrument.id])
+            reviewers_with_responses = len(
+                {
+                    rid
+                    for (iid, rid, _fid), value in cells.items()
+                    if iid == instrument.id and (value or "").strip()
+                }
             )
-            if assignment is not None:
-                for df in instrument_display_fields:
-                    value = instruments_service.display_field_value(
-                        df,
-                        assignment,
-                        pair_context_lookup=pair_context,
-                    )
-                    display_cells.append(
-                        SummaryDisplayCell(
-                            value=value,
-                            is_profile_link=(
-                                df.source_type == "reviewee"
-                                and df.source_field == "profile_link"
-                            ),
-                        )
-                    )
-            section_rows.append(
-                ResultsRow(
-                    reviewer_name=reviewer.name or "",
-                    reviewer_email=reviewer.email or None,
-                    display_cells=display_cells,
-                    values=values,
+            field_cells: list[SummarizedFieldCell] = []
+            for f in fields:
+                raw_values = [
+                    (
+                        cells.get((instrument.id, rid, f.id), "")
+                        or ""
+                    ).strip()
+                    for rid in row_order[instrument.id]
+                ]
+                raw_values = [v for v in raw_values if v]
+                field_cells.append(
+                    _summarize_field(f, raw_values)
                 )
+            summarized_row = SummarizedRow(
+                reviewers_assigned=reviewers_assigned,
+                reviewers_with_responses=reviewers_with_responses,
+                field_cells=field_cells,
             )
+            # Summarized mode ignores operator-set column widths
+            # — the aggregate-row shape doesn't carry the same
+            # column semantics, so pinning a Band 2 pixel width
+            # to it would mis-apply.
+            display_field_cols = []
+            identity_width_px = None
+            has_custom_widths = False
+        else:
+            # Sort rows by reviewer name so the reading order is
+            # stable + alphabetical.
+            ordered_reviewer_ids = sorted(
+                row_order[instrument.id],
+                key=lambda rid: (
+                    (reviewer_by_id[rid].name or "").lower(),
+                    rid,
+                ),
+            )
+            for reviewer_id in ordered_reviewer_ids:
+                reviewer = reviewer_by_id[reviewer_id]
+                values = [
+                    cells.get((instrument.id, reviewer_id, f.id), "")
+                    for f in fields
+                ]
+                display_cells: list[SummaryDisplayCell] = []
+                assignment = representative_assignment.get(
+                    (instrument.id, reviewer_id)
+                )
+                if assignment is not None:
+                    for df in instrument_display_fields:
+                        value = instruments_service.display_field_value(
+                            df,
+                            assignment,
+                            pair_context_lookup=pair_context,
+                        )
+                        display_cells.append(
+                            SummaryDisplayCell(
+                                value=value,
+                                is_profile_link=(
+                                    df.source_type == "reviewee"
+                                    and df.source_field == "profile_link"
+                                ),
+                            )
+                        )
+                section_rows.append(
+                    ResultsRow(
+                        reviewer_name=reviewer.name or "",
+                        reviewer_email=reviewer.email or None,
+                        display_cells=display_cells,
+                        values=values,
+                    )
+                )
 
         sections.append(
             ResultsSection(
@@ -569,7 +703,8 @@ def build_reviewee_results_context(
                 rows=section_rows,
                 identity_width_px=identity_width_px,
                 has_custom_widths=has_custom_widths,
-                mode=instrument_mode[instrument.id],
+                mode=picked_mode,
+                summarized_row=summarized_row,
             )
         )
 
@@ -583,6 +718,8 @@ __all__ = [
     "RevieweeResultsContext",
     "ResultsRow",
     "ResultsSection",
+    "SummarizedFieldCell",
+    "SummarizedRow",
     "SummaryDisplayCell",
     "SummaryDisplayCol",
     "SummaryFieldCol",
