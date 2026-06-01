@@ -40,6 +40,7 @@ from app.db.models import (
 from app.services import field_labels
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
+from app.services import visibility_policies
 from app.services._queries import slot_has_data
 from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.web import breadcrumbs
@@ -798,7 +799,89 @@ def build_instruments_context(
         # ``data_type=list`` + a pre-filled comma-separated
         # ``list_options``; identity-less at storage time).
         "band3_list_presets": list(_BAND3_LIST_PRESETS),
+        # Band 3 visibility editor — per-instrument, per-audience
+        # state for the Visibility table. Missing rows surface as
+        # the audience's default (disabled + default mode +
+        # default visible_when). See
+        # ``spec/visibility_policy.md`` for the contract.
+        "band3_visibility_by_instrument": _band3_visibility_states_for(
+            db, instruments
+        ),
     }
+
+
+# Per-audience UI defaults for the Band 3 visibility editor when
+# no row exists yet on ``instrument_view_policies`` for that
+# audience. The default mode for ``peer_reviewer`` is locked at
+# ``raw`` (the UI greys the What chip); the default
+# ``visible_when`` mirrors the placeholder template's pre-S12
+# selection — ``while_ongoing`` for peer_reviewer (the legacy
+# "While session ongoing" pill), ``after_release`` for reviewee /
+# observer (the placeholder's "After release" cycle default).
+_BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
+    "peer_reviewer": {
+        "enabled": False,
+        "mode": "raw",
+        "visible_when": "while_ongoing",
+        "observer_tag": None,
+    },
+    "reviewee": {
+        "enabled": False,
+        "mode": "anonymized",
+        "visible_when": "after_release",
+        "observer_tag": None,
+    },
+    "observer": {
+        "enabled": False,
+        "mode": "anonymized",
+        "visible_when": "after_release",
+        "observer_tag": None,
+    },
+}
+
+
+def _band3_visibility_states_for(
+    db: Session, instruments: list[Instrument]
+) -> dict[int, dict[str, dict[str, object]]]:
+    """Build the Band 3 visibility editor state for every instrument
+    on the page. Returns ``{instrument_id: {audience: state}}``
+    where ``state`` is a dict carrying ``enabled`` / ``mode`` /
+    ``visible_when`` / ``observer_tag``. Audiences with no
+    persisted row fall back to
+    :data:`_BAND3_VISIBILITY_DEFAULTS`."""
+    result: dict[int, dict[str, dict[str, object]]] = {}
+    for instrument in instruments:
+        persisted = visibility_policies.list_for_instrument(
+            db, instrument.id
+        )
+        per_audience: dict[str, dict[str, object]] = {}
+        for audience in visibility_policies.AUDIENCES:
+            row = persisted.get(audience)
+            defaults = _BAND3_VISIBILITY_DEFAULTS[audience]
+            if row is None:
+                per_audience[audience] = dict(defaults)
+                continue
+            try:
+                mode = visibility_policies.decode_mode(
+                    row.granularity, row.identification
+                )
+            except visibility_policies.VisibilityPolicyError:
+                # The reserved-incoherent (aggregated, identified)
+                # combo is rejected by upsert, but the column
+                # types accept it — fall back to defaults rather
+                # than 500 on render.
+                mode = str(defaults["mode"])
+            per_audience[audience] = {
+                "enabled": bool(row.enabled),
+                "mode": mode,
+                "visible_when": (
+                    row.visible_when
+                    or str(defaults["visible_when"])
+                ),
+                "observer_tag": row.observer_tag,
+            }
+        result[instrument.id] = per_audience
+    return result
 
 
 def _new_model_band2_states_for(

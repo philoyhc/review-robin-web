@@ -22,7 +22,7 @@ The audience name implies a **scope rule** the resolver applies in addition to t
 
 | Audience | Scope of "responses they may see" |
 |---|---|
-| Peer reviewer | The reviewer's **own** submitted responses, plus (when `enabled`) responses about the same reviewee contributed by *other* reviewers — the "peer feedback" case. Never any reviewer's responses about a reviewee this reviewer didn't review. |
+| Peer reviewer | The reviewer's **own** submitted responses on this instrument — **never** responses keyed in by another reviewer. The schema name `peer_reviewer` is historical; the policy governs a reviewer viewing their own work post-submit / across pages of the review. |
 | Reviewee | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. |
 | Observer | All responses by all reviewers about all reviewees on the session, on instruments this observer is granted (subject to `observer_tag`). Observers are the only audience whose grant is cross-cohort. |
 
@@ -62,7 +62,7 @@ This fallback is the resolver's responsibility; the policy row carries `aggregat
 
 The peer-reviewer audience's form is **fixed at Raw** (`granularity = row`, `identification = identified`). The operator-facing UI exposes only the **When** chip for the Peer reviewer row; the **What** cell renders as a static "Raw responses" pill.
 
-Rationale: deidentifying a reviewer's view of their own and peers' responses doesn't make sense — they already know who their peers are from the assignment, and they wrote their own response under their own identity. Aggregation has the same problem (a reviewer reading their own submission shouldn't see it averaged into the group). The schema accepts other values here; the UI just doesn't surface them.
+Rationale: the scope rule (§1.1) restricts a reviewer to their own submitted responses on this instrument. Aggregating one row to itself or anonymising one's own work are both meaningless, so the schema's other form values aren't useful here. The schema columns accept any value; the editor + service simply don't surface them.
 
 ---
 
@@ -147,7 +147,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 |---|---|---|
 | S2 (PR #1678) | `instrument_view_policies` table | ✓ shipped |
 | S12 (PR #1724) | `visible_when` column | ✓ shipped |
-| **W15 — Band 3 editor** | Per-instrument UI on the Instruments page; service-layer upsert; audit emission. | ✘ in progress (this slice) |
+| W15 — Band 3 editor (persistence half) | `app/services/visibility_policies.py` (mode encoder / decoder + per-audience vocabulary + `upsert_policy` + `upsert_many`); `POST /operator/sessions/{id}/instruments/{instrument_id}/view-policy`; Band 3 template rewired with Save button + persisted prefill; `build_instruments_context` carries `band3_visibility_by_instrument`. | ✓ shipped |
 | W7 — Resolver | Reads policies + applies the scope rules; consumed by W16 / W17 surfaces. | ✘ pending |
 | W16 — Reviewee `/results` body | Renders the policy-permitted content. | ✘ pending |
 | W17 — Observer `/collation` body | Renders the policy-permitted content. | ✘ pending |

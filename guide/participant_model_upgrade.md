@@ -241,8 +241,7 @@ the scope rule alongside the policy lookup:
 
 | Audience | Scope of "responses they may see" |
 |---|---|
-| `peer_reviewer` (reviewers viewing their own work) | The reviewer's **own** submitted responses on this instrument — never any other reviewer's. (Useful for letting reviewers re-read their work after submit. Note that during the active review the reviewer surface already shows the form they're filling in; this grant governs the post-submit / cross-page case.) |
-| `peer_reviewer` (reviewers viewing peers' work) | Responses about the same reviewee they reviewed, contributed by *other* reviewers — the "peer feedback" case. Implementation: the existing `peer_reviewer` policy row's `enabled` flag governs whether this case lights up; the audience name covers both self and peer rows since the surface is the same per-reviewer page. |
+| `peer_reviewer` (reviewer viewing own work) | The reviewer's **own** submitted responses on this instrument — never any other reviewer's. Useful for letting reviewers re-read their own work post-submit / across pages. The schema name `peer_reviewer` is historical; today the grant covers self-view only. |
 | `reviewee` | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. The Reviewee surface filters at view time: a reviewee only sees rows whose `Assignment.reviewee_id` (or group containment) matches their identity. |
 | `observer` | All responses about all reviewees, on instruments this observer is granted (subject to `observer_tag`). No self-scope. Observers are the only audience whose grant is cross-cohort. |
 
