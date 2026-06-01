@@ -12,6 +12,9 @@ The per-extract serialisers live alongside this module:
   CSV (12A-1 PR 2).
 - ``app/services/extracts/relationships_extract.py`` —
   Relationships CSV (12A-3 PR 1).
+- ``app/services/extracts/observers_extract.py`` — Observers
+  CSV. Closes the Extract Setup leg of L2 from
+  ``guide/participant_model_remainder.md``.
 - ``app/services/extracts/responses_extract.py`` — Responses
   CSV (12A-1 PR 4).
 

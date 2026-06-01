@@ -653,6 +653,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.responses_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12A-3 PR 1 — Relationships export.
     "session.relationships_extracted": EventSchema(_IDENTITY | {"counts"}),
+    # Observers extract — sibling of the per-entity CSV exports.
+    "session.observers_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12A-3 PR 3 — Settings importer.
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.

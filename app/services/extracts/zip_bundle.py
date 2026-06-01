@@ -35,6 +35,7 @@ from app.services.extracts.by_instrument_extract import (
     by_instrument_filename_slug,
     serialize_by_instrument,
 )
+from app.services.extracts.observers_extract import serialize_observers
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import (
     serialize_responses,
@@ -81,14 +82,21 @@ def build_setup_bundle(
         "relationships": relationships,
         "settings": settings_csv,
     }
-    buffer = _write_archive(review_session, members)
-
     counts = {
         "reviewers": max(0, len(reviewers) - 1),
         "reviewees": max(0, len(reviewees) - 1),
         "relationships": max(0, len(relationships) - 1),
         "settings": len(settings_rows),
     }
+    # Observers ride into the bundle only when the session's
+    # ``observers_enabled`` toggle is on, matching the Extract
+    # Setup card's per-row gate. The CSV round-trips with the
+    # Quick Setup Observers slot + the Observers Setup page.
+    if review_session.observers_enabled:
+        observers = list(serialize_observers(db, review_session))
+        members["observers"] = observers
+        counts["observers"] = max(0, len(observers) - 1)
+    buffer = _write_archive(review_session, members)
     return buffer, counts
 
 
