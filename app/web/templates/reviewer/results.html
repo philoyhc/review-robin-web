@@ -65,14 +65,17 @@
                 {% endfor %}
               </tr>
             </thead>
-            {# When the operator picked "Anonymized summaries"
-               (the ``summarized`` mode), every identification
+            {# When the operator picked "Anonymized responses"
+               (the ``anonymized`` mode), every identification
                cell — the Reviewer column + every display-field
                cell — collapses to the muted em-dash so the
                reviewee can read the values without learning who
                said what. The response value cells below stay
-               unchanged in either mode. #}
-            {% set _identify = section.mode != "summarized" %}
+               unchanged in either mode. ``summarized`` (the
+               "Anonymized summaries" chip — per-data-type
+               aggregation) is a separate render shape and is
+               not surfaced in this slice. #}
+            {% set _identify = section.mode != "anonymized" %}
             <tbody>
             {% for row in section.rows %}
               <tr>
