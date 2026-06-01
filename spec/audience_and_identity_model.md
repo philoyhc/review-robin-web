@@ -50,19 +50,18 @@ assigned reviewees, submits responses.
   reviewer's review list, response form per instrument,
   submission confirmation, error / expired states.
 
-### 3. Reviewee (participant-model Phase 1 — partially live)
+### 3. Reviewee
 
-The reviewee is now entering the system as a participant
-audience. Phase 1 (PR #1706 / participant_model_prep) has:
+The reviewee is a live participant audience. W16 + W19 (PRs #1737–#1752) shipped the full results surface:
 
-- An `Observer` model and per-session `observers` table with a
-  dedicated CRUD Setup page (gated by `session.observers_enabled`).
 - A `require_reviewee_in_session` gate in `app/web/deps.py` that
   matches a signed-in user to an active Reviewee row by
   case-insensitive email equality.
-- A placeholder **Reviewee Results** page at
-  `GET /me/sessions/{id}/results` — reviewer-surface chrome with
-  no body content yet. Full content lands with W16.
+- A **Reviewee Results** page at `GET /me/sessions/{id}/results`
+  rendering per-instrument sections in raw / anonymized / summarized
+  mode, filtered through the per-instrument visibility policy.
+- An Acknowledge gesture (`POST …/results/acknowledge`) stamping
+  `reviewees.results_acknowledged_at` (idempotent).
 
 Identity match: `reviewee.email_or_identifier` must parse as a
 valid email to confer access (confidential reviewees — non-email
@@ -278,7 +277,7 @@ navigation patterns are audience-specific.
 | Operator (in session) | Per-session pages | Heavy: two-row chrome, status strip, lifecycle context | Rich: Setup pages, Operations pages, sub-pages |
 | Operator (out of session) | App-level pages | Light: minimal top bar, user menu | Sparse: Sessions, About, Settings |
 | Reviewer | Response surface | Light: page header, role-navigator chips | Sparse: `/me` dashboard, response form, summary |
-| Reviewee (Phase 1+) | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (W16 body content pending) |
+| Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card, W16 + W19) |
 | Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` (W17 body content pending) |
 
 The discipline: **components are universal, chrome is audience-
@@ -307,9 +306,8 @@ conventions.
 
 Recorded for visibility; **none committed.**
 
-- **Reviewee surface** as a live audience. Comes online when the
-  app supports non-confidential review, 360-degree feedback, or
-  results-sharing flows.
+- **Reviewee surface** is live (W16 + W19). The Observer collation
+  surface (W17) is still pending.
 - **System administrator surface.** Cross-session admin grouping;
   not yet scoped.
 - **Vetted institutional wordmarks** as a constrained customization

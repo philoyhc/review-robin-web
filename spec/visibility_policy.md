@@ -60,11 +60,11 @@ Of the four combinations, three are coherent for participant audiences and one i
 
 | Data type | Summarized rendering |
 |---|---|
-| Integer / Decimal | Mean, median, distribution, count. |
-| List (enum) | Per-option count + percentage. |
-| String (free-text) | Falls back to the **Anonymized** render — show each de-identified row as a list. Free-text can't be averaged; hiding the content behind a count would erase qualitative feedback. Operators who want a count-only view explicitly pick Anonymized. |
+| Integer / Decimal | Average, Median, Min, Max, (based on N responses). Em-dash placeholders at zero responses. |
+| List (enum) | Per-choice frequency with percentage, e.g. `A: 2 (33.3%)`. Every declared option surfaces including zeros. |
+| String (free-text) | Total length (characters) + Average length (characters), (based on N responses). Em-dash placeholders at zero responses. Also the fallback for unrecognised data types. |
 
-This fallback is the resolver's responsibility; the policy row carries `aggregated` regardless of data type. The Reviewee / Observer surfaces present the same UI either way.
+The policy row carries `aggregated` regardless of data type. The per-type rendering lives in `app/web/views/_reviewee_results.py::_summarize_field` (for the reviewee surface) and the corresponding template branch in `reviewer/results.html`. The Reviewee / Observer surfaces present the same per-type aggregate shapes.
 
 ### 2.2 Peer reviewer special case
 
@@ -169,8 +169,8 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Band 2 preview of the reviewer-surface visibility card | `build_instruments_context` carries `band2_preview_visibility_rows_by_instrument` (same shape as the reviewer surface's `visibility_rows`); the Band 2 intro grid renders the read-only "Who can see what you wrote (other than admin)" card alongside the description card so the operator can preview the reviewer's view from the operator surface. | ✓ shipped |
 | S14 — per-window mode pairs + Band 3 column-axis swap | Alembic `a7e3b1d92c64` (expand) adds the four pair columns; PR #1730 swaps service + route + view + template to read / write the pair columns and rebuilds Band 3 as 3 audiences × 2 windows of mode chips; Alembic `b8f4c2a91d35` (contract) drops the legacy `enabled` / `granularity` / `identification` / `visible_when` quadruple. | ✓ shipped |
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a half-width read-only "Who can see what you wrote" card in column 2 of each per-instrument intro grid on `review_surface.html`. Renders three rows (You / Reviewees / Observers) × two windows with the persisted mode labels (Raw responses / Anonymized responses / Summarized responses / —). | ✓ shipped |
-| W7 — Resolver | Reads policies + applies the scope rules; consumed by W16 / W17 surfaces. | ✘ pending |
-| W16 — Reviewee `/results` body | Renders the policy-permitted content. | ✘ pending |
+| W7 — Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies + applies the scope rules; consumed by the W16 reviewee surface. | ✓ shipped |
+| W16 — Reviewee `/results` body | `build_reviewee_results_context` renders raw / anonymized / summarized modes. W19 Acknowledge card also live (PR #1750). | ✓ shipped |
 | W17 — Observer `/collation` body | Renders the policy-permitted content. | ✘ pending |
 
 ---

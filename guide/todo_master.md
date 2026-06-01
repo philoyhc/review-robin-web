@@ -1604,6 +1604,69 @@ refs (e.g. "Catalog #33") point at the historical
 `guide/archive/unfinished_business.md` numbering for items
 that originated there before the catalog retired.
 
+### Reviewee `/results` body + Acknowledge + lobby trim — done 2026-06-01 (PRs #1737 → #1751)
+
+Closes the bulk of the participant-model surface tail. After
+this stream the reviewee-side viewing surface is fully wired
+(all three visibility modes) and the participation gesture
+(Acknowledge) is live. Lobby noise also dropped.
+
+- **W16 reviewee `/results` body — all three modes** (PRs
+  **#1737** Raw scaffolding + per-reviewer rows, **#1738 → #1740**
+  Anonymized mode + window-gating refinements, **#1741 → #1746**
+  test pinning + scope guards for the Same Group + Different
+  team configuration). Identity column is the *reviewer* (not the
+  reviewee — the reviewee already knows it's about them); rows
+  filtered by `Assignment.reviewee_id == reviewee.id`. Raw shows
+  full identification + values; Anonymized dashes every
+  identification cell but keeps values. Group-scoped instruments
+  drop the display-field columns. Window gating mirrors the
+  reviewer surface (pre-release scaffolding renders empty cells;
+  explicitly-closed release windows drop the section entirely).
+- **W16 Summarized mode — aggregate render shape** (PR
+  **#1747** baseline aggregates, **#1748** broadened to median
+  / min / max + list percentages + string length, **#1749**
+  label scaffolding at zero responses). The "Anonymized
+  summaries" chip now renders one collapsed Summary cell
+  + per-data-type aggregates: Integer / Decimal show Average,
+  Median, Min, Max + the response-count basis (labels render at
+  zero with em-dashes); List shows each declared option with its
+  frequency + percentage (zeros still surface); String shows
+  Total length + Average length characters. Operator-set column
+  widths intentionally ignored — the aggregate-row shape doesn't
+  carry the same column semantics.
+- **W19 Acknowledge gesture** (PR **#1750**). Bottom-right
+  half-width Acknowledge card on `/results`, blue-emphasis
+  modelled on the selected Data shape sub-card (border + 1px
+  shadow + faint blue tint via new `.rs-acknowledge-card` class
+  in `base.html`). Pre-ack: checkbox + Acknowledge button
+  gated by the existing `data-delete-confirm` / `data-delete-btn`
+  JS pattern. Post-ack: form collapses to "✓ Acknowledged on
+  {date}" strip + a `✓ Acknowledged` pill-success in the page
+  header. `POST /me/sessions/{id}/results/acknowledge` calls
+  `reviewees.acknowledge_results` (idempotent — second POST is
+  a no-op, original stamp preserved). New audit event
+  `reviewee.results_acknowledged` registered in `EVENT_SCHEMAS`
+  (snapshot envelope: reviewee_id + acknowledged_at). No
+  migration needed — `reviewees.results_acknowledged_at`
+  pre-positioned in #1678.
+- **`/me` lobby — per-page sub-rows retired** (PR **#1751**).
+  The participant dashboard's per-page sub-row treatment
+  (Segment 15B Slice 6 + Segment 18L multi-page) is gone.
+  Multi-paged sessions show only the main session row;
+  pagination happens via the surface's own pager rather than
+  deep-linked from the lobby. `DashboardPageRow` +
+  `_build_dashboard_page_rows` + `_rollup_page_state` deleted
+  from `_dashboard.py`; 6 sub-row tests retired (3 sibling
+  lobby-shape tests kept).
+- **Participant-model remainder doc** (PR **#1752**). New
+  `guide/participant_model_remainder.md` — focused filter on
+  `_prep.md` listing only the outstanding W items (W5, W8,
+  W11 partial, W12, W13, W17, W20, W21), the two loose ends
+  (L1, L2), and the magic-link schema blocker. `_prep.md`
+  stays the canonical historical audit + ship trail. Both
+  files now listed in `guide/README.md`.
+
 ### Implementation sequence
 
 Outstanding work, mutually independent unless flagged in
@@ -1663,25 +1726,28 @@ dep chains called out at the bottom of this file.
 > slices** now landing ahead of the full segments 21+ work
 > (see the matching Done entries above). All seven Phase 2
 > placeholders (P1–P7) are shipped, along with W6 toggle
-> wiring, W9 friendly-label retirement, W10 Observer CRUD,
-> W14 session-schedule authoring (Release-from / Release-
-> until), and W18 cross-role `/me` lobby union. **Still
-> unscheduled in this file** (each tracked individually in
-> `guide/participant_model_prep.md`): the visibility-policy
-> resolver + editor (W7 / W15), the reviewee-reachability
-> warning on Validate (W8), reviewer `profile_link` surface
-> mirror finish (W11 partial), Quick Setup Observer slot
-> submission (W12), Extract Setup observer shapes (W13),
-> reviewee results / observer collation real-body wiring
-> (W16 / W17), Acknowledge flow (W19), participant-side
-> email notifications (W20 — gated on Segment 14B), and
-> magic-link landings (W21 — blocked on the
-> `invitations`-extensibility design call). The umbrella
-> design lives at `guide/participant_model_upgrade.md`; the
+> wiring, W7 visibility-policy resolver, W9 friendly-label
+> retirement, W10 Observer CRUD, W14 session-schedule
+> authoring (Release-from / Release-until), W15 Band 3
+> visibility-policy editor, W16 reviewee `/results` body
+> across all three modes (raw / anonymized / summarized
+> aggregates), W18 cross-role `/me` lobby union, and W19
+> Acknowledge gesture. **Still unscheduled in this file**
+> (each tracked individually in
+> `guide/participant_model_remainder.md` — the focused filter
+> on `_prep.md`): the reviewee-reachability warning on
+> Validate (W8), reviewer `profile_link` surface mirror
+> finish (W11 partial), Quick Setup Observer slot submission
+> (W12), Extract Setup observer shapes (W13), observer
+> `/collation` body wiring (W17), participant-side email
+> notifications (W20 — gated on Segment 14B), and magic-link
+> landings (W21 — blocked on the `invitations`-extensibility
+> design call). The umbrella design lives at
+> `guide/participant_model_upgrade.md`; the
 > implementation-phase audit at
 > `guide/participant_model_prep.md` carries current marker
-> state; a dedicated todo file will be started when the
-> remaining surface slices are scoped.
+> state; `guide/participant_model_remainder.md` is the
+> outstanding-only filter for quick scanning of what's left.
 
 ### Sequencing notes
 
