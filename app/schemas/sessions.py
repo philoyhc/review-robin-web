@@ -45,15 +45,20 @@ class SessionCreate(BaseModel):
     # ``guide/participant_model_upgrade.md`` §3.8.
     relationships_enabled: bool = False
     observers_enabled: bool = False
-    # Participant-model Phase 3 (W14) — Release-responses window.
-    # ``responses_release_at`` is the moment reviewees / observers
-    # can start viewing collated responses; ``release_until_offset``
-    # is the ISO 8601 duration (positive) anchoring the close. Per
-    # the §8.2.2 anchor-null rule, the offset is inert whenever the
-    # anchor is unset. Both columns ride pre-positioned schema
-    # (Segment 18G Part 0a / 0b).
+    # Participant-model Phase 3 (W14 + S12) — Release-responses
+    # window. ``responses_release_at`` is the moment reviewees /
+    # observers can start viewing collated responses;
+    # ``responses_release_until`` is the absolute close datetime
+    # (NULL ⇒ open-ended, or no window scheduled). The Edit / Create
+    # form's "Release responses until" input and the operator's
+    # Stop release button both write the until column;
+    # ``responses_release_at = NULL`` makes the window inert per
+    # the §8.2.2 anchor-null rule. S12 retired the original
+    # ``release_until_offset`` (ISO 8601 duration) in favour of
+    # this absolute datetime — see
+    # ``guide/participant_model_upgrade.md`` §3.3 + §3.4.
     responses_release_at: datetime | None = None
-    release_until_offset: str | None = None
+    responses_release_until: datetime | None = None
 
 
 class SessionRead(BaseModel):

@@ -106,7 +106,16 @@ class ReviewSession(Base, TimestampMixin):
     invite_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     reminder_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     archive_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    release_until_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Participant-model S12 — absolute close datetime for the
+    # responses-release window. Replaces the W14 ``release_until_offset``
+    # (ISO 8601 duration). Both the Edit / Create form's "Release
+    # responses until" input and the operator's Stop release button
+    # write here; Release responses now clears it so the window
+    # re-opens open-ended. See ``guide/participant_model_upgrade.md``
+    # §3.3 + §3.4.
+    responses_release_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Segment 18G Part 0c — per-session retention controls.
     # ``retention_exception`` opts a session out of any auto-purge

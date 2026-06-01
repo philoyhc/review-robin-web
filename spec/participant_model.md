@@ -75,10 +75,10 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 ### Reachability windows (today)
 
 - Reviewer surface: reachable when `session_status_for_reviewer(reviewer, session) != "not opened"`. The surface 403s / redirects until the session has at least once been activated.
-- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate today.** W16 will add the `responses_release_at` + `release_until_offset` window (see §7 below).
+- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate today.** W16 will add the `responses_release_at` / `responses_release_until` window (see §7 below).
 - Observer collation: reachable for any active observer. **No datetime gate today.** W17 adds the analogous gate.
 
-The release-window columns (`sessions.responses_release_at` + `sessions.release_until_offset`) are operator-authorable now via W14 but consumed at view time only when W16 / W17 land.
+The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable now via W14 + S12 but consumed at view time only when W16 / W17 land.
 
 ---
 
@@ -125,9 +125,9 @@ The Create New Session and Session Edit Details forms author two extra schedule 
 | Field | Form input | Service | Validator |
 |---|---|---|---|
 | `responses_release_at` | `<input type="datetime-local">` "Release responses from (optional)" | Persisted on `sessions.responses_release_at`. | `scheduled_events.parse_and_validate_responses_release_at(raw, *, timezone_name)`. No minimum-lead floor — operator may backdate. |
-| `release_until_offset` | `<input type="text">` "Release responses until (optional)" | Persisted on `sessions.release_until_offset`. | `scheduled_events.parse_and_validate_release_until_offset(raw)`. Positive ISO 8601 duration; magnitude cap 365 days. |
+| `responses_release_until` | `<input type="datetime-local">` "Release responses until (optional)" | Persisted on `sessions.responses_release_until`. | `scheduled_events.parse_and_validate_responses_release_until(raw, *, timezone_name, responses_release_at)`. Datetime parse; must close *after* `responses_release_at` when both are set, and within 365 days of it. |
 
-Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `release_until_offset` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an offset without an anchor is allowed and harmless.
+Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `responses_release_until` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an until without an anchor is allowed and harmless. S12 retired the W14 `release_until_offset` (ISO 8601 duration) in favour of this absolute datetime so the form input and the operator's forthcoming Stop release button can write the same column.
 
 **Consumer status.** No surface reads these columns yet — they're operator-authorable now but consumed only when W16 (reviewee results) and W17 (observer collation) wire the window into the placeholder routes' reachability gates.
 
@@ -167,6 +167,6 @@ The participant-model upgrade has more arcs that are not yet live. See `guide/pa
 - `spec/setup_pages.md` — Observers page contract.
 - `spec/reviewer-surface.md` — `/me` dashboard + reviewer-surface chrome; the role-pill + role-navigator integration points live here.
 - `spec/role_navigator.md` — the chip-strip partial used by all four `/me` surfaces.
-- `spec/lifecycle.md` — schedule columns including `responses_release_at` / `release_until_offset`.
+- `spec/lifecycle.md` — schedule columns including `responses_release_at` / `responses_release_until`.
 - `spec/csv_contracts.md` — Observer CSV import contract (§3.2b).
 - `spec/settings_inventory.md` — every persisted `sessions` field including the two feature toggles + the release-window columns.

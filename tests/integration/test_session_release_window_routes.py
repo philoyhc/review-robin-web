@@ -1,14 +1,20 @@
 """Route + service coverage for the Participants-platform
-release-responses window (W14 — wires
-`responses_release_at` + `release_until_offset` on both the
+release-responses window (W14 + S12 — wires
+`responses_release_at` + `responses_release_until` on both the
 Create New Session and Session Details edit forms).
+
+S12 retired the W14 ISO 8601 offset
+(`release_until_offset`) in favour of an absolute close
+datetime (`responses_release_until`) — the form input is now
+a `datetime-local` and the Stop release button (forthcoming)
+writes the same column.
 
 The §8.2.2 anchor-null rule (inertness when
 `responses_release_at` is NULL) is enforced at view time, not
-save time — persisting a `release_until_offset` without an
-anchor is allowed and harmless. These tests pin the save-time
-contract: parseability, positivity, magnitude cap, and round-
-trip prefill on edit.
+save time — persisting an until without an anchor is allowed
+and harmless. These tests pin the save-time contract:
+parseability, ordering, magnitude check, and round-trip
+prefill on edit.
 """
 
 from __future__ import annotations
@@ -79,33 +85,40 @@ def test_create_persists_release_window_pair(
         code="rw-create",
         data={
             "responses_release_at": "2027-01-01T12:00",
-            "release_until_offset": "P30D",
+            "responses_release_until": "2027-01-31T12:00",
             "display_timezone": "UTC",
         },
     )
     db.refresh(review_session)
-    # SQLite drops tzinfo on read; compare against the naive form.
     assert _naive_utc(review_session.responses_release_at) == datetime(
         2027, 1, 1, 12, 0
     )
-    assert review_session.release_until_offset == "P30D"
+    assert _naive_utc(review_session.responses_release_until) == datetime(
+        2027, 1, 31, 12, 0
+    )
 
 
-def test_create_allows_offset_without_anchor(
+def test_create_allows_until_without_anchor(
     client: TestClient, db: Session
 ) -> None:
     """The §8.2.2 anchor-null rule is enforced at view time; save
-    allows an offset alone, which the consumer will treat as
-    inert until the anchor is set."""
+    allows an until alone, which the consumer will treat as inert
+    until the anchor is set. Magnitude / ordering checks skip when
+    the anchor is NULL."""
     review_session = _make_session(
         client,
         db,
-        code="rw-offset-only",
-        data={"release_until_offset": "P14D"},
+        code="rw-until-only",
+        data={
+            "responses_release_until": "2027-02-15T12:00",
+            "display_timezone": "UTC",
+        },
     )
     db.refresh(review_session)
     assert review_session.responses_release_at is None
-    assert review_session.release_until_offset == "P14D"
+    assert _naive_utc(review_session.responses_release_until) == datetime(
+        2027, 2, 15, 12, 0
+    )
 
 
 def test_create_rejects_malformed_release_at(
@@ -126,57 +139,60 @@ def test_create_rejects_malformed_release_at(
     assert "Release responses from" in response.text
 
 
-def test_create_rejects_malformed_offset(
+def test_create_rejects_malformed_until(
     client: TestClient, db: Session
 ) -> None:
     response = client.post(
         "/operator/sessions",
         data={
             "name": "S",
-            "code": "rw-bad-offset",
+            "code": "rw-bad-until",
             "description": "",
-            "release_until_offset": "30 days",
+            "responses_release_until": "30 days",
             "display_timezone": "UTC",
         },
         follow_redirects=False,
     )
     assert response.status_code == 422
+    assert "Release responses until" in response.text
 
 
-def test_create_rejects_zero_or_negative_offset(
+def test_create_rejects_until_at_or_before_anchor(
     client: TestClient, db: Session
 ) -> None:
     response = client.post(
         "/operator/sessions",
         data={
             "name": "S",
-            "code": "rw-neg",
+            "code": "rw-out-of-order",
             "description": "",
-            "release_until_offset": "-P1D",
+            "responses_release_at": "2027-01-15T12:00",
+            "responses_release_until": "2027-01-15T12:00",
             "display_timezone": "UTC",
         },
         follow_redirects=False,
     )
     assert response.status_code == 422
-    assert "must be positive" in response.text
+    assert "after Release responses from" in response.text
 
 
-def test_create_rejects_oversized_offset(
+def test_create_rejects_until_exceeding_365d_from_anchor(
     client: TestClient, db: Session
 ) -> None:
     response = client.post(
         "/operator/sessions",
         data={
             "name": "S",
-            "code": "rw-big",
+            "code": "rw-too-far",
             "description": "",
-            "release_until_offset": "P9999D",
+            "responses_release_at": "2027-01-01T00:00",
+            "responses_release_until": "2028-02-01T00:00",
             "display_timezone": "UTC",
         },
         follow_redirects=False,
     )
     assert response.status_code == 422
-    assert "maximum window length" in response.text
+    assert "within 365 days" in response.text
 
 
 # ── Edit route ────────────────────────────────────────────────────────
@@ -190,7 +206,7 @@ def test_edit_persists_release_window_pair(
         client,
         review_session,
         responses_release_at="2027-02-01T09:30",
-        release_until_offset="P7D",
+        responses_release_until="2027-02-08T09:30",
         display_timezone="UTC",
     )
     assert code == 303
@@ -198,7 +214,9 @@ def test_edit_persists_release_window_pair(
     assert _naive_utc(review_session.responses_release_at) == datetime(
         2027, 2, 1, 9, 30
     )
-    assert review_session.release_until_offset == "P7D"
+    assert _naive_utc(review_session.responses_release_until) == datetime(
+        2027, 2, 8, 9, 30
+    )
 
 
 def test_edit_clears_release_window_on_blank_input(
@@ -210,7 +228,7 @@ def test_edit_clears_release_window_on_blank_input(
         code="rw-clear",
         data={
             "responses_release_at": "2027-01-01T12:00",
-            "release_until_offset": "P30D",
+            "responses_release_until": "2027-01-31T12:00",
             "display_timezone": "UTC",
         },
     )
@@ -218,13 +236,13 @@ def test_edit_clears_release_window_on_blank_input(
         client,
         review_session,
         responses_release_at="",
-        release_until_offset="",
+        responses_release_until="",
         display_timezone="UTC",
     )
     assert code == 303
     db.refresh(review_session)
     assert review_session.responses_release_at is None
-    assert review_session.release_until_offset is None
+    assert review_session.responses_release_until is None
 
 
 def test_edit_form_prefills_saved_release_window_values(
@@ -236,30 +254,28 @@ def test_edit_form_prefills_saved_release_window_values(
         code="rw-prefill",
         data={
             "responses_release_at": "2027-03-01T10:00",
-            "release_until_offset": "P14D",
+            "responses_release_until": "2027-03-15T10:00",
             "display_timezone": "UTC",
         },
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/edit"
     ).text
-    # datetime-local prefill in session zone (UTC) — value is the
-    # ISO datetime without tz.
+    # Both inputs prefilled in session zone (UTC).
     assert 'value="2027-03-01T10:00"' in body
-    assert 'value="P14D"' in body
+    assert 'value="2027-03-15T10:00"' in body
 
 
-def test_edit_inputs_render_without_disabled_attribute(
+def test_edit_until_renders_as_datetime_local_input(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="rw-enabled")
+    """S12 swapped the text+ISO-duration input to a
+    ``datetime-local``. The text input shape is gone."""
+    review_session = _make_session(client, db, code="rw-shape")
     body = client.get(
         f"/operator/sessions/{review_session.id}/edit"
     ).text
-    # No disabled attribute on either input — they're now wired.
     assert (
-        'name="responses_release_at" disabled' not in body
+        'type="datetime-local" id="responses_release_until"' in body
     )
-    assert (
-        'name="release_until_offset" disabled' not in body
-    )
+    assert 'name="release_until_offset"' not in body

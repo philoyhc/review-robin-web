@@ -325,9 +325,10 @@ def reviewer_dashboard(
         if "reviewee" in roles:
             role_links["reviewee"] = {
                 "target": f"/me/sessions/{review_session.id}/results",
-                # W16 will gate this on
-                # ``responses_release_at`` + ``release_until_offset``;
-                # today the placeholder accepts any active reviewee.
+                # W16 will gate this on the
+                # ``responses_release_at`` / ``responses_release_until``
+                # window; today the placeholder accepts any active
+                # reviewee.
                 "enabled": True,
             }
         if "observer" in roles:

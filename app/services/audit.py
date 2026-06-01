@@ -608,6 +608,20 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "session.schedule_set": EventSchema(_IDENTITY | {"changes"}),
     "session.feature_toggled": EventSchema(_IDENTITY | {"changes"}),
+    # Participant-model S12 — operator-explicit release-window
+    # buttons. ``session.responses_released`` fires when the operator
+    # pressed "Release responses now" (carries the stamped
+    # ``responses_release_at`` and a flag if a prior
+    # ``responses_release_until`` was cleared). ``session.responses_release_stopped``
+    # fires when the operator pressed "Stop release" (carries the
+    # stamped ``responses_release_until``). Both ride the snapshot
+    # envelope so the actual values are visible in the audit log
+    # without a separate diff. Buttons + emitters land with the
+    # Operations-row release controls (W14 follow-on).
+    "session.responses_released": EventSchema(_IDENTITY | {"snapshot"}),
+    "session.responses_release_stopped": EventSchema(
+        _IDENTITY | {"snapshot"}
+    ),
     "results.released": EventSchema(_IDENTITY | {"snapshot"}),
     "results.acknowledged": EventSchema(_IDENTITY | {"snapshot", "refs"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),

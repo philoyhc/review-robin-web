@@ -51,6 +51,12 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     )
     granularity: Mapped[str] = mapped_column(String(16), nullable=False)
     identification: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Participant-model S12 — which session-level window applies for
+    # this (instrument, audience) grant. Values:
+    # ``while_ongoing`` / ``after_release`` / ``throughout`` /
+    # ``always`` (reserved). Nullable / inert; W15 writes, W7 reads.
+    # See ``guide/participant_model_upgrade.md`` §3.3.
+    visible_when: Mapped[str | None] = mapped_column(String(16))
     observer_tag: Mapped[str | None] = mapped_column(String(255))
 
     instrument: Mapped[Instrument] = relationship(back_populates="view_policies")

@@ -53,11 +53,12 @@ def create_session(
         # Create / Edit Session pages.
         relationships_enabled=payload.relationships_enabled,
         observers_enabled=payload.observers_enabled,
-        # Participant-model Phase 3 (W14) — Release-responses window
-        # anchor + offset. Route layer enforces parse + magnitude;
-        # the §8.2.2 anchor-null rule handles inertness at view time.
+        # Participant-model Phase 3 (W14 + S12) — Release-responses
+        # window anchor + absolute close datetime. Route layer
+        # parses + validates; the §8.2.2 anchor-null rule handles
+        # inertness at view time.
         responses_release_at=payload.responses_release_at,
-        release_until_offset=payload.release_until_offset,
+        responses_release_until=payload.responses_release_until,
         created_by_user_id=user.id,
         # 18B PR 3 / PR 4: the per-session display timezone. The
         # Create Session form submits an explicit zone (defaulted to
@@ -175,7 +176,7 @@ def update_session(
         "relationships_enabled",
         "observers_enabled",
         "responses_release_at",
-        "release_until_offset",
+        "responses_release_until",
     ):
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)

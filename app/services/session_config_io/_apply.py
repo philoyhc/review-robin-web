@@ -361,7 +361,12 @@ def _apply_session_kv(
         # Defensively ignored even if exported — these are
         # machine-derived per the inclusion model.
         return
-    if key in {"deadline", "scheduled_activate_at", "responses_release_at"}:
+    if key in {
+        "deadline",
+        "scheduled_activate_at",
+        "responses_release_at",
+        "responses_release_until",
+    }:
         plan.session_overrides[key] = _parse_datetime(value)
         return
     if key == "display_timezone":
@@ -389,7 +394,7 @@ def _apply_session_kv(
             ]
             plan.session_overrides[key] = entries or None
         return
-    if key in {"archive_offset", "release_until_offset"}:
+    if key == "archive_offset":
         plan.session_overrides[key] = value or None
         return
     if key == "retention_exception":
@@ -967,10 +972,10 @@ def _apply_session_metadata(
         "self_reviews_active",
         "scheduled_activate_at",
         "responses_release_at",
+        "responses_release_until",
         "invite_offsets",
         "reminder_offsets",
         "archive_offset",
-        "release_until_offset",
         "retention_exception",
         "retention_overrides",
     ):
