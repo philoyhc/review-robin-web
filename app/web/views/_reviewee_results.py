@@ -424,6 +424,33 @@ def build_reviewee_results_context(
         else:
             heading_title = f"#{position}"
 
+        # Contract: for Raw + Anonymized modes, the table
+        # columns must mirror the reviewer surface
+        # (``review_surface.html``) for the same instrument —
+        # the operator's column choices apply uniformly to
+        # every reader. Specifically:
+        #
+        # - Response fields: same ``visible`` filter, same
+        #   ``(order, id)`` sort, same per-data-type
+        #   ``rs-narrow`` / ``rs-textlong`` class hints.
+        # - Display fields: same ``visible`` filter, same
+        #   ``_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD`` exclusion
+        #   (Name / Email / Profile dropped — they'd repeat the
+        #   signed-in reviewee on every row), same
+        #   ``(order, id)`` sort.
+        # - Per-column pixel widths from ``Instrument.column_widths``
+        #   (``"identity"`` / ``"df_<id>"`` / ``"rf_<id>"``).
+        #   When any custom width is set, the template emits a
+        #   ``<colgroup>`` + ``table-layout: fixed`` so the
+        #   widths actually take effect — same path the
+        #   reviewer surface uses.
+        #
+        # Operators who drag-resize a column on the Band 2
+        # editor get the same column width on the reviewee
+        # results page; operators who select / deselect a
+        # response or display field get the same column
+        # set. Mirroring this contract lets the operator
+        # configure once and have it apply across surfaces.
         fields = sorted(
             (f for f in instrument.response_fields if f.visible),
             key=lambda f: (f.order, f.id),
