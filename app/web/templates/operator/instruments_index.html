@@ -1684,6 +1684,39 @@
                         style="position: absolute; bottom: 4px; right: 4px;">✓</button>
               {% endif %}
             </div>
+            {# Reviewer-surface preview — "Who can see what you
+               wrote (other than admin)". Mirrors the read-only
+               transparency card the reviewer sees alongside their
+               instrument heading, so the operator can preview the
+               reviewer's view at-a-glance from the same intro
+               grid. Two rows (You / Reviewees) × two windows; the
+               Observers row is intentionally omitted, matching
+               the reviewer surface. #}
+            {% set _vp_preview_rows = (band2_preview_visibility_rows_by_instrument or {}).get(instrument.id, []) %}
+            {% if _vp_preview_rows %}
+              <div class="card rs-instrument-card"
+                   data-new-model-band2-vp-preview-card>
+                <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="text-align: left;">
+                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for vp in _vp_preview_rows %}
+                      <tr>
+                        <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
+                        <td style="padding: 4px 8px;">{{ vp.while_ongoing_label }}</td>
+                        <td style="padding: 4px 8px;">{{ vp.after_release_label }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% endif %}
           </div>
           {# Response field details now live as editable rows
              inside Band 3's "Response fields" section — the
@@ -3680,37 +3713,36 @@
                   align-items: stretch;
                   {% if not is_editing %}opacity: 0.75;{% endif %}"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
-        <div>
+        <div data-new-model-vp-form
+             data-new-model-instrument-id="{{ instrument.id }}">
           <h3 style="margin: 0 0 12px 0;">Visibility</h3>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/view-policy"
-                id="visibility-form-{{ instrument.id }}"
-                data-new-model-vp-form
-                data-new-model-instrument-id="{{ instrument.id }}">
-            {# Hidden inputs — the chip JS writes to these on every
-               cycle; the POST handler reads them. Reviewers
-               Session-ongoing is always Raw (baseline; not
-               editable). Reviewees Session-ongoing is always
-               empty (strict per-pair flow rule; not editable). #}
-            <input type="hidden" name="peer_reviewer_while_ongoing_mode"
-                   data-new-model-vp-input="peer_reviewer-while_ongoing"
-                   value="raw">
-            <input type="hidden" name="peer_reviewer_after_release_mode"
-                   data-new-model-vp-input="peer_reviewer-after_release"
-                   value="{{ _pr.after_release_mode or '' }}">
-            <input type="hidden" name="reviewee_while_ongoing_mode"
-                   data-new-model-vp-input="reviewee-while_ongoing"
-                   value="">
-            <input type="hidden" name="reviewee_after_release_mode"
-                   data-new-model-vp-input="reviewee-after_release"
-                   value="{{ _re.after_release_mode or '' }}">
-            <input type="hidden" name="observer_while_ongoing_mode"
-                   data-new-model-vp-input="observer-while_ongoing"
-                   value="{{ _ob.while_ongoing_mode or '' }}">
-            <input type="hidden" name="observer_after_release_mode"
-                   data-new-model-vp-input="observer-after_release"
-                   value="{{ _ob.after_release_mode or '' }}">
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+          {# Hidden inputs — the chip JS writes to these on every
+             cycle. They hitch a ride on the instrument card's
+             main Save form (``dfsave-<id>``) so the operator's
+             single Save button persists visibility alongside
+             everything else on the card. Reviewers Session-
+             ongoing is pinned to Raw (baseline self-view
+             guarantee); Reviewees Session-ongoing is pinned to
+             empty (strict per-pair flow rule). #}
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="peer_reviewer_while_ongoing_mode"
+                 data-new-model-vp-input="peer_reviewer-while_ongoing"
+                 value="raw">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="peer_reviewer_after_release_mode"
+                 data-new-model-vp-input="peer_reviewer-after_release"
+                 value="{{ _pr.after_release_mode or '' }}">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="reviewee_while_ongoing_mode"
+                 data-new-model-vp-input="reviewee-while_ongoing"
+                 value="">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="reviewee_after_release_mode"
+                 data-new-model-vp-input="reviewee-after_release"
+                 value="{{ _re.after_release_mode or '' }}">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="observer_while_ongoing_mode"
+                 data-new-model-vp-input="observer-while_ongoing"
+                 value="{{ _ob.while_ongoing_mode or '' }}">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="observer_after_release_mode"
+                 data-new-model-vp-input="observer-after_release"
+                 value="{{ _ob.after_release_mode or '' }}">
+          <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
               <thead>
                 <tr style="text-align: left;">
                   <th style="width: 28%; padding: 6px 8px;">Who can view</th>
@@ -3762,11 +3794,6 @@
                 </tr>
               </tbody>
             </table>
-            <div style="text-align: right; margin-top: 12px;">
-              <button class="btn primary" type="submit"
-                      {% if not is_editing %}disabled aria-disabled="true"{% endif %}>Save visibility</button>
-            </div>
-          </form>
         </div>
         <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>
@@ -5261,7 +5288,8 @@
     //   "raw"        → "Raw responses"
     //   "anonymized" → "Anonymized responses"
     //   "summarized" → "Summarized responses"
-    // Form POSTs to ``/instruments/{id}/view-policy``; the
+    // Hidden inputs hitch a ride on the card's main Save form
+    // (``dfsave-<id>`` → ``/instruments/{id}/fields/save``); the
     // service validates per-(audience, window) cell rules.
     var _VP_CELL_LABELS = {
       "": "—",
