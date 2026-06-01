@@ -47,6 +47,7 @@ non-identity display fields stay (and get dashed in
 
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -103,21 +104,36 @@ class SummarizedFieldCell:
 
     ``data_type`` drives the template render branch:
 
-    - ``"Integer"`` / ``"Decimal"`` — numeric average over
-      non-empty submitted values. ``average`` is the rounded
-      mean (None when ``response_count`` is zero);
-      ``response_count`` is how many values fed the mean.
-    - ``"List"`` — raw frequency of each list option. Every
-      option declared on the field surfaces (so a zero stays
-      visible) in field-declaration order.
-    - ``"String"`` — not aggregated; the template renders the
-      "cannot be summarized" placeholder.
+    - ``"Integer"`` / ``"Decimal"`` — numeric central-tendency
+      + range. ``average`` / ``median`` are the rounded mean and
+      median over non-empty submitted values; ``min_value`` /
+      ``max_value`` are the extremes. ``response_count`` is how
+      many values fed every aggregate; zero means the section
+      has nothing to summarize.
+    - ``"List"`` — raw frequency of each list option plus its
+      share of the total. Every option declared on the field
+      surfaces (so a zero stays visible) in field-declaration
+      order; each tuple is ``(choice, count, percentage)``.
+    - ``"String"`` — total characters across submissions plus
+      the per-response average, on the rationale that the
+      length distribution is the most defensible summary we
+      can give without semantic analysis. ``response_count``
+      is the number of non-empty string responses.
     """
 
     data_type: str
-    average: float | None = None
     response_count: int = 0
-    frequencies: tuple[tuple[str, int], ...] = ()
+    # Numerical
+    average: float | None = None
+    median: float | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    # List — ``(choice, count, percentage)``; percentage is a
+    # float in ``[0, 100]`` rounded to 1 decimal place.
+    frequencies: tuple[tuple[str, int, float], ...] = ()
+    # String
+    total_length: int = 0
+    average_length: float | None = None
 
 
 @dataclass(frozen=True)
@@ -194,8 +210,11 @@ def _summarize_field(
         mean = sum(parsed) / len(parsed)
         return SummarizedFieldCell(
             data_type=data_type,
-            average=round(mean, 2),
             response_count=len(parsed),
+            average=round(mean, 2),
+            median=round(statistics.median(parsed), 2),
+            min_value=round(min(parsed), 2),
+            max_value=round(max(parsed), 2),
         )
     if data_type == "List":
         choices_csv = field._inline_list_csv or ""
@@ -213,12 +232,31 @@ def _summarize_field(
                 # aggregate stays faithful to what's in the table.
                 counts.setdefault(value, 0)
                 counts[value] += 1
+        total = sum(counts.values())
+        frequencies = tuple(
+            (
+                choice,
+                count,
+                round(100 * count / total, 1) if total else 0.0,
+            )
+            for choice, count in counts.items()
+        )
         return SummarizedFieldCell(
             data_type=data_type,
-            frequencies=tuple(counts.items()),
+            response_count=total,
+            frequencies=frequencies,
         )
-    # String + anything else: not summarizable.
-    return SummarizedFieldCell(data_type=data_type or "String")
+    # String (and any unrecognised type): summarize by length.
+    lengths = [len(v) for v in raw_values]
+    if not lengths:
+        return SummarizedFieldCell(data_type=data_type or "String")
+    total_length = sum(lengths)
+    return SummarizedFieldCell(
+        data_type=data_type or "String",
+        response_count=len(lengths),
+        total_length=total_length,
+        average_length=round(total_length / len(lengths), 1),
+    )
 
 
 def build_reviewee_results_context(

@@ -59,20 +59,30 @@
                   <td>
                     {% if cell.data_type in ("Integer", "Decimal") %}
                       {% if cell.response_count > 0 %}
-                        Average: {{ cell.average }} (based on {{ cell.response_count }} responses)
+                        Average: {{ cell.average }}<br>
+                        Median: {{ cell.median }}<br>
+                        Min: {{ cell.min_value }}<br>
+                        Max: {{ cell.max_value }}<br>
+                        (based on {{ cell.response_count }} responses)
                       {% else %}
-                        Average: <span class="muted">—</span> (based on 0 responses)
+                        <span class="muted">(based on 0 responses)</span>
                       {% endif %}
                     {% elif cell.data_type == "List" %}
                       {% if cell.frequencies %}
-                        {% for choice, count in cell.frequencies %}
-                          {{ choice }}: {{ count }}{% if not loop.last %}<br>{% endif %}
+                        {% for choice, count, pct in cell.frequencies %}
+                          {{ choice }}: {{ count }} ({{ pct }}%){% if not loop.last %}<br>{% endif %}
                         {% endfor %}
                       {% else %}
                         <span class="muted">No list options defined.</span>
                       {% endif %}
                     {% else %}
-                      <span class="muted">Comments type field cannot be summarized</span>
+                      {% if cell.response_count > 0 %}
+                        Total length: {{ cell.total_length }} characters<br>
+                        Average length: {{ cell.average_length }} characters<br>
+                        (based on {{ cell.response_count }} responses)
+                      {% else %}
+                        <span class="muted">(based on 0 responses)</span>
+                      {% endif %}
                     {% endif %}
                   </td>
                 {% endfor %}
