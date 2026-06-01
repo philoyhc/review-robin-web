@@ -48,7 +48,7 @@
         <div class="fill-col" style="min-width: 0;">
           {# Right column — Help contact + Timezone side by side
              on top, then the schedule + offset sub-grid. Live:
-             Start / End (datetime anchors) + Auto-send invites /
+             Start / End (datetime anchors) + Send invites /
              reminders (offsets); Release-from
              (``responses_release_at``) anchor +
              Release-until (``responses_release_until``) absolute
@@ -78,7 +78,7 @@
 
           {# Schedule + offsets sub-grid — three rows × two columns,
              filled column-first via ``grid-auto-flow: column`` so
-             corresponding rows align (End ↔ Auto-send reminders;
+             corresponding rows align (End ↔ Send reminders;
              Release responses from ↔ Release responses until).
              Each label+input pair is its own grid cell, so the
              row's height takes the tallest cell — no drift when
@@ -126,14 +126,14 @@
             </div>
 
             <div>
-              <label for="invite_offsets">Auto-send invites (offset from Start; optional)</label>
+              <label for="invite_offsets">Send invites (offset from Start; optional)</label>
               <input type="text" id="invite_offsets" name="invite_offsets"
                      value="{{ invite_offsets_input_value }}"
                      placeholder="e.g. -P1D, -PT2H">
             </div>
 
             <div>
-              <label for="reminder_offsets">Auto-send reminders (offset from End; optional)</label>
+              <label for="reminder_offsets">Send reminders (offset from End; optional)</label>
               <input type="text" id="reminder_offsets" name="reminder_offsets"
                      value="{{ reminder_offsets_input_value }}"
                      placeholder="e.g. -P2D, -PT4H">
