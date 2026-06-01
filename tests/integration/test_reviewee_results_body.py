@@ -761,17 +761,19 @@ def test_results_body_summarized_aggregates_list_choice_frequencies(
     assert "C: 0 (0.0%)" in body
 
 
-def test_results_body_summarized_zero_responses_shows_counts(
+def test_results_body_summarized_zero_responses_shows_label_scaffolding(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """When the reviewer has assignments but hasn't submitted
-    yet, the summarized section still renders. Counts read
-    ``assigned: 1, with responses: 0`` and the numerical
-    aggregate reads ``(based on 0 responses)``. Mirrors the
-    Raw mode's "scaffolding without values" preview behavior."""
+    yet, the summarized section still renders with full label
+    scaffolding so the reviewee can see what each cell will
+    eventually show. Numerical cells render "Average: —",
+    "Median: —", etc. with the count line below; String cells
+    render the length labels likewise. Mirrors the Raw mode's
+    "scaffolding without values" preview behavior."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-sum-empty")
     # No _seed_submitted_responses() — no Response rows exist.
@@ -785,6 +787,15 @@ def test_results_body_summarized_zero_responses_shows_counts(
     assert ">Summary</th>" in body
     assert "Number of reviewers assigned: 1" in body
     assert "Number of reviewers with some responses: 0" in body
+    # Numerical labels show even with zero responses — operator + reviewee
+    # see the future shape of the cell.
+    assert "Average:" in body
+    assert "Median:" in body
+    assert "Min:" in body
+    assert "Max:" in body
+    # String labels show likewise.
+    assert "Total length:" in body
+    assert "Average length:" in body
     assert "(based on 0 responses)" in body
 
 
