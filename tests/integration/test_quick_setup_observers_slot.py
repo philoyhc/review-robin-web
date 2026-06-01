@@ -1,6 +1,6 @@
 """Integration coverage for the Quick Setup Observers slot.
 
-Closes W12 from `guide/participant_model_remainder.md`: gates the
+Closes W12 from `guide/archive/participant_model_remainder.md`: gates the
 Observers slot on the session's ``observers_enabled`` toggle,
 shipped end-to-end through the per-slot POST + the consolidated
 submit-all chain. Mirrors the Relationships slot pattern (PR 7c)

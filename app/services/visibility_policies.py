@@ -10,7 +10,7 @@ Operator-facing modes (Raw / Anonymized / Summarized) encode to
 below.
 
 See ``spec/visibility_policy.md`` for the full functional
-contract and ``guide/participant_model_upgrade.md`` §3.3 for
+contract and ``guide/archive/participant_model_upgrade.md`` §3.3 for
 the design rationale + audience-scope semantics.
 
 Audit emission: every write emits one

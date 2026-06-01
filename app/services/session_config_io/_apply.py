@@ -216,7 +216,7 @@ _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 # only validation layer that keeps the table aligned with the
 # friendly-label intent on import. Reviewee identity fields
 # (Name / Email_Identifier / Profile) dropped 2026-05-31 alongside
-# the editor retirement (``guide/participant_model_upgrade.md``
+# the editor retirement (``guide/archive/participant_model_upgrade.md``
 # §3.7); Settings-CSV imports for those slots are now rejected.
 _VALID_FL_SOURCE_FIELDS: dict[str, frozenset[str]] = {
     "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),

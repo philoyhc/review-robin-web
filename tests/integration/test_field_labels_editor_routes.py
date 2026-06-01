@@ -187,7 +187,7 @@ def test_reviewers_page_renders_editor_disabled_when_ready(
 # ── Reviewees route (three tag slots) ───────────────────────────────────
 #
 # Identity columns (Name / Email_Identifier / Profile) retired
-# 2026-05-31 per guide/participant_model_upgrade.md §3.7. Only the
+# 2026-05-31 per guide/archive/participant_model_upgrade.md §3.7. Only the
 # three tag slots remain; identity-slot form fields are silently
 # ignored if submitted.
 

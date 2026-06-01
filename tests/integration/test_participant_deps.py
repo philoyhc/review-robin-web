@@ -4,8 +4,8 @@
 
 Exercised by direct dependency invocation (no route mounts them
 yet). The auth surfaces will mount them in Phase 3 (W16 / W17).
-See ``guide/participant_model_upgrade.md`` §4 and
-``guide/participant_model_upgrade.md`` rows W2, W3.
+See ``guide/archive/participant_model_upgrade.md`` §4 and
+``guide/archive/participant_model_upgrade.md`` rows W2, W3.
 """
 
 from __future__ import annotations

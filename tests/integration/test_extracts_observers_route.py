@@ -1,5 +1,5 @@
 """Integration coverage for the Observers extract — closes the
-Extract Setup leg of L2 from ``guide/participant_model_remainder.md``.
+Extract Setup leg of L2 from ``guide/archive/participant_model_remainder.md``.
 
 Asserts the per-row export route + the bundle inclusion when the
 session's ``observers_enabled`` toggle is on, and the Extract

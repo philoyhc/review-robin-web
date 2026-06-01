@@ -7,7 +7,7 @@ window-open booleans, pick the operator-facing mode that
 applies right now (or ``None`` for "off").
 
 See ``spec/visibility_policy.md`` §3 and
-``guide/participant_model_upgrade.md`` §3.3.
+``guide/archive/participant_model_upgrade.md`` §3.3.
 """
 
 from __future__ import annotations

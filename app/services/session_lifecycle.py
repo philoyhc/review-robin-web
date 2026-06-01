@@ -100,7 +100,7 @@ def is_response_release_window_open(
     ``responses_release_until`` is NULL (open-ended) or hasn't yet
     arrived. Mirrors the predicate spelled out in
     ``spec/visibility_policy.md`` §3.2 and the resolver predicate
-    in ``guide/participant_model_upgrade.md`` §3.3.
+    in ``guide/archive/participant_model_upgrade.md`` §3.3.
 
     Anchor-null inertness: a saved ``responses_release_until``
     with no anchor reads as "not open yet" — the release-window

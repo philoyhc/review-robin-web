@@ -9,7 +9,7 @@ implementation chose to build the union inline in
 through the stub (see L1 in the participant-model remainder
 doc, now closed).
 
-See ``guide/participant_model_upgrade.md`` §3.2 (and Appendix A
+See ``guide/archive/participant_model_upgrade.md`` §3.2 (and Appendix A
 row W1).
 """
 

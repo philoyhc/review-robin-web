@@ -72,7 +72,7 @@ _DEFAULT_LABELS: dict[tuple[str, str], str] = {
 #
 # Friendly-label affordance retired for the reviewee fixed columns
 # (Name / Email_Identifier / Profile) on 2026-05-31 per
-# ``guide/participant_model_upgrade.md`` §3.7 — those columns mean
+# ``guide/archive/participant_model_upgrade.md`` §3.7 — those columns mean
 # what they say and operators renaming them added no signal.
 # ``_DEFAULT_LABELS`` retains the canonical strings so display
 # callers (table headers, etc.) still resolve to "Name" / "Email"

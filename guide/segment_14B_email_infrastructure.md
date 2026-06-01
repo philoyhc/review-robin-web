@@ -327,3 +327,75 @@ When parts ship:
   added if a Part introduces a new architectural primitive
   (queue / worker pattern in Part C, the generalised diagnostic
   surface in Part E).
+
+---
+
+## Appendix — Participant-model email + magic-link tail (W20 / W21)
+
+Two participant-model wiring items rest on this segment. They
+previously tracked in `guide/archive/participant_model_remainder.md`;
+filed here on 2026-06-01 because both are downstream of the
+14B infrastructure and don't need a separate plan doc until
+14B's prerequisites land.
+
+### W20 — Reviewee / observer email notifications
+
+Source: `guide/archive/participant_model_upgrade.md` §6.
+
+The reviewee `/results` surface (W16, shipped) needs two
+outbound emails:
+
+- **Results-ready notice** — fires when the operator opens
+  the after-release window (`responses_release_at` reached;
+  the W14 anchor). Recipient: reviewee. Identification mode:
+  email (reviewee must satisfy `is_email_identified` — the W8
+  Validate warning surfaces non-deliverable identifiers up
+  front).
+- **Acknowledgement nudge** — fires N days after Results-
+  ready when `reviewees.results_acknowledged_at` is still
+  NULL. Cadence TBD; one or two nudges seems right.
+
+Observer-side equivalents land at the same time (collation
+surface W17, also tracked below in the Observers stub).
+
+**Depends on:** 14B Part A (`email_outbox` writes against
+`kind="reviewee_results_ready"` / `kind="reviewee_results_nudge"`
+allowlist additions) + 14B Part D (templates in the editor
+with operator overrides). The auto-scheduling cadence for
+the nudge piggybacks on 18G Part 3's scheduler.
+
+### W21 — Magic-link landing for reviewees / observers
+
+Source: `guide/archive/participant_model_upgrade.md` §4.
+
+Today the `invitations` table is **reviewer-keyed** — one row
+per reviewer, with a token used for magic-link sign-in. The
+participant-model upgrade adds two more identity types
+(reviewee, observer) that need tokened landings too: an
+emailed link in W20's notices that drops the recipient
+directly onto their `/me/sessions/{id}/results` or
+`/me/sessions/{id}/collation` page.
+
+Three shapes for extending `invitations`:
+
+1. **Polymorphic FK** — one `participant_type` discriminator
+   column + nullable FKs (`reviewer_id` / `reviewee_id` /
+   `observer_id`). Single table; one of the three FKs is
+   non-null per row.
+2. **Sibling tables** — `reviewee_invitations` +
+   `observer_invitations` paralleling the existing
+   `invitations` (which stays reviewer-only). More joins on
+   token-lookup, simpler schema per row.
+3. **Token-only discriminator** — one row per token, no FK;
+   the token itself carries the participant identity. Most
+   flexible but loses referential integrity.
+
+**Design call pending.** No active implementation work on W21
+until the shape is picked — the magic-link landing handler
++ the email-side embedding both depend on it. The choice
+also drives whether `email_outbox.invitation_id` stays a FK
+to `invitations` or generalises.
+
+Once the shape is picked, the landing handler reuses the
+existing `/auth/magic/{token}` flow (the reviewer side); the
+new shapes light up the same flow with extra cases.

@@ -246,7 +246,7 @@ def require_reviewee_in_session(
 
     Confidential reviewees — those whose identifier is not a valid
     email — never grant access; the surface stays unavailable by
-    construction (``guide/participant_model_upgrade.md`` §3.2).
+    construction (``guide/archive/participant_model_upgrade.md`` §3.2).
     Reviewee rows whose ``status`` is anything other than ``active``
     do not grant access.
 

@@ -2,7 +2,7 @@
 
 Mirrors ``app.services.reviewers`` for the observer roster — the
 third participant audience landed inert in Phase 1
-(``guide/participant_model_upgrade.md``). The Setup-Observers page
+(``guide/archive/participant_model_upgrade.md``). The Setup-Observers page
 lights up via these helpers; the CSV importer in
 ``csv_imports.save_observers`` covers the bulk wipe-and-replace
 path.

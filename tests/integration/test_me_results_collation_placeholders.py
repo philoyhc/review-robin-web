@@ -5,7 +5,7 @@ observer URLs that light up behind their respective gates.
 Today the body is just the chrome: session-name header, the
 inline body-text caption, and an optional description card. The
 real content lands with W16 / W17 per
-``guide/participant_model_upgrade.md`` §3.2.
+``guide/archive/participant_model_upgrade.md`` §3.2.
 """
 
 from __future__ import annotations

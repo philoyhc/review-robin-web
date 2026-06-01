@@ -190,7 +190,7 @@ def update_session(
     # The Edit Session UI renders the checkbox `disabled` in this
     # state, so the form simply omits the field; but a direct
     # API call could still attempt the flip. Silent no-op for
-    # safety. See ``guide/participant_model_upgrade.md`` §3.8
+    # safety. See ``guide/archive/participant_model_upgrade.md`` §3.8
     # "Lock-on-data".
     if "relationships_enabled" in diffs:
         old, new = diffs["relationships_enabled"]
