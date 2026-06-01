@@ -268,17 +268,22 @@ def test_results_body_empty_when_no_visibility_policy(
     assert "Reviewer</th>" not in body
 
 
-def test_results_body_empty_when_release_window_not_opened(
+def test_results_body_window_closed_shows_scaffolding_without_values(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Operator authored Raw on after_release, but the release
-    window hasn't opened yet (anchor NULL) → empty body."""
+    """Operator authored Raw on after_release but ``responses_release_at``
+    is NULL (or in the future) — the section still renders so the
+    reviewee can see the would-be reviewers, but the submitted
+    response values stay hidden until the window opens. Empty
+    cells render as muted em-dashes."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-future")
-    _seed_submitted_responses(db, review_session)
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=False
     )
@@ -286,7 +291,14 @@ def test_results_body_empty_when_release_window_not_opened(
     body = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
     ).text
-    assert "No responses to view yet." in body
+    # Section renders — the reviewer-row scaffolding is visible.
+    assert "No responses to view yet." not in body
+    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
+    assert "Rae" in body
+    # But the submitted values stay hidden until the window opens.
+    assert "Solid work." not in body
+    # And the empty cells render as the muted em-dash placeholder.
+    assert body.count('<span class="muted">—</span>') >= 2
 
 
 def test_results_body_drafts_render_empty_value_cells(
@@ -468,3 +480,41 @@ def test_results_body_omits_instrument_with_policy_off(
     ).text
     assert "First Form" in body
     assert "Second Form" not in body
+
+
+def test_results_body_hides_section_when_release_window_explicitly_closed(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Once the operator has explicitly shut the after-release
+    window (``responses_release_until`` set and reached — Stop
+    release, or the scheduled close datetime), the reviewee
+    surface drops back to empty. The pre-release scaffolding
+    exception only applies before the window has fired; after
+    the explicit close, the grant is retired and reviewer
+    identities + display fields stop surfacing alongside the
+    values they used to pair with."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-raw-closed")
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    # Author Raw on after_release; stamp anchor + until both in
+    # the past so the window has explicitly closed.
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+    review_session.responses_release_until = datetime.now(
+        timezone.utc
+    ) - timedelta(minutes=30)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "No responses to view yet." in body
+    assert "Rae" not in body
+    assert "rae@example.edu" not in body
+    assert "Solid work." not in body

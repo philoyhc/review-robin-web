@@ -106,6 +106,35 @@ def is_response_release_window_open(
     return True
 
 
+def is_response_release_window_closed_explicitly(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """True when the operator has explicitly shut the after-
+    release visibility window — ``responses_release_until`` is
+    set and has been reached.
+
+    Used by the reviewee results surface to distinguish two
+    closed-window states that look identical to
+    :func:`is_response_release_window_open`:
+
+    - **Pre-release** — anchor NULL or in the future. The
+      reviewee surface still renders the table scaffolding so
+      the operator can preview who the would-be reviewers are
+      before stamping the anchor.
+    - **Explicitly closed** — anchor in the past *and* until in
+      the past (typically because the operator pressed Stop
+      release, or the scheduled close datetime arrived). The
+      reviewee should no longer see anything; their grant has
+      been retired by the schedule.
+    """
+    close = review_session.responses_release_until
+    if close is None:
+        return False
+    if now is None:
+        now = datetime.now(timezone.utc)
+    return now >= close
+
+
 def is_editable(review_session: ReviewSession) -> bool:
     """True when setup-mutating routes are allowed (``draft`` or ``validated``)."""
     return is_draft(review_session) or is_validated(review_session)
