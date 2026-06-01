@@ -63,7 +63,17 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
 #   (it's the baseline; mirrors how Operator always sees
 #   everything). Editor renders this cell as a static "Raw
 #   responses" pill.
-# - peer_reviewer Responses-released: ``None`` or ``raw``.
+# - peer_reviewer Responses-released: ``None`` / ``raw`` /
+#   ``summarized``. After release the reviewer can either see
+#   nothing, see their own raw submitted responses (read-only —
+#   no recall / resubmit), or see an Anonymized summary across
+#   the responses they themselves authored (e.g. a histogram
+#   across the reviewees they reviewed on this instrument). Per-
+#   pair flow stays strict: the reviewer's grant only covers
+#   responses they themselves keyed in; the summarized form just
+#   aggregates the multi-reviewee fan-out of those rows.
+#   ``anonymized`` stays disallowed — anonymising one's own work
+#   against oneself is incoherent.
 # - reviewee Session-ongoing: **always off** — the strict
 #   per-pair flow says reviewees don't see responses while the
 #   review is in flight. Editor renders this cell as a static
@@ -73,7 +83,9 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
 
 _PER_CELL_VALID_MODES: dict[tuple[str, str], frozenset[str | None]] = {
     ("peer_reviewer", "while_ongoing"): frozenset({"raw"}),
-    ("peer_reviewer", "after_release"): frozenset({None, "raw"}),
+    ("peer_reviewer", "after_release"): frozenset(
+        {None, "raw", "summarized"}
+    ),
     ("reviewee", "while_ongoing"): frozenset({None}),
     ("reviewee", "after_release"): frozenset(
         {None, "raw", "anonymized", "summarized"}

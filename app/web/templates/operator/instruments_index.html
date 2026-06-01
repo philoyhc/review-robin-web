@@ -3761,13 +3761,17 @@
                 {# Reviewers — peer_reviewer audience; scope: own
                    submitted responses only. Session-ongoing is
                    always Raw (baseline guarantee). Responses-
-                   released toggles ``—`` ⇄ Raw. #}
+                   released cycles ``—`` → Raw → Anonymized
+                   summaries — the reviewer either sees nothing,
+                   their own raw submissions read-only, or an
+                   anonymized summary aggregating across the
+                   reviewees they reviewed on this instrument. #}
                 <tr>
                   <td style="padding: 6px 8px;">{{ b3_static_pill("Reviewers") }}</td>
                   <td style="padding: 6px 8px;">{{ b3_static_pill("Raw responses") }}</td>
                   <td style="padding: 6px 8px;">
                     {{ b3_mode_cycle("peer_reviewer", "after_release",
-                                      ["", "raw"], _pr.after_release_mode) }}
+                                      ["", "raw", "summarized"], _pr.after_release_mode) }}
                   </td>
                 </tr>
                 {# Reviewees — scope: responses about this reviewee
