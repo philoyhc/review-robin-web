@@ -47,6 +47,7 @@ from app.services.extracts.entity_metadata_extract import (
     build_reviewer_metadata,
     self_review_handling_filename_suffix,
 )
+from app.services.extracts.observers_extract import serialize_observers
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -186,6 +187,37 @@ def export_relationships_csv(
     )
 
     download_name = filename(review_session, "relationships")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/observers.csv")
+def export_observers_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    rows = list(serialize_observers(db, review_session))
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.observers_extracted",
+        summary=(
+            f"Extracted Observers CSV for session {review_session.code} "
+            f"({body_count} observers)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "observers")
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",

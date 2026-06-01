@@ -81,6 +81,7 @@ class ExtractDataRow:
             "reviewers",
             "reviewees",
             "relationships",
+            "observers",
         )
 
 
@@ -101,6 +102,7 @@ def build_extract_data_context(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
+    observer_count = csv_imports.existing_observer_count(db, sid)
     instrument_count = len(
         list(
             db.execute(
@@ -114,17 +116,20 @@ def build_extract_data_context(
     #   Col 1            |  Col 2
     #   ---------------- | ----------------
     #   Reviewers        |  Relationships
-    #   Reviewees        |  Session settings
+    #   Reviewees        |  [Observers]
+    #                    |  Session settings
     #                    |  Zip all
     #
-    # The template renders the two columns as explicit ``<div>``
-    # children. Per-entity rows (Reviewers / Reviewees /
-    # Relationships) grey out when the count is 0 — there's
-    # nothing to download. Settings stays always-live: session
-    # metadata always exists even on a freshly-created draft.
-    # The Zip-all bundle contains only the four setup CSVs (per
-    # ``guide/extract_data.md``); response data downloads live on
-    # the Extract data Operations-strip tab.
+    # The Observers row is gated on ``review_session.observers_enabled``
+    # — when the toggle's off the right column collapses to
+    # Relationships → Session settings → Zip all (the original
+    # shape), mirroring the Quick Setup card. Per-entity rows
+    # (Reviewers / Reviewees / Relationships / Observers) grey out
+    # when their count is 0 — there's nothing to download.
+    # Settings stays always-live: session metadata always exists
+    # even on a freshly-created draft. The Zip-all bundle contains
+    # only the setup CSVs (per ``guide/extract_data.md``); response
+    # data downloads live on the Extract data Operations-strip tab.
     col_one = [
         _entity_row(
             key="reviewers",
@@ -152,6 +157,19 @@ def build_extract_data_context(
             sid=sid,
             code=code,
         ),
+    ]
+    if review_session.observers_enabled:
+        col_two.append(
+            _entity_row(
+                key="observers",
+                label="Observers",
+                noun="observer",
+                count=observer_count,
+                sid=sid,
+                code=code,
+            )
+        )
+    col_two.append(
         ExtractDataRow(
             key="settings",
             label="Session settings",
@@ -161,19 +179,24 @@ def build_extract_data_context(
             is_wired=True,
             download_url=f"/operator/sessions/{sid}/export/settings.csv",
             coming_in=None,
-        ),
-    ]
+        )
+    )
     # Flat ``rows`` preserves the historical iteration contract
     # (callers + tests). Read column-major: col 1 (rows[0:2])
     # then col 2 (rows[2:4]).
     rows = col_one + col_two
 
+    bundle_member_count = (
+        5 if review_session.observers_enabled else 4
+    )
     bundle = ExtractDataRow(
         key="bundle",
         label="Zip all",
         filename=f"{code}_setup.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of the four setup CSVs",
+        count_summary=(
+            f"zip of the {bundle_member_count} setup CSVs"
+        ),
         is_wired=True,
         download_url=f"/operator/sessions/{sid}/export/bundle.zip",
         coming_in=None,
