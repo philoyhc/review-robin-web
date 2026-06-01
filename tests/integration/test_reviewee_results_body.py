@@ -32,6 +32,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import (
     Assignment,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     ReviewSession,
@@ -675,3 +676,195 @@ def test_results_body_summarized_mode_is_unrendered(
     assert "No responses to view yet." in body
     assert "Solid work." not in body
     assert "Reviewer</th>" not in body
+
+
+# ── Column-shape mirroring (Raw + Anonymized contract) ───────────────
+
+
+def test_results_columns_mirror_reviewer_surface_widths(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Contract: when the operator drag-resizes a column on the
+    Band 2 editor, the resulting per-column pixel width must
+    apply uniformly across the reviewer surface (where the
+    operator authored it) AND the reviewee results page (where
+    the reviewee reads the same instrument). Same applies for
+    Raw + Anonymized modes — both keep the operator's column
+    layout intact.
+
+    Pin: ``Instrument.column_widths`` (``"identity"`` /
+    ``"df_<id>"`` / ``"rf_<id>"``) drives both surfaces. When
+    any custom width is set, the rendered HTML carries
+    ``style="table-layout: fixed;"`` + a ``<colgroup>`` with
+    the same explicit ``<col style="width: Npx">`` pixel
+    values on both pages.
+    """
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-cols")
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().first()
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    # Operator drag-resizes the identity column + the rating
+    # response field. This is the same per-column-widths shape
+    # the Band 2 editor persists; cosmetic divergence between
+    # the reviewer form and the reviewee results page is the
+    # exact regression this test guards against.
+    instrument.column_widths = {
+        "identity": 220,
+        f"rf_{rating.id}": 90,
+    }
+    db.commit()
+
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    # Both surfaces should render the same widths.
+    reviewer_body = make_client(rae).get(
+        f"/me/sessions/{review_session.id}/1"
+    ).text
+    reviewee_body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    for body in (reviewer_body, reviewee_body):
+        assert 'style="table-layout: fixed;"' in body
+        assert 'style="width: 220px"' in body
+        assert 'style="width: 90px"' in body
+
+
+def test_results_columns_drop_deselected_response_fields(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Contract: a response field deselected on the Band 2
+    editor (``InstrumentResponseField.visible = False``) must
+    not surface as a column on the reviewee results page —
+    same filter the reviewer surface applies."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-cols-drop")
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().first()
+    # Hide the comments field so the operator's "Anonymized
+    # responses" view should only show the rating column. The
+    # column header literal "Comments" must not surface.
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    comments.visible = False
+    db.commit()
+
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "Rating" in body
+    assert "Comments" not in body
+    # The hidden comments value also doesn't leak.
+    assert "Solid work." not in body
+
+
+def test_results_columns_drop_reviewee_identity_display_fields(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Contract: reviewee-identity display fields (Name / Email
+    / Profile) are excluded from the per-row display cells on
+    both surfaces — they'd just repeat the signed-in reviewee
+    on every row. The exclusion is keyed by
+    ``InstrumentDisplayField.source_type == "reviewee"`` +
+    ``source_field in {"name", "email_or_identifier",
+    "profile_link"}``."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(
+        operator, db, code="vp-cols-identity"
+    )
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().first()
+    # Add a reviewee Name display field (would-be identity
+    # column) + a reviewee.tag_1 column (would-be tag column).
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            source_type="reviewee",
+            source_field="name",
+            label="Reviewee Name",
+            order=1,
+            visible=True,
+        )
+    )
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            source_type="reviewee",
+            source_field="tag_1",
+            label="Reviewee Tag 1",
+            order=2,
+            visible=True,
+        )
+    )
+    db.commit()
+
+    _seed_submitted_responses(db, review_session)
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # tag_1 column survives (visible non-identity). Its label
+    # ("Tag 1" by default) appears as a column header.
+    assert "tag_1" in body.lower() or "Tag" in body
+    # The signed-in reviewee's own name "Carol" must not surface
+    # as a display-field value cell on every row (it'd repeat
+    # the user's identity unnecessarily). The session header /
+    # role chips might mention Carol, but the per-row display
+    # cells shouldn't.
+    body_lower = body.lower()
+    # Carol is a Reviewee in this session; she's the signed-in
+    # user. Her name should not appear in any per-row display
+    # cell. The reviewer surface's identity column on a
+    # reviewer-facing form would show her in the Reviewee cell,
+    # but on the reviewee surface the identity column is the
+    # Reviewer instead. Counting Carol mentions in the table
+    # body: should be 0 (no display cell repeats her).
+    table_open = body_lower.find("<table")
+    table_close = body_lower.find("</table>")
+    assert table_open != -1
+    assert table_close != -1
+    table_section = body_lower[table_open:table_close]
+    assert "carol" not in table_section

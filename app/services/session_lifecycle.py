@@ -77,6 +77,19 @@ def is_archived(review_session: ReviewSession) -> bool:
     return review_session.status == SessionStatus.archived.value
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Normalise a stored datetime to UTC-aware. SQLite's
+    ``DateTime(timezone=True)`` column round-trips can read
+    back naive in some refresh paths; the predicates below want
+    a comparable tz-aware value. Naive values are assumed UTC
+    (matches the project's "store everything in UTC" convention)."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def is_response_release_window_open(
     review_session: ReviewSession, *, now: datetime | None = None
 ) -> bool:
@@ -93,14 +106,14 @@ def is_response_release_window_open(
     with no anchor reads as "not open yet" — the release-window
     doesn't open until the operator sets the anchor.
     """
-    anchor = review_session.responses_release_at
+    anchor = _as_utc(review_session.responses_release_at)
     if anchor is None:
         return False
     if now is None:
         now = datetime.now(timezone.utc)
     if now < anchor:
         return False
-    close = review_session.responses_release_until
+    close = _as_utc(review_session.responses_release_until)
     if close is not None and now >= close:
         return False
     return True
@@ -127,7 +140,7 @@ def is_response_release_window_closed_explicitly(
       reviewee should no longer see anything; their grant has
       been retired by the schedule.
     """
-    close = review_session.responses_release_until
+    close = _as_utc(review_session.responses_release_until)
     if close is None:
         return False
     if now is None:
