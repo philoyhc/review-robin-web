@@ -66,16 +66,33 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 
 | Surface | URL | Gate | Status |
 |---|---|---|---|
-| Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Live; full response-collection + per-page sub-rows. See `spec/reviewer-surface.md`. |
-| Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_in_session` | **Placeholder.** Renders session-name header + inline caption "Results of the review" + the standard `rs-status-panel` description card when set. No body content yet — visibility-policy resolver (W7 in `guide/participant_model_prep.md`) + collation render (W16) wire the actual results. |
+| Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Live; full response-collection. See `spec/reviewer-surface.md`. |
+| Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_in_session` | **Live.** Renders per-instrument sections in raw / anonymized / summarized mode (W16), plus the Acknowledge card at the foot (W19). `POST /me/sessions/{id}/results/acknowledge` stamps `reviewees.results_acknowledged_at` (idempotent). See §4.1 below. |
 | Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | **Placeholder.** Same chrome with caption "Observer view of the session". W17 wires the cross-reviewee collation body. |
 
-**Mount-order note.** The placeholder routes (`_results.py`, `_collation.py`) are registered **before** `_surface` in `routes_reviewer/__init__.py` because the surface's `/me/sessions/{id}/{page_n}` would otherwise swallow `/results` and `/collation` as the `page_n` value. Treat this as load-bearing — adding any further literal-segment `/me/sessions/{id}/<thing>` routes needs the same precedence.
+### 4.1 Reviewee results surface (W16 + W19, live)
+
+`GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments that have a `reviewee` visibility policy row; the section's mode is one of:
+
+- **`raw`** — one row per reviewer who responded; Reviewer name + email shown in the identity column.
+- **`anonymized`** — same per-row table; every identification cell (Reviewer name, email, display-field cells) collapsed to a muted em-dash.
+- **`summarized`** — per-instrument sections collapse to one aggregate row. The identity column header reads "Summary" and the cell carries two counts: "Number of reviewers assigned" and "Number of reviewers with some responses". Response-field cells render per data type:
+  - `Integer` / `Decimal`: Average, Median, Min, Max, (based on N responses). At zero responses, all labels render with em-dash placeholders.
+  - `List`: per-choice frequency lines e.g. `A: 2 (33.3%)`. Every declared option surfaces including zeros.
+  - `String` (and unknown types): Total length (characters) + Average length (characters), (based on N responses). At zero responses, labels render with em-dash placeholders.
+
+When a policy's window is not open, Raw and Anonymized sections still render their row scaffolding (reviewer identity visible, value cells empty); Summarized sections are omitted entirely because the aggregate has nothing to show.
+
+The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at the foot of the page — bottom-right half-width, `border-color: var(--accent-blue)` + 1px shadow + `--accent-blue-bg-faint` tint. Pre-acknowledgement: checkbox (required by JS `data-delete-confirm` / `data-delete-btn` pattern) + "Acknowledge" submit button gated by the checkbox. Post-acknowledgement: the form collapses to a passive "✓ Acknowledged on {date}" strip; the page header gains a `pill-success` "✓ Acknowledged" chip.
+
+`POST /me/sessions/{id}/results/acknowledge` calls `app/services/reviewees.py::acknowledge_results`, which stamps `reviewees.results_acknowledged_at = now()` and emits `reviewee.results_acknowledged` (snapshot envelope: `reviewee_id` + `acknowledged_at`). The operation is **idempotent** — a second POST is a no-op (original timestamp preserved). On success, 303 → `GET /results`.
+
+**Mount-order note.** The routes (`_results.py`, `_collation.py`) are registered **before** `_surface` in `routes_reviewer/__init__.py` because the surface's `/me/sessions/{id}/{page_n}` would otherwise swallow `/results` and `/collation` as the `page_n` value. Treat this as load-bearing — adding any further literal-segment `/me/sessions/{id}/<thing>` routes needs the same precedence.
 
 ### Reachability windows (today)
 
 - Reviewer surface: reachable when `session_status_for_reviewer(reviewer, session) != "not opened"`. The surface 403s / redirects until the session has at least once been activated.
-- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate today.** W16 will add the `responses_release_at` / `responses_release_until` window (see §7 below).
+- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate at the route level today.** The per-instrument visibility-policy resolver inside `build_reviewee_results_context` applies the window gate — sections only surface values when the relevant window (while_ongoing / after_release) is currently open. W16 shipped the full resolver; the route itself does not 403 based on the release window.
 - Observer collation: reachable for any active observer. **No datetime gate today.** W17 adds the analogous gate.
 
 The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable now via W14 + S12 but consumed at view time only when W16 / W17 land.
@@ -131,7 +148,7 @@ Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `u
 
 The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
 
-**Consumer status.** No surface reads these columns yet — they're operator-authorable now but consumed only when W16 (reviewee results) and W17 (observer collation) wire the window into the placeholder routes' reachability gates.
+**Consumer status.** W16's `build_reviewee_results_context` consumes `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The route itself does not gate reachability on this window — sections simply show empty cells until the window opens. W17 (observer collation) will add the analogous consumption on that surface.
 
 ---
 
@@ -152,11 +169,9 @@ The participant-model upgrade has more arcs that are not yet live. See `guide/pa
 
 | Item | What's missing |
 |---|---|
-| W7 / W15 — Visibility-policy resolver + editor | The `instrument_view_policies` table exists (lands inert) but no resolver consults it yet. W15 wires the Band-3 chips to write policy rows; W7 reads them at view time. |
 | W8 — Reviewee-reachability warning on Validate | Soft warning calling `participants.is_email_identified` on each reviewee, surfaced on `/validate`. |
 | W12 / W13 — Quick Setup observer slot + Extract observer shapes | Setup-page CRUD ships but the Quick Setup card on Session Home / Create has no Observer slot, and the Extract Data card lacks an Observer extract tile. Round-trip story tracked as **L2** in `guide/participant_model_prep.md`. |
-| W16 / W17 — Reviewee results + Observer collation body content | Today's placeholder routes render only the chrome. W16 wires the cross-instrument collation through the visibility-policy resolver + the release window; W17 does the analogous observer-side render with `tag_1` filtering. |
-| W19 — Acknowledge flow | The `Acknowledge` button + handler on `/results` that writes `reviewees.results_acknowledged_at` and emits `results.acknowledged`. |
+| W17 — Observer collation body content | The placeholder route renders only the chrome. W17 wires the cross-reviewee collation body with `tag_1` filtering and the visibility-policy resolver. |
 | W21 — Magic-link landings for reviewees / observers | Blocked on the `invitations`-extensibility design call (the table is reviewer-keyed today). |
 
 ---

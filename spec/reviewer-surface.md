@@ -813,10 +813,9 @@ matching; only `status == "active"` rows contribute; the result is
 deduplicated per session and sorted by `session.updated_at`
 descending.
 
-Reviewer-specific columns (Reviewer status, deep-link target,
-per-page sub-rows) populate only when the user is an active
-reviewer on that session; reviewee-/observer-only rows show `—` in
-those cells.
+Reviewer-specific columns (Reviewer status, deep-link target)
+populate only when the user is an active reviewer on that session;
+reviewee-/observer-only rows show `—` in those cells.
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
@@ -917,23 +916,9 @@ surface itself — hitting Submit once doesn't lock the form.
 Submitting again replays the same logic and re-stamps
 `submitted_at`.
 
-### Per-page sub-rows
+### Per-page sub-rows (dropped PR #1751)
 
-A multi-page session (M > 1, where M is the count of operator-
-defined pages — see "URL pattern" above) renders one stacked
-sub-row per page below its parent row. Each sub-row is labelled
-``"Page N: #n {short_label}, #m {short_label}, …"`` listing the
-instruments on the page (using the per-session ``#N`` heading
-convention), with the Reviewer Status pill scoped to that page
-(rolled up across the page's instruments) and a matching counter
-chip following the same colour pairing. The deep link in each
-sub-row points at ``/me/sessions/{id}/{page_n}`` so the
-reviewer can jump straight to a specific page. Empty for single-
-page sessions, which covers both single-instrument sessions (the
-byte-identical contract from Segment 15B Slice 6) and multi-
-instrument sessions where the operator hasn't added a page break
-(the sub-row would just restate the parent session row at the
-same ``/{id}/1`` URL).
+Per-page sub-rows under multi-page sessions were removed in PR #1751. Multi-paged sessions now show only the main session row in the dashboard table; per-page navigation happens via the response surface itself (Prev / Next / Page N controls). `DashboardPageRow`, `_build_dashboard_page_rows`, and `_rollup_page_state` were deleted from `_dashboard.py`; the sub-row block was removed from `dashboard.html`.
 
 ---
 
@@ -996,9 +981,9 @@ for the gate semantics.
 
 ---
 
-## Reviewee results placeholder (`/me/sessions/{id}/results`)
+## Reviewee results (`/me/sessions/{id}/results`)
 
-PR #1713 — `GET /me/sessions/{id}/results`.
+`GET /me/sessions/{id}/results` + `POST /me/sessions/{id}/results/acknowledge`.
 
 **Gate** — `require_reviewee_in_session` in `app/web/deps.py`:
 the authenticated user must have an active Reviewee row whose
@@ -1006,11 +991,18 @@ the authenticated user must have an active Reviewee row whose
 (case-insensitive). Confidential reviewees (non-email identifiers)
 never grant access. On mismatch: **HTTP 403**.
 
-**Current state** — reviewer-surface chrome (`reviewer/results.html`)
-with an `rs-status-panel` description card. Body content (collated
-results render) lands with W16. The page already receives the
-`role_chips` context variable so the role-navigator chip strip
-renders correctly from day one.
+**Body** — per-instrument sections built by
+`app/web/views/_reviewee_results.py::build_reviewee_results_context`,
+filtered through the per-instrument `reviewee` visibility policy.
+Three rendering modes:
+
+- **raw** — one row per reviewer, identified (name + email in the identity column).
+- **anonymized** — same per-row table, every identification cell (Reviewer + display fields) replaced with a muted em-dash.
+- **summarized** — one aggregate row; identity column header "Summary" carrying two counts; per-field cells per data type (Integer/Decimal: Average / Median / Min / Max / N; List: per-choice frequency; String: total + average length). Em-dash placeholders at zero responses.
+
+Full mode / window semantics in `spec/participant_model.md` §4.1 and `spec/visibility_policy.md`.
+
+**Acknowledge card** — always rendered at the foot; bottom-right half-width, blue emphasis (`rs-acknowledge-card` in `base.html`). Checkbox gates the submit button; post-acknowledgement collapses to a confirmation strip + `pill-success` in the page header. `POST …/acknowledge` calls `reviewees_service.acknowledge_results` (idempotent, emits `reviewee.results_acknowledged`), 303 → GET.
 
 Route: `app/web/routes_reviewer/_results.py`. Registered before
 the catch-all `_surface` routes in
@@ -1294,9 +1286,9 @@ The URL change from `/me/sessions/{id}` to
   bare-session URL must 303 to `/me/sessions/{id}/1` to keep old
   invitation links working.
 - **Reviewer dashboard rows** — link generation in
-  `reviewer/dashboard.html` updates to point at page `1`; the
-  per-session sub-rows now also index by page (see "Reviewer
-  dashboard" §below).
+  `reviewer/dashboard.html` points at page `1`. Per-session
+  sub-rows were dropped in PR #1751 (see "Per-page sub-rows"
+  above).
 - **Bookmarks / returning reviewers** — same 303 covers them.
 
 The 303 fallback covers all known callers; no data migration is
