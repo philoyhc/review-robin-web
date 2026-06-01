@@ -1684,6 +1684,125 @@
                         style="position: absolute; bottom: 4px; right: 4px;">✓</button>
               {% endif %}
             </div>
+            {# Visibility Policy card — Band 3 W15 follow-on
+               redesign. Sits in column 2 of the intro grid so
+               the operator sees who-can-view alongside the
+               instrument's identity (short label + description).
+               One row per audience (Reviewers / Reviewees /
+               Observers) × two columns (Session ongoing /
+               Responses released). Each cell is either a chip
+               cycle through its per-cell valid modes or a static
+               pill for the fixed cells. Picking ``—`` means
+               "audience can't view in that window". The Operator
+               row is implicit (always sees everything). Per-cell
+               vocabulary lives in ``app/services/visibility_policies.py``
+               ``_PER_CELL_VALID_MODES``. See
+               ``spec/visibility_policy.md``. #}
+            {% set _b3vis = (band3_visibility_by_instrument or {}).get(instrument.id, {}) %}
+            {%- set _pr = _b3vis.get("peer_reviewer", {"while_ongoing_mode": "raw", "after_release_mode": None}) -%}
+            {%- set _re = _b3vis.get("reviewee", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
+            {%- set _ob = _b3vis.get("observer", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
+            {% set _b3_mode_labels = {
+                  "": "—",
+                  "raw": "Raw responses",
+                  "anonymized": "Anonymized responses",
+                  "summarized": "Summarized responses",
+            } %}
+            {% macro b3_static_pill(label) %}
+              <span class="pill pill-count tag-chip is-selected"
+                    title="Fixed">{{ label }}</span>
+            {% endmacro %}
+            {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
+              {% set _current = current_mode or "" %}
+              <span class="pill pill-count tag-chip is-selected"
+                    role="button" tabindex="0"
+                    data-new-model-vp-cycle-audience="{{ audience }}"
+                    data-new-model-vp-cycle-window="{{ window }}"
+                    data-new-model-vp-cycle-slugs="{{ slugs | join('|') }}"
+                    data-new-model-vp-current-slug="{{ _current }}"
+                    onclick="newModelCycleVisibilityCell(this)"
+                    title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
+            {% endmacro %}
+            <div class="card rs-instrument-card"
+                 data-new-model-visibility-policy-card
+                 style="{% if not is_editing %}opacity: 0.75;{% endif %}"
+                 {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+              <h3 style="margin: 0 0 12px 0;">Visibility Policy</h3>
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/view-policy"
+                    id="visibility-form-{{ instrument.id }}"
+                    data-new-model-vp-form
+                    data-new-model-instrument-id="{{ instrument.id }}">
+                {# Hidden inputs — the chip JS writes to these on
+                   every cycle; the POST handler reads them.
+                   Reviewers Session-ongoing is always Raw
+                   (baseline); Reviewees Session-ongoing is always
+                   empty (strict per-pair flow rule). #}
+                <input type="hidden" name="peer_reviewer_while_ongoing_mode"
+                       data-new-model-vp-input="peer_reviewer-while_ongoing"
+                       value="raw">
+                <input type="hidden" name="peer_reviewer_after_release_mode"
+                       data-new-model-vp-input="peer_reviewer-after_release"
+                       value="{{ _pr.after_release_mode or '' }}">
+                <input type="hidden" name="reviewee_while_ongoing_mode"
+                       data-new-model-vp-input="reviewee-while_ongoing"
+                       value="">
+                <input type="hidden" name="reviewee_after_release_mode"
+                       data-new-model-vp-input="reviewee-after_release"
+                       value="{{ _re.after_release_mode or '' }}">
+                <input type="hidden" name="observer_while_ongoing_mode"
+                       data-new-model-vp-input="observer-while_ongoing"
+                       value="{{ _ob.while_ongoing_mode or '' }}">
+                <input type="hidden" name="observer_after_release_mode"
+                       data-new-model-vp-input="observer-after_release"
+                       value="{{ _ob.after_release_mode or '' }}">
+                <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                  <thead>
+                    <tr style="text-align: left;">
+                      <th style="width: 28%; padding: 6px 8px;">Who can view</th>
+                      <th style="width: 36%; padding: 6px 8px;">Session ongoing</th>
+                      <th style="width: 36%; padding: 6px 8px;">Responses released</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding: 6px 8px;">{{ b3_static_pill("Reviewers") }}</td>
+                      <td style="padding: 6px 8px;">{{ b3_static_pill("Raw responses") }}</td>
+                      <td style="padding: 6px 8px;">
+                        {{ b3_mode_cycle("peer_reviewer", "after_release",
+                                          ["", "raw"], _pr.after_release_mode) }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 6px 8px;">{{ b3_static_pill("Reviewees") }}</td>
+                      <td style="padding: 6px 8px;">{{ b3_static_pill("—") }}</td>
+                      <td style="padding: 6px 8px;">
+                        {{ b3_mode_cycle("reviewee", "after_release",
+                                          ["", "raw", "anonymized", "summarized"],
+                                          _re.after_release_mode) }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 6px 8px;">{{ b3_static_pill("Observers") }}</td>
+                      <td style="padding: 6px 8px;">
+                        {{ b3_mode_cycle("observer", "while_ongoing",
+                                          ["", "raw", "anonymized", "summarized"],
+                                          _ob.while_ongoing_mode) }}
+                      </td>
+                      <td style="padding: 6px 8px;">
+                        {{ b3_mode_cycle("observer", "after_release",
+                                          ["", "raw", "anonymized", "summarized"],
+                                          _ob.after_release_mode) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style="text-align: right; margin-top: 12px;">
+                  <button class="btn primary" type="submit"
+                          {% if not is_editing %}disabled aria-disabled="true"{% endif %}>Save visibility</button>
+                </div>
+              </form>
+            </div>
           </div>
           {# Response field details now live as editable rows
              inside Band 3's "Response fields" section — the
@@ -3617,158 +3736,13 @@
       </script>
 
       <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-muted, #cbd5e1);">
-      {# Band 3 — Visibility audience policy (W15 follow-on
-         redesign). Card splits into two columns. Left: a
-         ``Visibility`` table with one row per audience
-         (Reviewers / Reviewees / Observers) × two columns
-         (Session ongoing / Responses released). Right: the
-         response-fields editor.
-
-         The new column axis is the **window**, not the mode.
-         Each cell is a chip cycle through the per-cell valid
-         modes (or a static pill where the cell is fixed) —
-         picking ``—`` in a cell means "audience can't view in
-         that window". An audience that picks ``—`` in both
-         cells doesn't see this instrument's responses at all.
-
-         The Operator row is implicit (always sees everything,
-         not a stored row). Per-cell vocabulary:
-           - Reviewers Session-ongoing: fixed Raw (baseline
-             self-view-during-session guarantee).
-           - Reviewers Responses-released: ``—`` ⇄ Raw.
-           - Reviewees Session-ongoing: fixed ``—`` (strict
-             per-pair flow rule).
-           - Reviewees Responses-released: ``—`` → Raw →
-             Anonymized → Summarized.
-           - Observers (both cells): ``—`` → Raw → Anonymized
-             → Summarized.
-
-         The Save button posts hidden inputs the chip JS keeps
-         in sync. See ``spec/visibility_policy.md``. #}
-      {% set _b3vis = (band3_visibility_by_instrument or {}).get(instrument.id, {}) %}
-      {%- set _pr = _b3vis.get("peer_reviewer", {"while_ongoing_mode": "raw", "after_release_mode": None}) -%}
-      {%- set _re = _b3vis.get("reviewee", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
-      {%- set _ob = _b3vis.get("observer", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
-      {% set _b3_mode_labels = {
-            "": "—",
-            "raw": "Raw responses",
-            "anonymized": "Anonymized responses",
-            "summarized": "Summarized responses",
-      } %}
-      {% macro b3_static_pill(label) %}
-        <span class="pill pill-count tag-chip is-selected"
-              title="Fixed">{{ label }}</span>
-      {% endmacro %}
-      {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
-        {# Cycle chip for a (audience, window) cell. ``slugs`` is
-           the ordered list of allowed values (with ``""`` for
-           "off"); the chip rotates through them on click and
-           writes the matching hidden input. Labels are looked
-           up client-side in the JS ``_VP_CELL_LABELS`` map. #}
-        {% set _current = current_mode or "" %}
-        <span class="pill pill-count tag-chip is-selected"
-              role="button" tabindex="0"
-              data-new-model-vp-cycle-audience="{{ audience }}"
-              data-new-model-vp-cycle-window="{{ window }}"
-              data-new-model-vp-cycle-slugs="{{ slugs | join('|') }}"
-              data-new-model-vp-current-slug="{{ _current }}"
-              onclick="newModelCycleVisibilityCell(this)"
-              title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
-      {% endmacro %}
+      {# Band 3 — Response fields editor. The Visibility-policy
+         editor moved up to the intro grid (column 2, beside the
+         description card); this block is now single-column. #}
       <div data-new-model-band3
-           style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-                  align-items: stretch;
-                  {% if not is_editing %}opacity: 0.75;{% endif %}"
+           style="{% if not is_editing %}opacity: 0.75;{% endif %}"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div>
-          <h3 style="margin: 0 0 12px 0;">Visibility</h3>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/view-policy"
-                id="visibility-form-{{ instrument.id }}"
-                data-new-model-vp-form
-                data-new-model-instrument-id="{{ instrument.id }}">
-            {# Hidden inputs — the chip JS writes to these on every
-               cycle; the POST handler reads them. Reviewers
-               Session-ongoing is always Raw (baseline; not
-               editable). Reviewees Session-ongoing is always
-               empty (strict per-pair flow rule; not editable). #}
-            <input type="hidden" name="peer_reviewer_while_ongoing_mode"
-                   data-new-model-vp-input="peer_reviewer-while_ongoing"
-                   value="raw">
-            <input type="hidden" name="peer_reviewer_after_release_mode"
-                   data-new-model-vp-input="peer_reviewer-after_release"
-                   value="{{ _pr.after_release_mode or '' }}">
-            <input type="hidden" name="reviewee_while_ongoing_mode"
-                   data-new-model-vp-input="reviewee-while_ongoing"
-                   value="">
-            <input type="hidden" name="reviewee_after_release_mode"
-                   data-new-model-vp-input="reviewee-after_release"
-                   value="{{ _re.after_release_mode or '' }}">
-            <input type="hidden" name="observer_while_ongoing_mode"
-                   data-new-model-vp-input="observer-while_ongoing"
-                   value="{{ _ob.while_ongoing_mode or '' }}">
-            <input type="hidden" name="observer_after_release_mode"
-                   data-new-model-vp-input="observer-after_release"
-                   value="{{ _ob.after_release_mode or '' }}">
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-              <thead>
-                <tr style="text-align: left;">
-                  <th style="width: 28%; padding: 6px 8px;">Who can view</th>
-                  <th style="width: 36%; padding: 6px 8px;">Session ongoing</th>
-                  <th style="width: 36%; padding: 6px 8px;">Responses released</th>
-                </tr>
-              </thead>
-              <tbody>
-                {# Reviewers — peer_reviewer audience; scope: own
-                   submitted responses only. Session-ongoing is
-                   always Raw (baseline guarantee). Responses-
-                   released toggles ``—`` ⇄ Raw. #}
-                <tr>
-                  <td style="padding: 6px 8px;">{{ b3_static_pill("Reviewers") }}</td>
-                  <td style="padding: 6px 8px;">{{ b3_static_pill("Raw responses") }}</td>
-                  <td style="padding: 6px 8px;">
-                    {{ b3_mode_cycle("peer_reviewer", "after_release",
-                                      ["", "raw"], _pr.after_release_mode) }}
-                  </td>
-                </tr>
-                {# Reviewees — scope: responses about this reviewee
-                   (or their group). Session-ongoing is always
-                   ``—`` (strict per-pair flow rule). Responses-
-                   released cycles through three modes. #}
-                <tr>
-                  <td style="padding: 6px 8px;">{{ b3_static_pill("Reviewees") }}</td>
-                  <td style="padding: 6px 8px;">{{ b3_static_pill("—") }}</td>
-                  <td style="padding: 6px 8px;">
-                    {{ b3_mode_cycle("reviewee", "after_release",
-                                      ["", "raw", "anonymized", "summarized"],
-                                      _re.after_release_mode) }}
-                  </td>
-                </tr>
-                {# Observers — scope: cross-cohort. Both cells
-                   independent; each cycles through the three
-                   modes. #}
-                <tr>
-                  <td style="padding: 6px 8px;">{{ b3_static_pill("Observers") }}</td>
-                  <td style="padding: 6px 8px;">
-                    {{ b3_mode_cycle("observer", "while_ongoing",
-                                      ["", "raw", "anonymized", "summarized"],
-                                      _ob.while_ongoing_mode) }}
-                  </td>
-                  <td style="padding: 6px 8px;">
-                    {{ b3_mode_cycle("observer", "after_release",
-                                      ["", "raw", "anonymized", "summarized"],
-                                      _ob.after_release_mode) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div style="text-align: right; margin-top: 12px;">
-              <button class="btn primary" type="submit"
-                      {% if not is_editing %}disabled aria-disabled="true"{% endif %}>Save visibility</button>
-            </div>
-          </form>
-        </div>
-        <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>
           {# One inline editor row per response field. Each row is
              independently editable + commitable: the ✓ button
