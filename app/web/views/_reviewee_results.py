@@ -106,10 +106,11 @@ class ResultsSection:
     identity_width_px: int | None = None
     has_custom_widths: bool = False
     # The operator-facing mode the resolver picked for this
-    # instrument (``"raw"`` today; future slices may also surface
-    # ``"anonymized"`` / ``"summarized"``). Carried on the
-    # section so the template can branch on per-instrument
-    # rendering if needed.
+    # instrument. ``"raw"`` shows identification + values;
+    # ``"summarized"`` (the operator's "Anonymized summaries"
+    # chip) shows the same table but every identification cell
+    # (Reviewer name + email + display-field values like tags)
+    # renders as the muted em-dash placeholder.
     mode: str = "raw"
 
 
@@ -178,18 +179,26 @@ def build_reviewee_results_context(
     # Per-instrument visibility resolution. Two gates:
     #
     # - **Structure gate** (``instrument_mode``): does the
-    #   operator's reviewee policy have ``raw`` authored on any
-    #   window? If yes, the section renders. ``anonymized`` and
-    #   ``summarized`` ship in follow-on slices; in this slice
-    #   any non-Raw policy still skips the instrument so we don't
-    #   render an unmediated row.
+    #   operator's reviewee policy have ``raw`` or ``summarized``
+    #   authored on any window? If yes, the section renders.
+    #   ``anonymized`` (row + deidentified — the operator-facing
+    #   "Anonymized responses" chip) ships in a later slice.
     # - **Value gate** (``instrument_values_visible``): is the
     #   relevant window currently open? Only then do submitted
     #   values surface in the cells. When the window is closed
-    #   (operator authored Raw but hasn't set / hasn't reached
-    #   ``responses_release_at``), the section still renders the
-    #   reviewer-row scaffolding but every value cell stays
-    #   muted-empty.
+    #   (operator authored Raw / Anonymized summaries but hasn't
+    #   set / hasn't reached ``responses_release_at``), the
+    #   section still renders the reviewer-row scaffolding but
+    #   every value cell stays muted-empty.
+    #
+    # ``summarized`` (the operator-facing "Anonymized summaries"
+    # chip) renders the same per-reviewer table shape as Raw —
+    # but every identification cell (Reviewer name + email + any
+    # display-field cell) is replaced with the muted em-dash so
+    # the reviewee can read the values without learning who said
+    # what. The section's ``mode`` carries the picked mode through
+    # to the template's per-cell branch.
+    _RENDERED_MODES = {"raw", "summarized"}
     instrument_mode: dict[int, str] = {}
     instrument_values_visible: dict[int, bool] = {}
     for instrument in instruments:
@@ -208,35 +217,44 @@ def build_reviewee_results_context(
             policy.after_release_identification,
         )
         authored_modes = {m for m in (while_mode, after_mode) if m}
-        if "raw" not in authored_modes:
+        # ``raw`` wins when co-authored alongside ``summarized``
+        # on different windows — Raw is the more permissive
+        # rendering, the operator opted in to it for at least one
+        # window, and the value gate below picks whichever mode
+        # the open window carries (so a window-closed
+        # ``after_release_mode = summarized`` still falls back to
+        # the dashed-identity render once its window opens).
+        if "raw" in authored_modes:
+            picked_mode = "raw"
+        elif "summarized" in authored_modes:
+            picked_mode = "summarized"
+        else:
             continue
         # Once the operator has *explicitly closed* the after-
         # release window (``responses_release_until`` set and
         # reached — typically via the Stop release Operations
-        # button or the scheduled close datetime), Raw authored
-        # only on after_release stops contributing to the
-        # structure gate. Reviewer identities + display fields
-        # must stop surfacing alongside the response values
-        # they'd otherwise pair with. Pre-release (anchor not
-        # yet set / not yet reached) stays a scaffolding-only
+        # button or the scheduled close datetime), policy
+        # authored only on after_release stops contributing to
+        # the structure gate. Reviewer identities + display
+        # fields must stop surfacing alongside the response
+        # values they'd otherwise pair with. Pre-release (anchor
+        # not yet set / not yet reached) stays a scaffolding-only
         # state — the operator gets the preview.
         if (
-            after_mode == "raw"
-            and while_mode != "raw"
+            after_mode in _RENDERED_MODES
+            and while_mode not in _RENDERED_MODES
             and after_release_closed_explicitly
         ):
             continue
-        # In this slice, ``anonymized`` / ``summarized`` co-authored
-        # on the other window don't change the Raw render — they
-        # only kick in once their own surfaces ship. Treat the
-        # instrument as Raw-mode if Raw is authored on any window.
-        instrument_mode[instrument.id] = "raw"
+        instrument_mode[instrument.id] = picked_mode
         active_mode = visibility_policies.resolve_mode(
             policy,
             while_ongoing_open=while_ongoing_open,
             after_release_open=after_release_open,
         )
-        instrument_values_visible[instrument.id] = active_mode == "raw"
+        instrument_values_visible[instrument.id] = (
+            active_mode in _RENDERED_MODES
+        )
 
     if not instrument_mode:
         return RevieweeResultsContext(

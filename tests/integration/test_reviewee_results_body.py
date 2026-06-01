@@ -518,3 +518,101 @@ def test_results_body_hides_section_when_release_window_explicitly_closed(
     assert "Rae" not in body
     assert "rae@example.edu" not in body
     assert "Solid work." not in body
+
+
+def _enable_reviewee_after_release_summarized(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    operator: User,
+    open_window: bool,
+) -> None:
+    """Author the ``reviewee`` policy as Summarized (the operator-
+    facing "Anonymized summaries" chip) on after_release."""
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="summarized",
+        user=operator,
+    )
+    if open_window:
+        review_session.responses_release_at = datetime.now(
+            timezone.utc
+        ) - timedelta(hours=1)
+    db.commit()
+
+
+def test_results_body_summarized_dashes_identification_keeps_values(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """``summarized`` mode (operator's "Anonymized summaries"
+    chip): the same per-reviewer table renders as Raw, but the
+    Reviewer column's name + email — and every display-field
+    cell — collapses to the muted em-dash placeholder. The
+    response values themselves still surface."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-sum-ok")
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    _enable_reviewee_after_release_summarized(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # Section renders + Reviewer column header still labeled.
+    assert "No responses to view yet." not in body
+    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
+    # Identification dashed — Rae's name + email never surface.
+    assert "Rae" not in body
+    assert "rae@example.edu" not in body
+    # Response values still surface.
+    assert "Solid work." in body
+    # The Reviewer cell renders the em-dash placeholder.
+    assert (
+        '<td class="rs-reviewee">\n                  \n                    '
+        '<span class="muted">—</span>'
+    ) in body or '<td class="rs-reviewee">' in body and (
+        body.count('<span class="muted">—</span>') >= 1
+    )
+
+
+def test_results_body_summarized_window_closed_explicitly_hides_section(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Same gating as Raw — once the operator explicitly closes
+    the after-release window (``responses_release_until`` set +
+    reached), the Summarized section also hides. The grant has
+    been retired and even the dashed scaffolding stops showing."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-sum-closed")
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    _enable_reviewee_after_release_summarized(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+    review_session.responses_release_until = datetime.now(
+        timezone.utc
+    ) - timedelta(minutes=30)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "No responses to view yet." in body
+    assert "Solid work." not in body
