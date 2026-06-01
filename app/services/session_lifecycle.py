@@ -77,6 +77,35 @@ def is_archived(review_session: ReviewSession) -> bool:
     return review_session.status == SessionStatus.archived.value
 
 
+def is_response_release_window_open(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """Predicate for the after-release visibility window.
+
+    Returns True when the operator-set release window is currently
+    open — ``responses_release_at`` is set and reached, and either
+    ``responses_release_until`` is NULL (open-ended) or hasn't yet
+    arrived. Mirrors the predicate spelled out in
+    ``spec/visibility_policy.md`` §3.2 and the resolver predicate
+    in ``guide/participant_model_upgrade.md`` §3.3.
+
+    Anchor-null inertness: a saved ``responses_release_until``
+    with no anchor reads as "not open yet" — the release-window
+    doesn't open until the operator sets the anchor.
+    """
+    anchor = review_session.responses_release_at
+    if anchor is None:
+        return False
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if now < anchor:
+        return False
+    close = review_session.responses_release_until
+    if close is not None and now >= close:
+        return False
+    return True
+
+
 def is_editable(review_session: ReviewSession) -> bool:
     """True when setup-mutating routes are allowed (``draft`` or ``validated``)."""
     return is_draft(review_session) or is_validated(review_session)

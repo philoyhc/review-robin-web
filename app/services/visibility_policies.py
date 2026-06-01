@@ -172,6 +172,70 @@ def list_for_instrument(
     return {row.audience: row for row in rows}
 
 
+def decode_pair_to_mode(
+    granularity: str | None, identification: str | None
+) -> str | None:
+    """Decode a per-window ``(granularity, identification)`` pair
+    into an operator-facing mode (``"raw"`` / ``"anonymized"`` /
+    ``"summarized"``). ``None`` on either side means "off in this
+    window" → returns ``None``. The reserved-incoherent
+    ``aggregated`` + ``identified`` pair also returns ``None`` so
+    a corrupt row reads as "off" rather than 500ing.
+    """
+    if granularity is None or identification is None:
+        return None
+    try:
+        return decode_mode(granularity, identification)
+    except VisibilityPolicyError:
+        return None
+
+
+def resolve_mode(
+    policy: InstrumentViewPolicy | None,
+    *,
+    while_ongoing_open: bool,
+    after_release_open: bool,
+) -> str | None:
+    """Pick the operator-facing mode that applies right now for
+    one ``(instrument, audience)`` grant.
+
+    Inputs: the persisted policy row (or ``None`` if no row
+    exists), plus two booleans describing which session-level
+    window is currently open. Returns ``"raw"`` / ``"anonymized"``
+    / ``"summarized"`` / ``None`` — ``None`` means "the audience
+    cannot view this instrument right now" and the caller renders
+    nothing.
+
+    Window precedence: when both windows are open at once (a
+    session whose release window happens to start before the
+    deadline arrives), ``after_release`` wins. Operator
+    semantics align — picking a mode under "Responses released"
+    is the operator's explicit "this is what gets shown once the
+    release window opens"; picking a session-ongoing mode is the
+    pre-release shape. If only one window is open, that
+    window's mode applies. If neither is open, the audience
+    sees nothing regardless of stored state.
+
+    A missing row, or a row whose relevant window pair is
+    ``(NULL, NULL)``, returns ``None``.
+    """
+    if policy is None:
+        return None
+    if after_release_open:
+        mode = decode_pair_to_mode(
+            policy.after_release_granularity,
+            policy.after_release_identification,
+        )
+        if mode is not None:
+            return mode
+    if while_ongoing_open:
+        return decode_pair_to_mode(
+            policy.while_ongoing_granularity,
+            policy.while_ongoing_identification,
+        )
+    return None
+
+
 def _validate_per_window(
     *,
     audience: str,
@@ -380,8 +444,10 @@ __all__ = [
     "MODE_LABELS",
     "VisibilityPolicyError",
     "decode_mode",
+    "decode_pair_to_mode",
     "encode_mode",
     "list_for_instrument",
+    "resolve_mode",
     "upsert_many",
     "upsert_policy",
     "valid_modes_for_cell",
