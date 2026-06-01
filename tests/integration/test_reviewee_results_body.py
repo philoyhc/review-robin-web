@@ -648,23 +648,26 @@ def test_results_body_anonymized_window_closed_explicitly_hides_section(
     assert "Solid work." not in body
 
 
-def test_results_body_summarized_mode_is_unrendered(
+def test_results_body_summarized_aggregates_numerical_and_dashes_strings(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """``summarized`` (operator's "Anonymized summaries" chip) is
-    per-data-type aggregation — a different render shape from
-    the per-row table. Until the aggregation render ships, an
-    instrument whose only authored mode is ``summarized`` reads
-    as unrendered (no section, empty page). This pins the
-    contract so a future aggregation slice doesn't accidentally
-    inherit the dashed-row treatment from PR #1741's slip."""
+    """``summarized`` (operator's "Anonymized summaries" chip)
+    collapses identification columns into a single counts cell
+    and rows into one. Numerical response fields render
+    ``Average: X (based on M responses)``; String fields render
+    the "cannot be summarized" placeholder. The Reviewer column
+    header from the per-row mode is gone — the identity column
+    header is "Summary"."""
     operator = make_client(alice)
-    review_session = _seed_and_activate(operator, db, code="vp-sum-unrend")
+    review_session = _seed_and_activate(operator, db, code="vp-sum-num")
     _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
+        db,
+        review_session,
+        rating_value="4",
+        comments_value="Solid work.",
     )
     _enable_reviewee_after_release_summarized(
         db, review_session, operator=_operator_user(db), open_window=True
@@ -673,9 +676,108 @@ def test_results_body_summarized_mode_is_unrendered(
     body = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
     ).text
-    assert "No responses to view yet." in body
-    assert "Solid work." not in body
+    # Section renders; the per-row table chrome is gone.
+    assert "No responses to view yet." not in body
     assert "Reviewer</th>" not in body
+    assert ">Summary</th>" in body
+    # Counts cell: one reviewer assigned, one with responses.
+    assert "Number of reviewers assigned: 1" in body
+    assert "Number of reviewers with some responses: 1" in body
+    # Integer aggregate for the seeded rating=4 (single response).
+    assert "Average: 4.0 (based on 1 responses)" in body
+    # String fields don't summarize; the raw value never surfaces.
+    assert "Comments type field cannot be summarized" in body
+    assert "Solid work." not in body
+
+
+def test_results_body_summarized_aggregates_list_choice_frequencies(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A List response field renders one ``choice: count`` line
+    per declared option, including options that received zero
+    responses. The operator's "Anonymized summaries" chip is
+    the right surface to see a quick distribution snapshot
+    without exposing per-reviewer authorship."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-sum-list")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    # Add a List response field with three options.
+    list_field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="grade",
+        label="Grade",
+        required=False,
+        order=3,
+        _inline_data_type="List",
+        _inline_response_type="Letter_grade",
+        _inline_list_csv="A,B,C",
+    )
+    db.add(list_field)
+    db.commit()
+
+    # One reviewer + one reviewee → only one Response row for the
+    # list field. Seed it as "B".
+    assignment = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == instrument.id,
+            Assignment.include.is_(True),
+        )
+    ).scalar_one()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=list_field.id,
+            value="B",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+
+    _enable_reviewee_after_release_summarized(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # Every declared option surfaces — including the two with zero
+    # responses — so the operator/reviewee can see the distribution.
+    assert "A: 0" in body
+    assert "B: 1" in body
+    assert "C: 0" in body
+
+
+def test_results_body_summarized_zero_responses_shows_counts(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the reviewer has assignments but hasn't submitted
+    yet, the summarized section still renders. Counts read
+    ``assigned: 1, with responses: 0`` and the numerical
+    aggregate reads ``(based on 0 responses)``. Mirrors the
+    Raw mode's "scaffolding without values" preview behavior."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-sum-empty")
+    # No _seed_submitted_responses() — no Response rows exist.
+    _enable_reviewee_after_release_summarized(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert ">Summary</th>" in body
+    assert "Number of reviewers assigned: 1" in body
+    assert "Number of reviewers with some responses: 0" in body
+    assert "(based on 0 responses)" in body
 
 
 # ── Column-shape mirroring (Raw + Anonymized contract) ───────────────

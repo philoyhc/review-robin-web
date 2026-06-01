@@ -33,7 +33,53 @@
     {% for section in sections %}
       <section class="card" style="margin-top: var(--space-4);">
         <h2 style="margin-top: 0;">{{ section.heading_title }}</h2>
-        {% if section.field_cols and section.rows %}
+        {% if section.mode == "summarized" and section.field_cols and section.summarized_row %}
+          {# "Anonymized summaries" — identification columns
+             collapse into a single counts cell, rows collapse
+             into one, each response field renders an aggregate
+             keyed by its ``data_type``. Operator-set column
+             widths don't carry over: the aggregate-row shape
+             doesn't carry the same column semantics. #}
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" class="rs-reviewee">Summary</th>
+                {% for col in section.field_cols %}
+                  <th scope="col">{{ col.label }}{% if col.required %} *{% endif %}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="rs-reviewee">
+                  Number of reviewers assigned: {{ section.summarized_row.reviewers_assigned }},
+                  Number of reviewers with some responses: {{ section.summarized_row.reviewers_with_responses }}
+                </td>
+                {% for cell in section.summarized_row.field_cells %}
+                  <td>
+                    {% if cell.data_type in ("Integer", "Decimal") %}
+                      {% if cell.response_count > 0 %}
+                        Average: {{ cell.average }} (based on {{ cell.response_count }} responses)
+                      {% else %}
+                        Average: <span class="muted">—</span> (based on 0 responses)
+                      {% endif %}
+                    {% elif cell.data_type == "List" %}
+                      {% if cell.frequencies %}
+                        {% for choice, count in cell.frequencies %}
+                          {{ choice }}: {{ count }}{% if not loop.last %}<br>{% endif %}
+                        {% endfor %}
+                      {% else %}
+                        <span class="muted">No list options defined.</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="muted">Comments type field cannot be summarized</span>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            </tbody>
+          </table>
+        {% elif section.field_cols and section.rows %}
           {# Same table shape as the reviewer-surface form + the
              reviewer summary page (Reviewee / Group identity →
              display fields → response fields), with the identity
@@ -71,10 +117,7 @@
                cell — collapses to the muted em-dash so the
                reviewee can read the values without learning who
                said what. The response value cells below stay
-               unchanged in either mode. ``summarized`` (the
-               "Anonymized summaries" chip — per-data-type
-               aggregation) is a separate render shape and is
-               not surfaced in this slice. #}
+               unchanged in either mode. #}
             {% set _identify = section.mode != "anonymized" %}
             <tbody>
             {% for row in section.rows %}
