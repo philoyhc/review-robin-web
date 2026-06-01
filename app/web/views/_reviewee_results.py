@@ -18,14 +18,21 @@ differences are intentional:
   themselves. The reviewee already knows it's about them; what
   they want to see is who said what.
 - **Visibility policy gate** — instruments are filtered through
-  ``visibility_policies.resolve_mode`` against the persisted
-  ``reviewee`` policy. Only instruments whose effective mode is
-  ``"raw"`` render a section in this slice; ``anonymized`` and
-  ``summarized`` modes ship in follow-on slices. An instrument
-  with no row, or with both windows off, contributes nothing.
-- **Window gate** — even when the policy says Raw, the relevant
-  session-level window must be currently open. The resolver
-  consumes ``session_lifecycle.is_ready`` (while_ongoing) and
+  the persisted ``reviewee`` policy. Two modes render in this
+  slice: ``raw`` (full identification + values) and
+  ``anonymized`` (same table, identification cells dashed,
+  values still shown). ``summarized`` (per-data-type aggregation
+  — the operator-facing "Anonymized summaries" chip) is a
+  different render shape and ships in a later slice. An
+  instrument with no row, or with both windows off, contributes
+  nothing.
+- **Window gate** — even when the policy says Raw or Anonymized,
+  the relevant session-level window must be currently open for
+  values to surface. Pre-release (anchor not yet set / not yet
+  reached) renders the table scaffolding with empty cells;
+  explicitly-closed windows drop the section entirely. The
+  resolver consumes ``session_lifecycle.is_ready``
+  (while_ongoing) and
   ``session_lifecycle.is_response_release_window_open``
   (after_release). Archived sessions force every audience to
   off at the route layer.
@@ -33,7 +40,8 @@ differences are intentional:
 Reviewee-identity display fields (Name / Email / Profile) are
 dropped from the per-row display cells — they'd just repeat the
 signed-in reviewee on every row. Tag columns and other
-non-identity display fields stay.
+non-identity display fields stay (and get dashed in
+``anonymized`` mode).
 """
 
 from __future__ import annotations
@@ -107,10 +115,12 @@ class ResultsSection:
     has_custom_widths: bool = False
     # The operator-facing mode the resolver picked for this
     # instrument. ``"raw"`` shows identification + values;
-    # ``"summarized"`` (the operator's "Anonymized summaries"
+    # ``"anonymized"`` (the operator's "Anonymized responses"
     # chip) shows the same table but every identification cell
     # (Reviewer name + email + display-field values like tags)
-    # renders as the muted em-dash placeholder.
+    # renders as the muted em-dash placeholder. ``"summarized"``
+    # — aggregation — is a separate render shape and ships
+    # later; it isn't surfaced in this slice.
     mode: str = "raw"
 
 
@@ -179,26 +189,28 @@ def build_reviewee_results_context(
     # Per-instrument visibility resolution. Two gates:
     #
     # - **Structure gate** (``instrument_mode``): does the
-    #   operator's reviewee policy have ``raw`` or ``summarized``
+    #   operator's reviewee policy have ``raw`` or ``anonymized``
     #   authored on any window? If yes, the section renders.
-    #   ``anonymized`` (row + deidentified — the operator-facing
-    #   "Anonymized responses" chip) ships in a later slice.
+    #   ``summarized`` (the operator-facing "Anonymized
+    #   summaries" chip) ships in a later slice — it's per-data-
+    #   type aggregation, a different render shape, not the
+    #   per-row table with identification dashed.
     # - **Value gate** (``instrument_values_visible``): is the
     #   relevant window currently open? Only then do submitted
     #   values surface in the cells. When the window is closed
-    #   (operator authored Raw / Anonymized summaries but hasn't
+    #   (operator authored Raw / Anonymized responses but hasn't
     #   set / hasn't reached ``responses_release_at``), the
     #   section still renders the reviewer-row scaffolding but
     #   every value cell stays muted-empty.
     #
-    # ``summarized`` (the operator-facing "Anonymized summaries"
+    # ``anonymized`` (the operator-facing "Anonymized responses"
     # chip) renders the same per-reviewer table shape as Raw —
     # but every identification cell (Reviewer name + email + any
     # display-field cell) is replaced with the muted em-dash so
     # the reviewee can read the values without learning who said
     # what. The section's ``mode`` carries the picked mode through
     # to the template's per-cell branch.
-    _RENDERED_MODES = {"raw", "summarized"}
+    _RENDERED_MODES = {"raw", "anonymized"}
     instrument_mode: dict[int, str] = {}
     instrument_values_visible: dict[int, bool] = {}
     for instrument in instruments:
@@ -217,17 +229,17 @@ def build_reviewee_results_context(
             policy.after_release_identification,
         )
         authored_modes = {m for m in (while_mode, after_mode) if m}
-        # ``raw`` wins when co-authored alongside ``summarized``
+        # ``raw`` wins when co-authored alongside ``anonymized``
         # on different windows — Raw is the more permissive
         # rendering, the operator opted in to it for at least one
         # window, and the value gate below picks whichever mode
         # the open window carries (so a window-closed
-        # ``after_release_mode = summarized`` still falls back to
+        # ``after_release_mode = anonymized`` still falls back to
         # the dashed-identity render once its window opens).
         if "raw" in authored_modes:
             picked_mode = "raw"
-        elif "summarized" in authored_modes:
-            picked_mode = "summarized"
+        elif "anonymized" in authored_modes:
+            picked_mode = "anonymized"
         else:
             continue
         # Once the operator has *explicitly closed* the after-
