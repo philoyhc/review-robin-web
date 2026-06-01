@@ -165,6 +165,7 @@ def _render_reviewers_page(
             edit_values = {
                 "name": edited.name,
                 "email": edited.email,
+                "profile_link": edited.profile_link or "",
                 "tag_1": edited.tag_1 or "",
                 "tag_2": edited.tag_2 or "",
                 "tag_3": edited.tag_3 or "",
@@ -174,6 +175,7 @@ def _render_reviewers_page(
         edit_values = {
             "name": "",
             "email": "",
+            "profile_link": "",
             "tag_1": "",
             "tag_2": "",
             "tag_3": "",
@@ -265,6 +267,7 @@ def reviewers_create(
     request: Request,
     name: str = Form(default=""),
     email: str = Form(default=""),
+    profile_link: str = Form(default=""),
     tag_1: str = Form(default=""),
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
@@ -280,6 +283,7 @@ def reviewers_create(
             review_session=review_session,
             name=name,
             email=email,
+            profile_link=profile_link,
             tag_1=tag_1,
             tag_2=tag_2,
             tag_3=tag_3,
@@ -297,6 +301,7 @@ def reviewers_create(
             edit_values={
                 "name": name,
                 "email": email,
+                "profile_link": profile_link,
                 "tag_1": tag_1,
                 "tag_2": tag_2,
                 "tag_3": tag_3,
@@ -321,6 +326,7 @@ def reviewers_update(
     reviewer_id: int,
     name: str = Form(default=""),
     email: str = Form(default=""),
+    profile_link: str = Form(default=""),
     tag_1: str = Form(default=""),
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
@@ -339,6 +345,7 @@ def reviewers_update(
             reviewer=reviewer,
             name=name,
             email=email,
+            profile_link=profile_link,
             tag_1=tag_1,
             tag_2=tag_2,
             tag_3=tag_3,
@@ -356,6 +363,7 @@ def reviewers_update(
             edit_values={
                 "name": name,
                 "email": email,
+                "profile_link": profile_link,
                 "tag_1": tag_1,
                 "tag_2": tag_2,
                 "tag_3": tag_3,
