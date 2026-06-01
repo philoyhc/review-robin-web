@@ -169,6 +169,21 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # Cross-field datetime ordering: Start ≤ End ≤ Release-from.
+    # Runs after every individual parse so the operator gets the
+    # field-level error before the ordering error.
+    try:
+        scheduled_events.validate_schedule_ordering(
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            deadline=parsed_deadline,
+            responses_release_at=parsed_responses_release_at,
+        )
+    except scheduled_events.ScheduledActivateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     payload = SessionCreate(
         name=name,
         code=code,

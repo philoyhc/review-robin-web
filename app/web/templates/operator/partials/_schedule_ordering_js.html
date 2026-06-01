@@ -1,0 +1,66 @@
+{# Live-updates ``min`` / ``max`` on the four schedule
+   datetime-local inputs as the operator types, keeping the
+   ordering chain
+   ``scheduled_activate_at ≤ deadline ≤ responses_release_at ≤
+   responses_release_until`` enforceable by the browser picker.
+
+   Page-load values for the bounds come from the prefill on
+   each input's own ``min`` / ``max`` attribute; this script
+   handles every subsequent edit. The browser's native form-
+   validity check stops submission on a violation; the server
+   re-runs ``scheduled_events.validate_schedule_ordering`` as
+   the load-bearing safety net.
+
+   Used by ``session_edit.html`` and ``session_new.html``.
+   Both forms wire the same four input ``id``s
+   (``scheduled_activate_at``, ``deadline``,
+   ``responses_release_at``, ``responses_release_until``). #}
+<script>
+  (function () {
+    var IDS = [
+      "scheduled_activate_at",
+      "deadline",
+      "responses_release_at",
+      "responses_release_until",
+    ];
+    var inputs = IDS.map(function (id) {
+      return document.getElementById(id);
+    });
+    if (inputs.some(function (el) { return !el; })) return;
+
+    function setBound(el, attr, value) {
+      if (value) {
+        el.setAttribute(attr, value);
+      } else {
+        el.removeAttribute(attr);
+      }
+    }
+
+    function refresh() {
+      var values = inputs.map(function (el) { return el.value || ""; });
+      // Each input's ``max`` = next non-empty downstream value.
+      // Each input's ``min`` = previous non-empty upstream value.
+      for (var i = 0; i < inputs.length; i++) {
+        var minValue = "";
+        for (var j = i - 1; j >= 0; j--) {
+          if (values[j]) { minValue = values[j]; break; }
+        }
+        var maxValue = "";
+        for (var k = i + 1; k < inputs.length; k++) {
+          if (values[k]) { maxValue = values[k]; break; }
+        }
+        setBound(inputs[i], "min", minValue);
+        setBound(inputs[i], "max", maxValue);
+      }
+    }
+
+    inputs.forEach(function (el) {
+      el.addEventListener("input", refresh);
+      el.addEventListener("change", refresh);
+    });
+    // One initial refresh so any server-rendered bounds tighten
+    // against each other (e.g. End's ``max`` becomes Release-
+    // from when both were prefilled separately).
+    refresh();
+  })();
+</script>
