@@ -138,6 +138,15 @@ def downgrade() -> None:
             sa.ForeignKey("operator_rule_sets.id", ondelete="CASCADE"),
             nullable=False,
         ),
+        # ``revision_no`` + ``created_by_user_id`` were on the
+        # original table (created by 8d57b772ffc4); the
+        # downgrade of c5e9a8f3d4b1 (drop Lead-led seed) inserts
+        # rows referencing both. Earlier versions of this
+        # downgrade omitted the two columns, breaking the
+        # ``alembic downgrade base`` chain on Postgres (SQLite
+        # was tolerant enough not to surface the gap until the
+        # chain ran end-to-end).
+        sa.Column("revision_no", sa.Integer(), nullable=False),
         sa.Column("combinator", sa.String(16), nullable=False),
         sa.Column(
             "exclude_self_reviews",
@@ -159,12 +168,31 @@ def downgrade() -> None:
             nullable=False,
             server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
+        sa.Column(
+            "created_by_user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id"),
+            nullable=True,
+        ),
+        sa.UniqueConstraint(
+            "rule_set_id", "revision_no", name="uq_rule_set_revision_no"
+        ),
     )
     op.create_index(
         "ix_rule_set_revisions_rule_set_id",
         "rule_set_revisions",
         ["rule_set_id"],
     )
+    # The upgrade dropped this FK before the table drops; the
+    # downgrade re-establishes it so 8d57b772ffc4's downgrade
+    # (further back in the chain) can drop it cleanly.
+    with op.batch_alter_table("operator_rule_sets") as batch_op:
+        batch_op.create_foreign_key(
+            "fk_rule_sets_current_revision_id",
+            "rule_set_revisions",
+            ["current_revision_id"],
+            ["id"],
+        )
 
     with op.batch_alter_table("session_rule_sets", schema=None) as batch_op:
         batch_op.add_column(
