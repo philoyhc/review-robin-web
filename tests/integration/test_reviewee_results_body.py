@@ -1311,3 +1311,215 @@ def test_results_body_excludes_responses_about_other_groups(
     assert "Frank" not in body
     assert "erin@example.edu" not in body
     assert "frank@example.edu" not in body
+
+
+def test_results_body_team_unit_of_review_scopes_to_own_team(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Mirrors the user-reported setup: an instrument grouped by
+    ``reviewee.tag_3`` (= "team"), with one Group of 4 teams
+    (Team 1..4) each holding one reviewee. The reviewer (R21 on
+    Team 2) reviews Teams 1, 3, 4 (pool = same group + different
+    team). Each (reviewer, team) submission has a distinct
+    value.
+
+    Carol = A11 (Team 1). Her ``/results`` surface must show
+    only R21's response about TEAM 1 — never R21's responses
+    about Teams 3 or 4.
+    """
+    from app.db.models import Reviewer, Reviewee
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Pool TUR", "code": "pool-tur"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "pool-tur")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    # Drop the seeded per-reviewee instrument so this test is
+    # scoped to the group-by-team instrument.
+    pri = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_(None))
+    ).scalars().all()
+    for inst in pri:
+        db.delete(inst)
+    db.commit()
+    group_instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    # Configure the group boundary as ``reviewee.tag_3`` (the
+    # "team" tag). The seeded ``group_kind`` from add-group may
+    # be different; override directly so the fan-out keys by
+    # team.
+    group_instrument.group_kind = "r3"
+    db.commit()
+
+    # Roster: 4 individuals, each on a distinct team in the
+    # same Group ("Alpha"). Each is BOTH a reviewer and a
+    # reviewee in the session — mirrors the 360-style setup.
+    rosters: list[tuple[str, str, str]] = [
+        ("A11", "a11@example.edu", "Team-1"),
+        ("A21", "a21@example.edu", "Team-2"),
+        ("A31", "a31@example.edu", "Team-3"),
+        ("A41", "a41@example.edu", "Team-4"),
+    ]
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail,ReviewerTag2,ReviewerTag3\n"
+                + b"".join(
+                    f"{n},{e},Alpha,{t}\n".encode() for n, e, t in rosters
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag2,RevieweeTag3\n"
+                + b"".join(
+                    b"Carol,carol@example.edu,Alpha,Team-1\n"
+                    if e == "a11@example.edu"
+                    else f"{n},{e},Alpha,{t}\n".encode()
+                    for n, e, t in rosters
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    db.commit()
+    # Manually build the "Same Group + Different team" pool by
+    # creating one Assignment row per (reviewer, reviewee) pair
+    # where the team tag differs. This bypasses the rule
+    # engine but produces the exact assignment matrix the user
+    # describes.
+    reviewers_by_email = {
+        r.email: r
+        for r in db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        ).scalars()
+    }
+    reviewees_by_email = {
+        e.email_or_identifier: e
+        for e in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    for reviewer_email, r in reviewers_by_email.items():
+        for reviewee_email, e in reviewees_by_email.items():
+            # Same Group + Different team — and skip self-review
+            # by mismatched email.
+            if r.tag_3 == e.tag_3:
+                continue
+            if r.tag_2 != e.tag_2:
+                continue
+            db.add(
+                Assignment(
+                    session_id=review_session.id,
+                    instrument_id=group_instrument.id,
+                    reviewer_id=r.id,
+                    reviewee_id=e.id,
+                    include=True,
+                    created_by_mode="manual",
+                )
+            )
+    db.commit()
+    # Activate.
+    review_session.status = "ready"
+    db.commit()
+
+    # Each (reviewer, target-team) team-review has one set of
+    # values. We mimic that by inserting Responses whose value
+    # encodes (reviewer_email, target_team) — so a leak would
+    # surface a value tied to a team other than Carol's.
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == group_instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == group_instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    submitted_at = datetime.now(timezone.utc)
+    assignments = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == group_instrument.id,
+        )
+    ).scalars().all()
+    for a in assignments:
+        # The "team being reviewed" is the reviewee's team.
+        target_team = a.reviewee.tag_3
+        reviewer_label = a.reviewer.name
+        db.add(
+            Response(
+                assignment_id=a.id,
+                response_field_id=rating.id,
+                value=f"{reviewer_label}->{target_team}",
+                submitted_at=submitted_at,
+            )
+        )
+        db.add(
+            Response(
+                assignment_id=a.id,
+                response_field_id=comments.id,
+                value=f"{reviewer_label}-comment-about-{target_team}",
+                submitted_at=submitted_at,
+            )
+        )
+    db.commit()
+
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=group_instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="raw",
+        user=_operator_user(db),
+    )
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+
+    # Carol (A11, Team-1) should see responses ABOUT Team-1
+    # from reviewers on Teams 2/3/4. Each surfaces as
+    # ``<reviewer>-comment-about-Team-1``.
+    assert "A21-comment-about-Team-1" in body
+    assert "A31-comment-about-Team-1" in body
+    assert "A41-comment-about-Team-1" in body
+    # No response about another team should leak.
+    for other_team in ("Team-2", "Team-3", "Team-4"):
+        assert f"about-{other_team}" not in body, (
+            f"leak: response about {other_team} should not appear "
+            "on Carol's /results — she's on Team-1"
+        )
