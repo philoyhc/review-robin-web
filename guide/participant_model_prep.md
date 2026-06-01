@@ -120,12 +120,12 @@ Lights up the placeholders.
 | W5 | `app/services/collation.py` service | §7 | ⚠ | Pure code can pre-position; rendering needs `instrument_view_policies` rows from W15. |
 | W6 | Per-session toggle wiring | §3.8 | ✓ shipped (#1685 + #1686) | Both flags wired end-to-end: Setup nav reads `relationships_enabled` / `observers_enabled` and conditionally renders the tabs; new `require_relationships_enabled_session` + `require_observers_enabled_session` route gates return 404 when the flag is off; lock-on-data check at the service layer rejects True→False flips when rows exist (so a direct API call can't bypass the disabled UI); `session.feature_toggled` audit event fires when either flag flips. No migration backfill — operator confirmed FALSE for all existing sessions per S7. |
 | W7 | Visibility-policy resolver | §3.3 | ✓ shipped (alongside W15) | `app/services/visibility_policies.py::resolve_mode` takes the persisted policy row + the two window-open booleans (`while_ongoing_open` / `after_release_open`) and returns the operator-facing mode (`"raw"` / `"anonymized"` / `"summarized"` / `None`). After-release wins when both windows are open. Consumed by W16 (reviewee `/results`) and the future W17 (observer `/collation`). |
-| W8 | Reviewee-reachability warning on Validate page | §3.3 | ✘ | Cross-cutting soft warning; calls W1. |
+| W8 | Reviewee-reachability warning on Validate page | §3.3 | ✓ shipped (PR #1758) | Cross-cutting soft warning; calls W1's `is_email_identified`. New rule `reviewees.unreachable_for_results` with `severity=warning` (non-blocking — anonymous-identifier sessions are a legitimate use case); check counts active reviewees with non-email identifiers and emits one umbrella issue with the count + a fix link to Reviewees Setup anchored at the first offending row. Mapped under the Setup gate. |
 | W9 | Friendly-label retirement | §3.7 | ✓ shipped (#1680) | Reviewee identity slots (Name / Email_Identifier / Profile) dropped from the editor + Settings-CSV allowlist; alembic `c8d4e9f1a2b3` deletes persisted override rows. Reviewer side already had only tag slots — no change needed. |
 | W10 | Observer CSV importer + Setup-page table population + sort + friendly-label resolver | §3.1 | ✓ shipped (#1706) | Turns P1 into a functional Setup page. `app/services/observers.py` carries `create_observer` / `update_observer` / `bulk_inactivate` / `bulk_reactivate` with `ObserverOperationError` and audit envelopes; `csv_imports.parse_observer_csv` + `save_observers` + `delete_all_observers` + `existing_observer_count` reuse the shared `_save` / `_delete_all` infra; `ObserverImportRow` lives in `app/schemas/imports.py`; `observers.imported` registered in `EVENT_SCHEMAS`; `OBSERVERS_STATUS_OPTIONS` / `filter_observers_rows` / `observers_search_options` in `app/web/views/_filters.py`; `_setup_observers.py` has the full route surface (page / create / update / bulk in-/reactivate / delete-all / import); template refit to live UI with Upload + Operator actions + preview table + Danger Zone. Single-tag observer keeps the friendly-label editor card out of scope. |
-| W11 | Reviewer `profile_link` surface mirror | §3.9 | ⚠ partially shipped (#1680) | Quick Setup (CSV import via `parse_reviewer_csv` + `ReviewerImportRow`) and Extract Settings (`reviewers_extract.HEADER` + per-row serialize) wired. **Remaining:** services/reviewers create+update normalisation, Setup-Reviewers template + route, field labels default entry, display fields (label / CSV name / `ALLOWED_SOURCES` / seeding), view adapter, reviewer-summary cell styling. |
-| W12 | Quick Setup Observer slot submission | §3.8 | ✘ | Wired Quick Setup card surface; persists to `observers`. |
-| W13 | Extract Setup observer shapes | §3.8 | ✘ | Observer roster CSV (and any later observer-specific extracts) become selectable when S8 = TRUE. |
+| W11 | Reviewer `profile_link` surface mirror | §3.9 | ⚠ partially shipped (#1680 + #1756); two touchpoints parked | Shipped: Quick Setup CSV import (`parse_reviewer_csv` + `ReviewerImportRow`, #1680), Extract Settings (`reviewers_extract.HEADER` + per-row serialize, #1680), services/reviewers create + update normalisation, Setup-Reviewers template + route, field labels default entry (`("reviewer", "profile_link"): "Profile"`), preview-table column visibility (mirrors Reviewees: hidden when no row has data, visible in edit mode or when at least one row carries a link) — all in PR #1756. **Parked (different design call):** display-fields `ALLOWED_SOURCES` / seeding (the display-fields system is reviewer-form-facing and shows reviewee data; reviewer `profile_link` doesn't naturally fit there), operator-side reviewer-summary cell styling (separate slice once that surface is in scope). |
+| W12 | Quick Setup Observer slot submission | §3.8 | ✓ shipped (PR #1754) | Right column on the Quick Setup card reads Relationships → Observers → Session settings when `observers_enabled` is on; collapses back to Relationships → Session settings when off. `_split` formula flipped from `(length + 1) // 2` to `length // 2`. New `POST /operator/sessions/{id}/quick-setup/observers` route mirrors the Relationships slot — file-upload mode, `confirm_replace` on existing rows, lifecycle gate on Activated, no response-loss ack. `submit-all` + the create-session POST both pick up an `observers_file` parameter + the matching dispatcher branch. |
+| W13 | Extract Setup observer shapes | §3.8 | ✓ shipped (PR #1755) | New `observers_extract.py` serialiser (column shape `ObserverEmail` / `ObserverName` / `ObserverTag1` / `Status` — round-trips with the Quick Setup slot + the Observers Setup-page upload). New `GET /operator/sessions/{id}/export/observers.csv` route + `session.observers_extracted` audit event registered in `EVENT_SCHEMAS`. Extract Setup card's right column gains the Observers row between Relationships and Session settings when the toggle is on; the Zip-all bundle picks up an `{code}_observers.csv` member. |
 | W14 | Session schedule authoring | §3.4 | ✓ shipped (anchor wired in PR #1716; close re-shaped to datetime by S12) | Wires P3's two disabled inputs: `responses_release_at` (datetime-local, parsed via `scheduled_events.parse_and_validate_responses_release_at` — no minimum-lead floor since the operator can backdate Release-from) + `responses_release_until` (datetime-local, parsed via `scheduled_events.parse_and_validate_responses_release_until` — must close after the anchor, within 365 days, when both are set; accepts an until alone under §8.2.2). Both fields ride on `SessionCreate` end-to-end through `sessions.create_session` / `sessions.update_session`, with the latter diffing them for `session.updated` audit emission. The Edit form prefills both via `responses_release_at_input_value` / `responses_release_until_input_value`. S12 retired the original ISO 8601 offset shape (`release_until_offset`, `parse_and_validate_release_until_offset`); the Settings-CSV slot followed (`session.responses_release_until` as a datetime, replacing the string). |
 | W15 | Band 3 visibility-policy editor | §3.3 | ✓ shipped (editor + transparency surfaces; resolver W7 + consumer surfaces W16 / W17 still pending) | Editor + persistence + reviewer-surface transparency shipped end-to-end across multiple PRs:<br>• **Service** — `app/services/visibility_policies.py` carries `encode_mode` / `decode_mode` (operator-facing modes Raw / Anonymized / Summarized ↔ the stored `(granularity, identification)` pairs), `_PER_CELL_VALID_MODES` + `valid_modes_for_cell` (per-(audience, window) vocabulary including the fixed cells: Reviewer Session-ongoing pinned to Raw, Reviewee Session-ongoing pinned to off), and `upsert_policy` / `upsert_many` emitting `instrument.view_policy_set` per row touched.<br>• **Schema reshape** — S12 (Alembic `f4a92b3c6d18`) added the `visible_when` window axis + the `responses_release_until` close datetime; S14 (Alembic `a7e3b1d92c64` expand + `b8f4c2a91d35` contract) replaced the single-mode `enabled` / `granularity` / `identification` / `visible_when` quadruple with four per-window pair columns (`while_ongoing_granularity` / `while_ongoing_identification` / `after_release_granularity` / `after_release_identification`); NULL in both members ≡ "off in this window".<br>• **Persistence path** — visibility hidden inputs ride the card's main Save form via `form="dfsave-<id>"`; `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save` reads the six per-(audience, window) form fields alongside the rest of the card's state and calls `upsert_many` (the standalone `/view-policy` POST + "Save visibility" submit retired in PR #1733). The chip click fires the dirty tracker so Save flips active (PR #1734).<br>• **Editor template** — the Band 3 block on `instruments_index.html` renders a 3-row (Reviewers / Reviewees / Observers) × 2-window-column (Session ongoing / Responses released) chip grid. Static pills mark the fixed cells; the remaining four cells cycle through their per-cell valid modes. The Operator row is gone — Operator is the implicit baseline.<br>• **Reviewer-surface transparency card** — read-only "Who can see what you wrote (other than admin)" card lands in the per-instrument intro grid on `review_surface.html`, mirroring the persisted policy for two non-admin audiences (You / Reviewees). Observers are intentionally omitted. PR #1733 adds the matching preview alongside the description card in the operator's Band 2 intro grid (`band2_preview_visibility_rows_by_instrument`). PR #1734 renames the `summarized` mode's display label to "Anonymized summaries" everywhere it surfaces.<br>• **View adapter** — `build_instruments_context` carries `band3_visibility_by_instrument` (the editor's per-audience state) + `band2_preview_visibility_rows_by_instrument` (the Band 2 preview rows). `build_reviewer_visibility_rows` is the shared builder for both the reviewer surface and the operator's Band 2 preview.<br>• **PR trail** — #1656 (P2 placeholder), #1728 (W15 persistence — service / route / template, single-mode encoding), #1724 (S12 — `visible_when` + `responses_release_until`), #1729 (S14 expand — per-window pair columns), #1730 (read-path swap to per-window pairs + UI redesign), #1731 (S14 contract — drop legacy quadruple), #1732 (reviewer transparency card), #1733 (card-Save consolidation + Band 2 preview + Observers row drop on the reviewer surface), #1734 (chip click → Save active + "Anonymized summaries" rename).<br>• **Still pending** — W7 (resolver), W16 (reviewee `/results` body), W17 (observer `/collation` body). See `spec/visibility_policy.md` for the consolidated contract. |
 | W16 | Reviewee results surface | §5 | ✓ shipped (PRs #1737 → #1749) | Wires P5: resolves visibility policy via W7 + renders the responses in the policy-picked form. Three modes ship end-to-end:<br>• **Raw** — per-reviewer rows; identity column is the *reviewer* (the reviewee already knows the responses are about them); rows filtered by `Assignment.reviewee_id == reviewee.id`. Group-scoped instruments drop the display-field columns. Window-gating mirrors the reviewer surface (pre-release scaffolding renders empty cells; explicitly-closed release windows drop the section entirely).<br>• **Anonymized** — same table shape as Raw, but every identification cell (Reviewer name + email + display-field values) collapses to the muted em-dash. Response values still surface.<br>• **Summarized** — different render shape: identification columns collapse to a single "Summary" cell carrying `Number of reviewers assigned: N` + `Number of reviewers with some responses: M`; rows collapse to one aggregate row. Per-data-type aggregates: Integer / Decimal show Average + Median + Min + Max (labels render with em-dashes at zero responses); List shows each declared option with its frequency + percentage (zeros surface); String shows Total length + Average length characters. Operator-set column widths intentionally ignored.<br>• Code: `app/web/views/_reviewee_results.py` (`SummarizedFieldCell`, `SummarizedRow`, `_summarize_field`), `app/web/templates/reviewer/results.html`. PR trail: **#1737** Raw + structure, **#1738 → #1740** Anonymized + window-gating refinements, **#1741 → #1746** scope-guard regression tests for the Same Group + Different team configuration, **#1747** Summarized baseline, **#1748** broadened aggregates (median/min/max/percentages/length), **#1749** zero-response label scaffolding. |
@@ -323,6 +323,56 @@ Lights up the placeholders.
   the canonical historical audit; refresh the remainder
   doc whenever something ships by moving the row from
   there back to here.
+- **W12 Quick Setup Observers slot** (PR #1754). Right
+  column on the Quick Setup card reads
+  Relationships → Observers → Session settings when
+  `observers_enabled` is on; collapses back to
+  Relationships → Session settings when off.
+  `POST /operator/sessions/{id}/quick-setup/observers`
+  route + `submit-all` branch + create-session POST
+  branch wire the file upload through the standard CSV
+  pipeline.
+- **W13 Extract Setup Observers row + bundle** (PR
+  #1755). Sibling `observers_extract.py` serialiser;
+  `GET /operator/sessions/{id}/export/observers.csv` +
+  the new `session.observers_extracted` audit event.
+  Extract Setup card gains the Observers row between
+  Relationships and Session settings when the toggle is
+  on; the Zip-all bundle picks up an
+  `{code}_observers.csv` member. Closes the Extract
+  Setup leg of L2 — the Observers round-trip
+  (Setup page → Quick Setup → Extract Setup → bundle)
+  is end-to-end.
+- **W11 in-scope — Reviewer `profile_link` Setup mirror**
+  (PR #1756). `services/reviewers.create_reviewer` +
+  `update_reviewer` accept the kwarg and run it through
+  the same blank-→-None normaliser as the tag slots;
+  audit snapshot picks it up. Setup-Reviewers route wires
+  the form param through create + update; template
+  Profile-link column mirrors the Reviewees treatment.
+  `field_labels` defaults map gains
+  `("reviewer", "profile_link"): "Profile"`. Two
+  out-of-scope touchpoints stay parked on the W11 row
+  above.
+- **L1 cleanup — retire dead `sessions_for_user` stub**
+  (PR #1757). `ParticipantSession` dataclass +
+  `sessions_for_user` function deleted from
+  `app/services/participants.py`; two pinning unit tests
+  retired. The W18 implementation (PR #1709) built the
+  cross-role union inline in `_dashboard.py` and never
+  consumed the stub. `is_email_identified` (W1) stays
+  live. Remainder doc also rolls W5 into W17 in the same
+  PR (no useful pre-positioning since W17 is the sole
+  consumer of a future `collation.py` module).
+- **W8 — Validate-page reviewee reachability warning**
+  (PR #1758). New rule
+  `reviewees.unreachable_for_results` registered with
+  `severity=Severity.warning` (non-blocking — anonymous-
+  identifier sessions stay activatable). Check counts
+  active reviewees whose `email_or_identifier` isn't a
+  deliverable email; emits one umbrella issue with the
+  count + a fix link to Reviewees Setup anchored at the
+  first offending row. Mapped under the Setup gate.
 
 Each subsequent Phase 2 / Phase 3 slice lights up a subset of
 the Phase 1 schema without doing its own migration.
@@ -336,12 +386,10 @@ the Phase 1 schema without doing its own migration.
 
 ## Loose ends to attend to
 
-Drift / parity / cleanup work that's not blocking but should be folded into the appropriate next slice (or its own follow-on PR).
+All loose ends from the original audit have closed:
 
-| # | Item | Notes |
-|---|---|---|
-| L1 | Retire or back-fill `app/services/participants.py::sessions_for_user` | The function is W4's planned home for the cross-role union, but body still returns `[]`. The real query landed inline in `app/web/routes_reviewer/_dashboard.py` (W18 / PR #1709) instead of going through this helper. Pick one: (a) delete `sessions_for_user` + the `ParticipantSession` dataclass and update W4 to call the cleanup done, or (b) move the dashboard's inline union into `sessions_for_user` and reroute `_dashboard.py` to call it. Either way, the spec drift in `spec/reviewer-surface.md` (which currently notes this as a gap) closes. |
-| L2 | Update Extract / Quick Setup round-trip for Observers | The Observer roster is now a first-class Setup page (W10 / PR #1706) but neither the Extract Setup nor the Quick Setup card covers it. Two follow-ons:<br>• **Extract**: ship an Observers extract tile + CSV export route paralleling Reviewers / Reviewees (the spec sweep in PR #1719 flagged §2 "Five extracts" as already an undercount; this is the missing sixth). Mirrors the existing `serialize_reviewers` / `serialize_reviewees` shape; ObserverEmail / ObserverName / ObserverTag1 column set per `parse_observer_csv` so a port round-trips. Tracked separately as W13 (Extract Setup observer shapes) — fold the round-trip closure here.<br>• **Quick Setup**: ship the Observer slot (file-upload only, behind the `observers_enabled` toggle) so a fresh session can ingest observers alongside the other rosters from the Create New Session screen. Tracked separately as W12 — call out the Quick Setup roundtrip story when W12 lands so the Settings importer / config CSV stay aligned. |
+- **L1** — `sessions_for_user` + `ParticipantSession` stub retired in PR #1757; the W18 cross-role union lives inline in `_dashboard.py`.
+- **L2** — Observers round-trip closed end-to-end (Setup page → Quick Setup [W12 / #1754] → Extract Setup [W13 / #1755] → bundle).
 
 ## Cross-references
 

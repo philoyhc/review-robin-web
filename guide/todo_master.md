@@ -1667,6 +1667,79 @@ this stream the reviewee-side viewing surface is fully wired
   stays the canonical historical audit + ship trail. Both
   files now listed in `guide/README.md`.
 
+### Observers round-trip + reviewer profile_link + Validate-warning + cleanup — done 2026-06-01 (PRs #1754 → #1758)
+
+Continues the participant-model surface stream: Observers
+get the same Quick Setup + Extract Setup treatment as the
+other rosters, the reviewer's `profile_link` mirrors the
+reviewee side on Setup, the Validate page surfaces a soft
+warning for non-email reviewees, and the dead
+`sessions_for_user` stub finally goes. Closes W8 / W11 (in
+scope) / W12 / W13 / L1 / L2 from
+`guide/participant_model_remainder.md`; W5 collapsed into
+W17 as a documentation merge (no separate code surface).
+
+- **W12 Quick Setup Observers slot** (PR **#1754**). Right
+  column on the Quick Setup card now reads
+  Relationships → Observers → Session settings when
+  `observers_enabled` is on; collapses back to
+  Relationships → Session settings when off. `_split`
+  formula flipped from `(length + 1) // 2` to `length // 2`
+  so the right column always carries the configuration-style
+  slots. New `POST /operator/sessions/{id}/quick-setup/observers`
+  route mirrors the Relationships slot — file-upload mode,
+  `confirm_replace` on existing rows, lifecycle gate on
+  Activated, no response-loss ack. The consolidated
+  `submit-all` handler + the create-session POST both pick
+  up an `observers_file` parameter + the matching dispatcher
+  branch.
+- **W13 Extract Setup Observers row + bundle** (PR **#1755**).
+  Sibling `observers_extract.py` serialiser; column shape
+  (`ObserverEmail` / `ObserverName` / `ObserverTag1` / `Status`)
+  round-trips with the Quick Setup slot + the Observers
+  Setup-page upload. New
+  `GET /operator/sessions/{id}/export/observers.csv` route +
+  `session.observers_extracted` audit event registered in
+  `EVENT_SCHEMAS`. The Extract Setup card's right column gains
+  the Observers row between Relationships and Session settings
+  when the toggle is on; the Zip-all bundle picks up an
+  `{code}_observers.csv` member. Closes L2 (Observers
+  round-trip Setup → Quick Setup → Extract → bundle).
+- **W11 in-scope — Reviewer `profile_link` Setup mirror**
+  (PR **#1756**). `services/reviewers.create_reviewer` +
+  `update_reviewer` accept the new kwarg and run it through
+  the same blank-→-None normaliser as the tag slots; audit
+  snapshot picks it up. Setup-Reviewers route wires the form
+  param through create + update; `edit_values` carry it on
+  validation-error re-renders. Template Profile-link column
+  mirrors the Reviewees treatment: hidden when no row has
+  data, visible in edit mode or when at least one row carries
+  a link. `field_labels` defaults map gains
+  `("reviewer", "profile_link"): "Profile"`; override path
+  stays closed. Out-of-scope items (display-fields
+  `ALLOWED_SOURCES` / seeding; operator-side reviewer-summary
+  cell styling) folded back into the remainder doc's W11
+  row — different surface design calls.
+- **L1 cleanup — retire dead `sessions_for_user` stub**
+  (PR **#1757**). `ParticipantSession` dataclass +
+  `sessions_for_user` function deleted from
+  `app/services/participants.py`; two pinning unit tests
+  retired. The W18 implementation (PR #1709) built the
+  cross-role union inline in `_dashboard.py` and never
+  consumed the stub — keeping it around as `return []` was
+  spec drift. `is_email_identified` (W1) stays live.
+  Remainder doc rolls W5 into W17 in the same PR (no useful
+  pre-positioning since W17 is the sole consumer).
+- **W8 — Validate-page reviewee reachability warning**
+  (PR **#1758**). New rule `reviewees.unreachable_for_results`
+  registered with `severity=Severity.warning` (non-blocking —
+  anonymous-identifier sessions are a legitimate use case).
+  Check counts active reviewees whose `email_or_identifier`
+  isn't a deliverable email; emits one umbrella issue with
+  the count + a fix link to Reviewees Setup anchored at the
+  first offending row. Mapped under the Setup gate. The
+  `is_email_identified` helper (W1) is the predicate.
+
 ### Implementation sequence
 
 Outstanding work, mutually independent unless flagged in
@@ -1726,8 +1799,11 @@ dep chains called out at the bottom of this file.
 > slices** now landing ahead of the full segments 21+ work
 > (see the matching Done entries above). All seven Phase 2
 > placeholders (P1–P7) are shipped, along with W6 toggle
-> wiring, W7 visibility-policy resolver, W9 friendly-label
-> retirement, W10 Observer CRUD, W14 session-schedule
+> wiring, W7 visibility-policy resolver, W8 reviewee-
+> reachability warning, W9 friendly-label retirement, W10
+> Observer CRUD, W11 (in-scope) reviewer `profile_link`
+> Setup mirror, W12 Quick Setup Observers slot, W13 Extract
+> Setup Observers row + bundle, W14 session-schedule
 > authoring (Release-from / Release-until), W15 Band 3
 > visibility-policy editor, W16 reviewee `/results` body
 > across all three modes (raw / anonymized / summarized
@@ -1735,11 +1811,10 @@ dep chains called out at the bottom of this file.
 > Acknowledge gesture. **Still unscheduled in this file**
 > (each tracked individually in
 > `guide/participant_model_remainder.md` — the focused filter
-> on `_prep.md`): the reviewee-reachability warning on
-> Validate (W8), reviewer `profile_link` surface mirror
-> finish (W11 partial), Quick Setup Observer slot submission
-> (W12), Extract Setup observer shapes (W13), observer
-> `/collation` body wiring (W17), participant-side email
+> on `_prep.md`): the two out-of-scope W11 touchpoints
+> (display-fields seeding + operator-side reviewer-summary
+> cell styling), observer `/collation` body wiring
+> (W17 + W5 service module bundled), participant-side email
 > notifications (W20 — gated on Segment 14B), and magic-link
 > landings (W21 — blocked on the `invitations`-extensibility
 > design call). The umbrella design lives at
