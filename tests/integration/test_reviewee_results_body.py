@@ -648,7 +648,7 @@ def test_results_body_anonymized_window_closed_explicitly_hides_section(
     assert "Solid work." not in body
 
 
-def test_results_body_summarized_aggregates_numerical_and_dashes_strings(
+def test_results_body_summarized_aggregates_numerical_and_strings(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
@@ -656,11 +656,11 @@ def test_results_body_summarized_aggregates_numerical_and_dashes_strings(
 ) -> None:
     """``summarized`` (operator's "Anonymized summaries" chip)
     collapses identification columns into a single counts cell
-    and rows into one. Numerical response fields render
-    ``Average: X (based on M responses)``; String fields render
-    the "cannot be summarized" placeholder. The Reviewer column
-    header from the per-row mode is gone — the identity column
-    header is "Summary"."""
+    and rows into one. Numerical response fields render mean,
+    median, min, max + the count basis; String fields render
+    total + average character length. The raw String value
+    itself never surfaces (the whole point of the summary
+    mode)."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-sum-num")
     _seed_submitted_responses(
@@ -683,10 +683,17 @@ def test_results_body_summarized_aggregates_numerical_and_dashes_strings(
     # Counts cell: one reviewer assigned, one with responses.
     assert "Number of reviewers assigned: 1" in body
     assert "Number of reviewers with some responses: 1" in body
-    # Integer aggregate for the seeded rating=4 (single response).
-    assert "Average: 4.0 (based on 1 responses)" in body
-    # String fields don't summarize; the raw value never surfaces.
-    assert "Comments type field cannot be summarized" in body
+    # Integer aggregate for the seeded rating=4 (single response):
+    # mean / median / min / max all 4.0, count 1.
+    assert "Average: 4.0" in body
+    assert "Median: 4.0" in body
+    assert "Min: 4.0" in body
+    assert "Max: 4.0" in body
+    assert "(based on 1 responses)" in body
+    # String aggregate: "Solid work." = 11 chars.
+    assert "Total length: 11 characters" in body
+    assert "Average length: 11.0 characters" in body
+    # But the raw String content itself never surfaces.
     assert "Solid work." not in body
 
 
@@ -748,9 +755,10 @@ def test_results_body_summarized_aggregates_list_choice_frequencies(
     ).text
     # Every declared option surfaces — including the two with zero
     # responses — so the operator/reviewee can see the distribution.
-    assert "A: 0" in body
-    assert "B: 1" in body
-    assert "C: 0" in body
+    # Percentages are computed over the total response count.
+    assert "A: 0 (0.0%)" in body
+    assert "B: 1 (100.0%)" in body
+    assert "C: 0 (0.0%)" in body
 
 
 def test_results_body_summarized_zero_responses_shows_counts(
