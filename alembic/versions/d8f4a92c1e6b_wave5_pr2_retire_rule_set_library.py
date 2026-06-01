@@ -60,8 +60,18 @@ def upgrade() -> None:
         batch_op.drop_column("cached_eligible_pair_count")
         batch_op.drop_column("cached_eligibility_stamp")
 
-    # rule_set_revisions has a FK to operator_rule_sets; drop the
-    # child table first.
+    # rule_set_revisions has a FK to operator_rule_sets, AND
+    # operator_rule_sets has a forward FK back to
+    # rule_set_revisions (``fk_rule_sets_current_revision_id``,
+    # added by 8d57b772ffc4 to break the chicken-and-egg DDL
+    # ordering on create). Postgres enforces FK constraints at
+    # DROP TABLE time and rejects either drop until the cycle is
+    # broken; SQLite tolerates it. Drop the forward FK first,
+    # then the child table, then the parent.
+    with op.batch_alter_table("operator_rule_sets") as batch:
+        batch.drop_constraint(
+            "fk_rule_sets_current_revision_id", type_="foreignkey"
+        )
     op.drop_table("rule_set_revisions")
     op.drop_table("operator_rule_sets")
 

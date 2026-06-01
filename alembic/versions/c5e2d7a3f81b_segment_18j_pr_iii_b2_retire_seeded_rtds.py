@@ -35,6 +35,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # ``is_seeded`` is a Boolean column. SQLite stores booleans as
+    # 0/1 integers so ``= 1`` happens to work; psycopg + Postgres
+    # rejects the integer comparison with ``operator does not
+    # exist: boolean = integer``. ``IS TRUE`` is the portable
+    # idiom that both dialects accept.
     bind = op.get_bind()
     bind.execute(
         sa.text(
@@ -43,14 +48,14 @@ def upgrade() -> None:
             SET response_type_id = NULL
             WHERE response_type_id IN (
                 SELECT id FROM response_type_definitions
-                WHERE is_seeded = 1
+                WHERE is_seeded IS TRUE
             )
             """
         )
     )
     bind.execute(
         sa.text(
-            "DELETE FROM response_type_definitions WHERE is_seeded = 1"
+            "DELETE FROM response_type_definitions WHERE is_seeded IS TRUE"
         )
     )
 

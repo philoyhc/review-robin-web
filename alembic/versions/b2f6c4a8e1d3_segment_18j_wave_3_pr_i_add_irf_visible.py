@@ -44,6 +44,12 @@ def upgrade() -> None:
     # path). Add the column nullable first, backfill, then mark
     # NOT NULL so SQLite doesn't choke on a NOT-NULL-without-
     # default add against existing rows.
+    #
+    # ``server_default=sa.true()`` + the ``UPDATE ... SET visible
+    # = true`` backfill use the portable Boolean literals;
+    # SQLite tolerates ``1`` for booleans but Postgres rejects
+    # ``DEFAULT 1`` / ``= 1`` with ``DatatypeMismatch`` /
+    # ``operator does not exist: boolean = integer``.
     with op.batch_alter_table(
         "instrument_response_fields", schema=None
     ) as batch_op:
@@ -52,14 +58,14 @@ def upgrade() -> None:
                 "visible",
                 sa.Boolean(),
                 nullable=True,
-                server_default=sa.text("1"),
+                server_default=sa.true(),
             )
         )
 
     bind = op.get_bind()
     bind.execute(
         sa.text(
-            "UPDATE instrument_response_fields SET visible = 1 "
+            "UPDATE instrument_response_fields SET visible = true "
             "WHERE visible IS NULL"
         )
     )
