@@ -268,31 +268,36 @@ above).
 | `visible_when` | Window | Drawn from |
 |---|---|---|
 | `while_ongoing` | `[sessions.activated_at, sessions.deadline)` | Session lifecycle — the same window the reviewer surface stays reachable in. |
-| `after_release` | `[sessions.responses_release_at, sessions.responses_release_at + sessions.release_until_offset)` | The Release-responses window authored on Session Edit Details / Create New Session (W14, PR #1716). |
+| `after_release` | `[sessions.responses_release_at, sessions.responses_release_until)` | The Release-responses window authored on Session Edit Details / Create New Session. Originally W14 (PR #1716) wired `release_until_offset` here; S12 retires the offset in favour of an absolute `responses_release_until` datetime that the form input and the Stop button share. |
 | `throughout` | Union of the two windows above | Resolver returns true if *either* window is currently open. Useful when the operator wants results visible both during the review and after release without authoring two policy rows. |
 | `always` | Unconditional | Reserved — operator-only semantics today; the column accepts it for forward-compatibility (e.g. a future per-instrument `peer_reviewer` always-on knob). |
 
 **Operator buttons for the After-release window.** The
-`after_release` window can be driven by the scheduled
-`responses_release_at` + `release_until_offset` columns
-(operator authors on the Edit / Create forms) **or** by two
-session-level Operations buttons that override the schedule:
+`after_release` window is bracketed by two datetime columns on
+`sessions`: `responses_release_at` (start) and
+`responses_release_until` (end; `NULL` ⇒ open-ended). Either
+can be driven from the Edit / Create form **or** from two
+session-level Operations buttons that overwrite the schedule:
 
 - **Release responses now** — stamps `responses_release_at =
-  now()` (if unset or in the future) and clears any prior
-  `responses_release_stopped_at`. Emits
-  `session.responses_released` audit (snapshot).
-- **Stop release** — stamps `sessions.responses_release_stopped_at
-  = now()`. Emits `session.responses_release_stopped` audit
-  (snapshot).
+  now()` and clears any prior `responses_release_until` so the
+  window re-opens open-ended. Emits `session.responses_released`
+  audit (snapshot).
+- **Stop release** — stamps `responses_release_until = now()`.
+  Emits `session.responses_release_stopped` audit (snapshot).
+
+Both the scheduled-close form input and the Stop button write
+to the same `responses_release_until` column; the difference
+between "schedule a future close" and "stop now" is just the
+audit event the writer emits, not which column is touched.
 
 View-time predicate, used by the resolver for both
 `after_release` and the after-release half of `throughout`:
 
 > *Release window is open* ⇔ `responses_release_at IS NOT NULL`
-> AND `now() ≥ responses_release_at` AND `now() <
-> responses_release_at + release_until_offset` (or open-ended
-> if offset is NULL) AND `responses_release_stopped_at IS NULL`.
+> AND `now() ≥ responses_release_at` AND
+> (`responses_release_until IS NULL` OR `now() <
+> responses_release_until`).
 
 **Archive forces zero visibility.** When `sessions.status =
 'archived'`, the resolver returns `enabled = FALSE` for every
@@ -370,26 +375,61 @@ instrument's results released earlier than another's), these
 move to a per-instrument table — flagged as an open question
 (§9), not built up front.
 
-**Operator-explicit stop (S12).** One extra column on `sessions`
-lets the operator end an open release window before the
-scheduled `+release_until_offset` boundary:
+**Release-window close (S12) — datetime column replaces
+offset.** The original 18G shape for the release window was
+anchor + ISO 8601 offset duration (`responses_release_at` +
+`release_until_offset`, both wired by W14 / PR #1716). S12
+retires the offset in favour of an absolute close datetime,
+so the scheduled-close form input and the operator's Stop
+button can write to the same column:
 
 ```
 sessions
-  + responses_release_stopped_at  DateTime(tz)  NULL  (S12 — stamped by the
-                                                       Stop-release button;
-                                                       NULL = window is not
-                                                       explicitly stopped)
+   responses_release_at           DateTime(tz)  NULL  (W14, kept)
+ + responses_release_until        DateTime(tz)  NULL  (S12 — when the release
+                                                       window closes; NULL =
+                                                       open-ended)
+ - release_until_offset           String(16)    NULL  (W14 — retired; the
+                                                       offset semantics fold
+                                                       into responses_release_until
+                                                       via the migration)
 ```
 
-Paired with the existing `responses_release_at` /
-`release_until_offset`, this gives the resolver one predicate
-that covers both the scheduled and the operator-driven cases —
-see the **Visibility windows** subsection of §3.3 for the full
-expression. Release-now writes `responses_release_at = now()`
-on the existing column (no new schema). Both buttons emit
-audit events (`session.responses_released` /
+Migration writes `responses_release_until = responses_release_at
++ parse_iso_duration(release_until_offset)` on any row where
+both source columns are set, then drops `release_until_offset`.
+
+**Offset-only rows (`release_until_offset IS NOT NULL` AND
+`responses_release_at IS NULL`)** — these exist today because
+the W14 validator
+(`parse_and_validate_release_until_offset`) deliberately accepts
+the offset without an anchor; the §8.2.2 anchor-null rule
+treats it as inert until the anchor is later set. Under the
+new absolute-datetime model the staged offset has no
+translation (there is no anchor to compute the close
+datetime against), so the migration **drops these offsets
+silently** and leaves `responses_release_until` NULL.
+Operators who had staged an offset alone must re-enter a close
+datetime on the form after the migration. We accept this as a
+deliberate data-clear rather than carry a vestigial column
+through the cutover — exploratory offsets without an anchor
+are rare in practice and don't generalise to the new shape.
+
+Paired with the existing `responses_release_at`, this gives
+the resolver one predicate that covers scheduled and
+operator-driven close uniformly — see the **Visibility
+windows** subsection of §3.3 for the expression. The Stop
+button writes `responses_release_until = now()`; Release-now
+writes `responses_release_at = now()` and clears
+`responses_release_until`. Both emit dedicated audit events
+(`session.responses_released` /
 `session.responses_release_stopped`).
+
+The 365-day magnitude cap that W14 enforced on the offset
+moves to a soft "until must be within 365 days of
+`responses_release_at`" check on the datetime path — guards
+operator typos (e.g. a 2030 datetime on a 2026 session)
+without losing the bound.
 
 ### 3.5 Audit events
 
@@ -404,10 +444,12 @@ canonical-envelope convention:
   window.
 - `session.responses_released` (S12) — operator pressed
   Release-responses-now (snapshot envelope; carries
-  `responses_release_at`).
+  `responses_release_at`; also notes if a prior
+  `responses_release_until` was cleared by the press).
 - `session.responses_release_stopped` (S12) — operator pressed
   Stop-release (snapshot envelope; carries
-  `responses_release_stopped_at`).
+  `responses_release_until`, which the button has just
+  stamped to `now()`).
 - `observer.added` / `observer.removed` / `observer.bulk_*` —
   mirror the `reviewer.*` family.
 - `results.released` — the first moment a collation becomes
