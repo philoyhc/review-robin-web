@@ -849,22 +849,11 @@ _BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
 }
 
 
-def _decode_pair_to_mode(
-    granularity: str | None, identification: str | None
-) -> str | None:
-    """Decode the per-window ``(granularity, identification)``
-    pair into an operator-facing mode. ``None`` (either side)
-    means "off in this window". The reserved-incoherent
-    ``aggregated``+``identified`` pair falls back to ``None`` so
-    a corrupt row renders as "off" rather than 500ing on render."""
-    if granularity is None or identification is None:
-        return None
-    try:
-        return visibility_policies.decode_mode(
-            granularity, identification
-        )
-    except visibility_policies.VisibilityPolicyError:
-        return None
+# Thin alias for the public service helper so the view layer's
+# existing callers don't break. The decoder itself lives in
+# ``app/services/visibility_policies.py`` (consumed by both the
+# view-shape adapter and the resolver).
+_decode_pair_to_mode = visibility_policies.decode_pair_to_mode
 
 
 def _band3_visibility_states_for(

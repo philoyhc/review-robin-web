@@ -1,9 +1,13 @@
-{# Reviewee results placeholder surface — the page lights up the
-   ``/me/sessions/{id}/results`` URL behind
-   ``require_reviewee_in_session``. Today it's the chrome only;
-   the collated-results body lands with W16 per
-   ``guide/participant_model_upgrade.md`` §3.2. Mirrors the
-   reviewer surface's page header + session-description card. #}
+{# Reviewee results surface — ``/me/sessions/{id}/results``.
+
+   Read-only mirror of the reviewer's summary page. The header /
+   role-chip strip / session-description card stay identical;
+   the body is one section per instrument the operator has
+   opened up to the reviewee audience (per
+   ``app/services/visibility_policies.py::resolve_mode``). This
+   slice ships the ``"raw"`` mode — one row per reviewer who
+   responded, with the Reviewer (not the Reviewee) as the
+   identity column. Other modes ship in follow-on slices. #}
 {% extends "base.html" %}
 
 {% block title %}{{ session.name }} — Results — Review Robin Web{% endblock %}
@@ -22,6 +26,82 @@
   {% if session.description %}
     <div class="card rs-status-panel">
       <p class="rs-session-description">{{ session.description }}</p>
+    </div>
+  {% endif %}
+
+  {% if sections %}
+    {% for section in sections %}
+      <section class="card" style="margin-top: var(--space-4);">
+        <h2 style="margin-top: 0;">{{ section.heading_title }}</h2>
+        {% if section.field_cols and section.rows %}
+          {# Same table shape as the reviewer-surface form + the
+             reviewer summary page (Reviewee / Group identity →
+             display fields → response fields), with the identity
+             column swapped to the **reviewer** who keyed the
+             response so the reviewee reads "who said what". The
+             ``<colgroup>`` + ``table-layout: fixed`` pinning only
+             kicks in when the operator drag-resized at least one
+             column on Band 2; otherwise widths auto-distribute. #}
+          <table class="{% if section.is_group %}rs-group-table{% endif %}"{% if section.has_custom_widths and not section.is_group %} style="table-layout: fixed;"{% endif %}>
+            {% if section.has_custom_widths %}
+              <colgroup>
+                <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
+                {% for col in section.display_field_cols %}
+                  <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+                {% endfor %}
+                {% for col in section.field_cols %}
+                  <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+                {% endfor %}
+              </colgroup>
+            {% endif %}
+            <thead>
+              <tr>
+                <th scope="col" class="rs-reviewee">Reviewer</th>
+                {% for col in section.display_field_cols %}
+                  <th scope="col"{% if col.is_profile_link %} class="rs-narrow"{% endif %}>{{ col.label }}</th>
+                {% endfor %}
+                {% for col in section.field_cols %}
+                  <th scope="col"{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %}>{{ col.label }}{% if col.required %} *{% endif %}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+            {% for row in section.rows %}
+              <tr>
+                <td class="rs-reviewee">
+                  <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}
+                </td>
+                {% for cell in row.display_cells %}
+                  <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
+                    {% if cell.is_profile_link %}
+                      {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
+                    {% else %}
+                      {{ cell.value or "" }}
+                    {% endif %}
+                  </td>
+                {% endfor %}
+                {% for value in row.values %}
+                  {% set col = section.field_cols[loop.index0] %}
+                  <td{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %}>
+                    {% if value %}
+                      {{ value }}
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="muted">No responses on this instrument yet.</p>
+        {% endif %}
+      </section>
+    {% endfor %}
+  {% else %}
+    <div class="card" style="margin-top: var(--space-4);">
+      <p class="muted">No responses to view yet.</p>
     </div>
   {% endif %}
 {% endblock %}

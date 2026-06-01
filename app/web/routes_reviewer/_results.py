@@ -1,12 +1,19 @@
 """Reviewee results surface — ``GET /me/sessions/{id}/results``.
 
-Placeholder shell that lights up the URL behind
-``require_reviewee_in_session``: a reviewee whose
+Gated by ``require_reviewee_in_session``: a reviewee whose
 ``email_or_identifier`` (case-insensitive) matches the
-authenticated user's email reaches the page; everyone else gets
-403 / 404 from the gate. Today the body is just the chrome — the
-collated results render lands with W16 per
-``guide/participant_model_upgrade.md`` §3.2.
+authenticated user's email reaches the page; everyone else
+gets 403 / 404 from the gate.
+
+Body content is the reviewee's view of the responses written
+about them on this session, filtered through the per-instrument
+visibility policy
+(``app/services/visibility_policies.py``). This slice ships the
+``"raw"`` mode — instruments whose ``reviewee`` policy resolves
+to Raw render one row per reviewer who responded; other modes
+(``anonymized`` / ``summarized``) and the observer surface
+ship in follow-on slices. Empty body when no instrument has a
+currently-active grant for the signed-in reviewee.
 """
 
 from __future__ import annotations
@@ -23,6 +30,7 @@ from app.web.routes_reviewer._shared import (
     build_role_chips,
     reviewer_review_count_for_user,
 )
+from app.web.views._reviewee_results import build_reviewee_results_context
 
 router = APIRouter(prefix="/me")
 
@@ -39,7 +47,10 @@ def reviewee_results(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    _reviewee, review_session = reviewee_session
+    reviewee, review_session = reviewee_session
+    context = build_reviewee_results_context(
+        db, review_session=review_session, reviewee=reviewee
+    )
     return _templates.TemplateResponse(
         request,
         "reviewer/results.html",
@@ -55,5 +66,6 @@ def reviewee_results(
                 review_session=review_session,
                 active_role="reviewee",
             ),
+            "sections": context.sections,
         },
     )
