@@ -2192,6 +2192,16 @@
         background: var(--accent-green-bg);
         color: var(--accent-green);
       }
+      /* expired = the response window has shut — same red
+         treatment as the reviewer dashboard's "closed" pill +
+         the past-deadline pill in the End column, so the
+         post-window state reads consistently across surfaces.
+         Operator-facing label is "Closed" (see
+         ``app/services/lifecycle_display.py``). */
+      body.ui-v2 .pill-lifecycle-expired {
+        background: var(--accent-red-bg, #fee2e2);
+        color: var(--accent-red, #991b1b);
+      }
       /* Role pills for the /me/ lobby cross-role column. The
          dashboard query is reviewer-only today; the three
          classes are pre-positioned so the participant-model

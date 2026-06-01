@@ -835,3 +835,37 @@ def test_delete_selected_skips_other_users_sessions(
     assert db.execute(
         select(ReviewSession).where(ReviewSession.id == alice_session.id)
     ).scalar_one_or_none() is not None
+
+
+def test_lobby_status_cell_renders_closed_pill_for_expired_session(
+    client: TestClient, db: Session
+) -> None:
+    """When a session's lifecycle enum is ``expired``, the lobby's
+    Status cell renders ``<span class="pill pill-lifecycle-expired">
+    Closed</span>`` — the label rename ("Closed" rather than the
+    raw "Expired") plus a CSS class with a visible red treatment
+    (matching the past-deadline pill in the Deadline column + the
+    reviewer dashboard's ``closed`` pill).
+
+    Earlier renders carried the same class but no
+    ``body.ui-v2 .pill-lifecycle-expired`` rule existed in
+    ``base.html``, so the pill fell back to plain text styling."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Past", "code": "past-1"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "past-1")
+    ).scalar_one()
+    review_session.status = "expired"
+    db.commit()
+
+    body = client.get("/operator/sessions").text
+    assert (
+        '<span class="pill pill-lifecycle-expired">Closed</span>' in body
+    )
+    # Confirm the CSS rule itself ships (regression guard against
+    # the rule getting removed and the pill silently falling back
+    # to the un-styled state).
+    assert "body.ui-v2 .pill-lifecycle-expired" in body
