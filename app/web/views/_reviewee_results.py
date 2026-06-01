@@ -179,22 +179,28 @@ def build_reviewee_results_context(
             session=review_session, sections=[]
         )
 
-    # Assignment fan-out for the reviewee — the SQL filter below
-    # joins through these to pull every response keyed about the
-    # signed-in reviewee. Group-scoped instruments work the same
-    # way: the response service fans the reviewer's submission
-    # out to a row on every group member's assignment row, so
-    # scoping to ``reviewee_id == reviewee.id`` already picks up
-    # the reviewee's slice of any group-scoped responses without
-    # widening the filter.
-    assignments = list(
+    # Assignment fan-out for the reviewee — every reviewer
+    # assigned to review the signed-in reviewee on one of the
+    # policy-opened instruments. Group-scoped instruments work
+    # the same way: the response service fans a reviewer's
+    # submission out to a row on every group member's assignment
+    # row, so scoping to ``reviewee_id == reviewee.id`` already
+    # picks up the reviewee's slice of any group-scoped grant
+    # without widening the filter. Each ``(instrument_id,
+    # reviewer_id)`` pair seeded here becomes a row in the
+    # rendered table — even when no submitted response exists
+    # yet for that pair, the row surfaces with the reviewer's
+    # identity + empty value cells so the reviewee can see who
+    # the would-be reviewers are.
+    assignment_with_reviewer = list(
         db.execute(
-            select(Assignment)
+            select(Assignment, Reviewer)
+            .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
             .where(Assignment.session_id == review_session.id)
             .where(Assignment.reviewee_id == reviewee.id)
             .where(Assignment.include.is_(True))
             .where(Assignment.instrument_id.in_(instrument_mode.keys()))
-        ).scalars()
+        ).all()
     )
 
     # Visible display fields per instrument — excluding the
@@ -229,15 +235,31 @@ def build_reviewee_results_context(
         db, review_session.id
     )
 
-    # Pull every response keyed about this reviewee (per-reviewee
-    # instruments) or about a group this reviewee belongs to
-    # (group-scoped instruments). The join chain mirrors the
-    # reviewer summary's, with the scope inverted to
-    # ``Assignment.reviewee_id`` and a fan-out via the
-    # reviewee's own assignment rows (since group-scoped
-    # responses live on every member's assignment row in the
-    # fan-out, the reviewee's own rows are sufficient — no need
-    # to widen to other members' rows).
+    # Seed the (instrument, reviewer) row set from the
+    # assignment fan-out — every assigned reviewer surfaces a
+    # row even when they haven't submitted yet. The display
+    # cells are filled in below; the values cells fall back to
+    # empty strings whenever no submitted response exists for a
+    # given (instrument, reviewer, field) cell.
+    reviewer_by_id: dict[int, Reviewer] = {}
+    row_order: dict[int, list[int]] = {}
+    representative_assignment: dict[tuple[int, int], Assignment] = {}
+    for assignment, reviewer in assignment_with_reviewer:
+        reviewer_by_id[reviewer.id] = reviewer
+        rep_key = (assignment.instrument_id, reviewer.id)
+        if rep_key not in representative_assignment:
+            representative_assignment[rep_key] = assignment
+        order_list = row_order.setdefault(assignment.instrument_id, [])
+        if reviewer.id not in order_list:
+            order_list.append(reviewer.id)
+
+    # Pull every **submitted** response keyed about this
+    # reviewee (or about a group this reviewee belongs to). Same
+    # join chain as the reviewer summary's, scope inverted to
+    # ``Assignment.reviewee_id``. Draft rows
+    # (``submitted_at IS NULL``) are excluded — the reviewer
+    # identity still surfaces above, but the value cells stay
+    # empty until the reviewer hits Submit.
     response_rows = list(
         db.execute(
             select(
@@ -257,40 +279,23 @@ def build_reviewee_results_context(
             .where(Assignment.reviewee_id == reviewee.id)
             .where(Assignment.include.is_(True))
             .where(Assignment.instrument_id.in_(instrument_mode.keys()))
-            # Raw mode only shows submitted responses — drafts
-            # are still being worked on and exposing them would
-            # leak in-flight work to the reviewee. ``submitted_at
-            # IS NOT NULL`` is the submitted gate.
             .where(Response.submitted_at.is_not(None))
         ).all()
     )
 
-    # Index cells by (instrument_id, reviewer_id, field_id) — one
-    # row per reviewer who responded on this instrument.
+    # Index submitted values by (instrument_id, reviewer_id,
+    # field_id). Group-scoped instruments fan out the same value
+    # across every member's assignment row; the first occurrence
+    # wins (they all carry the same value by the fan-out
+    # invariant).
     cells: dict[tuple[int, int, int], str] = {}
-    row_order: dict[int, list[int]] = {}
-    reviewer_by_id: dict[int, Reviewer] = {}
-    representative_assignment: dict[tuple[int, int], Assignment] = {}
-    assignment_by_id = {a.id: a for a in assignments}
     for response, reviewer, instrument, field in response_rows:
-        reviewer_by_id[reviewer.id] = reviewer
         cell_key = (instrument.id, reviewer.id, field.id)
-        # Group-scoped instruments fan out the same value across
-        # every member's assignment row; pick the first occurrence
-        # for cell rendering (they all carry the same value).
         if cell_key in cells:
             continue
         cells[cell_key] = (
             response.value if response.value is not None else ""
         )
-        order_list = row_order.setdefault(instrument.id, [])
-        if reviewer.id not in order_list:
-            order_list.append(reviewer.id)
-        rep_key = (instrument.id, reviewer.id)
-        if rep_key not in representative_assignment:
-            assignment = assignment_by_id.get(response.assignment_id)
-            if assignment is not None:
-                representative_assignment[rep_key] = assignment
 
     sections: list[ResultsSection] = []
     total_instrument_count = len(instruments)

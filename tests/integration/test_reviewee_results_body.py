@@ -289,15 +289,17 @@ def test_results_body_empty_when_release_window_not_opened(
     assert "No responses to view yet." in body
 
 
-def test_results_body_omits_drafts(
+def test_results_body_drafts_render_empty_value_cells(
     db: Session,
     alice: AuthenticatedUser,
     carol: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Responses with ``submitted_at IS NULL`` are drafts and
-    must NOT surface — exposing in-flight work would leak
-    partial drafts back to the reviewee."""
+    """A reviewer with only draft rows still surfaces in the
+    table — their identity (Rae + email) renders so the
+    reviewee can see who the would-be reviewers are — but the
+    response cells stay empty until the reviewer hits Submit.
+    Draft text never leaks back to the reviewee."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-draft")
     _seed_submitted_responses(
@@ -313,9 +315,47 @@ def test_results_body_omits_drafts(
     body = make_client(carol).get(
         f"/me/sessions/{review_session.id}/results"
     ).text
+    # Draft content never leaks.
     assert "draft text" not in body
-    # No section renders since the only response row is a draft.
-    assert "No responses to view yet." in body
+    # The section still renders — the reviewer's row is there.
+    assert "No responses to view yet." not in body
+    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
+    assert "Rae" in body
+    assert "rae@example.edu" in body
+    # The empty-cell placeholder appears at least twice (the
+    # rating + comments fields both render as ``—`` since no
+    # submitted value exists). The em-dash is wrapped in
+    # ``<span class="muted">—</span>``.
+    assert body.count('<span class="muted">—</span>') >= 2
+
+
+def test_results_body_lists_unsubmitted_reviewers_with_empty_cells(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the operator opens Raw + the window is open but no
+    reviewer has filed anything yet, every assigned reviewer
+    surfaces with empty value cells — the reviewee can see the
+    would-be reviewers' identities before any have submitted."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-raw-no-resp")
+    # No ``_seed_submitted_responses`` call — there are zero
+    # responses on the session.
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "No responses to view yet." not in body
+    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
+    assert "Rae" in body
+    assert "rae@example.edu" in body
+    # Empty cells render as muted em-dash placeholders.
+    assert body.count('<span class="muted">—</span>') >= 2
 
 
 def test_results_body_omits_instrument_with_policy_off(
