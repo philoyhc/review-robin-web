@@ -176,7 +176,7 @@ orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`, and
 `check` (e.g. the duplicate-email rule sets the anchor to the
 first duplicate row's `#reviewer-row-{id}`).
 
-### 3.2 Current rules (16 registered)
+### 3.2 Current rules (18 registered)
 
 | `key` | `source` | Severity | What it catches |
 |---|---|---|---|
@@ -197,6 +197,7 @@ first duplicate row's `#reviewer-row-{id}`).
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
 | `instruments.stale_generated` | instruments | warning | Pinned instrument's eligible-pair count diverges from its generated row count (roster / rule changed post-Generate). |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
+| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. Shipped W8 (PR #1758). |
 
 Severity guidance:
 

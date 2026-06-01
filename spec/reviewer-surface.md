@@ -836,8 +836,9 @@ reviewee-/observer-only rows show `—` in those cells.
     `<span class="muted">—</span>` when null.
   - **View responses** — placeholder; renders `<span
     class="muted">—</span>` today. Will surface the
-    `responses_release_at` / `release_until_offset` access
-    window link once W16 / W17 land.
+    `responses_release_at` / `responses_release_until` access
+    window link once wired (W16 shipped `/results` + W19 Acknowledge;
+    this dashboard column is a follow-on).
   - **Until** — placeholder; renders `<span
     class="muted">—</span>` today. Will show the computed
     close time of the results-viewing window once wired.
@@ -866,17 +867,14 @@ per role the user holds:
 | Role | Target URL | Reachable today |
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
-| `reviewee` | `/me/sessions/{id}/results` | always `True` (W16 will add `responses_release_at` gate) |
+| `reviewee` | `/me/sessions/{id}/results` | always `True` today (W16 shipped the `/results` surface; the `responses_release_at` dashboard-row gate is a follow-on) |
 | `observer` | `/me/sessions/{id}/collation` | always `True` (W17 will add similar gate) |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
 as inert `<span>` pills.
 
-Note: `app/services/participants.py::sessions_for_user` still
-returns `[]` and is not called by the dashboard route. The
-cross-role union is inline in `_dashboard.py`; a future cleanup
-could move it to the service layer.
+The cross-role union is inline in `_dashboard.py`. The `sessions_for_user` stub that was proposed as the canonical home retired with L1 (PR #1757) — the inline shape was the W18 implementation choice and never grew a second consumer.
 
 ### Session-status pill vocabulary
 
@@ -1064,7 +1062,7 @@ modifiers.
 Reachability mirrors the dashboard's `role_links.enabled` logic:
 reviewer is reachable when `session_status != "not opened"`;
 reviewee and observer surfaces are always reachable today (W16 /
-W17 will add `responses_release_at` + `release_until_offset` gates
+W17 will add `responses_release_at` + `responses_release_until` gates
 later).
 
 ---

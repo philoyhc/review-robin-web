@@ -316,11 +316,12 @@ section beneath:
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
-| 4 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
-| 5 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
-| 6 | Status | — | `reviewer.status` |
-| 7 | Updated | — | `reviewer.updated_at` (`%Y-%m-%d %H:%M`) |
+| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). W11, PR #1756. |
+| 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
+| 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
+| 7 | Status | — | `reviewer.status` |
+| 8 | Updated | — | `reviewer.updated_at` (`%Y-%m-%d %H:%M`) |
 
 The `Show columns:` chip row sits in the top "Fields with data"
 card; see "Preview tables (shared toggle pattern)" above for

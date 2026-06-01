@@ -22,9 +22,9 @@ For `ready` and `closed` sessions, the card renders the same body-greying as the
 
 ### Slots
 
-The card contains four live slots: Reviewers, Reviewees, Relationships, Settings. All four share a "file upload" shape — no rule selectors or other slot-specific input modes. The Assignments slot retired in Segment 15D PR 7a (assignments are a materialised derivative post-15D, generated from the Operations Assignments page rather than uploaded directly); Relationships took its position in 15D PR 7c, and Settings graduated from inert to wired in 12A-3 PR 4 (post-cleanup polish #768 settled the final two-column layout).
+The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. The Assignments slot retired in Segment 15D PR 7a (assignments are a materialised derivative post-15D, generated from the Operations Assignments page rather than uploaded directly); Relationships took its position in 15D PR 7c, and Settings graduated from inert to wired in 12A-3 PR 4 (post-cleanup polish #768 settled the final two-column layout). The Observers slot shipped in W12 (PR #1754).
 
-**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships + Settings stack in the right column. There is no horizontal divider between the slot groups.
+**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships + Settings (+ Observers when visible) stack in the right column. There is no horizontal divider between the slot groups.
 
 **Slot 1 — Reviewers** (left column, top).
 - File upload accepting CSV.
@@ -64,7 +64,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` input on submit. The route gate stays the source of truth: when any slot whose `existing > 0` runs without `confirm_replace == "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox.
 
-**Per-slot dispatch.** The submit-all handler dispatches each slot whose input is present, in order: Reviewers → Reviewees → Relationships → Settings. On the first slot's failure it 303s with that slot's `quick_setup_error` flag and later slots don't run. Each slot routes through the same per-entity import primitive the per-entity Setup pages use (`_handle_quick_setup_import` for Reviewers / Reviewees, `save_relationships` for Relationships, `apply_session_config` for Settings).
+**Per-slot dispatch.** The submit-all handler dispatches each slot whose input is present, in order: Reviewers → Reviewees → Relationships → Observers → Settings. On the first slot's failure it 303s with that slot's `quick_setup_error` flag and later slots don't run. Each slot routes through the same per-entity import primitive the per-entity Setup pages use (`_handle_quick_setup_import` for Reviewers / Reviewees, `save_relationships` for Relationships, `save_observers` for Observers, `apply_session_config` for Settings).
 
 **Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 
@@ -124,7 +124,7 @@ The Quick Setup card also renders on the create-new-session page, below the Sess
 - **Lock / Unlock toggle suppressed.** There's no session row to lock; the card is always-unlocked. The footer row that holds Submit + Lock on Home doesn't render.
 - **No card-level replacement-confirmation checkbox.** A freshly-created session has nothing to replace, so the "This will replace any existing reviewers, reviewees, relationships or settings…" affordance is omitted. The body wrapper still exists; only the checkbox is suppressed.
 
-**Submission semantics.** The card has no Submit button of its own. Each slot's inputs associate with the create-session form via the HTML `form="create-session-form"` attribute, so the single "Create session" button submits both the session details and any staged Quick Setup uploads in one POST. After `POST /operator/sessions` creates the session, the handler dispatches each provided slot through the same per-slot pipeline (`_handle_quick_setup_import` for Reviewers / Reviewees, `save_relationships` for Relationships, `apply_session_config` for Settings) the Home consolidated submit-all uses. `confirm_replace` is implicitly `"true"` on this path — there's nothing to overwrite, so the route layer's gate is satisfied trivially.
+**Submission semantics.** The card has no Submit button of its own. Each slot's inputs associate with the create-session form via the HTML `form="create-session-form"` attribute, so the single "Create session" button submits both the session details and any staged Quick Setup uploads in one POST. After `POST /operator/sessions` creates the session, the handler dispatches each provided slot through the same per-slot pipeline (`_handle_quick_setup_import` for Reviewers / Reviewees, `save_relationships` for Relationships, `save_observers` for Observers, `apply_session_config` for Settings) the Home consolidated submit-all uses. `confirm_replace` is implicitly `"true"` on this path — there's nothing to overwrite, so the route layer's gate is satisfied trivially.
 
 **Failure mode.** Session creation runs first; if it succeeds and a downstream slot fails, the operator lands on Session Home with that slot's `?quick_setup_error=…&quick_setup_reason=…` flag and the slot's banner-error rendered in place. The session row stays — the operator retries the failing slot from the Home Quick Setup card.
 
