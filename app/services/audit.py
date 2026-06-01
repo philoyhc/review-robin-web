@@ -581,6 +581,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "reviewee.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "reviewee.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    # Reviewee taps Acknowledge on /results to confirm they've seen
+    # the responses written about them. Snapshot carries the
+    # reviewee_id + acknowledged_at timestamp. Idempotent on the
+    # service side (already-acknowledged is a no-op).
+    "reviewee.results_acknowledged": EventSchema(_IDENTITY | {"snapshot"}),
     # Segment 15F PR 5 — per-row relationship authoring + bulk
     # status flips. ``app/services/relationships.py`` emits.
     "relationship.created": EventSchema(_IDENTITY | {"snapshot"}),

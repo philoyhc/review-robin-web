@@ -22,6 +22,7 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -433,8 +434,45 @@ def bulk_reactivate(
     )
 
 
+def acknowledge_results(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    reviewee: Reviewee,
+    user: User,
+    correlation_id: str | None = None,
+) -> bool:
+    """Stamp ``reviewee.results_acknowledged_at`` with the current
+    UTC time and emit a ``reviewee.results_acknowledged`` audit
+    event. Returns ``True`` if a new stamp was written, ``False``
+    if the reviewee had already acknowledged (idempotent — once
+    acknowledged, stays acknowledged)."""
+    if reviewee.results_acknowledged_at is not None:
+        return False
+    now = datetime.now(timezone.utc)
+    reviewee.results_acknowledged_at = now
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="reviewee.results_acknowledged",
+        summary=f"Reviewee {reviewee.email_or_identifier} acknowledged results",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "reviewee_id": reviewee.id,
+                "acknowledged_at": now.isoformat(),
+            }
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return True
+
+
 __all__ = [
     "RevieweeOperationError",
+    "acknowledge_results",
     "create_reviewee",
     "update_reviewee",
     "bulk_inactivate",

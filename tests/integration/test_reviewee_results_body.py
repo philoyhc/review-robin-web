@@ -1644,3 +1644,103 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
             f"leak: response about {other_team} should not appear "
             "on Carol's /results — she's on Team-1"
         )
+
+
+# ── Acknowledge card ─────────────────────────────────────────────────
+
+
+def test_results_acknowledge_card_renders_before_ack(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Pre-acknowledgement: the bottom Acknowledge card renders
+    the checkbox + Acknowledge button + instructions. The header
+    pill is not present yet."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-ack-pre")
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # Bottom card present with the form.
+    assert "rs-acknowledge-card" in body
+    assert "I have read these results." in body
+    assert 'data-delete-confirm="ack-results"' in body
+    assert "Acknowledge</button>" in body
+    # No header pill yet.
+    assert "&#10003; Acknowledged" not in body
+    assert "✓ Acknowledged" not in body
+
+
+def test_results_acknowledge_post_stamps_and_redirects(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """POST stamps ``reviewee.results_acknowledged_at`` and
+    redirects back to ``/results``. The follow-up GET shows the
+    header pill, drops the form, and renders the "Acknowledged on
+    {date}" confirmation strip in the card. An audit event is
+    written. A second POST is a no-op — the original timestamp
+    survives."""
+    from app.db.models import AuditEvent, Reviewee
+
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-ack-post")
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+
+    carol_client = make_client(carol)
+    response = carol_client.post(
+        f"/me/sessions/{review_session.id}/results/acknowledge",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/me/sessions/{review_session.id}/results"
+    )
+
+    # DB stamped.
+    reviewee_row = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalar_one()
+    db.refresh(reviewee_row)
+    first_stamp = reviewee_row.results_acknowledged_at
+    assert first_stamp is not None
+
+    # Audit emitted.
+    ack_events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "reviewee.results_acknowledged"
+        )
+    ).scalars().all()
+    assert len(ack_events) == 1
+
+    # Subsequent GET: header pill + confirmation strip; no form.
+    body = carol_client.get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "&#10003; Acknowledged" in body
+    assert "Acknowledged on" in body
+    assert 'data-delete-confirm="ack-results"' not in body
+
+    # Second POST = no-op (idempotent — stamp + audit unchanged).
+    carol_client.post(
+        f"/me/sessions/{review_session.id}/results/acknowledge",
+        follow_redirects=False,
+    )
+    db.refresh(reviewee_row)
+    assert reviewee_row.results_acknowledged_at == first_stamp
+    ack_events_after = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "reviewee.results_acknowledged"
+        )
+    ).scalars().all()
+    assert len(ack_events_after) == 1

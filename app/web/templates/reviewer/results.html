@@ -19,6 +19,9 @@
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
     <span>Results of the review</span>
+    {% if acknowledged_at %}
+      <span class="pill pill-success" title="Acknowledged on {{ acknowledged_at.strftime('%Y-%m-%d %H:%M UTC') }}">&#10003; Acknowledged</span>
+    {% endif %}
   </div>
 
   {% include "reviewer/_role_chips.html" %}
@@ -166,4 +169,31 @@
       <p class="muted">No responses to view yet.</p>
     </div>
   {% endif %}
+
+  {# Acknowledge card at the foot of the page. The checkbox-gates-
+     button pattern reuses the global ``data-delete-confirm`` /
+     ``data-delete-btn`` JS in ``base.html`` — the keys collide
+     across the page (one per page), so ``ack-results`` is safe to
+     hard-code. Once acknowledged the form collapses to a passive
+     confirmation strip so a returning reviewee can see when they
+     ticked it. #}
+  <section class="card rs-acknowledge-card">
+    <h2>Acknowledge</h2>
+    {% if acknowledged_at %}
+      <p class="muted" style="margin-top: var(--space-3);">
+        &#10003; Acknowledged on {{ acknowledged_at.strftime('%Y-%m-%d %H:%M UTC') }}.
+      </p>
+    {% else %}
+      <p class="muted" style="margin-top: var(--space-3);">
+        Tick the box to confirm you've seen the responses written about you.
+      </p>
+      <form method="post" action="/me/sessions/{{ session.id }}/results/acknowledge" class="rs-acknowledge-form-row">
+        <label>
+          <input type="checkbox" data-delete-confirm="ack-results">
+          I have read these results.
+        </label>
+        <button type="submit" class="btn" data-delete-btn="ack-results">Acknowledge</button>
+      </form>
+    {% endif %}
+  </section>
 {% endblock %}

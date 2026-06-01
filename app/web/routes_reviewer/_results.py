@@ -19,11 +19,12 @@ currently-active grant for the signed-in reviewee.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
+from app.services import reviewees as reviewees_service
 from app.web.deps import get_or_create_user, require_reviewee_in_session
 from app.web.routes_reviewer._shared import (
     _templates,
@@ -67,5 +68,31 @@ def reviewee_results(
                 active_role="reviewee",
             ),
             "sections": context.sections,
+            "acknowledged_at": reviewee.results_acknowledged_at,
         },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/results/acknowledge",
+    response_class=HTMLResponse,
+)
+def reviewee_results_acknowledge(
+    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
+        require_reviewee_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Stamp the signed-in reviewee's ``results_acknowledged_at``
+    and redirect back to the results page. Idempotent — a second
+    POST on an already-acknowledged reviewee is a no-op (the
+    service keeps the original timestamp)."""
+    reviewee, review_session = reviewee_session
+    reviewees_service.acknowledge_results(
+        db, review_session=review_session, reviewee=reviewee, user=user
+    )
+    return RedirectResponse(
+        url=f"/me/sessions/{review_session.id}/results",
+        status_code=303,
     )

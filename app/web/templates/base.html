@@ -2644,6 +2644,51 @@
         }
       }
 
+      /* Reviewee-surface Acknowledge card at the foot of
+         ``/results``. Half-width flush right; blue emphasis
+         (matching the selected Data shape sub-card's
+         border + shadow + faint blue tint) so the page's
+         finalize gesture reads as a positive call-to-action
+         distinct from the destructive Clear-all (``.rs-danger-zone``)
+         that sits in the same screen position on the reviewer-
+         surface form pages. Collapses to full width below the
+         800px breakpoint like its sibling. After acknowledgement
+         the card stays put but the form collapses to a passive
+         confirmation strip — the template branches on
+         ``acknowledged_at``. */
+      body.ui-v2 .rs-acknowledge-card {
+        max-width: calc(50% - 10px);
+        margin-left: auto;
+        margin-top: var(--space-6);
+        box-sizing: border-box;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 1px var(--accent-blue);
+        background: var(--accent-blue-bg-faint, #fafcff);
+      }
+      body.ui-v2 .rs-acknowledge-card h2 { margin: 0; }
+      body.ui-v2 .rs-acknowledge-form-row {
+        margin-top: var(--space-3);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .rs-acknowledge-form-row form { margin: 0; }
+      body.ui-v2 .rs-acknowledge-form-row label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0;
+        font-weight: normal;
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .rs-acknowledge-card {
+          max-width: 100%;
+          margin-left: 0;
+        }
+      }
+
       /* Rule Builder per-rule rows (`_rule_builder_card.html`).
          Each row carries a left-edge bar that visually demarcates the
          rule. The bar is rendered as an absolutely-positioned ::before
