@@ -154,6 +154,18 @@ def build_reviewee_results_context(
     after_release_open = lifecycle.is_response_release_window_open(
         review_session
     )
+    # Distinguish "pre-release" (anchor not yet set / not yet
+    # reached — operator is still configuring) from "explicitly
+    # closed" (the operator stamped a close datetime or pressed
+    # Stop release). Pre-release is fine — the scaffolding is a
+    # preview the operator can use. Closed retires the grant and
+    # we hide the section so reviewer identities don't leak
+    # after the window has explicitly shut.
+    after_release_closed_explicitly = (
+        lifecycle.is_response_release_window_closed_explicitly(
+            review_session
+        )
+    )
 
     instruments = list(
         db.execute(
@@ -197,6 +209,22 @@ def build_reviewee_results_context(
         )
         authored_modes = {m for m in (while_mode, after_mode) if m}
         if "raw" not in authored_modes:
+            continue
+        # Once the operator has *explicitly closed* the after-
+        # release window (``responses_release_until`` set and
+        # reached — typically via the Stop release Operations
+        # button or the scheduled close datetime), Raw authored
+        # only on after_release stops contributing to the
+        # structure gate. Reviewer identities + display fields
+        # must stop surfacing alongside the response values
+        # they'd otherwise pair with. Pre-release (anchor not
+        # yet set / not yet reached) stays a scaffolding-only
+        # state — the operator gets the preview.
+        if (
+            after_mode == "raw"
+            and while_mode != "raw"
+            and after_release_closed_explicitly
+        ):
             continue
         # In this slice, ``anonymized`` / ``summarized`` co-authored
         # on the other window don't change the Raw render — they

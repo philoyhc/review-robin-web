@@ -480,3 +480,41 @@ def test_results_body_omits_instrument_with_policy_off(
     ).text
     assert "First Form" in body
     assert "Second Form" not in body
+
+
+def test_results_body_hides_section_when_release_window_explicitly_closed(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Once the operator has explicitly shut the after-release
+    window (``responses_release_until`` set and reached — Stop
+    release, or the scheduled close datetime), the reviewee
+    surface drops back to empty. The pre-release scaffolding
+    exception only applies before the window has fired; after
+    the explicit close, the grant is retired and reviewer
+    identities + display fields stop surfacing alongside the
+    values they used to pair with."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-raw-closed")
+    _seed_submitted_responses(
+        db, review_session, comments_value="Solid work."
+    )
+    # Author Raw on after_release; stamp anchor + until both in
+    # the past so the window has explicitly closed.
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+    review_session.responses_release_until = datetime.now(
+        timezone.utc
+    ) - timedelta(minutes=30)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    assert "No responses to view yet." in body
+    assert "Rae" not in body
+    assert "rae@example.edu" not in body
+    assert "Solid work." not in body
