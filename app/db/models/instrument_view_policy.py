@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint, text
+from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -46,27 +46,12 @@ class InstrumentViewPolicy(Base, TimestampMixin):
         ForeignKey("instruments.id"), index=True, nullable=False
     )
     audience: Mapped[str] = mapped_column(String(16), nullable=False)
-    enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("false"), nullable=False
-    )
-    granularity: Mapped[str] = mapped_column(String(16), nullable=False)
-    identification: Mapped[str] = mapped_column(String(16), nullable=False)
-    # Participant-model S12 — which session-level window applies for
-    # this (instrument, audience) grant. Values:
-    # ``while_ongoing`` / ``after_release`` / ``throughout`` /
-    # ``always`` (reserved). Nullable / inert; W15 writes, W7 reads.
-    # See ``guide/participant_model_upgrade.md`` §3.3.
-    visible_when: Mapped[str | None] = mapped_column(String(16))
-    # Participant-model S14 — per-window mode pairs for the Band 3
-    # editor redesign. Each pair encodes the audience's mode in
-    # that window; NULL ≡ "off in this window". The pair
-    # (``aggregated``, ``identified``) is reserved-incoherent and
-    # rejected by the service. The S12 columns above
-    # (``enabled`` / ``granularity`` / ``identification`` /
-    # ``visible_when``) stay in place during the expand step —
-    # the service mirror-writes both shapes so the read path can
-    # flip independently. See ``spec/visibility_policy.md`` and
-    # ``guide/participant_model_prep.md`` S14.
+    # Per-window mode pairs. Each pair encodes the audience's mode
+    # in that window via a ``(granularity, identification)`` tuple;
+    # ``NULL`` in both members of a pair ≡ "off in this window".
+    # The pair (``aggregated``, ``identified``) is reserved-
+    # incoherent and rejected by the service. See
+    # ``spec/visibility_policy.md``.
     while_ongoing_granularity: Mapped[str | None] = mapped_column(String(16))
     while_ongoing_identification: Mapped[str | None] = mapped_column(String(16))
     after_release_granularity: Mapped[str | None] = mapped_column(String(16))

@@ -5,8 +5,9 @@ the Instruments page (W15). One row per ``(instrument, audience)``
 on ``instrument_view_policies``; up to three audiences per
 instrument (``peer_reviewer`` / ``reviewee`` / ``observer``).
 Operator-facing modes (Raw / Anonymized / Summarized) encode to
-the two underlying ``granularity`` + ``identification`` columns
-via the helpers below.
+``(granularity, identification)`` pairs stored per-window
+(``while_ongoing_*`` / ``after_release_*``) via the helpers
+below.
 
 See ``spec/visibility_policy.md`` for the full functional
 contract and ``guide/participant_model_upgrade.md`` §3.3 for
@@ -49,30 +50,6 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
     "anonymized": ("row", "deidentified"),
     "summarized": ("aggregated", "deidentified"),
 }
-
-
-VALID_VISIBLE_WHEN: frozenset[str] = frozenset(
-    {"while_ongoing", "after_release", "throughout", "always"}
-)
-
-
-# Per-audience valid mode + window vocabularies the editor lets the
-# operator pick from. The DB doesn't constrain these (the
-# ``always`` value is reserved for operator forward-compatibility);
-# the service rejects anything outside the per-audience set so a
-# direct API call can't bypass the editor.
-
-PEER_REVIEWER_MODES: frozenset[str] = frozenset({"raw"})
-PEER_REVIEWER_WHENS: frozenset[str] = frozenset(
-    {"while_ongoing", "throughout"}
-)
-
-REVIEWEE_OBSERVER_MODES: frozenset[str] = frozenset(
-    {"raw", "anonymized", "summarized"}
-)
-REVIEWEE_OBSERVER_WHENS: frozenset[str] = frozenset(
-    {"while_ongoing", "after_release", "throughout"}
-)
 
 
 # Per-audience-per-window valid modes for the redesigned Band 3
@@ -126,9 +103,8 @@ class VisibilityPolicyError(ValueError):
 
     Codes:
     - ``invalid_audience`` — ``audience`` not in :data:`AUDIENCES`.
-    - ``invalid_mode`` — ``mode`` outside the per-audience set.
-    - ``invalid_visible_when`` — ``visible_when`` outside the
-      per-audience set.
+    - ``invalid_mode`` — ``mode`` outside the per-(audience, window)
+      set.
     - ``observer_tag_misuse`` — non-NULL ``observer_tag`` supplied
       for a non-observer audience.
     """
@@ -168,55 +144,13 @@ def decode_mode(granularity: str, identification: str) -> str:
     )
 
 
-def _validate(
-    *,
-    audience: str,
-    mode: str,
-    visible_when: str,
-    observer_tag: str | None,
-) -> None:
-    if audience not in AUDIENCES:
-        raise VisibilityPolicyError(
-            "invalid_audience",
-            f"audience must be one of {sorted(AUDIENCES)}; got "
-            f"{audience!r}.",
-        )
-    valid_modes = (
-        PEER_REVIEWER_MODES
-        if audience == "peer_reviewer"
-        else REVIEWEE_OBSERVER_MODES
-    )
-    if mode not in valid_modes:
-        raise VisibilityPolicyError(
-            "invalid_mode",
-            f"audience {audience!r} only accepts mode in "
-            f"{sorted(valid_modes)}; got {mode!r}.",
-        )
-    valid_whens = (
-        PEER_REVIEWER_WHENS
-        if audience == "peer_reviewer"
-        else REVIEWEE_OBSERVER_WHENS
-    )
-    if visible_when not in valid_whens:
-        raise VisibilityPolicyError(
-            "invalid_visible_when",
-            f"audience {audience!r} only accepts visible_when in "
-            f"{sorted(valid_whens)}; got {visible_when!r}.",
-        )
-    if observer_tag is not None and audience != "observer":
-        raise VisibilityPolicyError(
-            "observer_tag_misuse",
-            "observer_tag is only meaningful for the observer "
-            "audience.",
-        )
-
-
 def list_for_instrument(
     db: Session, instrument_id: int
 ) -> dict[str, InstrumentViewPolicy]:
     """Read every persisted policy row for the instrument, keyed
     by audience. Audiences with no row simply aren't in the dict —
-    the resolver treats a missing row as ``enabled = FALSE``.
+    the resolver treats a missing row as "this audience cannot
+    view this instrument in any form".
     """
     rows = db.execute(
         select(InstrumentViewPolicy).where(
@@ -297,12 +231,6 @@ def upsert_policy(
     must be ``"raw"`` (baseline self-view always on); Reviewee
     Session-ongoing must be ``None``; the others accept the
     three coherent modes plus ``None``.
-
-    Mirror-writes the legacy ``enabled`` / ``granularity`` /
-    ``identification`` / ``visible_when`` columns from the
-    per-window state, so a rolled-back deploy keeps seeing
-    sensible values. The legacy columns retire in the contract-
-    step PR after this slice ships.
     """
     _validate_per_window(
         audience=audience,
@@ -318,37 +246,6 @@ def upsert_policy(
     if after_release_mode is not None:
         after_release_pair = encode_mode(after_release_mode)
 
-    # Mirror-write the legacy quadruple from the new per-window
-    # state. ``enabled`` is True iff either window is on; the
-    # single-mode encoding picks a representative (the
-    # while_ongoing mode when present, else the after_release
-    # mode) — observer can in principle pick different modes per
-    # window, which the single-mode legacy schema can't represent
-    # losslessly; the read path moves off the legacy columns this
-    # slice, and the contract-step PR drops them.
-    any_enabled = (
-        while_ongoing_mode is not None or after_release_mode is not None
-    )
-    if not any_enabled:
-        legacy_mode = "raw"  # placeholder for the NOT NULL columns
-        legacy_granularity, legacy_identification = encode_mode(legacy_mode)
-        legacy_visible_when: str | None = None
-    else:
-        representative = while_ongoing_mode or after_release_mode
-        legacy_mode = representative  # type: ignore[assignment]
-        legacy_granularity, legacy_identification = encode_mode(
-            legacy_mode  # type: ignore[arg-type]
-        )
-        if (
-            while_ongoing_mode is not None
-            and after_release_mode is not None
-        ):
-            legacy_visible_when = "throughout"
-        elif while_ongoing_mode is not None:
-            legacy_visible_when = "while_ongoing"
-        else:
-            legacy_visible_when = "after_release"
-
     existing = db.execute(
         select(InstrumentViewPolicy).where(
             InstrumentViewPolicy.instrument_id == instrument.id,
@@ -357,10 +254,6 @@ def upsert_policy(
     ).scalar_one_or_none()
 
     proposed = {
-        "enabled": any_enabled,
-        "granularity": legacy_granularity,
-        "identification": legacy_identification,
-        "visible_when": legacy_visible_when,
         "while_ongoing_granularity": while_ongoing_pair[0],
         "while_ongoing_identification": while_ongoing_pair[1],
         "after_release_granularity": after_release_pair[0],
@@ -473,15 +366,11 @@ def upsert_many(
 __all__ = [
     "AUDIENCES",
     "MODE_LABELS",
-    "VALID_VISIBLE_WHEN",
-    "PEER_REVIEWER_MODES",
-    "PEER_REVIEWER_WHENS",
-    "REVIEWEE_OBSERVER_MODES",
-    "REVIEWEE_OBSERVER_WHENS",
     "VisibilityPolicyError",
     "decode_mode",
     "encode_mode",
     "list_for_instrument",
     "upsert_many",
     "upsert_policy",
+    "valid_modes_for_cell",
 ]

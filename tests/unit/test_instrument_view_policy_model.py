@@ -1,11 +1,12 @@
 """Unit tests for the ``InstrumentViewPolicy`` model — pins the
 per-instrument visibility-grant contract (UNIQUE on
 instrument_id + audience; ``instrument.view_policies`` cascade)
-before Phase 3 wiring (W7 resolver, W15 Band 3 editor) lights it
-up.
+in its post-contract-step shape: per-window
+``(granularity, identification)`` pairs only, no
+``enabled`` / ``visible_when`` quadruple.
 
 See ``guide/participant_model_upgrade.md`` §3.3 and
-``guide/participant_model_prep.md`` row S2.
+``spec/visibility_policy.md``.
 """
 
 from __future__ import annotations
@@ -47,9 +48,8 @@ def test_policy_persists_and_refetches(db: Session) -> None:
     policy = InstrumentViewPolicy(
         instrument_id=instrument.id,
         audience="reviewee",
-        enabled=True,
-        granularity="per_line",
-        identification="identified",
+        after_release_granularity="row",
+        after_release_identification="deidentified",
     )
     db.add(policy)
     db.commit()
@@ -57,23 +57,27 @@ def test_policy_persists_and_refetches(db: Session) -> None:
     refetched = db.get(InstrumentViewPolicy, policy.id)
     assert refetched is not None
     assert refetched.audience == "reviewee"
-    assert refetched.enabled is True
-    assert refetched.granularity == "per_line"
-    assert refetched.identification == "identified"
+    assert refetched.while_ongoing_granularity is None
+    assert refetched.while_ongoing_identification is None
+    assert refetched.after_release_granularity == "row"
+    assert refetched.after_release_identification == "deidentified"
     assert refetched.observer_tag is None
 
 
-def test_policy_enabled_defaults_to_false(db: Session) -> None:
+def test_policy_per_window_columns_default_to_null(db: Session) -> None:
+    """All four per-window columns are nullable and default to
+    ``NULL`` ≡ "off in this window"."""
     instrument = _instrument(db)
     policy = InstrumentViewPolicy(
         instrument_id=instrument.id,
         audience="reviewee",
-        granularity="per_line",
-        identification="deidentified",
     )
     db.add(policy)
     db.commit()
-    assert policy.enabled is False
+    assert policy.while_ongoing_granularity is None
+    assert policy.while_ongoing_identification is None
+    assert policy.after_release_granularity is None
+    assert policy.after_release_identification is None
 
 
 def test_policy_unique_per_instrument_audience(db: Session) -> None:
@@ -82,8 +86,8 @@ def test_policy_unique_per_instrument_audience(db: Session) -> None:
         InstrumentViewPolicy(
             instrument_id=instrument.id,
             audience="reviewee",
-            granularity="per_line",
-            identification="identified",
+            after_release_granularity="row",
+            after_release_identification="identified",
         )
     )
     db.commit()
@@ -92,8 +96,8 @@ def test_policy_unique_per_instrument_audience(db: Session) -> None:
         InstrumentViewPolicy(
             instrument_id=instrument.id,
             audience="reviewee",
-            granularity="summarized",
-            identification="deidentified",
+            after_release_granularity="aggregated",
+            after_release_identification="deidentified",
         )
     )
     with pytest.raises(IntegrityError):
@@ -108,8 +112,8 @@ def test_three_audiences_per_instrument_allowed(db: Session) -> None:
             InstrumentViewPolicy(
                 instrument_id=instrument.id,
                 audience=audience,
-                granularity="per_line",
-                identification="identified",
+                while_ongoing_granularity="row",
+                while_ongoing_identification="identified",
             )
         )
     db.commit()
@@ -122,8 +126,8 @@ def test_instrument_view_policies_cascade(db: Session) -> None:
         InstrumentViewPolicy(
             instrument_id=instrument.id,
             audience="reviewee",
-            granularity="per_line",
-            identification="identified",
+            after_release_granularity="row",
+            after_release_identification="identified",
         )
     )
     db.commit()
