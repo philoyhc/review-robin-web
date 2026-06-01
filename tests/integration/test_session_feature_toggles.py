@@ -4,7 +4,7 @@ authored on the Session Edit Details page's User interface
 settings card.
 
 See ``guide/participant_model_upgrade.md`` §3.8 +
-``guide/participant_model_prep.md`` row W6.
+``guide/participant_model_upgrade.md`` row W6.
 """
 
 from __future__ import annotations

@@ -9,10 +9,12 @@ where response visibility is explicit, governed data.
 This is the umbrella document for the post-MVP arc. It is **not**
 a segment plan and carries no PR ladder: fine-grained
 implementation plans (`segment_21_*.md`, `segment_22_*.md`, …)
-are written when specific work is scheduled. The surface slices
-(Phases 2 / 3 of `guide/participant_model_prep.md`) are still
-unscheduled — this doc records the design direction so it is
-not foreclosed and so the eventual segments share a foundation.
+are written when specific work is scheduled. The phase-by-phase
+S / P / W identifier glossary lives in **Appendix A** at the
+foot of this doc; outstanding items live in
+`guide/participant_model_remainder.md`. The participant-model
+work is otherwise pulled into `guide/todo_master.md` under Done
+as each slice ships.
 
 ## Status snapshot
 
@@ -22,7 +24,7 @@ Prep work has been landing ahead of any named segment. As of
 - **Design** locked across §§3.1, 3.2, 3.3, 3.5, 3.7, 3.8, 3.9,
   4, 5 (PRs #1671 → #1677).
 - **Phase 1 schema + audit allowlist** shipped (PR #1678) —
-  every ✓ row in `guide/participant_model_prep.md` Phase 1.
+  every ✓ row in Appendix A's Phase 1 table.
 - **Phase 1 dead-code helpers + dependency stubs** shipped
   (PR #1679) — W1 / W2 / W3 / W4 callable, no consumers yet.
 - **§3.7 friendly-label retirement** + **§3.9 partial** (Quick
@@ -39,8 +41,9 @@ Prep work has been landing ahead of any named segment. As of
   follow-on polish across PRs #1687 → #1703.
 - **§3.1 Observer roster CSV importer + Setup page CRUD**
   shipped (W10 / PR #1706) — the observer roster is a
-  first-class Setup page; Extract + Quick-Setup integration
-  for observers still pending (L2 in `participant_model_prep.md`).
+  first-class Setup page; Quick Setup slot (W12 / #1754) and
+  Extract Setup row + bundle inclusion (W13 / #1755) closed
+  the round-trip end-to-end.
 - **§5 reviewee + observer placeholder surfaces** shipped
   (PR #1713) — `/me/sessions/{id}/results` +
   `/me/sessions/{id}/collation` render the reviewer-surface
@@ -74,12 +77,32 @@ Prep work has been landing ahead of any named segment. As of
   in the operator's Band 2 intro grid; PR #1734 renames the
   ``summarized`` mode's display label to "Anonymized
   summaries" everywhere it surfaces.
-- **W7 resolver + W16 reviewee `/results` body + W17 observer
-  `/collation` body** still pending — the per-window pair
-  columns are the read source the resolver will consume.
+- **§5 reviewee `/results` body — all three visibility modes**
+  shipped (W16 / PRs #1737 → #1749) — raw + anonymized +
+  summarized aggregates (median / min / max for numerical,
+  per-choice frequency + percentage for List, total + average
+  character length for String).
+- **§6 Acknowledge gesture** shipped (W19 / PR #1750) —
+  bottom Acknowledge card on `/me/sessions/{id}/results` with
+  checkbox-gated button, post-ack pill, idempotent POST,
+  `reviewee.results_acknowledged` audit event.
+- **§3.3 reviewee-reachability soft warning** on the Validate
+  page shipped (W8 / PR #1758) — `reviewees.unreachable_for_results`
+  rule (severity = warning, non-blocking) flags active
+  reviewees whose `email_or_identifier` isn't a deliverable
+  email, since the `/results` surface needs email auth.
+- **§3.9 reviewer `profile_link` Setup mirror** shipped (W11
+  in-scope / PR #1756). Services / Setup route + template /
+  friendly label / preview-column visibility align with the
+  reviewee treatment. Two out-of-scope touchpoints
+  (display-fields seeding + operator-side reviewer-summary
+  cell styling) stay parked.
+- **§7 observer `/collation` body** still pending (W17, with
+  the supporting service module W5 bundled).
 
-The detailed audit lives at `guide/participant_model_prep.md`;
-this doc stays the rationale-and-design surface.
+Outstanding items track in `guide/participant_model_remainder.md`.
+Appendix A at the foot of this doc carries the full S / P / W
+identifier glossary with per-item status + PR pointers.
 
 ## Roadmap numbering
 
@@ -328,8 +351,8 @@ As a corollary, the **Reviewer scope is strictly self-only**
 in the policy table: a reviewer's grant covers only the
 responses they themselves keyed in. A future operator-level
 "Self only / All peers" toggle (a `peer_scope` column) is
-sketched as **S13** in `guide/participant_model_prep.md` —
-parked, not actively in design, because the same use case
+sketched as **S13** in Appendix A — parked, not actively in
+design, because the same use case
 might be served by an Operator- or Observer-published report
 instead.
 
@@ -1020,7 +1043,84 @@ are marked.
   notification half depends on it.
 - **`spec/rule_based_assignment.md`** — the eligibility engine
   this work builds on unchanged.
-- **`guide/todo_master.md`** — the roadmap; it tracks the MVP
-  (segments 1–20) only. The participant-model upgrade is
-  deliberately not in it — a dedicated todo file is started
-  when this work begins.
+- **`guide/todo_master.md`** — the roadmap. Tracks both the MVP
+  (segments 1–20) and every shipped participant-model slice
+  under Done; outstanding items live in
+  `guide/participant_model_remainder.md`.
+- **`guide/participant_model_remainder.md`** — focused filter on
+  this doc listing only the items still to ship. Refresh
+  whenever a row moves out by adding the matching Done entry
+  in `todo_master.md`.
+
+---
+
+## Appendix A — Implementation-phase identifier glossary
+
+The participant-model design above is also the source for the
+**S<N> / P<N> / W<N>** identifiers cited inline. The categorisation
+classifies each change by implementation phase:
+
+1. **Schema (S)** — additive migrations + `EVENT_SCHEMAS` rows.
+2. **UI placeholders (P)** — empty surfaces establishing layout
+   and navigation without functionality.
+3. **Wiring & logic (W)** — services, route guards, helpers,
+   business rules; lights up placeholders.
+
+This glossary supersedes the standalone `participant_model_prep.md`
+audit doc (retired 2026-06-01). The full ship trail is in
+`guide/todo_master.md`'s Done section; the currently-outstanding
+subset is in `guide/participant_model_remainder.md`.
+
+### Phase 1 — Schema
+
+| # | Change | Status |
+|---|---|---|
+| S1 | New `observers` table | ✓ shipped (#1678) |
+| S2 | New `instrument_view_policies` table | ✓ shipped (#1678) |
+| S3–S6 | Schedule columns (`scheduled_activate_at` / `deadline` / `responses_release_at` / `responses_release_until`) | ✓ pre-positioned by Segment 18G; S12 reshaped the release-window close to a datetime |
+| S7 | `sessions.relationships_enabled` | ✓ shipped (#1678) |
+| S8 | `sessions.observers_enabled` | ✓ shipped (#1678) |
+| S9 | `reviewees.results_acknowledged_at` | ✓ shipped (#1678); lit up by W19 (#1750) |
+| S10 | New event types in `EVENT_SCHEMAS` (`observer.*`, `instrument.view_policy_set`, `session.feature_toggled`, `session.responses_released` / `_release_stopped`, `reviewee.results_acknowledged`, `session.observers_extracted`) | ✓ shipped (#1678 + add-ons through #1758) |
+| S11 | `reviewers.profile_link` column | ✓ shipped (#1678); surface mirror W11 |
+| S12 | Visibility-window axis + release-until datetime — `instrument_view_policies.visible_when` (later retired by S14) + `sessions.responses_release_until` replacing `release_until_offset` | ✓ shipped — Alembic `f4a92b3c6d18` |
+| S13 | *(parked)* `instrument_view_policies.peer_scope` | ✘ parked — see §3.3 "Scope of the visibility policy" |
+| S14 | Per-window mode pairs on `instrument_view_policies` (`while_ongoing_*` / `after_release_*`); legacy `enabled` / `granularity` / `identification` / `visible_when` quadruple retired | ✓ shipped — Alembic `a7e3b1d92c64` (expand), #1730 (read-path swap), `b8f4c2a91d35` (contract) |
+
+### Phase 2 — UI placeholders
+
+| # | Placeholder | Status |
+|---|---|---|
+| P1 | Empty Observers Setup page | ✓ shipped (#1686 + polish #1687–#1692); lit up by W10 (#1706) |
+| P2 | Band 3 visibility-policy card | ✓ shipped (#1656); lit up by W15 |
+| P3 | Session-schedule authoring card | ✓ shipped (#1656); lit up by W14 (#1716) |
+| P4 | Two-checkbox card on Session Settings + New Session | ✓ shipped (#1685 + #1705); wired by W6 |
+| P5 | Empty `/me/sessions/{id}/results` page | ✓ shipped (#1713); body wired by W16 |
+| P6 | Empty `/me/sessions/{id}/collation` page | ✓ shipped (#1713); body wiring pending (W17) |
+| P7 | Role-pill column on `/me/` lobby | ✓ shipped (#1684, polish through #1715) |
+
+### Phase 3 — Wiring & logic
+
+| # | Item | Status |
+|---|---|---|
+| W1 | `is_email_identified(reviewee)` helper | ✓ shipped (#1679) |
+| W2 | `require_reviewee_in_session` dep | ✓ shipped (#1679) |
+| W3 | `require_observer_in_session` dep | ✓ shipped (#1679) |
+| W4 | Cross-role query helper shape | ✓ retired with L1 (#1757) — W18 built the union inline in `_dashboard.py` |
+| W5 | `app/services/collation.py` service | ✘ bundled into W17 — no useful pre-positioning |
+| W6 | Per-session toggle wiring | ✓ shipped (#1685 + #1686) |
+| W7 | Visibility-policy resolver | ✓ shipped alongside W15 |
+| W8 | Reviewee-reachability warning on Validate | ✓ shipped (#1758) |
+| W9 | Friendly-label retirement on reviewee identity slots | ✓ shipped (#1680) |
+| W10 | Observer CSV importer + Setup page wiring | ✓ shipped (#1706) |
+| W11 | Reviewer `profile_link` surface mirror | ⚠ Setup mirror shipped (#1680 + #1756); display-fields seeding + operator reviewer-summary cell parked — see `_remainder.md` |
+| W12 | Quick Setup Observer slot | ✓ shipped (#1754) |
+| W13 | Extract Setup observer shapes | ✓ shipped (#1755) |
+| W14 | Session schedule authoring | ✓ shipped (#1716, S12 reshape after) |
+| W15 | Band 3 visibility-policy editor | ✓ shipped (#1728 + #1730 + #1732–#1734) |
+| W16 | Reviewee results surface body | ✓ shipped (#1737 → #1749) — raw / anonymized / summarized |
+| W17 | Observer collation surface body | ✘ outstanding — see `_remainder.md` |
+| W18 | Unified `/me/` lobby cross-role query | ✓ shipped (#1709, polish through #1715) |
+| W19 | `Acknowledge` flow | ✓ shipped (#1750) |
+| W20 | Reviewee / observer email notifications | ✘ blocked on Segment 14B |
+| W21 | Magic-link landing for reviewees / observers | ✘ blocked on `invitations`-extensibility design call |
