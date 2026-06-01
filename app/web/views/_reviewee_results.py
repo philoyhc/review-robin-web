@@ -455,8 +455,22 @@ def build_reviewee_results_context(
             (f for f in instrument.response_fields if f.visible),
             key=lambda f: (f.order, f.id),
         )
-        instrument_display_fields = display_fields_by_instrument.get(
-            instrument.id, []
+        # Group-scoped instruments drop display field columns
+        # entirely — the reviewer surface (``review_surface.html``)
+        # + the reviewer summary (``_reviewer_summary.py``) do the
+        # same, on the rationale that the per-row identity for a
+        # group-scoped instrument is the GROUP, not individual
+        # reviewees. Carrying per-reviewee tag / profile-link
+        # columns alongside a group row would fan the identity
+        # axis out into 4-5 distinct columns and lose the table's
+        # row-per-reviewer shape. The reviewee surface mirrors
+        # this — for a group-scoped instrument, only the
+        # Reviewer identity column + the response field columns
+        # render.
+        instrument_display_fields = (
+            []
+            if is_group
+            else display_fields_by_instrument.get(instrument.id, [])
         )
         widths_by_col_key: dict[str, int] = dict(
             instrument.column_widths or {}

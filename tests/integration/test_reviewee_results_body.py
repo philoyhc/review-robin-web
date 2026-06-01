@@ -868,3 +868,160 @@ def test_results_columns_drop_reviewee_identity_display_fields(
     assert table_close != -1
     table_section = body_lower[table_open:table_close]
     assert "carol" not in table_section
+
+
+# ── Group-scoped instrument rendering ────────────────────────────────
+
+
+def test_results_body_group_scoped_drops_display_field_columns(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """For a group-scoped instrument, the reviewee surface drops
+    every display-field column entirely — mirroring the reviewer
+    surface + reviewer summary's group rendering. The per-row
+    identity for a group-scoped instrument is conceptually the
+    *group*, not individual members; fanning reviewee-tag
+    columns out alongside a group row would split the table's
+    identity axis into 4-5 distinct columns and lose its
+    row-per-reviewer shape.
+
+    Pin: a group-scoped instrument with a visible
+    ``reviewee.tag_1`` display field renders with only the
+    Reviewer identity column + the response field columns. The
+    tag column header doesn't appear; no tag value cell leaks
+    onto the page either.
+    """
+    operator = make_client(alice)
+    # Manual setup so we can add a group-scoped instrument
+    # before activation. Mirrors the pattern in
+    # ``test_reviewer_response_flow.test_group_instrument_save_fans_out_to_all_members``.
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Results", "code": "grp-res"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-res")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Squad-A\n"
+                b"Dan,dan@example.edu,Squad-A\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    # Pull the group-scoped instrument out so we can configure
+    # display fields + the visibility policy. Drop the seeded
+    # per-reviewee instrument so this test only exercises the
+    # group case.
+    group_instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    other_instruments = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_(None))
+    ).scalars().all()
+    for other in other_instruments:
+        db.delete(other)
+    db.commit()
+    # Add a visible reviewee.tag_1 display field on the group
+    # instrument — its column must NOT surface on the reviewee
+    # results page.
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=group_instrument.id,
+            source_type="reviewee",
+            source_field="tag_1",
+            label="Squad",
+            order=1,
+            visible=True,
+        )
+    )
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    operator.get(
+        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+    )
+    activate_response = operator.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert activate_response.status_code == 303
+    db.refresh(review_session)
+
+    _seed_submitted_responses(
+        db,
+        review_session,
+        instrument=group_instrument,
+        comments_value="Team did well.",
+    )
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=group_instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="raw",
+        user=_operator_user(db),
+    )
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+
+    # Section + Reviewer column render.
+    assert "No responses to view yet." not in body
+    assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
+    # The seeded response surfaces.
+    assert "Team did well." in body
+    # Critically: the reviewee.tag_1 display column ("Squad")
+    # does NOT surface — group-scoped instruments drop display
+    # field columns to keep the table's row-per-reviewer shape.
+    table_open = body.find("<table")
+    table_close = body.find("</table>")
+    assert table_open != -1
+    table_section = body[table_open:table_close]
+    assert "Squad" not in table_section
+    assert "Squad-A" not in table_section
+    # Carol's name should not leak into the table body — for a
+    # group-scoped instrument on the reviewee surface the
+    # per-row identity is the Reviewer (Rae), not the
+    # signed-in reviewee.
+    assert "Carol" not in table_section
+    assert "Dan" not in table_section
+    # Exactly one row in the rendered table (Rae's row) — no
+    # per-member fan-out.
+    assert table_section.count("<tr>") == 1 + 1  # thead + 1 body row
