@@ -203,8 +203,11 @@ instrument_view_policies
   instrument_id   FK -> instruments.id    (indexed, NOT NULL)
   audience        String(16)  NOT NULL    'reviewee' | 'peer_reviewer' | 'observer'
   enabled         Boolean     NOT NULL    default FALSE
-  granularity     String(16)  NOT NULL    'per_line' | 'summarized'
+  granularity     String(16)  NOT NULL    'row' | 'aggregated'
   identification  String(16)  NOT NULL    'identified' | 'deidentified'
+  visible_when    String(16)    NULL      (added in S12 — see participant_model_prep.md)
+                                          'while_ongoing' | 'after_release' |
+                                          'throughout' | 'always'
   observer_tag    String        NULL      (observer audience only — restrict the
                                            grant to observers carrying this tag;
                                            NULL = all observers on the session)
@@ -231,13 +234,71 @@ The **operator** is not a row: the operator always sees
 everything, identified and per-line. That is the baseline, not
 a policy.
 
-Two orthogonal **form** axes per grant:
+Three orthogonal axes per grant — two **form** axes (what the
+audience sees) plus one **window** axis (when):
 
-- `granularity` — `per_line` (each reviewer's response shown as
-  its own row) or `summarized` (aggregated — see §7).
+- `granularity` — `row` (each reviewer's response shown as its
+  own line) or `aggregated` (summarised — see §7).
 - `identification` — `identified` (the responding reviewer's
   name is shown) or `deidentified` (responses shown without
   attribution).
+- `visible_when` — which session-level window applies to this
+  grant. See **Visibility windows** below.
+
+The two form axes are not all four combinations open — only
+three modes are coherent for a participant audience:
+
+| Operator-facing mode | granularity | identification |
+|---|---|---|
+| Raw | `row` | `identified` |
+| Anonymized | `row` | `deidentified` |
+| Summarized | `aggregated` | `deidentified` |
+
+`aggregated` + `identified` is incoherent ("average Alice"
+isn't a thing); the service rejects it. The Band 3 editor
+presents three named modes; the encoder maps each onto the
+two columns.
+
+**Visibility windows (`visible_when`).** The operator picks one
+of four window values per grant. Three are reachable by the
+non-operator audiences in this table; `always` is reserved
+for the operator (who isn't an audience row — see paragraph
+above).
+
+| `visible_when` | Window | Drawn from |
+|---|---|---|
+| `while_ongoing` | `[sessions.activated_at, sessions.deadline)` | Session lifecycle — the same window the reviewer surface stays reachable in. |
+| `after_release` | `[sessions.responses_release_at, sessions.responses_release_at + sessions.release_until_offset)` | The Release-responses window authored on Session Edit Details / Create New Session (W14, PR #1716). |
+| `throughout` | Union of the two windows above | Resolver returns true if *either* window is currently open. Useful when the operator wants results visible both during the review and after release without authoring two policy rows. |
+| `always` | Unconditional | Reserved — operator-only semantics today; the column accepts it for forward-compatibility (e.g. a future per-instrument `peer_reviewer` always-on knob). |
+
+**Operator buttons for the After-release window.** The
+`after_release` window can be driven by the scheduled
+`responses_release_at` + `release_until_offset` columns
+(operator authors on the Edit / Create forms) **or** by two
+session-level Operations buttons that override the schedule:
+
+- **Release responses now** — stamps `responses_release_at =
+  now()` (if unset or in the future) and clears any prior
+  `responses_release_stopped_at`. Emits
+  `session.responses_released` audit (snapshot).
+- **Stop release** — stamps `sessions.responses_release_stopped_at
+  = now()`. Emits `session.responses_release_stopped` audit
+  (snapshot).
+
+View-time predicate, used by the resolver for both
+`after_release` and the after-release half of `throughout`:
+
+> *Release window is open* ⇔ `responses_release_at IS NOT NULL`
+> AND `now() ≥ responses_release_at` AND `now() <
+> responses_release_at + release_until_offset` (or open-ended
+> if offset is NULL) AND `responses_release_stopped_at IS NULL`.
+
+**Archive forces zero visibility.** When `sessions.status =
+'archived'`, the resolver returns `enabled = FALSE` for every
+non-operator audience regardless of `visible_when`. No schema
+change — pure view-time gate, mirrors how archive retires a
+session out of reviewer reach today.
 
 This subsumes any "confidential instrument" flag: a
 *confidential* instrument is simply one whose `reviewee` policy
@@ -309,15 +370,44 @@ instrument's results released earlier than another's), these
 move to a per-instrument table — flagged as an open question
 (§9), not built up front.
 
+**Operator-explicit stop (S12).** One extra column on `sessions`
+lets the operator end an open release window before the
+scheduled `+release_until_offset` boundary:
+
+```
+sessions
+  + responses_release_stopped_at  DateTime(tz)  NULL  (S12 — stamped by the
+                                                       Stop-release button;
+                                                       NULL = window is not
+                                                       explicitly stopped)
+```
+
+Paired with the existing `responses_release_at` /
+`release_until_offset`, this gives the resolver one predicate
+that covers both the scheduled and the operator-driven cases —
+see the **Visibility windows** subsection of §3.3 for the full
+expression. Release-now writes `responses_release_at = now()`
+on the existing column (no new schema). Both buttons emit
+audit events (`session.responses_released` /
+`session.responses_release_stopped`).
+
 ### 3.5 Audit events
 
 New emitters, registered in `audit.EVENT_SCHEMAS` per the 11K
 canonical-envelope convention:
 
 - `instrument.view_policy_set` — operator changes a visibility
-  grant (changes envelope).
+  grant (changes envelope). Covers any axis: `enabled`,
+  `granularity`, `identification`, `visible_when`,
+  `observer_tag`.
 - `session.schedule_set` — operator sets / clears a schedule
   window.
+- `session.responses_released` (S12) — operator pressed
+  Release-responses-now (snapshot envelope; carries
+  `responses_release_at`).
+- `session.responses_release_stopped` (S12) — operator pressed
+  Stop-release (snapshot envelope; carries
+  `responses_release_stopped_at`).
 - `observer.added` / `observer.removed` / `observer.bulk_*` —
   mirror the `reviewer.*` family.
 - `results.released` — the first moment a collation becomes
