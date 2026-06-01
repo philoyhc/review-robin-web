@@ -1,23 +1,23 @@
-"""Participant-model support helpers — Phase 1 dead-code stubs.
+"""Participant-model support helpers.
 
-Lands the public surface (function names, signatures, return
-types) the later participant-model slices will consume, so each
-slice is a one-line wire-up rather than its own design call. No
-caller in this PR; integration coverage arrives with the surfaces
-in Phase 2 / Phase 3.
+Owns the participant-side predicates that the route guards and
+surfaces call into. Previously also held a shape-only
+``sessions_for_user`` / ``ParticipantSession`` stub for the W4
+cross-role lobby query — that retired 2026-06-01 when the W18
+implementation chose to build the union inline in
+``app/web/routes_reviewer/_dashboard.py`` rather than route
+through the stub (see L1 in the participant-model remainder
+doc, now closed).
 
-See ``guide/participant_model_upgrade.md`` §3.2, §5 and
-``guide/participant_model_prep.md`` rows W1, W4.
+See ``guide/participant_model_upgrade.md`` §3.2 and
+``guide/participant_model_prep.md`` row W1.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 
-from sqlalchemy.orm import Session
-
-from app.db.models import ReviewSession, Reviewee, User
+from app.db.models import Reviewee
 
 
 # Same shape as the reviewer-side ``_EMAIL_RE`` in
@@ -43,41 +43,3 @@ def is_email_identified(reviewee: Reviewee) -> bool:
     """
     value = (reviewee.email_or_identifier or "").strip()
     return bool(_EMAIL_RE.fullmatch(value))
-
-
-@dataclass(frozen=True)
-class ParticipantSession:
-    """One row of the unified ``/me/`` lobby table — a session
-    the signed-in identity touches in one or more participant
-    roles, with the role-pill flags driving the table render.
-
-    Shape stable from Phase 1; the lobby slice (Phase 3 W18)
-    populates instances by unioning reviewers / email-identified
-    reviewees / observers for the user.
-    """
-
-    review_session: ReviewSession
-    is_reviewer: bool
-    is_reviewee: bool
-    is_observer: bool
-
-
-def sessions_for_user(
-    user: User, db: Session
-) -> list[ParticipantSession]:
-    """Cross-role lobby query — returns every session the user
-    touches as reviewer, reviewee, or observer, each row tagged
-    with role-pill flags.
-
-    Phase 1 stub returns an empty list; the real union query
-    (reviewers / email-identified reviewees / observers, all
-    matched case-insensitively on email) lands with the lobby
-    slice (W18). The signature is stable from this point so the
-    consumer can wire against it without rework.
-    """
-    # Intentional empty-list stub — callers should not exist
-    # yet. The ``db`` parameter is kept on the signature so the
-    # slice that lights this up doesn't need to change call
-    # sites.
-    del user, db
-    return []
