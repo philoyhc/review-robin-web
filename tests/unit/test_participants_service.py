@@ -1,9 +1,11 @@
-"""Unit tests for ``app/services/participants.py`` — the Phase 1
-helper / shape stubs.
-
-Covers ``is_email_identified`` (W1) and the ``sessions_for_user``
-+ ``ParticipantSession`` shape (W4). See
-``guide/participant_model_upgrade.md`` §3.2, §5 and
+"""Unit tests for ``app/services/participants.py`` — the
+participant-side predicates the route guards and surfaces call
+into. Covers ``is_email_identified`` (W1). The earlier
+``sessions_for_user`` / ``ParticipantSession`` shape stub retired
+2026-06-01 alongside the cross-role lobby cleanup (L1 from the
+participant-model remainder doc) — W18 built the union inline in
+``_dashboard.py`` and never consumed the stub. See
+``guide/participant_model_upgrade.md`` §3.2 and
 ``guide/participant_model_prep.md``.
 """
 
@@ -90,21 +92,3 @@ def test_is_email_identified_trims_surrounding_whitespace(
     )
     assert participants.is_email_identified(r) is True
 
-
-def test_sessions_for_user_stub_returns_empty_list(db: Session) -> None:
-    user = User(email="me@x.edu", display_name="Me")
-    db.add(user)
-    db.flush()
-    result = participants.sessions_for_user(user, db)
-    assert result == []
-    assert isinstance(result, list)
-
-
-def test_participant_session_dataclass_is_frozen() -> None:
-    # The lobby will consume immutable rows; pinning the contract
-    # so the slice can rely on hashability / no-mutation.
-    import dataclasses
-
-    fields = {f.name for f in dataclasses.fields(participants.ParticipantSession)}
-    assert fields == {"review_session", "is_reviewer", "is_reviewee", "is_observer"}
-    assert participants.ParticipantSession.__dataclass_params__.frozen is True
