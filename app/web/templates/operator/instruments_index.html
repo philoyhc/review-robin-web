@@ -3543,6 +3543,12 @@
             //     rebuilding the dfsave-bound
             //     ``sort_display_field_id`` / ``sort_dir`` hidden
             //     inputs in ``#sort-spec-inputs-<id>``.
+            //   - Band 3 visibility chips
+            //     (``newModelCycleVisibilityCell``) — rotate the
+            //     per-(audience, window) hidden inputs that ride
+            //     the dfsave form. Chip click mutates
+            //     ``input.value``, so the input event doesn't
+            //     fire; catch the click here.
             instrumentCard.addEventListener('click', function (ev) {
               var t = ev.target;
               if (!t || !t.closest) { return; }
@@ -3557,6 +3563,7 @@
                 || t.closest('[data-new-model-rule-remove]')
                 || t.closest('[data-new-model-unit-add]')
                 || t.closest('[data-new-model-unit-remove]')
+                || t.closest('[data-new-model-vp-cycle-audience]')
                 || t.closest('.sort-btn')) {
                 markDirty();
               }
@@ -3686,7 +3693,7 @@
             "": "—",
             "raw": "Raw responses",
             "anonymized": "Anonymized responses",
-            "summarized": "Summarized responses",
+            "summarized": "Anonymized summaries",
       } %}
       {% macro b3_static_pill(label) %}
         <span class="pill pill-count tag-chip is-selected"
@@ -5287,7 +5294,7 @@
     //   ""           → "—"
     //   "raw"        → "Raw responses"
     //   "anonymized" → "Anonymized responses"
-    //   "summarized" → "Summarized responses"
+    //   "summarized" → "Anonymized summaries"
     // Hidden inputs hitch a ride on the card's main Save form
     // (``dfsave-<id>`` → ``/instruments/{id}/fields/save``); the
     // service validates per-(audience, window) cell rules.
@@ -5295,7 +5302,7 @@
       "": "—",
       "raw": "Raw responses",
       "anonymized": "Anonymized responses",
-      "summarized": "Summarized responses"
+      "summarized": "Anonymized summaries"
     };
     window.newModelCycleVisibilityCell = function (chip) {
       var slugs = (
