@@ -518,6 +518,40 @@ ISO 8601 string. Per-list-entry dedup uses the entry's index
 (e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
 re-ordered list doesn't re-fire already-sent reminders.
 
+**8.2.7 Save-time datetime ordering.** Independently of the
+fire-time guard (§8.2.3), the four operator-set anchor
+datetimes carry an inherent order checked at save time on the
+Edit / Create routes:
+
+> `scheduled_activate_at  ≤  deadline  ≤  responses_release_at  <  responses_release_until`
+
+Each pair is checked only when both members are non-NULL;
+NULL slots impose no constraint. The Start ↔ End and End ↔
+Release-from pairs are enforced by
+`scheduled_events.validate_schedule_ordering`, called after
+the per-field parsers succeed; the Release-from ↔ Release-
+until pair (strict-greater-than, plus the 365-day magnitude
+check) lives inside
+`parse_and_validate_responses_release_until` along with that
+field's parse. Violations raise `ScheduledActivateError` and
+translate to HTTP 422 with the per-pair error message:
+
+| Pair | Error message |
+|---|---|
+| End < Start | `End must be on or after Start.` |
+| Release-from < End | `Release responses from must be on or after End — reviewees can only view results after the review window closes.` |
+| Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
+| Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
+
+The forms also pin the same chain client-side via `min` /
+`max` attributes on each `datetime-local` input and a small
+shared partial (`operator/partials/_schedule_ordering_js.html`)
+that live-updates the bounds as the operator types. The
+client check makes invalid choices grey out in the picker;
+the server check is the load-bearing safety net (mobile
+pickers silently round around `min` / `max` in some browsers,
+and direct POSTs bypass the picker entirely).
+
 ### 8.3 Implementation notes
 
 - **Trigger mechanism — lazy observer.** Settled 2026-05-20.

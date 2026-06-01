@@ -1321,3 +1321,60 @@ def parse_and_validate_responses_release_until(
                 f"from."
             )
     return parsed_aware
+
+
+# --------------------------------------------------------------------------- #
+# Cross-field ordering check                                                  #
+# --------------------------------------------------------------------------- #
+#
+# The four schedule datetimes carry an inherent order:
+#
+#   scheduled_activate_at  ≤  deadline  ≤  responses_release_at  <  responses_release_until
+#
+# Each pair is checked only when both members are set — operators may
+# leave any subset NULL. The per-field parsers handle parse + their
+# own intra-field rules (lead-time floors, magnitude caps); this
+# helper sits one layer above them to enforce the inter-field
+# ordering once every individual parse has succeeded. Same
+# ``ScheduledActivateError`` raised — the route layer translates to
+# 422 just like the other validators.
+#
+# Note ``responses_release_until > responses_release_at`` (strict) is
+# already enforced inside ``parse_and_validate_responses_release_until``
+# along with the 365-day magnitude check; this helper handles the two
+# remaining pairs (``End ≥ Start``, ``Release-from ≥ End``).
+
+
+def validate_schedule_ordering(
+    *,
+    scheduled_activate_at: datetime | None,
+    deadline: datetime | None,
+    responses_release_at: datetime | None,
+) -> None:
+    """Cross-field ordering check across the operator-set schedule
+    datetimes. No return value — raises
+    :class:`ScheduledActivateError` on the first violation. NULL
+    values are treated as "no constraint" (pairs with either side
+    NULL skip silently)."""
+    if (
+        scheduled_activate_at is not None
+        and deadline is not None
+        and _ensure_aware_utc(deadline) < _ensure_aware_utc(
+            scheduled_activate_at
+        )
+    ):
+        raise ScheduledActivateError(
+            "End must be on or after Start."
+        )
+    if (
+        deadline is not None
+        and responses_release_at is not None
+        and _ensure_aware_utc(responses_release_at) < _ensure_aware_utc(
+            deadline
+        )
+    ):
+        raise ScheduledActivateError(
+            "Release responses from must be on or after End — "
+            "reviewees can only view results after the review "
+            "window closes."
+        )

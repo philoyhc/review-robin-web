@@ -83,6 +83,17 @@
              Each label+input pair is its own grid cell, so the
              row's height takes the tallest cell — no drift when
              one label wraps to two lines. #}
+          {# Each datetime input also carries ``min`` / ``max``
+             bounds derived from the adjacent fields so the
+             browser picker greys out invalid choices. The
+             ordered chain is
+             ``scheduled_activate_at ≤ deadline ≤
+             responses_release_at ≤ responses_release_until``.
+             ``rrwBindScheduleOrdering`` (inline script at the
+             bottom of this page) live-updates the bounds as the
+             operator types so the constraints stay tight. The
+             server still revalidates the chain via
+             ``scheduled_events.validate_schedule_ordering``. #}
           <div style="display: grid;
                       grid-template-columns: 1fr 1fr;
                       grid-template-rows: auto auto auto;
@@ -93,20 +104,25 @@
               <label for="scheduled_activate_at">Start (optional)</label>
               <input type="datetime-local" id="scheduled_activate_at"
                      name="scheduled_activate_at"
-                     value="{{ scheduled_activate_at_input_value }}">
+                     value="{{ scheduled_activate_at_input_value }}"
+                     {% if deadline_input_value %}max="{{ deadline_input_value }}"{% endif %}>
             </div>
 
             <div>
               <label for="deadline">End (optional)</label>
               <input type="datetime-local" id="deadline" name="deadline"
-                     value="{{ deadline_input_value }}">
+                     value="{{ deadline_input_value }}"
+                     {% if scheduled_activate_at_input_value %}min="{{ scheduled_activate_at_input_value }}"{% endif %}
+                     {% if responses_release_at_input_value %}max="{{ responses_release_at_input_value }}"{% endif %}>
             </div>
 
             <div>
               <label for="responses_release_at">Release responses from (optional)</label>
               <input type="datetime-local" id="responses_release_at"
                      name="responses_release_at"
-                     value="{{ responses_release_at_input_value }}">
+                     value="{{ responses_release_at_input_value }}"
+                     {% if deadline_input_value %}min="{{ deadline_input_value }}"{% endif %}
+                     {% if responses_release_until_input_value %}max="{{ responses_release_until_input_value }}"{% endif %}>
             </div>
 
             <div>
@@ -127,7 +143,8 @@
               <label for="responses_release_until">Release responses until (optional)</label>
               <input type="datetime-local" id="responses_release_until"
                      name="responses_release_until"
-                     value="{{ responses_release_until_input_value }}">
+                     value="{{ responses_release_until_input_value }}"
+                     {% if responses_release_at_input_value %}min="{{ responses_release_at_input_value }}"{% endif %}>
             </div>
           </div>
         </div>
@@ -397,6 +414,7 @@
     </div>
   </div>
 
+  {% include "operator/partials/_schedule_ordering_js.html" %}
   {% include "operator/partials/_timezone_preview.html" %}
 
   {# Dirty-tracking: Save + Cancel disabled until any input on

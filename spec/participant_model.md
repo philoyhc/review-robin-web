@@ -129,6 +129,8 @@ The Create New Session and Session Edit Details forms author two extra schedule 
 
 Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `responses_release_until` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an until without an anchor is allowed and harmless. S12 retired the W14 `release_until_offset` (ISO 8601 duration) in favour of this absolute datetime so the form input and the operator's forthcoming Stop release button can write the same column.
 
+The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
+
 **Consumer status.** No surface reads these columns yet — they're operator-authorable now but consumed only when W16 (reviewee results) and W17 (observer collation) wire the window into the placeholder routes' reachability gates.
 
 ---

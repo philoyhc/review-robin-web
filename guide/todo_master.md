@@ -1538,6 +1538,64 @@ in this stream).
 
 ---
 
+### Participant-model S12 + schedule ordering — done 2026-06-01
+
+Two follow-ons on top of the surface-slice stream above:
+
+- **S12 visibility-window axis + release-until datetime
+  swap** (PR #1724). Alembic `f4a92b3c6d18` adds
+  `instrument_view_policies.visible_when` (nullable
+  `String(16)` — values `while_ongoing` / `after_release` /
+  `throughout` / `always` reserved) and
+  `sessions.responses_release_until` (nullable
+  `DateTime(tz)`), and **retires** the W14-shipped
+  `release_until_offset` (ISO 8601 duration string) in
+  favour of an absolute close datetime. Both the Edit /
+  Create form's "Release responses until" input (now a
+  `datetime-local`) and the operator's forthcoming Stop
+  release button write to the same column. Migration
+  backfills `release_at + parse_iso_duration(offset)`
+  where both source columns are set; offset-only rows
+  drop the staged offset silently (the new shape has no
+  way to carry an offset without an anchor — call-out
+  added on PR #1723 by Codex review).
+  `parse_and_validate_responses_release_until` enforces
+  `until > at` plus a 365-day magnitude check when both
+  are set. Two new audit events registered in
+  `EVENT_SCHEMAS`: `session.responses_released` /
+  `session.responses_release_stopped` (buttons + emitters
+  ship later).
+
+- **Cross-field schedule ordering + picker bounds**
+  (this PR). The four operator-set datetime anchors
+  (`scheduled_activate_at` / `deadline` /
+  `responses_release_at` / `responses_release_until`)
+  now carry a strict ordering chain enforced at save
+  time:
+  new `scheduled_events.validate_schedule_ordering`
+  helper checks **Start ≤ End** and **End ≤ Release-from**
+  after every per-field parser; both Edit and Create
+  routes call it and raise 422 on the first violation.
+  (Release-until > Release-from + 365d cap already
+  handled inside `parse_and_validate_responses_release_until`.)
+  Client-side, the four `datetime-local` inputs grow
+  `min` / `max` attributes that the browser picker
+  honours; a small shared partial
+  (`operator/partials/_schedule_ordering_js.html`)
+  live-updates the bounds as the operator types. The
+  shipped invite / reminder offset validators already
+  cover the user-stated rules (invite anchored on Start
+  + fires before Start ⇒ before End; reminder anchored
+  on End + minimum 1-hour notice gap = "at least 1hr
+  before End"); no new helpers needed for those families.
+
+Spec touched: `spec/lifecycle.md` §8.2.7 (new save-time
+ordering subsection), `spec/settings_inventory.md`
+(per-field rows), `spec/operator_ui_concept.md`,
+`spec/participant_model.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
