@@ -399,6 +399,22 @@ Migration writes `responses_release_until = responses_release_at
 + parse_iso_duration(release_until_offset)` on any row where
 both source columns are set, then drops `release_until_offset`.
 
+**Offset-only rows (`release_until_offset IS NOT NULL` AND
+`responses_release_at IS NULL`)** — these exist today because
+the W14 validator
+(`parse_and_validate_release_until_offset`) deliberately accepts
+the offset without an anchor; the §8.2.2 anchor-null rule
+treats it as inert until the anchor is later set. Under the
+new absolute-datetime model the staged offset has no
+translation (there is no anchor to compute the close
+datetime against), so the migration **drops these offsets
+silently** and leaves `responses_release_until` NULL.
+Operators who had staged an offset alone must re-enter a close
+datetime on the form after the migration. We accept this as a
+deliberate data-clear rather than carry a vestigial column
+through the cutover — exploratory offsets without an anchor
+are rare in practice and don't generalise to the new shape.
+
 Paired with the existing `responses_release_at`, this gives
 the resolver one predicate that covers scheduled and
 operator-driven close uniformly — see the **Visibility
