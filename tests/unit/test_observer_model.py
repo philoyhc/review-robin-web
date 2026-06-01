@@ -3,7 +3,7 @@ roster contract (UNIQUE on session_id + email; ``session.observers``
 cascade) before Phase 2 / Phase 3 slices build on top.
 
 See ``guide/participant_model_upgrade.md`` §3.1 and
-``guide/participant_model_prep.md`` row S1.
+``guide/participant_model_upgrade.md`` row S1.
 """
 
 from __future__ import annotations

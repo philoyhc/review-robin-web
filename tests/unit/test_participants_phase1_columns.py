@@ -3,7 +3,7 @@ on existing tables — pins ``reviewers.profile_link``,
 ``reviewees.results_acknowledged_at``, and the two session-level
 feature toggles before Phase 2 / Phase 3 slices read them.
 
-See ``guide/participant_model_prep.md`` rows S7, S8, S9, S11.
+See ``guide/participant_model_upgrade.md`` rows S7, S8, S9, S11.
 """
 
 from __future__ import annotations

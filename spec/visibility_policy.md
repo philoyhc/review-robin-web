@@ -10,7 +10,7 @@ The visibility policy governs **the information flow from reviewers to the revie
 
 Keeping the two mechanisms separate avoids loading the per-instrument audience policy with cohort-aggregate semantics it isn't shaped for (e.g. a reviewer who reviewed only Alice would otherwise need to see *"summarised across all reviewees"* they have no pairwise connection to). The pairwise flow is small and local; the resolver can be implemented cleanly against each `(reviewer, reviewee)` edge. Cohort-aggregate publication is a separate slice if and when it lands — design rationale in `guide/participant_model_upgrade.md` §3.3.
 
-A corollary: the **Reviewer scope is strictly self-only** in this policy table (§1.1). A future operator-level "Self only / All peers" toggle is sketched as **S13** in `guide/participant_model_prep.md` — parked, not actively in design, because the same use case is more likely to be served by an Operator- or Observer-published report instead.
+A corollary: the **Reviewer scope is strictly self-only** in this policy table (§1.1). A future operator-level "Self only / All peers" toggle is sketched as **S13** in `guide/participant_model_upgrade.md` Appendix A — parked, not actively in design, because the same use case is more likely to be served by an Operator- or Observer-published report instead.
 
 ---
 
@@ -178,7 +178,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 ## Cross-references
 
 - `guide/participant_model_upgrade.md` §3.3 — design rationale + the audience-scope table.
-- `guide/participant_model_prep.md` — implementation-phase audit (S2 / S12 / W7 / W15 / W16 / W17).
+- `guide/participant_model_upgrade.md` Appendix A — implementation-phase identifier glossary (S2 / S12 / W7 / W15 / W16 / W17).
 - `spec/participant_model.md` — cross-cutting participant-model contract; release-window columns.
 - `spec/instruments.md` — the per-instrument card layout; Band 3 visibility editor sits here.
 - `spec/lifecycle.md` — schedule columns (`responses_release_at` / `responses_release_until`), §8.2.2 anchor-null, §8.2.7 save-time ordering.

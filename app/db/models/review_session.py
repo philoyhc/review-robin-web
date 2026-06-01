@@ -140,7 +140,7 @@ class ReviewSession(Base, TimestampMixin):
     # service layer rejects True→False flips while rows exist;
     # ``session.feature_toggled`` audit event fires on flip. See
     # ``guide/participant_model_upgrade.md`` §3.8 + W6 entry in
-    # ``guide/participant_model_prep.md``.
+    # ``guide/participant_model_upgrade.md``.
     relationships_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default=false()
     )

@@ -1369,7 +1369,7 @@ Foundation for the post-MVP participant-model arc
 dead-code helpers, and small standalone retirements / parity
 gaps ahead of any named segment. The participant-model
 **surface slices** (Phases 2 / 3 in
-`guide/participant_model_prep.md`) remain unscheduled.
+`guide/participant_model_upgrade.md`) remain unscheduled.
 
 Three slices:
 
@@ -1383,7 +1383,7 @@ Three slices:
   `profile_link` parity), 4 (auth posture + magic links — schema
   TBD), 5 (`/me/` lobby + role pills, `/me/sessions/{id}/results`,
   `/me/sessions/{id}/collation`). The implementation-phase audit
-  at `guide/participant_model_prep.md` was restructured in PR
+  at `guide/participant_model_upgrade.md` was restructured in PR
   #1677 from a pre-position framing to **(1) Schema → (2) UI
   placeholders → (3) Wiring & logic** so subsequent prep work
   can land linearly.
@@ -1429,8 +1429,8 @@ Three slices:
     fields, view adapter, reviewer-summary cell styling)
     explicitly deferred.
 
-**Plans:** `guide/participant_model_upgrade.md` (design) +
-`guide/participant_model_prep.md` (implementation-phase audit).
+**Plans:** `guide/participant_model_upgrade.md` (design +
+Appendix A's implementation-phase audit).
 
 ---
 
@@ -1441,7 +1441,7 @@ out the participant-model **surface** slices on top of the
 inert Phase 1 schema and helper stubs. Closes Phase 2
 placeholders P1 / P2 / P3 / P4 / P5 / P6 / P7 and Phase 3
 wiring W6 / W9 / W10 / W14 / W18 from
-`guide/participant_model_prep.md`. Unshipped after this
+`guide/participant_model_upgrade.md`. Unshipped after this
 stream: W4 stub (functionality landed inline in
 `_dashboard.py` instead of `participants.sessions_for_user`),
 W5 / W7 / W8 / W11 (partial) / W12 / W13 / W15 / W16 /
@@ -1531,10 +1531,9 @@ W17 / W19 / W20 / W21.
   and Release responses from ↔ Release responses until
   align row-for-row.
 
-**Plans:** `guide/participant_model_upgrade.md` (design) +
-`guide/participant_model_prep.md` (implementation-phase
-audit — markers + "What's shipped" swept through PR #1717
-in this stream).
+**Plans:** `guide/participant_model_upgrade.md` (design +
+Appendix A's implementation-phase audit — markers swept
+through PR #1717 in this stream).
 
 ---
 
@@ -1593,16 +1592,6 @@ Spec touched: `spec/lifecycle.md` §8.2.7 (new save-time
 ordering subsection), `spec/settings_inventory.md`
 (per-field rows), `spec/operator_ui_concept.md`,
 `spec/participant_model.md`.
-
----
-
-## Upcoming
-
-Each item below has a detailed plan in its own doc; entries
-here are 1-3 lines for at-a-glance sequencing. Catalog-item
-refs (e.g. "Catalog #33") point at the historical
-`guide/archive/unfinished_business.md` numbering for items
-that originated there before the catalog retired.
 
 ### Reviewee `/results` body + Acknowledge + lobby trim — done 2026-06-01 (PRs #1737 → #1751)
 
@@ -1740,6 +1729,16 @@ W17 as a documentation merge (no separate code surface).
   first offending row. Mapped under the Setup gate. The
   `is_email_identified` helper (W1) is the predicate.
 
+---
+
+## Upcoming
+
+Each item below has a detailed plan in its own doc; entries
+here are 1-3 lines for at-a-glance sequencing. Catalog-item
+refs (e.g. "Catalog #33") point at the historical
+`guide/archive/unfinished_business.md` numbering for items
+that originated there before the catalog retired.
+
 ### Implementation sequence
 
 Outstanding work, mutually independent unless flagged in
@@ -1792,37 +1791,6 @@ dep chains called out at the bottom of this file.
   written for it. Workplan §18 items 1–10 (Start Here
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
-
-> **Beyond the MVP — segments 21+.** This file tracks the
-> current review-platform MVP (segments **1–20**) plus the
-> **Participants Model Prep + Phase 2 / Phase 3 surface
-> slices** now landing ahead of the full segments 21+ work
-> (see the matching Done entries above). All seven Phase 2
-> placeholders (P1–P7) are shipped, along with W6 toggle
-> wiring, W7 visibility-policy resolver, W8 reviewee-
-> reachability warning, W9 friendly-label retirement, W10
-> Observer CRUD, W11 (in-scope) reviewer `profile_link`
-> Setup mirror, W12 Quick Setup Observers slot, W13 Extract
-> Setup Observers row + bundle, W14 session-schedule
-> authoring (Release-from / Release-until), W15 Band 3
-> visibility-policy editor, W16 reviewee `/results` body
-> across all three modes (raw / anonymized / summarized
-> aggregates), W18 cross-role `/me` lobby union, and W19
-> Acknowledge gesture. **Still unscheduled in this file**
-> (each tracked individually in
-> `guide/participant_model_remainder.md` — the focused filter
-> on `_prep.md`): the two out-of-scope W11 touchpoints
-> (display-fields seeding + operator-side reviewer-summary
-> cell styling), observer `/collation` body wiring
-> (W17 + W5 service module bundled), participant-side email
-> notifications (W20 — gated on Segment 14B), and magic-link
-> landings (W21 — blocked on the `invitations`-extensibility
-> design call). The umbrella design lives at
-> `guide/participant_model_upgrade.md`; the
-> implementation-phase audit at
-> `guide/participant_model_prep.md` carries current marker
-> state; `guide/participant_model_remainder.md` is the
-> outstanding-only filter for quick scanning of what's left.
 
 ### Sequencing notes
 

@@ -26,7 +26,7 @@ class Observer(Base, TimestampMixin):
     multi-tag extension is a pure addition rather than a rename
     (§3.1 "Why one tag, not three").
 
-    Lands inert per ``guide/participant_model_prep.md`` Phase 1;
+    Lands inert per ``guide/participant_model_upgrade.md`` Phase 1;
     the Observer Setup page, Quick Setup slot, and surface
     populate this table in Phase 2 / Phase 3.
     """

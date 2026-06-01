@@ -27,7 +27,7 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     session"; a tag value restricts the grant to observers
     carrying that tag.
 
-    Lands inert per ``guide/participant_model_prep.md`` Phase 1;
+    Lands inert per ``guide/participant_model_upgrade.md`` Phase 1;
     the Band 3 editor lights the table up in Phase 3. See
     ``guide/participant_model_upgrade.md`` §3.3.
     """

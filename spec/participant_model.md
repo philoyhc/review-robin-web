@@ -123,7 +123,7 @@ If no role is reachable, the session name renders as plain text.
 
 ### Drift (planned cleanup)
 
-The function `app/services/participants.py::sessions_for_user` was designed as the canonical home for this query but currently returns `[]` — the union lives inline in `_dashboard.py`. Tracked as **L1** in `guide/participant_model_prep.md`. Either retire the helper or migrate the inline logic into it as a follow-on PR.
+The W18 cross-role union lives inline in `_dashboard.py`. The `sessions_for_user` stub originally proposed as the canonical home retired with **L1** (PR #1757) — the inline shape was the W18 implementation choice and never grew a second consumer.
 
 ---
 
@@ -165,21 +165,20 @@ These hold across the participant-model surface and are pinned by regression tes
 
 ## 9. Future work
 
-The participant-model upgrade has more arcs that are not yet live. See `guide/participant_model_prep.md` for the full ledger; the next-most-relevant items in priority order:
+The participant-model upgrade has a small remaining tail. See `guide/participant_model_remainder.md` for the short list; the next-most-relevant items in priority order:
 
 | Item | What's missing |
 |---|---|
-| W8 — Reviewee-reachability warning on Validate | Soft warning calling `participants.is_email_identified` on each reviewee, surfaced on `/validate`. |
-| W12 / W13 — Quick Setup observer slot + Extract observer shapes | Setup-page CRUD ships but the Quick Setup card on Session Home / Create has no Observer slot, and the Extract Data card lacks an Observer extract tile. Round-trip story tracked as **L2** in `guide/participant_model_prep.md`. |
 | W17 — Observer collation body content | The placeholder route renders only the chrome. W17 wires the cross-reviewee collation body with `tag_1` filtering and the visibility-policy resolver. |
 | W21 — Magic-link landings for reviewees / observers | Blocked on the `invitations`-extensibility design call (the table is reviewer-keyed today). |
+| W20 — Reviewee / observer email notifications | Blocked on Segment 14B email infrastructure. |
 
 ---
 
 ## Cross-references
 
-- `guide/participant_model_upgrade.md` — full design rationale + phase plan.
-- `guide/participant_model_prep.md` — implementation-phase audit (S / P / W marker grid + What's shipped + Loose ends).
+- `guide/participant_model_upgrade.md` — full design rationale + phase plan. Appendix A carries the S / P / W identifier glossary with per-item status + PR pointers.
+- `guide/participant_model_remainder.md` — short list of items still to ship or still blocked.
 - `spec/audience_and_identity_model.md` — audience taxonomy (operator / reviewer / reviewee / observer / sysadmin); auth posture.
 - `spec/setup_pages.md` — Observers page contract.
 - `spec/reviewer-surface.md` — `/me` dashboard + reviewer-surface chrome; the role-pill + role-navigator integration points live here.
