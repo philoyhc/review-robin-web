@@ -16,8 +16,8 @@ not foreclosed and so the eventual segments share a foundation.
 
 ## Status snapshot
 
-Prep work has started landing ahead of any named segment. As of
-2026-05-31:
+Prep work has been landing ahead of any named segment. As of
+2026-06-01:
 
 - **Design** locked across §§3.1, 3.2, 3.3, 3.5, 3.7, 3.8, 3.9,
   4, 5 (PRs #1671 → #1677).
@@ -27,16 +27,56 @@ Prep work has started landing ahead of any named segment. As of
   (PR #1679) — W1 / W2 / W3 / W4 callable, no consumers yet.
 - **§3.7 friendly-label retirement** + **§3.9 partial** (Quick
   Setup + Extract for Reviewer PhotoLink) shipped (PR #1680).
-- **§5 lobby column shell** shipped (PR #1684) — the unified
-  participant landing's role-pill column + placeholder
-  "View responses" / "Until" cells are in place; the
-  cross-role query (W18) populates them later.
+- **§5 unified `/me/` lobby** shipped — cross-role union
+  query + role pills folded into the Session cell + role-aware
+  reachability-gated links + role-navigator chip strip on
+  every role-specific surface (PRs #1684, #1709, #1712, #1714,
+  #1715).
 - **§3.8 per-session feature toggles wired end-to-end** —
-  Session Settings card with the two checkboxes + Setup-nav
-  gating + 404 route guards + lock-on-data (PR #1685);
-  Observers placeholder Setup page sits behind the toggle
-  (PR #1686); follow-on polish on the Observers card layout
-  + button + spacing conventions across PRs #1687 → #1703.
+  Session Settings + New Session card with the two checkboxes,
+  Setup-nav gating, 404 route guards, lock-on-data, and the
+  Quick Setup new-session side (PRs #1685, #1686, #1705);
+  follow-on polish across PRs #1687 → #1703.
+- **§3.1 Observer roster CSV importer + Setup page CRUD**
+  shipped (W10 / PR #1706) — the observer roster is a
+  first-class Setup page; Extract + Quick-Setup integration
+  for observers still pending (L2 in `participant_model_prep.md`).
+- **§5 reviewee + observer placeholder surfaces** shipped
+  (PR #1713) — `/me/sessions/{id}/results` +
+  `/me/sessions/{id}/collation` render the reviewer-surface
+  chrome with the standard description card; real bodies
+  land with W16 / W17.
+- **§3.4 release-window authoring (W14)** shipped (PR #1716)
+  + reshape to absolute close datetime (S12 / Alembic
+  `f4a92b3c6d18`) — `responses_release_at` +
+  `responses_release_until` ride end-to-end through the
+  Edit / Create form and Settings-CSV; the Release-now /
+  Stop-release Operations buttons + their audit events are
+  the only piece of the release-window story still pending.
+- **§3.3 Band 3 visibility-policy editor** shipped (W15
+  persistence + S14 per-window mode pairs) — Alembic
+  `a7e3b1d92c64` (expand, four pair columns) + PR #1730
+  (service / view / route / template flip onto the new
+  columns + per-window-axis 3 × 2 chip grid) + Alembic
+  `b8f4c2a91d35` (contract; legacy `enabled` /
+  `granularity` / `identification` / `visible_when`
+  quadruple dropped). Operator card-level Save now persists
+  the visibility table (PR #1733 retired the standalone
+  `/view-policy` POST; hidden inputs ride
+  `form="dfsave-<id>"` and the chip click fires the dirty
+  tracker per PR #1734).
+- **§3.3 reviewer-surface transparency card** shipped
+  (PR #1732) — read-only "Who can see what you wrote (other
+  than admin)" card lands in the per-instrument intro grid
+  on the reviewer surface, mirroring the operator's policy
+  for two non-admin audiences (You / Reviewees). PR #1733
+  adds the matching preview alongside the description card
+  in the operator's Band 2 intro grid; PR #1734 renames the
+  ``summarized`` mode's display label to "Anonymized
+  summaries" everywhere it surfaces.
+- **W7 resolver + W16 reviewee `/results` body + W17 observer
+  `/collation` body** still pending — the per-window pair
+  columns are the read source the resolver will consume.
 
 The detailed audit lives at `guide/participant_model_prep.md`;
 this doc stays the rationale-and-design surface.
@@ -368,9 +408,13 @@ This subsumes any "confidential instrument" flag: a
 row has both windows off. Confidentiality is the absence of a
 viewing grant.
 
-Default on instrument create: all three audiences `enabled =
-FALSE` (today's behaviour — operator-only). The operator opts
-each audience in deliberately.
+Default on instrument create: no policy rows. The resolver
+treats a missing row as "off in both windows" for that
+audience — instrument invisible to it — which matches
+today's operator-only behaviour. The operator opts each
+audience in deliberately on the Band 3 editor (and the
+matching reviewer-surface transparency card / Band 2 preview
+re-render to reflect the change on next page load).
 
 **Reviewee-reachability warning (validation pass, not the Band 3
 editor).** The Band 3 visibility editor stays roster-unaware —
@@ -509,8 +553,11 @@ canonical-envelope convention:
   Stop-release (snapshot envelope; carries
   `responses_release_until`, which the button has just
   stamped to `now()`).
-- `observer.added` / `observer.removed` / `observer.bulk_*` —
-  mirror the `reviewer.*` family.
+- `observer.created` / `observer.updated` /
+  `observer.bulk_inactivated` / `observer.bulk_reactivated` /
+  `observers.imported` / `observers.deleted_all` — mirror the
+  `reviewer.*` family. Shipped by W10 (PR #1706) alongside the
+  CRUD service.
 - `results.released` — the first moment a collation becomes
   viewable for a session (snapshot envelope).
 - `results.acknowledged` — a reviewee marks their results seen
@@ -850,8 +897,10 @@ Decide before any segment in this band is scoped:
    intended answer for participants with no institutional SSO —
    confirm that covers every external case, or scope which do
    not get a surface at all.
-2. **`responses_close_at` vs `deadline`.** Reuse `deadline` as
-   the hard close (recommended) or add a distinct column.
+2. ~~`responses_close_at` vs `deadline`.~~ **Settled** —
+   `deadline` is reused as the hard close. No separate
+   `responses_close_at` column ships; S4 in the prep audit
+   reads as "already exists" against `sessions.deadline`.
 3. **Per-instrument vs per-session viewing window.** §3.4 puts
    the window on the session; confirm no instrument needs its
    own release schedule, or move to a per-instrument table.
@@ -859,39 +908,61 @@ Decide before any segment in this band is scoped:
    enough, or is an `assignment_view_overrides` table needed?
 5. **Free-text summarization.** Concatenated list vs
    operator-curated written summary for `summarized` text
-   fields.
+   fields. (The reviewer-facing display label is now
+   "Anonymized summaries" per PR #1734 — the underlying
+   computation still has to be picked.)
 
 ## 10. Candidate segment breakdown
 
 Not a committed plan — a sketch of how the band might divide
 into `segment_2X_*.md` plans once scoped. Each line is
-plausibly one segment (some may split or merge):
+plausibly one segment (some may split or merge); the ones
+that ended up shipping as named PRs rather than as a segment
+are marked.
 
-- Schema prep — the §3 additions as inert additive migrations.
-- Per-session feature toggles (§3.8) — `relationships_enabled`
-  / `observers_enabled` columns, settings card on New Session
-  + Session Details, lock-on-data, route guards, migration
-  backfill. Ships before Observer roster so Observers slots
-  into the toggle from day one.
-- Observer roster — importer + Setup page (+ Quick Setup +
-  Extract Setup integration per §3.8).
-- Reviewee identity helper — `is_email_identified(reviewee)`
-  + `require_reviewee_in_session`. No schema change (§3.2).
-- Reviewer `profile_link` parity (§3.9) — column add +
-  ~12-file surface mirror in one coordinated slice.
-- Friendly-label retirement for fixed roster columns (§3.7).
-- Magic-link affordance — extend the tokened-landing path to
-  reviewees / observers; operator-selectable per session.
-- Per-instrument visibility-policy authoring.
-- Session schedule authoring + 18G integration.
-- Collation service — summarization + de-identification.
-- Reviewee results surface at ``/me/sessions/{id}/results``.
-- Observer surface at ``/me/sessions/{id}/collation``.
-- Unified participant landing — broaden the existing ``/me/``
-  dashboard query to the cross-role union and add the
-  role-pill column to the table; ships paired with (or after)
-  the surfaces above so the pills route to live pages.
-- Acknowledgement + notifications (gated on 14B).
+- ✓ Schema prep — the §3 additions as inert additive
+  migrations (Phase 1 / #1678).
+- ✓ Per-session feature toggles (§3.8) — `relationships_enabled`
+  / `observers_enabled` columns + Settings + New Session card
+  + lock-on-data + route guards (PRs #1685, #1686, #1705).
+- ✓ Observer roster — importer + Setup page (W10 / PR #1706).
+  Quick Setup observer slot + Extract Setup observer shapes
+  still pending (L2).
+- ✓ Reviewee identity helper —
+  `is_email_identified(reviewee)` + `require_reviewee_in_session`
+  / `require_observer_in_session` (W1 / W2 / W3 / PR #1679).
+- ⚠ Reviewer `profile_link` parity (§3.9) — column add shipped
+  (S11 / #1678); Quick Setup + Extract surface mirror shipped
+  via #1680; the rest of the ~12-file mirror (services / Setup
+  page / display fields / etc.) is still W11's remainder.
+- ✓ Friendly-label retirement for fixed roster columns
+  (§3.7 / W9 / PR #1680).
+- ✘ Magic-link affordance — blocked on the `invitations`
+  extensibility design call (W21).
+- ✓ Per-instrument visibility-policy authoring (W15 + S12 +
+  S14) — Alembic `f4a92b3c6d18` (S12 window axis +
+  responses_release_until), `a7e3b1d92c64` (S14 expand),
+  `b8f4c2a91d35` (S14 contract); plus PRs #1656 (placeholder),
+  #1730 (read-path swap), #1732 (reviewer transparency card),
+  #1733 (card-Save consolidation + Band 2 preview), #1734
+  (chip-click dirty + "Anonymized summaries" rename).
+- ✓ Session schedule authoring + 18G integration — W14 (PR
+  #1716) for `responses_release_at` + `responses_release_until`;
+  Release-now / Stop-release Operations buttons pending.
+- ✘ Collation service — summarization + de-identification.
+- ✘ Reviewee results surface at ``/me/sessions/{id}/results``
+  (W16) — placeholder chrome shipped (P5 / PR #1713); body
+  pending.
+- ✘ Observer surface at ``/me/sessions/{id}/collation``
+  (W17) — placeholder chrome shipped (P6 / PR #1713); body
+  pending.
+- ✓ Unified participant landing — `/me/` cross-role union +
+  role pills + role-aware links + role-navigator chip strip
+  (W18 / PRs #1684, #1709, #1712, #1714, #1715). Helper
+  consolidation in `participants.sessions_for_user` is a
+  cleanup follow-up (L1).
+- ✘ Acknowledgement + notifications (W19 / W20; gated on
+  Segment 14B).
 
 ## 11. Out of scope
 

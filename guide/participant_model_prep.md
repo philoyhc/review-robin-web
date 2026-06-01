@@ -86,7 +86,7 @@ Phase 3.
 | # | Placeholder | Ref | Notes |
 |---|---|---|---|
 | P1 | Empty Observers Setup page | §3.1 | ✓ shipped (#1686, polish via #1687–#1692). Two-column page grid (Upload + Operator actions row above; full-width Observers table; Danger Zone half-width below). Observers table has 6 columns (select-checkbox / Name / Email / Tag1 / Status / Updated) with per-column sort; rendering reads `observers` directly so seeded rows display in place of the mock row. |
-| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | ✓ shipped (#1656). Lives on the Instruments page as the Band 3 section of each instrument card (`instruments_index.html:3620`). Two-column card — left: a `Visibility` table with four audience rows (Operator / Reviewers / Reviewees / Observers); right: the response-fields editor. Operator + Reviewers rows are static pills (`Raw responses` / `Always` and `Raw responses` / `While session ongoing`). Reviewees + Observers rows render toggleable audience chips defaulting unselected; their What (Raw / Summarized / Anonymized) and When (While review ongoing / After release) cycle chips render muted at 0.4 opacity until the audience is selected. The whole block is wrapped in `inert aria-hidden="true"` outside edit mode. All click handlers are placeholder onclick stubs (`newModelToggleAudience` / `newModelCycleButton`) — nothing persists; W15 lights this up by wiring the chips to `instrument_view_policies`. Note: the placeholder uses "Reviewers" + adds an "Operator" row, whereas the schema's `audience` column is `reviewee` / `peer_reviewer` / `observer` — the vocabulary will reconcile at W15. |
+| P2 | Band 3 visibility-policy card on the Instrument editor | §3.3 | ✓ shipped (#1656) → lit up by W15 below. The placeholder card was a 4-row × 2-axis (What / When) chip grid with an explicit "Operator" row and toggleable Reviewees / Observers rows; W15 + S14 replaced it with the per-window-axis 3 × 2 grid (Reviewers / Reviewees / Observers × Session-ongoing / Responses-released) that now lives on the Instruments page (`instruments_index.html`, see W15). The Operator row is gone — Operator visibility is the implicit baseline, not a stored row. |
 | P3 | Session-schedule authoring card on Settings | §3.4 | ✓ shipped (#1656). Lives on the Session Edit Details page (`session_edit.html`) and the New Session form (`session_new.html`) as the right-hand column of the Edit Session Details card — six inputs in a 2-col sub-grid: Start (`scheduled_activate_at`) + End (`deadline`) + Release-responses-from (`responses_release_at`) in the left sub-column; Auto-send-invites (`invite_offsets`) + Auto-send-reminders (`reminder_offsets`) + Release-responses-until (`release_until_offset`) in the right. Note: the two operator-platform datetime fields (Start + End) ship fully wired since Segment 18G, and the two offset inputs since 18G Parts 2/3 — only the two participant-platform fields (`responses_release_at`, `release_until_offset`) render `disabled` with the "Participants platform" placeholder hint. W14 unlocks those two and persists them onto the existing 18G columns. |
 | P4 | Two-checkbox card on New Session form + Session Settings | §3.8 | ✓ shipped (#1685 + #1705). Session Settings side via #1685 (User interface settings card on Session Edit Details: checkboxes inside the main edit form, dirty Save, persisted on submit, lock-on-data UI). New Session form side via #1705 (same card placed above the Quick Setup card; values flow through `SessionCreate` to `sessions.create_session` so the toggles persist on session creation). |
 | P5 | Empty `/me/sessions/{id}/results` page | §5 | ✓ shipped (#1713). Mirrors the reviewer surface chrome — `<h1>{{ session.name }}</h1>` + inline caption "Results of the review" + the standard `rs-status-panel` description card. Gated on `require_reviewee_in_session` (W2). Mount-order note: registered before `_surface` in `routes_reviewer/__init__.py` so the catch-all `/me/sessions/{id}/{page_n}` doesn't swallow the literal `/results` segment. Role-navigator chips added in #1715. |
@@ -127,7 +127,7 @@ Lights up the placeholders.
 | W12 | Quick Setup Observer slot submission | §3.8 | ✘ | Wired Quick Setup card surface; persists to `observers`. |
 | W13 | Extract Setup observer shapes | §3.8 | ✘ | Observer roster CSV (and any later observer-specific extracts) become selectable when S8 = TRUE. |
 | W14 | Session schedule authoring | §3.4 | ✓ shipped (anchor wired in PR #1716; close re-shaped to datetime by S12) | Wires P3's two disabled inputs: `responses_release_at` (datetime-local, parsed via `scheduled_events.parse_and_validate_responses_release_at` — no minimum-lead floor since the operator can backdate Release-from) + `responses_release_until` (datetime-local, parsed via `scheduled_events.parse_and_validate_responses_release_until` — must close after the anchor, within 365 days, when both are set; accepts an until alone under §8.2.2). Both fields ride on `SessionCreate` end-to-end through `sessions.create_session` / `sessions.update_session`, with the latter diffing them for `session.updated` audit emission. The Edit form prefills both via `responses_release_at_input_value` / `responses_release_until_input_value`. S12 retired the original ISO 8601 offset shape (`release_until_offset`, `parse_and_validate_release_until_offset`); the Settings-CSV slot followed (`session.responses_release_until` as a datetime, replacing the string). |
-| W15 | Band 3 visibility-policy editor | §3.3 | ⚠ persistence half shipped | Persistence + per-audience vocabulary + audit emission shipped: new `app/services/visibility_policies.py` (encode / decode the three operator-facing modes Raw / Anonymized / Summarized → the two stored axes `granularity` + `identification`; per-audience valid mode + window vocabulary; `upsert_policy` + `upsert_many` emitting `instrument.view_policy_set` per row touched). New `POST /operator/sessions/{id}/instruments/{instrument_id}/view-policy` route. Band 3 template rewired: Reviewers row gains a 2-step When cycle (`while_ongoing` ⇄ `throughout`); Reviewees + Observers When cycle extends to 3 values (`while_ongoing` / `after_release` / `throughout`); each instrument's Visibility table wraps a form with hidden inputs that the chip JS updates, plus a "Save visibility" button. View adapter `build_instruments_context` carries `band3_visibility_by_instrument` with per-audience prefill. Resolver (W7) + consumer surfaces (W16 / W17) remain unshipped. See `spec/visibility_policy.md` for the consolidated contract. |
+| W15 | Band 3 visibility-policy editor | §3.3 | ✓ shipped (editor + transparency surfaces; resolver W7 + consumer surfaces W16 / W17 still pending) | Editor + persistence + reviewer-surface transparency shipped end-to-end across multiple PRs:<br>• **Service** — `app/services/visibility_policies.py` carries `encode_mode` / `decode_mode` (operator-facing modes Raw / Anonymized / Summarized ↔ the stored `(granularity, identification)` pairs), `_PER_CELL_VALID_MODES` + `valid_modes_for_cell` (per-(audience, window) vocabulary including the fixed cells: Reviewer Session-ongoing pinned to Raw, Reviewee Session-ongoing pinned to off), and `upsert_policy` / `upsert_many` emitting `instrument.view_policy_set` per row touched.<br>• **Schema reshape** — S12 (Alembic `f4a92b3c6d18`) added the `visible_when` window axis + the `responses_release_until` close datetime; S14 (Alembic `a7e3b1d92c64` expand + `b8f4c2a91d35` contract) replaced the single-mode `enabled` / `granularity` / `identification` / `visible_when` quadruple with four per-window pair columns (`while_ongoing_granularity` / `while_ongoing_identification` / `after_release_granularity` / `after_release_identification`); NULL in both members ≡ "off in this window".<br>• **Persistence path** — visibility hidden inputs ride the card's main Save form via `form="dfsave-<id>"`; `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save` reads the six per-(audience, window) form fields alongside the rest of the card's state and calls `upsert_many` (the standalone `/view-policy` POST + "Save visibility" submit retired in PR #1733). The chip click fires the dirty tracker so Save flips active (PR #1734).<br>• **Editor template** — the Band 3 block on `instruments_index.html` renders a 3-row (Reviewers / Reviewees / Observers) × 2-window-column (Session ongoing / Responses released) chip grid. Static pills mark the fixed cells; the remaining four cells cycle through their per-cell valid modes. The Operator row is gone — Operator is the implicit baseline.<br>• **Reviewer-surface transparency card** — read-only "Who can see what you wrote (other than admin)" card lands in the per-instrument intro grid on `review_surface.html`, mirroring the persisted policy for two non-admin audiences (You / Reviewees). Observers are intentionally omitted. PR #1733 adds the matching preview alongside the description card in the operator's Band 2 intro grid (`band2_preview_visibility_rows_by_instrument`). PR #1734 renames the `summarized` mode's display label to "Anonymized summaries" everywhere it surfaces.<br>• **View adapter** — `build_instruments_context` carries `band3_visibility_by_instrument` (the editor's per-audience state) + `band2_preview_visibility_rows_by_instrument` (the Band 2 preview rows). `build_reviewer_visibility_rows` is the shared builder for both the reviewer surface and the operator's Band 2 preview.<br>• **PR trail** — #1656 (P2 placeholder), #1728 (W15 persistence — service / route / template, single-mode encoding), #1724 (S12 — `visible_when` + `responses_release_until`), #1729 (S14 expand — per-window pair columns), #1730 (read-path swap to per-window pairs + UI redesign), #1731 (S14 contract — drop legacy quadruple), #1732 (reviewer transparency card), #1733 (card-Save consolidation + Band 2 preview + Observers row drop on the reviewer surface), #1734 (chip click → Save active + "Anonymized summaries" rename).<br>• **Still pending** — W7 (resolver), W16 (reviewee `/results` body), W17 (observer `/collation` body). See `spec/visibility_policy.md` for the consolidated contract. |
 | W16 | Reviewee results surface | §5 | ✘ | Wires P5: resolves visibility policy via W7, renders the collation in the policy's form, gates on the `results_open_at` window. |
 | W17 | Observer collation surface | §5 | ✘ | Wires P6: resolves visibility policy via W7, filters by observer `tag_1`. |
 | W18 | Unified `/me/` lobby cross-role query | §5 | ✓ shipped (#1709, polish #1712 / #1714 / #1715) | The `/me` dashboard now unions three roster lookups (reviewer / email-identified reviewee / observer, active rows only, case-insensitive email match) and emits one row per session the user touches with the full role list. Reviewer-specific fields (per-reviewer pill, deep link, per-page sub-rows) populate only when the user is an active reviewer; reviewee / observer-only rows show "—" in the Reviewer status column. Session-name + per-pill links resolve by priority Reviewer → Reviewee → Observer with per-role reachability gates (#1714); pills fold into the Session cell (#1712); the same cross-role navigator chip strip appears on each role-specific surface so the user can swap roles without going back to `/me` (#1715). Lives inline in `_dashboard.py` for now — see W4 for the unfinished move into `participants.sessions_for_user`. |
@@ -219,6 +219,62 @@ Lights up the placeholders.
   description card), gated by `require_reviewee_in_session`
   / `require_observer_in_session`. Real body content lands
   with W16 / W17.
+- **Schedule authoring (W14)** + **release-window reshape
+  (S12)** — PR #1716 wired P3's two disabled inputs onto
+  the existing 18G `responses_release_at` /
+  `release_until_offset` columns; S12 (Alembic
+  `f4a92b3c6d18`) then retired the offset shape in favour
+  of `responses_release_until` as an absolute close
+  datetime, with the validator + Settings-CSV slot
+  following. The Release-now / Stop-release Operations
+  buttons + their two audit events
+  (`session.responses_released` /
+  `session.responses_release_stopped`) registered in
+  `EVENT_SCHEMAS` are the remaining piece of the
+  release-window story.
+- **Visibility-policy editor (W15) + per-window mode pairs
+  (S14)** — the Band 3 placeholder (P2 / #1656) was lit
+  up across a sequence of PRs:
+  - **Persistence (W15)** — `app/services/visibility_policies.py`
+    with `encode_mode` / `decode_mode` + per-(audience, window)
+    validation + `upsert_policy` / `upsert_many` emitting
+    `instrument.view_policy_set`; `build_instruments_context`
+    carries `band3_visibility_by_instrument`.
+  - **S14 expand** (Alembic `a7e3b1d92c64`) adds the four
+    per-window mode pair columns
+    (`while_ongoing_granularity` / `_identification` +
+    `after_release_*`) and backfills from the legacy
+    quadruple.
+  - **PR #1730** flips service / route / view / template
+    onto the per-window pair columns and rebuilds the
+    editor as a 3-row × 2-window-column chip grid
+    (Reviewers / Reviewees / Observers × Session ongoing /
+    Responses released).
+  - **S14 contract** (Alembic `b8f4c2a91d35`) drops the
+    legacy `enabled` / `granularity` / `identification` /
+    `visible_when` quadruple.
+  - **Reviewer-surface transparency card** (PR #1732) —
+    read-only "Who can see what you wrote" card lands in
+    the per-instrument intro grid on `review_surface.html`,
+    via the shared `build_reviewer_visibility_rows`
+    builder.
+  - **Card-Save consolidation + Band 2 preview** (PR #1733) —
+    the standalone `/view-policy` POST + "Save visibility"
+    submit retire; visibility hidden inputs ride the card's
+    main Save form via `form="dfsave-<id>"`, and
+    `/fields/save` reads them and calls `upsert_many`. The
+    same builder feeds a read-only preview alongside the
+    description card in the operator's Band 2 intro grid.
+    Observers row dropped from the reviewer-surface card
+    (they're admin-side); the heading gains the "(other
+    than admin)" suffix.
+  - **Chip-click → Save active + label rename** (PR #1734) —
+    `[data-new-model-vp-cycle-audience]` added to the dirty
+    tracker's click allowlist so a visibility-cell click
+    flips Save active; the operator-facing
+    "Summarized responses" label renames to "Anonymized
+    summaries" in the chip selector and the transparency
+    cards.
 
 Each subsequent Phase 2 / Phase 3 slice lights up a subset of
 the Phase 1 schema without doing its own migration.
