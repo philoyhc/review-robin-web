@@ -1025,3 +1025,289 @@ def test_results_body_group_scoped_drops_display_field_columns(
     # Exactly one row in the rendered table (Rae's row) — no
     # per-member fan-out.
     assert table_section.count("<tr>") == 1 + 1  # thead + 1 body row
+
+
+# ── Scope-leak guard: only own / own-group responses surface ─────────
+
+
+def test_results_body_excludes_responses_about_other_reviewees(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A per-reviewee instrument where Rae reviews TWO reviewees
+    (Carol + Dan). Rae submits distinct comments about each.
+    When Carol queries /results, she must see ONLY Rae's
+    response about her — never the response about Dan."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Multi Reviewee", "code": "multi-ree"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "multi-ree")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\n"
+                b"Carol,carol@example.edu\n"
+                b"Dan,dan@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    operator.get(
+        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    # Distinct comments per assignment so we can detect a leak
+    # by string match: Carol's row should NOT carry Dan's text.
+    assignments = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == instrument.id,
+            Assignment.include.is_(True),
+        )
+    ).scalars().all()
+    submitted_at = datetime.now(timezone.utc)
+    for assignment in assignments:
+        reviewee_row = assignment.reviewee
+        if reviewee_row.email_or_identifier == "carol@example.edu":
+            comment_text = "About-Carol comment."
+        else:
+            comment_text = "About-Dan comment."
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=rating.id,
+                value="4",
+                submitted_at=submitted_at,
+            )
+        )
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=comments.id,
+                value=comment_text,
+                submitted_at=submitted_at,
+            )
+        )
+    db.commit()
+
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="raw",
+        user=_operator_user(db),
+    )
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # Carol's own comment surfaces.
+    assert "About-Carol comment." in body
+    # Dan's comment must NOT leak — it's not about Carol.
+    assert "About-Dan comment." not in body
+    # Dan's identity (name / email) must not leak as an identity
+    # either — Carol shouldn't learn what Rae said about Dan.
+    assert "dan@example.edu" not in body
+
+
+def test_results_body_excludes_responses_about_other_groups(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A group-scoped instrument with TWO groups (Squad-A:
+    Carol + Dan, Squad-B: Erin + Frank). Rae reviews both
+    groups and submits distinct comments per group. When Carol
+    queries /results, she must see ONLY Rae's response about
+    her group (Squad-A) — never the Squad-B response."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Multi Group", "code": "multi-grp"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "multi-grp")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Squad-A\n"
+                b"Dan,dan@example.edu,Squad-A\n"
+                b"Erin,erin@example.edu,Squad-B\n"
+                b"Frank,frank@example.edu,Squad-B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    # Drop the seeded per-reviewee instrument so we only test
+    # the group-scoped one.
+    other_instruments = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_(None))
+    ).scalars().all()
+    for other in other_instruments:
+        db.delete(other)
+    db.commit()
+    group_instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    operator.get(
+        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == group_instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == group_instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    # Look up which assignments belong to which group via the
+    # reviewee's tag_1 — Squad-A vs Squad-B.
+    assignments = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == group_instrument.id,
+            Assignment.include.is_(True),
+        )
+    ).scalars().all()
+    submitted_at = datetime.now(timezone.utc)
+    for assignment in assignments:
+        reviewee_row = assignment.reviewee
+        if reviewee_row.tag_1 == "Squad-A":
+            comment_text = "Squad-A: team did well."
+        else:
+            comment_text = "Squad-B: team did poorly."
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=rating.id,
+                value="4",
+                submitted_at=submitted_at,
+            )
+        )
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=comments.id,
+                value=comment_text,
+                submitted_at=submitted_at,
+            )
+        )
+    db.commit()
+
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=group_instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="raw",
+        user=_operator_user(db),
+    )
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    db.commit()
+
+    body = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    ).text
+    # Carol's own group's response surfaces.
+    assert "Squad-A: team did well." in body
+    # Squad-B's response must not leak.
+    assert "Squad-B: team did poorly." not in body
+    # Erin / Frank's names + emails must not leak as identities
+    # — Carol shouldn't learn anything about Squad-B's
+    # composition or responses.
+    assert "Erin" not in body
+    assert "Frank" not in body
+    assert "erin@example.edu" not in body
+    assert "frank@example.edu" not in body
