@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.services import monitoring as monitoring_service
 from app.services import responses as responses_service
+from app.services import visibility_policies
 from app.db.models import (
     Assignment,
     AuditEvent,
@@ -19,6 +20,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    User,
 )
 from ._full_matrix import (
     generate_via_page_button,
@@ -2264,3 +2266,73 @@ def test_surface_hides_response_field_when_visible_false(
     # Rating (visible) still renders; Comments (hidden) does not.
     assert "Rating" in response.text
     assert "Comments" not in response.text
+
+
+def test_surface_visibility_policy_card_reflects_persisted_policy(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer surface renders a read-only "Who can see what
+    you wrote" card next to each instrument's heading card,
+    reflecting the operator's persisted Band 3 policy. Audiences
+    with no row fall back to defaults — for the Observer audience
+    that's both windows off (em-dash)."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-vp-card",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    operator_user = db.execute(
+        select(User).where(User.email == "alice@example.edu")
+    ).scalar_one()
+    # Reviewees: Summarized after release; Observers: Raw both
+    # windows; peer_reviewer: take the baseline (Raw ongoing, off
+    # after release).
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="summarized",
+        user=operator_user,
+    )
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="observer",
+        while_ongoing_mode="raw",
+        after_release_mode="raw",
+        user=operator_user,
+    )
+    db.commit()
+    _activate(operator, db, review_session)
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+
+    assert "data-rs-visibility-policy-card" in body
+    assert "Who can see what you wrote" in body
+    # Column headings.
+    assert "Session ongoing" in body
+    assert "Responses released" in body
+    # Three audience labels in the table.
+    flat = " ".join(body.split())
+    assert "<td style=\"padding: 4px 8px;\">You</td>" in flat
+    assert "<td style=\"padding: 4px 8px;\">Reviewees</td>" in flat
+    assert "<td style=\"padding: 4px 8px;\">Observers</td>" in flat
+    # The reviewee Session-ongoing cell shows the em-dash (strict
+    # per-pair flow); after-release shows Summarized.
+    assert "Summarized responses" in body
+    # The observer-row shows Raw in both cells.
+    assert "Raw responses" in body

@@ -91,6 +91,7 @@ from ._setup import (
 from ._instruments import (
     InstrumentHeading,
     build_instruments_context,
+    build_reviewer_visibility_rows,
     constraint_summary_for_field,
     instrument_heading,
     numeric_column_ch_width,
@@ -220,6 +221,7 @@ __all__ = [
     "build_extract_data_context",
     "build_instruments_context",
     "build_invitations_rows",
+    "build_reviewer_visibility_rows",
     "build_new_session_quick_setup_context",
     "build_preview_picker_context",
     "build_quick_setup_context",

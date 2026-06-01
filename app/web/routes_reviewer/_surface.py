@@ -794,6 +794,20 @@ def _surface_context(
     ]
     instrument_groups.sort(key=lambda g: g["position"])
 
+    # "Who can see what you wrote" transparency table — one
+    # half-width card per instrument, sitting in the empty column
+    # 2 of the intro grid. Read-only mirror of the operator's Band
+    # 3 policy in plain language so the reviewer knows what
+    # downstream audiences (the reviewee, observers) will see and
+    # in what form.
+    visibility_rows_by_instrument = views.build_reviewer_visibility_rows(
+        db, [g["instrument"] for g in instrument_groups]
+    )
+    for group in instrument_groups:
+        group["visibility_rows"] = visibility_rows_by_instrument.get(
+            group["instrument"].id, []
+        )
+
     if preview_mode and page_url_builder is not None:
         prev_page_url = (
             page_url_builder(safe_page_n - 1) if safe_page_n > 1 else None
