@@ -29,6 +29,7 @@ from app.services import (
     instruments as instruments_service,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services import visibility_policies
 from app.web import views
 from app.web.deps import (
     get_or_create_user,
@@ -482,6 +483,73 @@ def instrument_move_display_field(
             f"?editing={instrument.id}#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/view-policy"
+)
+async def instrument_view_policy_save(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(
+        _require_instrument_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save the Band 3 visibility-policy table for one instrument.
+
+    Form payload: per audience in ``peer_reviewer`` / ``reviewee``
+    / ``observer``, three named slots —
+    ``{audience}_enabled`` (checkbox; "true" when ticked),
+    ``{audience}_mode`` (``raw`` / ``anonymized`` /
+    ``summarized``), and ``{audience}_visible_when``
+    (``while_ongoing`` / ``after_release`` / ``throughout``).
+    The service layer rejects values outside the per-audience
+    vocabulary so a direct API call can't bypass the editor.
+    """
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    form = await request.form()
+
+    rows: list[dict[str, object]] = []
+    for audience in visibility_policies.AUDIENCES:
+        enabled = (form.get(f"{audience}_enabled") or "").lower() == "true"
+        mode = (form.get(f"{audience}_mode") or "").strip()
+        visible_when = (
+            form.get(f"{audience}_visible_when") or ""
+        ).strip()
+        if not mode or not visible_when:
+            # An audience the editor didn't render — skip rather
+            # than reject. Lets future audience additions roll out
+            # without a coordinated form-payload change.
+            continue
+        rows.append(
+            {
+                "audience": audience,
+                "enabled": enabled,
+                "mode": mode,
+                "visible_when": visible_when,
+            }
+        )
+
+    try:
+        visibility_policies.upsert_many(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            rows=rows,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except visibility_policies.VisibilityPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.message,
+        ) from exc
+
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
     )
 
 

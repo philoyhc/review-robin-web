@@ -234,6 +234,53 @@ The **operator** is not a row: the operator always sees
 everything, identified and per-line. That is the baseline, not
 a policy.
 
+**Audience scope — what rows each row's grant covers.** The
+audience tells *who* can see; the audience's identity also
+implies *which* responses they can see. The resolver enforces
+the scope rule alongside the policy lookup:
+
+| Audience | Scope of "responses they may see" |
+|---|---|
+| `peer_reviewer` (reviewer viewing own work) | The reviewer's **own** submitted responses on this instrument — never any other reviewer's. Useful for letting reviewers re-read their own work post-submit / across pages. The schema name `peer_reviewer` is historical; today the grant covers self-view only. |
+| `reviewee` | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. The Reviewee surface filters at view time: a reviewee only sees rows whose `Assignment.reviewee_id` (or group containment) matches their identity. |
+| `observer` | All responses about all reviewees, on instruments this observer is granted (subject to `observer_tag`). No self-scope. Observers are the only audience whose grant is cross-cohort. |
+
+These rules are not stored on `instrument_view_policies` —
+they are properties of the audience itself, applied by the
+resolver. The schema's job is to record which audiences are
+enabled, in what form, and during which window; *scope* is
+intrinsic.
+
+**Scope of the visibility policy — strictly per-pair flow.**
+The visibility policy governs **the information flow from
+reviewers to the reviewees they are reviewing** (and the
+mirrors of that flow back to the reviewer themselves and out
+to the relevant observers). It is deliberately **not** a
+mechanism for surfacing cross-cohort summaries — e.g.
+"every reviewer sees the cohort-wide average of every
+instrument, anonymised". Those use cases can come up and are
+worth supporting later, but they belong to a separate
+mechanism — an **Operator- or Observer-published report**
+that someone with cohort-wide standing explicitly makes
+available to one or more audiences. Keeping the two
+mechanisms separate avoids loading the per-instrument
+audience policy with cohort-aggregate semantics it isn't
+shaped for (e.g. a reviewer who reviewed only Alice would
+otherwise need to see "summarised across all reviewees" they
+have no pairwise connection to). The pairwise flow is small,
+local, and the resolver can be implemented cleanly against
+each (reviewer, reviewee) edge; cohort-aggregate publication
+is a separate slice if and when it lands.
+
+As a corollary, the **Reviewer scope is strictly self-only**
+in the policy table: a reviewer's grant covers only the
+responses they themselves keyed in. A future operator-level
+"Self only / All peers" toggle (a `peer_scope` column) is
+sketched as **S13** in `guide/participant_model_prep.md` —
+parked, not actively in design, because the same use case
+might be served by an Operator- or Observer-published report
+instead.
+
 Three orthogonal axes per grant — two **form** axes (what the
 audience sees) plus one **window** axis (when):
 
