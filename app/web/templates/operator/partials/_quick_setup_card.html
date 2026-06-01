@@ -137,9 +137,14 @@
     {% for slot in quick_setup.slots %}
       {{ quick_setup_slot_banner(slot) }}
     {% endfor %}
-    {# Slot layout: first half (Reviewers + Reviewees) on the left,
-       second half (Relationships + Session settings) on the right. #}
-    {% set _split = (quick_setup.slots | length + 1) // 2 %}
+    {# Slot layout: Reviewers + Reviewees on the left, the remaining
+       slots (Relationships [+ Observers when the toggle's on] +
+       Session settings) on the right. ``length // 2`` keeps the
+       split at 2/2 when observers_enabled is off (4 slots) and
+       flips to 2/3 when it's on (5 slots) — the right column
+       always holds the configuration-style slots, even on
+       sessions whose Observer feature is dormant. #}
+    {% set _split = quick_setup.slots | length // 2 %}
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots[:_split] %}

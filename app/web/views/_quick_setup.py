@@ -184,6 +184,7 @@ def build_quick_setup_context(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
+    observer_count = csv_imports.existing_observer_count(db, sid)
 
     cancel_url_for = lambda key: (  # noqa: E731
         f"/operator/sessions/{sid}#quick-setup-{key}"
@@ -228,6 +229,29 @@ def build_quick_setup_context(
             error_message=_error_for("relationships"),
             cancel_url=cancel_url_for("relationships"),
         ),
+    ]
+    # Observers slot — gated on the session-level toggle. When
+    # ``observers_enabled`` is False (the default for sessions
+    # whose operator hasn't opted in to observers), the slot drops
+    # entirely so the right column stays the original 2-row shape;
+    # the toggle lives in Session Edit Details under "User
+    # interface settings" and is also surfaced as a roster filter
+    # on the rest of the UI.
+    if review_session.observers_enabled:
+        slots.append(
+            QuickSetupSlot(
+                key="observers",
+                label="Observers",
+                count=observer_count,
+                mode="file_upload",
+                is_wired=True,
+                wire_url=f"/operator/sessions/{sid}/quick-setup/observers",
+                coming_in=None,
+                error_message=_error_for("observers"),
+                cancel_url=cancel_url_for("observers"),
+            )
+        )
+    slots.append(
         QuickSetupSlot(
             key="settings",
             label="Session settings",
@@ -238,27 +262,33 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("settings"),
             cancel_url=cancel_url_for("settings"),
-        ),
-    ]
+        )
+    )
 
+    # The description copy lists the slots that actually render so
+    # the operator can see at a glance what they can bulk-populate.
+    slot_phrase = (
+        "reviewers, reviewees, relationships, observers, and "
+        "session settings"
+        if review_session.observers_enabled
+        else "reviewers, reviewees, relationships, and session settings"
+    )
     if has_responses:
         # A session reverted from ``ready`` keeps its responses, so it
         # lands here in ``draft`` but permanently locked. Spell out
         # why — Quick Setup's bulk imports replace rosters / settings
         # wholesale and would discard those responses.
         description = (
-            "Bulk-populate reviewers, reviewees, relationships, and "
-            "session settings from files in one place. Quick Setup is "
-            "locked because this session already holds reviewer "
-            "responses from a prior activation. Use the individual "
-            "Setup pages to make changes."
+            f"Bulk-populate {slot_phrase} from files in one place. "
+            "Quick Setup is locked because this session already holds "
+            "reviewer responses from a prior activation. Use the "
+            "individual Setup pages to make changes."
         )
     else:
         description = (
-            "Bulk-populate reviewers, reviewees, relationships, and "
-            "session settings from files in one place. Available only "
-            "when session is in draft mode and does not have any "
-            "responses."
+            f"Bulk-populate {slot_phrase} from files in one place. "
+            "Available only when session is in draft mode and does "
+            "not have any responses."
         )
 
     # Default-locked on every fresh page load when the card is
@@ -298,6 +328,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
         "reviewers": "Reviewers",
         "reviewees": "Reviewees",
         "relationships": "Relationships",
+        "observers": "Observers",
         "settings": "Session settings",
     }
     label = label_for.get(slot_key, slot_key)
@@ -317,6 +348,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
         "reviewers": "reviewers",
         "reviewees": "reviewees",
         "relationships": "relationships",
+        "observers": "observers",
     }.get(slot_key)
     if per_entity_path:
         return (
@@ -381,6 +413,21 @@ def build_new_session_quick_setup_context(
             wire_url=None,
             coming_in=None if is_wired else "Wired in Segment 15D PR 7c",
         ),
+        # Observers slot — always renders on the new-session form
+        # since the operator may tick the ``observers_enabled``
+        # toggle and upload observers in the same submission. When
+        # the toggle stays off, the upload is still parsed +
+        # persisted; the rows are visible once the operator turns
+        # the toggle on later.
+        QuickSetupSlot(
+            key="observers",
+            label="Observers",
+            count=0,
+            mode="file_upload",
+            is_wired=is_wired,
+            wire_url=None,
+            coming_in=None if is_wired else "Wired in Segment 21",
+        ),
         QuickSetupSlot(
             key="settings",
             label="Session settings",
@@ -398,8 +445,8 @@ def build_new_session_quick_setup_context(
         is_locked=False,
         description=(
             "Bulk-populate reviewers, reviewees, relationships, "
-            "and session settings from files in one place — "
-            "submitted alongside the session details above."
+            "observers, and session settings from files in one "
+            "place — submitted alongside the session details above."
         ),
         title="Quick setup (optional)",
         show_lock_toggle=False,
