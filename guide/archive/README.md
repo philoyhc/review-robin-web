@@ -36,13 +36,14 @@ edits — they are a rough size signal, not a tracked metric.
 | `ui_elements_parts_2_3_restyle_history.md` | 111 | Historical UI-elements catalogue, Parts 2 + 3. |
 | `ui_checklist.md` | 197 | The v1 restructure + v2 `body.ui-v2` sweep per-page tracking checklist — both passes complete; retired to archive 2026-05-19 once the sweep stopped being a living tracker. |
 | `spec_sweep_11may.md` | 657 | The 2026-05-11 `spec/` drift + consolidation audit proposal (F1-F8 / C1-C5 / S1-S5) — all items merged, proposal closed. Its "Done vs Remaining" coverage-gap list is the input for Segment 19 Part 1. |
-| `codebase_assessment_09may.md` | 373 | Codebase-vs-functional-spec snapshot, 2026-05-09. Superseded by later assessments; the latest active snapshot lives at `guide/codebase_assessment_30may.md`. |
+| `codebase_assessment_09may.md` | 373 | Codebase-vs-functional-spec snapshot, 2026-05-09. Superseded by later assessments; the latest active snapshot lives at `guide/codebase_assessment_01jun.md`. |
 | `codebase_assessment_11may.md` | 420 | Codebase-vs-functional-spec snapshot, 2026-05-11. Frequently cited from archived segment plans (16B / 16C / 18A / 18C) — those references were redirected to this archive path when it moved. |
 | `codebase_assessment_16may.md` | 452 | Codebase-vs-functional-spec snapshot, 2026-05-16. Anchored Segment 17A housekeeping + 17B reviewer-surface refinements. |
 | `codebase_assessment_17may.md` | 235 | Codebase-vs-functional-spec snapshot, 2026-05-17. |
 | `codebase_assessment_18may.md` | 234 | Codebase-vs-functional-spec snapshot, 2026-05-18. |
 | `codebase_assessment_19may.md` | 269 | Codebase-vs-functional-spec snapshot, 2026-05-19 (the close of Segment 13C / 14A / 17A and the 18-family up to 18E + 18D). Archived 2026-05-28 once superseded by `guide/codebase_assessment_28may.md` (since archived). |
 | `codebase_assessment_28may.md` | 458 | Codebase-vs-functional-spec snapshot, 2026-05-28 (the close of Segment 18K / 18L / 18M / 18N first half). 2,010 tests; ~63.8k production LOC; biggest file `_instrument_crud.py` at 1,928 LOC. Archived 2026-05-30 once superseded by `guide/codebase_assessment_30may.md`. |
+| `codebase_assessment_30may.md` | 375 | Codebase-vs-functional-spec snapshot, 2026-05-30 (the close of Segment 18N housekeeping + Extract data slice Phases 1-3 + Self-review consolidation; 129 PRs in 3 days). 2,206 tests; ~46.2k production LOC; biggest file `assignments.py` at ~1,200 LOC after the 18N splits. Archived 2026-06-01 once superseded by `guide/codebase_assessment_01jun.md`. |
 
 ## Segment plans
 
