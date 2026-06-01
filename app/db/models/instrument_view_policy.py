@@ -57,6 +57,20 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     # ``always`` (reserved). Nullable / inert; W15 writes, W7 reads.
     # See ``guide/participant_model_upgrade.md`` §3.3.
     visible_when: Mapped[str | None] = mapped_column(String(16))
+    # Participant-model S14 — per-window mode pairs for the Band 3
+    # editor redesign. Each pair encodes the audience's mode in
+    # that window; NULL ≡ "off in this window". The pair
+    # (``aggregated``, ``identified``) is reserved-incoherent and
+    # rejected by the service. The S12 columns above
+    # (``enabled`` / ``granularity`` / ``identification`` /
+    # ``visible_when``) stay in place during the expand step —
+    # the service mirror-writes both shapes so the read path can
+    # flip independently. See ``spec/visibility_policy.md`` and
+    # ``guide/participant_model_prep.md`` S14.
+    while_ongoing_granularity: Mapped[str | None] = mapped_column(String(16))
+    while_ongoing_identification: Mapped[str | None] = mapped_column(String(16))
+    after_release_granularity: Mapped[str | None] = mapped_column(String(16))
+    after_release_identification: Mapped[str | None] = mapped_column(String(16))
     observer_tag: Mapped[str | None] = mapped_column(String(255))
 
     instrument: Mapped[Instrument] = relationship(back_populates="view_policies")

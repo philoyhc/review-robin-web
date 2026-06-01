@@ -90,14 +90,26 @@ def test_upsert_policy_insert_emits_audit(db: Session) -> None:
     assert row.granularity == "row"
     assert row.identification == "deidentified"
     assert row.visible_when == "after_release"
-    # Insert paints every field as a change.
+    # Insert paints every field as a change — including the S14
+    # per-window mode pairs that mirror-write alongside the
+    # legacy quadruple.
     assert set(changes.keys()) == {
         "enabled",
         "granularity",
         "identification",
         "visible_when",
+        "while_ongoing_granularity",
+        "while_ongoing_identification",
+        "after_release_granularity",
+        "after_release_identification",
         "observer_tag",
     }
+    # Mirror-write content: persisted (reviewee, anonymized,
+    # after_release) → only after_release pair set.
+    assert row.while_ongoing_granularity is None
+    assert row.while_ongoing_identification is None
+    assert row.after_release_granularity == "row"
+    assert row.after_release_identification == "deidentified"
     events = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "instrument.view_policy_set"
@@ -192,6 +204,91 @@ def test_upsert_policy_observer_tag_rejected_for_non_observer(
             user=user,
         )
     assert excinfo.value.code == "observer_tag_misuse"
+
+
+def test_upsert_policy_mirror_writes_while_ongoing_pair(
+    db: Session,
+) -> None:
+    """S14 expand step — ``visible_when="while_ongoing"`` mirrors
+    the mode into only the ``while_ongoing_*`` pair."""
+    review_session, instrument, user = _setup(db)
+    row, _ = visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="peer_reviewer",
+        enabled=True,
+        mode="raw",
+        visible_when="while_ongoing",
+        user=user,
+    )
+    db.commit()
+    assert row.while_ongoing_granularity == "row"
+    assert row.while_ongoing_identification == "identified"
+    assert row.after_release_granularity is None
+    assert row.after_release_identification is None
+
+
+def test_upsert_policy_mirror_writes_throughout_to_both_pairs(
+    db: Session,
+) -> None:
+    review_session, instrument, user = _setup(db)
+    row, _ = visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="observer",
+        enabled=True,
+        mode="summarized",
+        visible_when="throughout",
+        user=user,
+    )
+    db.commit()
+    assert row.while_ongoing_granularity == "aggregated"
+    assert row.while_ongoing_identification == "deidentified"
+    assert row.after_release_granularity == "aggregated"
+    assert row.after_release_identification == "deidentified"
+
+
+def test_upsert_policy_disabled_nulls_both_pairs(
+    db: Session,
+) -> None:
+    """``enabled=False`` clears both per-window pairs regardless
+    of the legacy mode / visible_when values."""
+    review_session, instrument, user = _setup(db)
+    # First, enable and pick a window.
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="reviewee",
+        enabled=True,
+        mode="anonymized",
+        visible_when="after_release",
+        user=user,
+    )
+    db.commit()
+    # Now flip enabled → False with the same mode + window.
+    row, changes = visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="reviewee",
+        enabled=False,
+        mode="anonymized",
+        visible_when="after_release",
+        user=user,
+    )
+    db.commit()
+    assert row.enabled is False
+    assert row.while_ongoing_granularity is None
+    assert row.while_ongoing_identification is None
+    assert row.after_release_granularity is None
+    assert row.after_release_identification is None
+    # The flip writes both ``enabled`` and the after-release pair
+    # back to NULL — emit changes for each.
+    assert "enabled" in changes
+    assert "after_release_granularity" in changes
 
 
 def test_list_for_instrument_returns_persisted_audiences_only(
