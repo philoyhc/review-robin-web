@@ -41,6 +41,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # The FK + index get re-created with the *original* names
+    # (``fk_irf_response_type_id`` + ``ix_irf_response_type_id``,
+    # introduced by 8b3c1d4e5f7a) so 8b3c1d4e5f7a's downgrade
+    # further back in the chain can drop them. Earlier versions
+    # of this downgrade used different names — SQLite tolerates
+    # the mismatch in batch-recreate mode, but Postgres's strict
+    # DROP INDEX requires the original name.
     with op.batch_alter_table(
         "instrument_response_fields", schema=None
     ) as batch_op:
@@ -52,13 +59,13 @@ def downgrade() -> None:
             )
         )
         batch_op.create_foreign_key(
-            "fk_instrument_response_fields_response_type_id",
+            "fk_irf_response_type_id",
             "response_type_definitions",
             ["response_type_id"],
             ["id"],
             ondelete="CASCADE",
         )
         batch_op.create_index(
-            "ix_instrument_response_fields_response_type_id",
+            "ix_irf_response_type_id",
             ["response_type_id"],
         )

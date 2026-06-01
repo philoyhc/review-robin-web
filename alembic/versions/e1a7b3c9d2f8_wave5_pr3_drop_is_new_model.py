@@ -40,13 +40,15 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Restore the column with the legacy default (``False``). The
     # original is_new_model=True flags are not recoverable — every
-    # row resurrects as ``False``.
+    # row resurrects as ``False``. ``sa.false()`` is the portable
+    # Boolean literal — SQLite tolerates ``0`` for booleans but
+    # Postgres rejects ``DEFAULT 0`` on a BOOLEAN column.
     with op.batch_alter_table("instruments", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 "is_new_model",
                 sa.Boolean(),
                 nullable=False,
-                server_default=sa.text("0"),
+                server_default=sa.false(),
             )
         )

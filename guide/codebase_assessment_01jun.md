@@ -347,3 +347,132 @@ question parked items).
    implementation is the smaller half of the work.
 3. **Split `assignments.py`** at ~1,426 LOC in a 17A / 18N-
    style housekeeping pass before it crosses 1,500.
+
+---
+
+## 9. Proposed file splits
+
+The 18N housekeeping pass (PRs #1557 → #1559) is the established
+playbook: package by concern, keep the public import surface
+backward-compatible via the package's `__init__.py`, split file
+sizes are broadly equal, no behavior changes. Three production
+files are at or near the threshold where the same treatment
+pays off.
+
+### Candidate 1 — `app/services/assignments.py` (1,426 LOC)
+
+Top-of-file structure scans as **three cohesive concerns**:
+
+| Concern | Lines | Public functions |
+|---|---|---|
+| **Coverage / staleness / counts** — read-only summaries the Validate page + Workflow card consume | 42–254 | `reviewer_fields_with_data`, `reviewee_fields_with_data`, `assignment_fields_with_data`, `display_source_presence`, `existing_count`, `included_count_per_instrument`, `existing_count_per_instrument`, `compute_staleness`, `latest_generated_event_per_instrument` |
+| **Self-review classification** — the canonical helpers, the recompute invariant, the breakdown reporters | 257–574 | `is_self_review`, `count_self_review_candidates`, `count_self_reviews_in_assignments`, `classify_self_review`, `recompute_self_review_classification`, `verify_self_review_classification`, `self_review_breakdown_per_instrument`, `set_instrument_self_reviews_active` |
+| **Generation + reconciliation** — the rule-runner + Full Matrix + diff/materialise + reconcile pipeline | 576–end | `bulk_set_assignment_include`, `generate_full_matrix`, `coverage_stats`, `_session_rule_set_to_schema`, `_full_matrix_schema`, `_InstrumentDiff`, `_diff_one_instrument`, `_materialise_one_instrument`, `_ReconcileInputs`, …reconcile + regenerate paths |
+
+**Proposed shape:**
+
+```
+app/services/assignments/
+  __init__.py         # re-export public surface (backwards compat)
+  _coverage.py        # ~250 LOC — coverage + staleness + counts
+  _self_review.py     # ~320 LOC — classification + recompute + breakdown
+  _generate.py        # ~600–700 LOC — generate + reconcile pipeline
+  _shared.py          # ~50 LOC — small helpers (_is_active, _is_test_env)
+```
+
+**Why now:** all three concerns have grown independently; the
+generate-reconcile pipeline keeps adding behavior (the 15D
+rule-runner, the 18H reconcile passes, the W4 / 15B per-
+instrument scoping); the self-review consolidation slice
+(2026-05-30) tripled the classification block in one PR. Splits
+on natural seams; no cross-concern function dependencies past
+the few small helpers.
+
+### Candidate 2 — `app/services/scheduled_events.py` (1,380 LOC)
+
+The 18G scheduler. Top-of-file already carries `# ─────` rule
+banners between **five marked concerns**:
+
+| Concern | Lines | Notes |
+|---|---|---|
+| **Duration parsing** | 44–95 | `parse_iso_duration` |
+| **Offset resolution** | 99–135 | `_ensure_aware_utc`, `resolve_offset` |
+| **Locking + observation core** | 139–219 | `lock_session`, `observe_scheduled_events` (the entry point) |
+| **Activation observation + audit** | 221–451 | `_observe_scheduled_activation`, `_emit_activation_skipped`, `_emit_activation_retry_or_failed`, `_count_recent_retries` |
+| **Activation validators** | 453–520 | `ScheduledActivateError`, `parse_and_validate_scheduled_activate_at` |
+| **Invites scheduling** | 521–787 | `_resolve_invite_fires`, `_consumed_invite_offset_indices`, `_observe_scheduled_invites`, `_dispatch_pending_invitations` |
+| **Reminders scheduling** | 788–end | `_resolve_reminder_fires`, …  |
+
+**Proposed shape:**
+
+```
+app/services/scheduled_events/
+  __init__.py         # public surface
+  _duration.py        # ~50 LOC — parse_iso_duration + offset resolver
+  _lock.py            # ~80 LOC — lock_session + observe_scheduled_events orchestrator
+  _activation.py      # ~290 LOC — activation observers + validators + audit emit
+  _invites.py         # ~270 LOC — invite resolution + observe + dispatch
+  _reminders.py       # ~250 LOC — reminder resolution + observe + dispatch
+  _shared.py          # ~40 LOC — _ensure_aware_utc, _count_recent_retries
+```
+
+**Why now:** each section is cohesive and the rule-banner
+markers already encode the seam lines — the split is mostly
+mechanical. The activation / invites / reminders blocks have
+distinct test files already (`tests/integration/test_scheduled_*.py`),
+so the test-file mapping survives without renaming.
+
+### Candidate 3 — `app/services/session_config_io/_apply.py` (1,361 LOC)
+
+The Settings-CSV importer. Top-of-file dataclasses + `apply_session_config`
++ a stack of `_apply_*_kv` per-section handlers.
+
+| Concern | Lines | Notes |
+|---|---|---|
+| **Public surface + dataclasses** | 63–240 | `ApplyError`, `ApplyResult`, `_DisplayFieldSpec`, `_ResponseFieldSpec`, `_InstrumentSpec`, `_RuleSetSpec`, `_FieldLabelSpec`, `_DataShapeSpec`, `_ParsedConfig`, `apply_session_config` entry point |
+| **Parsing** | 276–354 | `_parse_rows`, `_ParseError`, `_route_row` |
+| **Per-section appliers** | 356–671 | `_apply_session_kv`, `_apply_email_kv`, `_apply_instrument_kv` (the biggest single block, 116 LOC), `_apply_rule_set_kv`, `_apply_field_label_kv`, `_apply_data_shape_kv` |
+| **Cross-row validation + helpers** | 672–end | `_cross_row_errors`, `_parse_bool` + other low-level parsers |
+
+**Proposed shape:**
+
+```
+app/services/session_config_io/
+  __init__.py
+  _apply.py           # ~250 LOC — public dataclasses + apply_session_config orchestrator
+  _parse.py           # ~120 LOC — _parse_rows + _route_row + _ParseError
+  _apply_session.py   # ~60 LOC
+  _apply_email.py     # ~30 LOC
+  _apply_instrument.py # ~120 LOC — the biggest applier
+  _apply_rule_set.py  # ~35 LOC
+  _apply_field_label.py # ~35 LOC
+  _apply_data_shape.py # ~50 LOC
+  _validate.py        # ~120 LOC — _cross_row_errors + parsers
+```
+
+**Why this shape:** each `_apply_*_kv` handler is independent
+(a section's apply doesn't call sibling appliers). The
+orchestrator dispatches by section type. Splitting per-applier
+makes the import-time surface of each concern small + lets
+section-specific tests target a single module.
+
+### Sequencing
+
+If these all land sooner rather than later, the order that
+minimizes merge conflicts:
+
+1. **`scheduled_events.py`** first — most mechanical (rule
+   banners already mark the seams; no cross-concern calls).
+2. **`assignments.py`** next — three clean blocks; the
+   self-review consolidation already exercised the
+   classification block's seam.
+3. **`session_config_io/_apply.py`** last — most files
+   touched (six new modules) but each is small once split;
+   leave this for the housekeeping window that owns the
+   Settings-CSV round-trip story.
+
+Together: ~4,200 LOC redistributed into ~16 modules of 50–700
+LOC each. Net file count grows by ~13; biggest file post-split
+drops from 1,426 to ~700. Tracks with the 18N housekeeping
+results (`_instrument_crud.py` 1,928 → 1,052; `responses.py`
+1,444 → `_core.py` 976 + `_group_reconciliation.py`).

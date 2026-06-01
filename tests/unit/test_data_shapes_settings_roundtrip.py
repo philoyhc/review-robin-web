@@ -195,7 +195,7 @@ def test_roundtrip_applies_shapes_with_portable_references(
     instr_b = _instrument(
         db, session_b, short_label="Peer Review"
     )
-    field_b = _field(db, instr_b, field_key="score")
+    _field(db, instr_b, field_key="score")
     db.flush()
 
     result = session_config_io.apply_session_config(
@@ -216,14 +216,32 @@ def test_roundtrip_applies_shapes_with_portable_references(
     # Session-wide shape — FKs stay null.
     assert by_name["Whole roster"].instrument_id is None
     assert by_name["Whole roster"].response_field_id is None
-    # Instrument-scoped shape — FK resolves to session B's
-    # ``Peer Review`` instrument.
-    assert by_name["Per instrument"].instrument_id == instr_b.id
+    # Instrument-scoped shape — FK resolves to a session B
+    # instrument whose ``short_label`` matches the serialized
+    # reference. Look up by short_label rather than by the
+    # ``instr_b`` Python reference: ``apply_session_config``
+    # may resolve via lazy-seeding paths that create a new
+    # instrument row in some flows (the SQLite default-id
+    # allocation happens to line up with ``instr_b.id``;
+    # Postgres exposes the indirection).
+    resolved_instr_id = db.execute(
+        select(Instrument.id).where(
+            Instrument.session_id == session_b.id,
+            Instrument.short_label == "Peer Review",
+        )
+    ).scalar_one()
+    assert by_name["Per instrument"].instrument_id == resolved_instr_id
     assert by_name["Per instrument"].response_field_id is None
-    # Field-scoped shape — FK resolves to session B's
+    # Field-scoped shape — FK resolves to the same instrument's
     # ``score`` field.
-    assert by_name["Per field"].instrument_id == instr_b.id
-    assert by_name["Per field"].response_field_id == field_b.id
+    resolved_field_id = db.execute(
+        select(InstrumentResponseField.id).where(
+            InstrumentResponseField.instrument_id == resolved_instr_id,
+            InstrumentResponseField.field_key == "score",
+        )
+    ).scalar_one()
+    assert by_name["Per field"].instrument_id == resolved_instr_id
+    assert by_name["Per field"].response_field_id == resolved_field_id
     # Column slots round-trip JSON-stable.
     assert json.loads(by_name["Per field"].column_chip_slots) == [
         "reviewee:name",

@@ -427,12 +427,23 @@ def _populated_round_trip_session(
     # even when the stored moment is correct).
     review_session.display_timezone = "UTC"
     review_session.self_reviews_active = False
-    review_session.scheduled_activate_at = dt.datetime(2026, 6, 1, 9, 0)
-    review_session.responses_release_at = dt.datetime(2026, 6, 30, 23, 59)
+    # tz-aware sources so the post-round-trip equality holds on
+    # Postgres too (``DateTime(timezone=True)`` columns return
+    # tz-aware UTC on Postgres; SQLite drops the tzinfo on write).
+    # Setting the source aware means both sides round through the
+    # serialize / parse pipeline in the same shape.
+    review_session.scheduled_activate_at = dt.datetime(
+        2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc
+    )
+    review_session.responses_release_at = dt.datetime(
+        2026, 6, 30, 23, 59, tzinfo=dt.timezone.utc
+    )
     review_session.invite_offsets = ["-7d", "-1d"]
     review_session.reminder_offsets = ["-3d", "-1d", "-12h"]
     review_session.archive_offset = "+30d"
-    review_session.responses_release_until = dt.datetime(2026, 7, 14, 23, 59)
+    review_session.responses_release_until = dt.datetime(
+        2026, 7, 14, 23, 59, tzinfo=dt.timezone.utc
+    )
     review_session.retention_exception = True
     review_session.retention_overrides = {"audit_log_days": 365}
 
@@ -498,8 +509,15 @@ def test_round_trip_carries_18g_scheduled_event_columns(db: Session) -> None:
         db, review_session=dst, rows=rows, user=_user(db, email="rt@e.edu")
     )
     assert result.errors == []
+    # Refresh both sides so the tzinfo state matches what each
+    # dialect persists — SQLite drops tzinfo on write, Postgres
+    # keeps it, so without the refresh ``src`` would retain its
+    # in-memory aware value while ``dst`` returns naive on
+    # SQLite, breaking ``==`` on one dialect or the other.
     db.expire(dst)
     db.refresh(dst)
+    db.expire(src)
+    db.refresh(src)
 
     assert dst.scheduled_activate_at == src.scheduled_activate_at
     assert dst.responses_release_at == src.responses_release_at
