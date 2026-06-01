@@ -147,59 +147,6 @@
               {% endif %}
             </td>
           </tr>
-          {# Segment 18L multi-page sub-rows — one per operator-
-             defined reviewer page (instruments grouped by Segment
-             18M page breaks). ``page_rows`` is empty for single-
-             page sessions, which covers both single-instrument
-             sessions (pre-15B byte-identical contract) and
-             multi-instrument sessions where the operator hasn't
-             added a page break (the sub-row would just restate the
-             parent session row at the same ``/1`` URL). #}
-          {% for sub in item.page_rows %}
-            <tr class="dashboard-page-row">
-              <td class="muted" style="padding-left: 24px;">
-                ↳
-                {% if item.link_enabled %}
-                <a href="/me/sessions/{{ item.session.id }}/{{ sub.page_n }}">
-                  {{ sub.label }}
-                </a>
-                {% else %}
-                  {{ sub.label }}
-                {% endif %}
-              </td>
-              {# Start / End / View responses / Until / Timezone /
-                 Session status — empty on the sub-row; the
-                 parent row owns those values. #}
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td>
-                {# Per-instrument sub-row counter — same colour
-                   pairing as the per-session row above. #}
-                {% if sub.state == "submitted" %}
-                  <span class="pill pill-success">submitted</span>
-                  {% if sub.total_assignments %}
-                    <span class="pill pill-success">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
-                  {% endif %}
-                {% elif sub.state == "in progress" %}
-                  <span class="pill pill-warning">in progress</span>
-                  {% if sub.total_assignments %}
-                    <span class="pill pill-warning">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
-                  {% endif %}
-                {% elif sub.state == "no assignments" %}
-                  <span class="pill pill-empty">no assignments</span>
-                {% else %}
-                  <span class="pill pill-info">not started</span>
-                  {% if sub.total_assignments %}
-                    <span class="pill pill-info">{{ sub.completed_rows }}/{{ sub.total_assignments }}</span>
-                  {% endif %}
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
         {% endfor %}
       </table>
     </div>
