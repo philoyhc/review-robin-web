@@ -452,3 +452,109 @@ def workflow_close(
         url=_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post("/sessions/{session_id}/workflow/release-responses")
+def workflow_release_responses(
+    return_to: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Force-release the session's response window — Row 3's
+    "Release responses" button. Stamps ``responses_release_at
+    = now()`` and clears any prior ``responses_release_until``,
+    overriding the schedule the operator set during edit.
+    """
+    correlation_id = request_correlation_id()
+    if lifecycle.is_archived(review_session):
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="release_responses",
+                super_step="precondition",
+                super_error="Archived sessions can't have responses released.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    lifecycle.release_responses_now(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=correlation_id,
+    )
+    return RedirectResponse(
+        url=_redirect_url(review_session.id, return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/workflow/stop-release")
+def workflow_stop_release(
+    return_to: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Close the response-release window — Row 3's "Stop
+    releasing responses" button. Stamps
+    ``responses_release_until = now()``, mirror of the release
+    flow.
+    """
+    correlation_id = request_correlation_id()
+    if lifecycle.is_archived(review_session):
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="stop_release",
+                super_step="precondition",
+                super_error="Archived sessions can't have releases stopped.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    lifecycle.stop_responses_release(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=correlation_id,
+    )
+    return RedirectResponse(
+        url=_redirect_url(review_session.id, return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/workflow/archive")
+def workflow_archive(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Archive the session — Row 3's "Archive session" button.
+
+    Accepts any non-archived state; the underlying service
+    records the from-state in the audit event. Redirects to
+    the archived-sessions index so the operator sees their
+    just-archived row in context.
+    """
+    correlation_id = request_correlation_id()
+    try:
+        lifecycle.archive_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    except lifecycle.LifecycleError:
+        # ``already_archived`` is the only path that raises now.
+        # Drop the user back to the lobby's archived index either
+        # way — they'll see the row there.
+        pass
+    return RedirectResponse(
+        url="/operator/sessions/archived",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )

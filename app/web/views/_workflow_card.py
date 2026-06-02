@@ -172,11 +172,28 @@ def build_workflow_card_context(
                 "deleted_pairs": impact.deleted,
             }
 
+    is_archived = lifecycle.is_archived(review_session)
+    # Row 3 button gates — release / stop-release are post-
+    # activation operations (the session has to be live or
+    # already-closed for them to make sense); archive can
+    # fire from any non-archived state.
+    release_responses_live = (
+        is_ready or is_expired
+    ) and not is_archived
+    response_release_window_open = (
+        lifecycle.is_response_release_window_open(review_session)
+    )
+    stop_release_live = response_release_window_open and not is_archived
+    archive_live = not is_archived
     return {
         "is_draft": is_draft,
         "is_validated": is_validated,
         "is_ready": is_ready,
         "is_expired": is_expired,
+        "is_archived": is_archived,
+        "release_responses_live": release_responses_live,
+        "stop_release_live": stop_release_live,
+        "archive_live": archive_live,
         "is_setup_empty": is_setup_empty,
         "is_pre_generate": is_pre_generate,
         "invitations_generated": invitations.has_invitations(
