@@ -536,6 +536,43 @@ def test_route_save_skips_audiences_with_missing_slots(
 # ── Template render: form + chip state on GET ────────────────────────
 
 
+def test_observer_session_ongoing_chip_cycle_limited_to_off_and_summarized(
+    client: TestClient, db: Session
+) -> None:
+    """The operator's chip for the observer / Session-ongoing
+    cell only rotates between ``""`` (off / em-dash) and
+    ``summarized`` (Anonymized summaries). Raw + Anonymized
+    rows are gated on ``after_release``."""
+    review_session = _alice_session(client, db, code="vp-chip-obs-ongoing")
+    instrument = _instrument_for(db, review_session)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+
+    # The Observer / Session-ongoing chip's ``data-new-model-vp-cycle-slugs``
+    # carries the two allowed values, joined with ``|``.
+    import re
+
+    chip_match = re.search(
+        r'data-new-model-vp-cycle-audience="observer"\s*'
+        r'data-new-model-vp-cycle-window="while_ongoing"\s*'
+        r'data-new-model-vp-cycle-slugs="([^"]*)"',
+        body,
+    )
+    assert chip_match is not None
+    assert chip_match.group(1) == "|summarized"
+
+    # The Observer / after_release chip still cycles all four.
+    after_match = re.search(
+        r'data-new-model-vp-cycle-audience="observer"\s*'
+        r'data-new-model-vp-cycle-window="after_release"\s*'
+        r'data-new-model-vp-cycle-slugs="([^"]*)"',
+        body,
+    )
+    assert after_match is not None
+    assert after_match.group(1) == "|raw|anonymized|summarized"
+
+
 def test_instruments_page_renders_per_window_form(
     client: TestClient, db: Session
 ) -> None:
