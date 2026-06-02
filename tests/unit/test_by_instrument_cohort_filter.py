@@ -1,13 +1,16 @@
 """Unit tests for the observer-collation parameters added to
 ``app.services.extracts.by_instrument_extract.serialize_by_instrument``:
 
-- ``cohort_filter`` — restricts data rows to assignments whose
-  reviewer or reviewee is in the materialised cohort.
+- ``row_filter`` — a per-assignment ``(Assignment) -> bool``
+  callable. Rows for which it returns False are dropped before
+  any further work. The observer-collation surface plugs in
+  ``observer_cohort.assignment_matches_cohort`` here so the
+  cohort rule's actual predicates run against each row.
 - ``identification="anonymized"`` — swaps the reviewer /
   reviewee names for per-session tokens, blanks emails + tag
   columns so the only identifier is the opaque token.
 
-Operator-side behaviour (the default ``cohort_filter=None``,
+Operator-side behaviour (default ``row_filter=None``,
 ``identification="raw"``) is exercised in the wider integration
 suite — this file pins only the observer additions.
 """
@@ -31,7 +34,6 @@ from app.db.models import (
 from app.services.extracts.by_instrument_extract import (
     serialize_by_instrument,
 )
-from app.services.observer_cohort import CohortIds
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────
@@ -154,38 +156,32 @@ def _seed_two_pairs(db: Session) -> dict:
 def _data_rows(
     rows: list[tuple[str, ...]],
 ) -> list[tuple[str, ...]]:
-    """Strip the meta block + the blank separator + the header
-    row, leaving only data rows."""
+    """Strip the meta block + blank separator + header row,
+    leaving only data rows."""
     body = list(rows)
-    # Find the data header (starts with ``ReviewerName``); everything
-    # after it is the data block.
     for i, row in enumerate(body):
         if row and row[0] == "ReviewerName":
             return body[i + 1 :]
     return []
 
 
-# ── cohort_filter ─────────────────────────────────────────────────────
+# ── row_filter ───────────────────────────────────────────────────────
 
 
-def test_cohort_filter_includes_row_if_reviewer_in_cohort(
+def test_row_filter_keeps_only_rows_where_predicate_passes(
     db: Session,
 ) -> None:
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
     r1 = seed["r1"]
-    cohort = CohortIds(
-        reviewer_ids=frozenset({r1.id}),
-        reviewee_ids=frozenset(),
-    )
     rows = list(
         serialize_by_instrument(
             db,
             sess,
             inst,
             position=0,
-            cohort_filter=cohort,
+            row_filter=lambda a: a.reviewer_id == r1.id,
         )
     )
     data = _data_rows(rows)
@@ -193,76 +189,51 @@ def test_cohort_filter_includes_row_if_reviewer_in_cohort(
     assert data[0][0] == "Alpha Reviewer"
 
 
-def test_cohort_filter_includes_row_if_reviewee_in_cohort(
-    db: Session,
-) -> None:
-    seed = _seed_two_pairs(db)
-    inst = seed["inst"]
-    sess = seed["sess"]
-    e2 = seed["e2"]
-    cohort = CohortIds(
-        reviewer_ids=frozenset(),
-        reviewee_ids=frozenset({e2.id}),
-    )
-    rows = list(
-        serialize_by_instrument(
-            db,
-            sess,
-            inst,
-            position=0,
-            cohort_filter=cohort,
-        )
-    )
-    data = _data_rows(rows)
-    assert len(data) == 1
-    assert data[0][5] == "Beta Reviewee"
-
-
-def test_cohort_filter_unions_two_sides(db: Session) -> None:
-    """A row is in scope if EITHER end is in the cohort — matches
-    the union of the two cohort-stats rows above the download
-    button on the collation surface."""
+def test_row_filter_can_test_both_sides(db: Session) -> None:
+    """The predicate is over the full ``Assignment`` so callers
+    can test reviewer + reviewee + assignment metadata
+    together."""
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
     r1 = seed["r1"]
     e2 = seed["e2"]
-    cohort = CohortIds(
-        reviewer_ids=frozenset({r1.id}),
-        reviewee_ids=frozenset({e2.id}),
-    )
     rows = list(
         serialize_by_instrument(
             db,
             sess,
             inst,
             position=0,
-            cohort_filter=cohort,
+            row_filter=lambda a: (
+                a.reviewer_id == r1.id or a.reviewee_id == e2.id
+            ),
         )
     )
     data = _data_rows(rows)
-    # Both pairs included — r1 satisfies the first row, e2 the second.
+    # Both pairs included — r1 satisfies pair 1, e2 satisfies
+    # pair 2.
     assert len(data) == 2
 
 
-def test_cohort_filter_empty_excludes_all_rows(db: Session) -> None:
+def test_row_filter_all_false_returns_empty_data_block(
+    db: Session,
+) -> None:
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
-    cohort = CohortIds(reviewer_ids=frozenset(), reviewee_ids=frozenset())
     rows = list(
         serialize_by_instrument(
             db,
             sess,
             inst,
             position=0,
-            cohort_filter=cohort,
+            row_filter=lambda a: False,
         )
     )
     assert _data_rows(rows) == []
 
 
-def test_no_cohort_filter_preserves_operator_side_behaviour(
+def test_no_row_filter_preserves_operator_side_behaviour(
     db: Session,
 ) -> None:
     seed = _seed_two_pairs(db)
@@ -270,7 +241,7 @@ def test_no_cohort_filter_preserves_operator_side_behaviour(
     sess = seed["sess"]
     rows = list(serialize_by_instrument(db, sess, inst, position=0))
     data = _data_rows(rows)
-    # Default ``cohort_filter=None`` returns every assignment.
+    # Default ``row_filter=None`` returns every assignment.
     assert len(data) == 2
 
 
@@ -315,18 +286,13 @@ def test_anonymized_blanks_emails_and_tag_columns(db: Session) -> None:
     )
     data = _data_rows(rows)
     for row in data:
-        # ReviewerEmail + reviewer.tag_1..3
-        assert row[1] == ""  # email
-        assert row[2] == row[3] == row[4] == ""  # tags
-        # RevieweeEmail + reviewee.tag_1..3
-        assert row[6] == ""  # email
-        assert row[7] == row[8] == row[9] == ""  # tags
+        assert row[1] == ""  # ReviewerEmail
+        assert row[2] == row[3] == row[4] == ""  # reviewer tags
+        assert row[6] == ""  # RevieweeEmail
+        assert row[7] == row[8] == row[9] == ""  # reviewee tags
 
 
 def test_anonymized_preserves_response_values(db: Session) -> None:
-    """The downstream point of Anonymized is to keep the data
-    while removing identification; response cells must ride
-    through unchanged."""
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
@@ -384,6 +350,5 @@ def test_raw_identification_preserves_operator_side_columns(
     rows = list(serialize_by_instrument(db, sess, inst, position=0))
     data = _data_rows(rows)
     names = {(row[0], row[1]) for row in data}
-    # Default ``identification="raw"`` keeps name + email as before.
     assert ("Alpha Reviewer", "alpha@x") in names
     assert ("Beta Reviewer", "beta@x") in names

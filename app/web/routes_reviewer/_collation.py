@@ -30,7 +30,13 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, Observer, ReviewSession, User
+from app.db.models import (
+    Assignment,
+    Instrument,
+    Observer,
+    ReviewSession,
+    User,
+)
 from app.db.session import get_db
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
@@ -38,7 +44,10 @@ from app.services.extracts.by_instrument_extract import (
     by_instrument_filename_slug,
     serialize_by_instrument,
 )
-from app.services.observer_cohort import materialize_cohort
+from app.services.observer_cohort import (
+    assignment_matches_cohort,
+    materialize_cohort,
+)
 from app.web import views
 from app.web.deps import get_or_create_user, require_observer_in_session
 from app.web.routes_reviewer._shared import (
@@ -126,9 +135,23 @@ def observer_collation_instrument_csv(
         # operator picked Summarized (no per-row download).
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    # Refuse the download when the observer's rule materialises
+    # to nothing (no saved rule, or every predicate matched zero
+    # rows). Catches the typical "operator hasn't authored a
+    # cohort yet" case without hitting the row filter below.
     cohort = materialize_cohort(db, observer=observer)
     if not cohort.reviewer_ids and not cohort.reviewee_ids:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    rule_set = observer.cohort_rule
+
+    def _row_in_cohort(assignment: Assignment) -> bool:
+        return assignment_matches_cohort(
+            rule_set,
+            observer=observer,
+            reviewer=assignment.reviewer,
+            reviewee=assignment.reviewee,
+        )
 
     # Find instrument position in the session for the meta header
     # / filename slug.
@@ -154,7 +177,7 @@ def observer_collation_instrument_csv(
             review_session,
             instrument,
             position=position,
-            cohort_filter=cohort,
+            row_filter=_row_in_cohort,
             identification=mode,
         ):
             writer.writerow(row)
@@ -162,9 +185,20 @@ def observer_collation_instrument_csv(
             buffer.seek(0)
             buffer.truncate(0)
 
-    filename = by_instrument_filename_slug(
+    # Filename: ``<observer_email>_<instrument_slug>[_anon].csv``.
+    # The email prefix names the recipient so the observer can
+    # tell their downloads apart in a Downloads folder. The
+    # ``_anon`` suffix (Anonymized mode only) makes the
+    # identification mode visible from the filename alone — useful
+    # when the same observer downloads both Raw and Anonymized
+    # copies of the same instrument.
+    instrument_slug = by_instrument_filename_slug(
         instrument, position=position, used=set()
-    ) + ".csv"
+    )
+    anon_suffix = "_anon" if mode == "anonymized" else ""
+    filename = (
+        f"{observer.email}_{instrument_slug}{anon_suffix}.csv"
+    )
     return StreamingResponse(
         _stream(),
         media_type="text/csv; charset=utf-8",
