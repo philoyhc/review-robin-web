@@ -96,11 +96,7 @@
                   style="text-align: right;">
                 {% if section.download_url %}
                   <a class="btn primary" href="{{ section.download_url }}"
-                     download>Download CSV
-                    {% if section.mode == "anonymized" %}
-                      <span class="muted">(Anonymized)</span>
-                    {% endif %}
-                  </a>
+                     download>Download CSV{% if section.mode == "anonymized" %} <span class="muted">(Anonymized)</span>{% endif %}</a>
                 {% else %}
                   <span class="muted">
                     Per the operator's visibility policy, only
