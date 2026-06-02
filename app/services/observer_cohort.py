@@ -50,6 +50,33 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer
 
 
+_REVIEWER_TAG_ATTRS: dict[str, str] = {
+    "tag1": "tag_1",
+    "tag2": "tag_2",
+    "tag3": "tag_3",
+}
+
+_REVIEWEE_TAG_ATTRS: dict[str, str] = {
+    "tag1": "tag_1",
+    "tag2": "tag_2",
+    "tag3": "tag_3",
+}
+
+
+def _reviewer_attr_value(reviewer: Reviewer, attr: str) -> str | None:
+    column = _REVIEWER_TAG_ATTRS.get(attr)
+    if column is None:
+        return None
+    return getattr(reviewer, column, None)
+
+
+def _reviewee_attr_value(reviewee: Reviewee, attr: str) -> str | None:
+    column = _REVIEWEE_TAG_ATTRS.get(attr)
+    if column is None:
+        return None
+    return getattr(reviewee, column, None)
+
+
 @dataclass(frozen=True)
 class CohortIds:
     """Materialised observer cohort. Empty frozensets mean the
@@ -302,3 +329,112 @@ def materialize_cohort(db: Session, *, observer: Observer) -> CohortIds:
     if combinator == "OR":
         return _combine_or(per_rule, session_id=session_id, db=db)
     return _combine_and(per_rule, session_id=session_id, db=db)
+
+
+# ── Per-row predicate (used by the CSV download filter) ───────────────
+
+
+def _rule_matches_row(
+    rule: dict[str, Any],
+    *,
+    observer: Observer,
+    reviewer: Reviewer,
+    reviewee: Reviewee,
+) -> bool:
+    """Evaluate a single rule against one ``(reviewer, reviewee)``
+    pair plus the observer. Returns True iff the rule's
+    predicate is satisfied by the row.
+
+    Same vocabulary as ``_evaluate_rule`` (the materialiser's
+    set-side evaluator) but tested row-by-row rather than via
+    a SQL ``IN`` against a precomputed id set.
+    """
+    field = str(rule.get("field", ""))
+    op = str(rule.get("op", ""))
+    operand_tag = str(rule.get("operand_tag", ""))
+    operand_value = str(rule.get("operand_value", ""))
+
+    if not field or "." not in field:
+        return False
+    namespace, attr = field.split(".", 1)
+
+    if namespace == "reviewer":
+        left = _reviewer_attr_value(reviewer, attr)
+    elif namespace == "reviewee":
+        left = _reviewee_attr_value(reviewee, attr)
+    else:
+        # ``pair_context.*`` — supported by the schema but the
+        # pair-level join isn't in the MVP materialiser. Treat as
+        # unmatched.
+        return False
+
+    if op in ("IS THE SAME AS", "IS DIFFERENT FROM"):
+        if not operand_tag.startswith("observer."):
+            # Cross-roster operand (e.g. ``reviewer.tag1 IS THE
+            # SAME AS reviewee.tag2``) — same deferral as the
+            # materialiser.
+            return False
+        observer_attr = operand_tag.split(".", 1)[1]
+        right = _observer_attr_value(observer, observer_attr)
+        if right is None:
+            return False
+        left_cmp = (left or "").lower()
+        right_cmp = right.lower()
+        if op == "IS THE SAME AS":
+            return left_cmp == right_cmp
+        return left_cmp != right_cmp
+
+    left_cmp = (left or "").lower()
+    value_cmp = operand_value.lower()
+    if op == "IS":
+        return left_cmp == value_cmp
+    if op == "IS NOT":
+        return left_cmp != value_cmp
+    if op == "CONTAINS":
+        return value_cmp in left_cmp
+    if op == "DOES NOT CONTAIN":
+        return value_cmp not in left_cmp
+    return False
+
+
+def assignment_matches_cohort(
+    rule_set: dict[str, Any] | None,
+    *,
+    observer: Observer,
+    reviewer: Reviewer,
+    reviewee: Reviewee,
+) -> bool:
+    """True iff this ``(reviewer, reviewee)`` assignment satisfies
+    the observer's saved cohort rule.
+
+    Per-row evaluation that respects what each rule actually
+    references — a rule on ``reviewer.*`` checks the reviewer,
+    a rule on ``reviewee.*`` checks the reviewee, and unmentioned
+    sides aren't second-guessed. The per-rule pass/fail bits
+    combine via the rule set's combinator (``AND`` → all rules
+    must pass, ``OR`` → at least one).
+
+    Used by the per-instrument CSV download filter so the
+    downloaded rows match the rule exactly — without the
+    set-based ``(in cohort_reviewers, in cohort_reviewees)``
+    AND/OR collapsing the rule into degenerate cases on
+    single-side / cross-side rule sets.
+
+    Returns False when ``rule_set`` is ``None`` or carries no
+    rules (no cohort scope ⇒ no rows pass).
+    """
+    if not rule_set:
+        return False
+    rules = rule_set.get("rules") or []
+    if not rules:
+        return False
+    combinator = str(rule_set.get("combinator", "AND")).upper()
+    results = [
+        _rule_matches_row(
+            r, observer=observer, reviewer=reviewer, reviewee=reviewee
+        )
+        for r in rules
+    ]
+    if combinator == "OR":
+        return any(results)
+    return all(results)

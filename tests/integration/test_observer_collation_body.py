@@ -400,6 +400,137 @@ def test_collation_csv_cohort_empty_returns_404(
     assert response.status_code == 404
 
 
+def test_collation_csv_or_rule_per_row_either_side(
+    client: TestClient, db: Session
+) -> None:
+    """A cross-side OR rule (``reviewer.tag1 = math`` OR
+    ``reviewee.tag1 = junior``) must include rows where EITHER
+    side matches, and only those. The set-based filter would
+    have either passed every row (OR-with-fallback degenerates
+    to ALL) or dropped both rules' valid cases (AND
+    intersect)."""
+    review_session = _make_session(client, db, code="col-csv-or")
+    inst = Instrument(
+        session_id=review_session.id, name="Instrument 1", order=0
+    )
+    db.add(inst)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=inst.id,
+        field_key="rating",
+        label="Rating",
+        _inline_data_type="Integer",
+        required=False,
+        order=0,
+    )
+    db.add(field)
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=inst.id,
+            audience="observer",
+            while_ongoing_granularity="row",
+            while_ongoing_identification="identified",
+        )
+    )
+    r_math = Reviewer(
+        session_id=review_session.id,
+        name="Math Rev",
+        email="math@x",
+        tag_1="math",
+    )
+    r_bio = Reviewer(
+        session_id=review_session.id,
+        name="Bio Rev",
+        email="bio@x",
+        tag_1="bio",
+    )
+    e_junior = Reviewee(
+        session_id=review_session.id,
+        name="Junior Ree",
+        email_or_identifier="junior@x",
+        tag_1="junior",
+    )
+    e_senior = Reviewee(
+        session_id=review_session.id,
+        name="Senior Ree",
+        email_or_identifier="senior@x",
+        tag_1="senior",
+    )
+    db.add_all([r_math, r_bio, e_junior, e_senior])
+    db.flush()
+    submitted = datetime.now(timezone.utc)
+    # Pair 1: math + senior — matches reviewer-side rule only.
+    a1 = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=r_math.id,
+        reviewee_id=e_senior.id,
+    )
+    # Pair 2: bio + junior — matches reviewee-side rule only.
+    a2 = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=r_bio.id,
+        reviewee_id=e_junior.id,
+    )
+    # Pair 3: bio + senior — matches neither.
+    a3 = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=r_bio.id,
+        reviewee_id=e_senior.id,
+    )
+    db.add_all([a1, a2, a3])
+    db.flush()
+    for assignment in (a1, a2, a3):
+        db.add(
+            Response(
+                assignment_id=assignment.id,
+                response_field_id=field.id,
+                value="3",
+                submitted_at=submitted,
+            )
+        )
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "OR",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "math",
+                },
+                {
+                    "field": "reviewee.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "junior",
+                },
+            ],
+        },
+    )
+
+    response = client.get(
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{inst.id}.csv"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Pair 1 (Math + Senior) included via reviewer side.
+    # Pair 2 (Bio + Junior) included via reviewee side.
+    # Pair 3 (Bio + Senior) absent — neither rule passes.
+    # Count reviewer / reviewee names: each appears once
+    # because each is in exactly one of the included pairs.
+    assert body.count("Math Rev") == 1
+    assert body.count("Junior Ree") == 1
+    assert body.count("Bio Rev") == 1
+    assert body.count("Senior Ree") == 1
+
+
 def test_collation_csv_excludes_rows_outside_cohort_rule(
     client: TestClient, db: Session
 ) -> None:

@@ -26,7 +26,7 @@ analyst use case.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from sqlalchemy import select
@@ -47,7 +47,6 @@ from app.services import responses as responses_service
 from app.services.date_formatting import iso_in_zone
 from app.services.instruments import decode_band1_state, decode_group_kind
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
-from app.services.observer_cohort import CohortIds
 from app.services.participant_tokens import ParticipantTokenizer
 from app.services.sessions import resolve_session_timezone
 
@@ -110,7 +109,7 @@ def serialize_by_instrument(
     position: int,
     include_metadata: bool = True,
     include_empty_assignments: bool = True,
-    cohort_filter: CohortIds | None = None,
+    row_filter: Callable[[Assignment], bool] | None = None,
     identification: str = "raw",
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
@@ -129,16 +128,17 @@ def serialize_by_instrument(
        ``include_empty_assignments`` is False.
 
     Observer-collation parameters (default to operator-side
-    behaviour — full identification, no cohort filtering):
+    behaviour — full identification, no row filtering):
 
-    - ``cohort_filter`` — when given, a row is included only
-      when **both** ends qualify: reviewer ∈
-      ``cohort_filter.reviewer_ids`` AND reviewee ∈
-      ``cohort_filter.reviewee_ids``. Single-side rules (e.g.
-      ``reviewer.tag1 = math``) still work because the
-      materialiser fills the unconstrained side with the
-      full roster, so AND collapses to the constrained side
-      alone. ``None`` → no cohort filtering.
+    - ``row_filter`` — when given, a per-row callable
+      ``(Assignment) -> bool``. Rows for which it returns
+      False are dropped before any further work. The observer
+      collation surface uses this with
+      ``app.services.observer_cohort.assignment_matches_cohort``
+      so each row is tested against the cohort rule's actual
+      predicates (a reviewer-only rule checks only the
+      reviewer side; AND / OR combination happens per-row,
+      not via set algebra over precomputed id sets).
     - ``identification`` — ``"raw"`` (default; identified
       names + emails + tags) or ``"anonymized"`` (per-row
       reviewer / reviewee names replaced by per-session
@@ -171,7 +171,7 @@ def serialize_by_instrument(
         fields,
         session_zone,
         include_empty_assignments=include_empty_assignments,
-        cohort_filter=cohort_filter,
+        row_filter=row_filter,
         tokenizer=tokenizer,
     )
 
@@ -345,7 +345,7 @@ def _data_block(
     session_zone: object,
     *,
     include_empty_assignments: bool,
-    cohort_filter: CohortIds | None = None,
+    row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
 ) -> Iterable[tuple[str, ...]]:
     yield _header_row(review_session, fields)
@@ -356,7 +356,7 @@ def _data_block(
         fields,
         session_zone,
         include_empty_assignments=include_empty_assignments,
-        cohort_filter=cohort_filter,
+        row_filter=row_filter,
         tokenizer=tokenizer,
     )
 
@@ -391,7 +391,7 @@ def _data_rows(
     session_zone: object,
     *,
     include_empty_assignments: bool,
-    cohort_filter: CohortIds | None = None,
+    row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
 ) -> Iterable[tuple[str, ...]]:
     assignments = list(
@@ -410,25 +410,8 @@ def _data_rows(
     if not assignments:
         return
 
-    if cohort_filter is not None:
-        # Row in scope only when BOTH ends conform to the cohort.
-        # Single-side rules (e.g. ``reviewer.tag1 = math``) still
-        # work: the materialiser fills the unconstrained side
-        # with the full roster, so the AND filter collapses to
-        # the constrained side alone. Multi-side rules require
-        # both ends to match — which is the right reading of
-        # "these are the rows the cohort qualifies for".
-        # OR was the previous default and let every row through
-        # whenever a rule only constrained one side (since the
-        # unconstrained side fell back to ALL ids).
-        reviewer_ids = cohort_filter.reviewer_ids
-        reviewee_ids = cohort_filter.reviewee_ids
-        assignments = [
-            a
-            for a in assignments
-            if a.reviewer_id in reviewer_ids
-            and a.reviewee_id in reviewee_ids
-        ]
+    if row_filter is not None:
+        assignments = [a for a in assignments if row_filter(a)]
         if not assignments:
             return
 
