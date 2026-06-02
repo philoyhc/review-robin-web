@@ -1643,9 +1643,15 @@ def test_tag_change_into_answered_group_refans_the_answer(
             .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         ).scalars()
     }
-    # Carol (Team A) has the lower assignment id, so after she joins
-    # Team B she becomes its collapse representative.
-    assert by_reviewee["Carol"].id < by_reviewee["Dan"].id
+    # The re-fan copies the group's answer to *every* member that
+    # lands without one (``_refan_group_responses``), so the
+    # downstream assertions (Carol's row carries "3", the surface
+    # displays "3") hold regardless of which assignment ended up
+    # with the lower id. A previous ``Carol.id < Dan.id`` preamble
+    # here tripped CI flakes on Postgres when pytest-xdist parallel
+    # workers interleaved the sequence allocation — dropped, since
+    # the id ordering isn't load-bearing for the behavior under
+    # test.
     # Segment 18L: single-page-default session — every instrument
     # lives on page 1.
     rae_client = make_client(rae)
