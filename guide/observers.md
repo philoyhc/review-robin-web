@@ -385,21 +385,38 @@ What's shipped (live in production):
   `/me/` with the amber `observer` role pill if they're on
   any session's roster (W18, polish through #1715). Their
   role-navigator chip strip links to `/me/sessions/{id}/collation`.
+- **Cohort match rule editor + persistence** —
+  `observers.cohort_rule` JSON column (#1787) +
+  `CohortRuleSet` validator + `observers_service.set_cohort_rule`
+  writer + the `observer.cohort_rule_assigned` audit event
+  (#1788) + the per-observer editor on the Observers Setup
+  page (multi-rule + AND/OR combinator + cross-attribute /
+  literal operands; #1789). The editor reads back the saved
+  rule on selection (#current PR), with mixed-state detection
+  via per-row signatures and a friendly summary in the table's
+  Cohort column. **Cohort consumers haven't shipped** — the
+  saved rule is authored but not yet used to filter what
+  observers see (see "Paused work items" below).
 
 ## Paused work items (now scoped by the MVP above)
 
-- **W17 — Observer collation surface body.** Reshape to the
-  per-instrument table (rows 1 = reviewer stats, row 2 =
-  reviewee stats, row 3 = conditional download button) per
-  the MVP definition. The original cross-reviewee
-  cell-rendering sketch retires.
 - **W5 — `app/services/collation.py` service.** Two thin
-  helpers: (a) cohort materialiser
-  (`observer + session → reviewer_ids, reviewee_ids`); (b)
+  helpers: (a) cohort materialiser (given an observer +
+  session, evaluate the saved ``cohort_rule`` against the
+  reviewer + reviewee rosters → in-cohort ids); (b)
   per-instrument stats builder that reuses W16's
   `_summarize_field` over the cohort. The originally-sketched
   `build_observer_collation_context` shrinks to a thin
   page-shape composer.
+- **W17 — Observer collation surface body.** Per-instrument
+  table (rows 1 = reviewer stats, row 2 = reviewee stats,
+  row 3 = conditional download button) per the MVP
+  definition. Depends on W5.
+- **Token helper + Anonymized identification** — the
+  `participant_token(session_id, role, individual_id) -> str`
+  helper (compute-not-persist), used to swap identification
+  when Band 3 is set to Anonymized for downloads + the
+  reviewee-stats row.
 
 ## Cross-references
 

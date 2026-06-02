@@ -150,6 +150,8 @@ def _render_observers_page(
         db, review_session.id
     )
 
+    cohort_match_tags = views.new_model_usable_tags(db, review_session)
+
     return _templates.TemplateResponse(
         request,
         "operator/session_observers.html",
@@ -175,9 +177,16 @@ def _render_observers_page(
             "add_mode": add_mode,
             "edit_values": edit_values,
             "edit_error": edit_error,
-            "cohort_match_tags": views.new_model_usable_tags(
-                db, review_session
-            ),
+            "cohort_match_tags": cohort_match_tags,
+            "cohort_rule_views": {
+                obs.id: {
+                    "signature": views.cohort_rule_signature(obs.cohort_rule),
+                    "summary": views.cohort_rule_summary(
+                        obs.cohort_rule, tag_labels=cohort_match_tags
+                    ),
+                }
+                for obs in observers
+            },
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Observers"
             ),

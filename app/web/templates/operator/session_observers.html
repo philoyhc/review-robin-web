@@ -365,7 +365,8 @@
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% else %}
-            <tr id="observer-row-{{ observer.id }}" data-observer-cohort-rule="">
+            <tr id="observer-row-{{ observer.id }}"
+                data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="observer-select"
@@ -381,7 +382,10 @@
               <td>
                 <span class="pill {{ 'pill-info' if observer.status == 'active' else 'pill-empty' }}">{{ observer.status }}</span>
               </td>
-              <td class="muted">—</td>
+              {% set _cohort_summary = cohort_rule_views[observer.id].summary %}
+              <td{% if not _cohort_summary %} class="muted"{% endif %}>
+                {{ _cohort_summary or "—" }}
+              </td>
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% endif %}
@@ -435,6 +439,70 @@
             btn.removeAttribute("aria-disabled");
           }
         }
+        // Snapshot the server-rendered first cell's outerHTML once
+        // so ``setEditorToDefault`` can restore the editor to a
+        // pristine single-cell state without losing the rendered
+        // option lists (which include the live tag labels).
+        var defaultCellHTML = null;
+        function ensureDefaultCellSnapshot() {
+          if (defaultCellHTML !== null) return;
+          if (!cohortBlock) return;
+          var first = cohortBlock.querySelector('[data-observer-rule-cell]');
+          if (first) defaultCellHTML = first.outerHTML;
+        }
+        function setEditorToDefault() {
+          if (!cohortBlock) return;
+          ensureDefaultCellSnapshot();
+          var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
+          if (cells && defaultCellHTML !== null) {
+            cells.innerHTML = defaultCellHTML;
+          }
+          var combBtn = cohortBlock.querySelector('[data-observer-combinator-toggle]');
+          var combInput = cohortBlock.querySelector('[data-observer-combinator-input]');
+          if (combBtn) combBtn.textContent = 'AND';
+          if (combInput) combInput.value = 'AND';
+        }
+        function loadEditorFromRule(rule) {
+          if (!cohortBlock) return;
+          setEditorToDefault();
+          var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
+          if (!cells) return;
+          var combBtn = cohortBlock.querySelector('[data-observer-combinator-toggle]');
+          var combInput = cohortBlock.querySelector('[data-observer-combinator-input]');
+          var nextComb = (rule && rule.combinator === 'OR') ? 'OR' : 'AND';
+          if (combBtn) combBtn.textContent = nextComb;
+          if (combInput) combInput.value = nextComb;
+          var rules = (rule && rule.rules) || [];
+          if (rules.length === 0) return;
+          // Grow the cell list to N via ``observerAddRule``; this
+          // clones the default cell and enables the cloned X.
+          var addBtn = cohortBlock.querySelector('[data-observer-rule-add]');
+          while (
+            cells.querySelectorAll('[data-observer-rule-cell]').length < rules.length
+            && addBtn
+          ) {
+            window.observerAddRule(addBtn);
+          }
+          var cellNodes = cells.querySelectorAll('[data-observer-rule-cell]');
+          for (var i = 0; i < rules.length; i++) {
+            var cell = cellNodes[i];
+            var entry = rules[i] || {};
+            var fieldSel = cell.querySelector('select[name="cohort_rule_field"]');
+            if (fieldSel) fieldSel.value = entry.field || '';
+            var opBtn = cell.querySelector('[data-observer-op-cycle]');
+            var opInput = cell.querySelector('[data-observer-op-input]');
+            var op = entry.op || 'IS THE SAME AS';
+            if (opBtn) opBtn.textContent = op;
+            if (opInput) opInput.value = op;
+            var tagSel = cell.querySelector('[data-observer-operand-tag]');
+            var valInput = cell.querySelector('[data-observer-operand-value]');
+            if (tagSel) tagSel.value = entry.operand_tag || '';
+            if (valInput) valInput.value = entry.operand_value || '';
+            var useTag = (op === 'IS THE SAME AS' || op === 'IS DIFFERENT FROM');
+            if (tagSel) tagSel.style.display = useTag ? '' : 'none';
+            if (valInput) valInput.style.display = useTag ? 'none' : '';
+          }
+        }
         function refresh() {
           var all = boxes();
           var n = countChecked();
@@ -456,23 +524,39 @@
           }
           if (cohortSaveBtn) setBtn(cohortSaveBtn, n === 0);
           // Mixed-state detection: gather the per-row cohort-rule
-          // signatures and check whether all selected observers
-          // share the same rule. Empty signature = no saved rule;
-          // populated when persistence ships. Message shows
-          // only when distinct rules > 1.
-          if (cohortMixedMessage) {
-            var seen = {};
-            var distinct = 0;
-            for (var j = 0; j < all.length; j++) {
-              if (!all[j].checked) continue;
-              var row = all[j].closest("tr");
-              var sig = row ? (row.getAttribute("data-observer-cohort-rule") || "") : "";
-              if (!Object.prototype.hasOwnProperty.call(seen, sig)) {
-                seen[sig] = true;
-                distinct++;
-              }
+          // signatures (set server-side per ``observers.cohort_rule``;
+          // empty string = no saved rule). Shared signature → load
+          // that rule into the editor; mixed → reset to default +
+          // show the message; n === 0 → block is hidden, no action.
+          var seen = {};
+          var distinct = 0;
+          for (var j = 0; j < all.length; j++) {
+            if (!all[j].checked) continue;
+            var row = all[j].closest("tr");
+            var sig = row ? (row.getAttribute("data-observer-cohort-rule") || "") : "";
+            if (!Object.prototype.hasOwnProperty.call(seen, sig)) {
+              seen[sig] = true;
+              distinct++;
             }
+          }
+          if (cohortMixedMessage) {
             cohortMixedMessage.hidden = (distinct <= 1);
+          }
+          if (cohortBlock && n > 0) {
+            if (distinct === 1) {
+              var onlySig = Object.keys(seen)[0];
+              if (onlySig === "") {
+                setEditorToDefault();
+              } else {
+                try {
+                  loadEditorFromRule(JSON.parse(onlySig));
+                } catch (e) {
+                  setEditorToDefault();
+                }
+              }
+            } else {
+              setEditorToDefault();
+            }
           }
         }
         document.addEventListener("change", function (e) {
