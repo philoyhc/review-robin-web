@@ -97,3 +97,42 @@ def test_session_observers_cascade(db: Session) -> None:
         db.query(Observer).filter(Observer.session_id == session_id).count()
     )
     assert remaining == 0
+
+
+def test_observer_cohort_rule_defaults_to_null(db: Session) -> None:
+    review_session = _session(db, code="obs-cohort-null")
+    observer = Observer(
+        session_id=review_session.id, email="no-rule@example.org"
+    )
+    db.add(observer)
+    db.commit()
+
+    refetched = db.get(Observer, observer.id)
+    assert refetched is not None
+    assert refetched.cohort_rule is None
+
+
+def test_observer_cohort_rule_round_trips_json(db: Session) -> None:
+    review_session = _session(db, code="obs-cohort-json")
+    payload = {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS THE SAME AS",
+                "operand_tag": "observer.email",
+                "operand_value": "",
+            }
+        ],
+    }
+    observer = Observer(
+        session_id=review_session.id,
+        email="with-rule@example.org",
+        cohort_rule=payload,
+    )
+    db.add(observer)
+    db.commit()
+
+    refetched = db.get(Observer, observer.id)
+    assert refetched is not None
+    assert refetched.cohort_rule == payload

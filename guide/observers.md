@@ -196,29 +196,47 @@ cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(
 
 Follows the existing instrument-assignment-rule precedent
 (`session_rule_sets.rules_json` — `sa.JSON()`, list of rule
-dicts, typed in-memory shape in `app/schemas/rules.py`). For
-the Observer cohort rule the MVP shape is a single
-predicate, not a list:
+dicts, typed in-memory shape in `app/schemas/rules.py`). The
+Cohort match rule editor is multi-rule with an AND / OR
+combinator from day one, so the storage shape is a wrapper —
+not a bare predicate — mirroring Band 1 Link 2's idiom:
 
 ```json
-{"side": "reviewee", "field": "tag_2", "op": "equals", "value": "Tutorial-A"}
+{
+  "combinator": "AND",
+  "rules": [
+    {"field": "reviewer.tag1", "op": "IS THE SAME AS", "operand_tag": "observer.email", "operand_value": ""},
+    {"field": "reviewee.tag1", "op": "IS", "operand_tag": "", "operand_value": "math"}
+  ]
+}
 ```
 
-- `side` — `"reviewer"` / `"reviewee"` / `"both"` (which
-  roster the match runs against; `"both"` materialises the
-  union).
-- `field` — `"tag_1"` / `"tag_2"` / `"tag_3"` / `"name"` /
-  `"email"` / `"identifier"` — the column on the matched
-  roster row.
-- `op` — `"equals"` / `"contains"` / `"in"` / `"matches"`
-  for MVP; same predicate vocabulary as `app/schemas/rules.py`.
-- `value` — string for `equals` / `contains` / `matches`;
-  list of strings for `in`.
+- `combinator` — `"AND"` / `"OR"`; how the per-cell verdicts
+  merge.
+- Each `rules[]` entry:
+  - `field` — canonical key from the editor's first dropdown
+    (`reviewer.tag1` / `reviewer.tag2` / … / `reviewee.tag3` /
+    `pair_context.tag1` …). Vocabulary in
+    `ALLOWED_LEFT_FIELDS` (matches the assignment-engine
+    field set, restricted to tag columns).
+  - `op` — the UI label as-is: `"IS THE SAME AS"` /
+    `"IS DIFFERENT FROM"` / `"IS"` / `"IS NOT"` / `"CONTAINS"` /
+    `"DOES NOT CONTAIN"`. Engine-side translation happens at
+    evaluation time (same Link 2 pattern).
+  - `operand_tag` — canonical key from the second dropdown
+    (`observer.name` / `observer.email` / `observer.tag1` or
+    any roster attribute). Used by the two cross-attribute
+    ops; empty string otherwise.
+  - `operand_value` — literal string from the text input.
+    Used by `IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`;
+    empty string otherwise.
 
-Null = no cohort filter (observer sees nothing, or
-everything, depending on the default we pick when the editor
-lands — likely "nothing until configured" to avoid accidental
-over-disclosure).
+`NULL` cohort_rule = the operator hasn't authored anything
+for this observer yet (distinct from a saved
+`{"combinator": "AND", "rules": []}` which is explicit
+"empty"). Resolver semantics (the difference between unset
+and explicitly-empty) land with the cohort materialiser
+service.
 
 Rejected alternatives:
 
@@ -232,10 +250,14 @@ Rejected alternatives:
 - *Stringly-typed convention* (`reviewee.tag_2=Tutorial-A`):
   validates poorly, extends poorly, doesn't match the
   existing rule idiom.
+- *Single-predicate shape* (an earlier note here): the editor
+  has been multi-rule since the placeholder UI landed.
+  Mirroring Link 2's wrapped shape from the start keeps the
+  service / route / validator coherent.
 
-Pydantic schema lives next to the rule consumer (likely
-`app/schemas/observer_rule.py` or a section of
-`app/schemas/rules.py`); the editor reuses Band 1's
+Pydantic validation lives in
+`app/schemas/observer_cohort_rule.py` (`CohortRule` per cell,
+`CohortRuleSet` for the wrapper); the editor reuses Band 1's
 predicate vocabulary.
 
 Combined with Band 3's identification mode pick, the matrix
