@@ -497,6 +497,85 @@ def test_observer_cohort_rule_signature_is_byte_identical_across_rows(
     assert sig1  # non-empty (the saved rule produced a signature)
 
 
+def test_observer_cohort_rule_save_allowed_when_session_is_ready(
+    client: TestClient, db: Session
+) -> None:
+    """Cohort rules govern observer visibility, not response data
+    or roster shape — operators should be able to refine them
+    mid-session. Pins the route's ``_require_not_archived`` gate:
+    a save against a ``ready`` session succeeds where the older
+    ``_require_editable`` would have 409'd."""
+    review_session = _make_session(client, db, "obs-cohort-ready")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    review_session.status = "ready"
+    db.commit()
+    db.refresh(obs)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.refresh(obs)
+    assert obs.cohort_rule == {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "math",
+            }
+        ],
+    }
+
+
+def test_observer_cohort_rule_save_rejected_when_session_is_archived(
+    client: TestClient, db: Session
+) -> None:
+    """Archived is the only hard stop — the route 409s instead
+    of writing through."""
+    review_session = _make_session(client, db, "obs-cohort-archived")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    review_session.status = "archived"
+    db.commit()
+    db.refresh(obs)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    db.refresh(obs)
+    assert obs.cohort_rule is None
+
+
 def test_observer_cohort_rule_save_pads_short_operand_arrays(
     client: TestClient, db: Session
 ) -> None:

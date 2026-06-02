@@ -114,40 +114,21 @@ retires for another reason.
 
 ### Medium-but-deferred
 
-12. **Loosen the cohort-edit lifecycle gate to "not
-    archived".** Today the route handler
-    (`observers_cohort_rule_save`) calls `_require_editable`,
-    which allows only draft + validated states. Cohort
-    rules govern *which parts of response data are visible
-    to an observer* — they don't affect roster shape or
-    response data — so the operator can legitimately
-    refine them mid-session (active / expired states),
-    and only `archived` is a real hard stop. Two pieces of
-    work:
-
-    - **Route:** swap `_require_editable` for a check that
-      blocks only `archived` (or just delete the call —
-      whatever pattern the rest of the codebase grows when
-      a similar mid-session-edit case lands).
-    - **Template:** the cohort editor currently nests inside
-      the operator-actions card, which the whole-card lock
-      pattern hides when `is_ready`. Either split the
-      cohort editor out into its own card with looser
-      visibility gating, or selectively render the
-      operator-actions card during active states with the
-      bulk-action buttons disabled while the cohort
-      controls stay live.
-
-    Defer until the W17 collation consumer surface ships —
-    at that point the mid-session-edit use case becomes
-    concrete (operator notices observer cohort needs
-    refinement after observers start accessing the
-    surface) and the right UX shape will be clearer.
-    *Source: Item 1 revisited (2026-06-02) — see commit
-    closing item 1 for the original rationale, and
-    https://github.com/philoyhc/review-robin-web/pull/1794
-    for the docstring on ``set_cohort_rule`` capturing the
-    "no service-layer lifecycle gate" decision.*
+12. ~~**Loosen the cohort-edit lifecycle gate to "not
+    archived".**~~
+    *Shipped #current — new ``_require_not_archived`` helper
+    in ``app/web/routes_operator/_shared.py``; the
+    ``observers_cohort_rule_save`` route now uses it. Template
+    splits the cohort editor into its own card sibling to (not
+    nested in) the Operator actions card, with its own
+    visibility gate ``not edit_mode and not is_archived``.
+    ``selectable`` widens to the same gate so the table
+    checkboxes stay live during ``ready`` / ``expired`` for
+    the cohort save flow; the bulk-actions card still hides
+    during ``ready`` (lock pattern) so the Edit / Inactivate /
+    Activate buttons can't fire. JS null-checks each element
+    so it works in any combination. Spec + service docstring
+    updated.*
 
 ## Workflow
 

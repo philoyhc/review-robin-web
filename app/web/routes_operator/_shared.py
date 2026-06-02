@@ -163,6 +163,23 @@ def _require_editable(review_session: ReviewSession) -> None:
         )
 
 
+def _require_not_archived(review_session: ReviewSession) -> None:
+    """Reject mutating operator actions only when archived.
+
+    Used for operator-side controls whose effect is post-validation
+    presentation only — e.g. the observer cohort match rule, which
+    governs which parts of response data become visible to an
+    observer rather than the response data or roster shape itself.
+    Editing those mid-session (ready / expired) is the legitimate
+    flow; only the archived hard-stop is enforced.
+    """
+    if lifecycle.is_archived(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Session is archived; cohort rule edits are not allowed.",
+        )
+
+
 def require_relationships_enabled_session(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> ReviewSession:

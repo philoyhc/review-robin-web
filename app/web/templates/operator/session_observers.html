@@ -149,111 +149,6 @@
           </div>
         </form>
       </div>
-      {# Cohort match rule — placeholder; client-side only. The
-         block is hidden until at least one observer checkbox is
-         ticked; the selection JS below flips ``hidden``. Mirrors
-         Band 1's Link 2 rule-list editor on the Instruments page
-         (per-instrument card, ``new_model_rule_list("link2", ...)``).
-         No persistence yet — + / X / cycle / combinator all stay
-         in the DOM. #}
-      {% if not edit_mode and not is_ready %}
-        <div id="observers-cohort-block" hidden>
-          <hr class="operator-actions-divider">
-          <h3 id="observers-cohort-heading" style="margin: 0 0 12px 0;">Selected observer is able to see responses where</h3>
-          <div data-observer-cohort-builder
-               style="display: flex; align-items: stretch; gap: 8px;">
-            <div style="flex: 0 0 20%; display: flex;
-                        align-items: center; justify-content: center; gap: 4px;">
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
-                      data-observer-rule-add
-                      onclick="observerAddRule(this)"
-                      title="Add rule">+</button>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
-                      data-observer-combinator-toggle
-                      onclick="observerToggleCombinator(this)"
-                      title="Toggle combinator">AND</button>
-              <input type="hidden" form="observers-bulk-form"
-                     name="cohort_combinator"
-                     data-observer-combinator-input
-                     value="AND">
-            </div>
-            <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-            <div data-observer-cohort-cells
-                 style="flex: 1; min-width: 0; display: flex;
-                        flex-direction: column; gap: 12px;">
-              <div data-observer-rule-cell
-                   style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <select form="observers-bulk-form" name="cohort_rule_field"
-                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                    {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                      <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                      <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                      <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="button" class="btn secondary"
-                          style="padding: 4px 8px; flex-shrink: 0;"
-                          data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
-                          onclick="observerCycleOperator(this)"
-                          title="Toggle operator">IS THE SAME AS</button>
-                  <input type="hidden" form="observers-bulk-form"
-                         name="cohort_rule_op"
-                         data-observer-op-input
-                         value="IS THE SAME AS">
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <select form="observers-bulk-form" name="cohort_rule_operand_tag"
-                          data-observer-operand-tag
-                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                    <option value="observer.name">Observer: Name</option>
-                    <option value="observer.email">Observer: Email</option>
-                    <option value="observer.tag1">Observer: Tag 1</option>
-                    <option disabled>──────────</option>
-                    {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                      <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                      <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                      <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
-                    {% endfor %}
-                  </select>
-                  <input form="observers-bulk-form" name="cohort_rule_operand_value"
-                         data-observer-operand-value type="text" placeholder="value"
-                         style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
-                  <button type="button" class="btn destructive"
-                          style="padding: 4px 8px; flex-shrink: 0;"
-                          data-observer-rule-remove
-                          onclick="observerRemoveRule(this)"
-                          disabled aria-disabled="true"
-                          title="Cannot remove the first rule">X</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p id="observers-cohort-mixed-message" hidden
-             style="margin: var(--space-3) 0 0 0;
-                    color: var(--text-muted, #64748b);">
-            The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
-          </p>
-          <div style="display: flex; justify-content: flex-end;
-                      gap: 12px; margin-top: var(--space-3);">
-            <button class="btn primary" type="submit"
-                    id="observers-cohort-save-btn"
-                    form="observers-bulk-form"
-                    formaction="{{ observers_base_url }}/cohort-rule"
-                    disabled aria-disabled="true">Save</button>
-          </div>
-        </div>
-      {% endif %}
       {% if edit_mode %}
         <hr class="operator-actions-divider">
         <h2>{{ "Add new observer" if add_mode else "Edit observer" }}</h2>
@@ -279,6 +174,112 @@
   </div>
   {% endif %}
 
+  {# Cohort match rule editor — its own card so the editor stays
+     live during ``ready`` / ``expired`` states even though the
+     bulk Operator actions card above gets hidden by the lock
+     pattern then. Hard stop is ``archived``: cohort rules govern
+     which parts of response data observers see (not the data
+     itself, not the roster shape), so mid-session refinement is
+     a legitimate flow. JS below toggles ``hidden`` on selection
+     count. #}
+  {% if not edit_mode and not is_archived %}
+    <div class="card" id="observers-cohort-block" hidden>
+      <h2 id="observers-cohort-heading" style="margin-top: 0;">Selected observer is able to see responses where</h2>
+      <div data-observer-cohort-builder
+           style="display: flex; align-items: stretch; gap: 8px;">
+        <div style="flex: 0 0 20%; display: flex;
+                    align-items: center; justify-content: center; gap: 4px;">
+          <button type="button" class="btn secondary"
+                  style="padding: 4px 10px;"
+                  data-observer-rule-add
+                  onclick="observerAddRule(this)"
+                  title="Add rule">+</button>
+          <button type="button" class="btn secondary"
+                  style="padding: 4px 10px;"
+                  data-observer-combinator-toggle
+                  onclick="observerToggleCombinator(this)"
+                  title="Toggle combinator">AND</button>
+          <input type="hidden" form="observers-bulk-form"
+                 name="cohort_combinator"
+                 data-observer-combinator-input
+                 value="AND">
+        </div>
+        <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+        <div data-observer-cohort-cells
+             style="flex: 1; min-width: 0; display: flex;
+                    flex-direction: column; gap: 12px;">
+          <div data-observer-rule-cell
+               style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select form="observers-bulk-form" name="cohort_rule_field"
+                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                  <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                {% endfor %}
+                {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                  <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                {% endfor %}
+                {% for canonical_key, friendly in cohort_match_tags.pair_context %}
+                  <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
+                      onclick="observerCycleOperator(this)"
+                      title="Toggle operator">IS THE SAME AS</button>
+              <input type="hidden" form="observers-bulk-form"
+                     name="cohort_rule_op"
+                     data-observer-op-input
+                     value="IS THE SAME AS">
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select form="observers-bulk-form" name="cohort_rule_operand_tag"
+                      data-observer-operand-tag
+                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                <option value="observer.name">Observer: Name</option>
+                <option value="observer.email">Observer: Email</option>
+                <option value="observer.tag1">Observer: Tag 1</option>
+                <option disabled>──────────</option>
+                {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                  <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                {% endfor %}
+                {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                  <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                {% endfor %}
+                {% for canonical_key, friendly in cohort_match_tags.pair_context %}
+                  <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
+                {% endfor %}
+              </select>
+              <input form="observers-bulk-form" name="cohort_rule_operand_value"
+                     data-observer-operand-value type="text" placeholder="value"
+                     style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
+              <button type="button" class="btn destructive"
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      data-observer-rule-remove
+                      onclick="observerRemoveRule(this)"
+                      disabled aria-disabled="true"
+                      title="Cannot remove the first rule">X</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p id="observers-cohort-mixed-message" hidden
+         style="margin: var(--space-3) 0 0 0;
+                color: var(--text-muted, #64748b);">
+        The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
+      </p>
+      <div style="display: flex; justify-content: flex-end;
+                  gap: 12px; margin-top: var(--space-3);">
+        <button class="btn primary" type="submit"
+                id="observers-cohort-save-btn"
+                form="observers-bulk-form"
+                formaction="{{ observers_base_url }}/cohort-rule"
+                disabled aria-disabled="true">Save</button>
+      </div>
+    </div>
+  {% endif %}
+
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}
   {% if edit_mode %}
@@ -300,7 +301,13 @@
      placeholder layout). When the filter matches nothing, render
      a muted notice instead of a stub row. #}
   {% if observers or add_mode %}
-    {% set selectable = not edit_mode and not is_ready %}
+    {# Checkboxes need to be live whenever the cohort editor is
+       (``not is_archived``) so the operator can pick observers to
+       apply a rule to. The bulk operator-actions card still hides
+       during ``is_ready``, so the bulk Edit / Inactivate / Activate
+       buttons can't fire — checkboxes during ``ready`` only drive
+       the cohort editor below. #}
+    {% set selectable = not edit_mode and not is_archived %}
     <div class="card">
       <table id="observers-table">
         <thead>
@@ -405,9 +412,14 @@
     </div>
   {% endif %}
 
-  {# Selection → action-button state binding. Only runs in the
-     interactive non-edit / non-ready state. #}
-  {% if not edit_mode and not is_ready %}
+  {# Selection → action-button state binding. Runs whenever the
+     checkboxes render (``selectable`` above — not edit, not
+     archived). The bulk-action buttons live in the Operator
+     actions card and disappear during ``is_ready`` (lock card);
+     the cohort editor lives in its own card and stays through
+     ``ready`` / ``expired``. The JS below null-checks each
+     element so it works regardless of which card is rendered. #}
+  {% if not edit_mode and not is_archived %}
     <script>
       (function () {
         var editBtn = document.getElementById("observers-edit-btn");
@@ -419,7 +431,6 @@
         var cohortHeading = document.getElementById("observers-cohort-heading");
         var cohortMixedMessage = document.getElementById("observers-cohort-mixed-message");
         var cohortSaveBtn = document.getElementById("observers-cohort-save-btn");
-        if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
         }
@@ -530,11 +541,13 @@
         function refresh() {
           var all = boxes();
           var n = countChecked();
-          setBtn(editBtn, n !== 1);
-          setBtn(inactivateBtn, n === 0);
-          setBtn(reactivateBtn, n === 0);
-          countPill.textContent = n + " selected";
-          countPill.hidden = (n === 0);
+          if (editBtn) setBtn(editBtn, n !== 1);
+          if (inactivateBtn) setBtn(inactivateBtn, n === 0);
+          if (reactivateBtn) setBtn(reactivateBtn, n === 0);
+          if (countPill) {
+            countPill.textContent = n + " selected";
+            countPill.hidden = (n === 0);
+          }
           if (selectAll) {
             selectAll.checked = (n > 0 && n === all.length);
           }
@@ -597,19 +610,21 @@
             refresh();
           }
         });
-        editBtn.addEventListener("click", function () {
-          var all = boxes();
-          var picked = null;
-          for (var i = 0; i < all.length; i++) {
-            if (all[i].checked) {
-              if (picked !== null) return;
-              picked = all[i];
+        if (editBtn) {
+          editBtn.addEventListener("click", function () {
+            var all = boxes();
+            var picked = null;
+            for (var i = 0; i < all.length; i++) {
+              if (all[i].checked) {
+                if (picked !== null) return;
+                picked = all[i];
+              }
             }
-          }
-          if (picked === null) return;
-          window.location =
-            {{ observers_base_url | tojson }} + "?edit_id=" + picked.value;
-        });
+            if (picked === null) return;
+            window.location =
+              {{ observers_base_url | tojson }} + "?edit_id=" + picked.value;
+          });
+        }
         refresh();
       })();
 
