@@ -840,6 +840,103 @@ def test_collation_csv_anonymized_filename_carries_anon_suffix(
     assert disposition.endswith('_anon.csv"')
 
 
+def test_collation_renders_after_release_section_when_window_open(
+    client: TestClient, db: Session
+) -> None:
+    """Observer / after_release Band 3 grant should render
+    once the operator's release-window timestamp is reached
+    and the policy carries an ``after_release`` mode."""
+    from datetime import timedelta
+
+    review_session = _make_session(
+        client, db, code="col-body-after-release"
+    )
+    inst = Instrument(
+        session_id=review_session.id, name="Instrument 1", order=0
+    )
+    db.add(inst)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=inst.id,
+        field_key="rating",
+        label="Rating",
+        _inline_data_type="Integer",
+        required=False,
+        order=0,
+    )
+    db.add(field)
+    # Operator policy: after_release Anonymized only — Session
+    # ongoing tightened to ``None`` per the 2026-06-02 cut.
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=inst.id,
+            audience="observer",
+            after_release_granularity="row",
+            after_release_identification="deidentified",
+        )
+    )
+    r = Reviewer(
+        session_id=review_session.id,
+        name="Rev",
+        email="rev@x",
+        tag_1="mathcohort",
+    )
+    e = Reviewee(
+        session_id=review_session.id,
+        name="Ree",
+        email_or_identifier="ree@x",
+    )
+    db.add_all([r, e])
+    db.flush()
+    a = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=r.id,
+        reviewee_id=e.id,
+    )
+    db.add(a)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=a.id,
+            response_field_id=field.id,
+            value="4",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+    # Critical bit: open the release window by setting
+    # ``responses_release_at`` to a past time.
+    review_session.responses_release_at = datetime.now(
+        timezone.utc
+    ) - timedelta(hours=1)
+    db.commit()
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(
+        f"/me/sessions/{review_session.id}/collation"
+    ).text
+    # The instrument section renders + Anonymized download
+    # button appears.
+    assert "Reviewers in cohort" in body
+    assert "Download CSV" in body
+    assert "(Anonymized)" in body
+
+
 def test_collation_csv_403_when_user_is_not_an_observer(
     client: TestClient, db: Session
 ) -> None:
