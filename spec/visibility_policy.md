@@ -96,7 +96,7 @@ One nullable column on `instrument_view_policies` encodes the window:
 |---|---|---|
 | Peer reviewer | `while_ongoing` ⇄ `throughout` (2-step toggle). | `while_ongoing` is the default. `after_release` and `always` are not exposed: a reviewer reading their own work after release is well-served by `throughout`. |
 | Reviewee | `while_ongoing` → `after_release` → `throughout` (3-step cycle). | All three are valid. Default: `after_release`. |
-| Observer | Same as Reviewee. | All three are valid. Default: `after_release`. |
+| Observer | `while_ongoing` accepts only `None` (off) or `summarized` (Anonymized summaries). Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk that the summary view dodges. `after_release` accepts all three modes + off. | `None` / `summarized` for `while_ongoing`; all four for `after_release`. Default: `after_release`. |
 
 ### 3.2 Anchor-null inertness
 

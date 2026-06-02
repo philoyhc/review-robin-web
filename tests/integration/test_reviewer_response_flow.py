@@ -2308,12 +2308,15 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
         after_release_mode="summarized",
         user=operator_user,
     )
+    # Observer Session-ongoing tightened to ``None`` /
+    # ``summarized`` only post-2026-06-02; rows are still
+    # omitted from the reviewer-facing card regardless.
     visibility_policies.upsert_policy(
         db,
         review_session=review_session,
         instrument=instrument,
         audience="observer",
-        while_ongoing_mode="raw",
+        while_ongoing_mode="summarized",
         after_release_mode="raw",
         user=operator_user,
     )

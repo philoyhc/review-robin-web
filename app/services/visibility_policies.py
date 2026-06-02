@@ -79,7 +79,15 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
 #   review is in flight. Editor renders this cell as a static
 #   "—" pill.
 # - reviewee Responses-released: any of the three modes or off.
-# - observer (both windows): any of the three modes or off.
+# - observer Session-ongoing: ``None`` (off) or ``summarized``
+#   only. Per-row downloads during an active session — Raw or
+#   Anonymized — were dropped 2026-06-02 once the collation
+#   surface body shipped: pre-release the operator is still
+#   collecting responses, downloads risk pulling unfinished
+#   data, and the summary view is enough for the "early sense
+#   check" use case. Once the response-release window opens the
+#   ``after_release`` row takes over with the full mode set.
+# - observer Responses-released: any of the three modes or off.
 
 _PER_CELL_VALID_MODES: dict[tuple[str, str], frozenset[str | None]] = {
     ("peer_reviewer", "while_ongoing"): frozenset({"raw"}),
@@ -90,9 +98,7 @@ _PER_CELL_VALID_MODES: dict[tuple[str, str], frozenset[str | None]] = {
     ("reviewee", "after_release"): frozenset(
         {None, "raw", "anonymized", "summarized"}
     ),
-    ("observer", "while_ongoing"): frozenset(
-        {None, "raw", "anonymized", "summarized"}
-    ),
+    ("observer", "while_ongoing"): frozenset({None, "summarized"}),
     ("observer", "after_release"): frozenset(
         {None, "raw", "anonymized", "summarized"}
     ),
