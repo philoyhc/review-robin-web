@@ -149,6 +149,56 @@
           </div>
         </form>
       </div>
+      {# Cohort match rule — placeholder; not wired. The block is
+         hidden until at least one observer checkbox is ticked; the
+         selection JS below flips ``hidden``. Mirrors Band 1's Link 2
+         rule-list editor on the Instruments page (per-instrument
+         card, ``new_model_rule_list("link2", ...)``). #}
+      {% if not edit_mode and not is_ready %}
+        <div id="observers-cohort-block" hidden>
+          <hr class="operator-actions-divider">
+          <h3 style="margin: 0 0 12px 0;">Cohort match rule</h3>
+          <div style="display: flex; align-items: stretch; gap: 8px;">
+            <div style="flex: 0 0 20%; display: flex;
+                        align-items: center; justify-content: center; gap: 4px;">
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 10px;"
+                      disabled aria-disabled="true"
+                      title="Add rule (not wired)">+</button>
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 10px;"
+                      disabled aria-disabled="true"
+                      title="Toggle combinator (not wired)">AND</button>
+            </div>
+            <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+            <div style="flex: 1; min-width: 0; display: flex;
+                        align-items: center; gap: 4px;">
+              <select style="flex: 0 0 30%; min-width: 0; padding: 4px;"
+                      disabled aria-disabled="true">
+                <option>Name</option>
+                <option>Email</option>
+                <option>Tag 1</option>
+              </select>
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      disabled aria-disabled="true"
+                      title="Toggle operator (not wired)">IS</button>
+              <select style="flex: 0 0 30%; min-width: 0; padding: 4px;"
+                      disabled aria-disabled="true">
+                <option>Reviewer Tag 1</option>
+                <option>Reviewer Tag 2</option>
+                <option>Reviewer Tag 3</option>
+                <option>Reviewee Tag 1</option>
+                <option>Reviewee Tag 2</option>
+                <option>Reviewee Tag 3</option>
+                <option>Pair Context Tag 1</option>
+                <option>Pair Context Tag 2</option>
+                <option>Pair Context Tag 3</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      {% endif %}
       {% if edit_mode %}
         <hr class="operator-actions-divider">
         <h2>{{ "Add new observer" if add_mode else "Edit observer" }}</h2>
@@ -302,6 +352,7 @@
         var reactivateBtn = document.getElementById("observers-reactivate-btn");
         var countPill = document.getElementById("observers-selected-count");
         var selectAll = document.getElementById("observers-select-all");
+        var cohortBlock = document.getElementById("observers-cohort-block");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -332,6 +383,9 @@
           countPill.hidden = (n === 0);
           if (selectAll) {
             selectAll.checked = (n > 0 && n === all.length);
+          }
+          if (cohortBlock) {
+            cohortBlock.hidden = (n === 0);
           }
         }
         document.addEventListener("change", function (e) {
