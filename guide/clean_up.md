@@ -136,18 +136,18 @@ The collation MVP shipped 2026-06-02 (#1799 → #1806). Three
 deferral notes from that ladder, now logged here so they don't
 get lost when ``guide/observers.md`` is sweep-trimmed:
 
-13. **`pair_context.*` left-side rules.** The
-    ``CohortRuleSet`` schema accepts ``pair_context.tag1`` /
-    ``tag2`` / ``tag3`` as the rule's left field. Today both
-    ``observer_cohort.materialize_cohort`` (set-side, used by
-    the surface stats rows) and
-    ``observer_cohort.assignment_matches_cohort`` (per-row,
-    used by the CSV filter) silently treat any
-    ``pair_context.*`` rule as unmatched. Lighting it up needs
-    a pair-level join against ``relationships`` /
-    ``Assignment`` to resolve the per-pair tag value.
-    *Source: ``observer_cohort.py`` module docstring (deferred
-    case) + ``test_pair_context_rule_returns_empty_for_now``.*
+13. ~~**`pair_context.*` left-side rules.**~~
+    *Closed by removing the option from the UI #current — the
+    Cohort match rule editor's field + operand_tag dropdowns no
+    longer surface ``pair_context.*`` entries on the Observers
+    Setup page, so an operator can't author such a rule. The
+    schema still accepts the value and the materialiser +
+    per-row predicate still treat it as unmatched, so legacy
+    saved rules (none expected in practice) degrade safely.
+    The pair-level join remains deferred — when a future
+    product decision asks for pair-context cohort filters, the
+    work is to add the UI back + light up the
+    ``observer_cohort.py`` branches.*
 
 14. **Cross-roster ``operand_tag`` (e.g.
     ``reviewer.tag1 IS THE SAME AS reviewee.tag2``).** The
