@@ -291,6 +291,7 @@
           <th>Email</th>
           <th>Tag1</th>
           <th>Status</th>
+          <th>Cohort</th>
           <th>Updated</th>
         </tr>
         </thead>
@@ -314,6 +315,7 @@
               </select>
             </td>
             <td class="muted">—</td>
+            <td class="muted">—</td>
           </tr>
         {% endif %}
         {% for observer in observers %}
@@ -335,6 +337,7 @@
                   <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
                 </select>
               </td>
+              <td class="muted">—</td>
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% else %}
@@ -354,6 +357,7 @@
               <td>
                 <span class="pill {{ 'pill-info' if observer.status == 'active' else 'pill-empty' }}">{{ observer.status }}</span>
               </td>
+              <td class="muted">—</td>
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% endif %}
