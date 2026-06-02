@@ -233,4 +233,4 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
     detail = events[0].detail
     assert detail["snapshot"]["observer_ids"] == sorted([o1.id, o2.id])
     assert detail["snapshot"]["cohort_rule"] == payload
-    assert detail["refs"]["observer_count"] == 2
+    assert "refs" not in detail

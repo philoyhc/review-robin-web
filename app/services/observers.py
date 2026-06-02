@@ -21,7 +21,6 @@ Audit events registered in ``EVENT_SCHEMAS``:
   changed; nothing emitted).
 - ``observer.cohort_rule_assigned`` — snapshot envelope with the
   cohort-rule payload + the observer_ids the rule was applied to.
-  ``refs`` carries the count of affected observers.
 - ``observer.bulk_inactivated`` / ``observer.bulk_reactivated`` —
   snapshot envelope listing the ids that were actually flipped
   (rows already at the target status are skipped silently).
@@ -417,7 +416,6 @@ def set_cohort_rule(
                 "cohort_rule": validated_dump,
             }
         ),
-        refs={"observer_count": len(target_ids)},
         correlation_id=correlation_id,
     )
     db.commit()
