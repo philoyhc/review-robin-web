@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -44,5 +44,13 @@ class Observer(Base, TimestampMixin):
     display_name: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
     tag_1: Mapped[str | None] = mapped_column(String(255))
+    cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    """Per-observer cohort match rule (the Cohort match rule
+    editor's payload). ``None`` = operator hasn't authored
+    anything for this observer yet. Shape validated by
+    ``app.schemas.observer_cohort_rule.CohortRuleSet``; see
+    ``guide/observers.md`` "Match-axis schema — decided"."""
 
     session: Mapped[ReviewSession] = relationship(back_populates="observers")
