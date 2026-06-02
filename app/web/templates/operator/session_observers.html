@@ -100,9 +100,6 @@
                     {% for canonical_key, friendly in cohort_match_tags.reviewee %}
                       <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
                     {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                      <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
-                    {% endfor %}
                   </select>
                   <button type="button" class="btn secondary"
                           style="padding: 4px 8px; flex-shrink: 0;"
@@ -127,9 +124,6 @@
                     {% endfor %}
                     {% for canonical_key, friendly in cohort_match_tags.reviewee %}
                       <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                      <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
                     {% endfor %}
                   </select>
                   <input form="observers-bulk-form" name="cohort_rule_operand_value"
