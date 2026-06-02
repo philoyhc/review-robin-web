@@ -205,6 +205,16 @@
                     <option>Observer: Name</option>
                     <option>Observer: Email</option>
                     <option>Observer: Tag 1</option>
+                    <option disabled>──────────</option>
+                    {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                      <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                    {% endfor %}
+                    {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                      <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                    {% endfor %}
+                    {% for canonical_key, friendly in cohort_match_tags.pair_context %}
+                      <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
+                    {% endfor %}
                   </select>
                   <input data-observer-operand-value type="text" placeholder="value"
                          style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
