@@ -1,4 +1,4 @@
-"""Unit tests for :func:`_summarize_field` in the reviewee
+"""Unit tests for :func:`summarize_field` in the reviewee
 results view shape — the per-data-type aggregation that the
 "Anonymized summaries" mode emits into each response column.
 
@@ -10,7 +10,7 @@ data-type branch end-to-end.
 from __future__ import annotations
 
 from app.db.models import InstrumentResponseField
-from app.web.views._reviewee_results import _summarize_field
+from app.web.views._reviewee_results import summarize_field
 
 
 def _field(*, data_type: str, list_csv: str | None = None) -> InstrumentResponseField:
@@ -26,7 +26,7 @@ def _field(*, data_type: str, list_csv: str | None = None) -> InstrumentResponse
 
 
 def test_numerical_aggregates_mean_median_min_max() -> None:
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="Integer"),
         ["1", "2", "3", "4", "5"],
     )
@@ -40,7 +40,7 @@ def test_numerical_aggregates_mean_median_min_max() -> None:
 def test_numerical_median_diverges_from_mean_on_outlier() -> None:
     # Skewed distribution — median + mean are different. Pins the
     # "show both" guideline that the operator can read for skew.
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="Decimal"),
         ["1", "1", "1", "1", "20"],
     )
@@ -53,7 +53,7 @@ def test_numerical_median_diverges_from_mean_on_outlier() -> None:
 def test_numerical_skips_unparseable_values() -> None:
     # A stray non-numeric stored value (e.g. a downstream-of-edit
     # leftover) is silently skipped, not crash the aggregate.
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="Integer"),
         ["3", "abc", "5"],
     )
@@ -62,7 +62,7 @@ def test_numerical_skips_unparseable_values() -> None:
 
 
 def test_numerical_zero_responses_leaves_metrics_none() -> None:
-    cell = _summarize_field(_field(data_type="Integer"), [])
+    cell = summarize_field(_field(data_type="Integer"), [])
     assert cell.response_count == 0
     assert cell.average is None
     assert cell.median is None
@@ -71,7 +71,7 @@ def test_numerical_zero_responses_leaves_metrics_none() -> None:
 
 
 def test_list_frequencies_include_percentages() -> None:
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="List", list_csv="A,B,C"),
         ["A", "B", "B", "C", "C", "C"],
     )
@@ -87,7 +87,7 @@ def test_list_frequencies_include_percentages() -> None:
 
 
 def test_list_zero_responses_keeps_options_at_zero() -> None:
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="List", list_csv="Yes,No"),
         [],
     )
@@ -96,7 +96,7 @@ def test_list_zero_responses_keeps_options_at_zero() -> None:
 
 
 def test_string_aggregates_total_and_average_length() -> None:
-    cell = _summarize_field(
+    cell = summarize_field(
         _field(data_type="String"),
         ["hi", "hello", "hey"],
     )
@@ -106,7 +106,7 @@ def test_string_aggregates_total_and_average_length() -> None:
 
 
 def test_string_zero_responses_leaves_metrics_none() -> None:
-    cell = _summarize_field(_field(data_type="String"), [])
+    cell = summarize_field(_field(data_type="String"), [])
     assert cell.response_count == 0
     assert cell.total_length == 0
     assert cell.average_length is None
