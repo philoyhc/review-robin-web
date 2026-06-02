@@ -1,0 +1,27 @@
+{# Per-field aggregate cell for the observer collation surface.
+   Mirrors the SummarizedFieldCell rendering on the reviewee
+   /results "summarized" mode so the per-data-type shape stays
+   consistent across the two surfaces.
+
+   Expects ``cell`` (``SummarizedFieldCell``) in scope. #}
+<td>
+  {% if cell.data_type in ("Integer", "Decimal") %}
+    Average: {% if cell.response_count > 0 %}{{ cell.average }}{% else %}<span class="muted">—</span>{% endif %}<br>
+    Median: {% if cell.response_count > 0 %}{{ cell.median }}{% else %}<span class="muted">—</span>{% endif %}<br>
+    Min: {% if cell.response_count > 0 %}{{ cell.min_value }}{% else %}<span class="muted">—</span>{% endif %}<br>
+    Max: {% if cell.response_count > 0 %}{{ cell.max_value }}{% else %}<span class="muted">—</span>{% endif %}<br>
+    <span class="muted">(based on {{ cell.response_count }} responses)</span>
+  {% elif cell.data_type == "List" %}
+    {% if cell.frequencies %}
+      {% for choice, count, pct in cell.frequencies %}
+        {{ choice }}: {{ count }} ({{ pct }}%){% if not loop.last %}<br>{% endif %}
+      {% endfor %}
+    {% else %}
+      <span class="muted">No list options defined.</span>
+    {% endif %}
+  {% else %}
+    Total length: {{ cell.total_length }} characters<br>
+    Average length: {% if cell.response_count > 0 %}{{ cell.average_length }} characters{% else %}<span class="muted">—</span>{% endif %}<br>
+    <span class="muted">(based on {{ cell.response_count }} responses)</span>
+  {% endif %}
+</td>

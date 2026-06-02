@@ -75,6 +75,11 @@ from ._filters import (
     reviewees_search_options,
     reviewers_search_options,
 )
+from ._observer_collation import (
+    InstrumentCollationSection,
+    ObserverCollationContext,
+    build_observer_collation_context,
+)
 from ._observers import (
     cohort_rule_signature,
     cohort_rule_summary,
@@ -205,7 +210,9 @@ __all__ = [
     "EmailPreviewTab",
     "ExtractDataContext",
     "ExtractDataRow",
+    "InstrumentCollationSection",
     "InstrumentHeading",
+    "ObserverCollationContext",
     "InstrumentStatusBlock",
     "InvitationsRow",
     "IssueSourceGroup",
@@ -226,6 +233,7 @@ __all__ = [
     "build_extract_data_context",
     "build_instruments_context",
     "build_invitations_rows",
+    "build_observer_collation_context",
     "build_reviewer_visibility_rows",
     "build_new_session_quick_setup_context",
     "build_preview_picker_context",

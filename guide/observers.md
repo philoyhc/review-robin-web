@@ -6,14 +6,19 @@ still to ship.
 
 ## Status
 
-**Paused 2026-06-01, reframed 2026-06-02.** Operator-side
-observer plumbing is live (roster Setup page, Quick Setup
-slot, Extract Setup row, bundle inclusion, per-session enable
-toggle, friendly-label resolver, visibility-policy column)
-but the participant-facing collation surface
-(`/me/sessions/{id}/collation`) renders only the placeholder
-chrome — no body. The reframe below replaces the
-collation-table sketch with a download-only model.
+**MVP shipped 2026-06-02.** Operator-side plumbing was live
+through the participant-model rollout; the consumer side —
+cohort materialiser, per-instrument stats builder,
+participant-token helper, by-instrument cohort filter, and
+the collation surface body itself — landed in a five-PR
+ladder (#1799 → #1802 + the surface PR). Today
+``/me/sessions/{id}/collation`` renders the per-instrument
+3-row table per the MVP defined below; the per-instrument
+CSV download route streams Raw / Anonymized data scoped to
+the observer's cohort.
+
+The Design reframe section below records the framing that
+led to the MVP shape; the wiring is now live.
 
 ## Design reframe (2026-06-02)
 
@@ -396,29 +401,35 @@ What's shipped (live in production):
   column (#1790). Audit emit reshaped to one event per
   affected observer with ``refs={"observer_id": id}`` for
   spec conformance; view helpers moved to
-  ``app/web/views/_observers.py``. **Cohort consumers haven't
-  shipped** — the saved rule is authored but not yet used to
-  filter what observers see (see "Paused work items" below).
+  ``app/web/views/_observers.py``.
+- **W17 — Observer collation surface body** —
+  `/me/sessions/{id}/collation` renders the per-instrument
+  3-row table (reviewer stats / reviewee stats / conditional
+  download), one card per visible-to-observer instrument.
+  Composes the cohort materialiser (#1800), the per-instrument
+  stats builder (#1801), and the by-instrument extract's
+  cohort filter + Anonymized token swap (#1802). Cohort-empty
+  and "no instruments visible right now" branches render
+  their own muted-paragraph messages.
+- **W5 — `app/services/collation.py`** + cohort materialiser
+  (`app/services/observer_cohort.py`) shipped with #1800 +
+  #1801. Per-instrument stats reuse W16's `summarize_field`
+  (promoted from underscore-private in the same PR).
+- **Token helper + Anonymized identification** — shipped via
+  ``app/services/participant_tokens.py`` (#1799) +
+  ``serialize_by_instrument(identification="anonymized")``
+  (#1802). Anonymized downloads swap reviewer / reviewee
+  names for per-session opaque tokens and blank emails + tag
+  columns so the only identifier is the token.
 
-## Paused work items (now scoped by the MVP above)
+## Cohort-consumer routes
 
-- **W5 — `app/services/collation.py` service.** Two thin
-  helpers: (a) cohort materialiser (given an observer +
-  session, evaluate the saved ``cohort_rule`` against the
-  reviewer + reviewee rosters → in-cohort ids); (b)
-  per-instrument stats builder that reuses W16's
-  `_summarize_field` over the cohort. The originally-sketched
-  `build_observer_collation_context` shrinks to a thin
-  page-shape composer.
-- **W17 — Observer collation surface body.** Per-instrument
-  table (rows 1 = reviewer stats, row 2 = reviewee stats,
-  row 3 = conditional download button) per the MVP
-  definition. Depends on W5.
-- **Token helper + Anonymized identification** — the
-  `participant_token(session_id, role, individual_id) -> str`
-  helper (compute-not-persist), used to swap identification
-  when Band 3 is set to Anonymized for downloads + the
-  reviewee-stats row.
+- ``GET /me/sessions/{id}/collation`` — observer surface body.
+- ``GET /me/sessions/{id}/collation/instruments/{instrument_id}.csv``
+  — per-instrument CSV download. Identification mode follows
+  Band 3 (`raw` / `anonymized`); `summarized` returns 404 (no
+  per-row download is offered when the operator picked the
+  aggregate view).
 
 ## Cross-references
 
