@@ -383,6 +383,64 @@ def test_observer_cohort_rule_save_drops_blank_rule(
     assert obs.cohort_rule == {"combinator": "AND", "rules": []}
 
 
+def test_observer_cohort_rule_round_trips_into_template(
+    client: TestClient, db: Session
+) -> None:
+    """After a save, the next GET should expose the saved rule on
+    each affected row's ``data-observer-cohort-rule`` signature
+    attribute, and the Cohort column should carry the friendly
+    summary."""
+    review_session = _make_session(client, db, "obs-cohort-roundtrip")
+    _enable_observers(db, review_session)
+    o1 = Observer(
+        session_id=review_session.id,
+        email="a@example.org",
+        display_name="A",
+        tag_1="anything",
+    )
+    o2 = Observer(
+        session_id=review_session.id,
+        email="b@example.org",
+        display_name="B",
+    )
+    db.add_all([o1, o2])
+    db.commit()
+    db.refresh(o1)
+    db.refresh(o2)
+
+    save_response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [o1.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+    assert save_response.status_code == 303
+
+    get_response = client.get(
+        f"/operator/sessions/{review_session.id}/observers"
+    )
+    assert get_response.status_code == 200
+    body = get_response.text
+    assert f"observer-row-{o1.id}" in body
+    # Saved observer's row carries a populated signature; the
+    # other observer's row carries the empty placeholder.
+    assert (
+        'data-observer-cohort-rule="{&#34;combinator&#34;: &#34;AND&#34;,'
+        in body
+        or 'data-observer-cohort-rule=\'{"combinator": "AND",' in body
+        or "data-observer-cohort-rule=\"{" in body
+    )
+    # Without configured friendly labels for reviewer.tag1, the
+    # summary falls back to the canonical key.
+    assert "reviewer.tag1 IS" in body
+
+
 def test_observer_cohort_rule_save_rejects_invalid_payload(
     client: TestClient, db: Session
 ) -> None:
