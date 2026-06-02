@@ -3787,14 +3787,20 @@
                                       _re.after_release_mode) }}
                   </td>
                 </tr>
-                {# Observers — scope: cross-cohort. Both cells
-                   independent; each cycles through the three
-                   modes. #}
+                {# Observers — scope: cross-cohort. Session-
+                   ongoing only cycles ``—`` ↔ Anonymized
+                   summaries (Raw + Anonymized rows are gated on
+                   ``after_release`` per the 2026-06-02
+                   tightening — per-row downloads during a live
+                   session risk pulling unfinished data, and the
+                   summary view is enough for the early sense
+                   check). Responses-released cycles through all
+                   four modes. #}
                 <tr>
                   <td style="padding: 6px 8px;">{{ b3_static_pill("Observers") }}</td>
                   <td style="padding: 6px 8px;">
                     {{ b3_mode_cycle("observer", "while_ongoing",
-                                      ["", "raw", "anonymized", "summarized"],
+                                      ["", "summarized"],
                                       _ob.while_ongoing_mode) }}
                   </td>
                   <td style="padding: 6px 8px;">
