@@ -95,6 +95,15 @@ def test_valid_modes_for_cell_locks_per_audience() -> None:
         )
         == frozenset({None})
     )
+    # observer Session-ongoing: off / Anonymized summaries only.
+    # Per-row downloads (Raw + Anonymized rows) only open once
+    # ``after_release`` does.
+    assert (
+        visibility_policies.valid_modes_for_cell(
+            "observer", "while_ongoing"
+        )
+        == frozenset({None, "summarized"})
+    )
     assert (
         visibility_policies.valid_modes_for_cell(
             "observer", "after_release"
@@ -291,6 +300,66 @@ def test_upsert_policy_rejects_peer_reviewer_anonymized_after_release(
         )
 
 
+def test_upsert_policy_rejects_observer_session_ongoing_raw(
+    db: Session,
+) -> None:
+    """Observer Session-ongoing accepts only ``None`` or
+    ``summarized`` (2026-06-02 tightening). Raw per-row
+    visibility during a live session has no use case —
+    downloads pull unfinished data; summary stats are
+    enough for the early sense-check."""
+    review_session, instrument, user = _setup(db)
+    with pytest.raises(visibility_policies.VisibilityPolicyError):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="observer",
+            while_ongoing_mode="raw",
+            after_release_mode=None,
+            user=user,
+        )
+
+
+def test_upsert_policy_rejects_observer_session_ongoing_anonymized(
+    db: Session,
+) -> None:
+    """Anonymized per-row rows (not summaries) are also gated
+    on ``after_release`` for observers."""
+    review_session, instrument, user = _setup(db)
+    with pytest.raises(visibility_policies.VisibilityPolicyError):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="observer",
+            while_ongoing_mode="anonymized",
+            after_release_mode=None,
+            user=user,
+        )
+
+
+def test_upsert_policy_accepts_observer_session_ongoing_summarized(
+    db: Session,
+) -> None:
+    """The Summarized mode is the one per-row aggregation
+    that's safe during a live session — counts / averages
+    don't carry the unfinished-row risk a Raw download does."""
+    review_session, instrument, user = _setup(db)
+    row, _ = visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="observer",
+        while_ongoing_mode="summarized",
+        after_release_mode=None,
+        user=user,
+    )
+    db.commit()
+    assert row.while_ongoing_granularity == "aggregated"
+    assert row.while_ongoing_identification == "deidentified"
+
+
 def test_upsert_policy_rejects_reviewee_session_ongoing_on(
     db: Session,
 ) -> None:
@@ -338,8 +407,11 @@ def test_list_for_instrument_returns_persisted_audiences_only(
         review_session=review_session,
         instrument=instrument,
         audience="observer",
-        while_ongoing_mode="anonymized",
-        after_release_mode="summarized",
+        # Observer Session-ongoing only accepts ``None`` /
+        # ``summarized`` (per the 2026-06-02 tightening); Raw /
+        # Anonymized rows are gated on ``after_release``.
+        while_ongoing_mode="summarized",
+        after_release_mode="anonymized",
         user=user,
     )
     db.commit()
@@ -348,9 +420,9 @@ def test_list_for_instrument_returns_persisted_audiences_only(
     )
     assert set(persisted.keys()) == {"observer"}
     row = persisted["observer"]
-    assert row.while_ongoing_granularity == "row"
+    assert row.while_ongoing_granularity == "aggregated"
     assert row.while_ongoing_identification == "deidentified"
-    assert row.after_release_granularity == "aggregated"
+    assert row.after_release_granularity == "row"
     assert row.after_release_identification == "deidentified"
 
 
@@ -395,7 +467,9 @@ def test_route_save_persists_three_audiences(
             "peer_reviewer_after_release_mode": "raw",
             "reviewee_while_ongoing_mode": "",
             "reviewee_after_release_mode": "summarized",
-            "observer_while_ongoing_mode": "anonymized",
+            # observer Session-ongoing only allows ``""`` (off) or
+            # ``"summarized"`` post-2026-06-02 tightening.
+            "observer_while_ongoing_mode": "summarized",
             "observer_after_release_mode": "",
         },
         follow_redirects=False,
@@ -413,8 +487,8 @@ def test_route_save_persists_three_audiences(
     # Reviewees: only after_release set, Summarized.
     assert by_audience["reviewee"].while_ongoing_granularity is None
     assert by_audience["reviewee"].after_release_granularity == "aggregated"
-    # Observer: only while_ongoing set, Anonymized.
-    assert by_audience["observer"].while_ongoing_granularity == "row"
+    # Observer: only while_ongoing set, Anonymized summaries.
+    assert by_audience["observer"].while_ongoing_granularity == "aggregated"
     assert by_audience["observer"].while_ongoing_identification == "deidentified"
     assert by_audience["observer"].after_release_granularity is None
 
