@@ -228,7 +228,7 @@
               </div>
             </div>
           </div>
-          <p id="observers-cohort-mixed-banner" hidden
+          <p id="observers-cohort-mixed-message" hidden
              style="margin: var(--space-3) 0 0 0;
                     color: var(--text-muted, #64748b);">
             The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
@@ -400,7 +400,7 @@
         var selectAll = document.getElementById("observers-select-all");
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortHeading = document.getElementById("observers-cohort-heading");
-        var cohortMixedBanner = document.getElementById("observers-cohort-mixed-banner");
+        var cohortMixedMessage = document.getElementById("observers-cohort-mixed-message");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -443,9 +443,9 @@
           // Mixed-state detection: gather the per-row cohort-rule
           // signatures and check whether all selected observers
           // share the same rule. Empty signature = no saved rule;
-          // populated when persistence ships. Banner shows only
-          // when distinct rules > 1.
-          if (cohortMixedBanner) {
+          // populated when persistence ships. Message shows
+          // only when distinct rules > 1.
+          if (cohortMixedMessage) {
             var seen = {};
             var distinct = 0;
             for (var j = 0; j < all.length; j++) {
@@ -457,7 +457,7 @@
                 distinct++;
               }
             }
-            cohortMixedBanner.hidden = (distinct <= 1);
+            cohortMixedMessage.hidden = (distinct <= 1);
           }
         }
         document.addEventListener("change", function (e) {
