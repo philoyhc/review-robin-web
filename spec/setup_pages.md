@@ -438,23 +438,38 @@ The Observers page renders, top-to-bottom:
 2. Status strip (`session_setup_status_row` partial).
 3. Yellow **lock card** (when the session is Activated) with the
    standard "revert to draft" Revert form.
-4. **Upload card (left) + Operator actions card (right)** — a
-   `.bottom-grid` pair. Hidden when the session is locked or a
-   row is being edited / added.
-   - **Upload card** (`#upload-csv`): CSV file in UTF-8, max 5 000
-     rows. Required column: `ObserverEmail`. Optional columns:
-     `ObserverName`, `ObserverTag1`. Destructive replace path
-     (existing rows are wiped on import).
+4. **Cohort match rule editor (left) + Operator actions card
+   (right)** — a `.bottom-grid` pair. Layout differs from
+   Reviewers / Reviewees because the Observers page carries
+   the per-observer rule-builder surface (no equivalent
+   elsewhere).
+   - **Cohort match rule editor**: see the dedicated section
+     below. Visible whenever the session isn't `archived`
+     (looser gate than the Operator actions card so the
+     editor stays live mid-session). Hidden by default;
+     the JS reveals it when ≥1 observer is checked.
    - **Operator actions card**: search box + status filter
      (`all` / `active` / `inactive`) + selection-driven
      Edit / Inactivate / Activate / Add-new-row button row.
      Same 200-row (500-when-filtered) cap. Same
      selection-preservation post-action redirect contract.
+     Hidden during `is_ready` (lock-card pattern) so the
+     bulk roster actions can't fire mid-session.
+   - When only one of the two should render (e.g. during
+     `ready` only the cohort editor stays live), the other
+     slot is an empty spacer so the grid stays half-and-half.
 5. **Preview table** — always renders when observers exist (or
    when Add mode is active).
-6. **Danger Zone card** — "Delete all observers". Only rendered
-   when at least one observer exists and the session is not
-   Activated.
+6. **Upload card (left) + Danger Zone (right)** — a
+   `.bottom-grid` pair below the table, mirroring the
+   Reviewers / Reviewees layout. Hidden during `is_ready` or
+   while a row is being edited / added.
+   - **Upload card** (`#upload-csv`): CSV file in UTF-8, max
+     5 000 rows. Required column: `ObserverEmail`. Optional
+     columns: `ObserverName`, `ObserverTag1`. Destructive
+     replace path (existing rows are wiped on import).
+   - **Danger Zone card**: "Delete all observers". Only
+     rendered when at least one observer exists.
 
 There is no friendly-label editor (observers have no renamable
 label slots) and no "Fields with data" pill row above the table —

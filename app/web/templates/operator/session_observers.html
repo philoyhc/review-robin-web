@@ -39,52 +39,125 @@
     </div>
   {% endif %}
 
-  {# Top row: Upload card (left) + Operator actions card (right).
-     Half-and-half via .bottom-grid. Both hidden while the
-     session is ready (read-only) or while a row is being
-     edited / added. #}
-  {% if not is_ready %}
+  {# Top row: Cohort match rule editor (left) + Operator
+     actions card (right). Half-and-half via .bottom-grid.
+     - Left card (Cohort): visible whenever the session isn't
+       ``archived`` (refining cohort rules mid-session is a
+       legitimate flow — see ``guide/observers.md``).
+       ``hidden`` until at least one observer is selected;
+       the JS below flips it.
+     - Right card (Operator actions): hidden during
+       ``is_ready`` (lock-card pattern) and rendered with
+       ``is-locked`` styling during edit mode.
+     When only one of the two should render, the other slot
+     is an empty ``<div>`` spacer so the grid stays
+     half-half. Upload card moves below the table (mirrors
+     Reviewers / Reviewees layout). #}
+  {% set _show_cohort_slot = not edit_mode and not is_archived %}
+  {% set _show_actions_slot = not is_ready %}
+  {% if _show_cohort_slot or _show_actions_slot %}
   <div class="bottom-grid">
-    <section class="card" id="upload-csv">
-      <h2 style="margin-top: 0;">Upload Observers</h2>
-      <p class="form-help">
-        CSV file in UTF-8, max {{ 5000 }} rows. Required column:
-        <code>ObserverEmail</code>. Optional columns:
-        <code>ObserverName</code>, <code>ObserverTag1</code>.
-        Other columns are ignored.
-      </p>
-
-      {% include "operator/partials/validation_results.html" %}
-
-      <form method="post"
-            action="{{ observers_base_url }}/import"
-            enctype="multipart/form-data">
-        <input type="file" id="file" name="file" accept=".csv,text/csv"
-               aria-label="CSV file" required>
-
-        {% if existing_count and existing_count > 0 %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required
-                     data-delete-confirm="replace-observers">
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
-            </label>
-          </p>
-        {% endif %}
-
-        <div class="btn-pair" style="margin-top: 20px;">
-          {% if existing_count and existing_count > 0 %}
-            <button class="btn secondary" type="submit"
-                    data-delete-btn="replace-observers"
-                    disabled aria-disabled="true">Upload</button>
-          {% else %}
-            <button class="btn secondary" type="submit">Upload</button>
-          {% endif %}
+    {% if _show_cohort_slot %}
+      <div class="card" id="observers-cohort-block" hidden>
+        <h2 id="observers-cohort-heading" style="margin-top: 0;">Selected observer is able to see responses where</h2>
+        <div data-observer-cohort-builder
+             style="display: flex; align-items: stretch; gap: 8px;">
+          <div style="flex: 0 0 20%; display: flex;
+                      align-items: center; justify-content: center; gap: 4px;">
+            <button type="button" class="btn secondary"
+                    style="padding: 4px 10px;"
+                    data-observer-rule-add
+                    onclick="observerAddRule(this)"
+                    title="Add rule">+</button>
+            <button type="button" class="btn secondary"
+                    style="padding: 4px 10px;"
+                    data-observer-combinator-toggle
+                    onclick="observerToggleCombinator(this)"
+                    title="Toggle combinator">AND</button>
+            <input type="hidden" form="observers-bulk-form"
+                   name="cohort_combinator"
+                   data-observer-combinator-input
+                   value="AND">
+          </div>
+          <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+          <div data-observer-cohort-cells
+               style="flex: 1; min-width: 0; display: flex;
+                      flex-direction: column; gap: 12px;">
+            <div data-observer-rule-cell
+                 style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <select form="observers-bulk-form" name="cohort_rule_field"
+                        style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                  {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                    <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                  {% endfor %}
+                  {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                    <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                  {% endfor %}
+                  {% for canonical_key, friendly in cohort_match_tags.pair_context %}
+                    <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="btn secondary"
+                        style="padding: 4px 8px; flex-shrink: 0;"
+                        data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
+                        onclick="observerCycleOperator(this)"
+                        title="Toggle operator">IS THE SAME AS</button>
+                <input type="hidden" form="observers-bulk-form"
+                       name="cohort_rule_op"
+                       data-observer-op-input
+                       value="IS THE SAME AS">
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <select form="observers-bulk-form" name="cohort_rule_operand_tag"
+                        data-observer-operand-tag
+                        style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                  <option value="observer.name">Observer: Name</option>
+                  <option value="observer.email">Observer: Email</option>
+                  <option value="observer.tag1">Observer: Tag 1</option>
+                  <option disabled>──────────</option>
+                  {% for canonical_key, friendly in cohort_match_tags.reviewer %}
+                    <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
+                  {% endfor %}
+                  {% for canonical_key, friendly in cohort_match_tags.reviewee %}
+                    <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
+                  {% endfor %}
+                  {% for canonical_key, friendly in cohort_match_tags.pair_context %}
+                    <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
+                  {% endfor %}
+                </select>
+                <input form="observers-bulk-form" name="cohort_rule_operand_value"
+                       data-observer-operand-value type="text" placeholder="value"
+                       style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
+                <button type="button" class="btn destructive"
+                        style="padding: 4px 8px; flex-shrink: 0;"
+                        data-observer-rule-remove
+                        onclick="observerRemoveRule(this)"
+                        disabled aria-disabled="true"
+                        title="Cannot remove the first rule">X</button>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
-    </section>
+        <p id="observers-cohort-mixed-message" hidden
+           style="margin: var(--space-3) 0 0 0;
+                  color: var(--text-muted, #64748b);">
+          The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
+        </p>
+        <div style="display: flex; justify-content: flex-end;
+                    gap: 12px; margin-top: var(--space-3);">
+          <button class="btn primary" type="submit"
+                  id="observers-cohort-save-btn"
+                  form="observers-bulk-form"
+                  formaction="{{ observers_base_url }}/cohort-rule"
+                  disabled aria-disabled="true">Save</button>
+        </div>
+      </div>
+    {% else %}
+      <div></div>
+    {% endif %}
 
+    {% if _show_actions_slot %}
     <div class="card operator-actions-card">
       <h2 style="margin-top: 0;">Operator actions</h2>
       <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
@@ -171,113 +244,10 @@
         </div>
       {% endif %}
     </div>
+    {% else %}
+      <div></div>
+    {% endif %}
   </div>
-  {% endif %}
-
-  {# Cohort match rule editor — its own card so the editor stays
-     live during ``ready`` / ``expired`` states even though the
-     bulk Operator actions card above gets hidden by the lock
-     pattern then. Hard stop is ``archived``: cohort rules govern
-     which parts of response data observers see (not the data
-     itself, not the roster shape), so mid-session refinement is
-     a legitimate flow. JS below toggles ``hidden`` on selection
-     count. #}
-  {% if not edit_mode and not is_archived %}
-    <div class="card" id="observers-cohort-block" hidden>
-      <h2 id="observers-cohort-heading" style="margin-top: 0;">Selected observer is able to see responses where</h2>
-      <div data-observer-cohort-builder
-           style="display: flex; align-items: stretch; gap: 8px;">
-        <div style="flex: 0 0 20%; display: flex;
-                    align-items: center; justify-content: center; gap: 4px;">
-          <button type="button" class="btn secondary"
-                  style="padding: 4px 10px;"
-                  data-observer-rule-add
-                  onclick="observerAddRule(this)"
-                  title="Add rule">+</button>
-          <button type="button" class="btn secondary"
-                  style="padding: 4px 10px;"
-                  data-observer-combinator-toggle
-                  onclick="observerToggleCombinator(this)"
-                  title="Toggle combinator">AND</button>
-          <input type="hidden" form="observers-bulk-form"
-                 name="cohort_combinator"
-                 data-observer-combinator-input
-                 value="AND">
-        </div>
-        <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-        <div data-observer-cohort-cells
-             style="flex: 1; min-width: 0; display: flex;
-                    flex-direction: column; gap: 12px;">
-          <div data-observer-rule-cell
-               style="display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <select form="observers-bulk-form" name="cohort_rule_field"
-                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                  <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                {% endfor %}
-                {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                  <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                {% endfor %}
-                {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                  <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
-                {% endfor %}
-              </select>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
-                      onclick="observerCycleOperator(this)"
-                      title="Toggle operator">IS THE SAME AS</button>
-              <input type="hidden" form="observers-bulk-form"
-                     name="cohort_rule_op"
-                     data-observer-op-input
-                     value="IS THE SAME AS">
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <select form="observers-bulk-form" name="cohort_rule_operand_tag"
-                      data-observer-operand-tag
-                      style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                <option value="observer.name">Observer: Name</option>
-                <option value="observer.email">Observer: Email</option>
-                <option value="observer.tag1">Observer: Tag 1</option>
-                <option disabled>──────────</option>
-                {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                  <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                {% endfor %}
-                {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                  <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                {% endfor %}
-                {% for canonical_key, friendly in cohort_match_tags.pair_context %}
-                  <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
-                {% endfor %}
-              </select>
-              <input form="observers-bulk-form" name="cohort_rule_operand_value"
-                     data-observer-operand-value type="text" placeholder="value"
-                     style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
-              <button type="button" class="btn destructive"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      data-observer-rule-remove
-                      onclick="observerRemoveRule(this)"
-                      disabled aria-disabled="true"
-                      title="Cannot remove the first rule">X</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p id="observers-cohort-mixed-message" hidden
-         style="margin: var(--space-3) 0 0 0;
-                color: var(--text-muted, #64748b);">
-        The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
-      </p>
-      <div style="display: flex; justify-content: flex-end;
-                  gap: 12px; margin-top: var(--space-3);">
-        <button class="btn primary" type="submit"
-                id="observers-cohort-save-btn"
-                form="observers-bulk-form"
-                formaction="{{ observers_base_url }}/cohort-rule"
-                disabled aria-disabled="true">Save</button>
-      </div>
-    </div>
   {% endif %}
 
   {# Hidden form shells the table checkboxes / edit inputs attach
@@ -712,28 +682,75 @@
     </script>
   {% endif %}
 
-  {# Bottom row: empty spacer + Danger Zone, half-and-half. #}
-  {% if not is_ready and not edit_mode and total_row_count > 0 %}
+  {# Bottom row: Upload card (left) + Danger Zone (right),
+     half-and-half. Mirrors the Reviewers / Reviewees layout —
+     Upload sits below the preview table so a misfire on the
+     destructive replace path can't catch the operator before
+     they've seen the current roster. Danger Zone keeps its
+     ``total_row_count > 0`` gate; Upload renders whenever the
+     session is editable. #}
+  {% if not is_ready and not edit_mode %}
     <div class="bottom-grid">
-      <div></div>
-      <div class="card danger-zone">
-        <h2 style="margin-top: 0;">Danger Zone</h2>
-        <form method="post" action="{{ observers_base_url }}/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required
-                     data-delete-confirm="delete-all">
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
-            </label>
-          </p>
-          <p>
-            <button class="btn destructive" type="submit"
-                    data-delete-btn="delete-all"
-                    disabled aria-disabled="true">Delete all observers</button>
-          </p>
+      <section class="card" id="upload-csv">
+        <h2 style="margin-top: 0;">Upload Observers</h2>
+        <p class="form-help">
+          CSV file in UTF-8, max {{ 5000 }} rows. Required column:
+          <code>ObserverEmail</code>. Optional columns:
+          <code>ObserverName</code>, <code>ObserverTag1</code>.
+          Other columns are ignored.
+        </p>
+
+        {% include "operator/partials/validation_results.html" %}
+
+        <form method="post"
+              action="{{ observers_base_url }}/import"
+              enctype="multipart/form-data">
+          <input type="file" id="file" name="file" accept=".csv,text/csv"
+                 aria-label="CSV file" required>
+
+          {% if existing_count and existing_count > 0 %}
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required
+                       data-delete-confirm="replace-observers">
+                Yes, replace the existing
+                <span class="pill pill-empty">{{ existing_count }} observer{% if existing_count != 1 %}s{% endif %}</span>.
+              </label>
+            </p>
+          {% endif %}
+
+          <div class="btn-pair" style="margin-top: 20px;">
+            {% if existing_count and existing_count > 0 %}
+              <button class="btn secondary" type="submit"
+                      data-delete-btn="replace-observers"
+                      disabled aria-disabled="true">Upload</button>
+            {% else %}
+              <button class="btn secondary" type="submit">Upload</button>
+            {% endif %}
+          </div>
         </form>
-      </div>
+      </section>
+
+      {% if total_row_count and total_row_count > 0 %}
+        <div class="card danger-zone">
+          <h2 style="margin-top: 0;">Danger Zone</h2>
+          <form method="post" action="{{ observers_base_url }}/delete-all">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required
+                       data-delete-confirm="delete-all">
+                Yes, delete the existing
+                <span class="pill pill-empty">{{ total_row_count }} observer{% if total_row_count != 1 %}s{% endif %}</span>.
+              </label>
+            </p>
+            <p>
+              <button class="btn destructive" type="submit"
+                      data-delete-btn="delete-all"
+                      disabled aria-disabled="true">Delete all observers</button>
+            </p>
+          </form>
+        </div>
+      {% endif %}
     </div>
   {% endif %}
 {% endblock %}
