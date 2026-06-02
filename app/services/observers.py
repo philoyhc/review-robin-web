@@ -59,6 +59,8 @@ class ObserverOperationError(ValueError):
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``invalid_cohort_rule`` — cohort-rule payload failed schema
       validation (``CohortRuleSet.model_validate`` rejected it).
+    - ``empty_selection`` — bulk operation reached the service
+      with an empty ``observer_ids`` list.
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -376,7 +378,10 @@ def set_cohort_rule(
     route gate needs lifting, not the service.
     """
     if not observer_ids:
-        return None
+        raise ObserverOperationError(
+            "empty_selection",
+            "No observers selected for cohort-rule save.",
+        )
 
     if payload is None:
         validated_dump: dict[str, Any] | None = None

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from starlette.datastructures import FormData
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -393,7 +395,7 @@ def observers_bulk_reactivate(
     )
 
 
-def _parse_cohort_rule_form(form: Any) -> dict[str, Any]:
+def _parse_cohort_rule_form(form: FormData) -> dict[str, Any]:
     """Decode the Cohort match rule editor's submission into the
     ``CohortRuleSet`` dict shape. Mirrors Band 1's
     ``_form_rules`` (parallel arrays + blank-field guard) so a
@@ -437,8 +439,10 @@ def _parse_cohort_rule_form(form: Any) -> dict[str, Any]:
         )
 
     combinator = str(form.get("cohort_combinator") or "AND").strip().upper()
-    if combinator not in ("AND", "OR"):
-        combinator = "AND"
+    # Don't silently coerce unknown values to AND — let
+    # ``CohortRuleSet.model_validate`` reject so a JS bug that
+    # desyncs the hidden combinator mirror surfaces as a 400
+    # rather than a silent AND save.
 
     return {"combinator": combinator, "rules": rules}
 
@@ -465,11 +469,6 @@ async def observers_cohort_rule_save(
         for v in form.getlist("observer_ids")
         if str(v).isdigit()
     ]
-    if not observer_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No observers selected for cohort-rule save.",
-        )
     payload = _parse_cohort_rule_form(form)
     try:
         observers_service.set_cohort_rule(
