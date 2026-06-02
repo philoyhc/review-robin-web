@@ -174,6 +174,10 @@
                       data-observer-combinator-toggle
                       onclick="observerToggleCombinator(this)"
                       title="Toggle combinator">AND</button>
+              <input type="hidden" form="observers-bulk-form"
+                     name="cohort_combinator"
+                     data-observer-combinator-input
+                     value="AND">
             </div>
             <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
             <div data-observer-cohort-cells
@@ -182,7 +186,8 @@
               <div data-observer-rule-cell
                    style="display: flex; flex-direction: column; gap: 4px;">
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                  <select form="observers-bulk-form" name="cohort_rule_field"
+                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
                     {% for canonical_key, friendly in cohort_match_tags.reviewer %}
                       <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
                     {% endfor %}
@@ -198,13 +203,18 @@
                           data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
                           onclick="observerCycleOperator(this)"
                           title="Toggle operator">IS THE SAME AS</button>
+                  <input type="hidden" form="observers-bulk-form"
+                         name="cohort_rule_op"
+                         data-observer-op-input
+                         value="IS THE SAME AS">
                 </div>
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <select data-observer-operand-tag
+                  <select form="observers-bulk-form" name="cohort_rule_operand_tag"
+                          data-observer-operand-tag
                           style="flex: 0 0 50%; min-width: 0; padding: 4px;">
-                    <option>Observer: Name</option>
-                    <option>Observer: Email</option>
-                    <option>Observer: Tag 1</option>
+                    <option value="observer.name">Observer: Name</option>
+                    <option value="observer.email">Observer: Email</option>
+                    <option value="observer.tag1">Observer: Tag 1</option>
                     <option disabled>──────────</option>
                     {% for canonical_key, friendly in cohort_match_tags.reviewer %}
                       <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
@@ -216,7 +226,8 @@
                       <option value="{{ canonical_key }}">Pair Context: {{ friendly }}</option>
                     {% endfor %}
                   </select>
-                  <input data-observer-operand-value type="text" placeholder="value"
+                  <input form="observers-bulk-form" name="cohort_rule_operand_value"
+                         data-observer-operand-value type="text" placeholder="value"
                          style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
                   <button type="button" class="btn destructive"
                           style="padding: 4px 8px; flex-shrink: 0;"
@@ -235,9 +246,11 @@
           </p>
           <div style="display: flex; justify-content: flex-end;
                       gap: 12px; margin-top: var(--space-3);">
-            <button class="btn primary" type="button"
-                    disabled aria-disabled="true"
-                    title="Save cohort rules (not wired)">Save</button>
+            <button class="btn primary" type="submit"
+                    id="observers-cohort-save-btn"
+                    form="observers-bulk-form"
+                    formaction="{{ observers_base_url }}/cohort-rule"
+                    disabled aria-disabled="true">Save</button>
           </div>
         </div>
       {% endif %}
@@ -401,6 +414,7 @@
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortHeading = document.getElementById("observers-cohort-heading");
         var cohortMixedMessage = document.getElementById("observers-cohort-mixed-message");
+        var cohortSaveBtn = document.getElementById("observers-cohort-save-btn");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -440,6 +454,7 @@
               ? "Selected observer is able to see responses where"
               : "Selected observers are able to see responses where");
           }
+          if (cohortSaveBtn) setBtn(cohortSaveBtn, n === 0);
           // Mixed-state detection: gather the per-row cohort-rule
           // signatures and check whether all selected observers
           // share the same rule. Empty signature = no saved rule;
@@ -507,10 +522,16 @@
         clone.querySelectorAll('select').forEach(function (s) {
           s.selectedIndex = 0;
         });
-        // Reset the operator-cycle button to the first option.
+        // Reset the operator-cycle button + its hidden mirror to
+        // the first option in the cycle.
         clone.querySelectorAll('[data-observer-op-cycle]').forEach(function (b) {
           var cycle = (b.getAttribute('data-observer-op-cycle') || '').split('|');
           if (cycle.length) b.textContent = cycle[0];
+        });
+        clone.querySelectorAll('[data-observer-op-input]').forEach(function (i) {
+          var btnCycle = clone.querySelector('[data-observer-op-cycle]');
+          var cycle = ((btnCycle && btnCycle.getAttribute('data-observer-op-cycle')) || '').split('|');
+          if (cycle.length) i.value = cycle[0];
         });
         // Default operand variant matches the default operator:
         // first cycle entry is ``IS THE SAME AS`` → tag dropdown
@@ -542,11 +563,15 @@
         var idx = cycle.indexOf(btn.textContent.trim());
         var next = cycle[(idx + 1) % cycle.length];
         btn.textContent = next;
+        var cell = btn.closest('[data-observer-rule-cell]');
+        // Keep the hidden ``cohort_rule_op`` mirror in sync so
+        // the form submission carries the operator label.
+        var opInput = cell.querySelector('[data-observer-op-input]');
+        if (opInput) opInput.value = next;
         // Swap operand visibility: ``IS THE SAME AS`` / ``IS
         // DIFFERENT FROM`` use the Observer-attribute dropdown
         // (cross-side tag match); other ops use the literal value
         // input.
-        var cell = btn.closest('[data-observer-rule-cell]');
         var tagSel = cell.querySelector('[data-observer-operand-tag]');
         var valInput = cell.querySelector('[data-observer-operand-value]');
         var useTag = (next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM');
@@ -555,7 +580,11 @@
       };
 
       window.observerToggleCombinator = function (btn) {
-        btn.textContent = (btn.textContent.trim() === 'AND' ? 'OR' : 'AND');
+        var next = (btn.textContent.trim() === 'AND' ? 'OR' : 'AND');
+        btn.textContent = next;
+        var wrap = btn.closest('[data-observer-cohort-builder]');
+        var combInput = wrap && wrap.querySelector('[data-observer-combinator-input]');
+        if (combInput) combInput.value = next;
       };
     </script>
   {% endif %}

@@ -287,6 +287,129 @@ def test_observer_bulk_inactivate(
     assert o2.status == "inactive"
 
 
+def test_observer_cohort_rule_save_persists_to_selected(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "obs-cohort-route")
+    _enable_observers(db, review_session)
+    o1 = Observer(
+        session_id=review_session.id, email="a@example.org", display_name="A"
+    )
+    o2 = Observer(
+        session_id=review_session.id, email="b@example.org", display_name="B"
+    )
+    o3 = Observer(
+        session_id=review_session.id, email="c@example.org", display_name="C"
+    )
+    db.add_all([o1, o2, o3])
+    db.commit()
+    db.refresh(o1)
+    db.refresh(o2)
+    db.refresh(o3)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [o1.id, o2.id],
+            "cohort_combinator": "OR",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.refresh(o1)
+    db.refresh(o2)
+    db.refresh(o3)
+    expected = {
+        "combinator": "OR",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "math",
+            }
+        ],
+    }
+    assert o1.cohort_rule == expected
+    assert o2.cohort_rule == expected
+    assert o3.cohort_rule is None
+
+
+def test_observer_cohort_rule_save_rejects_empty_selection(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "obs-cohort-empty")
+    _enable_observers(db, review_session)
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={"cohort_combinator": "AND"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_observer_cohort_rule_save_drops_blank_rule(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "obs-cohort-blank")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    db.commit()
+    db.refresh(obs)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": [""],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["irrelevant"],
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.refresh(obs)
+    assert obs.cohort_rule == {"combinator": "AND", "rules": []}
+
+
+def test_observer_cohort_rule_save_rejects_invalid_payload(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "obs-cohort-bad")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    db.commit()
+    db.refresh(obs)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag9"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["x"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
 def test_observer_delete_all_clears_roster(
     client: TestClient, db: Session
 ) -> None:
