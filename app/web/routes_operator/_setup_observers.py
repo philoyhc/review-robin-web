@@ -15,6 +15,8 @@ Session Edit Details.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -368,6 +370,96 @@ def observers_bulk_reactivate(
             db,
             review_session=review_session,
             observer_ids=observer_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except ObserverOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/observers",
+        observer_ids,
+        filter_params=[("status", filter_status), ("q", filter_q)],
+    )
+
+
+def _parse_cohort_rule_form(form: Any) -> dict[str, Any]:
+    """Decode the Cohort match rule editor's submission into the
+    ``CohortRuleSet`` dict shape. Mirrors Band 1's
+    ``_form_rules`` (parallel arrays + blank-field guard) so a
+    cell whose ``field`` came in empty (e.g. a default cell the
+    operator never touched, or the browser-omits-empty-select
+    edge case) drops silently rather than tripping the schema
+    validator."""
+    fields = [str(v) for v in form.getlist("cohort_rule_field")]
+    ops = [str(v) for v in form.getlist("cohort_rule_op")]
+    operand_tags = [
+        str(v) for v in form.getlist("cohort_rule_operand_tag")
+    ]
+    operand_values = [
+        str(v) for v in form.getlist("cohort_rule_operand_value")
+    ]
+
+    n = len(ops)
+    while len(fields) < n:
+        fields.append("")
+    n = min(n, len(operand_tags), len(operand_values))
+
+    rules: list[dict[str, str]] = []
+    for i in range(n):
+        if not fields[i]:
+            continue
+        rules.append(
+            {
+                "field": fields[i],
+                "op": ops[i],
+                "operand_tag": operand_tags[i],
+                "operand_value": operand_values[i],
+            }
+        )
+
+    combinator = str(form.get("cohort_combinator") or "AND").strip().upper()
+    if combinator not in ("AND", "OR"):
+        combinator = "AND"
+
+    return {"combinator": combinator, "rules": rules}
+
+
+@router.post("/sessions/{session_id}/observers/cohort-rule")
+async def observers_cohort_rule_save(
+    request: Request,
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
+    review_session: ReviewSession = Depends(
+        require_observers_enabled_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """POST handler for the Cohort match rule editor's Save
+    button. Applies the editor's current rule to every observer
+    in ``observer_ids`` (sourced from the bulk-form's row
+    checkboxes); rejects an empty selection with a 400."""
+    _require_editable(review_session)
+    form = await request.form()
+    observer_ids = [
+        int(v)
+        for v in form.getlist("observer_ids")
+        if str(v).isdigit()
+    ]
+    if not observer_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No observers selected for cohort-rule save.",
+        )
+    payload = _parse_cohort_rule_form(form)
+    try:
+        observers_service.set_cohort_rule(
+            db,
+            review_session=review_session,
+            observer_ids=observer_ids,
+            payload=payload,
             user=user,
             correlation_id=request_correlation_id(),
         )
