@@ -59,6 +59,57 @@ first instance, a **download index** — a list of the data
 the observer is entitled to, with per-file download links.
 Not a render surface, not a cells-in-a-table view.
 
+### What Raw vs Anonymized *operationalizes* as
+
+A refinement to the existing 3 × 2 Band 3 chip grid: the
+operator-facing labels stay, but Anonymized gets a concrete
+shape that means more than "hide the identification cells":
+
+| Mode | What it means in the downloaded data |
+|---|---|
+| **Raw** | Identification is the individual's name / email. The same identification the operator sees. |
+| **Anonymized** | Identification is a **stable machine token** (e.g. `R-12` for reviewer-12, `E-7` for reviewee-7). The token is consistent across rows and across reloads but doesn't disclose name / email. |
+| **Summarized** | No per-individual rows — per-instrument aggregates only (mean / median / min / max / frequencies, the W16 primitives). |
+
+This makes Anonymized meaningfully different from
+Summarized: the consumer sees per-individual structure but
+not per-individual identity. Useful when an observer needs
+to count "how many distinct reviewers gave low scores"
+without knowing who they are.
+
+The em-dash placeholder the reviewee `/results` Anonymized
+mode currently renders (`<span class="muted">—</span>`) is
+a degenerate case — the same answer for everyone collapses
+that surface to "all identification hidden" because the
+reviewee's results page only ever has one reviewee anyway.
+The token shape will look different on the observer
+download (which is multi-reviewee, multi-reviewer) than on
+the reviewee surface.
+
+### Observers page = cohort definition via tag matching
+
+The **Observers Setup page** is where the per-observer
+**cohort** is defined for the session — using tag matching
+against the rosters.
+
+An observer's `tag_1` matches a chosen axis on the reviewee
+side (or on the reviewer side, depending on the observer's
+focus) to materialise their per-observer scope. The match
+axis is a per-session operator setting; the materialisation
+happens at download time (no junction table).
+
+Combined with Band 3's identification mode pick, the matrix
+becomes:
+
+- **Cohort** (who's in scope) — defined per-observer on the
+  Observers page.
+- **Identification** (Raw / Anonymized tokens / Summarized
+  aggregates) — defined per-instrument on Band 3.
+
+These two axes are orthogonal: the cohort says *which rows
+are mine*, the Band 3 mode says *how identified are the
+rows I get to see*.
+
 ### Configurator lives on the Observers Setup page
 
 The right home for "what does observer X get to download" is
@@ -69,16 +120,13 @@ Reasons:
 
 - The Band 3 chip grid is a per-instrument × per-audience ×
   per-window cell-rendering matrix. It's the right shape for
-  reviewer-form transparency + reviewee `/results` mode-
-  picking — both of which are cells-on-a-table problems.
-  Observer download scope is a different shape (which files
-  / which scope / which partitions) and doesn't belong in
-  the same primitive.
-- An observer's scope is **per-observer**, not per-instrument.
-  The Band 3 grid has no per-observer axis.
+  the identification mode (Raw / Anonymized / Summarized)
+  but not for the per-observer cohort.
+- An observer's cohort is **per-observer**, not
+  per-instrument. The Band 3 grid has no per-observer axis.
 - The Observers Setup page already has the operator looking at
-  the roster, the tags, the status. Adding a "what each
-  observer can download" affordance on the same page keeps
+  the roster, the tags, the status. Adding the cohort axis
+  (match-tag picker + focus picker) on the same page keeps
   the operator's workflow cohesive.
 
 ### Implications for the existing operator surfaces
