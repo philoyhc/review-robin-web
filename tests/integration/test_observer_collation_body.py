@@ -766,6 +766,80 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     assert data_body.count("R-") == 1
 
 
+def test_collation_csv_raw_filename_prefixes_observer_email(
+    client: TestClient, db: Session
+) -> None:
+    """Filename pattern: ``<observer_email>_<instrument_slug>.csv``
+    for Raw. No ``_anon`` suffix in the Raw case."""
+    review_session = _make_session(
+        client, db, code="col-csv-name-raw"
+    )
+    seeded = _seed_one_instrument(db, review_session)
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+    response = client.get(
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{seeded['instrument'].id}.csv"
+    )
+    assert response.status_code == 200
+    disposition = response.headers["content-disposition"]
+    assert "alice@example.edu_" in disposition
+    assert disposition.endswith('.csv"')
+    assert "_anon" not in disposition
+
+
+def test_collation_csv_anonymized_filename_carries_anon_suffix(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(
+        client, db, code="col-csv-name-anon"
+    )
+    seeded = _seed_one_instrument(
+        db,
+        review_session,
+        while_ongoing_granularity="row",
+        while_ongoing_identification="deidentified",
+    )
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+    response = client.get(
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{seeded['instrument'].id}.csv"
+    )
+    assert response.status_code == 200
+    disposition = response.headers["content-disposition"]
+    assert "alice@example.edu_" in disposition
+    assert disposition.endswith('_anon.csv"')
+
+
 def test_collation_csv_403_when_user_is_not_an_observer(
     client: TestClient, db: Session
 ) -> None:

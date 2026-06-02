@@ -185,9 +185,20 @@ def observer_collation_instrument_csv(
             buffer.seek(0)
             buffer.truncate(0)
 
-    filename = by_instrument_filename_slug(
+    # Filename: ``<observer_email>_<instrument_slug>[_anon].csv``.
+    # The email prefix names the recipient so the observer can
+    # tell their downloads apart in a Downloads folder. The
+    # ``_anon`` suffix (Anonymized mode only) makes the
+    # identification mode visible from the filename alone — useful
+    # when the same observer downloads both Raw and Anonymized
+    # copies of the same instrument.
+    instrument_slug = by_instrument_filename_slug(
         instrument, position=position, used=set()
-    ) + ".csv"
+    )
+    anon_suffix = "_anon" if mode == "anonymized" else ""
+    filename = (
+        f"{observer.email}_{instrument_slug}{anon_suffix}.csv"
+    )
     return StreamingResponse(
         _stream(),
         media_type="text/csv; charset=utf-8",
