@@ -74,48 +74,80 @@ retires for another reason.
 
 ### Low
 
-7. **Route-side coercion of `combinator` hides client desyncs.**
-   `_parse_cohort_rule_form` falls back to `"AND"` for any
-   non-`OR` value. If the JS ever desyncs the hidden mirror
-   (a future `observerToggleCombinator` change), the save
-   silently lands `AND` instead of failing loud. Pass
-   `combinator` through verbatim (or only uppercase it) and
-   let `CohortRuleSet.model_validate` gatekeep.
-   *Source: Observers code review, finding #11 (2026-06-02).*
+7. ~~**Route-side coercion of `combinator` hides client desyncs.**~~
+   *Shipped #current — parser now passes ``combinator``
+   through verbatim (uppercase-only). Unknown values 400 via
+   ``CohortRuleSet.model_validate`` instead of silently
+   landing ``AND``. Integration test exercises a ``"XOR"``
+   submission.*
 
-8. **No integration test that two rows sharing the same saved
-   rule produce byte-identical `data-observer-cohort-rule`
-   attributes.** The mixed-state JS depends on byte-identity
-   of the rendered attribute strings (it does a string-set
-   distinct-count). If the template ever rendered the
-   attribute through a different path for one row vs another,
-   the cross-row-shared-rule UX would silently break.
-   *Source: Observers code review, finding #12 (2026-06-02).*
+8. ~~**No integration test for byte-identical
+   `data-observer-cohort-rule` across rows.**~~
+   *Shipped #current — new integration test saves the same
+   rule to two observers via the route, then asserts both
+   ``data-observer-cohort-rule`` attribute strings are
+   byte-identical in the GET response.*
 
-9. **`set_cohort_rule` empty-`observer_ids` no-op is
-   unreachable from the route.** The route 400s on empty
-   selection before reaching the service. The service still
-   docstring-promises a no-op and a unit test pins it. Either
-   lift the empty-selection 400 into the service (single
-   source of truth) or accept the duplication and note in
-   the route docstring that the service is forgiving.
-   *Source: Observers code review, finding #13 (2026-06-02).*
+9. ~~**`set_cohort_rule` empty-`observer_ids` no-op
+   unreachable from the route.**~~
+   *Shipped #current — service now raises
+   ``ObserverOperationError("empty_selection", ...)`` instead
+   of silently returning ``None``. Route's early 400 block
+   dropped — the standard ``except ObserverOperationError``
+   handler catches the new code. Unit test renamed +
+   updated to assert the raise.*
 
 ### Nit
 
-10. **`form: Any` annotation on `_parse_cohort_rule_form`.**
-    Should be `starlette.datastructures.FormData`. Band 1's
-    `_form_rules` carries the same nit — fix both together
-    if either gets touched.
-    *Source: Observers code review, finding #14 (2026-06-02).*
+10. ~~**`form: Any` annotation on `_parse_cohort_rule_form`.**~~
+    *Shipped #current — typed as
+    ``starlette.datastructures.FormData``. Band 1's
+    ``_form_rules`` still carries the same nit; defer until
+    Band 1 gets touched for another reason.*
 
-11. **Curly quotes in the friendly cohort summary.** The
-    summary string uses U+201C / U+201D for value-operator
-    operands; would render oddly in CSV / shell exports if
-    the summary text ever leaves the rendered HTML. Plain
-    quotes + CSS-side typography prettification is the
-    long-term fix.
-    *Source: Observers code review, finding #15 (2026-06-02).*
+11. ~~**Curly quotes in the friendly cohort summary.**~~
+    *Shipped #current — value-operator operands now render
+    with ASCII straight quotes (``"math"`` instead of
+    ``"math"``). The ``«empty»`` rendering from item 6 keeps
+    its distinctive look so the "filter on blank field" case
+    stays visually unambiguous.*
+
+### Medium-but-deferred
+
+12. **Loosen the cohort-edit lifecycle gate to "not
+    archived".** Today the route handler
+    (`observers_cohort_rule_save`) calls `_require_editable`,
+    which allows only draft + validated states. Cohort
+    rules govern *which parts of response data are visible
+    to an observer* — they don't affect roster shape or
+    response data — so the operator can legitimately
+    refine them mid-session (active / expired states),
+    and only `archived` is a real hard stop. Two pieces of
+    work:
+
+    - **Route:** swap `_require_editable` for a check that
+      blocks only `archived` (or just delete the call —
+      whatever pattern the rest of the codebase grows when
+      a similar mid-session-edit case lands).
+    - **Template:** the cohort editor currently nests inside
+      the operator-actions card, which the whole-card lock
+      pattern hides when `is_ready`. Either split the
+      cohort editor out into its own card with looser
+      visibility gating, or selectively render the
+      operator-actions card during active states with the
+      bulk-action buttons disabled while the cohort
+      controls stay live.
+
+    Defer until the W17 collation consumer surface ships —
+    at that point the mid-session-edit use case becomes
+    concrete (operator notices observer cohort needs
+    refinement after observers start accessing the
+    surface) and the right UX shape will be clearer.
+    *Source: Item 1 revisited (2026-06-02) — see commit
+    closing item 1 for the original rationale, and
+    https://github.com/philoyhc/review-robin-web/pull/1794
+    for the docstring on ``set_cohort_rule`` capturing the
+    "no service-layer lifecycle gate" decision.*
 
 ## Workflow
 

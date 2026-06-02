@@ -84,13 +84,12 @@ def cohort_rule_summary(
         )
     else:
         operand_value = str(first.get("operand_value", ""))
-        # Render an empty literal explicitly as ``«empty»`` so the
-        # operator can tell a rule "filter on blank field" apart
-        # from "unfilled cell". ``filter on blank`` is a legitimate
-        # semantic, just visually ambiguous with curly quotes alone.
-        operand = (
-            f"“{operand_value}”" if operand_value else "«empty»"
-        )
+        # ASCII straight quotes so the summary string survives
+        # CSV / shell exports if it ever leaves the rendered HTML;
+        # ``«empty»`` (item 6) keeps its distinctive look for the
+        # "filter on blank field" case so the operator can tell
+        # it apart from an unfilled cell at a glance.
+        operand = f'"{operand_value}"' if operand_value else "«empty»"
     summary = f"{field} {op} {operand}".strip()
     extra = len(rules) - 1
     if extra > 0:

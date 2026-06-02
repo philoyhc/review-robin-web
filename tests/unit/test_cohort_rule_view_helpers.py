@@ -107,7 +107,7 @@ def test_summary_single_rule_value_operator_quotes_value() -> None:
         ],
     }
     summary = cohort_rule_summary(rule, tag_labels=_TAG_LABELS_FULL)
-    assert summary == "Reviewee: Cohort IS “math”"
+    assert summary == 'Reviewee: Cohort IS "math"'
 
 
 def test_summary_value_operator_renders_empty_value_explicitly() -> None:

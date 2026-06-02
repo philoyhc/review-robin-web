@@ -441,6 +441,62 @@ def test_observer_cohort_rule_round_trips_into_template(
     assert "reviewer.tag1 IS" in body
 
 
+def test_observer_cohort_rule_signature_is_byte_identical_across_rows(
+    client: TestClient, db: Session
+) -> None:
+    """The mixed-state JS does a string-set distinct-count over
+    ``data-observer-cohort-rule``; two rows saved with the same
+    rule must therefore render byte-identical signature strings.
+    Pins it: save the same payload to two observers via the
+    route, GET the page, assert both rows' attributes match
+    exactly."""
+    review_session = _make_session(client, db, "obs-cohort-bytewise")
+    _enable_observers(db, review_session)
+    o1 = Observer(
+        session_id=review_session.id, email="a@example.org", display_name="A"
+    )
+    o2 = Observer(
+        session_id=review_session.id, email="b@example.org", display_name="B"
+    )
+    db.add_all([o1, o2])
+    db.commit()
+    db.refresh(o1)
+    db.refresh(o2)
+
+    save_response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [o1.id, o2.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+    assert save_response.status_code == 303
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/observers"
+    ).text
+    import re
+
+    def _sig_for(row_id: int) -> str:
+        match = re.search(
+            rf'observer-row-{row_id}.*?data-observer-cohort-rule="([^"]*)"',
+            body,
+            re.DOTALL,
+        )
+        assert match, f"row {row_id} missing data-observer-cohort-rule"
+        return match.group(1)
+
+    sig1 = _sig_for(o1.id)
+    sig2 = _sig_for(o2.id)
+    assert sig1 == sig2
+    assert sig1  # non-empty (the saved rule produced a signature)
+
+
 def test_observer_cohort_rule_save_pads_short_operand_arrays(
     client: TestClient, db: Session
 ) -> None:
@@ -536,6 +592,37 @@ def test_observer_cohort_rule_save_rejects_cross_session_ids(
     # own session — no cross-session write.
     db.refresh(foreign)
     assert foreign.cohort_rule is None
+
+
+def test_observer_cohort_rule_save_rejects_unknown_combinator(
+    client: TestClient, db: Session
+) -> None:
+    """The parser passes ``combinator`` through verbatim — a
+    forged or desynced value (e.g. ``"XOR"``) reaches
+    ``CohortRuleSet.model_validate`` and 400s instead of
+    silently coercing to ``AND``."""
+    review_session = _make_session(client, db, "obs-cohort-bad-comb")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    db.commit()
+    db.refresh(obs)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "XOR",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
 
 
 def test_observer_cohort_rule_save_rejects_invalid_payload(

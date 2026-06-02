@@ -135,24 +135,26 @@ def test_set_cohort_rule_none_clears_existing(db: Session) -> None:
     assert refetched.cohort_rule is None
 
 
-def test_set_cohort_rule_empty_ids_noops(db: Session) -> None:
+def test_set_cohort_rule_empty_ids_raises(db: Session) -> None:
+    """Empty ``observer_ids`` is a programmer / forged-POST
+    error, not a normal flow. The service raises so the route
+    can fold it into the standard 400 path; existing per-row
+    cohort_rule values are untouched (no flush has happened)."""
     session, user = _session_with_user(db, code="cohort-noop")
     obs = _add_observer(db, review_session=session, email="x@example.org")
     obs.cohort_rule = {"combinator": "AND", "rules": []}
     db.commit()
 
-    returned = observers_service.set_cohort_rule(
-        db,
-        review_session=session,
-        observer_ids=[],
-        payload={
-            "combinator": "OR",
-            "rules": [],
-        },
-        user=user,
-    )
+    with pytest.raises(observers_service.ObserverOperationError) as exc:
+        observers_service.set_cohort_rule(
+            db,
+            review_session=session,
+            observer_ids=[],
+            payload={"combinator": "OR", "rules": []},
+            user=user,
+        )
+    assert exc.value.code == "empty_selection"
 
-    assert returned is None
     db.expire_all()
     refetched = db.get(Observer, obs.id)
     assert refetched is not None
