@@ -231,9 +231,8 @@
           <div style="display: flex; justify-content: flex-end;
                       gap: 12px; margin-top: var(--space-3);">
             <button class="btn primary" type="button"
-                    id="observers-cohort-save"
                     disabled aria-disabled="true"
-                    title="Save cohort rules (not wired)">Assign cohort to this observer</button>
+                    title="Save cohort rules (not wired)">Save</button>
           </div>
         </div>
       {% endif %}
@@ -396,7 +395,6 @@
         var selectAll = document.getElementById("observers-select-all");
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortHeading = document.getElementById("observers-cohort-heading");
-        var cohortSaveBtn = document.getElementById("observers-cohort-save");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -435,11 +433,6 @@
             cohortHeading.textContent = (n === 1
               ? "Selected observer is able to see responses where"
               : "Selected observers are able to see responses where");
-          }
-          if (cohortSaveBtn && n > 0) {
-            cohortSaveBtn.textContent = (n === 1
-              ? "Assign cohort to this observer"
-              : "Assign cohort to these observers");
           }
         }
         document.addEventListener("change", function (e) {
