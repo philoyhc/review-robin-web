@@ -130,6 +130,62 @@ retires for another reason.
     so it works in any combination. Spec + service docstring
     updated.*
 
+### Observer cohort follow-ups (post-MVP)
+
+The collation MVP shipped 2026-06-02 (#1799 → #1806). Three
+deferral notes from that ladder, now logged here so they don't
+get lost when ``guide/observers.md`` is sweep-trimmed:
+
+13. **`pair_context.*` left-side rules.** The
+    ``CohortRuleSet`` schema accepts ``pair_context.tag1`` /
+    ``tag2`` / ``tag3`` as the rule's left field. Today both
+    ``observer_cohort.materialize_cohort`` (set-side, used by
+    the surface stats rows) and
+    ``observer_cohort.assignment_matches_cohort`` (per-row,
+    used by the CSV filter) silently treat any
+    ``pair_context.*`` rule as unmatched. Lighting it up needs
+    a pair-level join against ``relationships`` /
+    ``Assignment`` to resolve the per-pair tag value.
+    *Source: ``observer_cohort.py`` module docstring (deferred
+    case) + ``test_pair_context_rule_returns_empty_for_now``.*
+
+14. **Cross-roster ``operand_tag`` (e.g.
+    ``reviewer.tag1 IS THE SAME AS reviewee.tag2``).** The
+    schema permits the right-hand operand to point at the
+    opposite roster, but the materialiser + per-row
+    predicate both treat it as unmatched. Same pair-level
+    requirement as item 13. The Cohort match rule editor
+    on the Observers Setup page already exposes these
+    options in the operand dropdown — the operator can
+    author the rule today, it just doesn't fire.
+    *Source: ``observer_cohort.py`` ``_rule_matches_row`` +
+    ``test_cross_roster_operand_tag_returns_empty_for_now``.*
+
+15. **"Decode token" widget on the Observers Setup page.**
+    Per ``guide/observers.md`` token-design decisions, the
+    operator should be able to paste an Anonymized token
+    (``R-a3f8b2c1``) and get back the underlying
+    name + email by re-hashing the roster. Cheap at typical
+    roster sizes (≤1000 rows). Not yet implemented; nothing
+    in the surface today reveals identification on demand.
+    *Source: ``guide/observers.md`` "Token design —
+    decisions" (operator decoder bullet).*
+
+16. **Stats-row cohort scope review.** The collation
+    surface's Row 1 / Row 2 (reviewer-side / reviewee-side
+    aggregates) query ``cohort.reviewer_ids`` /
+    ``cohort.reviewee_ids`` independently via the
+    set-based materialiser. The CSV download tightened to
+    per-row predicate evaluation (PR #1804) because the
+    set-based approach degenerated on cross-side OR rules.
+    The stats rows have the same vulnerability in theory.
+    Worth a review with real data — the stats rows may
+    deserve a similar per-row reformulation, or the
+    set-based shape may turn out to be the right
+    perspective for those rows specifically (since they're
+    "side-grouped views", not "row passes/fails" views).
+    *Source: PR #1804 description, "Note on stats rows".*
+
 ## Workflow
 
 When picking an item up:
