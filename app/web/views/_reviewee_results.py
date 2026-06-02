@@ -190,7 +190,7 @@ class RevieweeResultsContext:
     sections: list[ResultsSection]
 
 
-def _summarize_field(
+def summarize_field(
     field: InstrumentResponseField, raw_values: list[str]
 ) -> SummarizedFieldCell:
     """Per-data-type aggregation for one response field's
@@ -672,7 +672,7 @@ def build_reviewee_results_context(
                 ]
                 raw_values = [v for v in raw_values if v]
                 field_cells.append(
-                    _summarize_field(f, raw_values)
+                    summarize_field(f, raw_values)
                 )
             summarized_row = SummarizedRow(
                 reviewers_assigned=reviewers_assigned,
