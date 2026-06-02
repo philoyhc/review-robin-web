@@ -68,7 +68,7 @@ shape that means more than "hide the identification cells":
 | Mode | What it means in the downloaded data |
 |---|---|
 | **Raw** | Identification is the individual's name / email. The same identification the operator sees. |
-| **Anonymized** | Identification is a **stable machine token** (e.g. `R-12` for reviewer-12, `E-7` for reviewee-7). The token is consistent across rows and across reloads but doesn't disclose name / email. |
+| **Anonymized** | Identification is a **stable machine token** (e.g. `R-a3f8b2c1` for a reviewer, `E-9d4e7f10` for a reviewee). The token is consistent across rows and across reloads but doesn't disclose name / email. |
 | **Summarized** | No per-individual rows — per-instrument aggregates only (mean / median / min / max / frequencies, the W16 primitives). |
 
 This makes Anonymized meaningfully different from
@@ -77,14 +77,53 @@ not per-individual identity. Useful when an observer needs
 to count "how many distinct reviewers gave low scores"
 without knowing who they are.
 
-The em-dash placeholder the reviewee `/results` Anonymized
-mode currently renders (`<span class="muted">—</span>`) is
-a degenerate case — the same answer for everyone collapses
-that surface to "all identification hidden" because the
-reviewee's results page only ever has one reviewee anyway.
-The token shape will look different on the observer
-download (which is multi-reviewee, multi-reviewer) than on
-the reviewee surface.
+### Token design — decisions (2026-06-02)
+
+- **Shape: short hash.** Opaque prefix-and-hex form like
+  `R-a3f8b2c1` / `E-9d4e7f10`. Hides insertion order and
+  roster size; readable enough to talk about in support
+  cases.
+- **Scope: per-session.** Same individual → same token
+  across all consumers of the same session. Observers
+  comparing notes can correlate; that's accepted because
+  observers are operator-trusted in this product.
+  Per-audience scrambled tokens would be a future tightening
+  if needed.
+- **Storage: compute, do not persist.** Hash inputs are
+  `(session_id, role, individual_id) + salt`; ``Reviewer.id``
+  / ``Reviewee.id`` already exist as session-local stable
+  PKs. **No new table, no new column** for the token
+  mechanism itself.
+
+  ```python
+  def participant_token(
+      session_id: int, role: str, individual_id: int
+  ) -> str:
+      raw = f"{session_id}:{role}:{individual_id}"
+      digest = hashlib.blake2b(raw.encode(), digest_size=4).hexdigest()
+      prefix = role[0].upper()  # "R" / "E" / "O"
+      return f"{prefix}-{digest}"
+  ```
+
+- **Operator decoder.** The hash is one-way; reverse a token
+  by re-hashing every roster row and matching. Cheap at
+  roster sizes ≤ 1000. Could surface as a "decode token"
+  widget on the Observers Setup page (paste `R-a3f8b2c1`,
+  get back name + email) without any persistence.
+- **Anonymized hides the tags too.** Beyond the obvious
+  partitioning fact (i.e. the cohort the observer was scoped
+  to), tag columns drop from the rendered / downloaded
+  Anonymized rows. The use scenario assumes tags narrow
+  down to workable groups; they don't identify on their own,
+  but combined with other data they could deanonymize.
+  Operator's responsibility to set the cohort wide enough
+  that the surviving tag isn't a single-person bucket.
+- **Reviewee `/results` keeps the em-dash treatment.**
+  Tokens are only useful when the consumer wants to run
+  downstream analysis on multi-row data. A reviewee on their
+  own `/results` page has one identity (themselves) and no
+  analysis use case; dashes stay the right rendering for
+  Anonymized there.
 
 ### Observers page = cohort definition via tag matching
 
@@ -98,11 +137,34 @@ focus) to materialise their per-observer scope. The match
 axis is a per-session operator setting; the materialisation
 happens at download time (no junction table).
 
+**Open design question** — should the match axis be:
+
+- **Hardcoded** to `observer.tag_1 == reviewee.tag_1` (and
+  the symmetric reviewer side). Zero schema, zero UI. The
+  operator just has to ensure observer-tag values are drawn
+  from the same vocabulary as the reviewee tag axis they
+  want to match. Cheapest path; fine for the first cut.
+- **Operator-picked** per session: one new column on
+  `sessions` like `observer_match_field VARCHAR(32)` storing
+  `"reviewee.tag_1"` / `"reviewee.tag_2"` / `"reviewer.tag_1"`
+  / etc. Plus a small UI on the Observers Setup page (or on
+  Session Edit Details) to pick the axis. Slight schema
+  cost, much more flexible.
+- **Operator-picked per observer**: a column on `observers`
+  carrying the match-field choice for that row alone. Most
+  flexible; per-observer focus axis becomes natural too
+  (some observers watch reviewees, others watch reviewers).
+  Largest schema + UI cost.
+
+Lean direction TBD; the cheapest path keeps everything in
+existing columns, and the richer path is one column away.
+
 Combined with Band 3's identification mode pick, the matrix
 becomes:
 
 - **Cohort** (who's in scope) — defined per-observer on the
-  Observers page.
+  Observers page (or, in the cheapest path, derived from
+  the hardcoded `observer.tag_1` ↔ `reviewee.tag_1` match).
 - **Identification** (Raw / Anonymized tokens / Summarized
   aggregates) — defined per-instrument on Band 3.
 
