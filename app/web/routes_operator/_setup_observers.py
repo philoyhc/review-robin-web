@@ -400,7 +400,12 @@ def _parse_cohort_rule_form(form: Any) -> dict[str, Any]:
     cell whose ``field`` came in empty (e.g. a default cell the
     operator never touched, or the browser-omits-empty-select
     edge case) drops silently rather than tripping the schema
-    validator."""
+    validator.
+
+    All four sibling arrays are padded up to ``len(ops)`` with
+    empty strings — never truncated — so a missing trailing
+    operand never silently drops an otherwise valid rule cell.
+    """
     fields = [str(v) for v in form.getlist("cohort_rule_field")]
     ops = [str(v) for v in form.getlist("cohort_rule_op")]
     operand_tags = [
@@ -413,7 +418,10 @@ def _parse_cohort_rule_form(form: Any) -> dict[str, Any]:
     n = len(ops)
     while len(fields) < n:
         fields.append("")
-    n = min(n, len(operand_tags), len(operand_values))
+    while len(operand_tags) < n:
+        operand_tags.append("")
+    while len(operand_values) < n:
+        operand_values.append("")
 
     rules: list[dict[str, str]] = []
     for i in range(n):

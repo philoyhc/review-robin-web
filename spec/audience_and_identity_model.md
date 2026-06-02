@@ -76,6 +76,11 @@ results). Phase 1 has:
 
 - An `Observer` model and per-session `observers` table with a
   dedicated CRUD Setup page (gated by `session.observers_enabled`).
+- An `observers.cohort_rule` JSON column carrying a per-observer
+  cohort match rule authored on the Observers Setup page (see
+  `spec/setup_pages.md` "Cohort match rule editor" + `guide/observers.md`).
+  Authored but not yet consumed — the resolver / surface that
+  filters what an observer sees by their saved rule is pending.
 - A `require_observer_in_session` gate in `app/web/deps.py`.
 - A placeholder **Observer Collation** page at
   `GET /me/sessions/{id}/collation` — reviewer-surface chrome with

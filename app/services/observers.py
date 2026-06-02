@@ -19,8 +19,13 @@ Audit events registered in ``EVENT_SCHEMAS``:
 - ``observer.updated`` — changes envelope, ``{field: [old, new]}``
   for every field the operator actually changed (no-op if nothing
   changed; nothing emitted).
-- ``observer.cohort_rule_assigned`` — snapshot envelope with the
-  cohort-rule payload + the observer_ids the rule was applied to.
+- ``observer.cohort_rule_assigned`` — one event per affected
+  observer, ``refs={"observer_id": id}`` pointing at the row +
+  ``snapshot={"cohort_rule": payload}`` carrying the saved (or
+  cleared) rule. Bulk applies fan out to N events of this
+  shape so the audit-export consumer can thread per-observer
+  rows by ``refs["observer_id"]`` rather than digging into a
+  list-of-ids payload.
 - ``observer.bulk_inactivated`` / ``observer.bulk_reactivated`` —
   snapshot envelope listing the ids that were actually flipped
   (rows already at the target status are skipped silently).
@@ -397,27 +402,23 @@ def set_cohort_rule(
         observer.cohort_rule = validated_dump
     db.flush()
 
-    target_ids = [o.id for o in candidates]
-    audit.write_event(
-        db,
-        event_type="observer.cohort_rule_assigned",
-        summary=(
-            f"Assigned cohort rule to {len(target_ids)} observer"
-            f"{'' if len(target_ids) == 1 else 's'}"
-            if validated_dump is not None
-            else f"Cleared cohort rule on {len(target_ids)} observer"
-            f"{'' if len(target_ids) == 1 else 's'}"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.snapshot(
-            {
-                "observer_ids": target_ids,
-                "cohort_rule": validated_dump,
-            }
-        ),
-        correlation_id=correlation_id,
-    )
+    # Emit one event per affected observer so the audit-export
+    # consumer can thread per-observer rows via
+    # ``refs["observer_id"]`` (per spec/architecture.md
+    # "Audit-event detail schema" — refs carries cross-entity int
+    # PKs, snapshot carries full-state row capture).
+    verb = "Assigned" if validated_dump is not None else "Cleared"
+    for observer in candidates:
+        audit.write_event(
+            db,
+            event_type="observer.cohort_rule_assigned",
+            summary=f"{verb} cohort rule for {observer.email}",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.snapshot({"cohort_rule": validated_dump}),
+            refs={"observer_id": observer.id},
+            correlation_id=correlation_id,
+        )
     db.commit()
     return validated_dump
 
