@@ -604,6 +604,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # ``guide/archive/participant_model_upgrade.md`` §3.5.
     "observer.created": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "observer.cohort_rule_assigned": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observers.imported": EventSchema(_IDENTITY | {"counts", "context"}),

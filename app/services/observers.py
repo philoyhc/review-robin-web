@@ -19,6 +19,8 @@ Audit events registered in ``EVENT_SCHEMAS``:
 - ``observer.updated`` — changes envelope, ``{field: [old, new]}``
   for every field the operator actually changed (no-op if nothing
   changed; nothing emitted).
+- ``observer.cohort_rule_assigned`` — snapshot envelope with the
+  cohort-rule payload + the observer_ids the rule was applied to.
 - ``observer.bulk_inactivated`` / ``observer.bulk_reactivated`` —
   snapshot envelope listing the ids that were actually flipped
   (rows already at the target status are skipped silently).
@@ -27,11 +29,14 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 import re
+from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
+from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 
@@ -47,6 +52,8 @@ class ObserverOperationError(ValueError):
     - ``duplicate_email`` — another observer in the same session
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    - ``invalid_cohort_rule`` — cohort-rule payload failed schema
+      validation (``CohortRuleSet.model_validate`` rejected it).
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -326,6 +333,95 @@ def bulk_inactivate(
     )
 
 
+def set_cohort_rule(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    observer_ids: list[int],
+    payload: dict[str, Any] | None,
+    user: User,
+    correlation_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Assign the same cohort rule to every observer in ``observer_ids``.
+
+    ``payload`` is the editor's raw dict (``CohortRuleSet`` shape)
+    or ``None`` to clear the cohort rule. The payload is validated
+    through ``CohortRuleSet.model_validate`` before any row is
+    touched — a rejected payload raises
+    ``ObserverOperationError("invalid_cohort_rule", ...)`` and
+    leaves the database unchanged.
+
+    Returns the validated cohort-rule dict that landed on every
+    named observer (or ``None`` when clearing). No-ops cleanly
+    when ``observer_ids`` is empty.
+
+    Lifecycle: cohort_rule changes don't invalidate validation —
+    the cohort rule is post-validation configuration (it governs
+    the observer's view, not the roster shape).
+    """
+    if not observer_ids:
+        return None
+
+    if payload is None:
+        validated_dump: dict[str, Any] | None = None
+    else:
+        try:
+            ruleset = CohortRuleSet.model_validate(payload)
+        except ValidationError as exc:
+            raise ObserverOperationError(
+                "invalid_cohort_rule",
+                f"Cohort-rule payload failed validation: {exc}",
+            ) from exc
+        validated_dump = ruleset.model_dump(mode="json")
+
+    candidates = list(
+        db.execute(
+            select(Observer)
+            .where(
+                Observer.session_id == review_session.id,
+                Observer.id.in_(observer_ids),
+            )
+            .order_by(Observer.id)
+        ).scalars()
+    )
+    found_ids = {o.id for o in candidates}
+    missing = set(observer_ids) - found_ids
+    if missing:
+        raise ObserverOperationError(
+            "not_in_session",
+            f"Observer ids {sorted(missing)} do not belong to "
+            f"session {review_session.id}.",
+        )
+
+    for observer in candidates:
+        observer.cohort_rule = validated_dump
+    db.flush()
+
+    target_ids = [o.id for o in candidates]
+    audit.write_event(
+        db,
+        event_type="observer.cohort_rule_assigned",
+        summary=(
+            f"Assigned cohort rule to {len(target_ids)} observer"
+            f"{'' if len(target_ids) == 1 else 's'}"
+            if validated_dump is not None
+            else f"Cleared cohort rule on {len(target_ids)} observer"
+            f"{'' if len(target_ids) == 1 else 's'}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "observer_ids": target_ids,
+                "cohort_rule": validated_dump,
+            }
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return validated_dump
+
+
 def bulk_reactivate(
     db: Session,
     *,
@@ -351,6 +447,7 @@ __all__ = [
     "ObserverOperationError",
     "create_observer",
     "update_observer",
+    "set_cohort_rule",
     "bulk_inactivate",
     "bulk_reactivate",
 ]
