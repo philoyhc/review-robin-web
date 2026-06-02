@@ -157,7 +157,7 @@
       {% if not edit_mode and not is_ready %}
         <div id="observers-cohort-block" hidden>
           <hr class="operator-actions-divider">
-          <h3 style="margin: 0 0 12px 0;">Cohort match rule</h3>
+          <h3 id="observers-cohort-heading" style="margin: 0 0 12px 0;">Selected observer is able to see responses where</h3>
           <div style="display: flex; align-items: stretch; gap: 8px;">
             <div style="flex: 0 0 16%; display: flex;
                         align-items: center; justify-content: center; gap: 4px;">
@@ -175,16 +175,6 @@
                         align-items: center; gap: 4px;">
               <select style="flex: 0 0 30%; min-width: 0; padding: 4px;"
                       disabled aria-disabled="true">
-                <option>Observer Email</option>
-                <option>Observer Name</option>
-                <option>Observer Tag 1</option>
-              </select>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 8px; flex-shrink: 0;"
-                      disabled aria-disabled="true"
-                      title="Toggle operator (not wired)">IS DIFFERENT FROM</button>
-              <select style="flex: 0 0 30%; min-width: 0; padding: 4px;"
-                      disabled aria-disabled="true">
                 <option>Pair Context Tag 1</option>
                 <option>Pair Context Tag 2</option>
                 <option>Pair Context Tag 3</option>
@@ -194,6 +184,16 @@
                 <option>Reviewee Tag 1</option>
                 <option>Reviewee Tag 2</option>
                 <option>Reviewee Tag 3</option>
+              </select>
+              <button type="button" class="btn secondary"
+                      style="padding: 4px 8px; flex-shrink: 0;"
+                      disabled aria-disabled="true"
+                      title="Toggle operator (not wired)">IS DIFFERENT FROM</button>
+              <select style="flex: 0 0 30%; min-width: 0; padding: 4px;"
+                      disabled aria-disabled="true">
+                <option>Observer Email</option>
+                <option>Observer Name</option>
+                <option>Observer Tag 1</option>
               </select>
               <button type="button" class="btn destructive"
                       style="padding: 4px 8px; flex-shrink: 0;"
@@ -357,6 +357,7 @@
         var countPill = document.getElementById("observers-selected-count");
         var selectAll = document.getElementById("observers-select-all");
         var cohortBlock = document.getElementById("observers-cohort-block");
+        var cohortHeading = document.getElementById("observers-cohort-heading");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -390,6 +391,11 @@
           }
           if (cohortBlock) {
             cohortBlock.hidden = (n === 0);
+          }
+          if (cohortHeading && n > 0) {
+            cohortHeading.textContent = (n === 1
+              ? "Selected observer is able to see responses where"
+              : "Selected observers are able to see responses where");
           }
         }
         document.addEventListener("change", function (e) {
