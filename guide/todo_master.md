@@ -1733,6 +1733,110 @@ W17 as a documentation merge (no separate code surface).
   first offending row. Mapped under the Setup gate. The
   `is_email_identified` helper (W1) is the predicate.
 
+### Observer cohort editor + collation MVP — done 2026-06-02 (PRs #1769 → #1808)
+
+The Observer Collation MVP shipped end-to-end. The operator
+authors a per-observer cohort rule on the Observers Setup
+page; the observer signs in to `/me/sessions/{id}/collation`
+and sees per-instrument reviewer-side / reviewee-side
+summary aggregates plus a conditional cohort-scoped CSV
+download whose identification follows Band 3. Closes W5 +
+W17 from `guide/observers.md` (now slimmed to a current
+operating reference; the planning history archived to
+`guide/archive/observers_mvp_planning.md` in #1807).
+
+Operator-side editor (#1769 → #1786):
+
+- **Schema** — `observers.cohort_rule` JSON column +
+  `CohortRuleSet` Pydantic validator (#1787).
+- **Service** — `observers.set_cohort_rule` writer +
+  `observer.cohort_rule_assigned` audit event, reshaped per
+  Codex feedback to one event per affected observer
+  (#1788).
+- **Editor UI** — multi-rule + AND/OR combinator editor on
+  the Observers Setup page; placeholder ladder (#1769 →
+  #1782) → wired persistence (#1789) → read-back +
+  Cohort-column summary (#1790). Includes the
+  mixed-state plumbing for multi-select edit and the
+  per-row signature attribute the JS compares against.
+- **Layout** — cohort editor card moved to top-left of the
+  Operators Setup grid; Upload below the table (mirrors
+  Reviewers / Reviewees) — #1797 + #1798 keep-card-visible
+  fix.
+- **Review-driven cleanup** — `guide/clean_up.md` items 1–11
+  shipped or closed without action (#1791 → #1796), plus
+  item 12 (lifecycle gate loosened to "not archived" for
+  the cohort editor route).
+
+Consumer-side surface (#1799 → #1804):
+
+- **Participant tokens** —
+  `app/services/participant_tokens.py`: pure-function
+  helper computing per-session opaque `R-`/`E-` tokens for
+  Anonymized downloads (#1799). Salt mixes env-level
+  `PARTICIPANT_TOKEN_SALT` with `session.created_at`.
+- **Cohort materialiser** —
+  `app/services/observer_cohort.py`: set-based
+  `materialize_cohort` for the surface stats rows + per-row
+  `assignment_matches_cohort` for the CSV download
+  (#1800 + #1804). `pair_context.*` left-side rules and
+  cross-roster `operand_tag` ops deferred — tracked in
+  `guide/clean_up.md` items 13 + 14.
+- **Per-instrument stats** —
+  `app/services/collation.py:build_cohort_stats_for_instrument`
+  + `summarize_field` promotion from `_summarize_field`
+  on `views._reviewee_results` (#1801).
+- **By-instrument extract** — `serialize_by_instrument` gains
+  `row_filter` (per-row predicate) + `identification`
+  (`"raw"` / `"anonymized"`) parameters. Anonymized swaps
+  reviewer / reviewee names for tokens + blanks emails +
+  tag columns (#1802 + #1804).
+- **Surface body + CSV download routes** —
+  `/me/sessions/{id}/collation` renders the per-instrument
+  3-row table (reviewer stats / reviewee stats /
+  conditional Download CSV); `.csv` route streams the
+  cohort-scoped slice. Filename pattern is
+  `<observer_email>_<instrument_slug>[_anon].csv` (#1803 +
+  #1804).
+- **Band 3 tightening** — Observer / Session-ongoing chip
+  cell tightened from all-four to `None` / `summarized` only
+  (#1805 server-side validator + #1806 chip-cycle JS).
+  Per-row Raw + Anonymized downloads gated on the
+  `after_release` window opening explicitly via
+  `responses_release_at`.
+- **Doc sweep** — `guide/observers.md` trimmed to a current
+  operating reference; planning history archived;
+  `guide/clean_up.md` items 13–16 added for the deferred
+  cohort-rule cases + the decode-token widget + the
+  stats-row cohort-scope review (#1807). Pinned an
+  `after_release` rendering regression test in #1808.
+
+### Workflow card Row 3 — manual release / archive buttons — done 2026-06-02 (PR #1810)
+
+Third button row on the Workflow card carries three manual
+late-stage operator overrides:
+
+- **Release responses** —
+  `lifecycle.release_responses_now` stamps
+  `responses_release_at = now()` + clears any prior
+  `responses_release_until`. Live for `ready` / `expired`
+  sessions; emits `session.responses_released`.
+- **Stop releasing responses** —
+  `lifecycle.stop_responses_release` stamps
+  `responses_release_until = now()`. Live only when the
+  release window is currently open; emits
+  `session.responses_release_stopped`.
+- **Archive session** — `lifecycle.archive_session`
+  widened from draft-only to any non-archived state; the
+  audit event records the actual from-state. Route redirects
+  to `/operator/sessions/archived` so the operator sees
+  their just-archived row in context.
+
+The bulk-archive route on the lobby keeps its draft-only
+filter via its own pre-check; the service-layer relaxation
+backs the workflow-card button without changing the bulk
+semantics.
+
 ---
 
 ## Upcoming

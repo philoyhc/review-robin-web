@@ -405,7 +405,7 @@ durations.
 |---|---|---|---|
 | **Start** (auto-activate) | `scheduled_activate_at` | operator-set | **18G Part 0a** |
 | **End** (deadline) | `deadline` | operator-set | live today |
-| **Release-from** (Participants platform — reviewees / observers can view responses) | `responses_release_at` | operator-set | Wired end-to-end in W14 / PR #1716 — no lead-time floor; operator can backdate. W16 consumes it inside `build_reviewee_results_context` (per-section window gate — sections show empty cells when window is closed). Route-level 403 gate still pending. W17 observer collation still pending. |
+| **Release-from** (Participants platform — reviewees / observers can view responses) | `responses_release_at` | operator-set | Wired end-to-end in W14 / PR #1716 — no lead-time floor; operator can backdate. W16 + W17 consume it inside their per-instrument window gates (sections / instrument cards stay empty until the window opens). Route-level 403 gates stay unimplemented — the operator can force the window open mid-flight via the Workflow card's **Release responses** button (2026-06-02). |
 
 Two existing system-stamped datetimes (`activated_at` and the
 in-memory archive timestamp) also serve as anchors for offsets:
@@ -424,7 +424,7 @@ in-memory archive timestamp) also serve as anchors for offsets:
 | Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | 18G Part 2 |
 | Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | 18G Part 3 |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | **`P30D`** (gives operator time to download data post-deadline before the session leaves the active lobby) | 18G Part 4 (deferred — see `guide/deferred_until_pilot_feedback.md`) |
-| Release-until | `responses_release_until` (absolute datetime; S12 swap retired `release_until_offset`) | n/a — column carries the absolute close time | DateTime(tz) | unset | Wired end-to-end via W14 (anchor) + S12 (datetime swap). The form input is a `datetime-local`; save-time validator enforces ordering (must close after `responses_release_at`) + 365-day magnitude check. The operator's forthcoming **Stop release** button writes the same column (`= now()`). W16 consumes it inside the per-instrument window gate (same as Release-from); route-level gate and W17 observer collation still pending. |
+| Release-until | `responses_release_until` (absolute datetime; S12 swap retired `release_until_offset`) | n/a — column carries the absolute close time | DateTime(tz) | unset | Wired end-to-end via W14 (anchor) + S12 (datetime swap). The form input is a `datetime-local`; save-time validator enforces ordering (must close after `responses_release_at`) + 365-day magnitude check. The Workflow card's **Stop releasing responses** button (2026-06-02) writes the same column (`= now()`). W16 + W17 consume it inside their per-instrument window gates; route-level gate stays unimplemented. |
 | Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | 18G Part 5 (deferred — see `guide/deferred_until_pilot_feedback.md`) |
 
 The "End" anchor (`deadline`) is also the anchor for the lazy
