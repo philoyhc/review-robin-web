@@ -1,9 +1,19 @@
-{# Observer collation placeholder surface — the page lights up
-   the ``/me/sessions/{id}/collation`` URL behind
-   ``require_observer_in_session``. Today it's the chrome only;
-   the cross-reviewee collation body lands with W17 per
-   ``guide/archive/participant_model_upgrade.md`` §3.2. Mirrors the
-   reviewer surface's page header + session-description card. #}
+{# Observer collation surface — per-instrument 3-row tables.
+
+   Each visible instrument (per Band 3 observer-audience
+   visibility policy) renders a card with:
+     - Row 1: Reviewer-side cohort stats (responses BY the
+       cohort's reviewers).
+     - Row 2: Reviewee-side cohort stats (responses ABOUT the
+       cohort's reviewees).
+     - Row 3: A conditional download cell — Raw / Anonymized
+       offer a CSV; Summarized shows a "summary only" note.
+
+   The summary-cell rendering mirrors the reviewee /results
+   ``summarized`` mode so the per-data-type aggregate shape
+   stays consistent across surfaces. See
+   ``guide/observers.md`` "MVP definition" for the layout
+   contract this template implements. #}
 {% extends "base.html" %}
 
 {% block title %}{{ session.name }} — Collation — Review Robin Web{% endblock %}
@@ -23,5 +33,86 @@
     <div class="card rs-status-panel">
       <p class="rs-session-description">{{ session.description }}</p>
     </div>
+  {% endif %}
+
+  {% if collation.cohort_empty %}
+    <div class="card">
+      <p class="muted">
+        No cohort is configured for you yet. The session
+        operator assigns observers to cohorts on the Observers
+        Setup page — until that's done, this page has nothing
+        to show.
+      </p>
+    </div>
+  {% elif not collation.sections %}
+    <div class="card">
+      <p class="muted">
+        No instruments are visible to observers in the current
+        session window. Either the operator hasn't opened any
+        observer view on Band 3 yet, or the response-release
+        window is closed.
+      </p>
+    </div>
+  {% else %}
+    {% for section in collation.sections %}
+      <div class="card">
+        <h2 style="margin-top: 0;">{{ section.title }}</h2>
+        {% if section.description %}
+          <p class="muted">{{ section.description }}</p>
+        {% endif %}
+
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" class="rs-reviewee">Cohort</th>
+              <th scope="col" class="rs-narrow">Responses</th>
+              {% for field in section.fields %}
+                <th scope="col">{{ field.label or field.field_key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {# Row 1 — Reviewer stats #}
+            <tr>
+              <td class="rs-reviewee">Reviewers in cohort</td>
+              <td>{{ section.reviewer_stats.response_count }}</td>
+              {% for cell in section.reviewer_stats.field_cells %}
+                {% include "reviewer/_collation_field_cell.html" %}
+              {% endfor %}
+            </tr>
+            {# Row 2 — Reviewee stats #}
+            <tr>
+              <td class="rs-reviewee">Reviewees in cohort</td>
+              <td>{{ section.reviewee_stats.response_count }}</td>
+              {% for cell in section.reviewee_stats.field_cells %}
+                {% include "reviewer/_collation_field_cell.html" %}
+              {% endfor %}
+            </tr>
+            {# Row 3 — Download. Spans every column; the button
+               (or summary-only note) lives flush-right in the
+               last column per ``guide/observers.md``. #}
+            <tr>
+              <td colspan="{{ section.fields | length + 2 }}"
+                  style="text-align: right;">
+                {% if section.download_url %}
+                  <a class="btn primary" href="{{ section.download_url }}"
+                     download>Download CSV
+                    {% if section.mode == "anonymized" %}
+                      <span class="muted">(Anonymized)</span>
+                    {% endif %}
+                  </a>
+                {% else %}
+                  <span class="muted">
+                    Per the operator's visibility policy, only
+                    the summary above is shown — no row-level
+                    download.
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
   {% endif %}
 {% endblock %}
