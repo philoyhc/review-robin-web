@@ -205,6 +205,9 @@ def test_set_cohort_rule_rejects_ids_from_other_session(db: Session) -> None:
             user=user,
         )
     assert exc.value.code == "not_in_session"
+    # Generic message — the foreign-session id isn't echoed back.
+    assert str(obs_b.id) not in exc.value.message
+    assert str(session_b.id) not in exc.value.message
 
 
 def test_set_cohort_rule_emits_audit_event(db: Session) -> None:

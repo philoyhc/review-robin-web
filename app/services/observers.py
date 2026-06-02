@@ -392,10 +392,12 @@ def set_cohort_rule(
     found_ids = {o.id for o in candidates}
     missing = set(observer_ids) - found_ids
     if missing:
+        # Generic message — don't echo the specific foreign ids
+        # back to the caller (low info-leak, no legitimate caller
+        # hand-types these — they come from checkboxes).
         raise ObserverOperationError(
             "not_in_session",
-            f"Observer ids {sorted(missing)} do not belong to "
-            f"session {review_session.id}.",
+            "Invalid observer selection.",
         )
 
     for observer in candidates:

@@ -366,7 +366,7 @@
             </tr>
           {% else %}
             <tr id="observer-row-{{ observer.id }}"
-                data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}">
+                {% if selectable %}data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}"{% endif %}>
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="observer-select"

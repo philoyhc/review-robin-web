@@ -497,6 +497,47 @@ def test_observer_cohort_rule_save_pads_short_operand_arrays(
     }
 
 
+def test_observer_cohort_rule_save_rejects_cross_session_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Posting an ``observer_ids`` value that belongs to a
+    different session must 400 — the IDOR-class invariant the
+    service guards, pinned at the HTTP boundary."""
+    session_a = _make_session(client, db, "obs-cohort-cross-a")
+    session_b = _make_session(client, db, "obs-cohort-cross-b")
+    _enable_observers(db, session_a)
+    _enable_observers(db, session_b)
+    foreign = Observer(
+        session_id=session_b.id,
+        email="foreign@example.org",
+        display_name="Foreign",
+    )
+    db.add(foreign)
+    db.commit()
+    db.refresh(foreign)
+
+    response = client.post(
+        f"/operator/sessions/{session_a.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [foreign.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    # Error message generic — doesn't surface the leaky
+    # "Observer ids [...] do not belong to session N" string.
+    assert "do not belong to session" not in response.text
+    # And the foreign observer's row remains untouched in its
+    # own session — no cross-session write.
+    db.refresh(foreign)
+    assert foreign.cohort_rule is None
+
+
 def test_observer_cohort_rule_save_rejects_invalid_payload(
     client: TestClient, db: Session
 ) -> None:

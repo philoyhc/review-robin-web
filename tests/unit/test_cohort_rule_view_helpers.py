@@ -110,6 +110,26 @@ def test_summary_single_rule_value_operator_quotes_value() -> None:
     assert summary == "Reviewee: Cohort IS “math”"
 
 
+def test_summary_value_operator_renders_empty_value_explicitly() -> None:
+    """``operand_value == ""`` on a value operator is a
+    legitimate "filter on blank field" semantic. The summary
+    renders ``«empty»`` so the operator can tell it apart from
+    an unfilled cell at a glance."""
+    rule = {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewee.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "",
+            }
+        ],
+    }
+    summary = cohort_rule_summary(rule, tag_labels=_TAG_LABELS_FULL)
+    assert summary == "Reviewee: Cohort IS «empty»"
+
+
 def test_summary_appends_plus_n_more() -> None:
     rule = {
         "combinator": "AND",

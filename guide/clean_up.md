@@ -45,25 +45,14 @@ retires for another reason.
    probably enough for MVP.
    *Source: Observers code review, finding #4 (2026-06-02).*
 
-3. **HTTP-layer test for cross-session `observer_ids`.** The
-   service-level
-   `test_set_cohort_rule_rejects_ids_from_other_session`
-   pins the invariant in isolation; no integration test
-   confirms the 400 surfaces at
-   `POST /operator/sessions/{id}/observers/cohort-rule`. The
-   error message also leaks the foreign observer id (low
-   info-leak, but worth a deliberate decision — generalize to
-   `"Invalid observer selection"`).
-   *Source: Observers code review, finding #5 (2026-06-02).*
+3. ~~**HTTP-layer test for cross-session `observer_ids`.**~~
+   *Shipped #current — integration test pins the 400, service
+   message tightened to `"Invalid observer selection."` so the
+   foreign id no longer leaks.*
 
-4. **`data-observer-cohort-rule` renders unconditionally.**
-   The attribute lands on every observer row in the rendered
-   HTML, even when `edit_mode` / `is_ready` hides the cohort
-   editor + the checkboxes. Functionally harmless but ships
-   the full saved-rule JSON to anyone who can GET the
-   Observers page in those modes. Render the attribute only
-   when `selectable` is true.
-   *Source: Observers code review, finding #6 (2026-06-02).*
+4. ~~**`data-observer-cohort-rule` renders unconditionally.**~~
+   *Shipped #current — attribute now gated on `selectable`
+   (matches when the cohort editor + checkboxes render).*
 
 5. **`loadEditorFromRule` silently degrades when the saved
    `operand_tag` no longer exists.** The JS does
@@ -77,16 +66,12 @@ retires for another reason.
    `operand_tag` isn't in the dropdown.
    *Source: Observers code review, finding #7 (2026-06-02).*
 
-6. **Empty `operand_value` on value operators round-trips
-   but renders ambiguously.** The schema permits it; the
-   Cohort summary renders as `… IS “”` (empty quoted
-   string), visually indistinguishable from an unfilled cell.
-   Decide: treat blank `operand_value` as a blank-cell drop
-   in the form parser (mirrors the blank-field guard), or
-   pin the current behavior with an integration test +
-   surface as a Validate-page warning. No integration
-   coverage currently.
-   *Source: Observers code review, finding #8 (2026-06-02).*
+6. ~~**Empty `operand_value` on value operators round-trips
+   but renders ambiguously.**~~
+   *Shipped #current — the summary now renders the empty case
+   as `… IS «empty»` to distinguish "filter on blank field"
+   from "unfilled cell". The "filter on blank" semantic stays
+   available; no schema or parser change.*
 
 ### Low
 
