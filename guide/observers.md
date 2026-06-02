@@ -391,12 +391,14 @@ What's shipped (live in production):
   writer + the `observer.cohort_rule_assigned` audit event
   (#1788) + the per-observer editor on the Observers Setup
   page (multi-rule + AND/OR combinator + cross-attribute /
-  literal operands; #1789). The editor reads back the saved
-  rule on selection (#current PR), with mixed-state detection
-  via per-row signatures and a friendly summary in the table's
-  Cohort column. **Cohort consumers haven't shipped** — the
-  saved rule is authored but not yet used to filter what
-  observers see (see "Paused work items" below).
+  literal operands; #1789) + read-back into the editor on
+  selection + the friendly summary in the table's Cohort
+  column (#1790). Audit emit reshaped to one event per
+  affected observer with ``refs={"observer_id": id}`` for
+  spec conformance; view helpers moved to
+  ``app/web/views/_observers.py``. **Cohort consumers haven't
+  shipped** — the saved rule is authored but not yet used to
+  filter what observers see (see "Paused work items" below).
 
 ## Paused work items (now scoped by the MVP above)
 

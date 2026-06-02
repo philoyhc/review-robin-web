@@ -441,6 +441,62 @@ def test_observer_cohort_rule_round_trips_into_template(
     assert "reviewer.tag1 IS" in body
 
 
+def test_observer_cohort_rule_save_pads_short_operand_arrays(
+    client: TestClient, db: Session
+) -> None:
+    """When the form-encoded operand arrays come in shorter than
+    ``ops`` (e.g. a browser quirk drops a trailing empty hidden
+    field), the parser pads them with empty strings rather than
+    truncating ``n`` — so a fully-filled trailing rule cell
+    survives the round-trip instead of disappearing silently.
+    """
+    review_session = _make_session(client, db, "obs-cohort-pad")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X"
+    )
+    db.add(obs)
+    db.commit()
+    db.refresh(obs)
+
+    # Two rule cells in fields/ops, but only one operand_tag /
+    # operand_value entry (the trailing cell's operand fields are
+    # missing from the submission). The trailing cell should
+    # still land as a valid rule with empty operand strings.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewer.tag1", "reviewee.tag1"],
+            "cohort_rule_op": ["IS", "IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": ["math"],
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.refresh(obs)
+    assert obs.cohort_rule == {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "math",
+            },
+            {
+                "field": "reviewee.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "",
+            },
+        ],
+    }
+
+
 def test_observer_cohort_rule_save_rejects_invalid_payload(
     client: TestClient, db: Session
 ) -> None:

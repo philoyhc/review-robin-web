@@ -223,14 +223,22 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
 
     events = list(
         db.execute(
-            select(AuditEvent).where(
+            select(AuditEvent)
+            .where(
                 AuditEvent.session_id == session.id,
                 AuditEvent.event_type == "observer.cohort_rule_assigned",
             )
+            .order_by(AuditEvent.id)
         ).scalars()
     )
-    assert len(events) == 1
-    detail = events[0].detail
-    assert detail["snapshot"]["observer_ids"] == sorted([o1.id, o2.id])
-    assert detail["snapshot"]["cohort_rule"] == payload
-    assert "refs" not in detail
+    # One event per affected observer, threaded by
+    # ``refs["observer_id"]``; the cohort_rule payload rides in
+    # ``snapshot`` on each.
+    assert len(events) == 2
+    seen_ids = []
+    for event in events:
+        detail = event.detail
+        assert detail["snapshot"]["cohort_rule"] == payload
+        assert "observer_id" in detail["refs"]
+        seen_ids.append(detail["refs"]["observer_id"])
+    assert sorted(seen_ids) == sorted([o1.id, o2.id])

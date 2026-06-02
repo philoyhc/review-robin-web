@@ -62,8 +62,6 @@ from ._filters import (
     REVIEWEES_STATUS_OPTIONS,
     REVIEWERS_DATALIST_CAP,
     REVIEWERS_STATUS_OPTIONS,
-    cohort_rule_signature,
-    cohort_rule_summary,
     filter_invitations_rows,
     filter_observers_rows,
     filter_relationships_rows,
@@ -76,6 +74,10 @@ from ._filters import (
     responses_search_options,
     reviewees_search_options,
     reviewers_search_options,
+)
+from ._observers import (
+    cohort_rule_signature,
+    cohort_rule_summary,
 )
 
 # Setup overview rows + standardized status-pills row (sliced in

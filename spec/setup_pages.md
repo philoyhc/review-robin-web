@@ -469,7 +469,62 @@ the tag schema is fixed at one slot.
 | 2 | Name | — | `observer.display_name`; `—` when null |
 | 3 | Tag | — | `observer.tag_1`; `—` when null |
 | 4 | Status | — | `observer.status` |
-| 5 | Updated | — | `observer.updated_at` (`%Y-%m-%d %H:%M`) |
+| 5 | Cohort | — | Friendly summary of `observer.cohort_rule` (e.g. `Reviewer: Mentor IS THE SAME AS Observer: Email + 1 more`); `—` when no rule saved |
+| 6 | Updated | — | `observer.updated_at` (`%Y-%m-%d %H:%M`) |
+
+### Cohort match rule editor
+
+The Observers page is the only Setup page with a per-observer
+rule-builder surface (no equivalent on Reviewers / Reviewees).
+The editor reveals **inside the Operator actions card**, below
+the filter / action button row, **when at least one observer
+row is checked**. Layout mirrors Band 1 Link 2 on the
+Instruments page (`new_model_rule_list("link2", …)` in
+`instruments_index.html`):
+
+- Left column (`+` add-rule + `AND` / `OR` combinator toggle).
+- 3px vertical rule.
+- One or more rule cells stacked. Each cell is two rows:
+  - Row 1: cross-roster attribute dropdown (Reviewer /
+    Reviewee / Pair Context tags — live tags only, friendly
+    labels) + operator-cycle button
+    (`IS THE SAME AS` / `IS DIFFERENT FROM` / `IS` / `IS NOT` /
+    `CONTAINS` / `DOES NOT CONTAIN`).
+  - Row 2: operand dropdown (Observer attrs + the same
+    roster attrs after a thin separator — only shown for the
+    two cross-attribute ops) **or** a text input (for the
+    four literal ops) + the `X` remove-rule button (disabled
+    on the first cell).
+- Bottom-right: a primary `Save` button. `disabled` when no
+  observer is checked; otherwise submits the editor state to
+  every selected observer.
+
+**Multi-select pattern.** The editor applies to all selected
+observers at once. When the selection has a single shared
+saved rule (including all-unset), the editor loads that rule
+into the dropdowns. When the selection's saved rules differ,
+the editor opens at the default state with the message *"The
+selected observers currently have different cohort rules.
+Saving replaces them all with the rule above."* — sitting
+between the rule cells and the Save button. Saving always
+overwrites every selected observer with whatever the editor
+currently holds.
+
+Storage: `observers.cohort_rule` (`sa.JSON()`, nullable). The
+payload validates through
+`app.schemas.observer_cohort_rule.CohortRuleSet` —
+`combinator` (`AND` / `OR`) plus a list of per-cell
+`{field, op, operand_tag, operand_value}` dicts. `NULL` =
+operator hasn't authored a rule yet; an explicitly-saved
+empty `{"combinator": "AND", "rules": []}` is distinct. See
+`guide/observers.md` "Match-axis schema — decided" for the
+storage rationale.
+
+Route: `POST /operator/sessions/{id}/observers/cohort-rule`,
+gated on the same `require_observers_enabled_session` +
+`_require_editable` chain as the bulk-status routes. Emits
+one `observer.cohort_rule_assigned` audit event per affected
+observer (`refs={"observer_id": id}` + `snapshot={"cohort_rule": …}`).
 
 ### CSV import
 

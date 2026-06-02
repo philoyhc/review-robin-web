@@ -211,6 +211,7 @@ reject it.
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence. (The earlier `unfinished_business.md` catalog retired 2026-05-10 once all open items shipped or got absorbed into named segments; lives at `guide/archive/unfinished_business.md` for historical reference.)
 - **`guide/observers.md`** — Standing notes for the observer participant role; observer-collation body wiring (W17 + the supporting W5 service module) paused 2026-06-01 while use scenarios are rethought.
+- **`guide/clean_up.md`** — Standing punch-list of small-to-medium follow-ups identified by code review but not yet shipped. Pick from the top in idle moments; each item has its own context.
 - **`guide/codebase_assessment_*.md`** — Snapshot of code state vs spec. Only the latest stays here; older snapshots retire to `guide/archive/`. The 2026-06-01 snapshot's Appendix §9 has concrete file-split proposals for the three production files at or near the 18N housekeeping threshold (`assignments.py`, `scheduled_events.py`, `session_config_io/_apply.py`).
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
