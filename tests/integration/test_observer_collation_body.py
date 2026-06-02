@@ -400,6 +400,116 @@ def test_collation_csv_cohort_empty_returns_404(
     assert response.status_code == 404
 
 
+def test_collation_csv_excludes_rows_outside_cohort_rule(
+    client: TestClient, db: Session
+) -> None:
+    """A single-side cohort rule (e.g. ``reviewer.tag1 IS
+    mathcohort``) must drop assignments whose reviewer doesn't
+    match — even though the materialiser's
+    unconstrained-reviewee-side fallback includes every
+    reviewee. Regression test for the OR → AND filter swap."""
+    review_session = _make_session(client, db, code="col-csv-scope")
+    inst = Instrument(
+        session_id=review_session.id, name="Instrument 1", order=0
+    )
+    db.add(inst)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=inst.id,
+        field_key="rating",
+        label="Rating",
+        _inline_data_type="Integer",
+        required=False,
+        order=0,
+    )
+    db.add(field)
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=inst.id,
+            audience="observer",
+            while_ongoing_granularity="row",
+            while_ongoing_identification="identified",
+        )
+    )
+    # Two reviewers — only one matches the cohort rule.
+    in_cohort = Reviewer(
+        session_id=review_session.id,
+        name="In Cohort",
+        email="in@x",
+        tag_1="mathcohort",
+    )
+    out_cohort = Reviewer(
+        session_id=review_session.id,
+        name="Out Of Cohort",
+        email="out@x",
+        tag_1="bio",
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Ree",
+        email_or_identifier="ree@x",
+    )
+    db.add_all([in_cohort, out_cohort, reviewee])
+    db.flush()
+    a_in = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=in_cohort.id,
+        reviewee_id=reviewee.id,
+    )
+    a_out = Assignment(
+        session_id=review_session.id,
+        instrument_id=inst.id,
+        reviewer_id=out_cohort.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add_all([a_in, a_out])
+    db.flush()
+    submitted = datetime.now(timezone.utc)
+    db.add_all(
+        [
+            Response(
+                assignment_id=a_in.id,
+                response_field_id=field.id,
+                value="4",
+                submitted_at=submitted,
+            ),
+            Response(
+                assignment_id=a_out.id,
+                response_field_id=field.id,
+                value="9",
+                submitted_at=submitted,
+            ),
+        ]
+    )
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+
+    response = client.get(
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{inst.id}.csv"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # In-cohort row present; out-of-cohort row absent.
+    assert "In Cohort" in body
+    assert "Out Of Cohort" not in body
+
+
 def test_collation_csv_403_when_user_is_not_an_observer(
     client: TestClient, db: Session
 ) -> None:

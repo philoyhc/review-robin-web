@@ -168,16 +168,19 @@ def _data_rows(
 # ── cohort_filter ─────────────────────────────────────────────────────
 
 
-def test_cohort_filter_includes_row_if_reviewer_in_cohort(
+def test_cohort_filter_includes_only_row_where_both_ends_match(
     db: Session,
 ) -> None:
+    """AND semantics: a row passes only when reviewer ∈
+    reviewer_ids **and** reviewee ∈ reviewee_ids."""
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
     r1 = seed["r1"]
+    e1 = seed["e1"]
     cohort = CohortIds(
         reviewer_ids=frozenset({r1.id}),
-        reviewee_ids=frozenset(),
+        reviewee_ids=frozenset({e1.id}),
     )
     rows = list(
         serialize_by_instrument(
@@ -191,18 +194,27 @@ def test_cohort_filter_includes_row_if_reviewer_in_cohort(
     data = _data_rows(rows)
     assert len(data) == 1
     assert data[0][0] == "Alpha Reviewer"
+    assert data[0][5] == "Alpha Reviewee"
 
 
-def test_cohort_filter_includes_row_if_reviewee_in_cohort(
+def test_cohort_filter_single_side_rule_keeps_unconstrained_side_open(
     db: Session,
 ) -> None:
+    """A reviewer-only rule materialises into ``reviewer_ids =
+    {matching reviewers}`` and ``reviewee_ids = ALL reviewees``
+    (unconstrained-side fallback). The AND filter then collapses
+    to the constrained side: rows where reviewer ∈ matching."""
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
+    r1 = seed["r1"]
+    e1 = seed["e1"]
     e2 = seed["e2"]
     cohort = CohortIds(
-        reviewer_ids=frozenset(),
-        reviewee_ids=frozenset({e2.id}),
+        reviewer_ids=frozenset({r1.id}),
+        # Materialiser-style "unconstrained" fallback: all
+        # reviewees in the session.
+        reviewee_ids=frozenset({e1.id, e2.id}),
     )
     rows = list(
         serialize_by_instrument(
@@ -214,14 +226,17 @@ def test_cohort_filter_includes_row_if_reviewee_in_cohort(
         )
     )
     data = _data_rows(rows)
+    # Only r1's row survives — r2's row dropped despite e2 being
+    # in the (unconstrained-ALL) reviewee_ids.
     assert len(data) == 1
-    assert data[0][5] == "Beta Reviewee"
+    assert data[0][0] == "Alpha Reviewer"
 
 
-def test_cohort_filter_unions_two_sides(db: Session) -> None:
-    """A row is in scope if EITHER end is in the cohort — matches
-    the union of the two cohort-stats rows above the download
-    button on the collation surface."""
+def test_cohort_filter_cross_pair_match_excludes_rows(
+    db: Session,
+) -> None:
+    """When reviewer + reviewee sets are constrained but no
+    single row has both ends in those sets, every row drops."""
     seed = _seed_two_pairs(db)
     inst = seed["inst"]
     sess = seed["sess"]
@@ -241,8 +256,9 @@ def test_cohort_filter_unions_two_sides(db: Session) -> None:
         )
     )
     data = _data_rows(rows)
-    # Both pairs included — r1 satisfies the first row, e2 the second.
-    assert len(data) == 2
+    # Pair 1 is (r1, e1) — e1 not in reviewee_ids → drop.
+    # Pair 2 is (r2, e2) — r2 not in reviewer_ids → drop.
+    assert data == []
 
 
 def test_cohort_filter_empty_excludes_all_rows(db: Session) -> None:

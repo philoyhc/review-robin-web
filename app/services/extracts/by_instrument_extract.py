@@ -131,12 +131,14 @@ def serialize_by_instrument(
     Observer-collation parameters (default to operator-side
     behaviour — full identification, no cohort filtering):
 
-    - ``cohort_filter`` — when given, restrict the data rows
-      to assignments whose reviewer is in
-      ``cohort_filter.reviewer_ids`` **or** whose reviewee is
-      in ``cohort_filter.reviewee_ids`` (the union of the two
-      cohort-stats rows on the collation surface). ``None`` →
-      no cohort filtering.
+    - ``cohort_filter`` — when given, a row is included only
+      when **both** ends qualify: reviewer ∈
+      ``cohort_filter.reviewer_ids`` AND reviewee ∈
+      ``cohort_filter.reviewee_ids``. Single-side rules (e.g.
+      ``reviewer.tag1 = math``) still work because the
+      materialiser fills the unconstrained side with the
+      full roster, so AND collapses to the constrained side
+      alone. ``None`` → no cohort filtering.
     - ``identification`` — ``"raw"`` (default; identified
       names + emails + tags) or ``"anonymized"`` (per-row
       reviewer / reviewee names replaced by per-session
@@ -409,16 +411,23 @@ def _data_rows(
         return
 
     if cohort_filter is not None:
-        # Row in scope if EITHER end is in cohort — matches the
-        # union of the two cohort-stats rows the observer sees
-        # above the download button.
+        # Row in scope only when BOTH ends conform to the cohort.
+        # Single-side rules (e.g. ``reviewer.tag1 = math``) still
+        # work: the materialiser fills the unconstrained side
+        # with the full roster, so the AND filter collapses to
+        # the constrained side alone. Multi-side rules require
+        # both ends to match — which is the right reading of
+        # "these are the rows the cohort qualifies for".
+        # OR was the previous default and let every row through
+        # whenever a rule only constrained one side (since the
+        # unconstrained side fell back to ALL ids).
         reviewer_ids = cohort_filter.reviewer_ids
         reviewee_ids = cohort_filter.reviewee_ids
         assignments = [
             a
             for a in assignments
             if a.reviewer_id in reviewer_ids
-            or a.reviewee_id in reviewee_ids
+            and a.reviewee_id in reviewee_ids
         ]
         if not assignments:
             return
