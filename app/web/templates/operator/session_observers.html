@@ -149,59 +149,72 @@
           </div>
         </form>
       </div>
-      {# Cohort match rule — placeholder; not wired. The block is
-         hidden until at least one observer checkbox is ticked; the
-         selection JS below flips ``hidden``. Mirrors Band 1's Link 2
-         rule-list editor on the Instruments page (per-instrument
-         card, ``new_model_rule_list("link2", ...)``). #}
+      {# Cohort match rule — placeholder; client-side only. The
+         block is hidden until at least one observer checkbox is
+         ticked; the selection JS below flips ``hidden``. Mirrors
+         Band 1's Link 2 rule-list editor on the Instruments page
+         (per-instrument card, ``new_model_rule_list("link2", ...)``).
+         No persistence yet — + / X / cycle / combinator all stay
+         in the DOM. #}
       {% if not edit_mode and not is_ready %}
         <div id="observers-cohort-block" hidden>
           <hr class="operator-actions-divider">
           <h3 id="observers-cohort-heading" style="margin: 0 0 12px 0;">Selected observer is able to see responses where</h3>
-          <div style="display: flex; align-items: stretch; gap: 8px;">
-            <div style="flex: 0 0 16%; display: flex;
+          <div data-observer-cohort-builder
+               style="display: flex; align-items: stretch; gap: 8px;">
+            <div style="flex: 0 0 20%; display: flex;
                         align-items: center; justify-content: center; gap: 4px;">
               <button type="button" class="btn secondary"
                       style="padding: 4px 10px;"
-                      disabled aria-disabled="true"
-                      title="Add rule (not wired)">+</button>
+                      data-observer-rule-add
+                      onclick="observerAddRule(this)"
+                      title="Add rule">+</button>
               <button type="button" class="btn secondary"
                       style="padding: 4px 10px;"
-                      disabled aria-disabled="true"
-                      title="Toggle combinator (not wired)">AND</button>
+                      data-observer-combinator-toggle
+                      onclick="observerToggleCombinator(this)"
+                      title="Toggle combinator">AND</button>
             </div>
             <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
-            <div style="flex: 1; min-width: 0; display: flex;
-                        flex-direction: column; gap: 4px;">
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
-                        disabled aria-disabled="true">
-                  <option>Pair Context Tag 1</option>
-                  <option>Pair Context Tag 2</option>
-                  <option>Pair Context Tag 3</option>
-                  <option>Reviewer Tag 1</option>
-                  <option>Reviewer Tag 2</option>
-                  <option>Reviewer Tag 3</option>
-                  <option>Reviewee Tag 1</option>
-                  <option>Reviewee Tag 2</option>
-                  <option>Reviewee Tag 3</option>
-                </select>
-                <button type="button" class="btn secondary"
-                        style="padding: 4px 8px; flex-shrink: 0;"
-                        disabled aria-disabled="true"
-                        title="Toggle operator (not wired)">IS DIFFERENT FROM</button>
-              </div>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
-                        disabled aria-disabled="true">
-                  <option>Observer Email</option>
-                  <option>Observer Name</option>
-                  <option>Observer Tag 1</option>
-                </select>
-                <button type="button" class="btn destructive"
-                        style="padding: 4px 8px; flex-shrink: 0;"
-                        disabled aria-disabled="true"
-                        title="Remove rule (not wired)">X</button>
+            <div data-observer-cohort-cells
+                 style="flex: 1; min-width: 0; display: flex;
+                        flex-direction: column; gap: 12px;">
+              <div data-observer-rule-cell
+                   style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <select style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                    <option>Pair Context Tag 1</option>
+                    <option>Pair Context Tag 2</option>
+                    <option>Pair Context Tag 3</option>
+                    <option>Reviewer Tag 1</option>
+                    <option>Reviewer Tag 2</option>
+                    <option>Reviewer Tag 3</option>
+                    <option>Reviewee Tag 1</option>
+                    <option>Reviewee Tag 2</option>
+                    <option>Reviewee Tag 3</option>
+                  </select>
+                  <button type="button" class="btn secondary"
+                          style="padding: 4px 8px; flex-shrink: 0;"
+                          data-observer-op-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|CONTAINS|DOES NOT CONTAIN"
+                          onclick="observerCycleOperator(this)"
+                          title="Toggle operator">IS THE SAME AS</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <select data-observer-operand-tag
+                          style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                    <option>Observer Email</option>
+                    <option>Observer Name</option>
+                    <option>Observer Tag 1</option>
+                  </select>
+                  <input data-observer-operand-value type="text" placeholder="value"
+                         style="flex: 0 0 50%; min-width: 0; padding: 4px; display: none;">
+                  <button type="button" class="btn destructive"
+                          style="padding: 4px 8px; flex-shrink: 0;"
+                          data-observer-rule-remove
+                          onclick="observerRemoveRule(this)"
+                          disabled aria-disabled="true"
+                          title="Cannot remove the first rule">X</button>
+                </div>
               </div>
             </div>
           </div>
@@ -431,6 +444,74 @@
         });
         refresh();
       })();
+
+      // Cohort-rule builder — client-side only. Mirrors Band 1
+      // Link 2's add / remove / cycle / combinator pattern
+      // (newModelAddRule / newModelRemoveRule / newModelCycleOperator
+      // / newModelToggleCombinator on the Instruments page). No form
+      // binding, no persistence — just enough behaviour to evaluate
+      // the configurator shape.
+      window.observerAddRule = function (btn) {
+        var builder = btn.closest('[data-observer-cohort-builder]');
+        var container = builder.querySelector('[data-observer-cohort-cells]');
+        var first = container.querySelector('[data-observer-rule-cell]');
+        var clone = first.cloneNode(true);
+        clone.querySelectorAll('input[type="text"]').forEach(function (i) {
+          i.value = '';
+        });
+        clone.querySelectorAll('select').forEach(function (s) {
+          s.selectedIndex = 0;
+        });
+        // Reset the operator-cycle button to the first option.
+        clone.querySelectorAll('[data-observer-op-cycle]').forEach(function (b) {
+          var cycle = (b.getAttribute('data-observer-op-cycle') || '').split('|');
+          if (cycle.length) b.textContent = cycle[0];
+        });
+        // Default operand variant matches the default operator:
+        // first cycle entry is ``IS THE SAME AS`` → tag dropdown
+        // visible, value input hidden.
+        var tagSel = clone.querySelector('[data-observer-operand-tag]');
+        var valInput = clone.querySelector('[data-observer-operand-value]');
+        if (tagSel) tagSel.style.display = '';
+        if (valInput) valInput.style.display = 'none';
+        // Enable the cloned cell's X.
+        clone.querySelectorAll('[data-observer-rule-remove]').forEach(function (b) {
+          b.disabled = false;
+          b.removeAttribute('aria-disabled');
+          b.setAttribute('title', 'Remove rule');
+        });
+        container.appendChild(clone);
+      };
+
+      window.observerRemoveRule = function (btn) {
+        var cell = btn.closest('[data-observer-rule-cell]');
+        var container = cell.parentElement;
+        if (container.querySelectorAll('[data-observer-rule-cell]').length > 1) {
+          cell.remove();
+        }
+      };
+
+      window.observerCycleOperator = function (btn) {
+        var cycle = (btn.getAttribute('data-observer-op-cycle') || '').split('|');
+        if (!cycle.length) return;
+        var idx = cycle.indexOf(btn.textContent.trim());
+        var next = cycle[(idx + 1) % cycle.length];
+        btn.textContent = next;
+        // Swap operand visibility: ``IS THE SAME AS`` / ``IS
+        // DIFFERENT FROM`` use the Observer-attribute dropdown
+        // (cross-side tag match); other ops use the literal value
+        // input.
+        var cell = btn.closest('[data-observer-rule-cell]');
+        var tagSel = cell.querySelector('[data-observer-operand-tag]');
+        var valInput = cell.querySelector('[data-observer-operand-value]');
+        var useTag = (next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM');
+        if (tagSel) tagSel.style.display = useTag ? '' : 'none';
+        if (valInput) valInput.style.display = useTag ? 'none' : '';
+      };
+
+      window.observerToggleCombinator = function (btn) {
+        btn.textContent = (btn.textContent.trim() === 'AND' ? 'OR' : 'AND');
+      };
     </script>
   {% endif %}
 
