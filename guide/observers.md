@@ -6,103 +6,128 @@ still to ship.
 
 ## Status
 
-**Paused 2026-06-01.** Operator-side observer plumbing is live
-(roster Setup page, Quick Setup slot, Extract Setup row, bundle
-inclusion, per-session enable toggle, friendly-label resolver,
-visibility-policy column) but the participant-facing collation
-surface (`/me/sessions/{id}/collation`) renders only the
-placeholder chrome — no body.
+**Paused 2026-06-01, reframed 2026-06-02.** Operator-side
+observer plumbing is live (roster Setup page, Quick Setup
+slot, Extract Setup row, bundle inclusion, per-session enable
+toggle, friendly-label resolver, visibility-policy column)
+but the participant-facing collation surface
+(`/me/sessions/{id}/collation`) renders only the placeholder
+chrome — no body. The reframe below replaces the
+collation-table sketch with a download-only model.
 
-**Use-scenario framing (2026-06-02).** The paused work resumes
-once the two distinct observer scenarios are designed
-separately rather than collapsed into one collation surface:
+## Design reframe (2026-06-02)
 
-### Scenario A — Universal observers (see everyone)
+### Two scenarios are real
 
-An observer who needs visibility over the *entire* session's
-responses (e.g. a department head reviewing an evaluation
-cycle, an auditor, a programme administrator).
+**Scenario A — Universal observers** see the whole session
+(department head, auditor, programme admin). The operator
+already has Extract data + Zip-all bundles; a participant-
+facing surface is mostly redundant. If a surface is wanted,
+download-only is the cleanest shape.
 
-For this group, **a participant-facing surface is mostly
-redundant**. The operator already has the Extract data tab
-with per-instrument lens cards, the Data shaper, the Zip-all
-bundles. The cleanest path:
+**Scenario B — Partitioned observers** see one cohort (tutors
+per tutorial group, mentors per cohort). This is the group
+that genuinely benefits from a distinct observer role rather
+than the operator emailing CSVs.
 
-- **Operator sends the relevant CSVs directly** to the
-  observer out-of-band (email, file share). No new surface
-  needed.
-- If a surface is wanted, it should be **download-only** —
-  no in-page table, no interactive filters. A one-page list
-  of links that mirror what the operator would have attached
-  in an email.
-- **Optional refinement:** a summary-only surface (rolled-up
-  per-instrument aggregates across the whole session) for
-  observers who want a dashboard rather than raw data. The
-  W16 summarized-mode aggregate primitives in
-  `_reviewee_results.py::_summarize_field` carry over
-  directly.
+### Even Scenario B has two focuses
 
-Implication: most of the W17 design we'd sketched (cross-
-reviewee table, per-cell visibility policy resolution, layout
-that flips the W16 axis) doesn't actually serve this group.
+A partitioned observer might be monitoring **either**:
 
-### Scenario B — Partitioned observers (see a subset)
+- **Responses about the partition** — what reviewers said
+  about *the reviewees in this cohort*. (Tutor monitoring
+  their tutees' feedback.)
+- **Responses by the partition** — what *the reviewers in
+  this cohort* wrote about others. (Peer-review class where
+  reviewers are graded on the quality of their feedback.)
 
-An observer tagged to a specific partition of the session who
-needs visibility only over *their* partition. Example: tutors
-of students from different tutorial groups, each tutor sees
-only their tutees. Mentors / coaches / programme coordinators
-each scoped to a cohort.
+A cells-in-a-table surface would need a focus-switcher to
+support both, with each switch landing on a differently-
+shaped table. That's a lot of UI to maintain for one
+participant role.
 
-This is the group that genuinely needs **observer status as a
-distinct participant role**. It needs:
+### Conclusion — observers = download-access role
 
-- **A partition-assignment affordance** — akin to the
-  rule-based assignment that ties reviewers to reviewees, but
-  far simpler. Probably a single-axis tag match between the
-  observer's `tag_1` (already on the model) and the
-  reviewee's `tag_1` / `tag_2` / `tag_3`. The operator picks
-  which reviewee-tag axis the observer-tag matches on; the
-  service materialises the per-observer reviewee scope.
-- **A participant-facing surface** — a per-observer view of
-  the reviewees in their partition + the responses about
-  them, gated through the per-instrument visibility policy.
+All lines of reasoning point at the same conclusion:
 
-The W17 cross-reviewee body sketch (with the `tag_1`-match
-filter) is the right shape for this scenario; the open
-questions become:
+> **Observers are participants other than the operator who
+> get the ability to download a configured range of data
+> about the session.**
 
-- **Match-axis explicitness.** Observer-tag → reviewee-tag-N
-  needs an explicit per-session config rather than a hardcoded
-  `observer.tag_1 == reviewee.tag_1`. A small operator-side
-  control (a dropdown? a setting on the observers toggle?)
-  picks the axis.
-- **Match-many semantics.** What if an observer's `tag_1`
-  matches multiple reviewees across different tag values? A
-  comma-separated match list on the observer-side?
-- **Default render mode.** Same question as before — when
-  the operator hasn't authored a per-instrument policy for
-  the observer audience on a given instrument, what's the
-  cell render? (Likely: Summarized by default, with the
-  operator able to opt in to per-cell Raw / Anonymized.)
+The `/me/sessions/{id}/collation` surface should be, in the
+first instance, a **download index** — a list of the data
+the observer is entitled to, with per-file download links.
+Not a render surface, not a cells-in-a-table view.
+
+### Configurator lives on the Observers Setup page
+
+The right home for "what does observer X get to download" is
+**a dedicated configurator on the Observers Setup page**, not
+the Band 3 visibility table.
+
+Reasons:
+
+- The Band 3 chip grid is a per-instrument × per-audience ×
+  per-window cell-rendering matrix. It's the right shape for
+  reviewer-form transparency + reviewee `/results` mode-
+  picking — both of which are cells-on-a-table problems.
+  Observer download scope is a different shape (which files
+  / which scope / which partitions) and doesn't belong in
+  the same primitive.
+- An observer's scope is **per-observer**, not per-instrument.
+  The Band 3 grid has no per-observer axis.
+- The Observers Setup page already has the operator looking at
+  the roster, the tags, the status. Adding a "what each
+  observer can download" affordance on the same page keeps
+  the operator's workflow cohesive.
+
+### Implications for the existing operator surfaces
+
+- **Band 3 visibility editor.** The current 3 × 2 chip grid
+  has an `observer` row. Once the new configurator lands,
+  that row's role is unclear. Two options:
+  (a) drop the observer row from Band 3 entirely (the per-
+  instrument cell-render policy is reviewee-only);
+  (b) keep it but as the "default mode" for the summarized
+  aggregates the observer downloads — orthogonal to the
+  per-observer scope.
+- **`/me/sessions/{id}/collation`.** Renders the download
+  index, not a cross-reviewee table. The route gate stays
+  (`require_observer_in_session`), the chrome stays, the
+  body becomes a list of files.
+- **Observers Setup page.** Adds a per-observer
+  configurator — likely a small "scope" cell or expandable
+  row carrying: focus (reviewees / reviewers / both),
+  partition (whole session / matched by tag), file kinds
+  allowed (responses CSV / per-instrument CSVs / shaped
+  CSVs / setup bundle / etc.). Concrete shape is a design
+  call when this re-opens.
+- **W17 + W5 (paused).** The cross-reviewee table sketch is
+  retired. The replacement is the download-index +
+  configurator above; the supporting service module if
+  needed is a thin file-list builder rather than the
+  cell-rendering `build_observer_collation_context`
+  originally proposed.
 
 ## Re-design path
 
-When the body wiring resumes, the natural cut is:
+When the work resumes:
 
-1. **Decide if Scenario A needs a surface at all.** If yes,
-   spec what shape (download-only vs. summary-only vs. both).
-   If no, retire the operator-side toggle + roster for
-   Scenario A users; the operator just exports + emails.
-2. **Design the partition-assignment affordance** for
-   Scenario B. The "akin to but simpler than reviewer-rules"
-   shape suggests a per-session operator setting +
-   materialisation service + UI surface for the operator to
-   inspect coverage.
-3. **Then** wire the `/collation` body for Scenario B per the
-   sketched layout (rows = reviewees in the observer's
-   partition, columns = aggregate of responses about that
-   reviewee, cells resolved through the visibility policy).
+1. **Spec the per-observer scope configurator** on the
+   Observers Setup page. Decide the shape (focus axis,
+   partition axis, file-kinds allowlist).
+2. **Reshape the Band 3 observer row** per the implication
+   above — drop it or repurpose it.
+3. **Wire `/me/sessions/{id}/collation` as a download
+   index** — render the list of files the observer can
+   download given their configured scope, each file gated
+   through a per-observer download route that materialises
+   on demand.
+4. **Reuse the extract pipeline** — every file kind already
+   has an operator-facing serialiser (`reviewers_extract.py`,
+   `relationships_extract.py`, `responses_extract.py`, the
+   Data shaper output). The per-observer gate is a thin
+   permission layer on top.
 
 When that work scopes, fold this file into a
 `segment_22_observers.md` plan and link from
@@ -138,21 +163,20 @@ What's shipped (live in production):
   any session's roster (W18, polish through #1715). Their
   role-navigator chip strip links to `/me/sessions/{id}/collation`.
 
-## Paused work items (folded into the re-design above)
+## Paused work items (reshaped by the 2026-06-02 reframe)
 
-- **W17 — Observer collation surface body.** Reshape per the
-  Scenario A / B split above before resuming. The
-  cross-reviewee table sketched in the archived
-  `guide/archive/participant_model_upgrade.md` §7 is the
-  right shape for Scenario B; Scenario A may not need a
-  surface at all.
-- **W5 — `app/services/collation.py` service.** Still
-  bundled with W17. Shape stays
-  `build_observer_collation_context(db, *, review_session,
-  observer) -> ObserverCollationContext`, paralleling W16's
-  `build_reviewee_results_context`. The W7 resolver + the
-  per-data-type aggregation helpers from W16's
-  `_summarize_field` are the reusable primitives.
+- **W17 — Observer collation surface body.** Reshape from a
+  cross-reviewee cell-rendering table to a **download index**
+  per the reframe above. The original sketch (rows = reviewees
+  in the observer's partition, columns = aggregate; cells
+  resolved through the visibility policy) is retired.
+- **W5 — `app/services/collation.py` service.** The original
+  proposed `build_observer_collation_context` is also retired.
+  The replacement, if needed, is a thin per-observer
+  file-list builder + a download gate layer that calls the
+  existing extract serialisers (`reviewers_extract.py`,
+  `relationships_extract.py`, `responses_extract.py`, the
+  Data shaper) with the observer's configured scope applied.
 
 ## Cross-references
 
