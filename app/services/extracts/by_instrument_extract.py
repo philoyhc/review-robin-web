@@ -47,6 +47,8 @@ from app.services import responses as responses_service
 from app.services.date_formatting import iso_in_zone
 from app.services.instruments import decode_band1_state, decode_group_kind
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
+from app.services.observer_cohort import CohortIds
+from app.services.participant_tokens import ParticipantTokenizer
 from app.services.sessions import resolve_session_timezone
 
 __all__ = [
@@ -108,6 +110,8 @@ def serialize_by_instrument(
     position: int,
     include_metadata: bool = True,
     include_empty_assignments: bool = True,
+    cohort_filter: CohortIds | None = None,
+    identification: str = "raw",
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
 
@@ -123,11 +127,34 @@ def serialize_by_instrument(
     4. Data rows, one per (reviewer, reviewee_or_group) pair.
        Assignments with no responses are skipped when
        ``include_empty_assignments`` is False.
+
+    Observer-collation parameters (default to operator-side
+    behaviour — full identification, no cohort filtering):
+
+    - ``cohort_filter`` — when given, restrict the data rows
+      to assignments whose reviewer is in
+      ``cohort_filter.reviewer_ids`` **or** whose reviewee is
+      in ``cohort_filter.reviewee_ids`` (the union of the two
+      cohort-stats rows on the collation surface). ``None`` →
+      no cohort filtering.
+    - ``identification`` — ``"raw"`` (default; identified
+      names + emails + tags) or ``"anonymized"`` (per-row
+      reviewer / reviewee names replaced by per-session
+      opaque tokens via ``ParticipantTokenizer``; emails and
+      tag columns blanked so the only identifier is the
+      token). ``"summarized"`` is a no-op at the row level —
+      callers handle the no-download path before calling.
     """
 
     session_zone = resolve_session_timezone(review_session)
     fields = sorted(
         instrument.response_fields, key=lambda f: (f.order, f.id)
+    )
+
+    tokenizer = (
+        ParticipantTokenizer(review_session)
+        if identification == "anonymized"
+        else None
     )
 
     if include_metadata:
@@ -142,6 +169,8 @@ def serialize_by_instrument(
         fields,
         session_zone,
         include_empty_assignments=include_empty_assignments,
+        cohort_filter=cohort_filter,
+        tokenizer=tokenizer,
     )
 
 
@@ -314,6 +343,8 @@ def _data_block(
     session_zone: object,
     *,
     include_empty_assignments: bool,
+    cohort_filter: CohortIds | None = None,
+    tokenizer: ParticipantTokenizer | None = None,
 ) -> Iterable[tuple[str, ...]]:
     yield _header_row(review_session, fields)
     yield from _data_rows(
@@ -323,6 +354,8 @@ def _data_block(
         fields,
         session_zone,
         include_empty_assignments=include_empty_assignments,
+        cohort_filter=cohort_filter,
+        tokenizer=tokenizer,
     )
 
 
@@ -356,6 +389,8 @@ def _data_rows(
     session_zone: object,
     *,
     include_empty_assignments: bool,
+    cohort_filter: CohortIds | None = None,
+    tokenizer: ParticipantTokenizer | None = None,
 ) -> Iterable[tuple[str, ...]]:
     assignments = list(
         db.execute(
@@ -372,6 +407,21 @@ def _data_rows(
     )
     if not assignments:
         return
+
+    if cohort_filter is not None:
+        # Row in scope if EITHER end is in cohort — matches the
+        # union of the two cohort-stats rows the observer sees
+        # above the download button.
+        reviewer_ids = cohort_filter.reviewer_ids
+        reviewee_ids = cohort_filter.reviewee_ids
+        assignments = [
+            a
+            for a in assignments
+            if a.reviewer_id in reviewer_ids
+            or a.reviewee_id in reviewee_ids
+        ]
+        if not assignments:
+            return
 
     group_key_by_assignment, group_identity = _group_index(
         db, review_session, instrument, assignments
@@ -404,6 +454,7 @@ def _data_rows(
             group_key=group_key,
             group_identity=group_identity,
             session_zone=session_zone,
+            tokenizer=tokenizer,
         )
         sort_key = (row[5], row[0])  # composed reviewee name, then reviewer
         rows.append((sort_key, row))
@@ -422,14 +473,44 @@ def _assignment_row(
     group_key: tuple[str, ...] | None,
     group_identity: dict[tuple[int, tuple[str, ...]], str],
     session_zone: object,
+    tokenizer: ParticipantTokenizer | None = None,
 ) -> tuple[str, ...]:
     reviewer: Reviewer = assignment.reviewer
     reviewee: Reviewee = assignment.reviewee
 
-    if group_key is not None:
-        reviewee_name = group_identity.get(
-            (instrument.id, group_key), "(group)"
+    # Identification block: ``tokenizer`` only set for Anonymized
+    # observer downloads. Names ride through as opaque per-session
+    # tokens; emails + tag columns blank so the only identifier is
+    # the token. Operator extracts (``tokenizer is None``) carry
+    # the raw fields.
+    if tokenizer is not None:
+        reviewer_name = tokenizer.token("reviewer", reviewer.id)
+        reviewer_email = ""
+        reviewer_tags = ("", "", "")
+    else:
+        reviewer_name = reviewer.name
+        reviewer_email = reviewer.email
+        reviewer_tags = (
+            reviewer.tag_1 or "",
+            reviewer.tag_2 or "",
+            reviewer.tag_3 or "",
         )
+
+    if group_key is not None:
+        # Grouped row: the "reviewee" is a group. Blank the
+        # group label under Anonymized so the operator-set
+        # tag value (e.g. ``"Tutorial-A"``) doesn't leak.
+        reviewee_name = (
+            ""
+            if tokenizer is not None
+            else group_identity.get(
+                (instrument.id, group_key), "(group)"
+            )
+        )
+        reviewee_email = ""
+        reviewee_tags = ("", "", "")
+    elif tokenizer is not None:
+        reviewee_name = tokenizer.token("reviewee", reviewee.id)
         reviewee_email = ""
         reviewee_tags = ("", "", "")
     else:
@@ -465,11 +546,11 @@ def _assignment_row(
             submitted_at = response.submitted_at
 
     return (
-        reviewer.name,
-        reviewer.email,
-        reviewer.tag_1 or "",
-        reviewer.tag_2 or "",
-        reviewer.tag_3 or "",
+        reviewer_name,
+        reviewer_email,
+        reviewer_tags[0],
+        reviewer_tags[1],
+        reviewer_tags[2],
         reviewee_name,
         reviewee_email,
         reviewee_tags[0],
