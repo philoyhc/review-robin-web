@@ -544,7 +544,9 @@ def test_observer_session_ongoing_chip_cycle_limited_to_off_and_summarized(
     ``summarized`` (Anonymized summaries). Raw + Anonymized
     rows are gated on ``after_release``."""
     review_session = _alice_session(client, db, code="vp-chip-obs-ongoing")
-    instrument = _instrument_for(db, review_session)
+    # ``_instrument_for`` is the implicit fixture — the default
+    # template that lands on session creation; the chip-slug
+    # assertion below doesn't need the row itself.
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
