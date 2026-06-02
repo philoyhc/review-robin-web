@@ -68,7 +68,7 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 |---|---|---|---|
 | Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Live; full response-collection. See `spec/reviewer-surface.md`. |
 | Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_in_session` | **Live.** Renders per-instrument sections in raw / anonymized / summarized mode (W16), plus the Acknowledge card at the foot (W19). `POST /me/sessions/{id}/results/acknowledge` stamps `reviewees.results_acknowledged_at` (idempotent). See §4.1 below. |
-| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | **Placeholder.** Same chrome with caption "Observer view of the session". W17 wires the cross-reviewee collation body. |
+| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | **Live (MVP shipped 2026-06-02).** Renders per-instrument 3-row tables: reviewer-side aggregates + reviewee-side aggregates + a conditional `Download CSV` button. Identification mode follows the per-instrument Band 3 observer policy (Raw / Anonymized rows / Anonymized summaries). Per-instrument CSV download at `.../collation/instruments/{instrument_id}.csv`. See `guide/observers.md`. |
 
 ### 4.1 Reviewee results surface (W16 + W19, live)
 
@@ -93,9 +93,9 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 
 - Reviewer surface: reachable when `session_status_for_reviewer(reviewer, session) != "not opened"`. The surface 403s / redirects until the session has at least once been activated.
 - Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate at the route level today.** The per-instrument visibility-policy resolver inside `build_reviewee_results_context` applies the window gate — sections only surface values when the relevant window (while_ongoing / after_release) is currently open. W16 shipped the full resolver; the route itself does not 403 based on the release window.
-- Observer collation: reachable for any active observer. **No datetime gate today.** W17 adds the analogous gate.
+- Observer collation: reachable for any active observer. The per-instrument visibility-policy resolver inside `build_observer_collation_context` applies the window gate at view time — instruments only render when the active window (while_ongoing / after_release) has a policy-permitted mode for the observer audience. The route itself does not 403 based on the release window.
 
-The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable now via W14 + S12 but consumed at view time only when W16 / W17 land.
+The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable via W14 + S12 and consumed at view time by W16 (reviewee `/results`) and W17 (observer `/collation`).
 
 ---
 
@@ -115,7 +115,7 @@ Reachability per role for the link:
 |---|---|
 | reviewer | `session_status_for_reviewer != "not opened"` (per §4). Surfaces with `pill.state == "submitted"` link to `/me/sessions/{id}/summary` instead of `/me/sessions/{id}/1`. |
 | reviewee | Always today; gated on the release window in W16. |
-| observer | Always today; gated on the release window in W17. |
+| observer | Per-instrument render gated on the Band 3 observer policy + the active session window (W17, shipped 2026-06-02). The lobby link is reachable for any active observer. |
 
 If no role is reachable, the session name renders as plain text.
 
@@ -148,7 +148,7 @@ Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `u
 
 The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
 
-**Consumer status.** W16's `build_reviewee_results_context` consumes `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The route itself does not gate reachability on this window — sections simply show empty cells until the window opens. W17 (observer collation) will add the analogous consumption on that surface.
+**Consumer status.** W16's `build_reviewee_results_context` and W17's `build_observer_collation_context` both consume `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The routes themselves do not gate reachability on this window — sections / instrument cards simply don't surface values until the relevant window opens.
 
 ---
 
@@ -169,7 +169,6 @@ The participant-model upgrade has a small remaining tail. See `guide/archive/par
 
 | Item | What's missing |
 |---|---|
-| W17 — Observer collation body content | The placeholder route renders only the chrome. W17 wires the cross-reviewee collation body with `tag_1` filtering and the visibility-policy resolver. |
 | W21 — Magic-link landings for reviewees / observers | Blocked on the `invitations`-extensibility design call (the table is reviewer-keyed today). |
 | W20 — Reviewee / observer email notifications | Blocked on Segment 14B email infrastructure. |
 

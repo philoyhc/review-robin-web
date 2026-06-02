@@ -25,8 +25,8 @@ The partial is included by:
 |---|---|---|
 | `GET /me/sessions/{id}/{page_n}` (reviewer surface) | `reviewer/review_surface.html` | `"reviewer"` |
 | `GET /me/sessions/{id}/summary` (reviewer summary) | `reviewer/summary.html` | `"reviewer"` |
-| `GET /me/sessions/{id}/results` (reviewee placeholder) | `reviewer/results.html` | `"reviewee"` |
-| `GET /me/sessions/{id}/collation` (observer placeholder) | `reviewer/collation.html` | `"observer"` |
+| `GET /me/sessions/{id}/results` (reviewee) | `reviewer/results.html` | `"reviewee"` |
+| `GET /me/sessions/{id}/collation` (observer) | `reviewer/collation.html` | `"observer"` |
 
 **Suppressed in operator-preview mode.** The reviewer-surface template reuses the same partial under the operator-side preview route (`/operator/sessions/{id}/previews`), which renders `review_surface.html` with `preview_mode = True`. The chip strip is wrapped in `{% if not preview_mode %}` so the operator preview doesn't leak a misleading "you are here" chip for an arbitrary reviewer the operator is impersonating.
 
@@ -63,7 +63,7 @@ When the user has no roles on the session (an empty list returned), the template
 |---|---|---|
 | reviewer | `/me/sessions/{id}/summary` if `pill.state == "submitted"`, else `/me/sessions/{id}/1` | `session_status_for_reviewer(reviewer, session) != "not opened"`. Closes when the session is `draft` / `validated` (the reviewer surface itself would 403 / redirect). |
 | reviewee | `/me/sessions/{id}/results` | Always (today). W16 will gate on `responses_release_at` + `release_until_offset`. |
-| observer | `/me/sessions/{id}/collation` | Always (today). W17 will add the analogous gate. |
+| observer | `/me/sessions/{id}/collation` | Always for any active observer; per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context` (W17, shipped 2026-06-02). |
 
 ### Identity match
 
@@ -102,7 +102,7 @@ The strip wrapper is `<div class="rs-role-nav">`.
 
 ## 5. Adding the strip to a new surface
 
-If a future participant surface (e.g. the W16 reviewee results body, the W17 observer collation body, or any further `/me/sessions/{id}/<something>` page) wants the strip:
+If a future participant surface (e.g. another `/me/sessions/{id}/<something>` page) wants the strip:
 
 1. In the surface route, compute `role_chips = build_role_chips(db, user=user, review_session=session, active_role="<role>")`. Pass it into the template context.
 2. In the template, add `{% include "reviewer/_role_chips.html" %}` directly under the page header (the `rs-page-header` div) and before any description card.

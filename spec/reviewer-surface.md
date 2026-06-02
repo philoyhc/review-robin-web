@@ -868,7 +868,7 @@ per role the user holds:
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
 | `reviewee` | `/me/sessions/{id}/results` | always `True` today (W16 shipped the `/results` surface; the `responses_release_at` dashboard-row gate is a follow-on) |
-| `observer` | `/me/sessions/{id}/collation` | always `True` (W17 will add similar gate) |
+| `observer` | `/me/sessions/{id}/collation` | always `True` for any active observer; per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context` (W17, shipped 2026-06-02) |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
@@ -1009,7 +1009,7 @@ captured as a `{page_n}` value.
 
 ---
 
-## Observer collation placeholder (`/me/sessions/{id}/collation`)
+## Observer collation surface (`/me/sessions/{id}/collation`)
 
 PR #1713 — `GET /me/sessions/{id}/collation`.
 
@@ -1018,8 +1018,11 @@ the authenticated user must have an active Observer row whose
 `email` matches (case-insensitive). On mismatch: **HTTP 403**.
 
 **Current state** — reviewer-surface chrome (`reviewer/collation.html`)
-with an `rs-status-panel` description card. Body content (cross-
-reviewee collation render) lands with W17.
+plus the per-instrument 3-row collation table (reviewer-side
+aggregates / reviewee-side aggregates / conditional CSV
+download). MVP shipped 2026-06-02 (W17) — see
+`guide/observers.md` and the cohort-consumer routes in
+`app/web/routes_reviewer/_collation.py`.
 
 Route: `app/web/routes_reviewer/_collation.py`. Also registered
 before the `_surface` catch-all.
@@ -1061,9 +1064,12 @@ modifiers.
 
 Reachability mirrors the dashboard's `role_links.enabled` logic:
 reviewer is reachable when `session_status != "not opened"`;
-reviewee and observer surfaces are always reachable today (W16 /
-W17 will add `responses_release_at` + `responses_release_until` gates
-later).
+reviewee and observer surfaces are always reachable for an
+active row in the matching roster. W16 / W17 apply the
+`responses_release_at` + `responses_release_until` gates
+inside the per-instrument render (sections / instrument cards
+fall through to empty state when the window is closed), not at
+route-level 403.
 
 ---
 
