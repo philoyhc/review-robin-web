@@ -133,11 +133,11 @@ The first cut of the observer feature is now scoped:
 
 The operator can **assign each observer to a cohort** by
 **tag matching** against the reviewer / reviewee rosters.
-Match shape is operator-configurable (decided when the work
-opens — see the three options under "Match-axis open
-question" below; lean is per-session pick), and the
-materialised cohort = the set of reviewers and/or reviewees
-whose chosen tag axis equals the observer's tag.
+Match shape is per-observer, stored as JSON in a new
+`observers.cohort_rule` column (see "Match-axis schema —
+decided" below). The materialised cohort = the set of
+reviewers and/or reviewees whose chosen field matches the
+observer's rule.
 
 This lives on the Observers Setup page (operator side); the
 observer themselves never sees the match config.
@@ -184,34 +184,65 @@ cells-against-policy table. Rows 1 + 2 give the observer
 enough at-a-glance signal that they often don't need to
 download; row 3 is the escape hatch for downstream analysis.
 
-### Open: match-axis schema
+### Match-axis schema — decided (2026-06-02)
 
-- **Hardcoded** to `observer.tag_1 == reviewee.tag_1` (and
-  the symmetric reviewer side). Zero schema, zero UI. The
-  operator just has to ensure observer-tag values are drawn
-  from the same vocabulary as the reviewee tag axis they
-  want to match. Cheapest path; fine for the first cut.
-- **Operator-picked** per session: one new column on
-  `sessions` like `observer_match_field VARCHAR(32)` storing
-  `"reviewee.tag_1"` / `"reviewee.tag_2"` / `"reviewer.tag_1"`
-  / etc. Plus a small UI on the Observers Setup page (or on
-  Session Edit Details) to pick the axis. Slight schema
-  cost, much more flexible.
-- **Operator-picked per observer**: a column on `observers`
-  carrying the match-field choice for that row alone. Most
-  flexible; per-observer focus axis becomes natural too
-  (some observers watch reviewees, others watch reviewers).
-  Largest schema + UI cost.
+**Per-observer JSON column.** New column on `observers`:
 
-Lean direction TBD; the cheapest path keeps everything in
-existing columns, and the richer path is one column away.
+```python
+cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(
+    JSON, nullable=True
+)
+```
+
+Follows the existing instrument-assignment-rule precedent
+(`session_rule_sets.rules_json` — `sa.JSON()`, list of rule
+dicts, typed in-memory shape in `app/schemas/rules.py`). For
+the Observer cohort rule the MVP shape is a single
+predicate, not a list:
+
+```json
+{"side": "reviewee", "field": "tag_2", "op": "equals", "value": "Tutorial-A"}
+```
+
+- `side` — `"reviewer"` / `"reviewee"` / `"both"` (which
+  roster the match runs against; `"both"` materialises the
+  union).
+- `field` — `"tag_1"` / `"tag_2"` / `"tag_3"` / `"name"` /
+  `"email"` / `"identifier"` — the column on the matched
+  roster row.
+- `op` — `"equals"` / `"contains"` / `"in"` / `"matches"`
+  for MVP; same predicate vocabulary as `app/schemas/rules.py`.
+- `value` — string for `equals` / `contains` / `matches`;
+  list of strings for `in`.
+
+Null = no cohort filter (observer sees nothing, or
+everything, depending on the default we pick when the editor
+lands — likely "nothing until configured" to avoid accidental
+over-disclosure).
+
+Rejected alternatives:
+
+- *Hardcoded* `observer.tag_1 == reviewee.tag_1`: too
+  restrictive — observers commonly want to match on their
+  own name / email against a reviewer-side tag, or partial-
+  match on a custom field.
+- *Per-session match field* (one column on `sessions`):
+  doesn't cover the case where different observers in the
+  same session focus on different axes.
+- *Stringly-typed convention* (`reviewee.tag_2=Tutorial-A`):
+  validates poorly, extends poorly, doesn't match the
+  existing rule idiom.
+
+Pydantic schema lives next to the rule consumer (likely
+`app/schemas/observer_rule.py` or a section of
+`app/schemas/rules.py`); the editor reuses Band 1's
+predicate vocabulary.
 
 Combined with Band 3's identification mode pick, the matrix
 becomes:
 
 - **Cohort** (who's in scope) — defined per-observer on the
-  Observers page (or, in the cheapest path, derived from
-  the hardcoded `observer.tag_1` ↔ `reviewee.tag_1` match).
+  Observers page via the `cohort_rule` JSON column.
 - **Identification** (Raw / Anonymized tokens / Summarized
   aggregates) — defined per-instrument on Band 3.
 
@@ -270,12 +301,13 @@ Reasons:
 
 Sequencing the MVP defined above:
 
-1. **Resolve the match-axis schema** (the three options in
-   "Open: match-axis schema" above). Lean is per-session
-   pick — one new column on `sessions`.
+1. **Schema migration** — add `observers.cohort_rule`
+   (`sa.JSON()`, nullable) per the decision above. Pydantic
+   schema for the rule shape alongside.
 2. **Cohort materialiser service** — given an observer + a
-   session, return the in-cohort reviewer ids + reviewee ids.
-   Compute at request time; no junction table.
+   session, evaluate `cohort_rule` against the reviewer +
+   reviewee rosters and return the in-cohort reviewer ids +
+   reviewee ids. Compute at request time; no junction table.
 3. **Token helper** (`participant_token`) — pure function
    over `(session_id, role, individual_id)`. No persistence.
 4. **By-instrument extract — cohort filter parameter** —
