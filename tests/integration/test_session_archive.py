@@ -37,10 +37,28 @@ def test_archive_session_flips_draft_to_archived(db: Session) -> None:
     assert event.detail["changes"]["status"] == ["draft", "archived"]
 
 
-def test_archive_session_rejects_non_draft(db: Session) -> None:
+def test_archive_session_accepts_non_draft_states(db: Session) -> None:
+    """Post-2026-06-02 widening — the workflow card's per-
+    session Archive button fires from any non-archived state.
+    The audit event records the actual from-state."""
     review_session, op = _draft_session(db, "arch-ready")
     review_session.status = "ready"
     db.commit()
+
+    lifecycle.archive_session(db, review_session=review_session, user=op)
+    assert review_session.status == "archived"
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.archived",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    assert event.detail["changes"]["status"] == ["ready", "archived"]
+
+
+def test_archive_session_rejects_already_archived(db: Session) -> None:
+    review_session, op = _draft_session(db, "arch-double")
+    lifecycle.archive_session(db, review_session=review_session, user=op)
 
     with pytest.raises(lifecycle.LifecycleError):
         lifecycle.archive_session(

@@ -543,6 +543,98 @@ def revert_session_to_draft(
     return review_session
 
 
+def release_responses_now(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Force the response-release window open by stamping
+    ``responses_release_at = now()`` and clearing any prior
+    ``responses_release_until`` close-stamp.
+
+    The "Release responses" button on the Workflow card calls
+    this. It's a manual override on the schedule the operator
+    set during edit — useful when an operator wants to publish
+    results ahead of the scheduled release time, or when they
+    previously stopped a release and want to re-open it.
+
+    Emits ``session.responses_released`` with a snapshot of the
+    new ``responses_release_at`` + a ``cleared_until`` flag when
+    the prior close-stamp was non-null. The session lifecycle
+    state isn't changed by this call — release windows are
+    orthogonal to ``draft / validated / ready / expired``.
+    """
+    now = datetime.now(timezone.utc)
+    cleared_until = review_session.responses_release_until is not None
+    review_session.responses_release_at = now
+    review_session.responses_release_until = None
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.responses_released",
+        summary=(
+            f"Session {review_session.code} responses released "
+            f"({now.isoformat()})"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "responses_release_at": now.isoformat(),
+                "cleared_until": cleared_until,
+            }
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
+def stop_responses_release(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Close the response-release window by stamping
+    ``responses_release_until = now()``.
+
+    The "Stop releasing responses" button on the Workflow card
+    calls this. Mirrors the release flow: the operator picks
+    the close moment manually, overriding any scheduled
+    ``responses_release_until``. Idempotent — a session whose
+    window is already closed gets a fresh stamp on the close
+    column but the audit log records each press.
+
+    Emits ``session.responses_release_stopped`` with the new
+    close-stamp.
+    """
+    now = datetime.now(timezone.utc)
+    review_session.responses_release_until = now
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.responses_release_stopped",
+        summary=(
+            f"Session {review_session.code} response release "
+            f"stopped ({now.isoformat()})"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot(
+            {"responses_release_until": now.isoformat()}
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
 def archive_session(
     db: Session,
     *,
@@ -550,17 +642,24 @@ def archive_session(
     user: User,
     correlation_id: str | None = None,
 ) -> ReviewSession:
-    """Flip ``draft → archived`` — file a session out of the active lobby.
+    """Flip any non-archived session into ``archived`` — file it
+    out of the active lobby.
 
-    Archiving is reversible (see ``unarchive_session``) and deletes no
-    data. Only ``draft`` sessions are eligible: a running session is
-    reverted to draft first. Raises ``LifecycleError`` otherwise.
+    Archiving is reversible (see ``unarchive_session``) and
+    deletes no data. Accepts any starting state except
+    ``archived`` itself; the audit event records the actual
+    from-state so the round-trip is reconstructible. The
+    bulk-archive route on the lobby page still filters to
+    ``draft`` only via its own pre-check; this widened service
+    backs the workflow card's per-session "Archive session"
+    button, which can fire from any lifecycle state.
     """
-    if not is_draft(review_session):
+    if is_archived(review_session):
         raise LifecycleError(
-            f"Session is {review_session.status}, can only archive from draft",
-            code="not_draft",
+            f"Session is already {review_session.status}",
+            code="already_archived",
         )
+    from_status = review_session.status
     review_session.status = SessionStatus.archived.value
     db.flush()
     audit.write_event(
@@ -569,7 +668,9 @@ def archive_session(
         summary=f"Session {review_session.code} archived",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.changes({"status": ["draft", "archived"]}),
+        payload=audit.changes(
+            {"status": [from_status, SessionStatus.archived.value]}
+        ),
         correlation_id=correlation_id,
     )
     db.commit()
@@ -932,6 +1033,8 @@ __all__ = [
     "expire_session",
     "revert_session_to_draft",
     "archive_session",
+    "release_responses_now",
+    "stop_responses_release",
     "unarchive_session",
     "open_instrument",
     "close_instrument",

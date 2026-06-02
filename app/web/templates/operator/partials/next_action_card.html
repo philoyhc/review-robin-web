@@ -351,6 +351,64 @@
               disabled aria-disabled="true">Close session</button>
     {% endif %}
   </div>
+
+  {# Row 3 — release / archive operations. Manual affordances
+     to override the scheduled release window (Release responses /
+     Stop releasing responses) and to file the session out of the
+     lobby (Archive session). Release pair is live once the
+     session is past activation (``ready`` or ``expired``); Stop
+     is live only when the release window is currently open
+     (otherwise the click would be a no-op). Archive is live
+     everywhere except already-archived. #}
+  {% if release_responses_live %}
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/workflow/release-responses"
+          id="next-action-release-responses-form">
+      {% if _next_action_return_to %}
+        <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+      {% endif %}
+    </form>
+  {% endif %}
+  {% if stop_release_live %}
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/workflow/stop-release"
+          id="next-action-stop-release-form">
+      {% if _next_action_return_to %}
+        <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+      {% endif %}
+    </form>
+  {% endif %}
+  {% if archive_live %}
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/workflow/archive"
+          id="next-action-archive-form"></form>
+  {% endif %}
+
+  <div class="next-action-buttons next-action-buttons-row">
+    {% if release_responses_live %}
+      <button class="btn secondary" type="submit"
+              form="next-action-release-responses-form">Release responses</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Release responses</button>
+    {% endif %}
+
+    {% if stop_release_live %}
+      <button class="btn secondary" type="submit"
+              form="next-action-stop-release-form">Stop releasing responses</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Stop releasing responses</button>
+    {% endif %}
+
+    {% if archive_live %}
+      <button class="btn destructive" type="submit"
+              form="next-action-archive-form">Archive session</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Archive session</button>
+    {% endif %}
+  </div>
     </div>
     {# Right column — per-state status aside. Per-state Setup-
        checklist / Validation-issues / Status detail renders
