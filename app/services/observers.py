@@ -373,9 +373,13 @@ def set_cohort_rule(
         try:
             ruleset = CohortRuleSet.model_validate(payload)
         except ValidationError as exc:
+            # Operator-facing message. The original Pydantic
+            # exception rides along via ``from exc`` so dev
+            # tracebacks still carry the field-level detail.
             raise ObserverOperationError(
                 "invalid_cohort_rule",
-                f"Cohort-rule payload failed validation: {exc}",
+                "Couldn't save the cohort rule. Check that every "
+                "rule cell has a field selected and an operand.",
             ) from exc
         validated_dump = ruleset.model_dump(mode="json")
 

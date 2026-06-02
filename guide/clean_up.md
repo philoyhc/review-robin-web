@@ -34,16 +34,16 @@ retires for another reason.
    mutate `cohort_rule` on a non-draft session.
    *Source: Observers code review, finding #3 (2026-06-02).*
 
-2. **Cohort-rule save failure UX.** Invalid payloads (or a
-   forged `op` / `combinator`) raise
-   `ObserverOperationError("invalid_cohort_rule")` which the
-   route turns into a bare HTTP 400 page with the raw Pydantic
-   error string in the body. Compare to `observers_create` /
-   `observers_update`, which re-render the Observers page with
-   `edit_error=` set + a banner. Editor cell state re-hydration
-   is the harder bit; a flash banner + preserved selection is
-   probably enough for MVP.
-   *Source: Observers code review, finding #4 (2026-06-02).*
+2. ~~**Cohort-rule save failure UX.**~~
+   *Shipped #current (partial) — the verbose Pydantic error
+   no longer leaks to the operator. ``invalid_cohort_rule``
+   now carries the friendly message ``"Couldn't save the
+   cohort rule. Check that every rule cell has a field
+   selected and an operand."``; the original exception rides
+   along via ``from exc`` for dev tracebacks. The full
+   re-render-with-editor-state-preserved fix is still
+   deferred — see Item 12 of the original review for the
+   editor-rehydration complication.*
 
 3. ~~**HTTP-layer test for cross-session `observer_ids`.**~~
    *Shipped #current — integration test pins the 400, service
@@ -54,17 +54,15 @@ retires for another reason.
    *Shipped #current — attribute now gated on `selectable`
    (matches when the cohort editor + checkboxes render).*
 
-5. **`loadEditorFromRule` silently degrades when the saved
-   `operand_tag` no longer exists.** The JS does
-   `tagSel.value = entry.operand_tag` — if the operator
-   cleared that tag slot's label after the rule was saved,
-   the assignment falls through to the first option without
-   surfacing the drift. The Cohort-column summary handles
-   the same case correctly (falls back to the canonical key).
-   Either add a hidden disabled option preserving the saved
-   value, or render a small notice when the saved
-   `operand_tag` isn't in the dropdown.
-   *Source: Observers code review, finding #7 (2026-06-02).*
+5. ~~**`loadEditorFromRule` silently degrades when the saved
+   `operand_tag` no longer exists.**~~
+   *Shipped #current — ``loadEditorFromRule`` now calls
+   ``ensureStaleOption`` against both the field and operand
+   selects before assigning, inserting a disabled
+   ``<option>`` carrying the saved canonical key suffixed
+   with ``(missing label)`` when the value isn't in the live
+   dropdown. The operator sees the stale value, can't
+   re-select it, and overwrites by picking a valid option.*
 
 6. ~~**Empty `operand_value` on value operators round-trips
    but renders ambiguously.**~~
