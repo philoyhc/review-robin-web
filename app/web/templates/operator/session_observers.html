@@ -228,6 +228,11 @@
               </div>
             </div>
           </div>
+          <p id="observers-cohort-mixed-banner" hidden
+             style="margin: var(--space-3) 0 0 0;
+                    color: var(--text-muted, #64748b);">
+            The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
+          </p>
           <div style="display: flex; justify-content: flex-end;
                       gap: 12px; margin-top: var(--space-3);">
             <button class="btn primary" type="button"
@@ -347,7 +352,7 @@
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
           {% else %}
-            <tr id="observer-row-{{ observer.id }}">
+            <tr id="observer-row-{{ observer.id }}" data-observer-cohort-rule="">
               <td class="row-select-cell">
                 {% if selectable %}
                   <input type="checkbox" class="observer-select"
@@ -395,6 +400,7 @@
         var selectAll = document.getElementById("observers-select-all");
         var cohortBlock = document.getElementById("observers-cohort-block");
         var cohortHeading = document.getElementById("observers-cohort-heading");
+        var cohortMixedBanner = document.getElementById("observers-cohort-mixed-banner");
         if (!editBtn) return;
         function boxes() {
           return document.querySelectorAll(".observer-select");
@@ -433,6 +439,25 @@
             cohortHeading.textContent = (n === 1
               ? "Selected observer is able to see responses where"
               : "Selected observers are able to see responses where");
+          }
+          // Mixed-state detection: gather the per-row cohort-rule
+          // signatures and check whether all selected observers
+          // share the same rule. Empty signature = no saved rule;
+          // populated when persistence ships. Banner shows only
+          // when distinct rules > 1.
+          if (cohortMixedBanner) {
+            var seen = {};
+            var distinct = 0;
+            for (var j = 0; j < all.length; j++) {
+              if (!all[j].checked) continue;
+              var row = all[j].closest("tr");
+              var sig = row ? (row.getAttribute("data-observer-cohort-rule") || "") : "";
+              if (!Object.prototype.hasOwnProperty.call(seen, sig)) {
+                seen[sig] = true;
+                distinct++;
+              }
+            }
+            cohortMixedBanner.hidden = (distinct <= 1);
           }
         }
         document.addEventListener("change", function (e) {
