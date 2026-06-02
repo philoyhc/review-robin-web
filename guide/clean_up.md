@@ -23,16 +23,17 @@ retires for another reason.
 
 ### Medium
 
-1. **Service-layer lifecycle assertion for `set_cohort_rule`.**
-   The route calls `_require_editable`, but
-   `app/services/observers.py::set_cohort_rule` itself has no
-   lifecycle guard — every other observer mutator
-   (`create_observer` / `update_observer` / `_bulk_set_status`)
-   calls `lifecycle.invalidate_if_validated`. Defensible to
-   skip (cohort_rule is post-validation configuration), but
-   the layering inconsistency means a non-route caller could
-   mutate `cohort_rule` on a non-draft session.
-   *Source: Observers code review, finding #3 (2026-06-02).*
+1. ~~**Service-layer lifecycle assertion for `set_cohort_rule`.**~~
+   *Closed without action #current — deliberate decision:
+   cohort rules govern which parts of response data are
+   visible to an observer, not the response data itself or
+   the roster shape, so there's no contract that requires
+   lifecycle-gating at the service layer. The route still
+   calls ``_require_editable`` for parity with other
+   Setup-page mutators; if a future product decision opens
+   mid-session refinement, only the route gate needs
+   lifting. Docstring on ``set_cohort_rule`` captures the
+   rationale so the gap doesn't get re-flagged.*
 
 2. ~~**Cohort-rule save failure UX.**~~
    *Shipped #current (partial) — the verbose Pydantic error
