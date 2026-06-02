@@ -360,9 +360,20 @@ def set_cohort_rule(
     named observer (or ``None`` when clearing). No-ops cleanly
     when ``observer_ids`` is empty.
 
-    Lifecycle: cohort_rule changes don't invalidate validation —
-    the cohort rule is post-validation configuration (it governs
-    the observer's view, not the roster shape).
+    Lifecycle: cohort_rule changes don't invalidate session
+    validation, and the service deliberately does **not** call
+    ``_require_editable``. Unlike the roster mutators
+    (``create_observer`` / ``update_observer`` /
+    ``_bulk_set_status``), the cohort rule governs **which
+    parts of response data become visible to an observer**, not
+    the response data itself or the roster shape — so there's
+    no contract that requires lifecycle-gating at the service
+    layer. The current route handler still calls
+    ``_require_editable`` for parity with the rest of the
+    Setup-page mutators (the editor renders only when the
+    session is in an editable state); if a future product
+    decision opens mid-session cohort refinement, only the
+    route gate needs lifting, not the service.
     """
     if not observer_ids:
         return None
