@@ -588,7 +588,7 @@ def _display_field_has_data(
     at least one populated row in the session. Reuses
     :func:`slot_has_data` for the column-level check; pair-context
     rows are gated on ``status == "active"`` to mirror the rule
-    engine's view (the same gate ``_new_model_usable_tags`` applies)."""
+    engine's view (the same gate ``new_model_usable_tags`` applies)."""
     if field.source_type == "reviewee":
         col = getattr(Reviewee, field.source_field, None)
         if col is None:
@@ -614,7 +614,7 @@ def _label_slot(source_type: str, source_field: str) -> str:
     return source_field
 
 
-def _new_model_usable_tags(
+def new_model_usable_tags(
     db: Session, review_session: ReviewSession
 ) -> dict[str, list[tuple[str, str]]]:
     """For the Instrument Builder new-model card: which tag slots are
@@ -775,7 +775,7 @@ def build_instruments_context(
         "breadcrumbs": breadcrumbs.operator_session_child(
             review_session, "Instruments"
         ),
-        "new_model_tags": _new_model_usable_tags(db, review_session),
+        "new_model_tags": new_model_usable_tags(db, review_session),
         "new_model_band1_state": {
             instrument.id: instruments_service.decode_band1_state(
                 instrument, db

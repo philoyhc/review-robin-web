@@ -173,6 +173,9 @@ def _render_observers_page(
             "add_mode": add_mode,
             "edit_values": edit_values,
             "edit_error": edit_error,
+            "cohort_match_tags": views.new_model_usable_tags(
+                db, review_session
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Observers"
             ),

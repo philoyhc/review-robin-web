@@ -59,7 +59,7 @@ def slot_has_data(
     - The Setup pages' "Fields with data" pills
       (``app.services.assignments.reviewer_fields_with_data`` etc.).
     - Band 1's tag-slot dropdowns on the new-model instrument card
-      (``app.web.views._instruments._new_model_usable_tags``).
+      (``app.web.views._instruments.new_model_usable_tags``).
     - Band 2's "Review Instrument" preview pills
       (``app.web.views._instruments._new_model_band2_state``).
 
