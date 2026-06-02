@@ -102,8 +102,9 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    (the cross-role lobby), `_surface.py` (the multi-page response
    form), `_summary.py` (post-submit summary), `_results.py` (the
    reviewee `/me/sessions/{id}/results` body), `_collation.py`
-   (the observer `/me/sessions/{id}/collation` placeholder —
-   body wiring paused; see `guide/observers.md`), `_invite.py`
+   (the observer `/me/sessions/{id}/collation` per-instrument
+   3-row table + per-instrument CSV download; see
+   `guide/observers.md`), `_invite.py`
    (magic-link landing), `_shared.py`. See
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
@@ -112,7 +113,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
 
 A small but important fourth seam:
 
-- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_assignments.py`, `_audit_log.py`, `_sort.py`, `_workflow_card.py`, `_reviewer_summary.py` (reviewer post-submit summary), `_reviewee_results.py` (reviewee `/results` body — Raw / Anonymized / Summarized aggregate primitives in `_summarize_field`)); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
+- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_assignments.py`, `_audit_log.py`, `_sort.py`, `_workflow_card.py`, `_reviewer_summary.py` (reviewer post-submit summary), `_reviewee_results.py` (reviewee `/results` body — Raw / Anonymized / Summarized aggregate primitives in `summarize_field`)); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
 
 ### Audit events
 
@@ -206,7 +207,7 @@ reject it.
 - **`spec/instruments.md`** — Instrument entity + per-session Instruments operator page. Per-instrument card (Identity / Bands 1+2+3), "Not set" pill safety gate, group-scoped variant, Response Type Definitions card. (Consolidates the retired `instrument_builder.md` + `group_scoped_instruments.md`; pre-2026-05-26 docs preserved at `spec/archive/`.)
 - **`spec/settings_inventory.md`** — Single-stop index of every operator- / per-session setting Review Robin Web persists, plus the browser-local UI-state primitives (cookies / localStorage / URL params).
 - **`spec/visibility_policy.md`** — Per-instrument visibility policy (the 3 × 2 chip grid: Reviewers / Reviewees / Observers × Session-ongoing / Responses-released; Raw / Anonymized / Summarized modes; `instrument_view_policies` storage; `resolve_mode` view-time resolver). Cited by both the reviewee `/results` and the (paused) observer `/collation` surfaces.
-- **`spec/participant_model.md`** — Active spec covering the participant-model behavior shipped 2026-05-30 → 2026-06-01: observer roster + per-session toggle + reviewee `/results` body across all three modes + Acknowledge gesture. The umbrella design rationale + the S/P/W identifier glossary live in `guide/archive/participant_model_upgrade.md` (Appendix A); outstanding work is logged in `guide/observers.md` (W17/W5, paused) and `guide/segment_14B_email_infrastructure.md` appendix (W20/W21).
+- **`spec/participant_model.md`** — Active spec covering the participant-model behavior shipped 2026-05-30 → 2026-06-01: observer roster + per-session toggle + reviewee `/results` body across all three modes + Acknowledge gesture. The umbrella design rationale + the S/P/W identifier glossary live in `guide/archive/participant_model_upgrade.md` (Appendix A); outstanding work is logged in `guide/observers.md` (W17/W5, paused) and `guide/segment_14B_email_infrastructure.md` appendix (W20/W21). The observer collation MVP (W17 + W5) shipped 2026-06-02 — see `guide/observers.md` "Status".
 - **`spec/audience_and_identity_model.md`** — Audience taxonomy (operator / reviewer / reviewee / observer / sysadmin) and auth posture.
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence. (The earlier `unfinished_business.md` catalog retired 2026-05-10 once all open items shipped or got absorbed into named segments; lives at `guide/archive/unfinished_business.md` for historical reference.)

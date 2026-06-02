@@ -79,12 +79,19 @@ results). Phase 1 has:
 - An `observers.cohort_rule` JSON column carrying a per-observer
   cohort match rule authored on the Observers Setup page (see
   `spec/setup_pages.md` "Cohort match rule editor" + `guide/observers.md`).
-  Authored but not yet consumed — the resolver / surface that
-  filters what an observer sees by their saved rule is pending.
+  Materialised at request time on the collation surface (no
+  junction table).
 - A `require_observer_in_session` gate in `app/web/deps.py`.
-- A placeholder **Observer Collation** page at
-  `GET /me/sessions/{id}/collation` — reviewer-surface chrome with
-  no body content yet. Full content lands with W17.
+- The **Observer Collation** surface at
+  `GET /me/sessions/{id}/collation` — per-instrument 3-row
+  table (reviewer-side aggregates / reviewee-side aggregates /
+  conditional CSV download) scoped to the observer's cohort.
+  Identification mode (Raw / Anonymized rows / Anonymized
+  summaries) follows the per-instrument Band 3 observer
+  policy. Anonymized downloads swap reviewer / reviewee names
+  for per-session opaque tokens via
+  `app/services/participant_tokens.py`. MVP shipped
+  2026-06-02.
 
 Observers are always email-identified (`observers.email` is NOT
 NULL); no parse check is needed before identity matching.
@@ -283,7 +290,7 @@ navigation patterns are audience-specific.
 | Operator (out of session) | App-level pages | Light: minimal top bar, user menu | Sparse: Sessions, About, Settings |
 | Reviewer | Response surface | Light: page header, role-navigator chips | Sparse: `/me` dashboard, response form, summary |
 | Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card, W16 + W19) |
-| Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` (W17 body content pending) |
+| Observer (Phase 1+) | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` — per-instrument 3-row table (reviewer / reviewee aggregates + conditional CSV download); MVP shipped 2026-06-02 |
 
 The discipline: **components are universal, chrome is audience-
 local.** A submit button looks the same to operators and reviewers.
@@ -311,8 +318,10 @@ conventions.
 
 Recorded for visibility; **none committed.**
 
-- **Reviewee surface** is live (W16 + W19). The Observer collation
-  surface (W17) is still pending.
+- **Reviewee surface** is live (W16 + W19). The Observer
+  collation surface (W17) shipped 2026-06-02 as the MVP — per-
+  instrument 3-row table + cohort-scoped CSV downloads via
+  `app/web/routes_reviewer/_collation.py`.
 - **System administrator surface.** Cross-session admin grouping;
   not yet scoped.
 - **Vetted institutional wordmarks** as a constrained customization

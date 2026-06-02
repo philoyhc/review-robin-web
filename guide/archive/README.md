@@ -35,6 +35,7 @@ edits — they are a rough size signal, not a tracked metric.
 | `assumptions_ui_legacy.md` | 119 | The legacy UI section carved out of `spec/domain_assumptions.md`. |
 | `ui_elements_parts_2_3_restyle_history.md` | 111 | Historical UI-elements catalogue, Parts 2 + 3. |
 | `ui_checklist.md` | 197 | The v1 restructure + v2 `body.ui-v2` sweep per-page tracking checklist — both passes complete; retired to archive 2026-05-19 once the sweep stopped being a living tracker. |
+| `observers_mvp_planning.md` | 225 | The Design reframe + MVP definition + Implementation path + Implications carved out of `guide/observers.md` once the MVP shipped 2026-06-02. The current operating reference (storage shape, token design, where the wiring stands, cohort-consumer routes) stayed in `guide/observers.md`. |
 | `spec_sweep_11may.md` | 657 | The 2026-05-11 `spec/` drift + consolidation audit proposal (F1-F8 / C1-C5 / S1-S5) — all items merged, proposal closed. Its "Done vs Remaining" coverage-gap list is the input for Segment 19 Part 1. |
 | `codebase_assessment_09may.md` | 373 | Codebase-vs-functional-spec snapshot, 2026-05-09. Superseded by later assessments; the latest active snapshot lives at `guide/codebase_assessment_01jun.md`. |
 | `codebase_assessment_11may.md` | 420 | Codebase-vs-functional-spec snapshot, 2026-05-11. Frequently cited from archived segment plans (16B / 16C / 18A / 18C) — those references were redirected to this archive path when it moved. |

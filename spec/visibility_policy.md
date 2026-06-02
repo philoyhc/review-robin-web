@@ -64,7 +64,7 @@ Of the four combinations, three are coherent for participant audiences and one i
 | List (enum) | Per-choice frequency with percentage, e.g. `A: 2 (33.3%)`. Every declared option surfaces including zeros. |
 | String (free-text) | Total length (characters) + Average length (characters), (based on N responses). Em-dash placeholders at zero responses. Also the fallback for unrecognised data types. |
 
-The policy row carries `aggregated` regardless of data type. The per-type rendering lives in `app/web/views/_reviewee_results.py::_summarize_field` (for the reviewee surface) and the corresponding template branch in `reviewer/results.html`. The Reviewee / Observer surfaces present the same per-type aggregate shapes.
+The policy row carries `aggregated` regardless of data type. The per-type rendering lives in `app/web/views/_reviewee_results.py::summarize_field` (for the reviewee surface and the observer collation stats rows) and the corresponding template branches in `reviewer/results.html` + `reviewer/_collation_field_cell.html`. The Reviewee / Observer surfaces present the same per-type aggregate shapes.
 
 ### 2.2 Peer reviewer special case
 
