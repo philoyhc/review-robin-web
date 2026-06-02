@@ -125,19 +125,66 @@ without knowing who they are.
   analysis use case; dashes stay the right rendering for
   Anonymized there.
 
-### Observers page = cohort definition via tag matching
+## MVP definition (2026-06-02)
 
-The **Observers Setup page** is where the per-observer
-**cohort** is defined for the session — using tag matching
-against the rosters.
+The first cut of the observer feature is now scoped:
 
-An observer's `tag_1` matches a chosen axis on the reviewee
-side (or on the reviewer side, depending on the observer's
-focus) to materialise their per-observer scope. The match
-axis is a per-session operator setting; the materialisation
-happens at download time (no junction table).
+### 1. Cohort assignment by tag matching
 
-**Open design question** — should the match axis be:
+The operator can **assign each observer to a cohort** by
+**tag matching** against the reviewer / reviewee rosters.
+Match shape is operator-configurable (decided when the work
+opens — see the three options under "Match-axis open
+question" below; lean is per-session pick), and the
+materialised cohort = the set of reviewers and/or reviewees
+whose chosen tag axis equals the observer's tag.
+
+This lives on the Observers Setup page (operator side); the
+observer themselves never sees the match config.
+
+### 2. Observer surface — `/me/sessions/{id}/collation`
+
+For each **visible instrument** the observer's cohort
+participates in, the page renders **one table per instrument**
+with three rows:
+
+- **Row 1 — Reviewer stats.** Summary aggregates over the
+  cohort's *reviewers* (mean / median / min / max for
+  numerical; per-choice frequencies + percentages for List;
+  total + average length for String). Same primitives as
+  the existing W16 "Anonymized summaries" mode for reviewees.
+- **Row 2 — Reviewee stats.** Same shape, computed over the
+  cohort's *reviewees*. Two rows means the observer sees
+  both the "what reviewers in my cohort were saying"
+  perspective and the "what reviewers said about reviewees
+  in my cohort" perspective without needing a focus
+  switcher on the UI.
+- **Row 3 — Download.** The third row carries a **download
+  button flushed right in the last column** (rightmost
+  column), per visible instrument. What gets downloaded
+  depends on the instrument's Band 3 identification mode:
+  - Band 3 = **Raw** → download row 3's button gives the
+    operator-style identified per-instrument CSV (the
+    cohort-scoped slice).
+  - Band 3 = **Anonymized** → download gives the same CSV
+    with names / emails replaced by stable tokens and the
+    tag columns dropped (per the token-design decisions
+    above).
+  - Band 3 = **Summarized** → no row-3 download; rows 1 + 2
+    are the only data shape the operator's policy allows
+    for this instrument.
+- **CSV shape.** One CSV per instrument, following the
+  existing **By-instrument** extract model
+  (`app/services/extracts/by_instrument_extract.py`),
+  scoped to the observer's cohort. Reuse the helper; pass
+  the cohort filter as an extra argument.
+
+The page is a **download index plus summary** — not a full
+cells-against-policy table. Rows 1 + 2 give the observer
+enough at-a-glance signal that they often don't need to
+download; row 3 is the escape hatch for downstream analysis.
+
+### Open: match-axis schema
 
 - **Hardcoded** to `observer.tag_1 == reviewee.tag_1` (and
   the symmetric reviewer side). Zero schema, zero UI. The
@@ -219,25 +266,37 @@ Reasons:
   cell-rendering `build_observer_collation_context`
   originally proposed.
 
-## Re-design path
+## Implementation path (when the work resumes)
 
-When the work resumes:
+Sequencing the MVP defined above:
 
-1. **Spec the per-observer scope configurator** on the
-   Observers Setup page. Decide the shape (focus axis,
-   partition axis, file-kinds allowlist).
-2. **Reshape the Band 3 observer row** per the implication
-   above — drop it or repurpose it.
-3. **Wire `/me/sessions/{id}/collation` as a download
-   index** — render the list of files the observer can
-   download given their configured scope, each file gated
-   through a per-observer download route that materialises
-   on demand.
-4. **Reuse the extract pipeline** — every file kind already
-   has an operator-facing serialiser (`reviewers_extract.py`,
-   `relationships_extract.py`, `responses_extract.py`, the
-   Data shaper output). The per-observer gate is a thin
-   permission layer on top.
+1. **Resolve the match-axis schema** (the three options in
+   "Open: match-axis schema" above). Lean is per-session
+   pick — one new column on `sessions`.
+2. **Cohort materialiser service** — given an observer + a
+   session, return the in-cohort reviewer ids + reviewee ids.
+   Compute at request time; no junction table.
+3. **Token helper** (`participant_token`) — pure function
+   over `(session_id, role, individual_id)`. No persistence.
+4. **By-instrument extract — cohort filter parameter** —
+   extend `serialize_by_instrument` with an optional cohort
+   filter (or a thin wrapper that applies it). Reuse the
+   token helper to swap identification when Band 3 says
+   Anonymized.
+5. **`/me/sessions/{id}/collation` body** — per-instrument
+   table: rows 1 + 2 carry the W16 aggregate primitives
+   (`_summarize_field`) scoped to the cohort's reviewers /
+   reviewees; row 3 carries the conditional download
+   button. One per visible instrument.
+6. **Operator-side Observers Setup configurator** — UI for
+   setting the per-observer cohort tag value (and the per-
+   session match axis once that decision lands). A small
+   "decode token" widget alongside, for support cases.
+7. **Reshape the Band 3 observer row** — the current 3 × 2
+   chip grid's observer row stays as the Raw / Anonymized /
+   Summarized pick that the MVP's row 3 download branches on.
+   No retire / repurpose needed — it does exactly the job
+   the MVP requires.
 
 When that work scopes, fold this file into a
 `segment_22_observers.md` plan and link from
@@ -273,20 +332,20 @@ What's shipped (live in production):
   any session's roster (W18, polish through #1715). Their
   role-navigator chip strip links to `/me/sessions/{id}/collation`.
 
-## Paused work items (reshaped by the 2026-06-02 reframe)
+## Paused work items (now scoped by the MVP above)
 
-- **W17 — Observer collation surface body.** Reshape from a
-  cross-reviewee cell-rendering table to a **download index**
-  per the reframe above. The original sketch (rows = reviewees
-  in the observer's partition, columns = aggregate; cells
-  resolved through the visibility policy) is retired.
-- **W5 — `app/services/collation.py` service.** The original
-  proposed `build_observer_collation_context` is also retired.
-  The replacement, if needed, is a thin per-observer
-  file-list builder + a download gate layer that calls the
-  existing extract serialisers (`reviewers_extract.py`,
-  `relationships_extract.py`, `responses_extract.py`, the
-  Data shaper) with the observer's configured scope applied.
+- **W17 — Observer collation surface body.** Reshape to the
+  per-instrument table (rows 1 = reviewer stats, row 2 =
+  reviewee stats, row 3 = conditional download button) per
+  the MVP definition. The original cross-reviewee
+  cell-rendering sketch retires.
+- **W5 — `app/services/collation.py` service.** Two thin
+  helpers: (a) cohort materialiser
+  (`observer + session → reviewer_ids, reviewee_ids`); (b)
+  per-instrument stats builder that reuses W16's
+  `_summarize_field` over the cohort. The originally-sketched
+  `build_observer_collation_context` shrinks to a thin
+  page-shape composer.
 
 ## Cross-references
 
