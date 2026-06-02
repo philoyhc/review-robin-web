@@ -50,6 +50,7 @@ from app.web.routes_operator._shared import (
     _SETUP_FILTERED_CAP,
     _redirect_keeping_selection,
     _require_editable,
+    _require_not_archived,
     _require_response_loss_ack,
     _templates,
     require_observers_enabled_session,
@@ -175,6 +176,7 @@ def _render_observers_page(
             "issues": issues or [],
             "filename": filename,
             "is_ready": is_ready,
+            "is_archived": lifecycle.is_archived(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,
@@ -461,8 +463,16 @@ async def observers_cohort_rule_save(
     """POST handler for the Cohort match rule editor's Save
     button. Applies the editor's current rule to every observer
     in ``observer_ids`` (sourced from the bulk-form's row
-    checkboxes); rejects an empty selection with a 400."""
-    _require_editable(review_session)
+    checkboxes); rejects an empty selection with a 400.
+
+    Lifecycle gate is ``_require_not_archived`` rather than the
+    stricter ``_require_editable`` used by the roster mutators:
+    cohort rules govern which parts of response data observers
+    see, not the response data or roster shape, so editing them
+    mid-session (ready / expired) is legitimate. Only archived
+    is a hard stop.
+    """
+    _require_not_archived(review_session)
     form = await request.form()
     observer_ids = [
         int(v)

@@ -368,14 +368,11 @@ def set_cohort_rule(
     (``create_observer`` / ``update_observer`` /
     ``_bulk_set_status``), the cohort rule governs **which
     parts of response data become visible to an observer**, not
-    the response data itself or the roster shape — so there's
-    no contract that requires lifecycle-gating at the service
-    layer. The current route handler still calls
-    ``_require_editable`` for parity with the rest of the
-    Setup-page mutators (the editor renders only when the
-    session is in an editable state); if a future product
-    decision opens mid-session cohort refinement, only the
-    route gate needs lifting, not the service.
+    the response data itself or the roster shape — so editing
+    it mid-session (``ready`` / ``expired``) is a legitimate
+    flow. The route handler enforces a permissive
+    ``_require_not_archived`` gate (archived is the only hard
+    stop); the service still trusts its caller on lifecycle.
     """
     if not observer_ids:
         raise ObserverOperationError(

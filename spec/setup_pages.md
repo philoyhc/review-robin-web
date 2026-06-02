@@ -521,10 +521,23 @@ empty `{"combinator": "AND", "rules": []}` is distinct. See
 storage rationale.
 
 Route: `POST /operator/sessions/{id}/observers/cohort-rule`,
-gated on the same `require_observers_enabled_session` +
-`_require_editable` chain as the bulk-status routes. Emits
-one `observer.cohort_rule_assigned` audit event per affected
-observer (`refs={"observer_id": id}` + `snapshot={"cohort_rule": …}`).
+gated on `require_observers_enabled_session` +
+`_require_not_archived` — looser than the bulk-status routes
+(`_require_editable`, draft + validated only) because cohort
+rules govern observer visibility, not response data or roster
+shape, so mid-session refinement (during `ready` / `expired`)
+is the legitimate flow. Only `archived` is a hard stop.
+Emits one `observer.cohort_rule_assigned` audit event per
+affected observer (`refs={"observer_id": id}` +
+`snapshot={"cohort_rule": …}`).
+
+**Card layout.** The cohort editor renders as its own card,
+visible whenever the session isn't `archived` (i.e. through
+`draft` / `validated` / `ready` / `expired`). The bulk
+Operator actions card above it still follows the standard
+lock pattern — it hides once the session reaches `ready`.
+Mid-session, the operator can refine cohort rules but can't
+mutate the roster.
 
 ### CSV import
 
