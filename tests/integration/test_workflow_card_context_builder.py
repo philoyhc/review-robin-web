@@ -329,9 +329,14 @@ def test_validated_no_invites_surfaces_revert_prepare_create_activate(
     assert len(visible) <= 4
 
 
-def test_ready_no_invites_surfaces_revert_create_close_release(
+def test_ready_no_invites_surfaces_revert_create_close(
     client: TestClient, db: Session
 ) -> None:
+    """Ready state surfaces ≤ 3 buttons: revert + create-invites
+    (or send-invites / send-reminders depending on invitation
+    progression) + close. **Release responses + Stop releasing
+    stay hidden until the session has closed/expired** — the
+    operator only takes the manual release shortcut post-deadline."""
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")
     sess.status = "ready"
     db.commit()
@@ -343,8 +348,9 @@ def test_ready_no_invites_surfaces_revert_create_close_release(
         "revert_visible",
         "create_invites_visible",
         "close_visible",
-        "release_responses_visible",
     }
+    assert ctx["release_responses_visible"] is False
+    assert ctx["stop_release_visible"] is False
     assert len(visible) <= 4
 
 
@@ -395,37 +401,40 @@ def test_every_state_keeps_visible_count_within_four(
         )
 
 
-def test_stop_release_visible_gates_on_post_activation(
+def test_release_and_stop_visible_gate_on_expired_only(
     client: TestClient, db: Session
 ) -> None:
-    """A backdated ``responses_release_at`` on a draft / validated
-    session opens the release window per
-    ``is_response_release_window_open``, but Stop must stay hidden
-    in pre-activation states. Otherwise validated + no invites
-    would surface five visible buttons (Revert · Prepare ·
-    Create invites · Activate · Stop) and blow the ≤4 grid
-    contract."""
+    """Release responses + Stop releasing stay hidden in every
+    pre-expired state. The operator only takes the manual
+    release shortcut after a session has closed (``expired``) —
+    matches the spec narrative ("responses are released because
+    the session is over") and keeps the ≤4-visible-button budget
+    safe across the draft / validated / ready states regardless
+    of any backdated ``responses_release_at``."""
     from datetime import datetime, timedelta, timezone
 
-    sess = _seed_pair_plus_pinned(client, db, code="stop-pre-activation")
+    sess = _seed_pair_plus_pinned(client, db, code="release-stop-pre-expired")
     sess.responses_release_at = datetime.now(timezone.utc) - timedelta(
         hours=1
     )
 
-    for state in ("draft", "validated"):
+    for state in ("draft", "validated", "ready"):
         sess.status = state
         db.commit()
         ctx = views.build_workflow_card_context(
             db, sess, return_to="home"
         )
+        assert ctx["release_responses_visible"] is False, (
+            f"Release should stay hidden in {state!r}"
+        )
         assert ctx["stop_release_visible"] is False, (
-            f"Stop should stay hidden in pre-activation state "
-            f"{state!r} even with a backdated release_at"
+            f"Stop should stay hidden in {state!r} even with a "
+            f"backdated release_at"
         )
         assert len(_visible_set(ctx)) <= 4
 
-    # Once activated, Stop surfaces because the window is open.
-    sess.status = "ready"
+    # Once closed/expired, Stop surfaces because the window is open.
+    sess.status = "expired"
     db.commit()
     ctx = views.build_workflow_card_context(
         db, sess, return_to="home"

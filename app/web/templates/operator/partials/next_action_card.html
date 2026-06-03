@@ -13,7 +13,7 @@
 
    - Create invites hides once invitations exist.
    - Send invites hides once invitations are sent.
-   - Release responses / Stop releasing responses share a slot,
+   - Release responses / Stop releasing share a slot,
      mutually exclusive on ``is_response_release_window_open``.
    - Archive session is ``is_expired``-only.
    - Everything else uses its existing live gate.
@@ -347,7 +347,7 @@
 
     {% if stop_release_visible %}
       <button class="btn secondary" type="submit"
-              form="next-action-stop-release-form">Stop releasing responses</button>
+              form="next-action-stop-release-form">Stop releasing</button>
     {% endif %}
 
     {% if archive_visible %}

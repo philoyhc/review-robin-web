@@ -603,7 +603,7 @@ def stop_responses_release(
     """Close the response-release window by stamping
     ``responses_release_until = now()``.
 
-    The "Stop releasing responses" button on the Workflow card
+    The "Stop releasing" button on the Workflow card
     calls this. Mirrors the release flow: the operator picks
     the close moment manually, overriding any scheduled
     ``responses_release_until``. Idempotent — a session whose

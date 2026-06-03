@@ -502,7 +502,7 @@ Cards that have graduated out of the placeholder pattern:
 | `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + per-issue list | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4W / 4Err / 5 / 6: Activate session live (Primary; 4W detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Create / Send invites surface based on invitation state | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Create invites / Send invites / Send reminders forward stages (whichever is next renders Primary); Close session + Release responses live (Secondary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
-| `expired` / Closed | State 10: Release responses (or Stop releasing responses when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
+| `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
 The **Danger Zone** card (Delete Data + Delete Session) lives on

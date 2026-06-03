@@ -1,5 +1,5 @@
 """Unit + integration coverage for the Workflow card's Row 3
-manual buttons: Release responses, Stop releasing responses,
+manual buttons: Release responses, Stop releasing,
 Archive session.
 """
 
