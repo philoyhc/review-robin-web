@@ -1913,6 +1913,15 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
+- **18O — Post-participants-model file splits** *(stub
+  created 2026-06-03)*. Four-track housekeeping pass on
+  the production files in the 1,300+ LOC band, before
+  Segment 14B adds route-heavy bulk on top. Tracks
+  (mechanical → integration-heaviest): A `scheduled_events.py`,
+  B `assignments.py`, C `session_config_io/_apply.py`,
+  D `routes_reviewer/_surface.py`. Mirrors the 18N + 17A
+  precedent. **Plan:** `guide/segment_18O_post_participants_model_file_splits.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
