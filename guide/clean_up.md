@@ -149,17 +149,19 @@ get lost when ``guide/observers.md`` is sweep-trimmed:
     work is to add the UI back + light up the
     ``observer_cohort.py`` branches.*
 
-14. **Cross-roster ``operand_tag`` (e.g.
-    ``reviewer.tag1 IS THE SAME AS reviewee.tag2``).** The
-    schema permits the right-hand operand to point at the
-    opposite roster, but the materialiser + per-row
-    predicate both treat it as unmatched. Same pair-level
-    requirement as item 13. The Cohort match rule editor
-    on the Observers Setup page already exposes these
-    options in the operand dropdown — the operator can
-    author the rule today, it just doesn't fire.
-    *Source: ``observer_cohort.py`` ``_rule_matches_row`` +
-    ``test_cross_roster_operand_tag_returns_empty_for_now``.*
+14. ~~**Cross-roster ``operand_tag`` (e.g.
+    ``reviewer.tag1 IS THE SAME AS reviewee.tag2``).**~~
+    *Closed by removing the option from the UI #current —
+    the right-side ``operand_tag`` dropdown now only carries
+    the three ``Observer:`` attributes; the cross-roster
+    ``Reviewer:`` / ``Reviewee:`` options + the separator
+    row are gone. Schema + materialiser + per-row predicate
+    still recognise cross-roster operands defensively
+    (legacy saved rules degrade to an empty cohort). The
+    pair-level join remains deferred — if a future product
+    decision asks for it, the work is to restore the
+    dropdown rows and light up the ``observer_cohort.py``
+    cross-roster branches.*
 
 15. **"Decode token" widget on the Observers Setup page.**
     Per ``guide/observers.md`` token-design decisions, the
