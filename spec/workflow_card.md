@@ -225,53 +225,87 @@ the min — the rule sets a floor, not a ceiling.
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
 
-## Workflow stepper — two rows of buttons
+## Workflow stepper — single-row button layout
 
-The left column hosts two rows of action buttons. **Row 1 (prep
-phase)** carries the actions an operator runs before reviewers
-see anything; **Row 2 (run phase)** carries the actions during
-and after the review window. **Close session** is live in
-Row 2 from `ready` onward — clicking it flips the session to
-`expired` and closes every instrument; the per-instrument
-`responses_visible_when_closed` toggle then governs whether
-reviewers can still see what they submitted post-close. From
-`expired` the operator clicks Revert to draft to reopen for
-editing (the shared `/sessions/{id}/revert` route accepts
-both `ready` and `expired` as starting states).
+The left column hosts a **single row of action buttons** at the
+bottom of the column. **Every state surfaces ≤ 4 visible
+buttons; inactive buttons are not rendered at all.** The row
+uses a 4-column CSS grid so each visible button locks at 25% of
+the column width regardless of how many slots render; the row
+left-aligns naturally as the empty grid cells collapse on the
+right.
+
+The body div above the buttons carries a `min-height` that
+reserves the vertical space previously occupied by the older
+two-row layout, so the card height stays stable when the
+visible-button count drops from 4 to 0 (and the buttons land at
+the same Y position the old Row 2 occupied).
+
+The 10 conceptual button slots (preserving the legacy
+prep-then-run ordering) are:
 
 ```
-Row 1 (prep): Revert to draft · Prepare session · Create invites
-Row 2 (run):  Send invites · Activate session · Send reminders · Close session
+1. Revert to draft   2. Prepare session   3. Create invites   4. Send invites
+5. Activate session  6. Send reminders   7. Close session     8. Release responses
+9. Stop releasing responses              10. Archive session
 ```
 
-Each slot is either **live** (Primary or Secondary, clickable)
-or **inert** (`<button disabled aria-disabled="true">`, rendered
-in the Secondary style for visual consistency). Revert is
-rendered in Secondary style whenever it's live — the stepper
-never promotes it to Primary.
+### Visibility gates
 
-`Pri` = Primary live, `Sec` = Secondary live, `—` = inert.
+The view-builder (``views.build_workflow_card_context``) emits
+one boolean per slot. Inactive buttons are hidden:
 
-**Row 1 (prep) — Revert · Prepare · Create invites**
+| Slot | ``*_visible`` formula |
+|---|---|
+| Revert to draft | `is_validated or is_ready or is_expired` |
+| Prepare session | `(is_draft and not is_setup_empty) or is_validated` |
+| Create invites | `(is_validated or is_ready) and not invitations_generated` |
+| Send invites | `(is_validated or is_ready) and invitations_generated and not invitations_sent` |
+| Activate session | `is_validated` (warnings-detour link when `validation_summary.needs_acknowledge`) |
+| Send reminders | `is_ready and invitations_sent` |
+| Close session | `is_ready` |
+| Release responses | `(is_ready or is_expired) and not is_archived and not response_release_window_open` |
+| Stop releasing responses | `response_release_window_open and (is_ready or is_expired) and not is_archived` |
+| Archive session | `is_expired` |
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Revert to draft | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
-| Prepare session | — | **Pri** | **Pri** | Sec | Sec | Sec | Sec | Sec | — | — | — | — |
-| Create invites | — | — | — | **Pri** | **Pri** | — | Sec | Sec | **Pri** | Sec | Sec | — |
+Two slot pairs are mutually exclusive by construction so they
+never co-render: Create invites disappears once invites exist
+and Send invites disappears once they're sent; Release responses
+and Stop releasing responses share a slot, flipping on
+`is_response_release_window_open`.
 
-**Row 2 (run) — Send invites · Activate · Send reminders · Close session**
+### Per-state visible-button table
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Send invites | — | — | — | — | — | — | **Pri** | Sec | — | **Pri** | Sec | — |
-| Activate session | — | — | — | **Pri** | **Pri** (→ warn detour) | — | **Pri** | **Pri** | — | — | — | — |
-| Send reminders | — | — | — | — | — | — | — | — | — | — | **Pri** | — |
-| Close session | — | — | — | — | — | — | — | — | Sec | Sec | Sec | — |
+`Pri` = Primary style, `Sec` = Secondary style, `Dgr` = Danger
+style, blank = not rendered. Order preserved across the row;
+blank cells collapse so the row reads left-to-right with no
+gaps.
+
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 9‡ | 10 | 10‡ |
+| --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | -- | --- |
+| Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | | |
+| Create invites | | | | Pri | Pri | | | | Pri | | | | | |
+| Send invites | | | | | | | Pri | | | Pri | | | | |
+| Activate session | | | | Pri | Pri (→detour) | | Pri | Pri | | | | | | |
+| Send reminders | | | | | | | | | | | Pri | Pri | | |
+| Close session | | | | | | | | | Sec | Sec | Sec | Sec | | |
+| Release responses | | | | | | | | | Sec | Sec | Sec | | Sec | |
+| Stop releasing | | | | | | | | | | | | Sec | | Sec |
+| Archive session | | | | | | | | | | | | | Dgr | Dgr |
+| **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **4** | **4** | **4** | **4** | **3** | **3** |
+
+‡ = `is_response_release_window_open(session)` is True (i.e. operator has run Release responses or a scheduled release has fired). Both Release and Stop also require the session to be in `ready` or `expired` — a backdated `responses_release_at` on a `draft` / `validated` session doesn't surface either button, so the ≤4-button contract holds for every state.
+
+Each state caps at 4 visible buttons. The pruning rules above
+(drop Create invites once generated, drop Send invites once
+sent, hide Archive outside `expired`, Release/Stop share a
+slot) are what keep the total within budget — without them
+states 5 / 8 / 9 would surface 5+ buttons.
 
 `Generate assignments` and `Validate setup` don't render as their
-own stepper slots — they live inside **Prepare session**, which
-runs Generate + Validate in sequence (see below).
+own slots — they live inside **Prepare session**, which runs
+Generate + Validate in sequence (see below).
 
 ### Prepare session
 

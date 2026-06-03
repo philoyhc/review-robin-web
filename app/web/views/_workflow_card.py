@@ -173,35 +173,76 @@ def build_workflow_card_context(
             }
 
     is_archived = lifecycle.is_archived(review_session)
-    # Row 3 button gates — release / stop-release are post-
-    # activation operations (the session has to be live or
-    # already-closed for them to make sense); archive can
-    # fire from any non-archived state.
-    release_responses_live = (
-        is_ready or is_expired
-    ) and not is_archived
     response_release_window_open = (
         lifecycle.is_response_release_window_open(review_session)
     )
-    stop_release_live = response_release_window_open and not is_archived
-    archive_live = not is_archived
+    # Single-row Workflow card (2026-06-03 redesign). Every state
+    # surfaces ≤ 4 live buttons; inactive buttons are hidden, not
+    # rendered as disabled greys. Each visible button fills 25%
+    # of the row's width via the grid layout in base.html. Pruning
+    # rules:
+    # - Create invites hides once invitations exist (no
+    #   regenerate-from-the-card affordance);
+    # - Send invites hides once invitations are sent;
+    # - Release / Stop share a slot, mutually exclusive on
+    #   ``is_response_release_window_open``;
+    # - Archive surfaces only once the session is ``expired``.
+    invitations_generated = invitations.has_invitations(
+        db, review_session.id
+    )
+    invitations_sent = invitations.has_sent_invitations(
+        db, review_session.id
+    )
+    revert_visible = is_validated or is_ready or is_expired
+    prepare_visible = (is_draft and not is_setup_empty) or is_validated
+    create_invites_visible = (
+        is_validated or is_ready
+    ) and not invitations_generated
+    send_invites_visible = (
+        (is_validated or is_ready)
+        and invitations_generated
+        and not invitations_sent
+    )
+    activate_visible = is_validated
+    send_reminders_visible = is_ready and invitations_sent
+    close_visible = is_ready
+    release_responses_visible = (
+        (is_ready or is_expired)
+        and not is_archived
+        and not response_release_window_open
+    )
+    # Stop release lives on the same post-activation gate as
+    # Release — otherwise a backdated ``responses_release_at`` on a
+    # draft / validated session would flip the window-open check to
+    # True and surface Stop in a pre-activation state, blowing the
+    # ≤4-visible-button budget (e.g. validated + no invites would
+    # render Revert · Prepare · Create invites · Activate · Stop).
+    stop_release_visible = (
+        response_release_window_open
+        and (is_ready or is_expired)
+        and not is_archived
+    )
+    archive_visible = is_expired
     return {
         "is_draft": is_draft,
         "is_validated": is_validated,
         "is_ready": is_ready,
         "is_expired": is_expired,
         "is_archived": is_archived,
-        "release_responses_live": release_responses_live,
-        "stop_release_live": stop_release_live,
-        "archive_live": archive_live,
+        "revert_visible": revert_visible,
+        "prepare_visible": prepare_visible,
+        "create_invites_visible": create_invites_visible,
+        "send_invites_visible": send_invites_visible,
+        "activate_visible": activate_visible,
+        "send_reminders_visible": send_reminders_visible,
+        "close_visible": close_visible,
+        "release_responses_visible": release_responses_visible,
+        "stop_release_visible": stop_release_visible,
+        "archive_visible": archive_visible,
         "is_setup_empty": is_setup_empty,
         "is_pre_generate": is_pre_generate,
-        "invitations_generated": invitations.has_invitations(
-            db, review_session.id
-        ),
-        "invitations_sent": invitations.has_sent_invitations(
-            db, review_session.id
-        ),
+        "invitations_generated": invitations_generated,
+        "invitations_sent": invitations_sent,
         "validation_summary": validation_summary,
         "validation_issues_by_severity": validation_issues_by_severity,
         "setup_checklist": {

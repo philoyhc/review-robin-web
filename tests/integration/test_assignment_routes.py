@@ -251,10 +251,11 @@ def test_assignments_hub_renders_count_and_mode(
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
-    # The Workflow card's Activate session super-button is the
-    # operator's entry point to materialising assignments now (it
-    # runs Generate + Validate + Activate in sequence).
-    assert ">Activate session</button>" in empty.text
+    # The Workflow card's Prepare session button is the operator's
+    # entry point to materialising assignments (post-18F it runs
+    # Generate + Validate in sequence; Activate is a separate
+    # button live only from ``validated``).
+    assert ">Prepare session</button>" in empty.text
 
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")

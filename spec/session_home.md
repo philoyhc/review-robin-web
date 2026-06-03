@@ -180,13 +180,18 @@ Activated state, in the inline section).
 
 **Contents by lifecycle state:** see **`spec/workflow_card.md`**.
 That spec is the canonical source for the ten-state cascade
-(States 1 / 1A / 2 / 3 / 4A / 4B / 5 / 6 / 7 / 8), the uniform
-seven-stage stepper, the **Activate session** super-button (which
-collapses Generate → Validate → Activate into a single click with
-per-step rollback and a warnings-detour to `/validate?activate=1`),
+(States 1 / 2 / 3 / 4 / 4W / 4Err / 5 / 6 / 7 / 8 / 9 / 10),
+the single-row button layout (≤ 4 visible buttons per state,
+each at 25% column width, inactive hidden), the **Prepare
+session** button (runs Generate + Validate in sequence with
+per-step rollback and a saved-response reconcile-detour), the
+standalone **Activate session** button (live from `validated`,
+with a warnings-detour link to `/validate?activate=1` when the
+readiness report has non-blocking findings to acknowledge),
 and the right-column state-aware status / errors aside. Session
 Home renders the same partial that every Operations-row page
-renders; nothing on Home overrides the card's per-state behaviour.
+renders; nothing on Home overrides the card's per-state
+behaviour.
 
 Notes specific to Session Home:
 
@@ -196,12 +201,12 @@ Notes specific to Session Home:
   the same gap. The operator's path forward is the chrome top-nav
   Setup links (Reviewers / Reviewees / Relationships), which stay
   reachable while this state shows.
-- **Workflow stepper in `ready`.** The forward stages (Create
-  invites · Send invites · Send reminders) advance through States
-  6 → 7 → 8 as Invitation rows are created and sent; whichever
-  stage is the next forward action renders Primary, the others
-  Secondary. Revert to draft is always Secondary when live — the
-  stepper never promotes it to Primary. The pre-stepper Pause
+- **Workflow card in `ready`.** The forward action depends on
+  invitation state: Create invites (Primary) until invites
+  exist, Send invites (Primary) until they're sent, then Send
+  reminders (Primary). Close session is always Secondary when
+  live; Revert to draft is always Secondary when live — the
+  layout never promotes either to Primary. The pre-layout Pause
   confirmation checkbox retired with the State 6 refresh; the
   lifecycle-service `confirm` gate is upheld via a hidden field
   in the form.
@@ -492,20 +497,19 @@ Cards that have graduated out of the placeholder pattern:
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
-| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
+| `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + per-issue list | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `validated` / Validated | States 4 / 4W / 4Err / 5 / 6: Activate session live (Primary; 4W detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Create / Send invites surface based on invitation state | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `ready` / Activated | States 7 / 8 / 9: Create invites / Send invites / Send reminders forward stages (whichever is next renders Primary); Close session + Release responses live (Secondary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
+| `expired` / Closed | State 10: Release responses (or Stop releasing responses when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
+| `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
 The **Danger Zone** card (Delete Data + Delete Session) lives on
 the Edit Session Details page, not Home, as of 2026-05-22. Its
 per-state availability matches the table's missing column:
 Delete Data is active in every state, Delete Session is active in
 `draft` / `validated` and visible-but-disabled in `ready`.
-
-Reserved states (Expired, Archived) not yet in scope. When
-introduced, this table extends with their treatment.
 
 **Disabled treatment on Home is plain greying-out, not yellow
 lock cards.** The Workflow card carries any explanatory

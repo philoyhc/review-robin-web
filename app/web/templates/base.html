@@ -2037,22 +2037,32 @@
         gap: var(--space-2);
         padding-top: var(--space-3);
       }
-      /* 18F Part 1 — the left column now hosts two button rows
-         (.next-action-buttons-row) stacked vertically. Each row's
-         buttons flex equally so the row fills the column's width. */
+      /* 2026-06-03 single-row redesign — every state surfaces ≤ 4
+         visible buttons; inactive buttons are not rendered. The
+         row uses a 4-column grid so each visible button locks at
+         25% of the column width regardless of how many slots
+         render. The grid's left-alignment is the natural fall-out
+         of placing N ≤ 4 items into N of the 4 columns. */
+      body.ui-v2 .card.next-action .next-action-buttons-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-2);
+        padding-top: 0;
+      }
       body.ui-v2 .card.next-action .next-action-buttons-row > .btn,
       body.ui-v2 .card.next-action .next-action-buttons-row > a.btn {
-        flex: 1 1 0;
+        width: 100%;
         min-width: 0;
       }
-      /* Stable card height — reserve room for up to two rows of
-         body text so the card doesn't grow / shrink as the
-         state-specific body copy varies in length, and flex-grow
-         the body div so the button rows sink to the bottom of
-         the left column regardless of body length. */
+      /* Stable card height — reserve enough left-column height
+         (body min-height) so removing the second row of buttons
+         doesn't shrink the card, and the single button row lands
+         at the same Y position the old Row 2 occupied. The body
+         div is ``flex: 1 1 auto`` so it expands to fill whatever
+         space is between its content and the button row. */
       body.ui-v2 .card.next-action .next-action-body {
         flex: 1 1 auto;
-        min-height: 3.5em;
+        min-height: 7.5em;
       }
       /* Two-column inner layout for the Workflow card: left column
          carries the body + the two button rows; right column

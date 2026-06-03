@@ -1,21 +1,37 @@
-{# Workflow card — left column carries the body copy and two rows of
-   buttons; right column carries the per-state status aside (the
-   validation issue list, the invite/deadline notes, the workflow
-   failure banner). Segment 18F Part 1 split the previous
-   "Activate" super-button into a dedicated **Prepare session**
-   button (Generate + Validate) and a solo **Activate session**
-   button; the reconcile-detour saved-response confirmation moved
-   onto Prepare, while the warnings-detour
-   (`/validate?activate=1`) stays on Activate.
+{# Workflow card — left column carries the body copy and a single
+   row of up to 4 visible buttons (2026-06-03 single-row redesign);
+   right column carries the per-state status aside (the validation
+   issue list, the invite/deadline notes, the workflow failure
+   banner).
+
+   Every state surfaces ≤ 4 live buttons. Inactive buttons are
+   hidden, not rendered as disabled greys; each visible button
+   fills 25% of the column's width via the 4-column grid layout
+   in base.html. Visibility flags are computed by
+   ``views.build_workflow_card_context`` per the gating rules in
+   ``spec/workflow_card.md`` "Single-row button layout":
+
+   - Create invites hides once invitations exist.
+   - Send invites hides once invitations are sent.
+   - Release responses / Stop releasing responses share a slot,
+     mutually exclusive on ``is_response_release_window_open``.
+   - Archive session is ``is_expired``-only.
+   - Everything else uses its existing live gate.
 
    Callers must pass (via ``views.build_workflow_card_context``):
 
    - ``session`` (ReviewSession)
    - ``is_setup_empty`` (bool)
    - ``is_pre_generate`` (bool) — legacy; retained for callers that
-     still set it (no longer used by this template; the new
-     cascade collapses pre-generate into draft+populated).
-   - ``is_draft`` / ``is_validated`` / ``is_ready`` (bool flags)
+     still set it (no longer used by this template).
+   - ``is_draft`` / ``is_validated`` / ``is_ready`` / ``is_expired`` /
+     ``is_archived`` (bool flags)
+   - ``revert_visible`` / ``prepare_visible`` /
+     ``create_invites_visible`` / ``send_invites_visible`` /
+     ``activate_visible`` / ``send_reminders_visible`` /
+     ``close_visible`` / ``release_responses_visible`` /
+     ``stop_release_visible`` / ``archive_visible`` (bool flags
+     for the 10 button slots; gating rules above).
    - ``invitations_generated`` (bool) — at least one Invitation
      row exists for the session.
    - ``invitations_sent`` (bool) — at least one Invitation row has
@@ -37,14 +53,6 @@
    - ``super_failure`` (dict | None) with ``button`` /
      ``step`` / ``error`` slots — surfaces the workflow-button
      failure banner in the right column.
-
-   Layout: a 50% / 50% two-column grid. The left column hosts the
-   body copy + two rows of buttons (Row 1 prep: Revert · Prepare ·
-   Create invites; Row 2 run: Send invites · Activate · Send
-   reminders · Close session); the right column hosts the per-
-   state status aside. Below ~720 px the columns stack.
-   Close session flips ``ready → expired``; from ``expired`` the
-   Revert to draft button re-opens the session for editing.
 #}
 {% set _next_action_return_to = next_action_return_to | default(none) %}
 {% set _activate_warns_href = (
@@ -61,27 +69,10 @@
   if _next_action_return_to and _next_action_return_to != "home"
   else "/operator/sessions/" ~ session.id
 ) %}
-{# Predicate convenience flags for the stepper-row branches. #}
-{% set _prepare_live = (is_draft and not is_setup_empty) or is_validated %}
-{% set _activate_live = is_validated %}
+{# 4W warnings-detour gate — Activate links to /validate?activate=1
+   when there are non-blocking warnings the operator must
+   acknowledge before activation can fire. #}
 {% set _activate_needs_warnings_detour = is_validated and validation_summary and validation_summary.can_activate and validation_summary.needs_acknowledge %}
-{# 18F Part 2 — invitations are now live from Validated as well as
-   Ready. The button state still discriminates Pri vs Sec by
-   whether the invites have already been created / sent. #}
-{% set _invitations_actionable = is_validated or is_ready %}
-{% set _create_invites_live = _invitations_actionable %}
-{% set _create_invites_primary = _invitations_actionable and not invitations_generated %}
-{% set _send_invites_live = _invitations_actionable and invitations_generated %}
-{% set _send_invites_primary = _invitations_actionable and invitations_generated and not invitations_sent %}
-{% set _send_reminders_live = is_ready and invitations_sent %}
-{# Close session — live once the session is ready (anywhere in the
-   activated run window). After it fires the session moves to
-   ``expired`` and the button goes inert; Revert to draft becomes
-   the way back. #}
-{% set _close_session_live = is_ready %}
-{# Revert is live from validated through ready, and now also from
-   expired (recovery path after Close session). #}
-{% set _revert_live = is_validated or is_ready or is_expired %}
 <div class="card next-action" id="next-action">
   <h2>Workflow</h2>
   <div class="next-action-grid">
@@ -173,8 +164,11 @@
         preserved.</p>
     {% endif %}
 
-    {# Hidden form holders for the stepper-row buttons. #}
-    {% if _prepare_live %}
+    {# Hidden form holders. One per route the button row can POST
+       to; only rendered when the matching button is visible (or
+       in the case of the prepare-regenerate form, when the
+       saved-response confirmation is on). #}
+    {% if prepare_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/workflow/prepare"
             id="next-action-prepare-form">
@@ -193,7 +187,7 @@
         <input type="hidden" name="acknowledge_response_loss" value="true">
       </form>
     {% endif %}
-    {% if _activate_live and not _activate_needs_warnings_detour %}
+    {% if activate_visible and not _activate_needs_warnings_detour %}
       {# 18G PR 2C — when invite_offsets is non-empty and Start is
          scheduled, attach a confirmation message via data attribute.
          The inline script at the bottom of the partial intercepts
@@ -210,7 +204,7 @@
         {% endif %}
       </form>
     {% endif %}
-    {% if is_validated %}
+    {% if revert_visible and is_validated %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/revert"
             id="next-action-revert-form">
@@ -219,7 +213,7 @@
         {% endif %}
       </form>
     {% endif %}
-    {% if is_ready or is_expired %}
+    {% if revert_visible and (is_ready or is_expired) %}
       {# Shared form for ready→draft and expired→draft revert.
          The service requires confirm=true; the Close-session
          button posts a separate form below. #}
@@ -232,7 +226,7 @@
         <input type="hidden" name="confirm" value="true">
       </form>
     {% endif %}
-    {% if _close_session_live %}
+    {% if close_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/workflow/close"
             id="next-action-close-form">
@@ -241,13 +235,15 @@
         {% endif %}
       </form>
     {% endif %}
-    {% if _invitations_actionable %}
+    {% if create_invites_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/generate"
             id="next-action-generate-invites-form">
         <input type="hidden" name="return_to"
                value="{{ _next_action_return_to or 'home' }}">
       </form>
+    {% endif %}
+    {% if send_invites_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/send-all"
             id="next-action-send-invites-form">
@@ -255,7 +251,7 @@
                value="{{ _next_action_return_to or 'home' }}">
       </form>
     {% endif %}
-    {% if is_ready %}
+    {% if send_reminders_visible %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
             id="next-action-send-reminders-form">
@@ -263,150 +259,100 @@
                value="{{ _next_action_return_to or 'home' }}">
       </form>
     {% endif %}
-  </div>
-
-  {# Row 1 — prep phase: Revert to draft · Prepare session · Create
-     invites. Buttons stretch to fill the left column's width. #}
-  <div class="next-action-buttons next-action-buttons-row">
-    {% if is_ready or is_expired %}
-      <button class="btn secondary" type="submit"
-              form="next-action-pause-form">Revert to draft</button>
-    {% elif is_validated %}
-      <button class="btn secondary" type="submit"
-              form="next-action-revert-form">Revert to draft</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Revert to draft</button>
+    {% if release_responses_visible %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/release-responses"
+            id="next-action-release-responses-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+      </form>
     {% endif %}
-
-    {% if is_validated %}
-      <button class="btn secondary" type="submit"
-              form="next-action-prepare-form">Prepare session</button>
-    {% elif _prepare_live %}
-      <button class="btn" type="submit"
-              form="next-action-prepare-form">Prepare session</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Prepare session</button>
+    {% if stop_release_visible %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/stop-release"
+            id="next-action-stop-release-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+      </form>
     {% endif %}
-
-    {% if _create_invites_primary %}
-      <button class="btn" type="submit"
-              form="next-action-generate-invites-form">Create invites</button>
-    {% elif _create_invites_live %}
-      <button class="btn secondary" type="submit"
-              form="next-action-generate-invites-form">Create invites</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Create invites</button>
+    {% if archive_visible %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/archive"
+            id="next-action-archive-form"></form>
     {% endif %}
   </div>
 
-  {# Row 2 — run phase: Send invites · Activate session · Send
-     reminders. Close session is deferred (Segment 18F plan)
-     alongside the `expired` lifecycle status work. #}
+  {# Single button row at the bottom of the left column. Inactive
+     buttons are hidden; visible buttons are ordered per the 1-10
+     stepper sequence and each fills 25% of the row's grid. Every
+     state surfaces ≤ 4 visible buttons. See
+     ``spec/workflow_card.md`` "Single-row button layout" for the
+     gating contract. #}
   <div class="next-action-buttons next-action-buttons-row">
-    {% if _send_invites_primary %}
-      <button class="btn" type="submit"
-              form="next-action-send-invites-form">Send invites</button>
-    {% elif _send_invites_live %}
-      <button class="btn secondary" type="submit"
-              form="next-action-send-invites-form">Send invites</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Send invites</button>
+    {% if revert_visible %}
+      {% if is_ready or is_expired %}
+        <button class="btn secondary" type="submit"
+                form="next-action-pause-form">Revert to draft</button>
+      {% else %}
+        <button class="btn secondary" type="submit"
+                form="next-action-revert-form">Revert to draft</button>
+      {% endif %}
     {% endif %}
 
-    {% if _activate_needs_warnings_detour %}
-      <a class="btn" href="{{ _activate_warns_href }}">Activate session</a>
-    {% elif _activate_live %}
-      <button class="btn" type="submit"
-              form="next-action-activate-session-form">Activate session</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Activate session</button>
+    {% if prepare_visible %}
+      {% if is_validated %}
+        <button class="btn secondary" type="submit"
+                form="next-action-prepare-form">Prepare session</button>
+      {% else %}
+        <button class="btn" type="submit"
+                form="next-action-prepare-form">Prepare session</button>
+      {% endif %}
     {% endif %}
 
-    {% if _send_reminders_live %}
+    {% if create_invites_visible %}
+      <button class="btn" type="submit"
+              form="next-action-generate-invites-form">Create invites</button>
+    {% endif %}
+
+    {% if send_invites_visible %}
+      <button class="btn" type="submit"
+              form="next-action-send-invites-form">Send invites</button>
+    {% endif %}
+
+    {% if activate_visible %}
+      {% if _activate_needs_warnings_detour %}
+        <a class="btn" href="{{ _activate_warns_href }}">Activate session</a>
+      {% else %}
+        <button class="btn" type="submit"
+                form="next-action-activate-session-form">Activate session</button>
+      {% endif %}
+    {% endif %}
+
+    {% if send_reminders_visible %}
       <button class="btn" type="submit"
               form="next-action-send-reminders-form">Send reminders</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Send reminders</button>
     {% endif %}
 
-    {# Close session — live once the session is ``ready`` (the
-       activated run window). POSTs to
-       ``/sessions/{id}/workflow/close`` which flips
-       ``ready → expired`` and closes every instrument; responses
-       are preserved so reviewers with
-       ``responses_visible_when_closed=True`` can still read what
-       they submitted. From ``expired`` the operator clicks Revert
-       to draft to reopen for editing. #}
-    {% if _close_session_live %}
+    {% if close_visible %}
       <button class="btn secondary" type="submit"
               form="next-action-close-form">Close session</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Close session</button>
     {% endif %}
-  </div>
 
-  {# Row 3 — release / archive operations. Manual affordances
-     to override the scheduled release window (Release responses /
-     Stop releasing responses) and to file the session out of the
-     lobby (Archive session). Release pair is live once the
-     session is past activation (``ready`` or ``expired``); Stop
-     is live only when the release window is currently open
-     (otherwise the click would be a no-op). Archive is live
-     everywhere except already-archived. #}
-  {% if release_responses_live %}
-    <form method="post"
-          action="/operator/sessions/{{ session.id }}/workflow/release-responses"
-          id="next-action-release-responses-form">
-      {% if _next_action_return_to %}
-        <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
-      {% endif %}
-    </form>
-  {% endif %}
-  {% if stop_release_live %}
-    <form method="post"
-          action="/operator/sessions/{{ session.id }}/workflow/stop-release"
-          id="next-action-stop-release-form">
-      {% if _next_action_return_to %}
-        <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
-      {% endif %}
-    </form>
-  {% endif %}
-  {% if archive_live %}
-    <form method="post"
-          action="/operator/sessions/{{ session.id }}/workflow/archive"
-          id="next-action-archive-form"></form>
-  {% endif %}
-
-  <div class="next-action-buttons next-action-buttons-row">
-    {% if release_responses_live %}
+    {% if release_responses_visible %}
       <button class="btn secondary" type="submit"
               form="next-action-release-responses-form">Release responses</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Release responses</button>
     {% endif %}
 
-    {% if stop_release_live %}
+    {% if stop_release_visible %}
       <button class="btn secondary" type="submit"
               form="next-action-stop-release-form">Stop releasing responses</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Stop releasing responses</button>
     {% endif %}
 
-    {% if archive_live %}
+    {% if archive_visible %}
       <button class="btn destructive" type="submit"
               form="next-action-archive-form">Archive session</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Archive session</button>
     {% endif %}
   </div>
     </div>

@@ -73,9 +73,16 @@ _EXPECTED_KEYS = {
     "is_ready",
     "is_expired",
     "is_archived",
-    "release_responses_live",
-    "stop_release_live",
-    "archive_live",
+    "revert_visible",
+    "prepare_visible",
+    "create_invites_visible",
+    "send_invites_visible",
+    "activate_visible",
+    "send_reminders_visible",
+    "close_visible",
+    "release_responses_visible",
+    "stop_release_visible",
+    "archive_visible",
     "is_setup_empty",
     "is_pre_generate",
     "invitations_generated",
@@ -228,3 +235,200 @@ def test_parse_super_failure_decodes_query_params() -> None:
         "step": "precondition",
         "error": "Session is already activated.",
     }
+
+
+def test_archive_visible_gates_on_expired_only(
+    client: TestClient, db: Session
+) -> None:
+    """Archive button surfaces only when the session is
+    ``expired`` — i.e. the operator has run Close session. The
+    underlying ``lifecycle.archive_session`` service stays
+    permissive, but the Workflow card chrome doesn't surface
+    Archive from earlier states (avoids piling buttons on
+    pre-close states + matches the close-then-file-away
+    sequence)."""
+    sess = _make_session(client, db, code="archive-gate")
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    # draft: archive button hidden.
+    assert ctx["archive_visible"] is False
+
+    for state in ("validated", "ready"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        assert ctx["archive_visible"] is False, (
+            f"archive button should not surface in {state!r}"
+        )
+
+    sess.status = "expired"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["archive_visible"] is True
+
+    sess.status = "archived"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["archive_visible"] is False
+
+
+# ── Single-row visible-button gating per state ──────────────────────────
+
+
+_VISIBLE_KEYS = (
+    "revert_visible",
+    "prepare_visible",
+    "create_invites_visible",
+    "send_invites_visible",
+    "activate_visible",
+    "send_reminders_visible",
+    "close_visible",
+    "release_responses_visible",
+    "stop_release_visible",
+    "archive_visible",
+)
+
+
+def _visible_set(ctx: dict) -> set[str]:
+    return {key for key in _VISIBLE_KEYS if ctx.get(key)}
+
+
+def test_draft_empty_state_surfaces_nothing(
+    client: TestClient, db: Session
+) -> None:
+    sess = _make_session(client, db, code="vis-state-1")
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert _visible_set(ctx) == set()
+
+
+def test_validated_no_invites_surfaces_revert_prepare_create_activate(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-4")
+    sess.status = "validated"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "prepare_visible",
+        "create_invites_visible",
+        "activate_visible",
+    }
+    assert len(visible) <= 4
+
+
+def test_ready_no_invites_surfaces_revert_create_close_release(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")
+    sess.status = "ready"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "create_invites_visible",
+        "close_visible",
+        "release_responses_visible",
+    }
+    assert len(visible) <= 4
+
+
+def test_expired_surfaces_revert_release_archive(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-10")
+    sess.status = "expired"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "release_responses_visible",
+        "archive_visible",
+    }
+
+
+def test_archived_surfaces_nothing(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-archived")
+    sess.status = "archived"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert _visible_set(ctx) == set()
+
+
+def test_every_state_keeps_visible_count_within_four(
+    client: TestClient, db: Session
+) -> None:
+    """Sanity check for the 25%-per-button single-row layout — every
+    lifecycle state caps the visible-button count at 4."""
+    sess = _seed_pair_plus_pinned(client, db, code="vis-cap")
+    for state in ("draft", "validated", "ready", "expired", "archived"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        visible = _visible_set(ctx)
+        assert len(visible) <= 4, (
+            f"state {state!r} surfaces {len(visible)} buttons: {visible}"
+        )
+
+
+def test_stop_release_visible_gates_on_post_activation(
+    client: TestClient, db: Session
+) -> None:
+    """A backdated ``responses_release_at`` on a draft / validated
+    session opens the release window per
+    ``is_response_release_window_open``, but Stop must stay hidden
+    in pre-activation states. Otherwise validated + no invites
+    would surface five visible buttons (Revert · Prepare ·
+    Create invites · Activate · Stop) and blow the ≤4 grid
+    contract."""
+    from datetime import datetime, timedelta, timezone
+
+    sess = _seed_pair_plus_pinned(client, db, code="stop-pre-activation")
+    sess.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+
+    for state in ("draft", "validated"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        assert ctx["stop_release_visible"] is False, (
+            f"Stop should stay hidden in pre-activation state "
+            f"{state!r} even with a backdated release_at"
+        )
+        assert len(_visible_set(ctx)) <= 4
+
+    # Once activated, Stop surfaces because the window is open.
+    sess.status = "ready"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["stop_release_visible"] is True
+    assert ctx["release_responses_visible"] is False
