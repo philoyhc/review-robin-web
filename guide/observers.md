@@ -188,20 +188,29 @@ What's shipped (live in production):
   ``app/web/views/_observers.py``.
 - **W17 — Observer collation surface body** —
   `/me/sessions/{id}/collation` renders the per-instrument
-  3-row table (reviewer stats / reviewee stats / conditional
-  download), one card per visible-to-observer instrument.
-  Composes the cohort materialiser (#1800), the per-instrument
-  stats builder (#1801), and the by-instrument extract's
-  cohort filter + Anonymized token swap (#1802 + #1804).
-  Cohort-empty and "no instruments visible right now" branches
-  render their own muted-paragraph messages.
+  3-row table (Row 1 reviewer-side headcount badge / Row 2
+  reviewee-side headcount badge / conditional download), one
+  card per visible-to-observer instrument. Composes the
+  cohort materialiser (#1800), the per-instrument stats builder
+  (#1801), and the by-instrument extract's cohort filter +
+  Anonymized token swap (#1802 + #1804). Cohort-empty and "no
+  instruments visible right now" branches render their own
+  muted-paragraph messages.
 - **W5 — `app/services/collation.py`** + cohort materialiser
   (`app/services/observer_cohort.py`) shipped with #1800 +
-  #1801. Per-instrument stats reuse W16's `summarize_field`
-  (promoted from underscore-private in the same PR). The
-  per-row predicate `assignment_matches_cohort` (#1804) is
-  what the CSV filter reaches for — the materialiser's
-  set-based shape is reserved for the surface's stats rows.
+  #1801, reformed to the partition model (clean_up item 16):
+  ``materialize_cohort_assignments`` walks per-(observer,
+  instrument) assignments via the per-row predicate
+  ``assignment_matches_cohort`` and returns the in-cohort
+  assignment id set + the two side-distinct counts.
+  ``build_cohort_stats_for_instrument`` runs one aggregate
+  against the pool — Row 1 + Row 2 share the same
+  ``field_cells`` + ``response_count``; only the
+  ``distinct_count`` headcount badge differs per row. The CSV
+  download uses the same ``assignment_matches_cohort``
+  predicate (PR #1804) so surface stats + CSV stay in sync.
+  Per-instrument stats reuse W16's `summarize_field` (promoted
+  from underscore-private in the same PR).
 - **Token helper + Anonymized identification** — shipped via
   ``app/services/participant_tokens.py`` (#1799) +
   ``serialize_by_instrument(identification="anonymized")``
@@ -231,9 +240,8 @@ What's shipped (live in production):
   scope, §7 collation render shape).
 - `guide/archive/participant_model_remainder.md` —
   outstanding participant-model items overall.
-- `guide/clean_up.md` items 13-16 — the observer-side
-  deferrals (pair_context, cross-roster operand_tag,
-  decode-token widget, stats-row cohort-scope review).
+- `guide/clean_up.md` item 15 — the one remaining observer-side
+  deferral (decode-token widget). Items 13, 14, 16 closed.
 - `spec/audience_and_identity_model.md` — authoritative
   audience taxonomy.
 - `spec/setup_pages.md` — Observers Setup page contract

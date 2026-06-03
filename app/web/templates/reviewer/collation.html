@@ -2,10 +2,11 @@
 
    Each visible instrument (per Band 3 observer-audience
    visibility policy) renders a card with:
-     - Row 1: Reviewer-side cohort stats (responses BY the
-       cohort's reviewers).
-     - Row 2: Reviewee-side cohort stats (responses ABOUT the
-       cohort's reviewees).
+     - Row 1: Reviewer-side badge (distinct reviewers in the
+       in-cohort assignment pool) + shared aggregate.
+     - Row 2: Reviewee-side badge (distinct reviewees in the
+       same pool) + the same shared aggregate. Row 1 and Row 2
+       differ in their headcount badge only.
      - Row 3: A conditional download cell — Raw / Anonymized
        offer a CSV; Summarized shows a "summary only" note.
 
@@ -72,17 +73,17 @@
             </tr>
           </thead>
           <tbody>
-            {# Row 1 — Reviewer stats #}
+            {# Row 1 — Reviewer side (distinct headcount + shared aggregate) #}
             <tr>
-              <td class="rs-reviewee">Reviewers in cohort</td>
+              <td class="rs-reviewee">{{ section.reviewer_stats.distinct_count }} Reviewers in cohort</td>
               <td>{{ section.reviewer_stats.response_count }}</td>
               {% for cell in section.reviewer_stats.field_cells %}
                 {% include "reviewer/_collation_field_cell.html" %}
               {% endfor %}
             </tr>
-            {# Row 2 — Reviewee stats #}
+            {# Row 2 — Reviewee side (same aggregate, different headcount) #}
             <tr>
-              <td class="rs-reviewee">Reviewees in cohort</td>
+              <td class="rs-reviewee">{{ section.reviewee_stats.distinct_count }} Reviewees in cohort</td>
               <td>{{ section.reviewee_stats.response_count }}</td>
               {% for cell in section.reviewee_stats.field_cells %}
                 {% include "reviewer/_collation_field_cell.html" %}
