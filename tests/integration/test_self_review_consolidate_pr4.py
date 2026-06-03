@@ -193,10 +193,14 @@ def test_regenerate_strict_mode_raises_on_persistent_drift(
         assignments, "recompute_self_review_classification", _noop_recompute
     )
     # Also patch the in-module reference the regenerate body uses.
-    import app.services.assignments as assignments_module
+    # ``replace_assignments`` lives in ``_generate.py`` post-18O Track B
+    # and imports ``recompute_self_review_classification`` into its own
+    # namespace; patching the package-level re-export does not reach
+    # that binding.
+    from app.services.assignments import _generate as assignments_generate
 
     monkeypatch.setattr(
-        assignments_module,
+        assignments_generate,
         "recompute_self_review_classification",
         _noop_recompute,
     )
