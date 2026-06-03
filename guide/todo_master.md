@@ -994,36 +994,6 @@ and replaced it with a ``_surface_context``-driven full-preview
 route — page breaks are now honoured end-to-end. Plan archived to
 `guide/archive/segment_18M_instrument_layout.md`.
 
-### Segment 18O — Post-participants-model file splits — done 2026-06-03
-
-Four-track housekeeping pass on the production files in the
-1,300+ LOC band, before Segment 14B adds route-heavy bulk on
-top. Tracks landed in plan-order (mechanical → integration-
-heaviest); ~5,500 LOC redistributed across ~23 small modules;
-biggest file in the repo drops from 1,426 (`assignments.py`
-pre-Track-B) to ~764 (`assignments/_generate.py` post-Track-B).
-No behaviour change across all four tracks; 2,546 tests green
-throughout. **Track A** (#1823) — `scheduled_events.py` (1,380
-LOC) → 7-module package (`_shared` / `_duration` / `_activation`
-/ `_invites` / `_reminders` / `_release` + `__init__` orchestrator);
-plan deviation: `lock_session` moved to `_shared.py` and
-`observe_scheduled_events` orchestrator to `__init__.py` to keep
-the dependency graph acyclic, `_release.py` added for the
-response-release validators. **Track B** (#1824) —
-`assignments.py` (1,426 LOC) → 4-module package (`_shared` /
-`_coverage` / `_self_review` / `_generate`); one white-box
-monkeypatch test updated to patch the new in-module binding.
-**Track D** (#1825) — `routes_reviewer/_surface.py` (1,299 LOC)
-→ 4-module package (`_status` / `_group_collapse` / `_context`
-/ `_routes`); `_context.py` stays the single biggest file (645
-LOC) because `_surface_context` is structurally linear. **Track
-C** (#1826) — `session_config_io/_apply.py` (1,361 LOC) →
-eight sibling per-section modules (`_apply_shared` /
-`_apply_session` / `_apply_email` / `_apply_instrument` /
-`_apply_rule_set` / `_apply_field_label` / `_apply_data_shape`
-/ `_apply_parse`) + slim `_apply.py` orchestrator. **Plan:**
-`guide/segment_18O_post_participants_model_file_splits.md`.
-
 ### Segment 18N — Housekeeping (file splits + reviewer-surface asymmetry + settings round-trip) — done 2026-05-28
 
 Five PRs total. **PR 1** (#1556) — Track A: reviewer-surface
@@ -1898,6 +1868,36 @@ Two closing slices on the observer-side ladder:
   lookup use case with no JS / per-lookup audit machinery.
   Closes ``guide/archive/observers_clean_up.md`` item 15; the four observer
   follow-ups (items 13-16) are all closed.
+
+### Segment 18O — Post-participants-model file splits — done 2026-06-03
+
+Four-track housekeeping pass on the production files in the
+1,300+ LOC band, before Segment 14B adds route-heavy bulk on
+top. Tracks landed in plan-order (mechanical → integration-
+heaviest); ~5,500 LOC redistributed across ~23 small modules;
+biggest file in the repo drops from 1,426 (`assignments.py`
+pre-Track-B) to ~764 (`assignments/_generate.py` post-Track-B).
+No behaviour change across all four tracks; 2,546 tests green
+throughout. **Track A** (#1823) — `scheduled_events.py` (1,380
+LOC) → 7-module package (`_shared` / `_duration` / `_activation`
+/ `_invites` / `_reminders` / `_release` + `__init__` orchestrator);
+plan deviation: `lock_session` moved to `_shared.py` and
+`observe_scheduled_events` orchestrator to `__init__.py` to keep
+the dependency graph acyclic, `_release.py` added for the
+response-release validators. **Track B** (#1824) —
+`assignments.py` (1,426 LOC) → 4-module package (`_shared` /
+`_coverage` / `_self_review` / `_generate`); one white-box
+monkeypatch test updated to patch the new in-module binding.
+**Track D** (#1825) — `routes_reviewer/_surface.py` (1,299 LOC)
+→ 4-module package (`_status` / `_group_collapse` / `_context`
+/ `_routes`); `_context.py` stays the single biggest file (645
+LOC) because `_surface_context` is structurally linear. **Track
+C** (#1826) — `session_config_io/_apply.py` (1,361 LOC) →
+eight sibling per-section modules (`_apply_shared` /
+`_apply_session` / `_apply_email` / `_apply_instrument` /
+`_apply_rule_set` / `_apply_field_label` / `_apply_data_shape`
+/ `_apply_parse`) + slim `_apply.py` orchestrator. **Plan:**
+`guide/segment_18O_post_participants_model_file_splits.md`.
 
 ---
 
