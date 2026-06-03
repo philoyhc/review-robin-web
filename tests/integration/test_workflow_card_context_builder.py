@@ -393,3 +393,42 @@ def test_every_state_keeps_visible_count_within_four(
         assert len(visible) <= 4, (
             f"state {state!r} surfaces {len(visible)} buttons: {visible}"
         )
+
+
+def test_stop_release_visible_gates_on_post_activation(
+    client: TestClient, db: Session
+) -> None:
+    """A backdated ``responses_release_at`` on a draft / validated
+    session opens the release window per
+    ``is_response_release_window_open``, but Stop must stay hidden
+    in pre-activation states. Otherwise validated + no invites
+    would surface five visible buttons (Revert · Prepare ·
+    Create invites · Activate · Stop) and blow the ≤4 grid
+    contract."""
+    from datetime import datetime, timedelta, timezone
+
+    sess = _seed_pair_plus_pinned(client, db, code="stop-pre-activation")
+    sess.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+
+    for state in ("draft", "validated"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        assert ctx["stop_release_visible"] is False, (
+            f"Stop should stay hidden in pre-activation state "
+            f"{state!r} even with a backdated release_at"
+        )
+        assert len(_visible_set(ctx)) <= 4
+
+    # Once activated, Stop surfaces because the window is open.
+    sess.status = "ready"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["stop_release_visible"] is True
+    assert ctx["release_responses_visible"] is False

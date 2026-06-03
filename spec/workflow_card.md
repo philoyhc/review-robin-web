@@ -265,7 +265,7 @@ one boolean per slot. Inactive buttons are hidden:
 | Send reminders | `is_ready and invitations_sent` |
 | Close session | `is_ready` |
 | Release responses | `(is_ready or is_expired) and not is_archived and not response_release_window_open` |
-| Stop releasing responses | `response_release_window_open and not is_archived` |
+| Stop releasing responses | `response_release_window_open and (is_ready or is_expired) and not is_archived` |
 | Archive session | `is_expired` |
 
 Two slot pairs are mutually exclusive by construction so they
@@ -295,7 +295,7 @@ gaps.
 | Archive session | | | | | | | | | | | | | Dgr | Dgr |
 | **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **4** | **4** | **4** | **4** | **3** | **3** |
 
-‡ = `is_response_release_window_open(session)` is True (i.e. operator has run Release responses or a scheduled release has fired).
+‡ = `is_response_release_window_open(session)` is True (i.e. operator has run Release responses or a scheduled release has fired). Both Release and Stop also require the session to be in `ready` or `expired` — a backdated `responses_release_at` on a `draft` / `validated` session doesn't surface either button, so the ≤4-button contract holds for every state.
 
 Each state caps at 4 visible buttons. The pruning rules above
 (drop Create invites once generated, drop Send invites once

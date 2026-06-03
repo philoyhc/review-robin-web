@@ -211,7 +211,17 @@ def build_workflow_card_context(
         and not is_archived
         and not response_release_window_open
     )
-    stop_release_visible = response_release_window_open and not is_archived
+    # Stop release lives on the same post-activation gate as
+    # Release — otherwise a backdated ``responses_release_at`` on a
+    # draft / validated session would flip the window-open check to
+    # True and surface Stop in a pre-activation state, blowing the
+    # ≤4-visible-button budget (e.g. validated + no invites would
+    # render Revert · Prepare · Create invites · Activate · Stop).
+    stop_release_visible = (
+        response_release_window_open
+        and (is_ready or is_expired)
+        and not is_archived
+    )
     archive_visible = is_expired
     return {
         "is_draft": is_draft,
