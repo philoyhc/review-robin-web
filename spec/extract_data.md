@@ -1013,7 +1013,7 @@ combined, header-excluded).
 output: same `ParticipantTokenizer` (env salt mixed with
 `session.created_at`), so a token here is byte-identical
 to the corresponding token in any Anonymized `by_instrument`
-download. Closes `guide/clean_up.md` item 15 (originally
+download. Closes `guide/archive/observers_clean_up.md` item 15 (originally
 planned as a paste-a-token widget on the Observers Setup
 page).
 

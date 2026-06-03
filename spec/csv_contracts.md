@@ -263,7 +263,7 @@ to its counterpart in any Anonymized download for the same
 session. Audit event:
 `session.participant_tokens_extracted` (`counts.rows` =
 reviewer + reviewee row count, header excluded). Closes
-`guide/clean_up.md` item 15.
+`guide/archive/observers_clean_up.md` item 15.
 
 ---
 

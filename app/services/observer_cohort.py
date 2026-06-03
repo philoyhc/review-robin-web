@@ -14,7 +14,7 @@ Per-rule semantics:
   ``reviewer.tag1`` / ``reviewer.tag2`` / ``reviewer.tag3`` and
   the ``reviewee.*`` mirror. ``pair_context.*`` is recognised by
   the schema but the predicate treats it as unmatched (pair-level
-  join deferred — see ``guide/clean_up.md`` item 13).
+  join deferred — see ``guide/archive/observers_clean_up.md`` item 13).
 - Right side is either:
   - a literal value (``operand_value``) for ``IS`` / ``IS NOT`` /
     ``CONTAINS`` / ``DOES NOT CONTAIN``;

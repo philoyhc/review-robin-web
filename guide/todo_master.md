@@ -1763,7 +1763,7 @@ Operator-side editor (#1769 → #1786):
   Operators Setup grid; Upload below the table (mirrors
   Reviewers / Reviewees) — #1797 + #1798 keep-card-visible
   fix.
-- **Review-driven cleanup** — `guide/clean_up.md` items 1–11
+- **Review-driven cleanup** — `guide/archive/observers_clean_up.md` items 1–11
   shipped or closed without action (#1791 → #1796), plus
   item 12 (lifecycle gate loosened to "not archived" for
   the cohort editor route).
@@ -1809,7 +1809,7 @@ Consumer-side surface (#1799 → #1804):
   `responses_release_at`.
 - **Doc sweep** — `guide/archive/observers.md` trimmed to a current
   operating reference; planning history archived;
-  `guide/clean_up.md` items 13–16 added for the deferred
+  `guide/archive/observers_clean_up.md` items 13–16 added for the deferred
   cohort-rule cases + the decode-token widget + the
   stats-row cohort-scope review (#1807). Pinned an
   `after_release` rendering regression test in #1808.
@@ -1853,7 +1853,7 @@ Two closing slices on the observer-side ladder:
   over the pool; Row 1 + Row 2 share the same
   ``field_cells`` + ``response_count`` and differ only in
   the ``distinct_count`` headcount badge. Closes
-  ``guide/clean_up.md`` item 16; fixes the cross-side OR
+  ``guide/archive/observers_clean_up.md`` item 16; fixes the cross-side OR
   degeneracy + the "Row 2 ignores reviewer side"
   side-specific-filter weirdness.
 - **Token keys extract (PR #current).** Operator-side
@@ -1866,7 +1866,7 @@ Two closing slices on the observer-side ladder:
   ``observers_enabled``. Replaces the originally-planned
   paste-a-token widget on the Observers Setup page — same
   lookup use case with no JS / per-lookup audit machinery.
-  Closes ``guide/clean_up.md`` item 15; the four observer
+  Closes ``guide/archive/observers_clean_up.md`` item 15; the four observer
   follow-ups (items 13-16) are all closed.
 
 ---
