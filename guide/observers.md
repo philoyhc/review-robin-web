@@ -130,11 +130,14 @@ Implementation in `app/services/participant_tokens.py`.
   `Reviewee.id` already exist as session-local stable PKs.
   **No new table, no new column** for the token mechanism
   itself.
-- **Operator decoder (deferred).** The hash is one-way;
-  reverse a token by re-hashing every roster row and
-  matching. Cheap at roster sizes ≤ 1000. Should surface as
-  a "decode token" widget on the Observers Setup page —
-  tracked in `guide/clean_up.md` item 15.
+- **Operator decoder — `participant_tokens.csv`.** The hash
+  is one-way; reverse a token by re-hashing every roster row
+  and matching. Cheap at roster sizes ≤ 1000. Shipped as a
+  CSV download from the Extract data tab's `Token keys` card
+  (and the intro card's `Token keys` chip on the Zip-all
+  bundle) rather than a paste-a-token widget — same lookup
+  use case with no JS, gated on `observers_enabled`. Closes
+  `guide/clean_up.md` item 15.
 - **Anonymized hides the tags too.** Beyond the obvious
   partitioning fact (i.e. the cohort the observer was scoped
   to), tag columns drop from the rendered / downloaded
@@ -240,8 +243,8 @@ What's shipped (live in production):
   scope, §7 collation render shape).
 - `guide/archive/participant_model_remainder.md` —
   outstanding participant-model items overall.
-- `guide/clean_up.md` item 15 — the one remaining observer-side
-  deferral (decode-token widget). Items 13, 14, 16 closed.
+- `guide/clean_up.md` — all four observer-side deferrals
+  (items 13, 14, 15, 16) closed.
 - `spec/audience_and_identity_model.md` — authoritative
   audience taxonomy.
 - `spec/setup_pages.md` — Observers Setup page contract

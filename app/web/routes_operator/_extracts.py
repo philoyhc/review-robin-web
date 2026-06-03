@@ -48,6 +48,9 @@ from app.services.extracts.entity_metadata_extract import (
     self_review_handling_filename_suffix,
 )
 from app.services.extracts.observers_extract import serialize_observers
+from app.services.extracts.participant_tokens_extract import (
+    serialize_participant_tokens,
+)
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -227,6 +230,48 @@ def export_observers_csv(
     )
 
 
+@router.get("/sessions/{session_id}/export/participant_tokens.csv")
+def export_participant_tokens_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Operator-side deanonymization key — one row per Reviewer +
+    Reviewee with the per-session opaque token the Anonymized
+    ``by_instrument`` CSV swaps in for names + emails on the
+    observer collation surface. Lets the operator answer "which
+    row is ``R-a3f8b2c1``?" without re-hashing the roster by hand.
+
+    No lifecycle gate (read-only); no ``observers_enabled`` gate
+    on the route itself (the chrome that surfaces the download
+    handles visibility), so a deep-link to the URL still works
+    for diagnostics on a session that briefly toggled observers
+    off."""
+    rows = list(serialize_participant_tokens(db, review_session))
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.participant_tokens_extracted",
+        summary=(
+            "Extracted participant tokens CSV for session "
+            f"{review_session.code} ({body_count} rows)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "participant_tokens")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
 @router.get("/sessions/{session_id}/export/responses.csv")
 def export_responses_csv(
     review_session: ReviewSession = Depends(require_session_operator),
@@ -306,6 +351,7 @@ def export_bundle_zip(
 @router.get("/sessions/{session_id}/export/responses_bundle.zip")
 def export_responses_bundle_zip(
     data_shapes: int = Query(default=1),
+    tokens: int = Query(default=1),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -320,12 +366,21 @@ def export_responses_bundle_zip(
     saved shape, one CSV each named
     ``{code}_{slug(name)}.csv``.
 
+    ``?tokens=0`` excludes ``participant_tokens.csv`` from the
+    bundle — driven by the intro card's ``Token keys`` chip.
+    The chip + CSV only render / ship when the session has
+    ``observers_enabled`` on; without observers the tokens
+    have no consumer.
+
     Filename: ``{code}_responses.zip``. Per
     ``guide/extract_data.md`` the per-card lens downloads are
     the fine-grained alternative; this button is the one-click
     "all response files" shortcut."""
     zip_bytes, counts = build_responses_bundle(
-        db, review_session, include_data_shapes=(data_shapes != 0)
+        db,
+        review_session,
+        include_data_shapes=(data_shapes != 0),
+        include_participant_tokens=(tokens != 0),
     )
 
     audit.write_event(

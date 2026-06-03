@@ -1837,6 +1837,35 @@ filter via its own pre-check; the service-layer relaxation
 backs the workflow-card button without changing the bulk
 semantics.
 
+### Observer cohort partition refactor + Token keys extract — done 2026-06-03
+
+Two closing slices on the observer-side ladder:
+
+- **Partition-model collation surface stats (PR #1814).**
+  ``observer_cohort.materialize_cohort_assignments`` walks
+  per-(observer, instrument) assignments via the per-row
+  predicate ``assignment_matches_cohort`` and returns the
+  in-cohort assignment id set + the two side-distinct counts.
+  ``build_cohort_stats_for_instrument`` runs one aggregate
+  over the pool; Row 1 + Row 2 share the same
+  ``field_cells`` + ``response_count`` and differ only in
+  the ``distinct_count`` headcount badge. Closes
+  ``guide/clean_up.md`` item 16; fixes the cross-side OR
+  degeneracy + the "Row 2 ignores reviewer side"
+  side-specific-filter weirdness.
+- **Token keys extract (PR #current).** Operator-side
+  deanonymization key as a CSV: one row per Reviewer +
+  Reviewee with their per-session opaque token, served as
+  ``participant_tokens.csv`` from the Extract data page's
+  new Token keys card (half-width, below the Data shaper)
+  and as a member of the Zip-all bundle (driven by the
+  intro card's Token keys chip). Both surfaces gated on
+  ``observers_enabled``. Replaces the originally-planned
+  paste-a-token widget on the Observers Setup page — same
+  lookup use case with no JS / per-lookup audit machinery.
+  Closes ``guide/clean_up.md`` item 15; the four observer
+  follow-ups (items 13-16) are all closed.
+
 ---
 
 ## Upcoming
