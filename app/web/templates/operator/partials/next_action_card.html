@@ -294,65 +294,65 @@
     {% if revert_visible %}
       {% if is_ready or is_expired %}
         <button class="btn secondary" type="submit"
-                form="next-action-pause-form">Revert to draft</button>
+                form="next-action-pause-form">Revert<br>to draft</button>
       {% else %}
         <button class="btn secondary" type="submit"
-                form="next-action-revert-form">Revert to draft</button>
+                form="next-action-revert-form">Revert<br>to draft</button>
       {% endif %}
     {% endif %}
 
     {% if prepare_visible %}
       {% if is_validated %}
         <button class="btn secondary" type="submit"
-                form="next-action-prepare-form">Prepare session</button>
+                form="next-action-prepare-form">Prepare<br>session</button>
       {% else %}
         <button class="btn" type="submit"
-                form="next-action-prepare-form">Prepare session</button>
+                form="next-action-prepare-form">Prepare<br>session</button>
       {% endif %}
     {% endif %}
 
     {% if create_invites_visible %}
       <button class="btn" type="submit"
-              form="next-action-generate-invites-form">Create invites</button>
+              form="next-action-generate-invites-form">Create<br>invites</button>
     {% endif %}
 
     {% if send_invites_visible %}
       <button class="btn" type="submit"
-              form="next-action-send-invites-form">Send invites</button>
+              form="next-action-send-invites-form">Send<br>invites</button>
     {% endif %}
 
     {% if activate_visible %}
       {% if _activate_needs_warnings_detour %}
-        <a class="btn" href="{{ _activate_warns_href }}">Activate session</a>
+        <a class="btn" href="{{ _activate_warns_href }}">Activate<br>session</a>
       {% else %}
         <button class="btn" type="submit"
-                form="next-action-activate-session-form">Activate session</button>
+                form="next-action-activate-session-form">Activate<br>session</button>
       {% endif %}
     {% endif %}
 
     {% if send_reminders_visible %}
       <button class="btn" type="submit"
-              form="next-action-send-reminders-form">Send reminders</button>
+              form="next-action-send-reminders-form">Send<br>reminders</button>
     {% endif %}
 
     {% if close_visible %}
       <button class="btn secondary" type="submit"
-              form="next-action-close-form">Close session</button>
+              form="next-action-close-form">Close<br>session</button>
     {% endif %}
 
     {% if release_responses_visible %}
       <button class="btn secondary" type="submit"
-              form="next-action-release-responses-form">Release responses</button>
+              form="next-action-release-responses-form">Release<br>responses</button>
     {% endif %}
 
     {% if stop_release_visible %}
       <button class="btn secondary" type="submit"
-              form="next-action-stop-release-form">Stop releasing</button>
+              form="next-action-stop-release-form">Stop releasing<br>responses</button>
     {% endif %}
 
     {% if archive_visible %}
       <button class="btn destructive" type="submit"
-              form="next-action-archive-form">Archive session</button>
+              form="next-action-archive-form">Archive<br>session</button>
     {% endif %}
   </div>
     </div>
