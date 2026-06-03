@@ -359,19 +359,24 @@ heading; the card title *is* the session:
     ("—" when null).
   - **Column 3:** Modified (count pill with the canonical
     timestamp in the session's resolved display zone).
-- **Schedule timeline sub-card** — sits between the meta grid and
-  the Edit button. A read-only inner `<div class="card">`
-  carrying a "Schedule timeline" `<h3>`, a one-line subtitle
-  ("Resolved fire moments for the session's anchors + offsets."),
-  and a two-column table (`When` / `Event`) listing every
-  resolved anchor + offset on the session in chronological order
-  (Start, End, auto-send invites, auto-send reminders). Built by
+- **Schedule timeline card** — half-width sibling card directly
+  below the Session Details card in the left column of the
+  `.bottom-grid` flex layout (i.e. `.bottom-left` ↦ Session
+  Details ↦ Schedule timeline). Carries an `<h2>` "Schedule
+  timeline" title, a one-line subtitle ("Resolved fire moments
+  for the session's anchors + offsets."), and a two-column
+  table (`When` / `Event`) listing every resolved anchor +
+  offset on the session in chronological order (Start, End,
+  auto-send invites, auto-send reminders). Built by
   `views.build_schedule_timeline` — the same builder Create /
   Edit Session use. Hidden when no rows resolve (e.g. a fresh
-  session with neither Start nor offsets set).
-- **Edit button** (Secondary styling), bottom-right of the card.
-  Opens `session_edit.html` as a sub-page of Home for full
-  metadata editing.
+  session with neither Start nor offsets set). Promoted from a
+  nested sub-card inside Session Details on 2026-06-03 so the
+  timeline reads as its own glanceable surface and the meta
+  grid + Edit affordance keep a focused Session Details body.
+- **Edit button** (Secondary styling), bottom-right of the
+  Session Details card. Opens `session_edit.html` as a sub-page
+  of Home for full metadata editing.
 
 **Edit affordance behavior:**
 

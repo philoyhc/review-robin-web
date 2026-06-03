@@ -58,33 +58,6 @@
           </div>
         </div>
 
-        {# Schedule timeline — read-only inner card listing every
-           resolved anchor + offset on the session in chronological
-           order. Same builder as the Create / Edit Session forms
-           use (``views.build_schedule_timeline``). Hidden when no
-           rows resolve. #}
-        {% if schedule_timeline_rows %}
-          <div class="card" style="margin-top: var(--space-3);">
-            <h3 style="margin-top: 0;">Schedule timeline</h3>
-            <p class="muted" style="margin: 0 0 var(--space-2) 0;">
-              Resolved fire moments for the session's anchors +
-              offsets.
-            </p>
-            <table style="margin-top: var(--space-2);">
-              <tr>
-                <th>When</th>
-                <th>Event</th>
-              </tr>
-              {% for row in schedule_timeline_rows %}
-                <tr>
-                  <td>{{ row.at }}</td>
-                  <td>{{ row.label }}</td>
-                </tr>
-              {% endfor %}
-            </table>
-          </div>
-        {% endif %}
-
         {# Lifecycle state shown in the chrome status strip — no
            duplicate Status pill here per spec/session_home.md. #}
         <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
@@ -100,6 +73,33 @@
           {% endif %}
         </div>
       </div>
+
+      {# Schedule timeline — half-width card below Session Details,
+         listing every resolved anchor + offset on the session in
+         chronological order. Same builder
+         (``views.build_schedule_timeline``) as the Create / Edit
+         Session forms use. Hidden when no rows resolve. #}
+      {% if schedule_timeline_rows %}
+        <div class="card">
+          <h2>Schedule timeline</h2>
+          <p class="muted" style="margin: 0 0 var(--space-2) 0;">
+            Resolved fire moments for the session's anchors +
+            offsets.
+          </p>
+          <table style="margin-top: var(--space-2);">
+            <tr>
+              <th>When</th>
+              <th>Event</th>
+            </tr>
+            {% for row in schedule_timeline_rows %}
+              <tr>
+                <td>{{ row.at }}</td>
+                <td>{{ row.label }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% endif %}
 
       {# Danger Zone moved to the Edit Session Details page
          (bottom-right of the Edit half-grid) so destructive
