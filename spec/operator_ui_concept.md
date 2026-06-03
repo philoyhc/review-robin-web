@@ -218,7 +218,7 @@ Top-level operator lobby. A table of sessions, one row per session, columns: **N
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Create invites, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing responses, Archive session, plus Revert to draft.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Create invites, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft.
 
 ### `/operator/sessions/new` — Create new session
 

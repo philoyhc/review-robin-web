@@ -259,7 +259,7 @@ prep-then-run ordering) are:
 ```
 1. Revert to draft   2. Prepare session   3. Create invites   4. Send invites
 5. Activate session  6. Send reminders   7. Close session     8. Release responses
-9. Stop releasing responses              10. Archive session
+9. Stop releasing                        10. Archive session
 ```
 
 ### Visibility gates
@@ -276,15 +276,17 @@ one boolean per slot. Inactive buttons are hidden:
 | Activate session | `is_validated` (warnings-detour link when `validation_summary.needs_acknowledge`) |
 | Send reminders | `is_ready and invitations_sent` |
 | Close session | `is_ready` |
-| Release responses | `(is_ready or is_expired) and not is_archived and not response_release_window_open` |
-| Stop releasing responses | `response_release_window_open and (is_ready or is_expired) and not is_archived` |
+| Release responses | `is_expired and not is_archived and not response_release_window_open` |
+| Stop releasing | `response_release_window_open and is_expired and not is_archived` |
 | Archive session | `is_expired` |
 
 Two slot pairs are mutually exclusive by construction so they
 never co-render: Create invites disappears once invites exist
 and Send invites disappears once they're sent; Release responses
-and Stop releasing responses share a slot, flipping on
-`is_response_release_window_open`.
+and Stop releasing share a slot, flipping on
+`is_response_release_window_open`, and both stay hidden until
+the session has **closed (expired)** — the operator only takes
+the manual release shortcut post-deadline.
 
 ### Per-state visible-button table
 
@@ -293,27 +295,29 @@ style, blank = not rendered. Order preserved across the row;
 blank cells collapse so the row reads left-to-right with no
 gaps.
 
-| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 9‡ | 10 | 10‡ |
-| --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | -- | --- |
-| Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
-| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | | |
-| Create invites | | | | Pri | Pri | | | | Pri | | | | | |
-| Send invites | | | | | | | Pri | | | Pri | | | | |
-| Activate session | | | | Pri | Pri (→detour) | | Pri | Pri | | | | | | |
-| Send reminders | | | | | | | | | | | Pri | Pri | | |
-| Close session | | | | | | | | | Sec | Sec | Sec | Sec | | |
-| Release responses | | | | | | | | | Sec | Sec | Sec | | Sec | |
-| Stop releasing | | | | | | | | | | | | Sec | | Sec |
-| Archive session | | | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **4** | **4** | **4** | **4** | **3** | **3** |
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 | 10‡ |
+| --- | - | - | - | - | -- | ---- | - | - | - | - | - | -- | --- |
+| Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
+| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | Sec | | | | | |
+| Create invites | | | | Pri | Pri | | | | Pri | | | | |
+| Send invites | | | | | | | Pri | | | Pri | | | |
+| Activate session | | | | Pri | Pri (→detour) | | Pri | Pri | | | | | |
+| Send reminders | | | | | | | | | | | Pri | | |
+| Close session | | | | | | | | | Sec | Sec | Sec | | |
+| Release responses | | | | | | | | | | | | Sec | |
+| Stop releasing | | | | | | | | | | | | | Sec |
+| Archive session | | | | | | | | | | | | Dgr | Dgr |
+| **Visible total** | **0** | **1** | **1** | **4** | **4** | **3** | **4** | **3** | **3** | **3** | **3** | **3** | **3** |
 
-‡ = `is_response_release_window_open(session)` is True (i.e. operator has run Release responses or a scheduled release has fired). Both Release and Stop also require the session to be in `ready` or `expired` — a backdated `responses_release_at` on a `draft` / `validated` session doesn't surface either button, so the ≤4-button contract holds for every state.
+‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
-Each state caps at 4 visible buttons. The pruning rules above
-(drop Create invites once generated, drop Send invites once
-sent, hide Archive outside `expired`, Release/Stop share a
-slot) are what keep the total within budget — without them
-states 5 / 8 / 9 would surface 5+ buttons.
+Each state caps at 4 visible buttons; today's worst case is 4
+(states 4 / 4W / 5). The pruning rules above (drop Create invites
+once generated, drop Send invites once sent, hide Archive
+outside `expired`, hide Release/Stop outside `expired`,
+Release/Stop share a slot when both eligible) are what keep
+the total within budget — without them states 5 / 8 / 9 would
+surface 5+ buttons.
 
 `Generate assignments` and `Validate setup` don't render as their
 own slots — they live inside **Prepare session**, which runs
@@ -540,22 +544,22 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   `session.closed`.
 - **Release responses** posts to
   `/operator/sessions/{id}/workflow/release-responses` via
-  `next-action-release-responses-form`. Live in States 7 – 10
+  `next-action-release-responses-form`. Live in State 10 only,
   when the release window isn't currently open
-  (`release_responses_visible = (is_ready or is_expired) and
-  not is_archived and not response_release_window_open`). Calls
-  `lifecycle.release_responses_now` → stamps
+  (`release_responses_visible = is_expired and not is_archived
+  and not response_release_window_open`) — the operator only
+  takes the manual release shortcut after a session has closed.
+  Calls `lifecycle.release_responses_now` → stamps
   `responses_release_at = now()` and clears any prior
   `responses_release_until`. Emits `session.responses_released`.
-- **Stop releasing responses** posts to
+- **Stop releasing** posts to
   `/operator/sessions/{id}/workflow/stop-release` via
-  `next-action-stop-release-form`. Live in States 7 – 10 only
-  when the release window is currently open AND the session is
-  post-activation (`stop_release_visible =
-  response_release_window_open and (is_ready or is_expired)
-  and not is_archived`) — the dual-gate prevents a backdated
-  `responses_release_at` on a `draft` / `validated` session
-  from surfacing the button before activation. Calls
+  `next-action-stop-release-form`. Live in State 10 only, when
+  the release window is currently open
+  (`stop_release_visible = response_release_window_open and
+  is_expired and not is_archived`) — the `is_expired` gate
+  prevents a backdated `responses_release_at` on a pre-close
+  session from surfacing the button. Calls
   `lifecycle.stop_responses_release` → stamps
   `responses_release_until = now()` (the release window closes
   immediately). Emits `session.responses_release_stopped`.

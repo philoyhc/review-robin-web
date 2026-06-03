@@ -206,20 +206,23 @@ def build_workflow_card_context(
     activate_visible = is_validated
     send_reminders_visible = is_ready and invitations_sent
     close_visible = is_ready
+    # Release / Stop release stay inert pre-close: the operator
+    # only takes the manual release shortcut after a session has
+    # closed or hit its deadline (is_expired). Gating on
+    # is_expired (rather than the earlier is_ready ∨ is_expired)
+    # keeps the ≤4-visible-button budget in ready states (Revert
+    # + Send invites / reminders + Close + Release would have
+    # been 4 already, leaving no room for Stop on top of a
+    # backdated release_at) and matches the spec narrative —
+    # responses are released *because the session is over*.
     release_responses_visible = (
-        (is_ready or is_expired)
+        is_expired
         and not is_archived
         and not response_release_window_open
     )
-    # Stop release lives on the same post-activation gate as
-    # Release — otherwise a backdated ``responses_release_at`` on a
-    # draft / validated session would flip the window-open check to
-    # True and surface Stop in a pre-activation state, blowing the
-    # ≤4-visible-button budget (e.g. validated + no invites would
-    # render Revert · Prepare · Create invites · Activate · Stop).
     stop_release_visible = (
         response_release_window_open
-        and (is_ready or is_expired)
+        and is_expired
         and not is_archived
     )
     archive_visible = is_expired
