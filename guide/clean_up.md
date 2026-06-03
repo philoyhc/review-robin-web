@@ -163,15 +163,18 @@ get lost when ``guide/observers.md`` is sweep-trimmed:
     dropdown rows and light up the ``observer_cohort.py``
     cross-roster branches.*
 
-15. **"Decode token" widget on the Observers Setup page.**
-    Per ``guide/observers.md`` token-design decisions, the
-    operator should be able to paste an Anonymized token
-    (``R-a3f8b2c1``) and get back the underlying
-    name + email by re-hashing the roster. Cheap at typical
-    roster sizes (≤1000 rows). Not yet implemented; nothing
-    in the surface today reveals identification on demand.
-    *Source: ``guide/observers.md`` "Token design —
-    decisions" (operator decoder bullet).*
+15. ~~**"Decode token" widget on the Observers Setup page.**~~
+    *Closed via the Extract data tab #current — instead of a
+    paste-a-token widget, the operator downloads
+    ``participant_tokens.csv`` from the new Token keys card on
+    the Extract data page (or via the ``Token keys`` chip on
+    the intro card's Zip-all bundle) and Ctrl-Fs the token.
+    Same deanonymization use case (cheap roster lookup), no
+    new JS / per-lookup audit machinery. Service:
+    ``app/services/extracts/participant_tokens_extract.py``;
+    route: ``GET /sessions/{id}/export/participant_tokens.csv``;
+    bundle inclusion gated on ``observers_enabled`` (tokens
+    have no consumer without observers today).*
 
 16. ~~**Stats-row cohort scope review.**~~
     *Closed #current — the surface stats rows now honour the

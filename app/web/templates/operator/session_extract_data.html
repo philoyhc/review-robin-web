@@ -55,6 +55,20 @@
                 role="button"
                 tabindex="0"
                 aria-pressed="true">Data shaper</span>
+          {# Token keys chip — only meaningful when observers
+             exist on the session (the tokens are the deanonymization
+             key for the observer-side Anonymized output). Mirrors
+             the per-observer ``observers.csv`` gating on the
+             Setup-bundle. When ``observers_enabled`` is off the
+             intro chip + the matching card below the Data shaper
+             both stay hidden. #}
+          {% if session.observers_enabled %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-extract-all-chip="token-keys"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">Token keys</span>
+          {% endif %}
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
@@ -767,6 +781,39 @@
     </div>
   </div>
 
+  {# Token keys card — half-width, left column. Only renders
+     when the session has ``observers_enabled`` on; the tokens
+     are the deanonymization key for the observer-side
+     Anonymized output and have no other consumer today. The
+     right column is intentionally empty so the card reads as
+     a deliberate half-width affordance under the full-width
+     Data shaper. #}
+  {% if session.observers_enabled %}
+  <div class="extract-data-grid">
+    <div class="extract-data-column">
+      <div class="card extract-data-card-stack" id="extract-data-token-keys">
+        <div>
+          <h2 style="margin-top: 0;">Token keys</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Operator-side deanonymization key — one row per
+            Reviewer + Reviewee with their per-session opaque
+            token. Look up a token from an Anonymized observer
+            download to recover the underlying name + email.
+          </p>
+        </div>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-token-keys-download"
+             href="/operator/sessions/{{ session.id }}/export/participant_tokens.csv">
+            Download token keys
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="extract-data-column"></div>
+  </div>
+  {% endif %}
+
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
      plus the By-instrument card's ``data-by-instrument-chip``
@@ -992,12 +1039,24 @@
         var includeShapes =
           !shaperChip ||
           shaperChip.getAttribute("aria-pressed") === "true";
+        var tokensChip = document.querySelector(
+          '[data-extract-all-chip="token-keys"]'
+        );
+        // ``token-keys`` chip only renders when the session has
+        // observers enabled; when absent, default to "include"
+        // and the bundle's own ``observers_enabled`` gate makes
+        // the param a no-op.
+        var includeTokens =
+          !tokensChip ||
+          tokensChip.getAttribute("aria-pressed") === "true";
+        var params = new URLSearchParams();
+        if (!includeShapes) params.set("data_shapes", "0");
+        if (!includeTokens) params.set("tokens", "0");
         var base =
           "/operator/sessions/" + sessionId +
           "/export/responses_bundle.zip";
-        btn.setAttribute(
-          "href", includeShapes ? base : base + "?data_shapes=0"
-        );
+        var qs = params.toString();
+        btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
       syncByInstrumentButton();
       syncTopZipAllButton();

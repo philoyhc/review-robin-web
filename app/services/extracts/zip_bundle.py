@@ -36,6 +36,9 @@ from app.services.extracts.by_instrument_extract import (
     serialize_by_instrument,
 )
 from app.services.extracts.observers_extract import serialize_observers
+from app.services.extracts.participant_tokens_extract import (
+    serialize_participant_tokens,
+)
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import (
     serialize_responses,
@@ -118,6 +121,7 @@ def build_responses_bundle(
     review_session: ReviewSession,
     *,
     include_data_shapes: bool = True,
+    include_participant_tokens: bool = True,
 ) -> tuple[bytes, dict[str, int]]:
     """Build the responses-only zip for ``review_session``.
 
@@ -127,10 +131,13 @@ def build_responses_bundle(
     Members: the unified ``responses.csv`` + ``reviewer_stats.csv``
     + ``reviewee_stats.csv`` + one ``instrument_{n}.csv`` per
     instrument, plus (when ``include_data_shapes``) one CSV per
-    saved Data shape named ``{code}_{slug(name)}.csv``. The
-    Data shaper chip on the intro card drives the
-    ``include_data_shapes`` flag via a ``?data_shapes=0``
-    query param on the route.
+    saved Data shape named ``{code}_{slug(name)}.csv``, plus
+    (when ``include_participant_tokens`` and the session has
+    ``observers_enabled`` on) ``participant_tokens.csv`` — the
+    deanonymization key for the Anonymized observer surfaces.
+    The intro card's chips drive both flags via the
+    ``?data_shapes=0`` and ``?tokens=0`` query params on the
+    route.
     """
     from app.db.models import DataShape
     from app.services.extracts.data_shape_extract import (
@@ -161,6 +168,19 @@ def build_responses_bundle(
                 db, review_session, instrument, position=position
             )
         )
+
+    # Participant tokens are only useful when observers exist on
+    # the session — the tokens are the deanonymization key for the
+    # observer-side Anonymized output and have no other consumer
+    # today. Skip silently when ``observers_enabled`` is off so
+    # the bundle shape stays consistent with the chrome's gate.
+    participant_tokens_rows = 0
+    if include_participant_tokens and review_session.observers_enabled:
+        token_rows = list(
+            serialize_participant_tokens(db, review_session)
+        )
+        members["participant_tokens"] = token_rows
+        participant_tokens_rows = max(0, len(token_rows) - 1)
 
     data_shape_count = 0
     if include_data_shapes:
@@ -195,6 +215,7 @@ def build_responses_bundle(
         "reviewee_stats": max(0, len(reviewee_stats) - 1),
         "instrument_files": len(instruments),
         "data_shapes": data_shape_count,
+        "participant_tokens": participant_tokens_rows,
     }
     return buffer, counts
 
