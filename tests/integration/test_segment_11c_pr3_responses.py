@@ -271,13 +271,29 @@ def test_responses_page_bulk_remind_form_targets_invitations_endpoint(
 ) -> None:
     """The Responses page's bulk reminder funnels through the same
     ``/invitations/remind-incomplete`` endpoint Manage Invitations
-    uses (single-source per the segment plan)."""
+    uses (single-source per the segment plan).
+
+    The form (and its Send-reminders button) is gated on
+    ``send_reminders_visible = is_ready AND invitations_sent``,
+    so the session needs invites sent before the form renders
+    in the workflow card. Exercise that state to verify the
+    wiring."""
     session = _ready_session(
         client,
         db,
         "resp-bulk-form",
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/generate",
+        data={"return_to": "responses"},
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/send-all",
+        data={"return_to": "responses"},
+        follow_redirects=False,
     )
     body = client.get(f"/operator/sessions/{session.id}/responses").text
     assert (

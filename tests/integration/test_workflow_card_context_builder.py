@@ -73,9 +73,16 @@ _EXPECTED_KEYS = {
     "is_ready",
     "is_expired",
     "is_archived",
-    "release_responses_live",
-    "stop_release_live",
-    "archive_live",
+    "revert_visible",
+    "prepare_visible",
+    "create_invites_visible",
+    "send_invites_visible",
+    "activate_visible",
+    "send_reminders_visible",
+    "close_visible",
+    "release_responses_visible",
+    "stop_release_visible",
+    "archive_visible",
     "is_setup_empty",
     "is_pre_generate",
     "invitations_generated",
@@ -230,7 +237,7 @@ def test_parse_super_failure_decodes_query_params() -> None:
     }
 
 
-def test_archive_live_gates_on_expired_only(
+def test_archive_visible_gates_on_expired_only(
     client: TestClient, db: Session
 ) -> None:
     """Archive button surfaces only when the session is
@@ -245,7 +252,7 @@ def test_archive_live_gates_on_expired_only(
         db, sess, return_to="home"
     )
     # draft: archive button hidden.
-    assert ctx["archive_live"] is False
+    assert ctx["archive_visible"] is False
 
     for state in ("validated", "ready"):
         sess.status = state
@@ -253,7 +260,7 @@ def test_archive_live_gates_on_expired_only(
         ctx = views.build_workflow_card_context(
             db, sess, return_to="home"
         )
-        assert ctx["archive_live"] is False, (
+        assert ctx["archive_visible"] is False, (
             f"archive button should not surface in {state!r}"
         )
 
@@ -262,11 +269,127 @@ def test_archive_live_gates_on_expired_only(
     ctx = views.build_workflow_card_context(
         db, sess, return_to="home"
     )
-    assert ctx["archive_live"] is True
+    assert ctx["archive_visible"] is True
 
     sess.status = "archived"
     db.commit()
     ctx = views.build_workflow_card_context(
         db, sess, return_to="home"
     )
-    assert ctx["archive_live"] is False
+    assert ctx["archive_visible"] is False
+
+
+# ── Single-row visible-button gating per state ──────────────────────────
+
+
+_VISIBLE_KEYS = (
+    "revert_visible",
+    "prepare_visible",
+    "create_invites_visible",
+    "send_invites_visible",
+    "activate_visible",
+    "send_reminders_visible",
+    "close_visible",
+    "release_responses_visible",
+    "stop_release_visible",
+    "archive_visible",
+)
+
+
+def _visible_set(ctx: dict) -> set[str]:
+    return {key for key in _VISIBLE_KEYS if ctx.get(key)}
+
+
+def test_draft_empty_state_surfaces_nothing(
+    client: TestClient, db: Session
+) -> None:
+    sess = _make_session(client, db, code="vis-state-1")
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert _visible_set(ctx) == set()
+
+
+def test_validated_no_invites_surfaces_revert_prepare_create_activate(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-4")
+    sess.status = "validated"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "prepare_visible",
+        "create_invites_visible",
+        "activate_visible",
+    }
+    assert len(visible) <= 4
+
+
+def test_ready_no_invites_surfaces_revert_create_close_release(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")
+    sess.status = "ready"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "create_invites_visible",
+        "close_visible",
+        "release_responses_visible",
+    }
+    assert len(visible) <= 4
+
+
+def test_expired_surfaces_revert_release_archive(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-10")
+    sess.status = "expired"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    visible = _visible_set(ctx)
+    assert visible == {
+        "revert_visible",
+        "release_responses_visible",
+        "archive_visible",
+    }
+
+
+def test_archived_surfaces_nothing(
+    client: TestClient, db: Session
+) -> None:
+    sess = _seed_pair_plus_pinned(client, db, code="vis-state-archived")
+    sess.status = "archived"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert _visible_set(ctx) == set()
+
+
+def test_every_state_keeps_visible_count_within_four(
+    client: TestClient, db: Session
+) -> None:
+    """Sanity check for the 25%-per-button single-row layout — every
+    lifecycle state caps the visible-button count at 4."""
+    sess = _seed_pair_plus_pinned(client, db, code="vis-cap")
+    for state in ("draft", "validated", "ready", "expired", "archived"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        visible = _visible_set(ctx)
+        assert len(visible) <= 4, (
+            f"state {state!r} surfaces {len(visible)} buttons: {visible}"
+        )
