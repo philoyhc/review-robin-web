@@ -254,8 +254,10 @@ def test_assignments_hub_renders_count_and_mode(
     # The Workflow card's Prepare session button is the operator's
     # entry point to materialising assignments (post-18F it runs
     # Generate + Validate in sequence; Activate is a separate
-    # button live only from ``validated``).
-    assert ">Prepare session</button>" in empty.text
+    # button live only from ``validated``). The label is
+    # ``Prepare<br>session`` post-2026-06-03 to fit the 2-row
+    # button layout.
+    assert ">Prepare<br>session</button>" in empty.text
 
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")

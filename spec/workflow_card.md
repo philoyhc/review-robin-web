@@ -247,6 +247,15 @@ the column width regardless of how many slots render; the row
 left-aligns naturally as the empty grid cells collapse on the
 right.
 
+**Two-line labels.** Each button's text wraps to two lines via a
+literal `<br>` after the first word — `Revert<br>to draft`,
+`Prepare<br>session`, `Release<br>responses`, etc. The only
+three-word label, `Stop releasing<br>responses`, keeps the verb
+phrase together on the first line. Two-line labels stabilise
+the row height across states (regardless of which buttons
+render, every cell is the same height) and absorb the narrower
+visual width the 25% column-width grid gives each button.
+
 The body div above the buttons carries a `min-height` that
 reserves the vertical space previously occupied by the older
 two-row layout, so the card height stays stable when the
