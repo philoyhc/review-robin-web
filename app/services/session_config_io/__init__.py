@@ -42,14 +42,14 @@ re-exporting the public surface so callers keep writing
 from __future__ import annotations
 
 from app.services.session_config_io._apply import (
-    ApplyError,
     ApplyResult,
     apply_session_config,
 )
+from app.services.session_config_io._apply_parse import ApplyError
 
 # ``_ParseError`` / ``_parse_group_kind`` are re-exported for the
 # unit test that exercises the group-kind cell parser directly.
-from app.services.session_config_io._apply import (  # noqa: F401
+from app.services.session_config_io._apply_shared import (  # noqa: F401
     _ParseError,
     _parse_group_kind,
 )
