@@ -60,7 +60,7 @@ Once an operator is **inside a session**, the Control Panel is that session's ho
 
 Most of the operator's time is spent doing **phase work** — configuring setup, then running operations — on the phase pages where that work belongs. But the **transitions between lifecycle states** are session-level commits and the Workflow card on every session-scoped page surfaces the next one explicitly: validating a setup, activating, and reverting to draft all happen via the Workflow card's stepper.
 
-Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The Workflow card itself is specified in **`spec/workflow_card.md`** (same partial renders on Session Home and every Operations-row page). The high-level Home shape: a full-width **Workflow card** above two independent flex columns — left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card's seven-stage stepper is the canonical entry point for every lifecycle-advancing action; the Activate session super-button collapses Generate → Validate → Activate into a single click.
+Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The Workflow card itself is specified in **`spec/workflow_card.md`** (same partial renders on Session Home and every Operations-row page). The high-level Home shape: a full-width **Workflow card** above two independent flex columns — left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card's single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden) is the canonical entry point for every lifecycle-advancing action; **Prepare session** runs Generate + Validate in sequence, and the standalone **Activate session** button fires from `validated` (with a warnings-detour link when there are non-blocking findings to acknowledge).
 
 #### Sub-pages of Home
 
@@ -218,7 +218,7 @@ Top-level operator lobby. A table of sessions, one row per session, columns: **N
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via its uniform seven-stage stepper and the Activate session super-button.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Create invites, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing responses, Archive session, plus Revert to draft.
 
 ### `/operator/sessions/new` — Create new session
 
@@ -306,7 +306,7 @@ Operations row tab. Read-only deep-dive of every setup issue, intended for the o
 - **Severity counts** (three pills inline): error / warning / info counts.
 - **Per-issue list** (rendered via the `operator/partials/validation_results.html` partial) — one entry per issue, with severity pill, source (e.g. "Reviewers", "Assignments"), and human description.
 
-There is no standalone Activate button on this page body; activation fires from the Workflow card's Activate session super-button. The Validate page does still own the **warnings-detour banner** (`/validate?activate=1`) — the super-button redirects there when the readiness report has non-blocking findings so the operator can acknowledge them before the underlying `/activate` POST fires.
+There is no standalone Activate button on this page body; activation fires from the Workflow card's Activate session button. The Validate page does still own the **warnings-detour banner** (`/validate?activate=1`) — the Activate button redirects there when the readiness report has non-blocking findings so the operator can acknowledge them before the underlying `/activate` POST fires.
 
 ### `/operator/sessions/{id}/previews` — Previews hub
 
@@ -363,7 +363,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/visual_style_rrw.md`** — Review-Robin chrome instantiation, including all visual specifics elided here.
 - **`spec/architecture.md`** — domain entities and layering. Reads upstream of this file.
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including layout + lifecycle display-label mapping.
-- **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, seven-stage stepper, Activate session super-button.
+- **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden), Prepare-then-Activate split + warnings detour.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
 - **`spec/operations_pages.md`** — Invitations + Responses functional spec (reviewer-centric Invitations + reviewee-centric Responses; bulk-action affordances live on the Workflow card stepper).
