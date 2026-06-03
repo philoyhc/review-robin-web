@@ -60,7 +60,7 @@ Observer plumbing is operator-side-complete (Setup page +
 Quick Setup slot + Extract row + bundle inclusion + visibility
 policy), but the participant-facing `/me/sessions/{id}/collation`
 body is **paused** — render shape is still being rethought
-(captured in `guide/observers.md`).
+(captured in `guide/archive/observers.md`).
 
 **New since the 30may snapshot:**
 
@@ -129,7 +129,7 @@ body is **paused** — render shape is still being rethought
   work landed). Residual tail dispersed: W20 / W21 + magic-link
   schema into the `segment_14B_email_infrastructure.md`
   appendix; W5 / W17 + the open questions blocking observer
-  collation into the new `guide/observers.md` stub (paused).
+  collation into the new `guide/archive/observers.md` stub (paused).
   Spec sweep aligned nine spec files with shipped behavior
   (Reviewers `PhotoLink` extract column, five-slot Quick Setup,
   Observers extract details, W8 rule count, lifecycle
@@ -217,7 +217,7 @@ files; no remaining alignment errors known.
 | **Reviewee `/me/sessions/{id}/results` body — all three modes** | Live in `spec/participant_model.md §4.1`, `spec/reviewer-surface.md` | ✓ shipped (W16 / this stream) |
 | **Acknowledge gesture** | Live in `spec/participant_model.md` | ✓ shipped (W19 / this stream) |
 | Email infrastructure (transport, queue, templates) | Stub at `guide/segment_14B_email_infrastructure.md`; spec at `spec/email_infra_options.md` | ⏸ planned |
-| **Observer `/collation` body** | Stub at `guide/observers.md`; design rationale archived at `guide/archive/participant_model_upgrade.md` §7 | ⏸ **paused** (use scenarios under review) |
+| **Observer `/collation` body** | Stub at `guide/archive/observers.md`; design rationale archived at `guide/archive/participant_model_upgrade.md` §7 | ⏸ **paused** (use scenarios under review) |
 | Magic-link landings for reviewees / observers | Filed in 14B appendix; design call still pending | ⏸ blocked on `invitations`-extensibility shape |
 
 Everything else lives in `docs/status.md` (the authoritative
@@ -263,7 +263,7 @@ ship-state).
 - **The participant-model arc isn't fully done.** Three of the
   21 W-items still pending:
   - **W17 / W5 — observer collation surface body** (paused
-    while use scenarios are rethought; `guide/observers.md`
+    while use scenarios are rethought; `guide/archive/observers.md`
     is the home).
   - **W20 — reviewee / observer email notifications**
     (gated on Segment 14B's email infrastructure; filed in
@@ -342,7 +342,7 @@ question parked items).
    gives a real test of the magic-link schema shape (W21)
    under load.
 2. **Reopen W17 / W5 design** when the use-scenario rethink
-   completes. `guide/observers.md` captures the open
+   completes. `guide/archive/observers.md` captures the open
    questions; the W16 stream's aggregate primitives mean the
    implementation is the smaller half of the work.
 3. **Split `assignments.py`** at ~1,426 LOC in a 17A / 18N-

@@ -7,7 +7,7 @@ Composes the building blocks shipped in earlier slices —
 list of sections the ``/me/sessions/{id}/collation`` template
 can iterate over.
 
-Per the MVP shape in ``guide/observers.md``, each section
+Per the MVP shape in ``guide/archive/observers.md``, each section
 carries the two cohort-stats rows (reviewer side + reviewee
 side) — both sharing one aggregate over the in-cohort
 assignment pool, differing in the per-side distinct-count badge —

@@ -78,7 +78,7 @@ results). Phase 1 has:
   dedicated CRUD Setup page (gated by `session.observers_enabled`).
 - An `observers.cohort_rule` JSON column carrying a per-observer
   cohort match rule authored on the Observers Setup page (see
-  `spec/setup_pages.md` "Cohort match rule editor" + `guide/observers.md`).
+  `spec/setup_pages.md` "Cohort match rule editor" + `guide/archive/observers.md`).
   Materialised at request time on the collation surface (no
   junction table).
 - A `require_observer_in_session` gate in `app/web/deps.py`.

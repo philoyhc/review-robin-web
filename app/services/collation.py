@@ -4,7 +4,7 @@ surface.
 Given a materialised ``CohortAssignments`` (from
 ``app.services.observer_cohort.materialize_cohort_assignments``)
 and an ``Instrument``, computes two aggregate rows per the MVP
-shape in ``guide/observers.md``:
+shape in ``guide/archive/observers.md``:
 
 The cohort rule picks out a pool of in-cohort assignments. Both
 rows draw from the **same pool**:

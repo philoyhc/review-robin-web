@@ -1741,7 +1741,7 @@ page; the observer signs in to `/me/sessions/{id}/collation`
 and sees per-instrument reviewer-side / reviewee-side
 summary aggregates plus a conditional cohort-scoped CSV
 download whose identification follows Band 3. Closes W5 +
-W17 from `guide/observers.md` (now slimmed to a current
+W17 from `guide/archive/observers.md` (now slimmed to a current
 operating reference; the planning history archived to
 `guide/archive/observers_mvp_planning.md` in #1807).
 
@@ -1807,7 +1807,7 @@ Consumer-side surface (#1799 → #1804):
   Per-row Raw + Anonymized downloads gated on the
   `after_release` window opening explicitly via
   `responses_release_at`.
-- **Doc sweep** — `guide/observers.md` trimmed to a current
+- **Doc sweep** — `guide/archive/observers.md` trimmed to a current
   operating reference; planning history archived;
   `guide/clean_up.md` items 13–16 added for the deferred
   cohort-rule cases + the decode-token widget + the

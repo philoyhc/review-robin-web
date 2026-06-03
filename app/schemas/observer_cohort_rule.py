@@ -13,7 +13,7 @@ labels (``IS THE SAME AS`` / ``IS DIFFERENT FROM`` / ``IS`` /
 as-is, with the engine-side translation happening at
 evaluation time (when the cohort resolver lands).
 
-See ``guide/observers.md`` "Match-axis schema — decided" for
+See ``guide/archive/observers.md`` "Match-axis schema — decided" for
 the design notes.
 """
 

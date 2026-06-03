@@ -537,7 +537,7 @@ payload validates through
 `{field, op, operand_tag, operand_value}` dicts. `NULL` =
 operator hasn't authored a rule yet; an explicitly-saved
 empty `{"combinator": "AND", "rules": []}` is distinct. See
-`guide/observers.md` "Match-axis schema — decided" for the
+`guide/archive/observers.md` "Match-axis schema — decided" for the
 storage rationale.
 
 Route: `POST /operator/sessions/{id}/observers/cohort-rule`,

@@ -13,7 +13,7 @@
    The summary-cell rendering mirrors the reviewee /results
    ``summarized`` mode so the per-data-type aggregate shape
    stays consistent across surfaces. See
-   ``guide/observers.md`` "MVP definition" for the layout
+   ``guide/archive/observers.md`` "MVP definition" for the layout
    contract this template implements. #}
 {% extends "base.html" %}
 
@@ -91,7 +91,7 @@
             </tr>
             {# Row 3 — Download. Spans every column; the button
                (or summary-only note) lives flush-right in the
-               last column per ``guide/observers.md``. #}
+               last column per ``guide/archive/observers.md``. #}
             <tr>
               <td colspan="{{ section.fields | length + 2 }}"
                   style="text-align: right;">
