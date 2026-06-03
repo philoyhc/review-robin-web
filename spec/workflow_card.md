@@ -2,11 +2,12 @@
 
 The **Workflow card** is the single persistent action card at the
 top of every operator session page. It carries state-aware
-explanatory copy, **two rows of action buttons** (a prep row and a
-run row, both in the left column), and a right-column status
-aside. The card is the canonical entry-point for every
-lifecycle-advancing action on a session — from preparing the
-assignment pairs through to sending reminders.
+explanatory copy, a **single row of action buttons** (≤ 4 visible
+buttons per state, each fixed at 25% of the column width, inactive
+hidden), and a right-column status aside. The card is the canonical
+entry-point for every lifecycle-advancing action on a session —
+from preparing the assignment pairs through to sending reminders,
+manually releasing responses, closing, and archiving.
 
 The H2 the operator reads is "Workflow". The template / CSS
 class names use the `next_action` prefix (the card's earlier
@@ -28,9 +29,12 @@ edit / extract / outbox sub-pages.
 
 Each host page sets `next_action_return_to` to its Operations-row
 slug so that every POST the card emits — `/workflow/prepare`,
-`/workflow/activate`, `/revert`, `/invitations/generate`,
-`/invitations/send-all`, `/invitations/remind-incomplete` — 303s
-back to the page that rendered the card. Allowed slugs:
+`/workflow/activate`, `/workflow/close`,
+`/workflow/release-responses`, `/workflow/stop-release`,
+`/workflow/archive`, `/revert`, `/invitations/generate`,
+`/invitations/send-all`, `/invitations/remind-incomplete` —
+303s back to the page that rendered the card (except Archive,
+which 303s to `/operator/sessions/archived`). Allowed slugs:
 
 - `home` (Session Home; resolved server-side to
   `/operator/sessions/{id}`)
@@ -52,8 +56,8 @@ the returned dict into its template context via `**workflow_ctx`.
 The builder lives in `app/web/views/_workflow_card.py`. It
 returns:
 
-- `is_draft` / `is_validated` / `is_ready` — lifecycle booleans
-  from `lifecycle.is_*`.
+- `is_draft` / `is_validated` / `is_ready` / `is_expired` /
+  `is_archived` — lifecycle booleans from `lifecycle.is_*`.
 - `is_setup_empty` — `True` iff the session is in draft AND any of:
   reviewer count is 0, reviewee count is 0, or at least one
   instrument is not configured (checked via
@@ -70,6 +74,15 @@ returns:
   row exists for the session.
 - `invitations_sent` — `True` iff at least one `Invitation` row
   has a non-NULL `sent_at`.
+- Ten `*_visible` flags — one per button slot (`revert_visible`,
+  `prepare_visible`, `create_invites_visible`,
+  `send_invites_visible`, `activate_visible`,
+  `send_reminders_visible`, `close_visible`,
+  `release_responses_visible`, `stop_release_visible`,
+  `archive_visible`). The single-row layout renders only the
+  visible buttons. See "Workflow stepper — single-row button
+  layout" below for the per-slot formula + the contract that
+  every state caps at ≤ 4 visible.
 - `validation_summary` — `dict | None`. Populated when
   `validated_just_ran=True` OR the session is already
   `validated`. Keys: `error_count` / `warning_count` /
@@ -80,8 +93,8 @@ returns:
   `errors` / `warnings` / `info` lists from
   `lifecycle.build_readiness_report`.
 - `setup_checklist` — three-boolean dict (`reviewers_ok`,
-  `reviewees_ok`, `instruments_pinned_ok`) driving the State 1
-  right-column checklist.
+  `reviewees_ok`, `instruments_configured_ok`) driving the
+  State 1 right-column checklist.
 - `super_failure` — `dict | None` decoded from the redirect's
   `?super_status=failed&super_button=...&super_step=...&super_error=...`
   query-param set via `views.parse_super_failure`. Slots:
@@ -132,7 +145,7 @@ from the step name (`generate` / `validate` → `"prepare"`;
 
 ## State machine
 
-The card has eleven states. The body and right column are
+The card has twelve states. The body and right column are
 chosen by this cascade in `next_action_card.html`:
 
 ```
@@ -177,50 +190,49 @@ missed).
 
 ## Layout
 
-Two-column inner grid: the body copy and **two rows of action
-buttons** in the left column, the per-state status aside in the
-right column:
+Two-column inner grid: the body copy and a **single row of
+action buttons** in the left column, the per-state status aside
+in the right column:
 
 ```
 ┌── Workflow (H2) ──────────────────────────────────────────────┐
 │ ┌─ .next-action-main (~55%) ─┐ ┌─ .next-action-status (~45%) ┐│
-│ │ <p>State-specific body</p> │ │ Signal lines (top) +        ││
-│ │                            │ │ per-state status detail.    ││
-│ │ ┌── prep row ───────────┐  │ │                             ││
-│ │ │ Revert │ Prepare │ Cr │  │ │                             ││
-│ │ │ to     │ session │ in │  │ │                             ││
-│ │ │ draft  │         │ v  │  │ │                             ││
-│ │ └────────────────────────┘ │ │                             ││
-│ │ ┌── run row ────────────┐  │ │                             ││
-│ │ │ Send │ Activate│ Send │  │ │                             ││
-│ │ │ inv- │ session │ rem- │  │ │                             ││
-│ │ │ ites │         │ inde │  │ │                             ││
-│ │ └────────────────────────┘ │ │                             ││
+│ │ <p>State-specific body</p> │ │ Per-state status detail +   ││
+│ │                            │ │ signal lines (failure /     ││
+│ │ (reserved vertical space)  │ │ scheduled / auto-send).     ││
+│ │                            │ │                             ││
+│ │ ┌── button row (25% × 4) ─┐│ │                             ││
+│ │ │ A │ B │ C │ D            ││ │                             ││
+│ │ └─────────────────────────┘│ │                             ││
 │ └────────────────────────────┘ └─────────────────────────────┘│
 └───────────────────────────────────────────────────────────────┘
 ```
 
 `grid-template-columns: minmax(0, 11fr) minmax(0, 9fr)` — the
 left column takes ~55% and the right column ~45% (the left
-column carries up to four buttons per row, so it gets slightly
-more room than 50/50). The left column carries a 1px right
-border that reads as a vertical divider; below ~720 px viewport
-width the columns collapse to a single stacked column and the
-divider becomes a horizontal rule above the right-column
+column carries up to four buttons in its row, so it gets
+slightly more room than 50/50). The left column carries a 1px
+right border that reads as a vertical divider; below ~720 px
+viewport width the columns collapse to a single stacked column
+and the divider becomes a horizontal rule above the right-column
 content.
 
-Each button row is a `.next-action-buttons.next-action-buttons-row`
-flex container whose children stretch (`flex: 1 1 0`) so the
-row's buttons distribute evenly across the left column's width.
+The button row is a `.next-action-buttons.next-action-buttons-row`
+CSS grid (`grid-template-columns: repeat(4, 1fr)`) so each
+visible button locks at exactly 25% of the column width
+regardless of how many slots render. With N ≤ 4 visible
+buttons the row left-aligns naturally — the empty grid cells
+on the right collapse.
 
 **Stable card height.** The `.next-action-body` div flex-grows
-(`flex: 1 1 auto`) and carries `min-height: 3.5em` — enough for
-~2 rows of body text. The two action button rows sink to the
-bottom of the left column regardless of body length, and the
-card doesn't grow / shrink as the state-specific copy goes from
-one line to two. Multi-paragraph states (e.g. State 3's two-line
-body) or the prepare-confirm banner still expand the body beyond
-the min — the rule sets a floor, not a ceiling.
+(`flex: 1 1 auto`) and carries `min-height: 7.5em` — enough to
+reserve the vertical space that the previous multi-row layout
+occupied, so the single button row lands at the same Y position
+the old run-phase row sat at. The card doesn't grow / shrink as
+the state-specific copy or the visible-button count varies.
+Multi-paragraph states (e.g. State 3's two-line body) or the
+prepare-confirm banner still expand the body beyond the min —
+the rule sets a floor, not a ceiling.
 
 CSS lives in `app/web/templates/base.html` next to the
 `.card.next-action` rules.
@@ -465,7 +477,7 @@ Pre-flight gates:
   layer; the workflow card renders the Prepare button as inert
   in State 1 so the form can't post.
 
-### Other stepper buttons
+### Other button slots
 
 - **Create invites** posts to
   `/operator/sessions/{id}/invitations/generate` via
@@ -484,25 +496,82 @@ Pre-flight gates:
   `invitations.send_reminders_to_incomplete` for reviewers whose
   assignments aren't complete.
 
-All three invitation forms emit on every ready state (7 / 8 / 9)
-so the Secondary "re-run an earlier stage" buttons stay wired;
-only the corresponding Primary slot's live state changes. Each
-form carries a hidden `return_to=<slug>` field; the route's
+Each invitation form is rendered alongside its visible button —
+Create invites renders only when `create_invites_visible` is True
+(`(is_validated or is_ready) and not invitations_generated`),
+Send invites only when `send_invites_visible` is True
+(generated but not sent), Send reminders only when
+`send_reminders_visible` is True (`is_ready and invitations_sent`).
+Each form carries a hidden `return_to=<slug>` field; the route's
 `_invitation_redirect_url` helper consults `_REVERT_RETURN_TO` +
 the special `"home"` slug to resolve the 303 target. Direct form
 posts elsewhere (e.g. tests hitting the route without the form's
 hidden field) fall back to `/operator/sessions/{id}/invitations`.
+The underlying routes accept POSTs from `validated` / `ready`
+regardless of the form's visibility — deep-link / curl callers
+still work as defense-in-depth.
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`:
   - States 4 / 4W / 4Err / 5 / 6 (`is_validated`): via
     `next-action-revert-form`. Route dispatches to
     `lifecycle.invalidate_session(reason="operator_revert")` →
     `validated → draft`, audit `session.invalidated`.
-  - States 7 / 8 / 9 (`is_ready`): via `next-action-pause-form`
-    with hidden `confirm=true`. Route dispatches to
-    `lifecycle.revert_session_to_draft` → `ready → draft`,
-    audit `session.reverted_to_draft`. Instruments flip
-    `accepting_responses = False`; responses are preserved.
+  - States 7 / 8 / 9 (`is_ready`) + State 10 (`is_expired`):
+    via `next-action-pause-form` with hidden `confirm=true`.
+    Route dispatches to `lifecycle.revert_session_to_draft` →
+    `ready → draft` or `expired → draft` (the route accepts
+    both starting states), audit `session.reverted_to_draft`.
+    Instruments flip `accepting_responses = False`; responses
+    are preserved.
+
+### Close / Release / Stop / Archive buttons
+
+The four post-activation buttons share a workflow-routes
+sub-module (`app/web/routes_operator/_workflow.py`):
+
+- **Close session** posts to
+  `/operator/sessions/{id}/workflow/close` via
+  `next-action-close-form`. Live in State 9 only
+  (`close_visible = is_ready`). Calls `lifecycle.close_session`
+  → `ready → expired` + closes every instrument
+  (`accepting_responses = False`); the per-instrument
+  `responses_visible_when_closed` toggle then governs whether
+  reviewers can still see what they submitted post-close. Emits
+  `session.closed`.
+- **Release responses** posts to
+  `/operator/sessions/{id}/workflow/release-responses` via
+  `next-action-release-responses-form`. Live in States 7 – 10
+  when the release window isn't currently open
+  (`release_responses_visible = (is_ready or is_expired) and
+  not is_archived and not response_release_window_open`). Calls
+  `lifecycle.release_responses_now` → stamps
+  `responses_release_at = now()` and clears any prior
+  `responses_release_until`. Emits `session.responses_released`.
+- **Stop releasing responses** posts to
+  `/operator/sessions/{id}/workflow/stop-release` via
+  `next-action-stop-release-form`. Live in States 7 – 10 only
+  when the release window is currently open AND the session is
+  post-activation (`stop_release_visible =
+  response_release_window_open and (is_ready or is_expired)
+  and not is_archived`) — the dual-gate prevents a backdated
+  `responses_release_at` on a `draft` / `validated` session
+  from surfacing the button before activation. Calls
+  `lifecycle.stop_responses_release` → stamps
+  `responses_release_until = now()` (the release window closes
+  immediately). Emits `session.responses_release_stopped`.
+- **Archive session** posts to
+  `/operator/sessions/{id}/workflow/archive` via
+  `next-action-archive-form`. Live in State 10 only
+  (`archive_visible = is_expired`) — the operator must click
+  Close session first. The underlying
+  `lifecycle.archive_session` service is permissive (accepts
+  any non-archived state) so deep-link / curl POSTs from
+  `ready` still work; the chrome focuses on the
+  close-then-file-away sequence to keep the per-state button
+  count manageable. Emits `session.archived`. Redirects to
+  `/operator/sessions/archived` so the operator sees their
+  just-archived row in context (this is the only post-activation
+  button whose 303 target isn't the host page).
 
 ## Right column
 
@@ -547,11 +616,12 @@ item; there's no separate heading row.
 | **7** (ready, no invitations yet) | (no detail) |
 | **8** (ready, invites generated) | (no detail) |
 | **9** (ready, invites sent) | (no detail) |
+| **10** (expired) | (no detail) |
 
 States 5 / 6 currently share State 4's status block; an
 invite-counter / deadline aside can land as a follow-up.
-States 7 / 8 / 9 have no detail block yet — invitation-status
-counters are deferred.
+States 7 / 8 / 9 / 10 have no detail block yet — invitation-status
+counters + a "closed at «X»" stamp are deferred.
 
 ### Signal lines
 
@@ -676,10 +746,14 @@ routes:
 | --- | --- | --- | --- | --- |
 | `POST /operator/sessions/{id}/workflow/prepare` | `assignments.replace_assignments` → `lifecycle.mark_validated` (on clean Validate) | `draft` or `validated` (`is_editable`) | `validated` (or `draft` on Validate errors; detour to host page with `prepare_confirm=responses` in the saved-response case) | `session.workflow_run_started` with `context.button="prepare_session"` + per-step events; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/workflow/activate` | `lifecycle.activate_session` (re-validates first) | `validated` | `ready` (or detour to Validate page in the warnings case) | `session.workflow_run_started` with `context.button="activate_session"`; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/close` | `lifecycle.close_session` | `ready` | `expired` (every instrument flips `accepting_responses = False`) | `session.closed` |
+| `POST /operator/sessions/{id}/workflow/release-responses` | `lifecycle.release_responses_now` | not `archived` | unchanged (stamps `responses_release_at = now()`, clears `responses_release_until`) | `session.responses_released` |
+| `POST /operator/sessions/{id}/workflow/stop-release` | `lifecycle.stop_responses_release` | not `archived` | unchanged (stamps `responses_release_until = now()`) | `session.responses_release_stopped` |
+| `POST /operator/sessions/{id}/workflow/archive` | `lifecycle.archive_session` | any non-archived state | `archived`; 303 → `/operator/sessions/archived` | `session.archived` |
 | `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | unchanged | `assignments.generated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
-| `POST /operator/sessions/{id}/revert` (when `is_ready`) | `lifecycle.revert_session_to_draft` | `ready` | `draft` | `session.reverted_to_draft` |
+| `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
 | `POST /operator/sessions/{id}/invitations/generate` | `invitations.generate_invitations` | `validated` or `ready` (via `_require_validated_or_ready`) | unchanged | `invitations.generated` |
 | `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per pending) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
