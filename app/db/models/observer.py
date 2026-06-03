@@ -51,6 +51,6 @@ class Observer(Base, TimestampMixin):
     editor's payload). ``None`` = operator hasn't authored
     anything for this observer yet. Shape validated by
     ``app.schemas.observer_cohort_rule.CohortRuleSet``; see
-    ``guide/observers.md`` "Match-axis schema — decided"."""
+    ``guide/archive/observers.md`` "Match-axis schema — decided"."""
 
     session: Mapped[ReviewSession] = relationship(back_populates="observers")

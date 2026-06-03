@@ -78,20 +78,25 @@ results). Phase 1 has:
   dedicated CRUD Setup page (gated by `session.observers_enabled`).
 - An `observers.cohort_rule` JSON column carrying a per-observer
   cohort match rule authored on the Observers Setup page (see
-  `spec/setup_pages.md` "Cohort match rule editor" + `guide/observers.md`).
+  `spec/setup_pages.md` "Cohort match rule editor" + `guide/archive/observers.md`).
   Materialised at request time on the collation surface (no
   junction table).
 - A `require_observer_in_session` gate in `app/web/deps.py`.
 - The **Observer Collation** surface at
   `GET /me/sessions/{id}/collation` — per-instrument 3-row
-  table (reviewer-side aggregates / reviewee-side aggregates /
-  conditional CSV download) scoped to the observer's cohort.
-  Identification mode (Raw / Anonymized rows / Anonymized
-  summaries) follows the per-instrument Band 3 observer
-  policy. Anonymized downloads swap reviewer / reviewee names
-  for per-session opaque tokens via
-  `app/services/participant_tokens.py`. MVP shipped
-  2026-06-02.
+  table (Row 1 distinct-reviewer headcount + shared aggregate
+  over the in-cohort assignment pool / Row 2 distinct-reviewee
+  headcount + same aggregate / Row 3 conditional CSV download)
+  scoped to the observer's cohort. Identification mode (Raw /
+  Anonymized rows / Anonymized summaries) follows the
+  per-instrument Band 3 observer policy. Anonymized downloads
+  swap reviewer / reviewee names for per-session opaque
+  tokens via `app/services/participant_tokens.py`; the same
+  tokens are exposed as an operator-side CSV at
+  `GET /sessions/{id}/export/participant_tokens.csv` (the
+  Extract data tab's Token keys card) for ad-hoc
+  deanonymization. MVP shipped 2026-06-02, partition refactor
+  + Token keys card 2026-06-03.
 
 Observers are always email-identified (`observers.email` is NOT
 NULL); no parse check is needed before identity matching.

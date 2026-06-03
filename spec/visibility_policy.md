@@ -171,7 +171,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a half-width read-only "Who can see what you wrote" card in column 2 of each per-instrument intro grid on `review_surface.html`. Renders three rows (You / Reviewees / Observers) × two windows with the persisted mode labels (Raw responses / Anonymized responses / Summarized responses / —). | ✓ shipped |
 | W7 — Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies + applies the scope rules; consumed by the W16 reviewee surface. | ✓ shipped |
 | W16 — Reviewee `/results` body | `build_reviewee_results_context` renders raw / anonymized / summarized modes. W19 Acknowledge card also live (PR #1750). | ✓ shipped |
-| W17 — Observer `/collation` body | Renders the per-instrument 3-row table (reviewer stats / reviewee stats / conditional CSV download) scoped to the observer's cohort. Identification mode follows Band 3 (`raw` / `anonymized`); `summarized` returns no per-row download. MVP shipped 2026-06-02 — see `guide/observers.md` "Status". | ✓ shipped |
+| W17 — Observer `/collation` body | Renders the per-instrument 3-row table (Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool / Row 2 distinct-reviewee headcount + same aggregate / Row 3 conditional CSV download) scoped to the observer's cohort. Identification mode follows Band 3 (`raw` / `anonymized`); `summarized` returns no per-row download. MVP shipped 2026-06-02, partition-model refactor 2026-06-03 — see `guide/archive/observers.md` "Status". | ✓ shipped |
 
 ---
 

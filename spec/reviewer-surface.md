@@ -1021,7 +1021,7 @@ the authenticated user must have an active Observer row whose
 plus the per-instrument 3-row collation table (reviewer-side
 aggregates / reviewee-side aggregates / conditional CSV
 download). MVP shipped 2026-06-02 (W17) — see
-`guide/observers.md` and the cohort-consumer routes in
+`guide/archive/observers.md` and the cohort-consumer routes in
 `app/web/routes_reviewer/_collation.py`.
 
 Route: `app/web/routes_reviewer/_collation.py`. Also registered

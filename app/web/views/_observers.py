@@ -4,7 +4,7 @@ Carries the per-row adapters the Observers table uses — the
 mixed-state signature the cohort-rule editor JS compares against,
 and the friendly summary string the Cohort column renders.
 
-See ``guide/observers.md`` "Match-axis schema — decided" for the
+See ``guide/archive/observers.md`` "Match-axis schema — decided" for the
 storage shape these helpers translate from.
 """
 

@@ -22,7 +22,7 @@ about in support ("which row is ``R-a3f8b2c1``?") yet wide
 enough that collisions inside a single session are vanishingly
 rare.
 
-See ``guide/observers.md`` "Token design — decisions
+See ``guide/archive/observers.md`` "Token design — decisions
 (2026-06-02)" for the design rationale.
 """
 

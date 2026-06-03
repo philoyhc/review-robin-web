@@ -134,7 +134,7 @@ retires for another reason.
 
 The collation MVP shipped 2026-06-02 (#1799 → #1806). Three
 deferral notes from that ladder, now logged here so they don't
-get lost when ``guide/observers.md`` is sweep-trimmed:
+get lost when ``guide/archive/observers.md`` is sweep-trimmed:
 
 13. ~~**`pair_context.*` left-side rules.**~~
     *Closed by removing the option from the UI #current — the

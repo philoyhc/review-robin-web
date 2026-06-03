@@ -104,7 +104,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    reviewee `/me/sessions/{id}/results` body), `_collation.py`
    (the observer `/me/sessions/{id}/collation` per-instrument
    3-row table + per-instrument CSV download; see
-   `guide/observers.md`), `_invite.py`
+   `guide/archive/observers.md`), `_invite.py`
    (magic-link landing), `_shared.py`. See
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
@@ -207,11 +207,11 @@ reject it.
 - **`spec/instruments.md`** — Instrument entity + per-session Instruments operator page. Per-instrument card (Identity / Bands 1+2+3), "Not set" pill safety gate, group-scoped variant, Response Type Definitions card. (Consolidates the retired `instrument_builder.md` + `group_scoped_instruments.md`; pre-2026-05-26 docs preserved at `spec/archive/`.)
 - **`spec/settings_inventory.md`** — Single-stop index of every operator- / per-session setting Review Robin Web persists, plus the browser-local UI-state primitives (cookies / localStorage / URL params).
 - **`spec/visibility_policy.md`** — Per-instrument visibility policy (the 3 × 2 chip grid: Reviewers / Reviewees / Observers × Session-ongoing / Responses-released; Raw / Anonymized / Summarized modes; `instrument_view_policies` storage; `resolve_mode` view-time resolver). Cited by both the reviewee `/results` and the (paused) observer `/collation` surfaces.
-- **`spec/participant_model.md`** — Active spec covering the participant-model behavior shipped 2026-05-30 → 2026-06-02: observer roster + per-session toggle + reviewee `/results` body across all three modes + Acknowledge gesture + observer collation MVP (cohort rule editor + per-instrument 3-row table + cohort-scoped CSV downloads). The umbrella design rationale + the S/P/W identifier glossary live in `guide/archive/participant_model_upgrade.md` (Appendix A); the W17 + W5 observer surface shipped 2026-06-02 (see `guide/observers.md` "Status"); remaining participant-model items (W20 / W21 email-side) sit in `guide/segment_14B_email_infrastructure.md` appendix.
+- **`spec/participant_model.md`** — Active spec covering the participant-model behavior shipped 2026-05-30 → 2026-06-02: observer roster + per-session toggle + reviewee `/results` body across all three modes + Acknowledge gesture + observer collation MVP (cohort rule editor + per-instrument 3-row table + cohort-scoped CSV downloads). The umbrella design rationale + the S/P/W identifier glossary live in `guide/archive/participant_model_upgrade.md` (Appendix A); the W17 + W5 observer surface shipped 2026-06-02 (see `guide/archive/observers.md` "Status"); remaining participant-model items (W20 / W21 email-side) sit in `guide/segment_14B_email_infrastructure.md` appendix.
 - **`spec/audience_and_identity_model.md`** — Audience taxonomy (operator / reviewer / reviewee / observer / sysadmin) and auth posture.
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence. (The earlier `unfinished_business.md` catalog retired 2026-05-10 once all open items shipped or got absorbed into named segments; lives at `guide/archive/unfinished_business.md` for historical reference.)
-- **`guide/observers.md`** — Standing notes for the observer participant role; the cohort editor (operator side) + the collation surface body + Anonymized CSV download (consumer side) shipped 2026-06-02 as the MVP.
+- **`guide/archive/observers.md`** — Standing notes for the observer participant role; the cohort editor (operator side) + the collation surface body + Anonymized CSV download (consumer side) shipped 2026-06-02 as the MVP.
 - **`guide/clean_up.md`** — Standing punch-list of small-to-medium follow-ups identified by code review but not yet shipped. Pick from the top in idle moments; each item has its own context.
 - **`guide/codebase_assessment_*.md`** — Snapshot of code state vs spec. Only the latest stays here; older snapshots retire to `guide/archive/`. The 2026-06-01 snapshot's Appendix §9 has concrete file-split proposals for the three production files at or near the 18N housekeeping threshold (`assignments.py`, `scheduled_events.py`, `session_config_io/_apply.py`).
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
