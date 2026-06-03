@@ -29,8 +29,16 @@ chrome:
   search, sortable columns, and a dedicated
   `/operator/sessions/archived` child page.
 - **Roster management.** Reviewer / reviewee / **Relationships**
-  CSV imports with cross-table identity validation. Assignments
-  are **always derived** post-15D: rule-based generation only
+  CSV imports with cross-table identity validation. A fourth
+  optional roster — **Observers** — opts in per session via the
+  `observers_enabled` toggle, with its own Setup page, Quick
+  Setup slot, Extract Setup row, and Zip-all bundle member.
+  Each Observer carries a **Cohort match rule** (`reviewer.tag1
+  IS THE SAME AS observer.tag1`, multi-rule + AND/OR, authored
+  per-observer on the Observers Setup page) that partitions
+  the session's assignment rows into the pool the observer can
+  see on the collation surface. Assignments are **always
+  derived** post-15D: rule-based generation only
   (manual-row authoring retired in 15D PR 6a). Rule-based
   assignments are authored on the **Rule Builder page**
   (`/operator/sessions/{id}/assignments/rule-based-editor`) — a
@@ -86,11 +94,12 @@ chrome:
   Settings slot graduated to live in Segment 12A-3 PR 4 and
   posts to `/operator/sessions/{id}/import-config`, applying
   the 3-column Settings CSV via `apply_session_config`.
-- **Extract Data card** on Session Home ships **five live CSV
-  downloads** in a 2-column layout — left column for
+- **Extract Setup card** on Session Home ships **five-or-six
+  live CSV downloads** in a 2-column layout — left column for
   per-entity rosters (Reviewers / Reviewees / Relationships),
   right column for session-level outputs (Session settings /
-  Responses), plus a Zip-all row in the bottom-right slot that
+  Responses, plus Observers when `observers_enabled` is on),
+  plus a Zip-all row in the bottom-right slot that
   (Segment 18D) is now a real `{code}_bundle.zip` download of
   the whole porting set. Settings + Reviewers / Reviewees /
   Responses landed in Segment 12A-1 (2026-05-09); Relationships
@@ -118,24 +127,44 @@ chrome:
   Outbox stays a dev-diagnostic surface reachable via the "View
   outbox" button on Manage Invitations.
 
-**Reviewer surface** — `/me/sessions/{id}/{page}`:
+**Participant surfaces** — three audiences sharing the `/me/`
+chrome and a role-navigator chip strip that lets multi-role
+users swap between surfaces:
 
-- Multi-instrument session as paginated pages within one form;
-  each page is one instrument's table of (reviewee × response
-  field) cells. A group-scoped instrument (Segment 13C) renders
-  one row per boundary-defined group — a single reviewer answer
-  covers the whole group, counted once across reviewer state,
-  monitoring, and the Extract Data CSV.
-- Per-page status pills (`not_started` / `in_progress` /
-  `complete` / `submitted`) plus per-row submitted timestamps.
-- Save persists the current page's dirty inputs; Submit commits
-  the whole review session-wide.
-- Numeric inputs validate range natively and step-grid via JS
-  `setCustomValidity`; server-side `validate_value` is the
-  authoritative backstop.
-- Missing-required and invalid-value warnings render as their
-  own full-width cards below the bottom-grid; Submit is a hard
-  gate on missing required.
+- **Reviewer** at `/me/sessions/{id}/{page}`. Multi-instrument
+  session as paginated pages within one form; each page is one
+  instrument's table of (reviewee × response field) cells. A
+  group-scoped instrument (Segment 13C) renders one row per
+  boundary-defined group — a single reviewer answer covers the
+  whole group, counted once across reviewer state, monitoring,
+  and the Extract Data CSV. Per-page status pills
+  (`not_started` / `in_progress` / `complete` / `submitted`);
+  Save persists the current page's dirty inputs, Submit commits
+  the whole review session-wide. Numeric inputs validate range
+  natively and step-grid via JS `setCustomValidity`; server-side
+  `validate_value` is the authoritative backstop. Missing-required
+  and invalid-value warnings render as their own full-width
+  cards below the bottom-grid; Submit is a hard gate on
+  missing required.
+- **Reviewee** at `/me/sessions/{id}/results`. The reviewee's
+  view of responses received about them, per the per-instrument
+  Band 3 visibility policy (Raw / Anonymized / Summarized mode
+  picked by the operator per instrument × per audience). An
+  Acknowledge card at the foot stamps
+  `reviewees.results_acknowledged_at` (idempotent). Live since
+  W16 + W19.
+- **Observer** at `/me/sessions/{id}/collation`. Per-instrument
+  3-row tables — Row 1 distinct-reviewer headcount + shared
+  aggregate over the observer's in-cohort assignment pool, Row
+  2 distinct-reviewee headcount + same aggregate, Row 3
+  conditional `Download CSV` button. Identification mode
+  follows Band 3 (Raw / Anonymized rows / Anonymized summaries).
+  Anonymized downloads swap reviewer / reviewee names for
+  per-session opaque tokens (`R-a3f8b2c1` / `E-9d4e7f10` via
+  `app/services/participant_tokens.py`); the operator-side
+  deanonymization key ships as `participant_tokens.csv` from
+  the Extract data tab's Token keys card. MVP shipped
+  2026-06-02; partition refactor + Token keys 2026-06-03.
 
 **Lifecycle + audit.** Every mutating service writes an
 `audit_events` row with a typed `event_type` + canonical
