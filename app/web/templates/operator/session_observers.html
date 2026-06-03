@@ -118,13 +118,6 @@
                     <option value="observer.name">Observer: Name</option>
                     <option value="observer.email">Observer: Email</option>
                     <option value="observer.tag1">Observer: Tag 1</option>
-                    <option disabled>──────────</option>
-                    {% for canonical_key, friendly in cohort_match_tags.reviewer %}
-                      <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
-                    {% endfor %}
-                    {% for canonical_key, friendly in cohort_match_tags.reviewee %}
-                      <option value="{{ canonical_key }}">Reviewee: {{ friendly }}</option>
-                    {% endfor %}
                   </select>
                   <input form="observers-bulk-form" name="cohort_rule_operand_value"
                          data-observer-operand-value type="text" placeholder="value"
