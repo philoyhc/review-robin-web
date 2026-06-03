@@ -180,8 +180,13 @@ def test_workflow_archive_route_redirects_to_archived_lobby(
 def test_workflow_archive_route_works_from_ready_state(
     client: TestClient, db: Session
 ) -> None:
-    """Archive can fire from any non-archived state — the bulk-
-    archive route's draft-only filter doesn't apply here."""
+    """The underlying ``lifecycle.archive_session`` service is
+    permissive (accepts any non-archived state) — distinct from
+    the bulk-archive route's draft-only filter. Pins that
+    permissiveness for defense-in-depth: a deep-link / curl POST
+    from ``ready`` still works even though the Workflow card
+    only surfaces the Archive button once the session is
+    ``expired`` (the close-then-file-away sequence)."""
     response = client.post(
         "/operator/sessions",
         data={"name": "Arch", "code": "arch-from-ready", "description": ""},

@@ -175,8 +175,13 @@ def build_workflow_card_context(
     is_archived = lifecycle.is_archived(review_session)
     # Row 3 button gates — release / stop-release are post-
     # activation operations (the session has to be live or
-    # already-closed for them to make sense); archive can
-    # fire from any non-archived state.
+    # already-closed for them to make sense). Archive is
+    # post-close only: a session must be ``expired`` (Close
+    # session has fired) before the Workflow card surfaces the
+    # archive button. Archiving from earlier states is still
+    # reachable via the sessions-lobby bulk-archive flow
+    # (draft-only there); this card focuses on the close-then-
+    # file-away sequence.
     release_responses_live = (
         is_ready or is_expired
     ) and not is_archived
@@ -184,7 +189,7 @@ def build_workflow_card_context(
         lifecycle.is_response_release_window_open(review_session)
     )
     stop_release_live = response_release_window_open and not is_archived
-    archive_live = not is_archived
+    archive_live = is_expired
     return {
         "is_draft": is_draft,
         "is_validated": is_validated,

@@ -228,3 +228,45 @@ def test_parse_super_failure_decodes_query_params() -> None:
         "step": "precondition",
         "error": "Session is already activated.",
     }
+
+
+def test_archive_live_gates_on_expired_only(
+    client: TestClient, db: Session
+) -> None:
+    """Archive button surfaces only when the session is
+    ``expired`` — i.e. the operator has run Close session. The
+    underlying ``lifecycle.archive_session`` service stays
+    permissive, but the Workflow card chrome doesn't surface
+    Archive from earlier states (avoids piling buttons on
+    pre-close states + matches the close-then-file-away
+    sequence)."""
+    sess = _make_session(client, db, code="archive-gate")
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    # draft: archive button hidden.
+    assert ctx["archive_live"] is False
+
+    for state in ("validated", "ready"):
+        sess.status = state
+        db.commit()
+        ctx = views.build_workflow_card_context(
+            db, sess, return_to="home"
+        )
+        assert ctx["archive_live"] is False, (
+            f"archive button should not surface in {state!r}"
+        )
+
+    sess.status = "expired"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["archive_live"] is True
+
+    sess.status = "archived"
+    db.commit()
+    ctx = views.build_workflow_card_context(
+        db, sess, return_to="home"
+    )
+    assert ctx["archive_live"] is False

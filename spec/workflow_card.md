@@ -273,6 +273,27 @@ never promotes it to Primary.
 own stepper slots — they live inside **Prepare session**, which
 runs Generate + Validate in sequence (see below).
 
+**Row 3 (release / archive overrides) — Release responses · Stop releasing responses · Archive session**
+
+Side-channel manual operator affordances that override the
+scheduled release window and file the session out of the lobby.
+Distinct from Row 1 / Row 2 in that they don't advance the
+workflow stepper — Release / Stop release flip release-window
+timestamps in place; Archive moves the session out of the active
+lobby.
+
+| Button | 1 | 2 | 3 | 4 | 4W | 4Err | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Release responses | — | — | — | — | — | — | — | — | Sec | Sec | Sec | Sec |
+| Stop releasing responses | — | — | — | — | — | — | — | — | Sec† | Sec† | Sec† | Sec† |
+| Archive session | — | — | — | — | — | — | — | — | — | — | — | **Danger** |
+
+† Conditional on `lifecycle.is_response_release_window_open(session)` — i.e. `responses_release_at <= now() < responses_release_until`. In practice the release window opens via the Release responses button (or a scheduled release), so Stop is reachable in States 7 – 10 only after a release has fired.
+
+- **Release responses** POSTs `/operator/sessions/{id}/workflow/release-responses`: stamps `responses_release_at = now()` and clears `responses_release_until`. Live in `ready` + `expired` (anywhere post-activation).
+- **Stop releasing responses** POSTs `.../workflow/stop-release`: stamps `responses_release_until = now()` (the release window closes immediately). Live only when the release window is currently open.
+- **Archive session** POSTs `.../workflow/archive` and redirects to `/operator/sessions/archived` so the operator sees their just-archived row in context. **Live only in `expired`** — i.e. the operator must click Close session first. The underlying `lifecycle.archive_session` service is permissive (accepts any non-archived state), and the sessions-lobby bulk-archive flow exposes a draft-only path; the Workflow card focuses on the close-then-file-away sequence to keep the per-state button count manageable. Rendered in the `Danger` button style.
+
 ### Prepare session
 
 The Prepare session button POSTs to
