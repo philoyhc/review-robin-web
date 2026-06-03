@@ -1776,12 +1776,15 @@ Consumer-side surface (#1799 → #1804):
   Anonymized downloads (#1799). Salt mixes env-level
   `PARTICIPANT_TOKEN_SALT` with `session.created_at`.
 - **Cohort materialiser** —
-  `app/services/observer_cohort.py`: set-based
-  `materialize_cohort` for the surface stats rows + per-row
-  `assignment_matches_cohort` for the CSV download
-  (#1800 + #1804). `pair_context.*` left-side rules and
-  cross-roster `operand_tag` ops deferred — tracked in
-  `guide/clean_up.md` items 13 + 14.
+  `app/services/observer_cohort.py`: originally shipped with
+  a set-based `materialize_cohort` for the surface stats
+  rows + per-row `assignment_matches_cohort` for the CSV
+  download (#1800 + #1804). Refactored 2026-06-03 to the
+  partition model — see the 2026-06-03 entry below.
+  `pair_context.*` left-side rules and cross-roster
+  `operand_tag` ops deferred originally; both closed
+  2026-06-03 by removing them from the UI dropdowns (PRs
+  #1812 + #1813).
 - **Per-instrument stats** —
   `app/services/collation.py:build_cohort_stats_for_instrument`
   + `summarize_field` promotion from `_summarize_field`

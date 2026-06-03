@@ -13,26 +13,36 @@ sketch) lives in
 
 ## Status
 
-**MVP shipped 2026-06-02.** Operator-side plumbing was live
-through the participant-model rollout; the consumer side —
-cohort materialiser, per-instrument stats builder,
-participant-token helper, by-instrument cohort filter, and
-the collation surface body itself — landed in a five-PR
-ladder (#1799 → #1803) plus three follow-up tightenings
-(#1804 per-row cohort predicate + filename naming, #1805
-Band 3 valid-mode tightening, #1806 chip-cycle tightening).
+**MVP shipped 2026-06-02; observer ladder closed 2026-06-03.**
+Operator-side plumbing was live through the participant-model
+rollout; the consumer side — cohort materialiser,
+per-instrument stats builder, participant-token helper,
+by-instrument cohort filter, and the collation surface body
+itself — landed in a five-PR ladder (#1799 → #1803) plus
+three follow-up tightenings (#1804 per-row cohort predicate
++ filename naming, #1805 Band 3 valid-mode tightening,
+#1806 chip-cycle tightening). The four originally-deferred
+items (`guide/clean_up.md` items 13-16) all closed
+2026-06-03: `pair_context.*` left-side rules + cross-roster
+`operand_tag` dropped from the cohort editor dropdowns
+(PRs #1812 + #1813), the partition-model refactor on the
+collation surface stats (PR #1814), and the
+deanonymization key shipped as `participant_tokens.csv`
+from the Extract data tab's Token keys card (PR #1815)
+instead of a paste-a-token widget.
 
 Today `/me/sessions/{id}/collation` renders the per-instrument
-3-row table (reviewer-side aggregates / reviewee-side
-aggregates / conditional CSV download), and
+3-row table (Row 1 distinct-reviewer headcount + shared
+aggregate over the in-cohort assignment pool / Row 2
+distinct-reviewee headcount + same aggregate / Row 3
+conditional CSV download), and
 `.../collation/instruments/{instrument_id}.csv` streams the
 cohort-scoped slice in whichever identification mode Band 3
-authored.
+authored. The operator-side Token keys card on the Extract
+data tab serves `participant_tokens.csv` for ad-hoc
+deanonymization.
 
-Deferred items live in `guide/clean_up.md` (items 13-16) —
-`pair_context.*` left-side rules, cross-roster `operand_tag`,
-the operator-side decode-token widget, and a stats-row
-cohort-scope review.
+No open observer-specific items.
 
 ## Match-axis schema — decided (2026-06-02)
 
@@ -220,8 +230,17 @@ What's shipped (live in production):
   (#1802). Anonymized downloads swap reviewer / reviewee
   names for per-session opaque tokens and blank emails + tag
   columns so the only identifier is the token.
+- **Operator-side deanonymization key** — shipped 2026-06-03
+  as ``app/services/extracts/participant_tokens_extract.py``
+  + a Token keys card on the Extract data tab + a Token
+  keys chip on the intro card's Zip-all (PR #1815). One
+  row per Reviewer + Reviewee with their per-session token;
+  byte-identical to the tokens in the Anonymized
+  ``by_instrument`` CSVs so Ctrl-F on this file decodes any
+  token an observer brings the operator. Chrome + bundle
+  inclusion gated on ``session.observers_enabled``.
 
-## Cohort-consumer routes
+## Consumer + operator routes
 
 - ``GET /me/sessions/{id}/collation`` — observer surface body.
 - ``GET /me/sessions/{id}/collation/instruments/{instrument_id}.csv``
@@ -231,6 +250,13 @@ What's shipped (live in production):
   Identification mode follows Band 3 (`raw` / `anonymized`);
   `summarized` returns 404 (no per-row download is offered
   when the operator picked the aggregate view).
+- ``GET /operator/sessions/{id}/export/participant_tokens.csv``
+  — operator-side deanonymization key (Role / Name / Email
+  / Token, one row per Reviewer + Reviewee). The route
+  itself doesn't gate on ``observers_enabled``; only the
+  chrome that surfaces it does, so a deep-link lookup still
+  works if the toggle briefly drops. Emits
+  ``session.participant_tokens_extracted``.
 
 ## Cross-references
 

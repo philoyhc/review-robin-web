@@ -239,6 +239,32 @@ Builds on the same `_response_row_tuple` factored out in §2.7
 so a per-cell rename flows through to every file in this
 family.
 
+### 2.9 Participant tokens — `extracts/participant_tokens_extract.py`
+
+Shipped 2026-06-03 as the operator-side deanonymization key.
+Downloaded from the Extract data tab's `Token keys` card
+(`GET /sessions/{id}/export/participant_tokens.csv`) and
+included in the responses-bundle Zip-all archive when
+`session.observers_enabled` is on (driven by the intro
+card's `Token keys` chip — `?tokens=0` excludes).
+
+**No importer**: this CSV is a one-way reference, not a
+round-trippable shape. Sibling `reviewers.csv` /
+`reviewees.csv` keep their importer-compatible columns.
+
+**Columns**: `Role`, `Name`, `Email`, `Token`. One row per
+Reviewer + Reviewee on the session; reviewers block first
+(active rows first, then by name + email), then reviewees
+(same order rule). The token is computed by
+`app/services/participant_tokens.py::ParticipantTokenizer`
+— same chain the observer-side Anonymized
+`by_instrument` CSV uses, so a token here is byte-identical
+to its counterpart in any Anonymized download for the same
+session. Audit event:
+`session.participant_tokens_extracted` (`counts.rows` =
+reviewer + reviewee row count, header excluded). Closes
+`guide/clean_up.md` item 15.
+
 ---
 
 ## 3. Four importers (input contracts)

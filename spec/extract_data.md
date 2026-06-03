@@ -195,16 +195,17 @@ configurable surfaces below.
 | `by-instruments` | `By instruments` | Scope: include the by-instrument CSVs |
 | `reviewer-metadata` | `Reviewer response metadata` | Scope: include the reviewer metadata CSV |
 | `reviewee-metadata` | `Reviewee response metadata` | Scope: include the reviewee metadata CSV |
-| `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs |
+| `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs — drives `?data_shapes=0` on the bundle URL when off. |
+| `token-keys` | `Token keys` | Scope: include `participant_tokens.csv` in the bundle — drives `?tokens=0` when off. **Conditional**: chip + the matching Token keys card below only render when `session.observers_enabled` is on, since the tokens have no consumer without observers today. |
 
 The chip set is the scope-filter for the top-level
-`Zip all` zip. Today the button always ships the full
-`responses_bundle.zip` (unified Responses CSV +
-reviewer/reviewee stats + per-instrument long-format files);
-chip-driven filtering of that bundle is a follow-up. The
-chips persist via the shared `localStorage` plumbing so the
-operator's intent survives reload even before the wiring
-lands.
+`Zip all` zip. `data-shaper` + `token-keys` are wired
+(drive `?data_shapes=0` / `?tokens=0` on the bundle URL);
+`by-instruments` / `reviewer-metadata` / `reviewee-metadata`
+remain placeholder for the eventual scope split — today the
+bundle always carries those three regardless of chip state.
+The chips persist via the shared `localStorage` plumbing so
+the operator's intent survives reload.
 
 ## `By instrument` card
 
@@ -977,6 +978,44 @@ The wiring slice doesn't cover:
   `Download` button is wired; the outer `Zip all` button on
   the Data shaper card still renders `aria-disabled="true"`
   (bundle integration is a follow-up).
+
+## `Token keys` card
+
+Half-width card on the left, below the full-width `Data
+shaper` card. **Conditional**: renders only when
+`session.observers_enabled` is on — the tokens are the
+deanonymization key for the observer-side Anonymized
+output and have no other consumer today, so the chrome
+matches the intro card's `token-keys` chip in being
+gated on the same flag. The right column on this row is
+intentionally empty so the card reads as a deliberate
+half-width affordance under the full-width Data shaper.
+
+| Field | Value |
+|---|---|
+| Heading | `Token keys` |
+| Body copy | "Operator-side deanonymization key — one row per Reviewer + Reviewee with their per-session opaque token. Look up a token from an Anonymized observer download to recover the underlying name + email." |
+| Button id | `extract-data-token-keys-download` |
+| Button target | `/operator/sessions/{id}/export/participant_tokens.csv` |
+| Filename | `{code}_participant_tokens.csv` |
+| Columns | `Role`, `Name`, `Email`, `Token` |
+
+**No chip row** — the card has a single fixed-shape
+download. The matching `token-keys` chip on the intro card
+drives bundle inclusion (`?tokens=0` on the responses-bundle
+URL); this per-card button always ships the full mapping.
+
+**Audit event.** `session.participant_tokens_extracted`
+carries a `counts.rows` slot (reviewers + reviewees
+combined, header-excluded).
+
+**Token computation** mirrors the observer-side Anonymized
+output: same `ParticipantTokenizer` (env salt mixed with
+`session.created_at`), so a token here is byte-identical
+to the corresponding token in any Anonymized `by_instrument`
+download. Closes `guide/clean_up.md` item 15 (originally
+planned as a paste-a-token widget on the Observers Setup
+page).
 
 ## Cross-cutting behaviours
 

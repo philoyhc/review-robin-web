@@ -501,15 +501,20 @@ Instruments page (`new_model_rule_list("link2", …)` in
 - 3px vertical rule.
 - One or more rule cells stacked. Each cell is two rows:
   - Row 1: cross-roster attribute dropdown (Reviewer /
-    Reviewee / Pair Context tags — live tags only, friendly
-    labels) + operator-cycle button
-    (`IS THE SAME AS` / `IS DIFFERENT FROM` / `IS` / `IS NOT` /
-    `CONTAINS` / `DOES NOT CONTAIN`).
-  - Row 2: operand dropdown (Observer attrs + the same
-    roster attrs after a thin separator — only shown for the
-    two cross-attribute ops) **or** a text input (for the
-    four literal ops) + the `X` remove-rule button (disabled
-    on the first cell).
+    Reviewee tags — live tags only, friendly labels) +
+    operator-cycle button (`IS THE SAME AS` /
+    `IS DIFFERENT FROM` / `IS` / `IS NOT` / `CONTAINS` /
+    `DOES NOT CONTAIN`). `pair_context.*` tags are accepted
+    by the schema but dropped from the dropdown (PR #1812)
+    since the pair-level join isn't implemented; legacy
+    saved rules degrade safely via `ensureStaleOption`.
+  - Row 2: operand dropdown (Observer attrs only — Name /
+    Email / Tag 1) **only shown for the two cross-attribute
+    ops**; otherwise a text input (for the four literal ops)
+    + the `X` remove-rule button (disabled on the first
+    cell). Cross-roster `Reviewer:` / `Reviewee:` operands
+    are accepted by the schema but dropped from the dropdown
+    (PR #1813), same pair-level deferral.
 - Bottom-right: a primary `Save` button. `disabled` when no
   observer is checked; otherwise submits the editor state to
   every selected observer.
