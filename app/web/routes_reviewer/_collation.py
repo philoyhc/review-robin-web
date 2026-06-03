@@ -45,8 +45,7 @@ from app.services.extracts.by_instrument_extract import (
     serialize_by_instrument,
 )
 from app.services.observer_cohort import (
-    assignment_matches_cohort,
-    materialize_cohort,
+    materialize_cohort_assignments,
 )
 from app.web import views
 from app.web.deps import get_or_create_user, require_observer_in_session
@@ -136,22 +135,20 @@ def observer_collation_instrument_csv(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     # Refuse the download when the observer's rule materialises
-    # to nothing (no saved rule, or every predicate matched zero
-    # rows). Catches the typical "operator hasn't authored a
-    # cohort yet" case without hitting the row filter below.
-    cohort = materialize_cohort(db, observer=observer)
-    if not cohort.reviewer_ids and not cohort.reviewee_ids:
+    # to nothing on this instrument (no saved rule, or every
+    # predicate matched zero rows). Catches the typical "operator
+    # hasn't authored a cohort yet" case without writing an
+    # empty CSV.
+    cohort = materialize_cohort_assignments(
+        db, observer=observer, instrument_id=instrument.id
+    )
+    if not cohort.assignment_ids:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    rule_set = observer.cohort_rule
+    in_cohort_ids = cohort.assignment_ids
 
     def _row_in_cohort(assignment: Assignment) -> bool:
-        return assignment_matches_cohort(
-            rule_set,
-            observer=observer,
-            reviewer=assignment.reviewer,
-            reviewee=assignment.reviewee,
-        )
+        return assignment.id in in_cohort_ids
 
     # Find instrument position in the session for the meta header
     # / filename slug.

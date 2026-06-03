@@ -1,7 +1,7 @@
 """View-shape adapter for the observer collation surface.
 
 Composes the building blocks shipped in earlier slices —
-``observer_cohort.materialize_cohort``,
+``observer_cohort.materialize_cohort_assignments``,
 ``collation.build_cohort_stats_for_instrument``,
 ``visibility_policies.resolve_mode`` — into a per-instrument
 list of sections the ``/me/sessions/{id}/collation`` template
@@ -9,8 +9,10 @@ can iterate over.
 
 Per the MVP shape in ``guide/observers.md``, each section
 carries the two cohort-stats rows (reviewer side + reviewee
-side) + a conditional download URL whose presence depends on
-the instrument's Band 3 observer-audience mode:
+side) — both sharing one aggregate over the in-cohort
+assignment pool, differing in the per-side distinct-count badge —
+plus a conditional download URL whose presence depends on the
+instrument's Band 3 observer-audience mode:
 
 - ``raw`` / ``anonymized`` → download URL points at the
   per-instrument CSV route (the consumer of
@@ -44,7 +46,10 @@ from app.services.collation import (
     CohortStatsRow,
     build_cohort_stats_for_instrument,
 )
-from app.services.observer_cohort import materialize_cohort
+from app.services.observer_cohort import (
+    materialize_cohort_assignments,
+    observer_has_rule,
+)
 
 from ._instruments import instrument_heading
 
@@ -64,10 +69,12 @@ class InstrumentCollationSection:
     branch."""
 
     reviewer_stats: CohortStatsRow
-    """Row 1 — aggregates over the cohort's reviewers."""
+    """Row 1 — distinct reviewer count + shared aggregate over
+    the in-cohort assignment pool."""
 
     reviewee_stats: CohortStatsRow
-    """Row 2 — aggregates over the cohort's reviewees."""
+    """Row 2 — distinct reviewee count + shared aggregate over
+    the same in-cohort assignment pool."""
 
     download_url: str | None
     """Row 3 — non-None for ``raw`` / ``anonymized`` modes;
@@ -80,10 +87,12 @@ class ObserverCollationContext:
 
     sections: list[InstrumentCollationSection]
     cohort_empty: bool
-    """True when the observer's cohort_rule didn't materialize
-    any reviewer or reviewee ids (no saved rule, or the rule
-    matched zero rows). The template shows the empty-cohort
-    message instead of the section list."""
+    """True when the observer hasn't authored a cohort rule yet.
+    The template shows the empty-cohort message instead of the
+    section list. Sections that render with zero counts (rule
+    exists but matches nothing on a given instrument) are still
+    legitimate sections; only the "no rule at all" case is
+    treated as empty here."""
 
 
 def build_observer_collation_context(
@@ -95,8 +104,7 @@ def build_observer_collation_context(
     """Compose the per-instrument list the collation surface
     renders, scoped to the observer's cohort and the Band 3
     visibility policies."""
-    cohort = materialize_cohort(db, observer=observer)
-    if not cohort.reviewer_ids and not cohort.reviewee_ids:
+    if not observer_has_rule(observer):
         return ObserverCollationContext(sections=[], cohort_empty=True)
 
     while_ongoing_open = lifecycle.is_ready(review_session)
@@ -126,6 +134,10 @@ def build_observer_collation_context(
         )
         if mode is None:
             continue
+
+        cohort = materialize_cohort_assignments(
+            db, observer=observer, instrument_id=instrument.id
+        )
 
         reviewer_stats, reviewee_stats = (
             build_cohort_stats_for_instrument(

@@ -173,20 +173,19 @@ get lost when ``guide/observers.md`` is sweep-trimmed:
     *Source: ``guide/observers.md`` "Token design —
     decisions" (operator decoder bullet).*
 
-16. **Stats-row cohort scope review.** The collation
-    surface's Row 1 / Row 2 (reviewer-side / reviewee-side
-    aggregates) query ``cohort.reviewer_ids`` /
-    ``cohort.reviewee_ids`` independently via the
-    set-based materialiser. The CSV download tightened to
-    per-row predicate evaluation (PR #1804) because the
-    set-based approach degenerated on cross-side OR rules.
-    The stats rows have the same vulnerability in theory.
-    Worth a review with real data — the stats rows may
-    deserve a similar per-row reformulation, or the
-    set-based shape may turn out to be the right
-    perspective for those rows specifically (since they're
-    "side-grouped views", not "row passes/fails" views).
-    *Source: PR #1804 description, "Note on stats rows".*
+16. ~~**Stats-row cohort scope review.**~~
+    *Closed #current — the surface stats rows now honour the
+    partition model: ``materialize_cohort_assignments`` walks
+    per-(observer, instrument) assignments via the per-row
+    predicate, returning the in-cohort assignment id set + the
+    two side-distinct counts. ``build_cohort_stats_for_instrument``
+    runs one aggregate query against the pool and returns Row 1 +
+    Row 2 sharing the same ``field_cells`` + ``response_count``;
+    only the ``distinct_count`` headcount differs per row. The
+    pre-existing ``CohortIds`` set-based materialiser + Row 2's
+    "(anyone) writing about the cohort's reviewees" framing are
+    gone. Cross-side OR / single-side rule degeneracies fixed at
+    the source.*
 
 ## Workflow
 

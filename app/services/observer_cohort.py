@@ -1,42 +1,40 @@
 """Observer cohort materialiser — evaluate ``cohort_rule`` against
-the session's rosters and return the in-cohort participant ids.
+the session's assignments and return the in-cohort assignment ids
+plus per-side distinct counts.
 
-Reads ``Observer.cohort_rule`` (validated via
-``app.schemas.observer_cohort_rule.CohortRuleSet``) and produces
-a ``CohortIds`` pair: the set of reviewer ids + reviewee ids
-the observer is scoped to.
+The rule partitions assignments using reviewer / reviewee tag
+predicates (and optionally observer-attribute operands). Each
+assignment row binds one reviewer + one reviewee; the rule's
+per-row predicate decides whether that row is in the observer's
+cohort.
 
 Per-rule semantics:
 
-- Left side (``field``) is the rule's roster attribute. MVP
-  supports ``reviewer.tag1`` / ``reviewer.tag2`` / ``reviewer.tag3``
-  and the ``reviewee.*`` mirror. ``pair_context.*`` is recognised
-  by the schema but the materialiser treats it as an unmatched
-  rule (returns empty side) until the pair-level join lands as
-  a follow-up.
+- Left side (``field``) is the rule's roster attribute. Supports
+  ``reviewer.tag1`` / ``reviewer.tag2`` / ``reviewer.tag3`` and
+  the ``reviewee.*`` mirror. ``pair_context.*`` is recognised by
+  the schema but the predicate treats it as unmatched (pair-level
+  join deferred — see ``guide/clean_up.md`` item 13).
 - Right side is either:
   - a literal value (``operand_value``) for ``IS`` / ``IS NOT`` /
     ``CONTAINS`` / ``DOES NOT CONTAIN``;
   - an observer attribute (``operand_tag`` starting with
     ``observer.``) for ``IS THE SAME AS`` / ``IS DIFFERENT FROM``.
     Cross-roster operands (``reviewer.X IS THE SAME AS
-    reviewee.Y``) are recognised by the schema but the
-    materialiser treats them as unmatched until the pair-level
-    join lands.
+    reviewee.Y``) are recognised by the schema but the predicate
+    treats them as unmatched (same pair-level deferral — item 14).
 - Comparisons are case-insensitive. ``CONTAINS`` /
-  ``DOES NOT CONTAIN`` use substring (not regex) — explicitly
-  not regex per ``guide/observers.md`` MVP scope.
-- A rule that only constrains one side leaves the other side
-  unconstrained (None). ``AND`` then intersects only the
-  constrained sides; ``OR`` unions only the constrained sides.
-- An ``observer`` with no saved rule returns an empty cohort.
-  The operator must explicitly author a rule for observers to
-  see anything.
+  ``DOES NOT CONTAIN`` use substring (not regex).
+- Per-rule pass/fail bits combine via the rule set's combinator
+  (``AND`` → all must pass, ``OR`` → at least one must pass).
+- An observer with no saved rule (or an empty ``rules`` list)
+  yields an empty cohort.
 
-The downstream consumers (W17 collation surface, the
-By-instrument extract's cohort filter) call ``materialize_cohort``
-once per observer per request and treat the result as opaque
-``frozenset[int]`` bags.
+The downstream consumers (W17 collation surface stats + the
+per-instrument CSV download filter) call
+``materialize_cohort_assignments`` per ``(observer, instrument)``
+and treat the result as an opaque ``frozenset[int]`` of
+assignment ids plus the two side-distinct counts.
 """
 
 from __future__ import annotations
@@ -44,10 +42,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Observer, Reviewee, Reviewer
+from app.db.models import Assignment, Observer, Reviewee, Reviewer
 
 
 _REVIEWER_TAG_ATTRS: dict[str, str] = {
@@ -56,11 +54,7 @@ _REVIEWER_TAG_ATTRS: dict[str, str] = {
     "tag3": "tag_3",
 }
 
-_REVIEWEE_TAG_ATTRS: dict[str, str] = {
-    "tag1": "tag_1",
-    "tag2": "tag_2",
-    "tag3": "tag_3",
-}
+_REVIEWEE_TAG_ATTRS: dict[str, str] = _REVIEWER_TAG_ATTRS
 
 
 def _reviewer_attr_value(reviewer: Reviewer, attr: str) -> str | None:
@@ -75,28 +69,6 @@ def _reviewee_attr_value(reviewee: Reviewee, attr: str) -> str | None:
     if column is None:
         return None
     return getattr(reviewee, column, None)
-
-
-@dataclass(frozen=True)
-class CohortIds:
-    """Materialised observer cohort. Empty frozensets mean the
-    observer's rule didn't match any rows on that side."""
-
-    reviewer_ids: frozenset[int]
-    reviewee_ids: frozenset[int]
-
-
-_REVIEWER_TAG_COLUMNS: dict[str, Any] = {
-    "tag1": Reviewer.tag_1,
-    "tag2": Reviewer.tag_2,
-    "tag3": Reviewer.tag_3,
-}
-
-_REVIEWEE_TAG_COLUMNS: dict[str, Any] = {
-    "tag1": Reviewee.tag_1,
-    "tag2": Reviewee.tag_2,
-    "tag3": Reviewee.tag_3,
-}
 
 
 def _observer_attr_value(observer: Observer, attr: str) -> str | None:
@@ -117,221 +89,40 @@ def _observer_attr_value(observer: Observer, attr: str) -> str | None:
 
 
 @dataclass(frozen=True)
-class _RuleResult:
-    """Per-rule outcome before AND / OR combination. ``None`` on
-    a side means the rule didn't constrain that side (passes
-    through unchanged when intersecting)."""
+class CohortAssignments:
+    """Per-(observer, instrument) materialised cohort.
 
-    reviewer_ids: frozenset[int] | None
-    reviewee_ids: frozenset[int] | None
+    ``assignment_ids`` is the pool of in-cohort assignment rows
+    for the instrument; the surface's stats query filters
+    responses through it. The two ``distinct_*_count`` slots are
+    the per-side individual counts derivable from those
+    assignments — the headcount badges Row 1 / Row 2 render
+    alongside the shared aggregate.
+    """
+
+    assignment_ids: frozenset[int]
+    distinct_reviewer_count: int
+    distinct_reviewee_count: int
 
 
-_UNMATCHED = _RuleResult(
-    reviewer_ids=frozenset(), reviewee_ids=frozenset()
+EMPTY_COHORT = CohortAssignments(
+    assignment_ids=frozenset(),
+    distinct_reviewer_count=0,
+    distinct_reviewee_count=0,
 )
 
 
-def _evaluate_rule(
-    db: Session,
-    session_id: int,
-    observer: Observer,
-    rule: dict[str, Any],
-) -> _RuleResult:
-    """Single-rule evaluation. See module docstring for the
-    supported predicate shapes."""
-    field = str(rule.get("field", ""))
-    op = str(rule.get("op", ""))
-    operand_tag = str(rule.get("operand_tag", ""))
-    operand_value = str(rule.get("operand_value", ""))
-
-    if not field or "." not in field:
-        return _UNMATCHED
-
-    namespace, attr = field.split(".", 1)
-
-    # Resolve left-side column for the SQL filter.
-    if namespace == "reviewer":
-        column = _REVIEWER_TAG_COLUMNS.get(attr)
-    elif namespace == "reviewee":
-        column = _REVIEWEE_TAG_COLUMNS.get(attr)
-    else:
-        # ``pair_context.*`` — supported by the schema but the
-        # pair-level join isn't in the MVP materialiser yet.
-        return _UNMATCHED
-
-    if column is None:
-        return _UNMATCHED
-
-    # Resolve right-side value.
-    if op in ("IS THE SAME AS", "IS DIFFERENT FROM"):
-        if not operand_tag.startswith("observer."):
-            # Cross-roster operand (e.g. ``reviewer.tag1 IS THE
-            # SAME AS reviewee.tag2``) — supported by the schema
-            # but not by the MVP materialiser.
-            return _UNMATCHED
-        observer_attr = operand_tag.split(".", 1)[1]
-        right_value = _observer_attr_value(observer, observer_attr)
-        if right_value is None:
-            # Observer's referenced attribute is empty → no
-            # meaningful comparison; matches nothing.
-            return _UNMATCHED
-        # ``IS THE SAME AS`` → equality; ``IS DIFFERENT FROM`` →
-        # inequality. Both case-insensitive.
-        if op == "IS THE SAME AS":
-            sql_predicate = func.lower(column) == right_value.lower()
-        else:
-            sql_predicate = func.lower(column) != right_value.lower()
-    elif op == "IS":
-        sql_predicate = func.lower(column) == operand_value.lower()
-    elif op == "IS NOT":
-        sql_predicate = func.lower(column) != operand_value.lower()
-    elif op == "CONTAINS":
-        # Case-insensitive substring; ``%`` escape isn't needed
-        # because the operator types a plain value (no wildcards
-        # promised). MVP scope: not regex.
-        sql_predicate = func.lower(column).contains(operand_value.lower())
-    elif op == "DOES NOT CONTAIN":
-        sql_predicate = ~func.lower(column).contains(operand_value.lower())
-    else:
-        return _UNMATCHED
-
-    if namespace == "reviewer":
-        ids = frozenset(
-            row[0]
-            for row in db.execute(
-                select(Reviewer.id).where(
-                    Reviewer.session_id == session_id,
-                    sql_predicate,
-                )
-            ).all()
-        )
-        return _RuleResult(reviewer_ids=ids, reviewee_ids=None)
-    else:  # reviewee
-        ids = frozenset(
-            row[0]
-            for row in db.execute(
-                select(Reviewee.id).where(
-                    Reviewee.session_id == session_id,
-                    sql_predicate,
-                )
-            ).all()
-        )
-        return _RuleResult(reviewer_ids=None, reviewee_ids=ids)
-
-
-def _all_reviewer_ids(db: Session, session_id: int) -> frozenset[int]:
-    return frozenset(
-        row[0]
-        for row in db.execute(
-            select(Reviewer.id).where(Reviewer.session_id == session_id)
-        ).all()
-    )
-
-
-def _all_reviewee_ids(db: Session, session_id: int) -> frozenset[int]:
-    return frozenset(
-        row[0]
-        for row in db.execute(
-            select(Reviewee.id).where(Reviewee.session_id == session_id)
-        ).all()
-    )
-
-
-def _combine_and(
-    results: list[_RuleResult],
-    *,
-    session_id: int,
-    db: Session,
-) -> CohortIds:
-    """Intersect constrained sides; sides where every rule was
-    unconstrained fall back to the full roster on that side."""
-    reviewer_constrained = [
-        r.reviewer_ids for r in results if r.reviewer_ids is not None
-    ]
-    reviewee_constrained = [
-        r.reviewee_ids for r in results if r.reviewee_ids is not None
-    ]
-    if reviewer_constrained:
-        reviewer_ids = reviewer_constrained[0]
-        for s in reviewer_constrained[1:]:
-            reviewer_ids = reviewer_ids & s
-    else:
-        reviewer_ids = _all_reviewer_ids(db, session_id)
-    if reviewee_constrained:
-        reviewee_ids = reviewee_constrained[0]
-        for s in reviewee_constrained[1:]:
-            reviewee_ids = reviewee_ids & s
-    else:
-        reviewee_ids = _all_reviewee_ids(db, session_id)
-    return CohortIds(
-        reviewer_ids=frozenset(reviewer_ids),
-        reviewee_ids=frozenset(reviewee_ids),
-    )
-
-
-def _combine_or(
-    results: list[_RuleResult],
-    *,
-    session_id: int,
-    db: Session,
-) -> CohortIds:
-    """Union constrained sides; sides where any rule was
-    unconstrained fall back to the full roster on that side
-    (OR with "all" = "all")."""
-    reviewer_unconstrained = any(r.reviewer_ids is None for r in results)
-    reviewee_unconstrained = any(r.reviewee_ids is None for r in results)
-    if reviewer_unconstrained:
-        reviewer_ids = _all_reviewer_ids(db, session_id)
-    else:
-        reviewer_ids = frozenset()
-        for r in results:
-            assert r.reviewer_ids is not None
-            reviewer_ids = reviewer_ids | r.reviewer_ids
-    if reviewee_unconstrained:
-        reviewee_ids = _all_reviewee_ids(db, session_id)
-    else:
-        reviewee_ids = frozenset()
-        for r in results:
-            assert r.reviewee_ids is not None
-            reviewee_ids = reviewee_ids | r.reviewee_ids
-    return CohortIds(
-        reviewer_ids=frozenset(reviewer_ids),
-        reviewee_ids=frozenset(reviewee_ids),
-    )
-
-
-def materialize_cohort(db: Session, *, observer: Observer) -> CohortIds:
-    """Evaluate ``observer.cohort_rule`` and return the in-cohort
-    reviewer + reviewee ids for this observer.
-
-    Empty cohort (no matches on either side) when:
-
-    - ``observer.cohort_rule is None`` (the operator hasn't
-      authored anything yet);
-    - the saved rule has an empty ``rules`` list;
-    - the rule's predicates don't resolve to any rows.
-    """
-    rule_set = observer.cohort_rule
-    if not rule_set:
-        return CohortIds(frozenset(), frozenset())
-    rules = rule_set.get("rules") or []
-    if not rules:
-        return CohortIds(frozenset(), frozenset())
-
-    combinator = str(rule_set.get("combinator", "AND")).upper()
-    session_id = observer.session_id
-
-    per_rule = [
-        _evaluate_rule(db, session_id, observer, rule_dict)
-        for rule_dict in rules
-    ]
-
-    if combinator == "OR":
-        return _combine_or(per_rule, session_id=session_id, db=db)
-    return _combine_and(per_rule, session_id=session_id, db=db)
-
-
-# ── Per-row predicate (used by the CSV download filter) ───────────────
+def observer_has_rule(observer: Observer) -> bool:
+    """True iff the observer carries a saved cohort rule with at
+    least one rule cell. ``False`` when ``cohort_rule`` is
+    ``None`` or its ``rules`` list is empty — the surface uses
+    this to distinguish "no rule authored" (empty-cohort message)
+    from "rule authored but matched nothing on this instrument"
+    (sections render with zero counts)."""
+    if not observer.cohort_rule:
+        return False
+    rules = observer.cohort_rule.get("rules") or []
+    return bool(rules)
 
 
 def _rule_matches_row(
@@ -342,13 +133,9 @@ def _rule_matches_row(
     reviewee: Reviewee,
 ) -> bool:
     """Evaluate a single rule against one ``(reviewer, reviewee)``
-    pair plus the observer. Returns True iff the rule's
-    predicate is satisfied by the row.
-
-    Same vocabulary as ``_evaluate_rule`` (the materialiser's
-    set-side evaluator) but tested row-by-row rather than via
-    a SQL ``IN`` against a precomputed id set.
-    """
+    pair plus the observer. Returns ``True`` iff the rule's
+    predicate is satisfied. See module docstring for the
+    supported predicate shapes."""
     field = str(rule.get("field", ""))
     op = str(rule.get("op", ""))
     operand_tag = str(rule.get("operand_tag", ""))
@@ -363,16 +150,14 @@ def _rule_matches_row(
     elif namespace == "reviewee":
         left = _reviewee_attr_value(reviewee, attr)
     else:
-        # ``pair_context.*`` — supported by the schema but the
-        # pair-level join isn't in the MVP materialiser. Treat as
-        # unmatched.
+        # ``pair_context.*`` — schema permits but pair-level join
+        # isn't implemented (clean_up item 13).
         return False
 
     if op in ("IS THE SAME AS", "IS DIFFERENT FROM"):
         if not operand_tag.startswith("observer."):
-            # Cross-roster operand (e.g. ``reviewer.tag1 IS THE
-            # SAME AS reviewee.tag2``) — same deferral as the
-            # materialiser.
+            # Cross-roster operand — schema permits but pair-level
+            # join isn't implemented (clean_up item 14).
             return False
         observer_attr = operand_tag.split(".", 1)[1]
         right = _observer_attr_value(observer, observer_attr)
@@ -408,19 +193,12 @@ def assignment_matches_cohort(
     the observer's saved cohort rule.
 
     Per-row evaluation that respects what each rule actually
-    references — a rule on ``reviewer.*`` checks the reviewer,
-    a rule on ``reviewee.*`` checks the reviewee, and unmentioned
-    sides aren't second-guessed. The per-rule pass/fail bits
-    combine via the rule set's combinator (``AND`` → all rules
-    must pass, ``OR`` → at least one).
+    references — a rule on ``reviewer.*`` checks the reviewer, a
+    rule on ``reviewee.*`` checks the reviewee, and unmentioned
+    sides aren't second-guessed. Per-rule pass/fail bits combine
+    via the rule set's combinator (``AND`` → all, ``OR`` → any).
 
-    Used by the per-instrument CSV download filter so the
-    downloaded rows match the rule exactly — without the
-    set-based ``(in cohort_reviewers, in cohort_reviewees)``
-    AND/OR collapsing the rule into degenerate cases on
-    single-side / cross-side rule sets.
-
-    Returns False when ``rule_set`` is ``None`` or carries no
+    Returns ``False`` when ``rule_set`` is ``None`` or carries no
     rules (no cohort scope ⇒ no rows pass).
     """
     if not rule_set:
@@ -438,3 +216,61 @@ def assignment_matches_cohort(
     if combinator == "OR":
         return any(results)
     return all(results)
+
+
+def materialize_cohort_assignments(
+    db: Session,
+    *,
+    observer: Observer,
+    instrument_id: int,
+) -> CohortAssignments:
+    """Walk the (observer, instrument) assignment list and return
+    the in-cohort assignment ids + per-side distinct counts.
+
+    Returns ``EMPTY_COHORT`` when:
+    - ``observer.cohort_rule`` is ``None`` or carries no rule
+      cells (caught by ``observer_has_rule``);
+    - the rule doesn't match any of the instrument's assignments.
+
+    Reviewer + reviewee are eager-loaded via ``joinedload`` so the
+    Python-side per-row evaluation is one query, not 1 + 2·N.
+    """
+    if not observer_has_rule(observer):
+        return EMPTY_COHORT
+
+    rule_set = observer.cohort_rule
+    rows = (
+        db.execute(
+            select(Assignment)
+            .options(
+                joinedload(Assignment.reviewer),
+                joinedload(Assignment.reviewee),
+            )
+            .where(
+                Assignment.session_id == observer.session_id,
+                Assignment.instrument_id == instrument_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    assignment_ids: set[int] = set()
+    reviewer_ids: set[int] = set()
+    reviewee_ids: set[int] = set()
+    for asgn in rows:
+        if assignment_matches_cohort(
+            rule_set,
+            observer=observer,
+            reviewer=asgn.reviewer,
+            reviewee=asgn.reviewee,
+        ):
+            assignment_ids.add(asgn.id)
+            reviewer_ids.add(asgn.reviewer_id)
+            reviewee_ids.add(asgn.reviewee_id)
+
+    return CohortAssignments(
+        assignment_ids=frozenset(assignment_ids),
+        distinct_reviewer_count=len(reviewer_ids),
+        distinct_reviewee_count=len(reviewee_ids),
+    )

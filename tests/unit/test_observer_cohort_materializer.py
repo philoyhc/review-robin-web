@@ -1,22 +1,37 @@
-"""Unit tests for ``app.services.observer_cohort.materialize_cohort``.
+"""Unit tests for
+``app.services.observer_cohort.materialize_cohort_assignments``.
 
-Pins per-rule semantics + AND/OR combination + unsupported
-edge cases (pair_context, cross-roster operand) before the
-collation surface starts reading the result.
+Pins the walker shape: empty-rule / no-match return ``EMPTY_COHORT``,
+single-side rules pick out the matching assignments, distinct
+side counts derive from the matching pool, and the walker scopes
+strictly to the given session + instrument.
+
+Per-rule predicate semantics (every operator, AND / OR
+combinator, observer-attribute operands, single-side rules
+ignoring the other side, pair_context / cross-roster deferral)
+are pinned separately in ``test_assignment_matches_cohort.py``.
 """
 
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
+from app.db.models import (
+    Assignment,
+    Instrument,
+    Observer,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.services.observer_cohort import (
-    CohortIds,
-    materialize_cohort,
+    EMPTY_COHORT,
+    materialize_cohort_assignments,
 )
 
 
-def _session(db: Session, *, code: str) -> tuple[ReviewSession, User]:
+def _session(db: Session, *, code: str) -> ReviewSession:
     user = User(email=f"{code}@x.edu", display_name="Op")
     db.add(user)
     db.flush()
@@ -28,7 +43,14 @@ def _session(db: Session, *, code: str) -> tuple[ReviewSession, User]:
     )
     db.add(sess)
     db.flush()
-    return sess, user
+    return sess
+
+
+def _instrument(db: Session, sess: ReviewSession) -> Instrument:
+    inst = Instrument(session_id=sess.id, name="Inst", order=0)
+    db.add(inst)
+    db.flush()
+    return inst
 
 
 def _reviewer(
@@ -38,16 +60,9 @@ def _reviewer(
     name: str,
     email: str,
     tag_1: str | None = None,
-    tag_2: str | None = None,
-    tag_3: str | None = None,
 ) -> Reviewer:
     r = Reviewer(
-        session_id=session_id,
-        name=name,
-        email=email,
-        tag_1=tag_1,
-        tag_2=tag_2,
-        tag_3=tag_3,
+        session_id=session_id, name=name, email=email, tag_1=tag_1
     )
     db.add(r)
     db.flush()
@@ -61,16 +76,12 @@ def _reviewee(
     name: str,
     email_or_identifier: str,
     tag_1: str | None = None,
-    tag_2: str | None = None,
-    tag_3: str | None = None,
 ) -> Reviewee:
     r = Reviewee(
         session_id=session_id,
         name=name,
         email_or_identifier=email_or_identifier,
         tag_1=tag_1,
-        tag_2=tag_2,
-        tag_3=tag_3,
     )
     db.add(r)
     db.flush()
@@ -82,14 +93,12 @@ def _observer(
     session_id: int,
     *,
     email: str,
-    display_name: str | None = None,
     tag_1: str | None = None,
     cohort_rule: dict | None = None,
 ) -> Observer:
     o = Observer(
         session_id=session_id,
         email=email,
-        display_name=display_name,
         tag_1=tag_1,
         cohort_rule=cohort_rule,
     )
@@ -98,384 +107,185 @@ def _observer(
     return o
 
 
+def _assignment(
+    db: Session,
+    sess: ReviewSession,
+    inst: Instrument,
+    reviewer: Reviewer,
+    reviewee: Reviewee,
+) -> Assignment:
+    a = Assignment(
+        session_id=sess.id,
+        instrument_id=inst.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(a)
+    db.flush()
+    return a
+
+
+def _rule_reviewer_tag1_is(value: str) -> dict:
+    return {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": value,
+            }
+        ],
+    }
+
+
 def test_no_saved_rule_returns_empty_cohort(db: Session) -> None:
-    sess, _ = _session(db, code="m-none")
+    sess = _session(db, code="mca-none")
+    inst = _instrument(db, sess)
     obs = _observer(db, sess.id, email="o@x")
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort == CohortIds(frozenset(), frozenset())
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst.id
+    )
+    assert cohort == EMPTY_COHORT
 
 
 def test_empty_rules_returns_empty_cohort(db: Session) -> None:
-    sess, _ = _session(db, code="m-empty")
+    sess = _session(db, code="mca-empty")
+    inst = _instrument(db, sess)
     obs = _observer(
         db,
         sess.id,
         email="o@x",
         cohort_rule={"combinator": "AND", "rules": []},
     )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort == CohortIds(frozenset(), frozenset())
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst.id
+    )
+    assert cohort == EMPTY_COHORT
 
 
-def test_reviewer_is_filters_reviewers_leaves_reviewees_open(
+def test_single_side_rule_picks_out_matching_assignments(
     db: Session,
 ) -> None:
-    sess, _ = _session(db, code="m-rev-is")
+    """``reviewer.tag1 IS "math"`` picks the assignments whose
+    reviewer carries that tag; everything else is excluded."""
+    sess = _session(db, code="mca-rev-tag")
+    inst = _instrument(db, sess)
     r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
-    _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
-    e1 = _reviewee(db, sess.id, name="EA", email_or_identifier="ea@x", tag_1="math")
-    e2 = _reviewee(db, sess.id, name="EB", email_or_identifier="eb@x", tag_1="bio")
+    r2 = _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
+    e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
+    a_in = _assignment(db, sess, inst, r1, e1)
+    a_out = _assignment(db, sess, inst, r2, e1)
     obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                }
-            ],
-        },
+        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
     )
-    cohort = materialize_cohort(db, observer=obs)
-    # reviewer.tag1 IS "math" → only r1; reviewee side
-    # unconstrained → all reviewees.
-    assert cohort.reviewer_ids == frozenset({r1.id})
-    assert cohort.reviewee_ids == frozenset({e1.id, e2.id})
+    db.commit()
+
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst.id
+    )
+    assert cohort.assignment_ids == frozenset({a_in.id})
+    assert a_out.id not in cohort.assignment_ids
+    assert cohort.distinct_reviewer_count == 1
+    assert cohort.distinct_reviewee_count == 1
 
 
-def test_reviewee_contains_is_case_insensitive_substring(
+def test_distinct_counts_can_differ(db: Session) -> None:
+    """The pool can be wide-and-short (few reviewers, many
+    reviewees) or vice versa — the distinct counts reflect that."""
+    sess = _session(db, code="mca-asym")
+    inst = _instrument(db, sess)
+    r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
+    e1 = _reviewee(db, sess.id, name="E1", email_or_identifier="e1@x")
+    e2 = _reviewee(db, sess.id, name="E2", email_or_identifier="e2@x")
+    e3 = _reviewee(db, sess.id, name="E3", email_or_identifier="e3@x")
+    _assignment(db, sess, inst, r1, e1)
+    _assignment(db, sess, inst, r1, e2)
+    _assignment(db, sess, inst, r1, e3)
+    obs = _observer(
+        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
+    )
+    db.commit()
+
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst.id
+    )
+    assert len(cohort.assignment_ids) == 3
+    assert cohort.distinct_reviewer_count == 1
+    assert cohort.distinct_reviewee_count == 3
+
+
+def test_no_matches_returns_empty_ids_but_keeps_zero_counts(
     db: Session,
 ) -> None:
-    sess, _ = _session(db, code="m-ree-contains")
-    _reviewee(db, sess.id, name="E1", email_or_identifier="e1@x", tag_1="MathStream")
-    e2 = _reviewee(db, sess.id, name="E2", email_or_identifier="e2@x", tag_1="mathfoo")
-    _reviewee(db, sess.id, name="E3", email_or_identifier="e3@x", tag_1="biology")
+    """Rule exists but matches no assignment → empty ids and
+    zero counts (not ``EMPTY_COHORT`` per se, but equivalent)."""
+    sess = _session(db, code="mca-no-match")
+    inst = _instrument(db, sess)
+    r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="bio")
+    e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
+    _assignment(db, sess, inst, r1, e1)
     obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewee.tag1",
-                    "op": "CONTAINS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                }
-            ],
-        },
+        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
     )
-    cohort = materialize_cohort(db, observer=obs)
-    # Case-insensitive substring → MathStream + mathfoo, not biology.
-    # MathStream is found via case-insensitive comparison.
-    assert e2.id in cohort.reviewee_ids
-    assert len(cohort.reviewee_ids) == 2
+    db.commit()
 
-
-def test_is_not_negates(db: Session) -> None:
-    sess, _ = _session(db, code="m-is-not")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
-    r2 = _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS NOT",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                }
-            ],
-        },
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst.id
     )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r2.id})
+    assert cohort.assignment_ids == frozenset()
+    assert cohort.distinct_reviewer_count == 0
+    assert cohort.distinct_reviewee_count == 0
 
 
-def test_does_not_contain_negates_substring(db: Session) -> None:
-    sess, _ = _session(db, code="m-not-contains")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="math_a")
-    r2 = _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "DOES NOT CONTAIN",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r2.id})
-
-
-def test_is_the_same_as_observer_attribute(db: Session) -> None:
-    sess, _ = _session(db, code="m-same-as")
-    r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="cohort-A")
-    _reviewer(db, sess.id, name="B", email="b@x", tag_1="cohort-B")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        tag_1="cohort-A",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS THE SAME AS",
-                    "operand_tag": "observer.tag1",
-                    "operand_value": "",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r1.id})
-
-
-def test_is_different_from_observer_attribute(db: Session) -> None:
-    sess, _ = _session(db, code="m-diff-from")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="cohort-A")
-    r2 = _reviewer(db, sess.id, name="B", email="b@x", tag_1="cohort-B")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        tag_1="cohort-A",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS DIFFERENT FROM",
-                    "operand_tag": "observer.tag1",
-                    "operand_value": "",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r2.id})
-
-
-def test_observer_attribute_missing_yields_empty(db: Session) -> None:
-    sess, _ = _session(db, code="m-missing-attr")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="x")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        # tag_1 is None — IS THE SAME AS observer.tag1 has no
-        # meaningful operand → empty cohort.
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS THE SAME AS",
-                    "operand_tag": "observer.tag1",
-                    "operand_value": "",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset()
-
-
-def test_and_combinator_intersects_constrained_sides(db: Session) -> None:
-    sess, _ = _session(db, code="m-and")
-    r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="math", tag_2="senior")
-    _reviewer(db, sess.id, name="B", email="b@x", tag_1="math", tag_2="junior")
-    _reviewer(db, sess.id, name="C", email="c@x", tag_1="bio", tag_2="senior")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                },
-                {
-                    "field": "reviewer.tag2",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "senior",
-                },
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r1.id})
-
-
-def test_or_combinator_unions_constrained_sides(db: Session) -> None:
-    sess, _ = _session(db, code="m-or")
+def test_other_instruments_assignments_are_excluded(
+    db: Session,
+) -> None:
+    """Assignments on a different instrument in the same session
+    must not contribute, even if their reviewer/reviewee would
+    pass the rule."""
+    sess = _session(db, code="mca-other-inst")
+    inst_a = _instrument(db, sess)
+    inst_b = Instrument(session_id=sess.id, name="Inst B", order=1)
+    db.add(inst_b)
+    db.flush()
     r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
-    r2 = _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
-    _reviewer(db, sess.id, name="C", email="c@x", tag_1="chem")
+    e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
+    a_a = _assignment(db, sess, inst_a, r1, e1)
+    _assignment(db, sess, inst_b, r1, e1)
     obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "OR",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                },
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "bio",
-                },
-            ],
-        },
+        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
     )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({r1.id, r2.id})
+    db.commit()
 
-
-def test_and_with_mixed_sides(db: Session) -> None:
-    sess, _ = _session(db, code="m-and-cross")
-    r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
-    _reviewer(db, sess.id, name="B", email="b@x", tag_1="bio")
-    e1 = _reviewee(db, sess.id, name="E1", email_or_identifier="e1@x", tag_1="senior")
-    _reviewee(db, sess.id, name="E2", email_or_identifier="e2@x", tag_1="junior")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                },
-                {
-                    "field": "reviewee.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "senior",
-                },
-            ],
-        },
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst_a.id
     )
-    cohort = materialize_cohort(db, observer=obs)
-    # Reviewer side constrained to {r1}; reviewee side
-    # constrained to {e1}.
-    assert cohort.reviewer_ids == frozenset({r1.id})
-    assert cohort.reviewee_ids == frozenset({e1.id})
+    assert cohort.assignment_ids == frozenset({a_a.id})
 
 
-def test_pair_context_rule_returns_empty_for_now(db: Session) -> None:
-    """``pair_context.*`` is recognised by the schema but the
-    materialiser doesn't yet do the pair-level join. The rule
-    is treated as unmatched until a future PR adds the join."""
-    sess, _ = _session(db, code="m-pair-ctx")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="math")
-    _reviewee(db, sess.id, name="E", email_or_identifier="e@x", tag_1="math")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "pair_context.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "tutorial-A",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset()
-    assert cohort.reviewee_ids == frozenset()
-
-
-def test_cross_roster_operand_tag_returns_empty_for_now(db: Session) -> None:
-    """``reviewer.tag1 IS THE SAME AS reviewee.tag2`` is
-    recognised by the schema but the materialiser doesn't yet
-    do the pair-level join."""
-    sess, _ = _session(db, code="m-cross-operand")
-    _reviewer(db, sess.id, name="A", email="a@x", tag_1="x")
-    _reviewee(db, sess.id, name="E", email_or_identifier="e@x", tag_1="x")
-    obs = _observer(
-        db,
-        sess.id,
-        email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS THE SAME AS",
-                    "operand_tag": "reviewee.tag1",
-                    "operand_value": "",
-                }
-            ],
-        },
-    )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset()
-    assert cohort.reviewee_ids == frozenset()
-
-
-def test_only_in_session_observers_are_matched(db: Session) -> None:
-    """The materialiser must not cross session boundaries."""
-    sess_a, _ = _session(db, code="m-cross-sess-a")
-    sess_b, _ = _session(db, code="m-cross-sess-b")
-    # Same tag value across sessions.
-    in_a = _reviewer(db, sess_a.id, name="A", email="a@x", tag_1="math")
-    _reviewer(db, sess_b.id, name="B", email="b@x", tag_1="math")
+def test_only_in_session_assignments_match(db: Session) -> None:
+    """Assignments in a different session never contribute, even
+    when the rule + reviewer/reviewee tags align."""
+    sess_a = _session(db, code="mca-cross-a")
+    sess_b = _session(db, code="mca-cross-b")
+    inst_a = _instrument(db, sess_a)
+    inst_b = _instrument(db, sess_b)
+    r_a = _reviewer(db, sess_a.id, name="A", email="ra@x", tag_1="math")
+    r_b = _reviewer(db, sess_b.id, name="B", email="rb@x", tag_1="math")
+    e_a = _reviewee(db, sess_a.id, name="E", email_or_identifier="ea@x")
+    e_b = _reviewee(db, sess_b.id, name="E", email_or_identifier="eb@x")
+    a_a = _assignment(db, sess_a, inst_a, r_a, e_a)
+    _assignment(db, sess_b, inst_b, r_b, e_b)
     obs = _observer(
         db,
         sess_a.id,
         email="o@x",
-        cohort_rule={
-            "combinator": "AND",
-            "rules": [
-                {
-                    "field": "reviewer.tag1",
-                    "op": "IS",
-                    "operand_tag": "",
-                    "operand_value": "math",
-                }
-            ],
-        },
+        cohort_rule=_rule_reviewer_tag1_is("math"),
     )
-    cohort = materialize_cohort(db, observer=obs)
-    assert cohort.reviewer_ids == frozenset({in_a.id})
+    db.commit()
+
+    cohort = materialize_cohort_assignments(
+        db, observer=obs, instrument_id=inst_a.id
+    )
+    assert cohort.assignment_ids == frozenset({a_a.id})
