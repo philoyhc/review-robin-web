@@ -1,7 +1,9 @@
 # Segment 18O — Post-participants-model file splits
 
-**Status:** Stub created 2026-06-03. Source: the
-[2026-06-03 codebase assessment](codebase_assessment_03jun.md)
+**Status:** Shipped 2026-06-03. PRs #1823 (Track A) → #1824
+(Track B) → #1825 (Track D) → #1826 (Track C). All four
+tracks merged in order; 2,546 tests green throughout. Source:
+the [2026-06-03 codebase assessment](codebase_assessment_03jun.md)
 §5 "Weaknesses" + §9 "Proposed file splits". Three production
 files have sat in the 1,300+ LOC band unchanged since the
 2026-06-01 assessment (`assignments.py`, `scheduled_events.py`,

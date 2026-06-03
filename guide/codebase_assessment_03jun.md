@@ -5,7 +5,14 @@ clean-up items 13-16 retired, the W17 collation surface body
 shipped, the cohort partition refactor, and the Token keys
 deanonymization extract) **plus** a Workflow card UX pass that
 collapses the 3-row stepper into a single row of ≤ 4 visible
-buttons (each at 25% column width, inactive hidden).
+buttons (each at 25% column width, inactive hidden) **plus**
+the **Segment 18O four-track file-splits housekeeping pass**
+that broke up every production file in the 1,300+ LOC band.
+
+**Updated end-of-day 2026-06-03** to reflect the Segment 18O
+completion — all four tracks merged after the original
+write-up. The biggest-files table + the §9 file-split proposals
+have rolled accordingly; the rest of the analysis stands.
 
 Specifically, since the 2026-06-01 snapshot:
 
@@ -37,6 +44,20 @@ Specifically, since the 2026-06-01 snapshot:
   #1820) — 3 rows of buttons (10 conceptual slots) → single
   row, ≤ 4 visible per state, 25% width grid, Codex-flagged
   backdated-release-at edge case closed.
+- **Segment 18O — Post-participants-model file splits**
+  (PRs #1822 stub + #1823 → #1826, 2026-06-03, end-of-day).
+  Four-track housekeeping pass on the four production files in
+  the 1,300+ LOC band: **Track A** `scheduled_events.py` (1,380
+  → 7 modules), **Track B** `assignments.py` (1,426 → 4
+  modules), **Track D** `routes_reviewer/_surface.py` (1,299
+  → 4 modules), **Track C** `session_config_io/_apply.py`
+  (1,361 → 8 sibling modules + slim orchestrator). ~5,500 LOC
+  redistributed across ~23 small modules; biggest file in the
+  repo drops from 1,426 to 1,097
+  (`instruments/_instrument_crud.py`, untouched). No behaviour
+  change across all four tracks; 2,546 tests stayed green
+  throughout. Plan + closure write-up in
+  `guide/segment_18O_post_participants_model_file_splits.md`.
 
 All shipped 2026-06-02 → 2026-06-03 (79 merge commits in two
 calendar days; ~95 non-merge commits on 2026-06-02 alone, the
@@ -186,38 +207,48 @@ otherwise unchanged from the 01jun snapshot.
 
 | Area | Files | LOC | Δ from 01jun |
 |---|---|---|---|
-| `app/` Python (production) | 162 | **52,231** | +1,897 (+3.8%) |
+| `app/` Python (production) | **184** | **52,840** | +2,506 (+5.0%) |
 | `app/web/templates/` | 59 | **21,469** | +561 (+2.7%) |
 | `tests/` | 240 (161 integration + 67 unit + 12 conftest/helpers) | **83,483** | +4,614 (+5.8%) |
 | Alembic migrations | **76** | — | +1 (observer cohort_rule column) |
 
-Test-to-production-Python ratio **~1.60×** (vs ~1.57× on
-01jun — still ticking up). **2,546 tests passing**, 17 skipped
-(was 2,417 + 17 on 01jun; +129 in two days). Suite **green**
-on both the SQLite default and the `postgres:16` CI service;
-`ruff` clean.
+Production file count **184** (was 162 mid-day before Segment
+18O carved up the four 1,300+ files into ~23 small modules
+under four new packages). Production LOC delta **+2,506** —
++1,897 from the observer arc + ~+609 from the Segment 18O
+re-export-wall surface area.
 
-**Biggest files** (top 10 production Python):
+Test-to-production-Python ratio **~1.58×** (vs ~1.57× on
+01jun — flat once 18O's re-exports are factored in). **2,546
+tests passing**, 17 skipped (was 2,417 + 17 on 01jun; +129 in
+two days). Suite **green** on both the SQLite default and the
+`postgres:16` CI service; `ruff` clean.
+
+**Biggest files** (top 10 production Python, post-18O):
 
 | LOC | File | Δ |
 |---|---|---|
-| 1,426 | `app/services/assignments.py` | unchanged |
-| 1,380 | `app/services/scheduled_events.py` | unchanged |
-| 1,361 | `app/services/session_config_io/_apply.py` | unchanged |
-| 1,299 | `app/web/routes_reviewer/_surface.py` | unchanged |
 | 1,097 | `app/services/instruments/_instrument_crud.py` | unchanged |
 | 1,068 | `app/web/routes_operator/_instruments.py` | unchanged |
 | 1,046 | `app/services/session_lifecycle.py` | +18 (W17 release / close / archive helpers) |
 | 999 | `app/web/views/_instruments.py` | unchanged |
 | 982 | `app/web/routes_operator/_quick_setup.py` | unchanged |
 | 976 | `app/services/responses/_core.py` | unchanged |
+| 966 | `app/services/instruments/_response_fields.py` | unchanged |
+| 965 | `app/services/audit.py` | unchanged |
+| 955 | `app/services/validation.py` | unchanged |
+| 916 | `app/services/instruments/_display_fields.py` | unchanged |
 
-Still **10 files past 800 LOC**, still **3 past 1,300**. The
-three Appendix §9 split candidates from 01jun (`assignments.py`
-/ `scheduled_events.py` / `session_config_io/_apply.py`) are
-unchanged; `session_lifecycle.py` is newly close to the
-threshold but doesn't justify a split yet (clean concern
-boundaries internally, well-scoped helpers).
+**Zero files past 1,100 LOC.** The four split-product packages
+distribute their old monoliths across modules of 24-764 LOC
+each; biggest split-product file is
+`app/services/assignments/_generate.py` at 764 LOC (cohesive
+diff → materialise → reconcile pipeline; intentional single
+seam). The top-of-list moves from the four 1,300+ files to a
+cluster of seven 900+ files — no longer a "long tail of fat
+modules" pattern but a stable plateau where the next-natural-
+split window is `session_lifecycle.py` if it ever pushes past
+~1,200 (today it's clean internally).
 
 The cohort + collation arc almost entirely landed in **new
 small modules**: `observer_cohort.py` (303 LOC),
@@ -229,15 +260,20 @@ small modules**: `observer_cohort.py` (303 LOC),
 `_collation.py` reviewer route (208 LOC). That's the §12.B
 discipline holding — net +1,897 production LOC distributed
 across new modules + minor edits to existing files, not
-accumulated on the already-big seams.
+accumulated on the already-big seams. The 18O splits then
+broke up the legacy seams *without* writing new behaviour —
+~+609 LOC of re-export surface area for ~5,500 LOC redistributed.
 
-**Package shape:**
+**Package shape (post-18O):**
 
-- `app/services/` — **34** modules + **5** sub-packages
-  (was 31 + 4; the new modules listed above).
+- `app/services/` — **30** top-level modules + **8** sub-packages
+  (was 31 + 4; +3 new packages from 18O — `assignments/`,
+  `scheduled_events/`, `session_config_io/` already existed but
+  grew by 8 files; -3 legacy modules consumed into those
+  packages; +1 `collation.py` from the observer arc).
 - `app/web/routes_operator/` — **21** slice files (unchanged).
-- `app/web/routes_reviewer/` — **8** slice files (unchanged;
-  `_collation.py` was already there as a placeholder).
+- `app/web/routes_reviewer/` — **7** slice files + **1**
+  sub-package (`_surface/` from 18O Track D).
 - `app/web/views/` — **18** view adapters (was 16; +
   `_observers.py`, `_observer_collation.py`).
 - `app/db/models/` — 20 model files (unchanged; cohort_rule
@@ -296,8 +332,18 @@ covers the whole arc, and the four observer follow-ups
   surface concerns and landed across **20+ small PRs** (most
   ≤ 300 LOC) without any single file ballooning. New code
   arrived in new modules; the per-route / per-view / per-service
-  package patterns absorbed the growth flatly. The biggest-file
-  list is unchanged top-7 from 01jun.
+  package patterns absorbed the growth flatly.
+- **Segment 18O actioned the long-standing §9 file-split
+  proposals.** Four tracks, four PRs, four merged — the
+  three 01jun candidates (`assignments.py`,
+  `scheduled_events.py`, `session_config_io/_apply.py`) all
+  shipped, plus a fourth (`routes_reviewer/_surface.py`)
+  added mid-stream once it joined the 1,300+ club under the
+  participant-model rollout. Zero behaviour change; one
+  white-box test updated; the public surface stayed byte-
+  stable via the package `__init__.py` re-export pattern
+  established by 18N. Biggest file in the repo dropped
+  29 % — from 1,426 to 1,097 — in one day.
 - **The partition-model refactor is a good worked example of
   spec-driven correctness.** The user's "one pool of in-cohort
   assignments" mental model surfaced through conversation,
@@ -330,21 +376,14 @@ covers the whole arc, and the four observer follow-ups
 
 ## 5. Weaknesses
 
-- **Three production files in the 1,300+ band, same as 01jun.**
-  The §9 Appendix split proposals haven't been actioned;
-  nothing in this stream touched them. They remain the natural
-  next-housekeeping-window targets:
-  1. `app/services/assignments.py` (1,426 LOC) — three cohesive
-     concerns (coverage / self-review / generate-reconcile).
-  2. `app/services/scheduled_events.py` (1,380 LOC) — rule-
-     banner-marked seams between five concerns.
-  3. `app/services/session_config_io/_apply.py` (1,361 LOC) —
-     per-section appliers + the orchestrator.
-  The plan in the 01jun assessment §9 still stands verbatim; no
-  rework needed when these are picked up. `session_lifecycle.py`
-  (1,046) is newly close but the internal structure is clean
-  (lifecycle transitions cluster naturally) so a split isn't
-  pressing.
+- **No files past 1,100 LOC; the long tail of fat modules is
+  gone.** Segment 18O's four-track sweep retired every file in
+  the 1,300+ band, and the new top-10 sits at 916–1,097 LOC —
+  a flatter plateau where no single file dominates. The
+  closest split candidate now is `session_lifecycle.py`
+  (1,046 LOC), but its internal structure is clean (lifecycle
+  transitions cluster naturally), so it's a watchlist item,
+  not a queued split.
 - **The 14B email infrastructure tail is the last truly
   in-flight thing.** W20 (reviewee / observer email
   notifications) and W21 (magic-link landings) are both in
@@ -373,7 +412,7 @@ No other bugs surfaced in PRs #1799 → #1820.
 
 ## 7. Estimated size upon completion
 
-Updated projection. Today: ~52.2k production Python + ~21.5k
+Updated projection. Today: ~52.8k production Python + ~21.5k
 templates + ~83.5k tests. Remaining MVP scope:
 
 - **Segment 14B Part A (email infrastructure activation)** —
@@ -397,7 +436,8 @@ Roughly +1.5-2.5k production LOC + +500-800 template LOC +
 of **~54-55k production + ~22-22.5k templates + ~85-86k tests**.
 Tracks with the 01jun projection (56-58k production); the
 delta is that the observer-collation arc that 01jun budgeted
-as a remainder item is now shipped.
+as a remainder item is now shipped, plus the +609 LOC from
+the Segment 18O re-export walls.
 
 ## 8. Bottom line
 
@@ -411,7 +451,10 @@ deanonymization are all live. The cohort-stats render shape
 absorbed a model-alignment refactor mid-stream (partition
 model, PR #1814) that fixed an actual cross-side OR
 degeneracy bug. Plus the Workflow card UX cleanup capped every
-state at ≤ 4 visible buttons in a single 25%-grid row.
+state at ≤ 4 visible buttons in a single 25%-grid row. Plus
+Segment 18O retired the entire 1,300+ LOC band end-of-day —
+four legacy seams broken into ~23 small modules without a
+single behaviour change.
 
 Doc cadence kept pace: `spec/participant_model.md` /
 `spec/setup_pages.md` / `spec/visibility_policy.md` /
@@ -428,48 +471,64 @@ up, hence the `observers_clean_up.md` rename + archive).
 1. **Land Segment 14B Part A** — the remaining MVP gap. Email
    infrastructure activation is the dependency for W20
    (reviewee + observer notifications) and a real test of the
-   magic-link schema shape (W21) under load.
-2. **Pick one of the three Appendix §9 file splits** — the
-   01jun proposals stand verbatim. `scheduled_events.py` is
-   still the most mechanical (rule banners encode the seams);
-   `assignments.py` is highest-value since it's still
-   top-of-file at 1,426 LOC and clean three-way seam.
-3. **Defer Segments 19 + 20** until 14B lands; those are
+   magic-link schema shape (W21) under load. Now the right
+   next move: Segment 18O cleared the housekeeping deck, so
+   14B's route-heavy bulk lands on freshly-split foundations.
+2. **Defer Segments 19 + 20** until 14B lands; those are
    "polish for pilot" segments that work best with the email
    path actually live.
 
+The §9 file-split proposals from 01jun are now **closed** —
+all three (plus a fourth that joined mid-stream) shipped via
+Segment 18O over a single day. The new file-size plateau
+sits at 916–1,097 LOC across the top 10; no queued splits.
+
 ---
 
-## 9. Proposed file splits
+## 9. Proposed file splits — closed
 
-The three Appendix §9 split candidates from 01jun stand
-unchanged:
+All four split candidates **shipped** via Segment 18O on
+2026-06-03 (PRs #1823 → #1824 → #1825 → #1826). Final
+shapes:
 
-1. **`app/services/assignments.py` (1,426 LOC)** — split into
-   `_coverage.py` / `_self_review.py` / `_generate.py` /
-   `_shared.py` under a new `app/services/assignments/`
-   package. The three top-of-file concerns are unchanged from
-   01jun (coverage / self-review / generate-reconcile); the
-   self-review consolidation slice still marks the cleanest
-   seam line.
-2. **`app/services/scheduled_events.py` (1,380 LOC)** — split
-   into `_duration.py` / `_lock.py` / `_activation.py` /
-   `_invites.py` / `_reminders.py` / `_shared.py`. Rule-banner
-   markers already encode the seams; mechanical split. The
-   three integration test files (`test_scheduled_*.py`) survive
-   the rename without restructuring.
-3. **`app/services/session_config_io/_apply.py` (1,361 LOC)**
-   — split into per-applier modules
-   (`_apply_session.py` / `_apply_email.py` /
-   `_apply_instrument.py` / `_apply_rule_set.py` /
-   `_apply_field_label.py` / `_apply_data_shape.py`) plus
-   `_parse.py` + `_validate.py`. The orchestrator dispatches
-   by section type; per-applier modules are independent.
+1. **`app/services/scheduled_events.py`** (1,380 LOC) →
+   `scheduled_events/` package: `_shared.py` (lock + error +
+   utils), `_duration.py`, `_activation.py`, `_invites.py`,
+   `_reminders.py`, `_release.py`, `__init__.py` (orchestrator
+   + re-export wall). Track A — PR #1823.
+2. **`app/services/assignments.py`** (1,426 LOC) →
+   `assignments/` package: `_shared.py`, `_coverage.py`,
+   `_self_review.py`, `_generate.py` (still 764 LOC — one
+   cohesive pipeline that the plan intentionally kept whole).
+   Track B — PR #1824.
+3. **`app/web/routes_reviewer/_surface.py`** (1,299 LOC) →
+   `_surface/` package: `_status.py`, `_group_collapse.py`,
+   `_context.py` (645 LOC — `_surface_context` is structurally
+   linear), `_routes.py`. Added to 18O scope mid-stream once
+   the participant-model rollout pushed it into the 1,300+
+   band. Track D — PR #1825.
+4. **`app/services/session_config_io/_apply.py`** (1,361 LOC)
+   → eight sibling per-section modules inside the existing
+   `session_config_io/` package: `_apply_shared.py`,
+   `_apply_session.py`, `_apply_email.py`,
+   `_apply_instrument.py`, `_apply_rule_set.py`,
+   `_apply_field_label.py`, `_apply_data_shape.py`,
+   `_apply_parse.py`, plus a slim `_apply.py` orchestrator.
+   Track C — PR #1826.
 
-See the prior assessment (`guide/archive/codebase_assessment_01jun.md`
-§9) for the full line-by-line concern tables + the sequencing
-recommendation (`scheduled_events` first, `assignments`
-second, `session_config_io/_apply` last). No changes to the
-plan; the candidates aged exactly as expected — no growth
-relative to 01jun, but no new natural split-windows opened
-either.
+Public surface preserved byte-stable in every case via the
+package `__init__.py` re-export wall established by Segment
+18N. One white-box monkeypatch test updated in Track B (it
+patched an in-module binding that moved with the split);
+otherwise zero call-site changes anywhere in `app/` or
+`tests/`. Plan archived alongside the codebase assessment at
+`guide/segment_18O_post_participants_model_file_splits.md`
+(closure write-up at the top of the doc).
+
+If a future housekeeping window opens, the closest watchlist
+items are `session_lifecycle.py` (1,046 LOC; clean internally,
+no queued split) and the seven-file 900+ cluster
+(`_instrument_crud.py`, `routes_operator/_instruments.py`,
+`views/_instruments.py`, `routes_operator/_quick_setup.py`,
+`responses/_core.py`, `_response_fields.py`, `audit.py`).
+None demand a split today.
