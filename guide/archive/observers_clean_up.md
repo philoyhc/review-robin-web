@@ -1,16 +1,23 @@
-# Clean-up backlog
+# Observers — clean-up backlog (closed 2026-06-03)
 
-Standing punch-list of small-to-medium follow-ups identified
-by code review, not yet shipped. Items here have **already
-been acknowledged** by the project (i.e. they're not "first
-ask"); the file exists so we can pick one off the top in idle
-moments rather than re-discovering them.
+Originally `guide/clean_up.md` — the standing punch-list of
+small-to-medium follow-ups identified by code review on the
+observer cohort editor PRs. Renamed + archived 2026-06-03
+once every item closed and the file's content turned out to
+be entirely observer-specific.
 
-When an item ships, strike it through with `~~text~~` and
-suffix the merge PR number, or remove it entirely if it
-retires for another reason.
+Items 1-12 came out of the initial code review on the cohort
+editor + cohort_rule persistence ladder
+(2026-06-02 PRs #1787 → #1796). Items 13-16 were the post-MVP
+deferrals from the collation surface MVP. All sixteen are
+struck through with their closing PR / commit.
 
-## Conventions
+Kept under `archive/` for context on the design / code
+decisions captured in each closure note — a future observer-
+side refactor will want to read these before reopening the
+cohort editor or the partition-model surface.
+
+## Conventions (historical)
 
 - Each item carries a **Severity** tag (Medium / Low / Nit)
   and a **Source** noting where it was first flagged.
@@ -19,7 +26,7 @@ retires for another reason.
   above a Medium when the surface it touches is being
   modified anyway.
 
-## Open items
+## Items
 
 ### Medium
 
