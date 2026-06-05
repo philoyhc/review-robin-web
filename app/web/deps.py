@@ -55,10 +55,18 @@ def get_or_create_user(
             detail="Authenticated identity has no email claim",
         )
 
+    # Case-insensitive lookup so a pre-seeded row (e.g. via the
+    # sys-admin invite path at app/services/users.py:430) is reused
+    # regardless of casing. Order by id and take the oldest match so
+    # any historical case-variant duplicates (rows created before
+    # this normalization landed) resolve deterministically to the
+    # original row rather than raising MultipleResultsFound. The
+    # storage-level guard against new duplicates is Slice D.
     user = db.execute(
-        select(User).where(
-            func.lower(User.email) == current_user.email.lower()
-        )
+        select(User)
+        .where(func.lower(User.email) == current_user.email.lower())
+        .order_by(User.id)
+        .limit(1)
     ).scalar_one_or_none()
     if user is not None:
         _stash_display_timezone(request, user)

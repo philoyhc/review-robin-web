@@ -481,6 +481,42 @@ def test_get_or_create_user_matches_existing_row_case_insensitively(
     )
 
 
+def test_get_or_create_user_resolves_historical_case_variant_duplicates(
+    db: Session,
+) -> None:
+    """Defense-in-depth for rows created before this normalization
+    landed: if two ``User`` rows already exist whose emails differ
+    only by case, the lookup must not raise ``MultipleResultsFound``
+    and must return the older row deterministically."""
+    older = User(
+        email="Alice@example.edu",
+        display_name="Alice (older)",
+        is_operator=True,
+        is_sys_admin=False,
+    )
+    db.add(older)
+    db.flush()
+    newer = User(
+        email="alice@example.edu",
+        display_name="Alice (newer)",
+        is_operator=False,
+        is_sys_admin=False,
+    )
+    db.add(newer)
+    db.commit()
+
+    auth = AuthenticatedUser(
+        principal_id="alice-oid",
+        email="ALICE@example.edu",
+        name="Alice",
+        provider="aad",
+    )
+    returned = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert returned.id == older.id
+
+
 def test_get_or_create_user_matches_existing_row_reverse_casing(
     db: Session,
 ) -> None:
