@@ -102,11 +102,12 @@ All four findings below were re-verified against `main` on the assessment date.
 ### Slice B — Per-row roster duplicate checks (P0.1)
 
 - Update `_email_taken` in `app/services/reviewers.py:97-110` and `app/services/observers.py:100-113` to compare `func.lower(<col>) == email.lower()`.
-- Update `_identifier_taken` in `app/services/reviewees.py:102-115` to apply `.lower()` **only when `"@"` is in the identifier**, matching the CSV import branch at `app/services/csv_imports.py:483,513`. Anonymous (non-email) identifiers remain case-sensitive — operators may legitimately use opaque tokens whose case is meaningful.
+- Update `_identifier_taken` in `app/services/reviewees.py:102-115` to compare `func.lower(Reviewee.email_or_identifier) == identifier.lower()` unconditionally — matching the CSV in-CSV dedup at `app/services/csv_imports.py:330,353`, which already lowercases every identifier without an `"@"` guard. (Earlier draft of this slice prescribed an `"@"`-guarded check; that would have re-introduced the editor-vs-CSV inconsistency this P0 item is meant to remove. The `"@"` branch at `csv_imports.py:483,513` is a *cross-role* collision check, not a within-reviewees policy.)
+- Side effect of unconditional lower-casing: anonymous (non-email) reviewee identifiers like `Token-AB` and `token-ab` will collide everywhere. This matches current CSV behavior, so it is not a regression; operators relying on case-distinct opaque tokens should switch to numeric or prefix-distinguished tokens.
 - Cover both create and update paths in all three services with regression tests:
   - Create rejects `alice@x.com` when `Alice@x.com` already exists (reviewer, reviewee email, observer).
   - Update rejects re-casing onto another row's email.
-  - Reviewee with anonymous identifier `Token-AB` does **not** collide with `token-ab` (negative test guarding the `"@"` branch).
+  - Reviewee with anonymous identifier `Token-AB` is rejected when `token-ab` already exists (positive test confirming editor matches CSV).
 - Audit-event impact: none (rejection happens before the mutating write).
 - Can ship in the same PR as Slice A, or immediately after; no ordering dependency between them.
 
