@@ -37,7 +37,7 @@ import re
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
@@ -106,7 +106,7 @@ def _email_taken(
 ) -> bool:
     stmt = select(Observer.id).where(
         Observer.session_id == session_id,
-        Observer.email == email,
+        func.lower(Observer.email) == email.lower(),
     )
     if exclude_observer_id is not None:
         stmt = stmt.where(Observer.id != exclude_observer_id)

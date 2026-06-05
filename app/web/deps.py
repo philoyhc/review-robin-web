@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
@@ -56,7 +56,9 @@ def get_or_create_user(
         )
 
     user = db.execute(
-        select(User).where(User.email == current_user.email)
+        select(User).where(
+            func.lower(User.email) == current_user.email.lower()
+        )
     ).scalar_one_or_none()
     if user is not None:
         _stash_display_timezone(request, user)

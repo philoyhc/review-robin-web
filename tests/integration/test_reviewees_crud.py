@@ -143,6 +143,53 @@ def test_create_reviewee_rejects_duplicate_identifier(db: Session) -> None:
     assert exc_info.value.code == "duplicate_identifier"
 
 
+def test_create_reviewee_rejects_case_variant_duplicate_email(
+    db: Session,
+) -> None:
+    """Per-row dedup is case-insensitive for both email-shaped and
+    anonymous identifiers, matching CSV import behavior (P0.1 in
+    ``guide/weaknesses_and_bugs_found_by_codex.md``)."""
+    user, review_session = _seed(db)
+    reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Carol",
+        email_or_identifier="Carol@example.edu",
+        user=user,
+    )
+    with pytest.raises(RevieweeOperationError) as exc_info:
+        reviewees_service.create_reviewee(
+            db,
+            review_session=review_session,
+            name="Carol 2",
+            email_or_identifier="carol@example.edu",
+            user=user,
+        )
+    assert exc_info.value.code == "duplicate_identifier"
+
+
+def test_create_reviewee_rejects_case_variant_anonymous_identifier(
+    db: Session,
+) -> None:
+    user, review_session = _seed(db)
+    reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Token holder",
+        email_or_identifier="Token-AB",
+        user=user,
+    )
+    with pytest.raises(RevieweeOperationError) as exc_info:
+        reviewees_service.create_reviewee(
+            db,
+            review_session=review_session,
+            name="Other holder",
+            email_or_identifier="token-ab",
+            user=user,
+        )
+    assert exc_info.value.code == "duplicate_identifier"
+
+
 # --------------------------------------------------------------------------- #
 # update_reviewee
 # --------------------------------------------------------------------------- #
@@ -217,6 +264,34 @@ def test_update_reviewee_rejects_identifier_collision(db: Session) -> None:
         review_session=review_session,
         name="Carol",
         email_or_identifier="carol@example.edu",
+        user=user,
+    )
+    dan = reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Dan",
+        email_or_identifier="dan-2026",
+        user=user,
+    )
+    with pytest.raises(RevieweeOperationError) as exc_info:
+        reviewees_service.update_reviewee(
+            db,
+            reviewee=dan,
+            email_or_identifier="carol@example.edu",
+            user=user,
+        )
+    assert exc_info.value.code == "duplicate_identifier"
+
+
+def test_update_reviewee_rejects_case_variant_identifier_collision(
+    db: Session,
+) -> None:
+    user, review_session = _seed(db)
+    reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Carol",
+        email_or_identifier="Carol@example.edu",
         user=user,
     )
     dan = reviewees_service.create_reviewee(

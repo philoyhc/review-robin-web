@@ -239,6 +239,60 @@ def test_update_reviewer_no_changes_emits_nothing(db: Session) -> None:
     assert len(after) == len(before)
 
 
+def test_create_reviewer_rejects_case_variant_duplicate_email(
+    db: Session,
+) -> None:
+    """Per-row dedup is case-insensitive (matches CSV import behavior;
+    P0.1 in ``guide/weaknesses_and_bugs_found_by_codex.md``)."""
+    user, review_session = _seed(db)
+    reviewers_service.create_reviewer(
+        db,
+        review_session=review_session,
+        name="Alice",
+        email="Alice@example.edu",
+        user=user,
+    )
+
+    with pytest.raises(ReviewerOperationError) as exc_info:
+        reviewers_service.create_reviewer(
+            db,
+            review_session=review_session,
+            name="Alice 2",
+            email="alice@example.edu",
+            user=user,
+        )
+    assert exc_info.value.code == "duplicate_email"
+
+
+def test_update_reviewer_rejects_case_variant_email_collision(
+    db: Session,
+) -> None:
+    user, review_session = _seed(db)
+    reviewers_service.create_reviewer(
+        db,
+        review_session=review_session,
+        name="Alice",
+        email="Alice@example.edu",
+        user=user,
+    )
+    bob = reviewers_service.create_reviewer(
+        db,
+        review_session=review_session,
+        name="Bob",
+        email="bob@example.edu",
+        user=user,
+    )
+
+    with pytest.raises(ReviewerOperationError) as exc_info:
+        reviewers_service.update_reviewer(
+            db,
+            reviewer=bob,
+            email="alice@example.edu",
+            user=user,
+        )
+    assert exc_info.value.code == "duplicate_email"
+
+
 def test_update_reviewer_rejects_email_collision(db: Session) -> None:
     user, review_session = _seed(db)
     reviewers_service.create_reviewer(

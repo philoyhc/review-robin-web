@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
@@ -108,7 +108,7 @@ def _identifier_taken(
 ) -> bool:
     stmt = select(Reviewee.id).where(
         Reviewee.session_id == session_id,
-        Reviewee.email_or_identifier == identifier,
+        func.lower(Reviewee.email_or_identifier) == identifier.lower(),
     )
     if exclude_reviewee_id is not None:
         stmt = stmt.where(Reviewee.id != exclude_reviewee_id)

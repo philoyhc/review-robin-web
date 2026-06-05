@@ -445,3 +445,63 @@ def test_get_or_create_user_reuses_existing_row_without_reapplying_bootstrap(
     )
     assert returned.id == user.id
     assert returned.is_operator is False
+
+
+def test_get_or_create_user_matches_existing_row_case_insensitively(
+    db: Session,
+) -> None:
+    """A pre-seeded ``User`` row with a different-cased email must be
+    reused on first sign-in instead of inserting a duplicate row.
+    Slice A in ``guide/weaknesses_and_bugs_found_by_codex.md``."""
+    existing = User(
+        email="Alice@example.edu",
+        display_name="Alice",
+        is_operator=False,
+        is_sys_admin=False,
+    )
+    db.add(existing)
+    db.commit()
+
+    auth = AuthenticatedUser(
+        principal_id="alice-oid",
+        email="alice@example.edu",
+        name="Alice",
+        provider="aad",
+    )
+    returned = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert returned.id == existing.id
+    assert (
+        db.execute(select(User).where(User.email.ilike("alice@example.edu")))
+        .scalars()
+        .unique()
+        .all()
+        == [existing]
+    )
+
+
+def test_get_or_create_user_matches_existing_row_reverse_casing(
+    db: Session,
+) -> None:
+    """Symmetric: pre-seeded lower-case row must match an upper-case
+    authenticated email."""
+    existing = User(
+        email="bob@example.edu",
+        display_name="Bob",
+        is_operator=False,
+        is_sys_admin=False,
+    )
+    db.add(existing)
+    db.commit()
+
+    auth = AuthenticatedUser(
+        principal_id="bob-oid",
+        email="Bob@Example.Edu",
+        name="Bob",
+        provider="aad",
+    )
+    returned = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert returned.id == existing.id
