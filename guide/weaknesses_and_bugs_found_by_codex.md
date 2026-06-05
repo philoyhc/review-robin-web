@@ -89,70 +89,75 @@ Plan covers P0, P3, P4. P1 (Segment 14B email) and P2 (pilot-readiness polish) a
 
 All four findings below were re-verified against `main` on the assessment date.
 
-### Slice A — `get_or_create_user` case-insensitive lookup (P0.2)
+### Slice A — `get_or_create_user` case-insensitive lookup (P0.2) — **Done (PR #1836)**
 
-**Land first.** Smallest patch, highest-leverage: every authenticated request flows through this dependency, so an inconsistent collation here can split operator identity across sessions.
+Landed in PR #1836 (`claude/p0-identity-normalization`). `app/web/deps.py` now looks up via `func.lower(User.email) == current_user.email.lower()`. Regression tests in `tests/integration/test_operator_allowlist_gate.py` cover both casings. **Note:** the historical-duplicates tolerance fix (`.order_by(User.id).limit(1)`) was prepared as `b26cf82` but missed the #1836 merge; it ships in PR #1837 — see the Codex P1 follow-up section below.
 
-- Change `app/web/deps.py:58-60` to look up via `func.lower(User.email) == current_user.email.lower()` (mirror the pattern at `app/services/users.py:430` and `app/web/routes_operator/_session_home.py:557`).
-- Add a regression test: pre-seed a `User` row with `Alice@example.edu`, drive a request with `FAKE_AUTH_EMAIL=alice@example.edu`, assert the existing row is reused (no second insert).
-- Add a second test for the reverse casing to confirm symmetry.
-- Audit-event impact: none (no schema change, no new emitter).
-- Storage-level normalization (lower-expression unique index on `users.email`) is **deferred** to Slice D; this slice is service-layer only so it can ship behind a small PR.
+### Slice B — Per-row roster duplicate checks (P0.1) — **Done (PR #1836)**
 
-### Slice B — Per-row roster duplicate checks (P0.1)
+Landed in PR #1836. `_email_taken` in `app/services/reviewers.py` and `app/services/observers.py`, and `_identifier_taken` in `app/services/reviewees.py`, all compare via `func.lower(<col>) == value.lower()`. Reviewee identifiers are lowercased unconditionally — matching the existing CSV in-CSV dedup at `app/services/csv_imports.py:330,353` and the policy resolved in PR #1835. (For context: an earlier draft of this slice prescribed an `"@"`-guarded check, which would have re-introduced the editor-vs-CSV inconsistency. The `"@"` branch at `csv_imports.py:483,513` is a *cross-role* collision check, not a within-reviewees policy.) Side effect of unconditional lower-casing: anonymous reviewee identifiers like `Token-AB` and `token-ab` collide everywhere — matches existing CSV behavior, not a regression.
 
-- Update `_email_taken` in `app/services/reviewers.py:97-110` and `app/services/observers.py:100-113` to compare `func.lower(<col>) == email.lower()`.
-- Update `_identifier_taken` in `app/services/reviewees.py:102-115` to compare `func.lower(Reviewee.email_or_identifier) == identifier.lower()` unconditionally — matching the CSV in-CSV dedup at `app/services/csv_imports.py:330,353`, which already lowercases every identifier without an `"@"` guard. (Earlier draft of this slice prescribed an `"@"`-guarded check; that would have re-introduced the editor-vs-CSV inconsistency this P0 item is meant to remove. The `"@"` branch at `csv_imports.py:483,513` is a *cross-role* collision check, not a within-reviewees policy.)
-- Side effect of unconditional lower-casing: anonymous (non-email) reviewee identifiers like `Token-AB` and `token-ab` will collide everywhere. This matches current CSV behavior, so it is not a regression; operators relying on case-distinct opaque tokens should switch to numeric or prefix-distinguished tokens.
-- Cover both create and update paths in all three services with regression tests:
-  - Create rejects `alice@x.com` when `Alice@x.com` already exists (reviewer, reviewee email, observer).
-  - Update rejects re-casing onto another row's email.
-  - Reviewee with anonymous identifier `Token-AB` is rejected when `token-ab` already exists (positive test confirming editor matches CSV).
-- Audit-event impact: none (rejection happens before the mutating write).
-- Can ship in the same PR as Slice A, or immediately after; no ordering dependency between them.
+Regression coverage: `tests/integration/test_reviewers_crud.py`, `tests/integration/test_reviewees_crud.py`, and the new `tests/integration/test_observers_crud_dedup.py` cover create + update paths for both email-shaped and anonymous identifiers.
 
-### Slice C — `_results.py` docstring rewrite (P4, targeted)
+### Slice C — `_results.py` docstring rewrite (P4, targeted) — **Done (PR #1836)**
 
-The Codex example is actively misleading about what the module does today, so do not defer this one until "next time we're in the neighborhood" — fold it into Slice A or B since both already touch participant/identity code paths.
+Landed in PR #1836. `app/web/routes_reviewer/_results.py` module docstring now describes the live surface (Raw + Anonymized + Summarized + Acknowledge, per `spec/participant_model.md`) instead of the original "Raw-mode-only" phase note.
 
-- Rewrite the module docstring at `app/web/routes_reviewer/_results.py:1-17` to describe current behavior: gated by `require_reviewee_in_session`; body built by `build_reviewee_results_context` which resolves Raw / Anonymized / Summarized via `app/services/visibility_policies.py`; includes the `acknowledge` POST.
-- Reference `spec/participant_model.md` rather than phase-history wording.
-- Five-line edit, no test impact.
+### Codex P1 follow-up on PR #1836 — **In flight (PR #1837)**
+
+Codex review on PR #1836 flagged that the new case-insensitive lookup would crash sign-in with `MultipleResultsFound` if two case-variant `User` rows already existed (possible from the old exact-match path on the dev slot). A fix (`.order_by(User.id).limit(1)` so the oldest matching row wins deterministically) was committed to the #1836 branch as `b26cf82` but the PR was merged before that commit reached the merge — only `ab04331` shipped. The Codex P1 concern is therefore **still live on `main`** until PR #1837 lands.
+
+PR #1837 re-applies the `b26cf82` change against `main`, plus the regression test `test_get_or_create_user_resolves_historical_case_variant_duplicates` in `tests/integration/test_operator_allowlist_gate.py`.
 
 ### Slice D — Storage-level uniqueness guard (P0 follow-up, deferred)
 
-After A + B land and bake on the dev slot, add a defense-in-depth migration:
+**Status:** not started. Gating on:
 
-- Either normalize email-bearing identities on write (preferred for portability) or add a lower-expression unique index. Both must round-trip on SQLite and Postgres per the migration-portability note in CLAUDE.md.
-- This is its own slice — do **not** bundle with A/B. The behavioral fix is the urgent part; the schema guard is durable but lower-priority.
-- Open question to resolve before drafting: does normalize-on-write require a one-time data migration to lower-case existing rows, and how many duplicate clusters does that surface in production? Run a read-only count first.
+1. PR #1836 baking on the dev slot — the b26cf82 tolerance fix is unverified end-to-end. Slice D's migration should not run before that fix is proven, because if the tolerance fix had a bug, the migration could compound the damage.
+2. A read-only duplicate-cluster audit against production data. The migration shape depends on the answer: zero clusters → clean unique-index migration; non-zero → deduplication step first, with operator-visible decisions about which row to keep.
 
-### Slice E — Opportunistic template carves (P3, no dedicated PR)
+When picked up: either normalize email-bearing identities on write (preferred for portability) or add a lower-expression unique index. Both must round-trip on SQLite and Postgres per the migration-portability note in CLAUDE.md.
 
-Do not schedule. Policy reminder for future PRs touching the three offenders:
+### Slice E — Large templates (P3) — **Not scheduled, by decision**
 
-| LOC (2026-06-05) | File | Suggested first carve when next touched |
-|---:|---|---|
-| 5,342 | `app/web/templates/operator/instruments_index.html` | Per-band partials (`_band1.html` / `_band2.html` / `_band3.html`) |
-| 3,231 | `app/web/templates/base.html` | None — CSS extraction is deferred; avoid churn here unless the change is functional |
-| 2,610 | `app/web/templates/operator/session_extract_data.html` | Per-instrument lens-card macro |
+Re-examined 2026-06-05 after PR #1836 landed. The 5,342 / 3,231 / 2,610 LOC files were re-verified; LOC has not changed.
 
-Carve only the cohesive partial nearest your functional change. No pure-churn refactors.
+Decision: **no PR, no implicit queue.** A real plan for carving these (4 PRs, snapshot-test infra build-out, ordering across cross-band JS dependencies) was sketched and costed. The cost is concrete and present (4 PRs of pure-churn diff review, render-regression risk, opportunity cost vs P1); the benefit is speculative and future ("easier reviews of changes that may or may not happen"). No known runtime defect is traced to template size. `base.html` is 87% one `<style>` block whose extraction CLAUDE.md explicitly defers.
+
+What would flip this decision:
+
+- A real functional change queued against one of the offenders — then carving a cohesive partial in the same PR is cheap because the reviewer is already in that file.
+- Measured friction: repeated reports of "I lost my place in this file" or "I shipped a bug because I missed a downstream consumer." Right now those reports do not exist.
+
+If either condition holds later, the earlier draft plan (Band 3 first, then Band 1, then Band 2, then the extract-data lens card; explicit snapshot tests; include-with-context over macros for high-arity blocks) is captured in this session's transcript and can be revived.
 
 ### Slice F — Other stale comments (P4, opportunistic)
 
-A repo-wide scan for "follow-on slices" / "Raw-mode-only" / "ships later" turned up only the one site in Slice C, so there is no systemic sweep to schedule. Continue the standing policy: when editing a module, fix any nearby comment that contradicts the current spec, and cite spec surfaces rather than phase history.
+Status unchanged. A repo-wide scan for "follow-on slices" / "Raw-mode-only" / "ships later" found only the one site Slice C resolved. No systemic sweep to schedule. Standing policy: when editing a module, fix any nearby comment that contradicts the current spec, and cite spec surfaces rather than phase history.
+
+### Status summary
+
+| Slice | Item | Status |
+|---|---|---|
+| A | `get_or_create_user` case-insensitive lookup | Done (PR #1836) |
+| B | Per-row roster duplicate checks | Done (PR #1836) |
+| C | `_results.py` docstring rewrite | Done (PR #1836) |
+| — | Codex P1 follow-up: tolerate historical duplicates | In flight (PR #1837) — `b26cf82` missed the #1836 merge |
+| D | Storage-level uniqueness guard | Deferred — gated on dev-slot bake + duplicate-cluster audit |
+| E | Large template carves | Set aside by decision — opportunistic only, no implicit queue |
+| F | Other stale comments | Standing policy — no scheduled work |
 
 ### Ordering and PR shape
 
-1. **PR 1 (Slices A + B + C):** identity case-normalization + the `_results.py` docstring. Single coherent slice — all touch participant identity contracts and share the regression-test setup.
-2. **PR 2 (Slice D):** storage-level guard, after PR 1 has baked. Drives the open-question audit first.
-3. **No PR for Slices E or F:** standing policy, applied opportunistically.
+1. **PR 1 (Slices A + B + C):** merged as #1836 on 2026-06-05.
+2. **PR 1a (Codex P1 follow-up):** in flight as #1837. Re-applies the `b26cf82` historical-duplicates tolerance that missed the #1836 merge.
+3. **PR 2 (Slice D):** deferred. Pre-work: run the duplicate-cluster audit once PR #1837 has landed and baked on the dev slot.
+4. **No PRs for Slices E or F.**
 
 ### Exit criteria
 
-This addendum is satisfied when:
-- `get_or_create_user` and all three per-row roster services use case-insensitive identity comparison, with regression tests guarding both directions.
-- `app/web/routes_reviewer/_results.py` module docstring describes current (Raw + Anonymized + Summarized + Acknowledge) behavior.
-- Slice D is either landed or has an explicit follow-up issue with the data-migration question answered.
-- The three large templates are unchanged unless a functional PR happened to touch them; LOC has not grown materially.
+- [x] `get_or_create_user` and all three per-row roster services use case-insensitive identity comparison, with regression tests guarding both directions.
+- [ ] `get_or_create_user` tolerates pre-existing case-variant duplicate rows without raising `MultipleResultsFound` (PR #1837).
+- [x] `app/web/routes_reviewer/_results.py` module docstring describes current (Raw + Anonymized + Summarized + Acknowledge) behavior.
+- [ ] Slice D is either landed or has an explicit follow-up issue with the data-migration question answered.
+- [x] The three large templates are unchanged unless a functional PR happened to touch them; LOC has not grown materially. (Re-verified 2026-06-05.)
