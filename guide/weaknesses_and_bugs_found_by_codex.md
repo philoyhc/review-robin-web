@@ -89,9 +89,9 @@ Plan covers P0, P3, P4. P1 (Segment 14B email) and P2 (pilot-readiness polish) a
 
 All four findings below were re-verified against `main` on the assessment date.
 
-### Slice A — `get_or_create_user` case-insensitive lookup (P0.2) — **Done (PR #1836)**
+### Slice A — `get_or_create_user` case-insensitive lookup (P0.2) — **Done (PR #1836 + PR #1837)**
 
-Landed in PR #1836 (`claude/p0-identity-normalization`). `app/web/deps.py` now looks up via `func.lower(User.email) == current_user.email.lower()`. Regression tests in `tests/integration/test_operator_allowlist_gate.py` cover both casings. **Note:** the historical-duplicates tolerance fix (`.order_by(User.id).limit(1)`) was prepared as `b26cf82` but missed the #1836 merge; it ships in PR #1837 — see the Codex P1 follow-up section below.
+Landed in PR #1836 (`claude/p0-identity-normalization`). `app/web/deps.py` now looks up via `func.lower(User.email) == current_user.email.lower()`, ordered by `User.id` and limited to 1 so any pre-existing case-variant duplicate rows resolve deterministically to the oldest match. The `.order_by(User.id).limit(1)` safeguard shipped as PR #1837 after missing the #1836 merge — see the Codex P1 follow-up section below. Regression tests in `tests/integration/test_operator_allowlist_gate.py` cover both casings plus the historical-duplicates case.
 
 ### Slice B — Per-row roster duplicate checks (P0.1) — **Done (PR #1836)**
 
@@ -103,17 +103,15 @@ Regression coverage: `tests/integration/test_reviewers_crud.py`, `tests/integrat
 
 Landed in PR #1836. `app/web/routes_reviewer/_results.py` module docstring now describes the live surface (Raw + Anonymized + Summarized + Acknowledge, per `spec/participant_model.md`) instead of the original "Raw-mode-only" phase note.
 
-### Codex P1 follow-up on PR #1836 — **In flight (PR #1837)**
+### Codex P1 follow-up on PR #1836 — **Done (PR #1837)**
 
-Codex review on PR #1836 flagged that the new case-insensitive lookup would crash sign-in with `MultipleResultsFound` if two case-variant `User` rows already existed (possible from the old exact-match path on the dev slot). A fix (`.order_by(User.id).limit(1)` so the oldest matching row wins deterministically) was committed to the #1836 branch as `b26cf82` but the PR was merged before that commit reached the merge — only `ab04331` shipped. The Codex P1 concern is therefore **still live on `main`** until PR #1837 lands.
-
-PR #1837 re-applies the `b26cf82` change against `main`, plus the regression test `test_get_or_create_user_resolves_historical_case_variant_duplicates` in `tests/integration/test_operator_allowlist_gate.py`.
+Codex review on PR #1836 flagged that the new case-insensitive lookup would crash sign-in with `MultipleResultsFound` if two case-variant `User` rows already existed (possible from the old exact-match path on the dev slot). A fix (`.order_by(User.id).limit(1)` so the oldest matching row wins deterministically) was committed to the #1836 branch as `b26cf82` but missed that PR's merge — only `ab04331` shipped — leaving the Codex P1 concern temporarily live on `main`. Resolved by PR #1837, which re-applied the change against `main` plus the regression test `test_get_or_create_user_resolves_historical_case_variant_duplicates` in `tests/integration/test_operator_allowlist_gate.py`.
 
 ### Slice D — Storage-level uniqueness guard (P0 follow-up, deferred)
 
 **Status:** not started. Gating on:
 
-1. PR #1836 baking on the dev slot — the b26cf82 tolerance fix is unverified end-to-end. Slice D's migration should not run before that fix is proven, because if the tolerance fix had a bug, the migration could compound the damage.
+1. PR #1836 + PR #1837 baking on the dev slot — the case-insensitive lookup and historical-duplicates safeguard are unverified end-to-end. Slice D's migration should not run before they are proven, because if the safeguard had a bug, the migration could compound the damage.
 2. A read-only duplicate-cluster audit against production data. The migration shape depends on the answer: zero clusters → clean unique-index migration; non-zero → deduplication step first, with operator-visible decisions about which row to keep.
 
 When picked up: either normalize email-bearing identities on write (preferred for portability) or add a lower-expression unique index. Both must round-trip on SQLite and Postgres per the migration-portability note in CLAUDE.md.
@@ -142,7 +140,7 @@ Status unchanged. A repo-wide scan for "follow-on slices" / "Raw-mode-only" / "s
 | A | `get_or_create_user` case-insensitive lookup | Done (PR #1836) |
 | B | Per-row roster duplicate checks | Done (PR #1836) |
 | C | `_results.py` docstring rewrite | Done (PR #1836) |
-| — | Codex P1 follow-up: tolerate historical duplicates | In flight (PR #1837) — `b26cf82` missed the #1836 merge |
+| — | Codex P1 follow-up: tolerate historical duplicates | Done (PR #1837) — `b26cf82` missed the #1836 merge and was re-landed |
 | D | Storage-level uniqueness guard | Deferred — gated on dev-slot bake + duplicate-cluster audit |
 | E | Large template carves | Set aside by decision — opportunistic only, no implicit queue |
 | F | Other stale comments | Standing policy — no scheduled work |
@@ -150,14 +148,14 @@ Status unchanged. A repo-wide scan for "follow-on slices" / "Raw-mode-only" / "s
 ### Ordering and PR shape
 
 1. **PR 1 (Slices A + B + C):** merged as #1836 on 2026-06-05.
-2. **PR 1a (Codex P1 follow-up):** in flight as #1837. Re-applies the `b26cf82` historical-duplicates tolerance that missed the #1836 merge.
-3. **PR 2 (Slice D):** deferred. Pre-work: run the duplicate-cluster audit once PR #1837 has landed and baked on the dev slot.
+2. **PR 1a (Codex P1 follow-up):** merged as #1837 on 2026-06-05. Re-applied the `b26cf82` historical-duplicates tolerance that missed the #1836 merge.
+3. **PR 2 (Slice D):** deferred. Pre-work: run the duplicate-cluster audit once #1836 + #1837 have baked on the dev slot.
 4. **No PRs for Slices E or F.**
 
 ### Exit criteria
 
 - [x] `get_or_create_user` and all three per-row roster services use case-insensitive identity comparison, with regression tests guarding both directions.
-- [ ] `get_or_create_user` tolerates pre-existing case-variant duplicate rows without raising `MultipleResultsFound` (PR #1837).
+- [x] `get_or_create_user` tolerates pre-existing case-variant duplicate rows without raising `MultipleResultsFound` (PR #1837).
 - [x] `app/web/routes_reviewer/_results.py` module docstring describes current (Raw + Anonymized + Summarized + Acknowledge) behavior.
 - [ ] Slice D is either landed or has an explicit follow-up issue with the data-migration question answered.
 - [x] The three large templates are unchanged unless a functional PR happened to touch them; LOC has not grown materially. (Re-verified 2026-06-05.)
