@@ -1,19 +1,22 @@
-"""Reviewee results surface — ``GET /me/sessions/{id}/results``.
+"""Reviewee results surface — ``GET /me/sessions/{id}/results``
+and the ``POST .../acknowledge`` companion.
 
 Gated by ``require_reviewee_in_session``: a reviewee whose
 ``email_or_identifier`` (case-insensitive) matches the
 authenticated user's email reaches the page; everyone else
 gets 403 / 404 from the gate.
 
-Body content is the reviewee's view of the responses written
-about them on this session, filtered through the per-instrument
-visibility policy
-(``app/services/visibility_policies.py``). This slice ships the
-``"raw"`` mode — instruments whose ``reviewee`` policy resolves
-to Raw render one row per reviewer who responded; other modes
-(``anonymized`` / ``summarized``) and the observer surface
-ship in follow-on slices. Empty body when no instrument has a
-currently-active grant for the signed-in reviewee.
+Body content is built by
+``app.web.views.build_reviewee_results_context`` and reflects
+the reviewee's view of the responses written about them on
+this session, filtered through the per-instrument visibility
+policy (``app/services/visibility_policies.py``). All three
+resolved modes — ``"raw"``, ``"anonymized"``, ``"summarized"``
+— render; ``summarize_field`` in the view layer produces the
+summarized aggregate primitives. Empty body when no
+instrument has a currently-active grant for the signed-in
+reviewee. See ``spec/participant_model.md`` for the surface
+contract.
 """
 
 from __future__ import annotations

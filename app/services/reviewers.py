@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import re
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
@@ -103,7 +103,7 @@ def _email_taken(
 ) -> bool:
     stmt = select(Reviewer.id).where(
         Reviewer.session_id == session_id,
-        Reviewer.email == email,
+        func.lower(Reviewer.email) == email.lower(),
     )
     if exclude_reviewer_id is not None:
         stmt = stmt.where(Reviewer.id != exclude_reviewer_id)
