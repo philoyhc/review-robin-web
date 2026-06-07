@@ -12,8 +12,11 @@ Flexible Server. Local dev runs against SQLite.
 
 ## What's in the app today
 
-**Operator surface** — Setup, Operations, Settings tabs in the
-chrome:
+**Operator surface** — per-session pages organised into a
+Setup row + an Operations row, both anchored off Session Home in
+the per-session chrome. A workspace-level **Operator Settings**
+page sits behind the top-bar user menu (per-operator SMTP
+credentials + display timezone), not in the per-session chrome:
 
 - **Session lifecycle.** `draft → validated → ready` (Activated)
   with edit-locks, deadline tracking, response-window gates, and
@@ -39,11 +42,11 @@ chrome:
   the session's assignment rows into the pool the observer can
   see on the collation surface. Assignments are **always
   derived** post-15D: rule-based generation only
-  (manual-row authoring retired in 15D PR 6a). Rule-based
-  assignments are authored on the **Rule Builder page**
-  (`/operator/sessions/{id}/assignments/rule-based-editor`) — a
-  single-card surface paired with an Available Rulesets sidebar
-  listing every visible RuleSet (5 seeds + caller-owned Personal).
+  (manual-row authoring retired in 15D PR 6a). Rules now author
+  per-instrument on **Band 1** of the Instruments page — Wave 5
+  PR 5.1 + 5.2 collapsed the standalone Rule Builder page + the
+  RuleSet library tier into one inline editor; pre-Wave-5 spec
+  preserved at `spec/archive/rule_based_assignment.md`.
   Generation runs through `app/services/rules/engine.py`
   (predicates / combinators / quotas / deterministic ordering); the
   engine consumes pair-context tags from the `relationships` table
@@ -60,15 +63,19 @@ chrome:
   R Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include); the
   trailing Status / Include cell renders as a `pill-info` /
   `pill-empty` pill. See `spec/setup_pages.md` for the contract.
-- **Instruments builder.** Per-instrument card with state-machine
-  Display + Response Fields tables, Response Type Definitions
-  catalog (10 seeded RTDs + operator-defined ones), live-preview
-  pane, multi-instrument support. A second flavour —
-  **group-scoped instruments** (Segment 13C), where one reviewer
-  answer covers a whole group of reviewees — is authorable via
-  `Add group instrument`; a group instrument requires a pinned
-  rule before it can open. The **Replicate** button clones a
-  card's content into a new instrument after the source.
+- **Instruments builder.** Per-instrument card with Bands 1+2+3
+  — Band 1 authors the assignment rule, Band 2 carries the
+  operator-side reviewer-surface preview, Band 3 hosts the
+  Response Fields table with inline `data_type` + bounds (the
+  per-session `response_type_definitions` catalog and FK tier
+  retired 2026-05-26 — every field's type now lives inline on
+  `instrument_response_fields`). Multi-instrument support. A
+  second flavour — **group-scoped instruments** (Segment 13C),
+  where one reviewer answer covers a whole group of reviewees —
+  is authorable via `Add group instrument`; a group instrument
+  requires a pinned rule before it can open. The **Replicate**
+  button clones a card's content into a new instrument after
+  the source.
 - **Email template editor.** Per-template (Invitation / Reminder
   / Responses-received) override of subject + body + CC + BCC,
   with the canonical merge tags (`$reviewer_name`,
@@ -87,13 +94,16 @@ chrome:
   existing per-entity import pipelines, behind a single Lock /
   Unlock toggle. The card uses a two-column layout — Reviewers +
   Reviewees on the left, Relationships + Session settings on the
-  right (Post-Segment 15 clean up, 2026-05-10). One bottom-right
-  Submit button (next to Lock / Unlock) runs every slot whose
-  file is attached. Unlock state resets when the operator
-  navigates away (per-route middleware in `app/main.py`). The
-  Settings slot graduated to live in Segment 12A-3 PR 4 and
-  posts to `/operator/sessions/{id}/import-config`, applying
-  the 3-column Settings CSV via `apply_session_config`.
+  right (plus an Observers slot inserted on the right when the
+  per-session `observers_enabled` toggle is on; Post-Segment 15
+  clean up, 2026-05-10, established the column layout). One
+  bottom-right Submit button (next to Lock / Unlock) runs every
+  slot whose file is attached. Unlock state resets when the
+  operator navigates away (per-route middleware in
+  `app/main.py`). The Settings slot graduated to live in
+  Segment 12A-3 PR 4 and posts to
+  `/operator/sessions/{id}/import-config`, applying the 3-column
+  Settings CSV via `apply_session_config`.
 - **Extract Setup card** on Session Home ships **five-or-six
   live CSV downloads** in a 2-column layout — left column for
   per-entity rosters (Reviewers / Reviewees / Relationships),
@@ -108,24 +118,34 @@ chrome:
   output, not input — and have no place in a porting bundle).
   The matching Settings importer landed in 12A-3 PR 3. The
   audit-events CSV download (Segment 12B) ships its route live
-  but with no Extract Data tile — per industry best practice
-  audit data sits behind an admin / diagnostics doorway, so the
-  extract lives behind the Sys Admin gate (Segment 16C, the
-  per-session audit-log viewer, shipped).
-- **Operations pages.** Validate · **Assignments** · Previews ·
-  Invitations · Responses (Assignments moved into the Operations
-  row in 15D PR 6a). Validate is the find-and-fix surface
-  (severity filter chip strip + per-issue Fix-on-Setup deep
-  links). Assignments hosts the Assignment Rule card +
-  Self-reviews bulk toggle + the Assignment pairs preview
-  table. Previews is the Reviewer Experience Preview hub
-  (tabbed email previews + iframed reviewer-surface card for an
-  operator-picked reviewer). Manage Invitations is a consolidated
-  reviewer-centric table that absorbed the retired Monitoring
-  page. Responses is the reviewee-centric coverage view
-  classifying each reviewee per `monitoring.AT_RISK_THRESHOLDS`.
-  Outbox stays a dev-diagnostic surface reachable via the "View
-  outbox" button on Manage Invitations.
+  but with no tile on either operator-side extracts surface
+  (Extract Setup or the Operations Extract data tab) — per
+  industry best practice audit data sits behind an admin /
+  diagnostics doorway, so the extract lives behind the Sys Admin
+  gate (Segment 16C, the per-session audit-log viewer, shipped).
+- **Operations pages.** **Assignments** · Validate · Previews ·
+  Invitations · Responses · **Extract data** (Assignments moved
+  into the Operations row in 15D PR 6a; Extract data carved out
+  from the Session Home card on 2026-05-29). Assignments hosts
+  a per-instrument status table (rule selection / self-review
+  inclusion per instrument) and an Assignments preview table —
+  the standalone Assignment Rule card + session-wide
+  Self-reviews bulk toggle retired in Wave 5 PR 5.1 + 5.2,
+  with both responsibilities relocated to per-instrument
+  Band 1 + the per-instrument checkbox column. Validate is the
+  find-and-fix surface (severity filter chip strip + per-issue
+  Fix-on-Setup deep links). Previews is the Reviewer Experience
+  Preview hub (tabbed email previews + iframed reviewer-surface
+  card for an operator-picked reviewer). Manage Invitations is
+  a consolidated reviewer-centric table that absorbed the
+  retired Monitoring page. Responses is the reviewee-centric
+  coverage view classifying each reviewee per
+  `monitoring.AT_RISK_THRESHOLDS`. Extract data carries the
+  response-data shaping pipeline (per-instrument lens cards +
+  Data shaper) plus the Token keys deanonymization extract.
+  The per-session Outbox view retired from this chrome in
+  Segment 16A and now lives inline on the Admin Sessions
+  Diagnostics page reachable from the top-bar Admin link.
 
 **Participant surfaces** — three audiences sharing the `/me/`
 chrome and a role-navigator chip strip that lets multi-role
