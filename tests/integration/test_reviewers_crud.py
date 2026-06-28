@@ -243,7 +243,7 @@ def test_create_reviewer_rejects_case_variant_duplicate_email(
     db: Session,
 ) -> None:
     """Per-row dedup is case-insensitive (matches CSV import behavior;
-    P0.1 in ``guide/weaknesses_and_bugs_found_by_codex.md``)."""
+    P0.1 in ``guide/archive/weaknesses_and_bugs_found_by_codex.md``)."""
     user, review_session = _seed(db)
     reviewers_service.create_reviewer(
         db,

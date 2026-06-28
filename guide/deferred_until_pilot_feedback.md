@@ -656,3 +656,156 @@ posts an unmodified Band 1 form, and asserts
 `SessionRuleSet.cached_eligibility_stamp` is unchanged.
 
 ---
+
+## Codex Slice D — Storage-level uniqueness guard on email-bearing identities (~100 LOC + migration)
+
+> Carved from
+> `guide/archive/weaknesses_and_bugs_found_by_codex.md` (Slice
+> D) 2026-06-28 when that addendum retired. Slices A + B + C
+> shipped as PRs #1836 + #1837 (the case-insensitive lookups
+> + the historical-duplicates safeguard); Slice D is the
+> defense-in-depth migration that was always scoped to follow
+> the behavioral fix after dev-slot bake.
+
+**Ships.**
+
+- A lower-expression unique index on `users.email`,
+  `reviewers.email`, `reviewees.email_or_identifier`, and
+  `observers.email` (per-session for the three roster
+  tables). Postgres syntax:
+  `CREATE UNIQUE INDEX … ON <table> (lower(<col>))` or
+  per-session pair `(session_id, lower(<col>))`.
+- Alternative shape (preferred for portability if pilot
+  data has any duplicate clusters to deal with): normalize
+  email-bearing identities on write — every service call
+  that inserts or updates an email lowercases at the
+  service-layer boundary, and the migration backfills
+  existing rows. Trades the index complexity for a one-time
+  data migration.
+- Migration round-trips on SQLite + Postgres per the
+  portability note in `CLAUDE.md`. SQLite supports
+  expression indexes via the same syntax as Postgres; both
+  branches of the alternative are portable.
+
+**Why deferred.** The behavioral fix in PRs #1836 + #1837
+prevents new duplicate-by-casing rows from being created
+through any current service path. The schema guard is durable
+defense-in-depth — it would catch a future bug that bypasses
+the service layer (e.g. a raw SQL admin script, a future ORM
+write that forgot the `.lower()`). Without that future bug,
+the migration ships zero observable benefit and costs one
+dev-slot migration window. The shape of the migration also
+depends on a question we haven't answered: how many
+case-variant duplicate clusters exist in production data
+right now? Zero → clean unique-index migration; non-zero →
+needs a deduplication step first, with operator-visible
+decisions about which row to keep.
+
+**Lift trigger.**
+
+- The duplicate-cluster audit returns a non-zero result (any
+  pair of `(lower(email), session_id)` collisions in
+  `reviewers` / `observers`, or `lower(email_or_identifier)`
+  + `session_id` in `reviewees`, or `lower(email)` in
+  `users`). That's the trigger to ship Slice D as **the
+  deduplication-first variant** — a one-time migration that
+  reports the clusters, prompts on which row to keep, then
+  enforces the unique index.
+- OR a future code change adds a new write path on one of
+  these tables (e.g. a Segment 14B magic-link landing route
+  inserts a participant row) — ship Slice D as the
+  unique-index variant before that path lands, so the new
+  surface can't regress.
+- OR pilot feedback surfaces a duplicate-identity bug we
+  can't otherwise explain (e.g. an operator reports "Alice
+  appears twice in my Reviewers list and I never typed her
+  twice").
+
+**Pre-work.** Run the read-only audit query before drafting
+the migration:
+
+```sql
+-- users (workspace-scope)
+SELECT lower(email) AS lower_email, COUNT(*) AS dupes
+FROM users
+GROUP BY lower(email)
+HAVING COUNT(*) > 1;
+
+-- reviewers / observers (per-session scope)
+SELECT session_id, lower(email) AS lower_email, COUNT(*) AS dupes
+FROM reviewers
+GROUP BY session_id, lower(email)
+HAVING COUNT(*) > 1;
+-- (repeat for observers)
+
+-- reviewees (per-session scope; both email and anonymous
+-- identifiers — the per-row check is case-insensitive
+-- unconditionally so the audit query mirrors it)
+SELECT session_id, lower(email_or_identifier) AS lower_id, COUNT(*) AS dupes
+FROM reviewees
+GROUP BY session_id, lower(email_or_identifier)
+HAVING COUNT(*) > 1;
+```
+
+**Wire-up.** Migration lives in `alembic/versions/`. The
+service-layer normalize-on-write variant touches the four
+mutating service paths (`get_or_create_user`,
+`create_reviewer` + `update_reviewer`, `create_reviewee` +
+`update_reviewee`, `create_observer` + `update_observer`) —
+each gets a `clean_email = email.strip().lower()` at the
+entry point, with the existing duplicate-check then matching
+exact equality on the stored lowercase value (which is what
+the existing `func.lower()` query already returns from the
+database).
+
+---
+
+## Codex Slice E — Carve down the three large templates
+
+> Carved from
+> `guide/archive/weaknesses_and_bugs_found_by_codex.md` (Slice
+> E) 2026-06-28 when that addendum retired. P3 in the
+> original Codex assessment — flagged as maintainability risk,
+> not a runtime defect.
+
+**Ships.** A four-PR sequence that carves the three offending
+templates into per-concern partials:
+
+| Template | LOC (2026-06-05) | Carve target |
+|---|---:|---|
+| `app/web/templates/operator/instruments_index.html` | 5,342 | Per-band partials: `_band3_card.html` (PR E1, ~1,700 LOC, largest single block first), `_band1_card.html` (PR E2, ~650 LOC, includes mid-file `<script>`), `_band2_card.html` (PR E3, ~2,150 LOC including dynamic preview JS — riskiest carve because Band 2 JS reads Band 3 row state; lands last so the Band 3 partial boundary is already proven). |
+| `app/web/templates/operator/session_extract_data.html` | 2,610 | `_extract_lens_card.html` macro (PR E4, ~400 LOC of per-instrument card markup). JS blocks stay in place. |
+| `app/web/templates/base.html` | 3,231 | **No carve.** 87% is one `<style>` block whose extraction `CLAUDE.md` explicitly defers; every other template keys off classes defined here. |
+
+Each carve PR ships in two commits: (a) verbatim move into
+the partial (reviewable via `git diff --color-moved`),
+(b) any cleanup. Each PR also adds a snapshot test asserting
+byte-identical render for a known fixture before/after.
+
+**Why deferred.** Pure-churn refactor with no behavior change
+and no known runtime defect tied to file size. Cost is
+concrete (4 PRs of diff review, snapshot-test infra
+build-out, render-regression risk, opportunity cost vs P1);
+benefit is speculative ("easier reviews of changes that may
+or may not happen"). The deferred-ledger note in this file
+is the parking lot until either lift trigger arrives.
+
+**Lift trigger.**
+
+- A real functional change queued against one of the
+  offenders — then carving a cohesive partial in the same PR
+  is cheap because the reviewer is already in that file.
+  Take only the partial closest to the functional change,
+  not the whole sequence.
+- Measured friction: repeated reports of "I lost my place in
+  this file" or "I shipped a bug because I missed a
+  downstream consumer in the other half of the file."
+
+**Wire-up.** Standard `{% include "operator/partials/<name>.html" with context %}`
+include pattern (matches existing `_quick_setup_card.html` /
+`_extract_data_card.html` siblings). Use
+`include with context` rather than `{% macro %}` because the
+Band partials each consume ~15 outer variables — macro arg
+lists at that size are worse than `with`-context.
+
+---
