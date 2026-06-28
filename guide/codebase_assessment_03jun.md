@@ -57,7 +57,7 @@ Specifically, since the 2026-06-01 snapshot:
   (`instruments/_instrument_crud.py`, untouched). No behaviour
   change across all four tracks; 2,546 tests stayed green
   throughout. Plan + closure write-up in
-  `guide/segment_18O_post_participants_model_file_splits.md`.
+  `guide/archive/segment_18O_post_participants_model_file_splits.md`.
 
 All shipped 2026-06-02 → 2026-06-03 (79 merge commits in two
 calendar days; ~95 non-merge commits on 2026-06-02 alone, the
@@ -521,8 +521,8 @@ package `__init__.py` re-export wall established by Segment
 18N. One white-box monkeypatch test updated in Track B (it
 patched an in-module binding that moved with the split);
 otherwise zero call-site changes anywhere in `app/` or
-`tests/`. Plan archived alongside the codebase assessment at
-`guide/segment_18O_post_participants_model_file_splits.md`
+`tests/`. Plan archived at
+`guide/archive/segment_18O_post_participants_model_file_splits.md`
 (closure write-up at the top of the doc).
 
 If a future housekeeping window opens, the closest watchlist

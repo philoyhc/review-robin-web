@@ -1897,7 +1897,7 @@ eight sibling per-section modules (`_apply_shared` /
 `_apply_session` / `_apply_email` / `_apply_instrument` /
 `_apply_rule_set` / `_apply_field_label` / `_apply_data_shape`
 / `_apply_parse`) + slim `_apply.py` orchestrator. **Plan:**
-`guide/segment_18O_post_participants_model_file_splits.md`.
+`guide/archive/segment_18O_post_participants_model_file_splits.md`.
 
 ### Codex P0 — Identity case-normalization — done 2026-06-05 (PRs #1836 → #1839)
 
