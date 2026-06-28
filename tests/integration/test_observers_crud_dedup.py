@@ -1,6 +1,6 @@
 """Case-insensitive duplicate-email coverage for the per-row observer
 CRUD service. Mirrors the reviewer / reviewee dedup tests for P0.1 in
-``guide/weaknesses_and_bugs_found_by_codex.md``.
+``guide/archive/weaknesses_and_bugs_found_by_codex.md``.
 """
 
 from __future__ import annotations

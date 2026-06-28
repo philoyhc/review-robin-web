@@ -452,7 +452,7 @@ def test_get_or_create_user_matches_existing_row_case_insensitively(
 ) -> None:
     """A pre-seeded ``User`` row with a different-cased email must be
     reused on first sign-in instead of inserting a duplicate row.
-    Slice A in ``guide/weaknesses_and_bugs_found_by_codex.md``."""
+    Slice A in ``guide/archive/weaknesses_and_bugs_found_by_codex.md``."""
     existing = User(
         email="Alice@example.edu",
         display_name="Alice",
