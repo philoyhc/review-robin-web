@@ -168,7 +168,13 @@ README:
   workplans, todos ([`guide/README.md`](guide/README.md)).
   Shipped segment plans live in
   [`guide/archive/`](guide/archive/);
-  [`guide/todo_master.md`](guide/todo_master.md) is the roadmap.
+  [`guide/todo_master.md`](guide/todo_master.md) is the
+  roadmap;
+  [`guide/deferred_until_pilot_feedback.md`](guide/deferred_until_pilot_feedback.md)
+  is the parking lot for scoped-but-paused product work waiting
+  on pilot feedback, and
+  [`guide/deferred_infra.md`](guide/deferred_infra.md) is the
+  same for infrastructure / platform work.
 
 Top-level docs at the repo root: `CLAUDE.md` / `AGENTS.md` (kept
 as byte-identical twins; AI-agent guidance),
