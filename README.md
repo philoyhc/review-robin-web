@@ -10,6 +10,12 @@ Built as a FastAPI + Jinja + SQLAlchemy monolith, deployed to
 Azure App Service (Linux, Python 3.12) against an Azure Postgres
 Flexible Server. Local dev runs against SQLite.
 
+For the *why* — the class of problem RRW targets, the two
+projects that shaped it (an Excel/VBA predecessor and
+TEAMMATES), the constraints that made it look the way it does,
+and the trade-offs it knowingly accepts — see
+[`rrw_design_rationale.md`](rrw_design_rationale.md).
+
 ## What's in the app today
 
 ### Operator surface
@@ -178,4 +184,8 @@ README:
 
 Top-level docs at the repo root: `CLAUDE.md` / `AGENTS.md` (kept
 as byte-identical twins; AI-agent guidance),
-`CONTRIBUTING.md`, `README.md` (this file).
+`CONTRIBUTING.md`,
+[`rrw_design_rationale.md`](rrw_design_rationale.md) (the *why*
+behind RRW's design — problem framing, the Review Robin (VBA) +
+TEAMMATES lineage, core decisions, and stated trade-offs),
+`README.md` (this file).
