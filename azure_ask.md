@@ -151,9 +151,9 @@ approval path if RRW graduates beyond pilot.
 ### 2.4 Database posture
 
 - **Move Postgres off the Burstable tier** to General Purpose D2s
-  or larger, depending on the largest observed cohort. Pilot dev
-  has run comfortably at ~1,500 reviewers × ~1,500 reviewees
-  through the rule engine on B1ms; larger cohorts want more RAM.
+  or larger, depending on the largest observed cohort. Larger
+  cohorts want more RAM; the right sizing is a scale-up decision
+  informed by pilot load, not something to pin now.
 - **Enable HA** (zone-redundant) for production Postgres.
 - **Extend backup retention beyond the default 7 days** to
   whatever the institutional data policy names (30 days is a
