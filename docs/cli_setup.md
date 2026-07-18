@@ -490,11 +490,9 @@ your workstation's public IP needs to be on it for `psql` from
 your machine to succeed.
 
 ```bash
-MY_IP=$(curl -sS https://api.ipify.org)
-echo "Current public IP: ${MY_IP}"
 az postgres flexible-server firewall-rule list \
     --resource-group rg-review-robin-web-dev \
-    --name <pg-server> \
+    --server-name "${PG_SERVER}" \
     --query "[].{name:name, start:startIpAddress, end:endIpAddress}" \
     -o table
 ```
@@ -506,9 +504,10 @@ context so it's revocable):
 ```bash
 az postgres flexible-server firewall-rule create \
     --resource-group rg-review-robin-web-dev \
-    --name <pg-server> \
-    --rule-name "wsl-$(date +%Y%m%d)" \
-    --start-ip-address "${MY_IP}" --end-ip-address "${MY_IP}"
+    --server-name "${PG_SERVER}" \
+    --name "home-$(date +%Y%m%d)" \
+    --start-ip-address "${MY_IP}" \
+    --end-ip-address "${MY_IP}"
 ```
 
 Remove it when you're done (`firewall-rule delete` with the
