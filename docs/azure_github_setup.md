@@ -73,15 +73,15 @@
 ## Phase 3 — Identity: Entra App Registration + Easy Auth
 
 - [ ] Create app registration for RRW `[MANUAL if IT-gated]`
-  - [ ] **Multi-tenant** (accounts in any organizational directory) — per RRW's existing design
+  - [ ] **Single-tenant** (accounts in the institutional directory only) — matches RRW's current design; `docs/authentication.md` and `docs/security_posture.md` both scope the pilot posture (including the CSRF decision) to single-tenant. If IT deliberately wants multi-tenant, revisit CSRF and add a `tid` claim filter before flipping.
   - [ ] Redirect URI: `https://<app-hostname>/.auth/login/aad/callback` (add the custom/gateway domain later too)
   - [ ] Create client secret → Key Vault (`rrw-aad-client-secret`); set expiry reminder (max 24 mo)
 - [ ] Configure **Easy Auth** on the Web App:
   - [ ] Provider: Microsoft; client ID + secret (Key Vault reference)
   - [ ] Issuer: `https://login.microsoftonline.com/common/v2.0`
   - [ ] Restrict access: **Require authentication**; unauthenticated → HTTP 302 login redirect
-  - [ ] **Exclude a health-check path** (e.g. `/healthz`) from auth — the App Gateway probe (Phase 5) must reach it anonymously
-- [ ] Port RRW's **tenant allowlist / issuer validation** middleware config (the `tid` claim check) — app-level, from existing RRW code; confirm the allowlist source (env var / App Config)
+  - [ ] **Exclude a health-check path** (e.g. `/health`) from auth — the App Gateway probe (Phase 5) must reach it anonymously
+- [ ] Configure RRW's **operator email allowlist** — set `OPERATOR_EMAILS` and `SYS_ADMIN_EMAILS` App Settings (comma-separated). These are the workspace-level lists of email addresses granted operator / sys-admin rights on first sign-in. Note: RRW does **not** currently enforce a `tid` claim filter or an issuer-level tenant check — the single-tenant Entra registration in the step above is what restricts sign-in to the institutional directory. If the registration is later switched to multi-tenant, add a `tid` check middleware first.
 - [ ] Test login round-trip from an allowed tenant and rejection from a disallowed one (personal MSA, etc.)
 
 ---
@@ -93,7 +93,7 @@
   - Issuer: `https://token.actions.githubusercontent.com`
   - Subject (PRD): `repo:philoyhc/review-robin-web:environment:production`
   - Subject (NPRD): `repo:philoyhc/review-robin-web:environment:staging`
-- [ ] Role assignment: grant it **Website Contributor** scoped to each `rg-rrw-*` (or just the Web Apps) `[MANUAL if you lack User Access Administrator]`
+- [ ] Role assignment: grant it **Website Contributor** scoped to each `rg-nrrw-*` (or just the Web Apps) `[MANUAL if you lack User Access Administrator]`
 - [ ] In GitHub repo settings:
   - [ ] Create **environments** `production` and `staging`; on `production`, enable required reviewer (you) so PRD deploys need a click
   - [ ] Environment variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_WEBAPP_NAME` (no secrets needed — that's the point of OIDC)
@@ -101,7 +101,7 @@
   - [ ] Trigger: push to `main` → deploy `staging`; manual approval gate (environment protection) → deploy `production`. (Or: tag-based PRD deploys — decide and record.)
   - [ ] Jobs: checkout → setup Python (pinned) → install deps → **run tests** → `azure/login@v2` (OIDC) → `azure/webapps-deploy@v3`
   - [ ] Concurrency group so parallel deploys queue rather than race
-- [ ] First deploy to NPRD from a branch; verify app boots, `/healthz` returns 200, login works
+- [ ] First deploy to NPRD from a branch; verify app boots, `/health` returns 200, login works
 - [ ] First PRD deploy through the approval gate
 
 > This mirrors the DBR lesson: deployment is `git push` + CI, never a manual upload. Keep `clasp push`-style manual paths out of the runbook entirely.
@@ -115,7 +115,7 @@
 - [ ] Create App Gateway WAF v2:
   - [ ] Backend pool → the Web App (App Service backend target)
   - [ ] Backend settings: HTTPS, **pick hostname from backend target** ON (App Service needs correct host header)
-  - [ ] Health probe → `/healthz` (the auth-excluded path from Phase 3); confirm 200
+  - [ ] Health probe → `/health` (the auth-excluded path from Phase 3); confirm 200
   - [ ] WAF policy: start **Detection** mode; review logs for a week; switch to **Prevention** `[decision point]`
 - [ ] Custom domain: DNS CNAME/A to the gateway public IP `[MANUAL — DNS via IT]`
   - [ ] TLS certificate on the gateway listener (App Service managed certs don't apply here — source cert from IT / Key Vault) `[MANUAL likely]`
@@ -149,7 +149,7 @@
 - [ ] `git push` to main → tests run → staging deploys with zero manual steps
 - [ ] PRD deploy requires explicit approval and succeeds via OIDC (no publish profiles or PATs anywhere)
 - [ ] App reachable **only** via the gateway domain; direct App Service hostname blocked
-- [ ] Login enforced on every path except `/healthz`; disallowed tenants rejected
+- [ ] Login enforced on every path except `/health`; disallowed tenants rejected
 - [ ] App connects to Postgres as `rrw_app` (least privilege), connection string sourced from Key Vault, no secrets in repo or App Service settings in plaintext
 - [ ] PITR verified conceptually (runbook written); backup retention confirmed
 - [ ] Alerts fire to your inbox (test one)
