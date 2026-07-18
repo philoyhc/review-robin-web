@@ -407,7 +407,147 @@ Expected: returns `?column?` / `1` after prompting for password
 version is too old to negotiate — install `postgresql-client-16`
 per Appendix A.3.
 
-### B.9 If any test fails
+### B.9 Current dev slot connectivity (free-tier personal Azure)
+
+Parallel to B.5–B.8 but pointed at the **existing** developer-
+owned dev slot (`rg-review-robin-web-dev` / `app-review-robin-web-dev`
+/ its Burstable Postgres server). Useful to run alongside B.5–B.8
+before starting the runbook, so you catch any residual
+credential drift on the current setup — or to confirm the dev
+slot is still healthy after you've switched shells / machines /
+WSL distributions.
+
+If you switched Azure tenants in B.5 (`az login --tenant
+<institutional-id>`) you need to switch **back** to your personal
+Azure tenant to run these tests, then switch again for the
+institutional runbook. `az account list -o table` shows both.
+
+Substitute `<pg-server>` with the actual Flexible Server name
+(check `az postgres flexible-server list --resource-group
+rg-review-robin-web-dev --query "[].name" -o tsv` if you don't
+remember it).
+
+**B.9.1 Dev-slot resource group + web app reachable.**
+
+```bash
+az group show --name rg-review-robin-web-dev \
+    --query "{name:name, state:properties.provisioningState}" -o table
+az webapp show --name app-review-robin-web-dev \
+    --resource-group rg-review-robin-web-dev \
+    --query "{name:name, state:state, host:defaultHostName, tls:httpsOnly}" -o table
+```
+
+Expected: RG shows `Succeeded`; web app shows `Running` +
+default host = `app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net`
+(or the current hostname) + `httpsOnly: true`. If `az group
+show` errors with `AuthorizationFailed` or `ResourceGroupNotFound`,
+you're pointed at the wrong tenant/subscription — see the note
+above.
+
+**B.9.2 Dev-slot `/health` reachable anonymously.**
+
+`/health` is the one route excluded from Easy Auth (per
+`docs/security_posture.md`), so it should return 200 with a
+JSON body without triggering a login redirect.
+
+```bash
+DEV_HOST=$(az webapp show --name app-review-robin-web-dev \
+    --resource-group rg-review-robin-web-dev \
+    --query defaultHostName -o tsv)
+curl -sS "https://${DEV_HOST}/health"
+echo   # trailing newline
+```
+
+Expected: `{"status":"ok"}` returned in one line, HTTP 200. If
+you get an HTML login page (302 to `login.microsoftonline.com`),
+`/health` isn't in the Easy Auth exclude list — check the App
+Service *Authentication* blade. If you get 503, the app is
+booting or has crashed — check `az webapp log tail --name
+app-review-robin-web-dev --resource-group rg-review-robin-web-dev`.
+
+**B.9.3 Dev-slot Postgres server reachable via `az`.**
+
+Confirms the server exists in the tenant/subscription you're
+pointed at, and prints the connection metadata `psql` needs.
+
+```bash
+az postgres flexible-server list \
+    --resource-group rg-review-robin-web-dev \
+    --query "[].{name:name, host:fullyQualifiedDomainName, state:state, version:version}" \
+    -o table
+```
+
+Expected: one row with `state=Ready` + Postgres `version=16`.
+The `host` value is what goes into the `psql` connection string
+below. If the list is empty, either you're in the wrong
+subscription or the server has been deleted — surface either
+before starting Phase 2.
+
+**B.9.4 Your public IP is in the Postgres firewall allow-list.**
+
+The dev slot uses public access with a firewall allow-list;
+your workstation's public IP needs to be on it for `psql` from
+your machine to succeed.
+
+```bash
+MY_IP=$(curl -sS https://api.ipify.org)
+echo "Current public IP: ${MY_IP}"
+az postgres flexible-server firewall-rule list \
+    --resource-group rg-review-robin-web-dev \
+    --name <pg-server> \
+    --query "[].{name:name, start:startIpAddress, end:endIpAddress}" \
+    -o table
+```
+
+Expected: at least one rule whose `[startIpAddress, endIpAddress]`
+range covers `${MY_IP}`. If not, add one (name it after the
+context so it's revocable):
+
+```bash
+az postgres flexible-server firewall-rule create \
+    --resource-group rg-review-robin-web-dev \
+    --name <pg-server> \
+    --rule-name "wsl-$(date +%Y%m%d)" \
+    --start-ip-address "${MY_IP}" --end-ip-address "${MY_IP}"
+```
+
+Remove it when you're done (`firewall-rule delete` with the
+same `--rule-name`). Office networks often block outbound 5432
+regardless — if you can't add the rule or `psql` still hangs
+after adding one, fall back to Azure Cloud Shell (which reaches
+the server via the "Allow Azure services" rule).
+
+**B.9.5 Dev-slot `psql` connection as admin.**
+
+```bash
+psql "host=<pg-server>.postgres.database.azure.com port=5432 \
+      dbname=rrw user=<admin> sslmode=require" -c "SELECT 1;"
+```
+
+Expected: prompts for password (or auto-reads `~/.pgpass`),
+returns `?column?` / `1`. Handshake failures usually mean B.9.4
+hasn't been resolved.
+
+**B.9.6 Dev-slot `psql` connection as `rrw_app` (least
+privilege).**
+
+Parallel to B.9.5 but confirms the least-privilege role the
+running app uses actually works. If this connects but B.9.5
+doesn't, you have the passwords swapped.
+
+```bash
+psql "host=<pg-server>.postgres.database.azure.com port=5432 \
+      dbname=rrw user=rrw_app sslmode=require" \
+     -c "SELECT current_user, count(*) FROM users;"
+```
+
+Expected: `current_user = rrw_app`, `count` = whatever the row
+count is. If you get `permission denied for table users`, the
+`GRANT` from Phase 2 of the runbook was skipped on this server
+— see `docs/deployment_dev.md` §Database configuration for the
+grant statements.
+
+### B.10 If any test fails
 
 - **Corporate proxy blocking (B.1).** Ask IT to allow-list
   `github.com`, `api.github.com`, `management.azure.com`, and
@@ -424,6 +564,7 @@ per Appendix A.3.
   on non-Ubuntu distros, follow the equivalent for
   postgresql.org's official repo.
 
-Once all eight tests pass, you're ready to work through
-[`azure_github_setup.md`](azure_github_setup.md) Phase 1
-onwards.
+Once B.1 through B.8 pass (institutional side) — plus B.9 if
+you're maintaining the personal dev slot in parallel — you're
+ready to work through [`azure_github_setup.md`](azure_github_setup.md)
+Phase 1 onwards.
