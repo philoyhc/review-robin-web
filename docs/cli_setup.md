@@ -205,7 +205,15 @@ sudo apt install -y git
 # Azure CLI (az) — Microsoft's install script
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
-# Postgres client (psql) — version 16 to match Flexible Server
+# Postgres client (psql) — version 16 to match Flexible Server.
+# Ubuntu's default postgresql-client trails the current major
+# version; PostgreSQL's official apt repo pins 16 reliably.
+sudo apt install -y curl ca-certificates
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc
+sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+sudo apt update
 sudo apt install -y postgresql-client-16
 
 # Useful adjuncts
@@ -230,7 +238,40 @@ If any of these come back older than the "expect" line, upgrade
 before proceeding — several runbook commands use features that
 land in the versions above.
 
-### A.5 (Optional) Move your RRW clone into WSL
+### A.5 Log into GitHub + configure git identity
+
+`gh auth setup-git` registers the GitHub CLI as git's credential
+helper — after this, `git push` uses the token `gh auth login`
+issued, and there's no password prompt on any repo operation.
+
+```bash
+gh auth login              # browser + device code
+gh auth setup-git          # register gh as the git credential helper
+
+git config --global user.name "philoyhc"
+git config --global user.email "philoyhc@users.noreply.github.com"
+```
+
+The `@users.noreply.github.com` address is GitHub's privacy
+form — commit metadata stays associated with the account
+without exposing a real inbox in the repo history.
+
+### A.6 Verify the identity is set
+
+Empty-commit-then-reset — the commit uses the just-configured
+name / email, and the reset rewinds immediately, so nothing
+lands in the branch history.
+
+```bash
+cd ~/src/review-robin-web   # or any existing clone
+git commit --allow-empty -m "identity test" && git reset --hard HEAD~1
+```
+
+If `gh auth setup-git` didn't run or the identity isn't set,
+`git commit` errors with `Please tell me who you are`; if the
+token is missing scope, a subsequent `git push` returns 403.
+
+### A.7 (Optional) Move your RRW clone into WSL
 
 WSL2 can read `/mnt/c/Users/...` transparently, but I/O is
 noticeably faster when the repo lives inside the WSL filesystem:
@@ -244,7 +285,7 @@ cd review-robin-web
 Use `code .` from inside the WSL shell to open VS Code with the
 WSL Remote extension (it auto-installs on first use).
 
-### A.6 Windows Terminal (nice-to-have)
+### A.8 Windows Terminal (nice-to-have)
 
 If it's not already default, install Windows Terminal
 (`winget install Microsoft.WindowsTerminal`) and set its default
