@@ -20,6 +20,8 @@ Authoritative for "what does the code currently do" — read
 | `backup_restore.md` | Database backup / restore mechanism and data-retention notes. |
 | `known_limitations.md` | Current scope limits and deferred items, stated plainly for a pilot. |
 | `security_posture.md` | Authorization model, permission / destructive-action audit, identity trust model, CSRF posture, deferred hardening. |
+| `azure_github_setup.md` | 8-phase Azure + GitHub setup runbook for the sanctioned PRD / NPRD deployment. Handoff from IT quote to a working App Service + Postgres + Key Vault + App Gateway topology behind Easy Auth. |
+| `cli_setup.md` | Companion to `azure_github_setup.md` — CLIs needed on your workstation, shell-choice notes for Windows, one-time auth setup, plus WSL2 setup on Windows 11 and connectivity tests to run before Phase 1. |
 
 Sibling folders:
 
