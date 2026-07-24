@@ -12,12 +12,18 @@ below carry that load, and the two elastic pressure valves
 ([§B](#b-headroom-for-1500-reviewers--the-pressure-valves)) absorb a
 deadline-day crush.
 
-This is the *shopping list*. Two siblings cover the other angles:
+This is the *shopping list*. Two siblings cover the other angles — but
+**both describe the broader two-environment (PRD + NPRD) topology**, not
+this single sandbox. Read their SKUs and PRD/NPRD split as the *scale-up
+graduation target*, and this doc's single-environment sizing as the pilot
+you actually provision first:
 
 - **[`../azure_ask.md`](../azure_ask.md)** — the wish list + governance
-  ask (sponsorship, data policy, cost cap) and the *why*.
+  ask (sponsorship, data policy, cost cap) and the *why*; its §1 is the
+  pilot ask, §2 the scale-up.
 - **[`azure_github_setup.md`](azure_github_setup.md)** — the step-by-step
-  build runbook once the estimate is approved.
+  build runbook for the sanctioned PRD/NPRD deployment, once the estimate
+  is approved.
 
 Read this one when you're sitting in the pricing calculator adding line
 items.
@@ -61,9 +67,21 @@ Size to the *shape* of the load, not the headline number:
   app: plain `<form>` GET/POST, no media, no heavy compute, no
   client-side build. A request is a couple of indexed Postgres queries
   and an HTML render.
-- **The data is small.** 1,500 reviewers × a handful of instruments ×
-  structured fields (text + numeric) + one audit row per mutation lands
-  in the low hundreds of thousands of rows — megabytes, not gigabytes.
+- **Data volume tracks the *assignment fan-out*, not the reviewer count.**
+  Each instrument's assignments are the (reviewer × reviewee) pairs its
+  Band 1 link rules select. For a **sparse** pattern — each reviewer
+  covering a bounded set of reviewees (a handful each) — 1,500 reviewers
+  land in the low hundreds of thousands of rows across assignments,
+  response fields, and audit: megabytes, comfortably inside the tiers
+  below. But RRW's **default is Full Matrix** (untouched Band 1 → *every*
+  reviewer/reviewee pair; `app/services/assignments/_generate.py`), so a
+  symmetric roster left on the default — say 1,500 reviewers all reviewing
+  1,500 reviewees — is ~2.25 M assignments for a *single* instrument,
+  before response-field and audit fan-out. That is a different order of
+  magnitude. **The 1,500-reviewer sizing here assumes a bounded
+  per-reviewer assignment count; a dense Full-Matrix at that roster size
+  should be load-tested first and likely wants General Purpose Postgres
+  (row 2's escalation path), not Burstable.**
 - **The app is stateless.** There is no in-process session store; all
   state lives in Postgres (verified — no `SessionMiddleware`, no in-memory
   cache tier). That means the App Service can **scale out horizontally**
@@ -80,7 +98,7 @@ Both are comfortably met by the tiers in §A.
 
 | # | Resource | Search term | Tier / SKU | Price knobs | Status |
 |---|---|---|---|---|---|
-| 1 | App Service Plan (compute) | **App Service** | Linux · **P0V3** (Premium v3, 1 vCPU / 4 GiB) | 1 instance × 730 h/mo (autoscale to 2–3 on demand — see §B) | Core |
+| 1 | App Service Plan (compute) | **App Service** | Linux · **P0V3** (Premium v3, 1 vCPU / 4 GiB) | 1 instance × 730 h/mo (price the surge at +1 → 2 instances; see §B) | Core |
 | 2 | PostgreSQL database | **Azure Database for PostgreSQL** → Flexible Server | **Burstable B2s** (2 vCore / 4 GiB) | Compute 730 h/mo · **Storage 32 GiB** · Backup 7-day (see note) · HA **off** | Core |
 | 3 | Key Vault | **Key Vault** | **Standard** | Operations (few/mo — pennies) | Core |
 | 4 | Log Analytics / App Insights | **Azure Monitor** → Log Analytics | Pay-as-you-go | GB ingested/mo (small; first 5 GB free) | Core |
@@ -95,9 +113,11 @@ Both are comfortably met by the tiers in §A.
    charge — the Web App is free and rides on the plan. Runtime is
    **Linux, Python 3.12**. **P0V3** (Premium v3) is the pick: it carries
    the steady load *and* unlocks the two things a 1,500-reviewer surge
-   needs — **autoscale-out** to 2–3 instances and **deployment slots**.
-   (Basic B-tier is cheaper but can't scale out or slot-swap, so it can't
-   absorb a deadline crush without re-provisioning.) If steady load ever
+   needs — **autoscale** (automatic scale-out on a load rule) and
+   **deployment slots**. (Basic B-tier is cheaper and *can* be scaled out
+   manually to at most 3 instances, but it **can't autoscale or
+   slot-swap** — only Premium reacts to a deadline-day CPU/request spike
+   automatically.) If steady load ever
    sits high, **P1V3** (2 vCPU / 8 GiB) is the in-place step up — no
    migration, just a plan resize.
 2. **PostgreSQL Flexible Server.** **Burstable B2s**, **Postgres 16**,
@@ -154,19 +174,24 @@ in-place levers that let the single environment ride out a surge. Provision
 the tiers that *enable* them (P0V3 in row 1) and they're available on
 demand:
 
-- **App Service autoscale-out.** Premium v3 can scale from 1 to 2–3
-  instances on a CPU or request-count rule during a deadline day, then
-  scale back. You only pay for the extra instance-hours while they run,
-  so the calculator's steady 1-instance figure is the baseline and a
-  surge adds a bounded, temporary increment. Because the app is stateless
-  this is safe — any instance can serve any request.
+- **App Service autoscale-out.** Premium v3 adds instances on a CPU or
+  request-count rule during a deadline day, then scales back. **Plan and
+  price the surge at +1 instance (2 total)** — two P0V3 instances
+  comfortably cover the peak request rate this workload produces; the
+  platform ceiling is higher (up to 3+) if a spike ever demands it. You
+  only pay for the extra instance-hours while they run, so the
+  calculator's steady 1-instance figure is the baseline and the surge adds
+  a bounded, temporary increment. Because the app is stateless this is
+  safe — any instance can serve any request.
 - **Postgres compute resize.** Burstable → same-tier bump, or
   Burstable → General Purpose, is a near-online resize if the DB ever
   becomes the bottleneck. Nothing to pre-pay; it's the escalation path,
   not the provision.
 
-For a hard worst-case estimate, add **one extra P0V3 instance-month** to
-the figure as a "sustained surge" contingency line and label it as such.
+For a hard worst-case estimate, add **one extra P0V3 instance-month** (the
++1 surge instance running the whole month) as a "sustained surge"
+contingency line and label it as such — matching the +1 autoscale rule
+above, so baseline + contingency = the 2-instance ceiling you priced.
 
 ---
 
