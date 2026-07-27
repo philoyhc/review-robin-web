@@ -14,6 +14,7 @@ Authoritative for "what does the code currently do" — read
 | `database.md` | SQLAlchemy + Alembic conventions, dialect parity, where Postgres lives. |
 | `imports.md` | CSV import format for reviewers / reviewees / assignments (operator-facing how-to). |
 | `local_setup.md` | Developer how-to for running tests, migrations, and the dev server locally. |
+| `codespace_setup.md` | Running the suite and the dev server from a GitHub Codespace (SQLite + fake auth, no external services); the Easy-Auth caveat; optional Postgres-parity and devcontainer. Companion to `local_setup.md`. |
 | `deployment_dev.md` | Dev Azure App Service deployment notes (resource names, env vars, GRANT bootstrap, planned production flow). |
 | `operations_runbook.md` | Day-to-day procedures for operating the deployed service (deploy, restart, logs, secrets). |
 | `troubleshooting.md` | Symptom-driven diagnosis for the deployed dev slot. |
