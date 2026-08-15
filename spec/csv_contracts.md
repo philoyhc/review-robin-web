@@ -73,11 +73,7 @@ is byte-stable.
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
 | 6 | `PhotoLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `PhotoLink` column (W11, PR #1756). |
-
-`Status` is **not** exported (reviewers carry a `status` column
-internally but the roster CSV doesn't surface it; it is edited
-on the Reviewers Setup page via the per-row Edit / bulk
-inactivate-reactivate UI shipped in Segment 15F).
+| 7 | `Status` | `reviewer.status` | Segment 18P PR C. `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
 `name`, then by `email`. Deterministic.
@@ -92,6 +88,7 @@ inactivate-reactivate UI shipped in Segment 15F).
 | 4 | `RevieweeTag2` | `reviewee.tag_2` | Optional. |
 | 5 | `RevieweeTag3` | `reviewee.tag_3` | Optional. |
 | 6 | `PhotoLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
+| 7 | `Status` | `reviewee.status` | Segment 18P PR C. `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first, then by `name`, then by
 `email_or_identifier`.
@@ -294,7 +291,9 @@ banner-error.
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `PhotoLink` may be absent. An absent column is `None` for every
-row; an empty cell is `None` for that row.
+row; an empty cell is `None` for that row. `Status` (18P PR C) is
+also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
+else a per-row error.
 
 **Save:** `save_reviewers(db, session, rows)` /
 `save_reviewees(...)` wipe-and-replace within the session's
@@ -328,9 +327,9 @@ Shipped PR #1706. `parse_observer_csv(content: bytes) -> ParseResult`
 and `save_observers(db, session, rows, *, user, correlation_id)`.
 
 **Required columns:** `ObserverEmail`.
-**Optional columns:** `ObserverName`, `ObserverTag1`, `CohortRule`
-(Segment 18P PR B — a compact-JSON `cohort_rule` payload; the extract
-emits it and the importer reads it back).
+**Optional columns:** `ObserverName`, `ObserverTag1`, `Status`,
+`CohortRule` (Segment 18P PR B — a compact-JSON `cohort_rule` payload;
+PR C — the `Status` the extract already emitted is now read back).
 
 **Per-row validation:**
 
@@ -339,6 +338,7 @@ emits it and the importer reads it back).
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
+| `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error (18P PR C). |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's

@@ -12,6 +12,10 @@ class ReviewerImportRow(BaseModel):
     tag_1: str | None = None
     tag_2: str | None = None
     tag_3: str | None = None
+    # Segment 18P PR C — active / inactive soft-delete state,
+    # validated by the parser; defaults to "active" (a CSV without a
+    # Status column re-imports everyone active, as before).
+    status: str = "active"
 
 
 class RevieweeImportRow(BaseModel):
@@ -21,6 +25,7 @@ class RevieweeImportRow(BaseModel):
     tag_1: str | None = None
     tag_2: str | None = None
     tag_3: str | None = None
+    status: str = "active"
 
 
 class ObserverImportRow(BaseModel):
@@ -34,6 +39,7 @@ class ObserverImportRow(BaseModel):
     email: str
     display_name: str | None = None
     tag_1: str | None = None
+    status: str = "active"
     # Segment 18P PR B — the per-observer cohort match rule
     # (``CohortRuleSet`` shape, already schema-validated by the
     # parser), or ``None`` when the CohortRule cell is blank / absent.

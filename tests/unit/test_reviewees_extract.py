@@ -91,6 +91,7 @@ def test_per_row_shape_includes_photo_link(db: Session) -> None:
         "",
         "",
         "https://example.edu/carol.jpg",
+        "active",
     )
 
 

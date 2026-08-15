@@ -93,6 +93,7 @@ def test_per_row_shape_matches_importer_columns(db: Session) -> None:
         "2026",
         "",
         "https://example.org/alex.png",
+        "active",
     )
 
 
@@ -107,7 +108,7 @@ def test_per_row_shape_empty_profile_link_yields_blank(
         email="bea@example.edu",
     )
     rows = list(serialize_reviewers(db, review_session))
-    assert rows[1] == ("Bea", "bea@example.edu", "", "", "", "")
+    assert rows[1] == ("Bea", "bea@example.edu", "", "", "", "", "active")
 
 
 def test_active_rows_lead_then_alphabetical(db: Session) -> None:
