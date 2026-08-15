@@ -1913,21 +1913,32 @@ Closed the P0 items from the Codex weaknesses assessment (addendum archived to `
 
 ---
 
-### Segment 18P — Patching the round-trip (harmonize + rehydrate) — planning (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
+### Segment 18P — Patching the round-trip (harmonize + rehydrate) — Group 1 done 2026-06-05 (PRs #1864 → #1870); Group 2 upcoming (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
 
 Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`): (1) **harmonize** the round-trip so export→import + clone stop silently dropping hand-set config; (2) **rehydrate** a complete session from its extract files. Group 1 lands first — it carries the rehydrate prerequisites. No new infra (Postgres-backed pre-flight stash; **no blob storage**).
 
-**Group 1 — Harmonize** (compact PR ladder; each flips gaps in the coverage matrix — the living scoreboard):
+**Group 1 — Harmonize — DONE** (each PR flipped its gap in the coverage matrix; no migrations):
 
-- **PR A1** — settings CSV: feature toggles (`relationships_enabled` / `observers_enabled`). *[rehydrate prereq]*
-- **PR A2** — settings CSV: `instrument_view_policies` serialize + apply. *[rehydrate prereq]*
-- **PR B** — observers CSV: `cohort_rule` round-trip.
-- **PR C** — roster CSVs: `status` round-trip (reviewer/reviewee `Status` column; observer importer reads the `Status` it already exports).
-- **PR D1** — clone: copy data shapes + retention config (scheduling anchors documented as intentional reset).
-- **PR D2** — settings CSV: session tags + `band1_touched_links`.
-- **PR E** — asymmetry cleanups (field-label export allowlist; document position-authoritative instrument order + dead `display_fields.label`).
+- **PR A1 (#1864)** ✅ — settings CSV: feature toggles (`relationships_enabled` / `observers_enabled`). *[rehydrate prereq]*
+- **PR A2 (#1865)** ✅ — settings CSV: `instrument_view_policies` serialize + apply. *[rehydrate prereq]*
+- **PR B (#1866)** ✅ — observers CSV: `cohort_rule` round-trip.
+- **PR C (#1867)** ✅ — roster CSVs: `status` round-trip (reviewer/reviewee `Status` column; observer importer reads the `Status` it already exports).
+- **PR D1 (#1868)** ✅ — clone: copy data shapes + retention + feature toggles (scheduling anchors documented as intentional reset).
+- **PR D2 (#1869)** ✅ — settings CSV: session tags + `band1_touched_links`.
+- **PR E (#1870)** ✅ — asymmetry cleanups (field-label export allowlist; document position-authoritative instrument order + dead `display_fields.label`).
 
-**Group 2 — Rehydrate** (needs A + F): **PR F** responses importer → **PR G** analyzer + validate page + stash (mandatory pre-flight gate; lobby button → `/operator/sessions/rehydrate`) → **PR H** commit route + orchestrator.
+With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequisite (A1 + A2) is satisfied, so Group 2 is unblocked.
+
+**Group 2 — Rehydrate — upcoming** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach):
+
+- **PR G0** — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
+- **PR F** — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill; own size limits). Independent.
+- **PR G1** — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
+- **PR G2** — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
+- **PR G3** — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).
+- **PR H** — wire Rehydrate: commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit.
+
+Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 
 ---
 

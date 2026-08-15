@@ -34,6 +34,11 @@ extracted session** (Group 2).
 
 ## Group 1 — Harmonize the round-trip
 
+> **Status: shipped 2026-06-05** — all seven PRs landed (A1 #1864, A2
+> #1865, B #1866, C #1867, D1 #1868, D2 #1869, E #1870), each
+> migration-free and flipping its gap in `spec/roundtrip_coverage.md`. The
+> rehydrate prerequisite (A1 + A2) is satisfied; Group 2 is unblocked.
+
 Close the gaps in `spec/roundtrip_coverage.md`. Each Part flips one class
 of gap from ❌/⚠️ to ✅ in that matrix and lands a round-trip test. Ordered
 so the rehydrate-blocking items come first.
@@ -323,10 +328,138 @@ rehydrate.
   load the set, **re-run the analyzer** (expired/altered stash fails safely),
   and on a clean verdict call H1 and redirect to the new Session Home.
 
-*Risk note — land F before G/H.* The responses importer is the only novel
-algorithm; getting it right (and tested) in isolation de-risks the whole
-feature. The analyzer (G1) reuses it; the page (G2) is testable against the
-analyzer; the orchestrator (H1) before the commit route (H2).
+*Risk note.* The UI **scaffold (G0) lands first** so the surface is agreed
+before any wiring (scaffold-first convention). The responses importer (F)
+is the only novel algorithm — get it right and tested in isolation to
+de-risk the feature. The analyzer (G1) reuses F; the wiring PRs (G3
+Validate, H Rehydrate/commit) attach behaviour to the G0 cards last. The
+detailed cut is in "Group 2 — implementation (PR ladder)" below.
+
+---
+
+## Group 2 — implementation (PR ladder)
+
+Six PRs. Group 2 introduces **consequential UI** (a lobby affordance + a new
+page with three cards), so it follows the **scaffold-first** convention
+(`CLAUDE.md` → Working approach): **PR G0 lands the UI shell with inert
+placeholder cards first**, and the surface gets agreed / iterated before any
+logic is wired behind it. The remaining PRs are the novel algorithm (F), the
+pure analyzer (G1), the stash (**G2 carries the segment's one Alembic
+migration**), then the two wiring PRs (G3 validate, H commit). Each PR that
+closes a `docs/rehydrate.md` item updates that spec in the same PR.
+
+### PR G0 — UI scaffold (placeholders; lands first)
+
+The reviewable UI shell, no behaviour behind it — per the scaffold-first
+convention, so the page shape is agreed before wiring.
+
+- **Lobby button** — the `Rehydrate` `.btn` in the search-card row, next to
+  `Add new` (between `Add new` and `Go to Archive`) in `sessions_list.html`,
+  linking to `GET /operator/sessions/rehydrate`.
+- **The page** — `GET /operator/sessions/rehydrate` → new
+  `operator/session_rehydrate.html` with all three cards as **static
+  placeholders** (`docs/rehydrate.md` §3.2): the instructions card (real
+  copy — required file set + restored / not-restored summary); the upload +
+  actions card (a real file input, plus **Validate** and **Rehydrate**
+  buttons present but **inert** — Rehydrate disabled, Validate a no-op that
+  re-renders); and the full-width details + findings card (empty
+  placeholder / "run Validate to see findings"). Same operator chrome as
+  `/operator/sessions/new`. No analyzer, no stash, no POST routes yet.
+- **Tests:** the lobby renders the `Rehydrate` button linking to the page;
+  the page returns 200 with all three cards; Rehydrate is disabled.
+
+### PR F — responses importer  *(net-new; independent)*
+
+`app/services/extracts/responses_import.py` — the only genuinely new
+algorithm (`docs/rehydrate.md` §6.4).
+
+- **`parse_responses_csv(content) -> list[_ParsedResponseRow]`** — a
+  streaming parser for the *sectioned* 21-column `responses.csv`
+  (per-instrument preamble → blank → header → data). Pure; **its own size
+  bound**, not `csv_imports`' 5000-row / 1 MiB caps (a 1,500-reviewer file
+  is far larger). Each row yields `(reviewer_email, reviewee_email,
+  instrument_short_label, field_key, value, saved_at, submitted_at,
+  version)` with the positional `instrument_{n}` as the short-label
+  fallback.
+- **`load_responses(db, *, review_session, rows) -> ResponseLoadResult`** —
+  resolve identity to the session's new PKs (reviewer/reviewee by lowered
+  email, instrument by short-label, field by `(instrument, field_key)`);
+  **find-or-create the assignment** for each `(reviewer, reviewee,
+  instrument)` (`include=True`, `created_by_mode="manual"`, `is_self_review`
+  = emails equal) so no response is orphaned; batched `Response` insert
+  (`saved_at` / `submitted_at` / `version` preserved). Returns counts +
+  unresolved-row warnings.
+- **Tests:** parse a real extract `responses.csv` (multi-instrument,
+  sectioned); load into a seeded session and assert byte-equal
+  value/timestamps/version + backfilled assignments; a scale test well
+  beyond 5000 rows.
+
+### PR G1 — the pre-flight analyzer  *(pure; needs F's parser)*
+
+`analyze_rehydrate_set(files) -> RehydrateReport` in
+`app/services/session_rehydrate.py` (`docs/rehydrate.md` §3.3). Completeness
+(required files + header match), **cross-file integrity** (responses emails
+resolve in the rosters; instrument short-labels + field-keys resolve in
+`settings.csv`; relationships/observers present iff the settings imply
+them — catches cross-session mixes), and a **preview** (derived `_REHYD`
+name/code + entity counts). Reuses F's parser in count-only mode + the
+settings/roster parsers. Pure and unit-testable; no route yet.
+
+- **Tests:** each verdict — clean, each missing file, malformed header,
+  responses referencing an absent email, an absent instrument/field, the
+  observers-vs-settings mismatch.
+
+### PR G2 — the stash  *(the segment's only migration)*
+
+`rehydrate_stashes` table (Alembic migration): `id`, `token` (unique),
+`operator_user_id` FK, `payload` (`LargeBinary` — the zipped/serialized
+file set; portable BLOB / bytea, **no `sqlalchemy.dialects.postgresql`
+import** per the model convention), `created_at`. A thin
+`rehydrate_stash` service: `put(files, user) -> token`, `get(token, user)`
+(TTL-checked, operator-scoped), and a sweep of expired rows. Postgres-backed
+so the Validate → Commit hand-off survives App Service scale-out
+(`docs/rehydrate.md` §3.3). Round-trips both dialects (SQLite tests +
+`ci-postgres`).
+
+- **Tests:** put→get round-trip; expired token rejected; another operator's
+  token rejected.
+
+### PR G3 — wire the Validate action into the scaffold
+
+Attach behaviour to G0's upload card. `POST …/rehydrate/validate` (unpack
+ZIPs → **G1** analyze → **G2** stash → re-render the page) turns the inert
+Validate button live: the full-width details + findings card populates with
+the report (derived name/code + preview counts + severity-chipped findings,
+reusing the Validate-page vocabulary), and the **Rehydrate** button enables
+only on a clean verdict, carrying the stash token. Still no session is
+created.
+
+- **Tests:** validate on a clean set stashes + enables Rehydrate + shows the
+  preview; validate on an incomplete / cross-session-mixed set blocks with
+  specific messages, keeps Rehydrate disabled, and creates no session.
+
+### PR H — commit route + orchestrator
+
+- **Orchestrator** `session_rehydrate.rehydrate_session(db, *, files, user,
+  correlation_id) -> ReviewSession` — the full pipeline (`docs/rehydrate.md`
+  §6): create draft → apply settings (with the `_REHYD` name + unique-code
+  rewrite) → import rosters + relationships + observers → generate
+  assignments → load responses via F → land **draft, not activated**; the
+  restored/not-restored description note; all-or-nothing rollback. Register
+  `session.rehydrated` in `EVENT_SCHEMAS`.
+- **Commit route** `POST …/rehydrate/commit` — load the stash by token,
+  **re-run the analyzer** (stale/expired stash fails safe), and on a clean
+  verdict call the orchestrator + redirect to the new Session Home.
+- **Tests:** the full round-trip integration (`docs/rehydrate.md` §12 —
+  build → extract → rehydrate → assert populations / instruments /
+  assignments / byte-equal responses / `_REHYD` name + note); collision
+  naming (`_REHYD` → `_REHYD_1`); mandatory-gate (commit with no / bad token
+  rejected, no session); rollback leaves zero rows.
+
+**Landing order:** **G0 first** (the UI scaffold — surface agreed before
+wiring), then F / G1 / G2 in any order (all independent logic), then G3
+(wire Validate — needs G0 + G1 + G2), then H (wire Rehydrate/commit — needs
+G0 + F + G1 + G3).
 
 ---
 
