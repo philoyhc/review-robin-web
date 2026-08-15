@@ -30,6 +30,8 @@ from app.services.email_templates import (
 # import retired.
 from app.services.sessions import resolve_session_timezone
 
+from ._apply_shared import _VALID_FL_SOURCE_FIELDS
+
 from app.services.session_config_io._rows import (
     Row,
     _bool,
@@ -624,6 +626,12 @@ def _field_label_rows(
         .scalars()
         .all()
     )
+    # Segment 18P PR E — only emit rows the importer would accept. The
+    # apply side rejects any `field_labels.*` outside the tag allowlist
+    # (`_VALID_FL_SOURCE_FIELDS`); exporting one anyway made the file
+    # non-round-trippable (a legacy reviewee-identity label would fail
+    # its own re-import). Filtering export to the allowlist removes that
+    # export-without-import asymmetry.
     return [
         Row(
             f"field_labels.{lbl.source_type}.{lbl.source_field}",
@@ -631,6 +639,8 @@ def _field_label_rows(
             "string",
         )
         for lbl in labels
+        if lbl.source_field
+        in _VALID_FL_SOURCE_FIELDS.get(lbl.source_type, frozenset())
     ]
 
 

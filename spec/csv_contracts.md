@@ -392,6 +392,20 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 
+**Round-trip notes (Segment 18P PR E):**
+
+- **`field_labels.*` are export-filtered to the import allowlist**
+  (`reviewer`/`reviewee` → `tag_1..3`, `pair_context` → `1..3`). A
+  legacy label outside that set is *not* exported, so the file always
+  re-imports cleanly (no export-without-import row).
+- **`instruments[n].order` is informational.** Apply ignores the `order`
+  cell — **1-based CSV row position is authoritative**. To reorder
+  instruments, reorder their row blocks in the file.
+- **`instruments[n].display_fields[m].label` is a dead column.** It is no
+  longer serialized (retired 15A); a legacy `label` row is tolerated and
+  silently dropped on import, and the model column is always restored
+  empty.
+
 ### 3.4 What's not an importer
 
 - **Assignments.** Materialised derivative post-15D — no operator-
