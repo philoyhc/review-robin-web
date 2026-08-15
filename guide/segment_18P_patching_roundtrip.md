@@ -34,6 +34,11 @@ extracted session** (Group 2).
 
 ## Group 1 — Harmonize the round-trip
 
+> **Status: shipped 2026-06-05** — all seven PRs landed (A1 #1864, A2
+> #1865, B #1866, C #1867, D1 #1868, D2 #1869, E #1870), each
+> migration-free and flipping its gap in `spec/roundtrip_coverage.md`. The
+> rehydrate prerequisite (A1 + A2) is satisfied; Group 2 is unblocked.
+
 Close the gaps in `spec/roundtrip_coverage.md`. Each Part flips one class
 of gap from ❌/⚠️ to ✅ in that matrix and lands a round-trip test. Ordered
 so the rehydrate-blocking items come first.
