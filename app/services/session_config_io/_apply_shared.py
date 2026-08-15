@@ -85,6 +85,9 @@ class _InstrumentSpec:
     column_widths: dict[str, Any] | None = None
     starts_new_page: bool = False
     band2_state: dict[str, Any] | None = None
+    # Segment 18P PR D2 — the Band 1 "set"-pill state, dropped by the
+    # pre-D2 settings CSV.
+    band1_touched_links: list[str] | None = None
     display_fields: dict[int, _DisplayFieldSpec] = _dataclass_field(default_factory=dict)
     response_fields: dict[int, _ResponseFieldSpec] = _dataclass_field(default_factory=dict)
     # Segment 18P PR A2 — the Band 3 visibility grid, keyed by
@@ -140,6 +143,9 @@ class _ParsedConfig:
     session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(default_factory=dict)
     field_labels: list[_FieldLabelSpec] = _dataclass_field(default_factory=list)
     data_shapes: dict[int, _DataShapeSpec] = _dataclass_field(default_factory=dict)
+    # Segment 18P PR D2 — session tags (the `session_tags[i].tag`
+    # rows), collected as an ordered list of tag strings.
+    session_tags: list[str] = _dataclass_field(default_factory=list)
 
 
 _VALID_DATA_TYPES = {
@@ -197,6 +203,7 @@ _RX_RULE_SET = re.compile(r"^session_rule_sets\[(\d+)\]\.(\w+)$")
 _RX_EMAIL = re.compile(r"^email_overrides\.(\w+)\.(\w+)$")
 _RX_FIELD_LABEL = re.compile(r"^field_labels\.(\w+)\.([^.]+)$")
 _RX_DATA_SHAPE = re.compile(r"^data_shapes\[(\d+)\]\.(\w+)$")
+_RX_SESSION_TAG = re.compile(r"^session_tags\[(\d+)\]\.(\w+)$")
 
 
 # --------------------------------------------------------------------------- #

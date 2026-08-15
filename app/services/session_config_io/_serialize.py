@@ -19,6 +19,7 @@ from app.db.models import (
     ReviewSession,
     SessionFieldLabel,
     SessionRuleSet,
+    SessionTag,
 )
 from app.services.date_formatting import iso_in_zone
 from app.services.email_templates import (
@@ -80,7 +81,28 @@ def serialize_session_config(
     rows.extend(_session_rule_set_rows(db, review_session))
     rows.extend(_field_label_rows(db, review_session))
     rows.extend(_data_shape_rows(db, review_session))
+    rows.extend(_session_tag_rows(db, review_session))
     return rows
+
+
+def _session_tag_rows(db: Session, review_session: ReviewSession) -> list[Row]:
+    """Segment 18P PR D2 — the session's operator-chosen tags, one
+    ``session_tags[i].tag`` row each, sorted for byte-stable
+    re-export. Pre-D2 tags round-tripped through clone but not the
+    settings CSV."""
+    tags = (
+        db.execute(
+            select(SessionTag)
+            .where(SessionTag.session_id == review_session.id)
+            .order_by(SessionTag.tag)
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        Row(f"session_tags[{i}].tag", _str(tag.tag), "string")
+        for i, tag in enumerate(tags, start=1)
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -355,6 +377,14 @@ def _instrument_rows(
         Row(
             f"{prefix}.band2_state",
             _json(instrument.band2_state or {}),
+            "json",
+        ),
+        # Segment 18P PR D2 — the Band 1 "set"-pill state (which links
+        # the operator has touched). Pre-D2 the settings CSV dropped
+        # it, so a ported session lost its Band 1 pill state.
+        Row(
+            f"{prefix}.band1_touched_links",
+            _json(instrument.band1_touched_links or []),
             "json",
         ),
     ]

@@ -12,6 +12,7 @@ from ._apply_field_label import _apply_field_label_kv
 from ._apply_instrument import _apply_instrument_kv
 from ._apply_rule_set import _apply_rule_set_kv
 from ._apply_session import _apply_session_kv
+from ._apply_session_tag import _apply_session_tag_kv
 from ._apply_shared import (
     _VALID_DATA_TYPES,
     _ParsedConfig,
@@ -108,6 +109,9 @@ def _route_row(
         return
     if field_path.startswith("data_shapes["):
         _apply_data_shape_kv(plan, field_path, value, data_type)
+        return
+    if field_path.startswith("session_tags["):
+        _apply_session_tag_kv(plan, field_path, value)
         return
     del index
     # Unknown field path — silently ignore. Defensive: the export
