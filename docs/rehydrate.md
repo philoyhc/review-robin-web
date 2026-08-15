@@ -176,13 +176,29 @@ report carries:
    pipeline ([§6](#6-reconstruction-pipeline)) and redirects to the new
    Session Home.
 
-**Stash mechanism.** RRW has no blob store, so the stash is a temp-file set
-under a per-token directory with a short TTL, cleaned up after commit or on
-expiry. The token is opaque and operator-scoped; another operator's token,
-or an expired one, is rejected and the page asks for a re-upload. This is
-the one piece of new infrastructure the straight-to-run flow adds; the
-fallback (re-upload on the commit POST) is available if temp-file handling
-is ever undesirable.
+**Stash mechanism — no blob storage required.** The stash holds the
+uploaded set between the Validate and Commit requests, keyed by an opaque,
+operator-scoped, short-TTL token (cleaned up after commit or on expiry; a
+foreign or expired token is rejected and the page asks for a re-upload).
+Three no-blob options, in order of robustness:
+
+1. **Postgres-backed stash (recommended).** Persist the uploaded bytes as a
+   `bytea` row keyed by token, TTL-swept. Survives instance recycle **and**
+   scale-out — which matters, because this app is sized to autoscale to 2–3
+   App Service instances under load (`docs/architecture.md`,
+   `azure_provision.md`), and a Validate on one instance / Commit on another
+   must still find the stash. Uses infrastructure already provisioned (the
+   database); no Storage Account.
+2. **Local temp-file + App Service session affinity.** Simplest, and fine
+   for the single-instance pilot, but the local file only exists on the
+   instance that wrote it — it relies on session affinity routing the
+   operator back there, and is lost on instance recycle. Fragile exactly
+   when the app scales out.
+3. **Re-upload on commit (no stash).** Zero state; the Commit POST carries
+   the files again. Slightly worse UX; always available as the fallback.
+
+None require blob storage. Prefer **(1)** so the straight-to-run flow stays
+robust under scale-out; **(3)** is the safe minimum.
 
 **Button styles.** Validate = Primary Outline; Rehydrate = Primary (per
 `spec/domain_assumptions.md`). Rehydrate is additive — it creates a new
@@ -467,9 +483,10 @@ Grounded in the existing seams so the diff stays small:
   - `POST /operator/sessions/rehydrate/commit` — take the token, load the
     stash, **re-run the analyzer**, and on a clean verdict call the
     orchestrator, then redirect to the new Session Home.
-- **Stash.** A short-TTL, operator-scoped temp-file store keyed by token
-  (per-token directory), cleaned up after commit or on expiry — the one new
-  infra piece ([§3.3](#33-pre-flight-validation-mandatory)).
+- **Stash.** A short-TTL, operator-scoped store keyed by token, cleaned up
+  after commit or on expiry — **no blob storage**; a Postgres `bytea` row is
+  the recommended backing (survives scale-out), with local temp-file or
+  re-upload as fallbacks ([§3.3](#33-pre-flight-validation-mandatory)).
 - **Orchestrator service.** `session_rehydrate.rehydrate_session(db, *,
   files, user, correlation_id) -> ReviewSession`, running the
   [§6](#6-reconstruction-pipeline) pipeline and owning the all-or-nothing
