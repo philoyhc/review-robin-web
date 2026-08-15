@@ -159,25 +159,48 @@ insert with its **own** size limits (not `csv_imports`' 5000-row / 1 MiB
 caps). Pure, unit-testable against a `responses.csv` produced by the real
 extract — **lands independently of the rest**, so build it first.
 
-### Part G — Rehydrate orchestrator + route + card
+### Part G — Pre-flight analyzer + validate page (mandatory gate)
 
-- **G1 — orchestrator service.** `app/services/session_rehydrate.py`:
-  `rehydrate_session(db, *, files, user, correlation_id) -> ReviewSession`
-  running the full pipeline (create draft → apply settings → import rosters
-  + relationships → generate assignments + backfill from responses → load
-  responses via Part F → land as draft, not activated), with the
-  all-or-nothing rollback and the `_REHYD[_n]` naming + unique-code + the
-  restored/not-restored description note. Register `session.rehydrated` in
-  `EVENT_SCHEMAS`. Fully testable headless.
-- **G2 — route + card.** `POST /operator/sessions/rehydrate` +
-  the "Rehydrate Extracted Session" card on `operator/session_new.html`
-  (warning copy, complete-file-set validation, "all other inputs ignored"
-  as a distinct handler). Thin — unpack ZIPs, resolve files, call G1,
-  redirect to the new Session Home.
+The entry point is a **dedicated `/operator/sessions/rehydrate` page**
+reached from a new **`Rehydrate`** button in the lobby search-card row
+(between `Add new` and `Go to Archive`), **not** a card on Add New Session
+(`docs/rehydrate.md` §3). Validation is a **mandatory gate** — no blind
+rehydrate.
 
-*Risk note — land F before G.* The responses importer is the only novel
+- **G1 — the analyzer.** `analyze_rehydrate_set(files) -> RehydrateReport`
+  (in `session_rehydrate.py` or a sibling): completeness (files + headers),
+  cross-file integrity (responses ↔ rosters ↔ settings references resolve —
+  catches cross-session mixes), and a preview (derived `_REHYD` name/code +
+  entity counts). Pure, unit-testable; reuses the Part F resolver in a
+  count-only mode (no inserts). **Shared** by validate and commit so a
+  green preview can't diverge from the run.
+- **G2 — page + validate route + stash.** New
+  `operator/session_rehydrate.html` (instructions card ½ top-left; upload +
+  Validate/Rehydrate buttons ½ top-right; full-width details+findings card
+  below) served by `GET /operator/sessions/rehydrate`; the lobby button in
+  `sessions_list.html`; and `POST …/rehydrate/validate` (analyze → **stash**
+  the set under a short-TTL operator-scoped token → render findings). The
+  Rehydrate button stays disabled until a clean verdict; the findings card
+  reuses the Validate-page severity vocabulary (`spec/validate_page.md`).
+
+### Part H — Commit route + orchestrator
+
+- **H1 — orchestrator service.** `session_rehydrate.rehydrate_session(db,
+  *, files, user, correlation_id) -> ReviewSession` running the full
+  pipeline (create draft → apply settings → import rosters + relationships →
+  generate assignments + backfill from responses → load responses via Part
+  F → land as draft, not activated), with all-or-nothing rollback, the
+  `_REHYD[_n]` naming + unique-code + restored/not-restored description
+  note. Register `session.rehydrated` in `EVENT_SCHEMAS`. Fully testable
+  headless.
+- **H2 — commit route.** `POST …/rehydrate/commit` — take the stash token,
+  load the set, **re-run the analyzer** (expired/altered stash fails safely),
+  and on a clean verdict call H1 and redirect to the new Session Home.
+
+*Risk note — land F before G/H.* The responses importer is the only novel
 algorithm; getting it right (and tested) in isolation de-risks the whole
-feature. G1 then G2 keeps the service testable before UI.
+feature. The analyzer (G1) reuses it; the page (G2) is testable against the
+analyzer; the orchestrator (H1) before the commit route (H2).
 
 ---
 
@@ -188,14 +211,15 @@ feature. G1 then G2 keeps the service testable before UI.
 2. **F** (responses importer) — independent, de-risks Group 2 early. Can
    run in parallel with A.
 3. **B**, **C** (observer cohort + roster status) — rehydrate fidelity.
-4. **G1** → **G2** (rehydrate service, then route + card) — needs A (+ B/C
-   for fidelity) and F.
+4. **G** (analyzer + validate page + stash) → **H** (commit + orchestrator)
+   — needs A (+ B/C for fidelity) and F. G is the mandatory pre-flight gate;
+   H can't ship without it.
 5. **D1**, **D2**, **E** (clone convergence + cleanups) — independent
    hygiene; can land any time, not blocking.
 
-Rehydrate can technically ship after A + F + G with B/C/D/E following, but
-its description note + `docs/rehydrate.md` limitations must honestly state
-whatever isn't harmonized yet.
+Rehydrate can technically ship after A + F + G + H with B/C/D/E following,
+but its description note + `docs/rehydrate.md` limitations must honestly
+state whatever isn't harmonized yet.
 
 ---
 
@@ -221,6 +245,9 @@ whatever isn't harmonized yet.
 - Update `spec/settings_inventory.md` §10 coverage table (currently omits
   view policies, cohort rule, `band1_touched_links`, reviewer
   `profile_link`).
+- Update `spec/sessions_overview.md` for the new lobby search-card
+  `Rehydrate` button (Part G) and describe the
+  `/operator/sessions/rehydrate` page.
 - On Group 2 ship, trim `docs/rehydrate.md` from "proposed" to
   "how it works today" and update `docs/status.md`.
 - Register `session.rehydrated` in `EVENT_SCHEMAS`.
