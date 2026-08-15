@@ -36,8 +36,12 @@ A few words you'll see throughout:
 
 ## 2. Before you start
 
+- Review Robin runs as a **hosted web app on your institution's Azure** —
+  there's nothing to install. You'll be given its **web address**; open it
+  in a browser.
 - **Sign in** with your institutional Microsoft account — the app uses your
   organisation's single sign-on, so there's no separate password to create.
+  The first time you sign in, your operator account is created automatically.
 - You'll land on the **Sessions** list (your lobby). If it's empty, that's
   expected — you haven't made a session yet.
 
@@ -68,8 +72,8 @@ anything freely.
 
 The **Workflow** card at the top of every session page is your control
 panel: it always shows the single most useful next action for the session's
-current state. You'll return to it to validate, activate, send invitations,
-and release results.
+current state. You'll return to it to validate, activate, and release
+results.
 
 ---
 
@@ -82,18 +86,38 @@ for the common pieces.
 
 ### 4a. Add reviewers and reviewees
 
-For each roster you can either type people in or **upload a CSV** (a
-spreadsheet with a name column and an email column).
+**Use CSV uploads.** Unless you're dealing with only a handful of people,
+strongly prefer importing a spreadsheet over typing rows one at a time —
+it's faster, far less error-prone, and it's the shape institutional rosters
+usually already come in. Each CSV just needs a **name** column and an
+**email** column.
 
-1. Open the **Reviewers** setup page.
-2. Use the **upload** card to import your CSV, or add rows manually.
-3. Do the same on the **Reviewees** page.
+> ⚠️ **The emails must be the institutional emails people will sign in
+> with.** The app matches each person to their roster row by their
+> signed-in email, so an address that doesn't match means they won't see
+> their review. Getting the emails right here is the single most important
+> setup step.
 
-> 📷 **Screenshot —** `05-reviewers-setup.png` — *the Reviewers setup page
-> with a few reviewers imported, showing the CSV upload card.*
+The quickest path, once you have the two CSVs ready, is the **Quick Setup**
+card on Session Home — it takes your **Reviewers** and **Reviewees** CSVs
+(and, if you use them, Relationships and a Settings file) in one place. Having
+the CSVs on hand is exactly what makes Quick Setup worthwhile.
 
-> Tip: reviewers and reviewees can overlap (people can review each other).
-> Rows can be marked **inactive** to exclude someone without deleting them.
+1. Prepare a **reviewers CSV** and a **reviewees CSV** (name + email columns).
+2. Upload both via **Quick Setup** on Session Home — or, to work
+   page-by-page, use the **Reviewers** and **Reviewees** setup pages' upload
+   cards.
+
+> 📷 **Screenshot —** `05-quick-setup.png` — *the Quick Setup card on Session
+> Home with the Reviewers and Reviewees CSV slots.*
+
+> 📷 **Screenshot —** `05a-reviewers-setup.png` — *the Reviewers setup page
+> after a CSV import, showing the roster and the upload card.*
+
+> Only a handful of people? You can type them straight into the Reviewers /
+> Reviewees pages instead. Either way: reviewers and reviewees can overlap
+> (people can review each other), and any row can be marked **inactive** to
+> exclude someone without deleting them.
 
 ### 4b. Build the form (Instruments)
 
@@ -154,34 +178,45 @@ generates the reviewer-reviewee pairings for you:
 > 📷 **Screenshot —** `11-activated.png` — *Session Home once the session is
 > Activated, with the status badge/pill.*
 
-> Before launching, the **Previews** page lets you see the exact email and
-> the exact form any specific reviewer will receive — a good final sanity
-> check.
+> Before launching, the **Previews** page lets you see the exact form any
+> specific reviewer will see when they sign in — a good final sanity check.
 
 ---
 
-## 6. Invite the reviewers
+## 6. Give reviewers access
 
-From the Workflow card (or the **Invitations** page):
+Automated email invitations and one-click **magic links aren't switched on
+yet** — but you don't need them to run a review. Because access is based on
+the roster, you simply **share the app's link yourself** and let people sign
+in:
 
-1. **Generate** invitations for your assigned, active reviewers.
-2. **Send all** — each reviewer gets a personal **magic link** that takes
-   them straight to their form after sign-in.
-3. Later, send **reminders** to anyone who hasn't finished.
+1. Make sure the session is **Activated** (Section 5) and your reviewers are
+   on the roster with the **emails they'll sign in with** (Section 4a).
+2. **Broadcast the Review Robin web address** to your participants through
+   your own channel — an LMS announcement, a class email, or a course page.
+3. Each person opens the link, **signs in with their institutional
+   account**, and immediately sees the review(s) that apply to them on their
+   dashboard. No invitation or code needed — the app recognises them by
+   their sign-in email.
 
-> 📷 **Screenshot —** `12-invitations.png` — *the Manage Invitations page
-> with the per-reviewer status table.*
+That's the whole handoff: **share the link → they log in → they see their
+reviews.**
 
-> Email setup: sending uses your SMTP details from **Settings** (the user
-> menu). If email isn't configured yet, invitations still generate and you
-> can copy links from the outbox.
+> 📷 **Screenshot —** `12-reviewer-dashboard.png` — *a signed-in reviewer's
+> dashboard (`/me`) listing the review(s) that apply to them.*
+
+> **Coming later:** when email + magic-link invitations ship, this step
+> becomes a one-click "generate + send invitations" (with reminders) from the
+> Workflow card. The review runs perfectly well without them today — the
+> shared-link route above is all you need.
 
 ---
 
 ## 7. Watch progress
 
-- The **Invitations** page shows, per reviewer, whether they've been
-  emailed and how far through the form they are.
+- The **Invitations** page shows, per reviewer, how far through the form
+  each person is (its email/reminder columns simply sit idle until email is
+  switched on).
 - The **Responses** page flips the view: per **reviewee**, how much coverage
   they've received (Complete / Adequate / At risk / No responses).
 
@@ -221,10 +256,11 @@ reviewers, reviewees, relationships, settings, and the full responses table
 
 So you know what you're asking people to do:
 
-1. They receive an email with a **magic link** and sign in with their
+1. They open the **Review Robin link** you shared and **sign in** with their
    institutional account.
-2. They land on their **review form**, listing the reviewees assigned to
-   them and the questions to answer.
+2. Their **dashboard** lists the review(s) that apply to them; they click in
+   to a **review form** listing the reviewees assigned to them and the
+   questions to answer.
 3. They **Save** as they go and **Submit** when finished. They can revisit
    until the session closes.
 
@@ -235,9 +271,18 @@ So you know what you're asking people to do:
 
 ## 10. Tips & troubleshooting
 
+- **Import with CSVs.** For anything beyond a handful of people, upload
+  reviewer/reviewee spreadsheets rather than typing rows — and it's what lets
+  you use the one-shot **Quick Setup** card.
+- **Roster emails must match sign-in emails.** People are recognised by the
+  institutional email they log in with, so the roster addresses have to be
+  those exact emails.
+- **No emails needed to launch.** Email + magic-link invitations aren't on
+  yet; just share the app link (e.g. via your LMS) and signed-in participants
+  see their own reviews.
 - **Everything's editable in Draft.** Set up freely before validating.
-- **Validate early.** The pre-flight catches missing pieces before anyone is
-  invited.
+- **Validate early.** The pre-flight catches missing pieces before you share
+  the link.
 - **Made a mistake after activating?** The Workflow card's **Revert** action
   returns a session to Draft so you can fix and re-launch.
 - **Inactive vs delete.** Mark a person inactive to exclude them while
@@ -255,11 +300,11 @@ So you know what you're asking people to do:
 
 <!--
 Screenshot checklist (replace each 📷 callout above with an image):
-  01-sign-in.png            02-empty-lobby.png       03-create-session.png
-  04-session-home-draft.png 05-reviewers-setup.png   06-instrument-editor.png
-  07-instrument-preview.png 08-assignments.png       09-visibility.png
-  10-validate.png           11-activated.png         12-invitations.png
-  13-responses-coverage.png 14-release.png           15-reviewee-results.png
-  16-extract-data.png       17-reviewer-surface.png
+  01-sign-in.png            02-empty-lobby.png         03-create-session.png
+  04-session-home-draft.png 05-quick-setup.png         05a-reviewers-setup.png
+  06-instrument-editor.png  07-instrument-preview.png  08-assignments.png
+  09-visibility.png         10-validate.png            11-activated.png
+  12-reviewer-dashboard.png 13-responses-coverage.png  14-release.png
+  15-reviewee-results.png   16-extract-data.png        17-reviewer-surface.png
 Suggested location: docs/images/quickstart/<name>.png
 -->
