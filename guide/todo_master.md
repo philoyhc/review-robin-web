@@ -1913,6 +1913,24 @@ Closed the P0 items from the Codex weaknesses assessment (addendum archived to `
 
 ---
 
+### Segment 18P — Patching the round-trip (harmonize + rehydrate) — planning (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
+
+Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`): (1) **harmonize** the round-trip so export→import + clone stop silently dropping hand-set config; (2) **rehydrate** a complete session from its extract files. Group 1 lands first — it carries the rehydrate prerequisites. No new infra (Postgres-backed pre-flight stash; **no blob storage**).
+
+**Group 1 — Harmonize** (compact PR ladder; each flips gaps in the coverage matrix — the living scoreboard):
+
+- **PR A1** — settings CSV: feature toggles (`relationships_enabled` / `observers_enabled`). *[rehydrate prereq]*
+- **PR A2** — settings CSV: `instrument_view_policies` serialize + apply. *[rehydrate prereq]*
+- **PR B** — observers CSV: `cohort_rule` round-trip.
+- **PR C** — roster CSVs: `status` round-trip (reviewer/reviewee `Status` column; observer importer reads the `Status` it already exports).
+- **PR D1** — clone: copy data shapes + retention config (scheduling anchors documented as intentional reset).
+- **PR D2** — settings CSV: session tags + `band1_touched_links`.
+- **PR E** — asymmetry cleanups (field-label export allowlist; document position-authoritative instrument order + dead `display_fields.label`).
+
+**Group 2 — Rehydrate** (needs A + F): **PR F** responses importer → **PR G** analyzer + validate page + stash (mandatory pre-flight gate; lobby button → `/operator/sessions/rehydrate`) → **PR H** commit route + orchestrator.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
