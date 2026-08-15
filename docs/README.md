@@ -11,7 +11,7 @@ Authoritative for "what does the code currently do" — read
 |---|---|
 | `status.md` | Current implementation state + segment history. Updated at the end of each segment. |
 | `architecture.md` | Cloud / deployment topology (App Service + Postgres + Key Vault + Monitor + Storage behind Easy Auth), a rendered diagram, and the provisioned-resource cost table. The infra companion to `spec/architecture.md` (which covers the app's domain layering). |
-| `rehydrate.md` | **Proposed (not yet built).** Design spec for rebuilding a live session from a complete set of extract CSV files — same settings, populations, and repopulated responses — via a "Rehydrate Extracted Session" card on the Add New Session page. |
+| `rehydrate.md` | **Shipped (Segment 18P Group 2).** Rebuilds a live draft session from a complete set of extract CSV files — same settings, populations, and repopulated responses — via the **Rehydrate** button in the lobby search-card row and the dedicated `/operator/sessions/rehydrate` page (Validate → Rehydrate). |
 | `authentication.md` | Easy Auth headers, `AuthenticatedUser`, `ALLOW_FAKE_AUTH`, identity resolution. |
 | `database.md` | SQLAlchemy + Alembic conventions, dialect parity, where Postgres lives. |
 | `imports.md` | CSV import format for reviewers / reviewees / assignments (operator-facing how-to). |
