@@ -1,21 +1,14 @@
-# Review Robin — Quickstart
+# Review Robin Web (RRW) — Quickstart
 
-A short, practical walkthrough for a colleague running their first review
-with Review Robin. It follows one session end-to-end: create it, set it up,
+A short, practical walkthrough for an operator running their first review
+using Review Robin Web (RRW). It follows one session end-to-end: create it, set it up,
 launch it, watch responses come in, and share the results.
-
-> **About the screenshots.** This guide has marked slots for screen
-> captures — each looks like the callout below. Replace every one with an
-> image (suggested filename in `code font`); the captions say exactly what
-> to capture. Until then they read as "insert a picture here."
->
-> 📷 **Screenshot —** `example.png` — *what the picture should show.*
 
 ---
 
-## 1. What Review Robin does
+## 1. What Review Robin Web does
 
-Review Robin runs **structured review sessions**: a group of **reviewers**
+RRW runs **structured review sessions**: **reviewers**
 fill in a form about a group of **reviewees**, and the app collects,
 organises, and shares the results. You (the **operator**) decide who
 reviews whom, what questions they answer, and who gets to see the outcome.
@@ -28,7 +21,7 @@ A few words you'll see throughout:
 | **Operator** | You: the person who sets up and runs the session. |
 | **Reviewer** | Someone who fills in the form. |
 | **Reviewee** | Someone who is being reviewed. |
-| **Instrument** | The form itself — the set of questions reviewers answer. |
+| **Instrument** | A set of questions reviewers answer; a session can hold multiple instruments |
 | **Assignment** | One reviewer-reviews-one-reviewee pairing. |
 | **Observer** *(optional)* | Someone who may view collated results without reviewing. |
 
@@ -36,13 +29,9 @@ A few words you'll see throughout:
 
 ## 2. Before you start
 
-- Review Robin runs as a **hosted web app on your institution's Azure** —
-  there's nothing to install. You'll be given its **web address**; open it
-  in a browser.
-- **Sign in** with your institutional Microsoft account — the app uses your
-  organisation's single sign-on, so there's no separate password to create.
-  The first time you sign in, your operator account is created automatically.
-- You'll land on the **Sessions** list (your lobby). If it's empty, that's
+- RRW runs as a **hosted web app on NUS Azure** — there's nothing to install. Access it via the **web address** to the operator page (or Sessiosn Lobby) in a browser.
+- **Sign in** with your NUS MS365 account — the app uses single sign-on, so there's no separate password to create.
+- If your NUS email is **whitelisted**, you'll land on the **Sessions** list (your lobby). If it's empty, that's
   expected — you haven't made a session yet.
 
 > 📷 **Screenshot —** `01-sign-in.png` — *the institutional sign-in screen
@@ -56,8 +45,8 @@ A few words you'll see throughout:
 ## 3. Create a session
 
 1. On the Sessions lobby, click **Add new**.
-2. Give it a **name** (e.g. "Spring Peer Review") and a short **code** (a
-   unique handle, e.g. `spring-2026`).
+2. Give it a **name** (e.g. "PH2345 AY2026-2027 Sem 1 Peer Review") and a short **code** (a
+   unique handle, e.g. `PH2345-2610-PR`).
 3. Optionally set a **deadline** and a description.
 4. Save. You'll be taken to the session's **Session Home**.
 
@@ -87,10 +76,8 @@ for the common pieces.
 ### 4a. Add reviewers and reviewees
 
 **Use CSV uploads.** Unless you're dealing with only a handful of people,
-strongly prefer importing a spreadsheet over typing rows one at a time —
-it's faster, far less error-prone, and it's the shape institutional rosters
-usually already come in. Each CSV just needs a **name** column and an
-**email** column.
+you are strongly advised to import a spreadsheet over typing rows one at a time. Each CSV just needs a **name** column and an
+**email** column. Following that, you also have three tag columns (ReviewerTag1,	ReviewerTag2,	ReviewerTag3; RevieweeTag1, RevieweeTag2, RevieweeTag3). Use the tag columns to provide attributes that will facilitate assignments by rules. For example (assume a list of students in a large course), ReviewerTag1 might be the individual's tutor and	ReviewerTag2 his tutorial group--so that you can have each student review exactly only their fellow tutorial groupmates.
 
 > ⚠️ **The email addresses must be the institutional ones people will sign
 > in with.** The app matches each person to their roster row by their
@@ -99,13 +86,15 @@ usually already come in. Each CSV just needs a **name** column and an
 > important setup step. (This is the app's *identifier* for each person — not
 > to be confused with invitation emails, which the app doesn't send yet;
 > see Section 6.)
+>
+> ⚠️ **The tags are essential so long as you intend to use rule based assignment of reviewers to reviewees. Use exactly these headers in the reviewer CSV file: ReviewerName, ReviewerEmail, ReviewerTag1, ReviewerTag2, ReviewerTag3; and these for the reviewee CSV file: RevieweeName, RevieweeEmail, RevieweeTag1, RevieweeTag2, RevieweeTag3. You will be able to provide friendly labels for the tags later.
 
 The quickest path, once you have the two CSVs ready, is the **Quick Setup**
 card on Session Home — it takes your **Reviewers** and **Reviewees** CSVs
 (and, if you use them, Relationships and a Settings file) in one place. Having
 the CSVs on hand is exactly what makes Quick Setup worthwhile.
 
-1. Prepare a **reviewers CSV** and a **reviewees CSV** (name + email columns).
+1. Prepare a **reviewers CSV** and a **reviewees CSV**.
 2. Upload both via **Quick Setup** on Session Home — or, to work
    page-by-page, use the **Reviewers** and **Reviewees** setup pages' upload
    cards.
@@ -123,14 +112,14 @@ the CSVs on hand is exactly what makes Quick Setup worthwhile.
 
 ### 4b. Build the form (Instruments)
 
-Open the **Instruments** page. Each session starts with a default
+Open the **Instruments** page. Each session starts with one default
 instrument you can rename and shape:
 
+- **Assignment rule** governing the instrument (pool of reviewers, those reviewed, unit of review).
 - **Response fields** are the questions reviewers answer (ratings, text,
   etc.) — add, edit, reorder, or remove them.
 - **Display fields** are read-only context shown to the reviewer (e.g. the
   reviewee's name or profile link).
-- Use **Preview** to see the form exactly as a reviewer will.
 
 > 📷 **Screenshot —** `06-instrument-editor.png` — *the Instruments page
 > with a couple of response fields defined.*
@@ -140,18 +129,15 @@ instrument you can rename and shape:
 
 ### 4c. Set who reviews whom (the assignment rule)
 
-**Each instrument carries its own pairing rule**, set in the **top band
-(Band 1)** of that instrument's card on the **Instruments** page — not on a
-separate page. Band 1 has three "Links":
+**Each instrument carries its own assignment rule**, set in the **top band** of that instrument's card on the **Instruments** page:
 
 - **Pool of reviewers** — who does the reviewing.
-- **Pool of those reviewed** — who gets reviewed.
+- **Pool of those reviewed** — who gets reviewed by each reviewer.
 - **Unit of review** — each reviewee individually, or as a group.
 
-By default every Link is set to **all**, which pairs **everyone with
-everyone eligible** (a full matrix) — so if that's what you want, there's
-nothing to change. To narrow it (say, reviewers tagged "Group A" only review
-reviewees tagged "Group A"), switch a Link to **filter** and choose the tags.
+Setting the links to **all, all, individual** pairs **everyone with
+everyone eligible, individually** (a full matrix). To narrow it (say, reviewers only review
+reviewees with the same tag), switch a Link to **filter** and choose the tags and appropriate .
 
 > 📷 **Screenshot —** `08-band1-rule.png` — *the top band (Band 1) of an
 > instrument card, showing the three Links (Pool of reviewers / Pool of those
@@ -183,7 +169,7 @@ reviewing themselves.
 
 1. Back on Session Home, click the Workflow card's **Prepare session**. In
    one step this **generates the assignment pairs** from every instrument's
-   Band 1 rule **and** runs a pre-flight check, listing anything missing or
+   assignment rule **and** runs a pre-flight check, listing anything missing or
    risky. Nothing goes live yet.
 2. Fix any blocking issues (warnings are fine to proceed past). The session
    moves to **Validated**. (You can now review the pairs on the Assignments
