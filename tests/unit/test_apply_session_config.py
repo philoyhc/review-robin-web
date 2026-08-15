@@ -291,6 +291,51 @@ def test_apply_force_applies_display_timezone_and_self_reviews(
     assert review_session.self_reviews_active is False
 
 
+def test_apply_force_applies_feature_toggles(db: Session) -> None:
+    """18P PR A1 — relationships_enabled / observers_enabled are
+    session config: force-applied over a destination's defaults, the
+    same way self_reviews_active is."""
+
+    review_session = _bare_session(db, code="cfg-toggles")
+    assert review_session.relationships_enabled is False
+    assert review_session.observers_enabled is False
+
+    rows = [
+        Row("session.relationships_enabled", "true", "boolean"),
+        Row("session.observers_enabled", "true", "boolean"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok, result.errors
+    db.refresh(review_session)
+    assert review_session.relationships_enabled is True
+    assert review_session.observers_enabled is True
+
+
+def test_round_trip_carries_feature_toggles(db: Session) -> None:
+    """18P PR A1 — both feature toggles survive a serialize → apply
+    round-trip onto a fresh session; the destination starts with the
+    opposite values so a silent no-op would fail the asserts."""
+
+    src = _bare_session(db, code="rt-tog-src")
+    src.relationships_enabled = True
+    src.observers_enabled = False
+    db.flush()
+    rows = serialize_session_config(db, src)
+
+    dst = _bare_session(db, code="rt-tog-dst")
+    dst.relationships_enabled = False
+    dst.observers_enabled = True
+    db.flush()
+    result = apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-tog@e.edu")
+    )
+    assert result.errors == []
+    db.expire(dst)
+    db.refresh(dst)
+    assert dst.relationships_enabled is True
+    assert dst.observers_enabled is False
+
+
 def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
     review_session = _bare_session(db, code="emails")
     review_session.email_template_overrides = {

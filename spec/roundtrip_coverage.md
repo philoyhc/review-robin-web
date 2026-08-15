@@ -51,7 +51,7 @@ below plus responses. See `docs/rehydrate.md`.
 | `email_template_overrides` (12 keys + `responses_received_enabled`) | ✅ | ✅ | Whole-JSON replace |
 | `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ | **Clone drops all scheduling anchors/offsets** (omitted from its constructor) |
 | `retention_exception`, `retention_overrides` | ✅ | ❌ | Same — clone drops retention config |
-| **`relationships_enabled`, `observers_enabled`** | ❌ | ❌ | **Gap — neither path.** Not serialized; not in clone's constructor. A cloned "all"-mode session copies relationship/observer *rows* but leaves the toggles `False`. Being closed by the [rehydrate prerequisite](../docs/rehydrate.md#prerequisite-extend-the-settings-round-trip) |
+| **`relationships_enabled`, `observers_enabled`** | ✅ | ❌ | Settings-CSV carries them as of **18P PR A1** (`session.relationships_enabled` / `session.observers_enabled`, force-applied). Clone still omits them from its constructor (a cloned "all"-mode session copies relationship/observer *rows* but leaves the toggles `False`) — fold into Part D1 |
 | `assignment_mode` | ❌ | ✅ | Settings-CSV defensively drops it (machine-derived); clone copies it |
 | `status`, `activated_at`, `created_by_user_id` | — | — | Runtime / identity — intentionally reset |
 
@@ -145,7 +145,8 @@ The settings an operator can set that survive **no** export/import path
 1. **Instrument visibility policies** (`instrument_view_policies`) — affects
    `/results` + `/collation`. *Fix underway:* the
    [rehydrate prerequisite](../docs/rehydrate.md#prerequisite-extend-the-settings-round-trip).
-2. **`relationships_enabled` / `observers_enabled` toggles** — *same fix.*
+2. **`relationships_enabled` / `observers_enabled` toggles** — settings-CSV
+   **done (18P PR A1)**; clone still omits them (Part D1).
 3. **Observer cohort rules** (`Observer.cohort_rule`) — the observers CSV
    drops them; clone copies no observers.
 4. **Manual per-pair assignment include overrides** — no export, no clone,

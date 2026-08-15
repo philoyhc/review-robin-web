@@ -39,6 +39,14 @@ def _apply_session_kv(
     if key == "self_reviews_active":
         plan.session_overrides[key] = _parse_bool(value, default=True)
         return
+    if key in {"relationships_enabled", "observers_enabled"}:
+        # Segment 18P PR A1 — per-session feature toggles. Config,
+        # not operator-typed identity, so force-applied (below) to
+        # mirror the source exactly. The lock-on-data guard is an
+        # interactive-toggle concern; the settings round-trip is a
+        # wholesale config replace on a draft/validated target.
+        plan.session_overrides[key] = _parse_bool(value, default=False)
+        return
     # Segment 18N PR 5 — the 18G scheduled-event offset / list /
     # retention columns. Round-trip uses typed-cell parses; the
     # ``parse_and_validate_*`` editor-side helpers in
@@ -115,6 +123,8 @@ def _apply_session_metadata(
     for key in (
         "display_timezone",
         "self_reviews_active",
+        "relationships_enabled",
+        "observers_enabled",
         "scheduled_activate_at",
         "responses_release_at",
         "responses_release_until",

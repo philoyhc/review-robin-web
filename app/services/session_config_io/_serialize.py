@@ -125,6 +125,20 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             _bool(review_session.self_reviews_active),
             "boolean",
         ),
+        # Segment 18P PR A1 — per-session feature toggles. Round-trip
+        # was silently dropping both, so a ported / rehydrated session
+        # fell back to the column defaults (False), losing the
+        # operator's Relationships / Observers enablement.
+        Row(
+            "session.relationships_enabled",
+            _bool(review_session.relationships_enabled),
+            "boolean",
+        ),
+        Row(
+            "session.observers_enabled",
+            _bool(review_session.observers_enabled),
+            "boolean",
+        ),
         # Segment 18N PR 5 — the eight 18G scheduled-event columns
         # added 2026-05-20 (Part 0 schema) + lit up across Parts 1-3.
         # Two datetime anchors + four offset / offset-list strings +
