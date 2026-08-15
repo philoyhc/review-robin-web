@@ -121,7 +121,7 @@ below plus responses. See `docs/rehydrate.md`.
 | Reviewee `results_acknowledged_at` | ❌ | ❌ | Participant-set; carried by no CSV and not cloned |
 | Observer `email`, `display_name`, `tag_1` | ✅ | ❌ | **Clone copies no observers at all** |
 | Observer **`status`** | ⚠️ | ❌ | Export **emits** `Status` but `parse_observer_csv` ignores it → resets to active |
-| Observer **`cohort_rule`** (JSON) | ❌ | ❌ | **Gap — neither path.** The observers CSV header is only Email/Name/Tag1/Status; the cohort rule is lost |
+| Observer **`cohort_rule`** (JSON) | ✅ | ❌ | Round-trips via the observers CSV's `CohortRule` column as of **18P PR B** (re-validated through `CohortRuleSet` on import). Clone still copies no observers |
 | Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | Relationships is the **only** roster path whose `status` round-trips |
 
 ### Assignments (`assignments`) — derived
@@ -147,8 +147,8 @@ The settings an operator can set that survive **no** export/import path
    omits them (a clone reverts to default visibility).
 2. **`relationships_enabled` / `observers_enabled` toggles** — settings-CSV
    **done (18P PR A1)**; clone still omits them (Part D1).
-3. **Observer cohort rules** (`Observer.cohort_rule`) — the observers CSV
-   drops them; clone copies no observers.
+3. **Observer cohort rules** (`Observer.cohort_rule`) — roster-CSV **done
+   (18P PR B)** (the `CohortRule` column); clone still copies no observers.
 4. **Manual per-pair assignment include overrides** — no export, no clone,
    not regenerated.
 5. **Observer status** — export-only column the importer ignores.

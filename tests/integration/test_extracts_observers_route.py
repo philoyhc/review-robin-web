@@ -152,6 +152,7 @@ def test_export_observers_csv_round_trips_uploaded_row(
         "ObserverName",
         "ObserverTag1",
         "Status",
+        "CohortRule",
     ]
     assert rows[1][0] == "oren@example.edu"
     assert rows[1][1] == "Oren"
