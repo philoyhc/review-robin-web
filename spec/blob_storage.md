@@ -166,6 +166,13 @@ first move. See "If it lands — where it plugs in."
 **Build order:** Phase 0 seam → **#2** → **#1** → **#3**, then #6 / #7
 opportunistically; #4 waits on its own feature.
 
+This ladder is planned in detail — with a comprehensive Phase 0 covering
+dependencies, config, CI (an Azurite job), deploy/runtime wiring, and
+provisioning docs — in **`guide/segment_18Q_blob.md`**. Institutional Azure
+blob provisioning has been requested (account awaiting finalization);
+Phase 0 + Tier-1 testing are buildable on localhost now (memory /
+filesystem backends + the Azurite emulator) without the account.
+
 ---
 
 ## Cross-cutting primitives blob would bring
