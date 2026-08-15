@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+import zipfile
 from dataclasses import dataclass, field as _dc_field
 from typing import Any
 
@@ -340,3 +341,27 @@ def analyze_rehydrate_set(
     return RehydrateReport(
         ok=not errors, errors=errors, warnings=warnings, preview=preview
     )
+
+
+# --------------------------------------------------------------------------- #
+# Stash payload packing — a file set ↔ a single zip blob. Shared with the
+# validate route (stash) and the commit orchestrator (unstash).
+# --------------------------------------------------------------------------- #
+
+
+def pack_file_set(files: dict[str, bytes]) -> bytes:
+    """Zip a ``{filename: bytes}`` set into one blob for the stash."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, content in sorted(files.items()):
+            zf.writestr(name, content)
+    return buf.getvalue()
+
+
+def unpack_file_set(blob: bytes) -> dict[str, bytes]:
+    """Inverse of :func:`pack_file_set`."""
+    out: dict[str, bytes] = {}
+    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+        for member in zf.namelist():
+            out[member] = zf.read(member)
+    return out

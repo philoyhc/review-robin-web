@@ -5,10 +5,9 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  {# Segment 18P PR G0 — UI scaffold. All three cards are
-     placeholders; the Validate / Rehydrate actions, the pre-flight
-     analyzer, the stash, and the commit orchestrator are wired in the
-     follow-up PRs (see guide/segment_18P_patching_roundtrip.md). #}
+  {# Segment 18P PR G3 — the Validate action is wired (analyze + stash +
+     findings). The Rehydrate button posts to the commit route, which
+     lands in PR H. #}
   <div class="page-grid">
     {# Instructions — half-width, top-left. #}
     <div class="card">
@@ -37,38 +36,93 @@
       </p>
     </div>
 
-    {# Upload + actions — half-width, top-right. #}
+    {# Upload + actions — half-width, top-right. Two forms so both
+       buttons can sit together, right-flushed: Validate submits the
+       upload, Rehydrate submits the stash token (via the ``form=``
+       attribute). #}
     <div class="card">
       <h2>Upload, validate, rehydrate</h2>
-      <label for="rehydrate-files">Extract files (CSVs and/or ZIP bundles)</label>
-      <input type="file" id="rehydrate-files" name="rehydrate_files"
-             multiple accept=".csv,.zip" disabled>
+      <form id="rehydrate-validate-form" method="post"
+            action="/operator/sessions/rehydrate/validate"
+            enctype="multipart/form-data">
+        <label for="rehydrate-files">Extract files (CSVs and/or ZIP bundles)</label>
+        <input type="file" id="rehydrate-files" name="files"
+               multiple accept=".csv,.zip">
+      </form>
+      <form id="rehydrate-commit-form" method="post"
+            action="/operator/sessions/rehydrate/commit">
+        <input type="hidden" name="token" value="{{ token or '' }}">
+      </form>
       <p class="form-help">
         Every run is checked before anything is created:
         <strong>Validate</strong> first, then <strong>Rehydrate</strong>.
       </p>
-      {# Actions flushed right at normal size, matching the lobby
-         Search card. Inert placeholders until the validate / commit
-         routes land (PRs G3 / H): Validate is a no-op; Rehydrate stays
-         disabled until a clean validation. #}
       <div class="sessions-action-buttons" style="margin-top: var(--space-3);">
-        <button type="button" class="btn secondary" disabled
-                aria-disabled="true">Validate</button>
+        <button type="submit" form="rehydrate-validate-form"
+                class="btn secondary">Validate</button>
+        {% if report and report.ok %}
+        <button type="submit" form="rehydrate-commit-form"
+                class="btn">Rehydrate</button>
+        {% else %}
         <button type="button" class="btn disabled" disabled
                 aria-disabled="true">Rehydrate</button>
+        {% endif %}
       </div>
     </div>
   </div>
 
   {# Details + validation output — full width, below. Empty until a
-     Validate run populates it (PR G3). #}
+     Validate run populates it. #}
   <div class="card">
     <h2>Details &amp; validation</h2>
+    {% if not report %}
     <p class="form-help">
       Upload your extract files and run <strong>Validate</strong> to see a
       preview of what will be created — the new session name, the
       populations and instruments, and any issues to fix before you
       rehydrate.
     </p>
+    {% else %}
+      {% if report.ok %}
+      <div class="banner banner-success">
+        Validation passed — ready to rehydrate.
+      </div>
+      {% else %}
+      <div class="banner banner-error">
+        Fix the following before rehydrating:
+      </div>
+      <ul>
+        {% for error in report.errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if report.warnings %}
+      <div class="banner banner-warning">Warnings</div>
+      <ul>
+        {% for warning in report.warnings %}
+        <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if report.preview %}
+      <p class="form-help" style="margin-top: var(--space-3);">
+        New session <strong>{{ report.preview.name }}</strong>
+        (code <code>{{ report.preview.code }}</code>), rebuilt from
+        &ldquo;{{ report.preview.original_name }}&rdquo;
+        (<code>{{ report.preview.original_code }}</code>):
+      </p>
+      <ul>
+        <li>{{ report.preview.reviewers }} reviewers</li>
+        <li>{{ report.preview.reviewees }} reviewees</li>
+        <li>{{ report.preview.observers }} observers</li>
+        <li>{{ report.preview.relationships }} relationships</li>
+        <li>{{ report.preview.instruments }} instruments</li>
+        <li>{{ report.preview.responses }} response rows</li>
+      </ul>
+      {% endif %}
+    {% endif %}
   </div>
 {% endblock %}
