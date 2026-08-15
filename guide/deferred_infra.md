@@ -108,3 +108,7 @@ drift is caught in CI.
   hardening 14A *does* cover, and its 6-PR ladder.
 - `spec/blob_storage.md` — candidate uses for object storage if a storage
   account is ever provisioned (§1 above is the portal-side prerequisite).
+- `guide/segment_18Q_blob.md` — the blob-storage build plan (seam +
+  first consumers). Institutional provisioning is now **requested**
+  (account awaiting finalization); the storage-account + managed-identity
+  role assignment in §1 above is that segment's active portal prerequisite.
