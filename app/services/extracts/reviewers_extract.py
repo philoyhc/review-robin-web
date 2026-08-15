@@ -40,6 +40,10 @@ HEADER: tuple[str, ...] = (
     "ReviewerTag2",
     "ReviewerTag3",
     "PhotoLink",
+    # Segment 18P PR C — active / inactive soft-delete state. The
+    # importer reads it back (blank / absent → active), so an
+    # inactive reviewer round-trips as inactive.
+    "Status",
 )
 
 
@@ -81,4 +85,5 @@ def serialize_reviewers(
             reviewer.tag_2 or "",
             reviewer.tag_3 or "",
             reviewer.profile_link or "",
+            reviewer.status,
         )

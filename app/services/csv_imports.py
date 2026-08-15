@@ -131,6 +131,39 @@ def _none_if_blank(row: dict[str, str], key: str) -> str | None:
     return value or None
 
 
+# Segment 18P PR C — the roster soft-delete states, shared by the
+# reviewer / reviewee / observer parsers. Mirrors
+# ``reviewers._VALID_STATUSES``.
+_VALID_ROSTER_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
+
+
+def _parse_status(
+    row: dict[str, str], *, source: str, row_number: int
+) -> str | ValidationIssue:
+    """Parse an optional ``Status`` cell → ``active`` / ``inactive``.
+
+    Blank or absent → ``"active"`` (back-compat: a pre-18P-C roster
+    CSV carries no ``Status`` column and should re-import everyone
+    active). A present, non-empty value outside the allowed set is a
+    blocking per-row error.
+    """
+    value = _cell(row, "Status").lower()
+    if not value:
+        return "active"
+    if value not in _VALID_ROSTER_STATUSES:
+        return ValidationIssue(
+            severity=Severity.error,
+            source=source,
+            row_number=row_number,
+            field="Status",
+            message=(
+                f"Status must be one of {sorted(_VALID_ROSTER_STATUSES)}; "
+                f"got {value!r}"
+            ),
+        )
+    return value
+
+
 def _parse_email(
     value: str,
     *,
@@ -255,6 +288,10 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             )
             continue
         seen_emails[email.lower()] = (index, name)
+        status = _parse_status(raw, source=source, row_number=index)
+        if isinstance(status, ValidationIssue):
+            issues.append(status)
+            continue
         parsed.append(
             ReviewerImportRow(
                 name=name,
@@ -263,6 +300,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                 tag_1=_none_if_blank(raw, "ReviewerTag1"),
                 tag_2=_none_if_blank(raw, "ReviewerTag2"),
                 tag_3=_none_if_blank(raw, "ReviewerTag3"),
+                status=status,
             )
         )
 
@@ -354,6 +392,10 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
             )
             continue
         seen_identifiers[identifier.lower()] = (index, name)
+        status = _parse_status(raw, source=source, row_number=index)
+        if isinstance(status, ValidationIssue):
+            issues.append(status)
+            continue
         parsed.append(
             RevieweeImportRow(
                 name=name,
@@ -362,6 +404,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                 tag_1=_none_if_blank(raw, "RevieweeTag1"),
                 tag_2=_none_if_blank(raw, "RevieweeTag2"),
                 tag_3=_none_if_blank(raw, "RevieweeTag3"),
+                status=status,
             )
         )
 
@@ -449,6 +492,11 @@ def parse_observer_csv(content: bytes) -> ParseResult:
             continue
         seen_emails[email.lower()] = index
 
+        status = _parse_status(raw, source=source, row_number=index)
+        if isinstance(status, ValidationIssue):
+            issues.append(status)
+            continue
+
         cohort_raw = _none_if_blank(raw, "CohortRule")
         cohort_rule: dict[str, Any] | None = None
         if cohort_raw is not None:
@@ -488,6 +536,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                 email=email,
                 display_name=_none_if_blank(raw, "ObserverName"),
                 tag_1=_none_if_blank(raw, "ObserverTag1"),
+                status=status,
                 cohort_rule=cohort_rule,
             )
         )
@@ -678,6 +727,7 @@ def _observer_to_kwargs(row: ObserverImportRow, session_id: int) -> dict[str, An
         "email": row.email,
         "display_name": row.display_name,
         "tag_1": row.tag_1,
+        "status": row.status,
         "cohort_rule": row.cohort_rule,
     }
 
@@ -691,6 +741,7 @@ def _reviewer_to_kwargs(row: ReviewerImportRow, session_id: int) -> dict[str, An
         "tag_1": row.tag_1,
         "tag_2": row.tag_2,
         "tag_3": row.tag_3,
+        "status": row.status,
     }
 
 
@@ -703,6 +754,7 @@ def _reviewee_to_kwargs(row: RevieweeImportRow, session_id: int) -> dict[str, An
         "tag_1": row.tag_1,
         "tag_2": row.tag_2,
         "tag_3": row.tag_3,
+        "status": row.status,
     }
 
 

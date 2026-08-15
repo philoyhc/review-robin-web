@@ -117,10 +117,10 @@ below plus responses. See `docs/rehydrate.md`.
 |---|:--:|:--:|---|
 | Reviewer `name`, `email`, `profile_link`, `tag_1..3` | ✅ | ✅ | |
 | Reviewee `name`, `email_or_identifier`, `profile_link`, `tag_1..3` | ✅ | ✅ | |
-| Reviewer / Reviewee **`status`** (active vs inactive) | ❌ | ✅ | **Roster CSVs have no `Status` column** — every re-imported reviewer/reviewee becomes `active`. Clone preserves status |
+| Reviewer / Reviewee **`status`** (active vs inactive) | ✅ | ✅ | Roster CSVs gained a `Status` column in **18P PR C** (blank/absent → active); clone already preserved status |
 | Reviewee `results_acknowledged_at` | ❌ | ❌ | Participant-set; carried by no CSV and not cloned |
 | Observer `email`, `display_name`, `tag_1` | ✅ | ❌ | **Clone copies no observers at all** |
-| Observer **`status`** | ⚠️ | ❌ | Export **emits** `Status` but `parse_observer_csv` ignores it → resets to active |
+| Observer **`status`** | ✅ | ❌ | `parse_observer_csv` reads the `Status` it exports as of **18P PR C** (was export-only). Clone still copies no observers |
 | Observer **`cohort_rule`** (JSON) | ✅ | ❌ | Round-trips via the observers CSV's `CohortRule` column as of **18P PR B** (re-validated through `CohortRuleSet` on import). Clone still copies no observers |
 | Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | Relationships is the **only** roster path whose `status` round-trips |
 
@@ -151,7 +151,8 @@ The settings an operator can set that survive **no** export/import path
    (18P PR B)** (the `CohortRule` column); clone still copies no observers.
 4. **Manual per-pair assignment include overrides** — no export, no clone,
    not regenerated.
-5. **Observer status** — export-only column the importer ignores.
+5. **Observer status** — **done (18P PR C)**; `parse_observer_csv` now reads
+   the `Status` it exported.
 6. **Session-operator role grants** — co-operators aren't carried.
 
 Covered by **one** path but lost by another (footguns when you pick the
@@ -161,7 +162,8 @@ wrong tool):
 8. **Data shapes** — settings-CSV ✅, clone ❌.
 9. **`band1_touched_links`, session tags, `assignment_mode`,
    `library_origin_id`** — clone ✅, settings-CSV ❌.
-10. **Reviewer / reviewee `status`** — clone ✅, roster CSV ❌.
+10. **Reviewer / reviewee `status`** — **done (18P PR C)**: both paths now
+    carry it (roster CSV gained a `Status` column; clone already did).
 
 ## Asymmetries and footguns
 
@@ -175,9 +177,9 @@ Places where a value *looks* carried but isn't faithfully restored:
   import, not carried (fine as long as inline bounds are present).
 - **Field labels outside the tag allowlist** — exported but rejected on
   import.
-- **Roster `Status`** — reviewers/reviewees lose it (no column); observers
-  have the column but the importer ignores it; only relationships preserve
-  it.
+- **Roster `Status`** — as of **18P PR C** all four roster CSVs (reviewers,
+  reviewees, observers, relationships) round-trip `status`; blank/absent →
+  active.
 - **`status` / `assignment_mode` session rows** — settings-CSV drops them
   on import even if hand-added to the file.
 
@@ -185,15 +187,13 @@ Places where a value *looks* carried but isn't faithfully restored:
 
 Ordered by user-visible impact:
 
-1. **Close the visibility-policy + feature-toggle gap in the settings
-   round-trip** (gaps 1–2) — already scoped as the
-   [rehydrate prerequisite](../docs/rehydrate.md#prerequisite-extend-the-settings-round-trip);
-   it also fixes plain export/import and backup/restore, not just rehydrate.
-2. **Carry observer `cohort_rule`** (gap 3) — add a column to the observers
-   CSV + importer, or serialize observers through `session_config_io`.
-3. **Decide the roster-`status` policy** (gap/footgun 10, asymmetry) — add a
-   `Status` column to the reviewer/reviewee CSVs (and read it in the
-   observer importer), or document that re-import reactivates everyone.
+1. ~~**Close the visibility-policy + feature-toggle gap** (gaps 1–2)~~ —
+   **done (18P A1 + A2)**; both round-trip through `settings.csv`.
+2. ~~**Carry observer `cohort_rule`** (gap 3)~~ — **done (18P PR B)** (the
+   observers-CSV `CohortRule` column).
+3. ~~**Decide the roster-`status` policy** (gap/footgun 10)~~ — **done (18P
+   PR C)**: `Status` preserved on all four roster CSVs (blank/absent →
+   active).
 4. **Reconcile clone with settings-CSV** (footguns 7–9) — clone silently
    drops scheduling/retention/data-shapes and settings-CSV silently drops
    tags/`band1_touched_links`. Converging them (or documenting the split)

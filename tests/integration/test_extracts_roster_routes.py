@@ -100,6 +100,7 @@ def test_reviewers_route_streams_csv_with_canonical_filename(
         "ReviewerTag2",
         "ReviewerTag3",
         "PhotoLink",
+        "Status",
     ]
     body = rows[1:]
     assert {r[1] for r in body} == {"alex@example.edu", "bob@example.edu"}
@@ -178,6 +179,7 @@ def test_reviewees_route_streams_csv_with_canonical_filename(
         "RevieweeTag2",
         "RevieweeTag3",
         "PhotoLink",
+        "Status",
     ]
 
 
