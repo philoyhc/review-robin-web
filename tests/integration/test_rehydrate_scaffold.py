@@ -33,7 +33,7 @@ def test_rehydrate_page_renders_scaffold(client: TestClient) -> None:
 
     # All three cards present.
     assert "Rehydrate an extracted session" in body
-    assert "Upload &amp; validate" in body
+    assert "Upload, validate, rehydrate" in body
     assert "Details &amp; validation" in body
 
     # A file input + both action buttons, all inert in the scaffold.

@@ -14,8 +14,8 @@
     <div class="card">
       <h2>Rehydrate an extracted session</h2>
       <p class="form-help">
-        Rebuild a past session — its settings, people, and all collected
-        responses — from a <strong>complete set of extract files</strong>.
+        Rebuild a past session with data from a
+        <strong>complete set of extract files</strong>.
       </p>
       <p class="form-help">
         You need <code>reviewers.csv</code>, <code>reviewees.csv</code>,
@@ -33,14 +33,13 @@
       </p>
       <p class="form-help">
         The rebuilt session is named
-        <code>&lt;original name&gt;_REHYD</code> and lands as a draft — you
-        review and activate it yourself.
+        <code>&lt;original name&gt;_REHYD</code> and lands as a draft.
       </p>
     </div>
 
     {# Upload + actions — half-width, top-right. #}
     <div class="card">
-      <h2>Upload &amp; validate</h2>
+      <h2>Upload, validate, rehydrate</h2>
       <label for="rehydrate-files">Extract files (CSVs and/or ZIP bundles)</label>
       <input type="file" id="rehydrate-files" name="rehydrate_files"
              multiple accept=".csv,.zip" disabled>
@@ -48,10 +47,11 @@
         Every run is checked before anything is created:
         <strong>Validate</strong> first, then <strong>Rehydrate</strong>.
       </p>
-      <div class="btn-row" style="margin-top: var(--space-3);">
-        {# Placeholder actions — inert until the validate / commit
-           routes land (PRs G3 / H). Validate is a no-op; Rehydrate
-           stays disabled until a clean validation. #}
+      {# Actions flushed right at normal size, matching the lobby
+         Search card. Inert placeholders until the validate / commit
+         routes land (PRs G3 / H): Validate is a no-op; Rehydrate stays
+         disabled until a clean validation. #}
+      <div class="sessions-action-buttons" style="margin-top: var(--space-3);">
         <button type="button" class="btn secondary" disabled
                 aria-disabled="true">Validate</button>
         <button type="button" class="btn disabled" disabled
