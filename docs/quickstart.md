@@ -29,7 +29,7 @@ A few words you'll see throughout:
 
 ## 2. Before you start
 
-- RRW runs as a **hosted web app on NUS Azure** — there's nothing to install. Access it via the **web address** to the operator page (or Sessiosn Lobby) in a browser.
+- RRW runs as a **hosted web app on NUS Azure** — there's nothing to install. Access it via the **web address** to the operator page (or sessions lobby) in a browser.
 - **Sign in** with your NUS MS365 account — the app uses single sign-on, so there's no separate password to create.
 - If your NUS email is **whitelisted**, you'll land on the **Sessions** list (your lobby). If it's empty, that's
   expected — you haven't made a session yet.
@@ -87,7 +87,7 @@ you are strongly advised to import a spreadsheet over typing rows one at a time.
 > to be confused with invitation emails, which the app doesn't send yet;
 > see Section 6.)
 >
-> ⚠️ **The tags are essential so long as you intend to use rule based assignment of reviewers to reviewees. Use exactly these headers in the reviewer CSV file: ReviewerName, ReviewerEmail, ReviewerTag1, ReviewerTag2, ReviewerTag3; and these for the reviewee CSV file: RevieweeName, RevieweeEmail, RevieweeTag1, RevieweeTag2, RevieweeTag3. You will be able to provide friendly labels for the tags later.
+> ⚠️ **The tags are essential so long as you intend to use rule based assignment of reviewers to reviewees**. Use exactly these headers in the reviewer CSV file: ReviewerName, ReviewerEmail, ReviewerTag1, ReviewerTag2, ReviewerTag3; and these for the reviewee CSV file: RevieweeName, RevieweeEmail, RevieweeTag1, RevieweeTag2, RevieweeTag3. You will be able to provide friendly labels for the tags later.
 
 The quickest path, once you have the two CSVs ready, is the **Quick Setup**
 card on Session Home — it takes your **Reviewers** and **Reviewees** CSVs
@@ -137,7 +137,7 @@ instrument you can rename and shape:
 
 Setting the links to **all, all, individual** pairs **everyone with
 everyone eligible, individually** (a full matrix). To narrow it (say, reviewers only review
-reviewees with the same tag), switch a Link to **filter** and choose the tags and appropriate .
+reviewees with the same tag), switch a Link to **filter** and choose the tags and appropriate connectors.
 
 > 📷 **Screenshot —** `08-band1-rule.png` — *the top band (Band 1) of an
 > instrument card, showing the three Links (Pool of reviewers / Pool of those
