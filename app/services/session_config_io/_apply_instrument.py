@@ -205,6 +205,11 @@ def _apply_instrument_kv(
         instrument.starts_new_page = _parse_bool(value)
     elif attr == "band2_state":
         instrument.band2_state = _parse_json(value, default={}) or None
+    elif attr == "band1_touched_links":
+        # Segment 18P PR D2 — the Band 1 "set"-pill link list.
+        instrument.band1_touched_links = (
+            _parse_json(value, default=[]) or None
+        )
     else:
         raise _ParseError(f"unknown instruments[] attribute {attr!r}")
     del data_type  # unused; type-checked by parser per attr
@@ -310,6 +315,7 @@ def _apply_instruments(
             column_widths=spec.column_widths,
             starts_new_page=spec.starts_new_page,
             band2_state=spec.band2_state,
+            band1_touched_links=spec.band1_touched_links,
         )
         db.add(instrument)
         db.flush()  # populate ``instrument.id``

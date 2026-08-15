@@ -591,6 +591,62 @@ def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
     assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
 
 
+def test_round_trip_carries_session_tags(db: Session) -> None:
+    """18P PR D2 — session tags survive a serialize → apply round-trip.
+    The destination pre-seeds a stale tag that must be dropped."""
+    from app.db.models import SessionTag
+
+    src = _session(db, code="rt-tag-src")
+    db.add_all(
+        [
+            SessionTag(session_id=src.id, tag="pilot"),
+            SessionTag(session_id=src.id, tag="cohort-a"),
+        ]
+    )
+    db.flush()
+    rows = serialize_session_config(db, src)
+
+    dst = _bare_session(db, code="rt-tag-dst")
+    db.add(SessionTag(session_id=dst.id, tag="stale"))
+    db.flush()
+    result = apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-tag@e.edu")
+    )
+    assert result.errors == []
+    db.expire_all()
+    tags = {
+        t.tag
+        for t in db.execute(
+            select(SessionTag).where(SessionTag.session_id == dst.id)
+        ).scalars()
+    }
+    assert tags == {"pilot", "cohort-a"}
+
+
+def test_round_trip_carries_band1_touched_links(db: Session) -> None:
+    """18P PR D2 — Instrument.band1_touched_links round-trips."""
+    src = _session(db, code="rt-b1-src")
+    inst = Instrument(
+        session_id=src.id,
+        name="B1 instrument",
+        order=1,
+        band1_touched_links=["link_1", "link_2"],
+    )
+    db.add(inst)
+    db.flush()
+    rows = serialize_session_config(db, src)
+
+    dst = _bare_session(db, code="rt-b1-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-b1@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    assert dst_inst.band1_touched_links == ["link_1", "link_2"]
+
+
 def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
     """18P PR A2 — the Band 3 visibility grid
     (``instrument_view_policies``) survives a serialize → apply

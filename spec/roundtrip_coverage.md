@@ -62,7 +62,7 @@ below plus responses. See `docs/rehydrate.md`.
 | `name`, `short_label`, `description`, `responses_visible_when_closed`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths |
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it** — 1-based CSV position wins. Value round-trips only because export order matches position |
-| **`band1_touched_links`** | ❌ | ✅ | **Settings-CSV gap.** The Band 1 "set"-pill state isn't serialized; clone copies it |
+| **`band1_touched_links`** | ✅ | ✅ | Settings-CSV carries it as of **18P PR D2** (`instruments[n].band1_touched_links`); clone already copied it |
 | `deadline_closed_at`, `cached_group_pair_count/_stamp` | — | — | Runtime / cache |
 
 ### Instrument display fields (`instrument_display_fields`)
@@ -109,7 +109,7 @@ below plus responses. See `docs/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `tag` | ❌ | ✅ | **Settings-CSV gap** — tags aren't serialized; clone copies them |
+| `tag` | ✅ | ✅ | Settings-CSV carries tags as of **18P PR D2** (`session_tags[i].tag`, wipe-and-replace); clone already copied them |
 
 ### Populations — reviewers / reviewees / observers / relationships
 
@@ -162,8 +162,9 @@ wrong tool):
    **Scheduling anchors** stay clone-reset **by design** (a clone is a fresh
    cycle); settings-CSV still round-trips them.
 8. **Data shapes** — **done (18P PR D1)**: clone now copies them.
-9. **`band1_touched_links`, session tags, `assignment_mode`,
-   `library_origin_id`** — clone ✅, settings-CSV ❌.
+9. **`band1_touched_links`, session tags** — **done (18P PR D2)**: both now
+   round-trip through the settings CSV. `assignment_mode` (machine-derived)
+   and `library_origin_id` (niche) remain clone-only by design.
 10. **Reviewer / reviewee `status`** — **done (18P PR C)**: both paths now
     carry it (roster CSV gained a `Status` column; clone already did).
 
@@ -196,10 +197,12 @@ Ordered by user-visible impact:
 3. ~~**Decide the roster-`status` policy** (gap/footgun 10)~~ — **done (18P
    PR C)**: `Status` preserved on all four roster CSVs (blank/absent →
    active).
-4. **Reconcile clone with settings-CSV** (footguns 7–9) — clone side **done
-   (18P PR D1)**: it now copies retention config, the feature toggles, and
-   data shapes, and documents the deliberate schedule reset. The remaining
-   split is settings-CSV dropping tags / `band1_touched_links` (Part D2).
+4. ~~**Reconcile clone with settings-CSV** (footguns 7–9)~~ — **done (18P
+   D1 + D2)**: D1 gave clone retention config + toggles + data shapes (and
+   documented the deliberate schedule reset); D2 gave the settings CSV
+   session tags + `band1_touched_links`. Only the by-design splits remain
+   (clone resets the schedule; `assignment_mode` / `library_origin_id` stay
+   clone-only).
 5. **Manual assignment overrides** (gap 4) — only worth an importer if
    field use shows operators rely on hand-toggling pairs; otherwise
    document that assignments always regenerate from rules.

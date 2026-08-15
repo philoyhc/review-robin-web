@@ -37,6 +37,7 @@ from ._apply_instrument import (
 from ._apply_parse import ApplyError, _parse_rows
 from ._apply_rule_set import _apply_session_rule_sets
 from ._apply_session import _apply_session_metadata
+from ._apply_session_tag import _apply_session_tags
 from ._apply_shared import _ParsedConfig
 from ._rows import Row
 
@@ -112,6 +113,7 @@ def _apply_plan(
         "session_rule_sets": 0,
         "field_labels": 0,
         "data_shapes": 0,
+        "session_tags": 0,
     }
 
     counts["session"] = _apply_session_metadata(review_session, plan)
@@ -132,6 +134,7 @@ def _apply_plan(
     counts.update(inst_counts)
     counts["field_labels"] = _apply_field_labels(db, review_session, plan)
     counts["data_shapes"] = _apply_data_shapes(db, review_session, plan)
+    counts["session_tags"] = _apply_session_tags(db, review_session, plan)
     db.flush()
 
     if user is not None:
