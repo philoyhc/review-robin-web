@@ -45,12 +45,43 @@ Grounded in what the extract actually captures and what importers exist:
 | Relationships (reviewer↔reviewee pairs + status + pair tags) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets, then backfill any pair present in `responses.csv` |
 | **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | **Net-new importer** ([§6.4](#64-load-responses)) |
-| Instrument visibility policies (`instrument_view_policies`) | **not extracted** | — | **Gap** — defaults applied ([§9](#9-limitations-and-known-gaps)) |
-| `relationships_enabled` / `observers_enabled` toggles | **not in settings.csv** | — | Inferred from file presence ([§6.2](#62-apply-settings)) |
+| Instrument visibility policies (`instrument_view_policies`) | `settings.csv` **(via prerequisite)** | ✅ once the [prerequisite](#prerequisite-extend-the-settings-round-trip) lands | Apply as-is |
+| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` **(via prerequisite)** | ✅ once the [prerequisite](#prerequisite-extend-the-settings-round-trip) lands | Apply as-is |
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
 
-The first three rows reuse existing, tested seams. Rows four and five are
-the new work.
+Rows one to three, plus the two rows closed by the
+[prerequisite](#prerequisite-extend-the-settings-round-trip), reuse
+existing (or prerequisite-extended) settings/roster seams. The **responses**
+row is the genuinely new work.
+
+## Prerequisite: extend the settings round-trip
+
+**Separate work item, lands first — valuable on its own, and a hard
+dependency of rehydrate.**
+
+`instrument_view_policies` (the per-instrument 3×2 visibility grid) and the
+session-level `relationships_enabled` / `observers_enabled` toggles are
+currently serialized by neither `session_config_io` nor `session_clone`.
+So they don't survive a plain `export settings.csv → import settings.csv`
+today — a real gap in the **normal** settings round-trip, independent of
+rehydrate. Close it there, not inside rehydrate:
+
+- **Serialize** — extend `session_config_io._serialize` to emit
+  `instruments[n].view_policies[audience].*` rows (the while-ongoing and
+  after-release *granularity* + *identification* pairs and `observer_tag`,
+  per `spec/visibility_policy.md`) and two `session.relationships_enabled`
+  / `session.observers_enabled` rows.
+- **Apply** — extend `session_config_io._apply` to parse and restore them
+  within the existing instrument wipe-and-rebuild pass.
+- **Test** — a round-trip test (`serialize → apply → assert view policies +
+  toggles unchanged`), matching how the rest of the settings round-trip is
+  covered.
+
+Once this ships, `settings.csv` fully describes visibility policy and the
+feature toggles, so **rehydrate inherits them for free** — no
+rehydrate-specific view-policy code, and every session's export/import
+(clone-by-config, backup/restore) also stops losing them. This is why it's
+a prerequisite rather than a rehydrate sub-task.
 
 ## 3. Entry point — the "Rehydrate Extracted Session" card
 
@@ -195,9 +226,12 @@ fields), session rule sets, field labels, email overrides, and data
 shapes, and restores per-instrument runtime flags including
 `accepting_responses` and `responses_visible_when_closed`.
 
-Because `relationships_enabled` / `observers_enabled` are **not** carried
-in `settings.csv`, they are set in [§6.1](#61-create-the-shell-session)
-from file presence, not by apply.
+With the [prerequisite](#prerequisite-extend-the-settings-round-trip) in
+place, `relationships_enabled` / `observers_enabled` **and** the instrument
+visibility policies are carried in `settings.csv` and restored by `apply` —
+no rehydrate-specific handling. (Defensive fallback for a legacy extract
+taken before the prerequisite: infer the toggles from file presence and
+leave view policies at defaults.)
 
 ### 6.3 Import populations and regenerate assignments
 
@@ -257,7 +291,9 @@ with its own, higher bound. This is called out because reusing
 
 ### 6.5 Land the session
 
-Set the session's lifecycle to its target state ([§8](#8-target-lifecycle-state))
+Leave the session in **`draft`** — assignments are generated
+([§6.3](#63-import-populations-and-regenerate-assignments)) and all data is
+loaded, but the session is **not activated** ([§8](#8-target-lifecycle-state)) —
 and write the `session.rehydrated` audit event.
 
 ## 7. Atomicity and audit
@@ -275,44 +311,31 @@ and write the `session.rehydrated` audit event.
 
 ## 8. Target lifecycle state
 
-The request is for the rehydrated session to be "active." Two defensible
-readings; this spec recommends the first and flags the choice as an
-[open decision](#10-open-decisions):
+The rehydrated session lands in **`draft`**, with **all assignments
+generated** ([§6.3](#63-import-populations-and-regenerate-assignments)) and
+all response data loaded, but **not activated**. The operator reviews the
+rebuilt session and runs Validate → Activate themselves when ready.
 
-- **Recommended — land as `draft` with all data present, one click from
-  Activate.** The operator reviews the rebuilt session and clicks Activate
-  themselves. Rationale: `activate_session` has real gates (a clean
-  `ReadinessReport`, acknowledged warnings) that a rehydrate shouldn't
-  silently bypass, and activation force-flips **every** instrument to
-  `accepting_responses=True`, which would *re-open* a closed session for
-  new input and overwrite the runtime flags [§6.2](#62-apply-settings)
-  just restored. A rehydrated draft with data is fully viewable and
-  operable; it just hasn't re-opened for new responses.
-- **Alternative — auto-activate to `ready`.** If the intent is a session
-  that is immediately live for new input, run `activate_session` at the
-  end and then re-apply the extracted per-instrument `accepting_responses`
-  values so closed instruments stay closed. This can fail if the rebuilt
-  session doesn't pass readiness, which the flow must surface rather than
-  swallow.
-
-Either way, "active" in the product sense (a normal, non-archived session
-you can open and work with) is satisfied — the distinction is only whether
-instruments re-open for new responses.
+Rationale for not auto-activating: `activate_session` has real gates (a
+clean `ReadinessReport`, acknowledged warnings) that a rehydrate shouldn't
+silently bypass, and activation force-flips **every** instrument to
+`accepting_responses=True` — which would *re-open* a previously-closed
+session for new input and overwrite the per-instrument runtime flags that
+[§6.2](#62-apply-settings) just restored. A rehydrated draft with fully
+generated assignments and loaded data is completely viewable and operable;
+activation stays a deliberate, separate operator gesture.
 
 ## 9. Limitations and known gaps
 
 Stated plainly so the card copy and the PR description can be honest:
 
-- **Visibility policies are not reconstructed.** `instrument_view_policies`
-  is serialized by neither `session_config_io` nor `session_clone`, so a
-  rehydrated session gets **default** view policies. The reviewee
-  `/results` and observer `/collation` surfaces may therefore resolve
-  different visibility than the original. *Fix path:* extend
-  `session_config_io` to serialize/apply view policies (small, additive),
-  after which rehydrate picks them up for free.
-- **Feature toggles inferred, not extracted.** `relationships_enabled` /
-  `observers_enabled` aren't in `settings.csv`; rehydrate infers them from
-  file presence. Same *fix path* as above.
+- **Visibility policies + feature toggles** (`instrument_view_policies`,
+  `relationships_enabled`, `observers_enabled`) round-trip through
+  `settings.csv` once the
+  [prerequisite](#prerequisite-extend-the-settings-round-trip) lands —
+  which is a hard dependency of rehydrate, so by ship time these are not
+  gaps. (Only a legacy pre-prerequisite extract would fall back to default
+  view policies + presence-inferred toggles.)
 - **Manual per-pair assignment toggles may not round-trip.** Assignments
   are regenerated from rules; a session where the operator hand-toggled
   individual `(reviewer, reviewee)` `include` flags on the Assignments
@@ -330,17 +353,17 @@ Stated plainly so the card copy and the PR description can be honest:
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph; the responses backfill covers any residual pairs.
 
-## 10. Open decisions
+## 10. Resolved decisions
 
-For confirmation before implementation:
-
-1. **Target lifecycle state** — land as `draft` (recommended,
-   [§8](#8-target-lifecycle-state)) or auto-activate to `ready`?
-2. **Name-collision scope** — match `_REHYD` names against the operator's
-   own sessions (recommended) or all sessions globally?
-3. **View-policy gap** — ship rehydrate with default view policies now and
-   extend `session_config_io` later, or bundle the `instrument_view_policies`
-   serialization into this work so visibility round-trips from day one?
+1. **Target lifecycle** — land as **`draft`** with all assignments
+   generated but **not activated** ([§8](#8-target-lifecycle-state)). The
+   operator activates deliberately.
+2. **Visibility-policy / config gap** — closed **outside** rehydrate, as a
+   separate [prerequisite](#prerequisite-extend-the-settings-round-trip)
+   that extends the normal settings round-trip to cover
+   `instrument_view_policies` and the feature toggles.
+3. **Name-collision scope** — match `_REHYD` names against the **operator's
+   own** sessions ([§5](#5-naming-and-description)).
 
 ## 11. New machinery to build
 
