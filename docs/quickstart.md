@@ -72,7 +72,7 @@ anything freely.
 
 The **Workflow** card at the top of every session page is your control
 panel: it always shows the single most useful next action for the session's
-current state. You'll return to it to validate, activate, and release
+current state. You'll return to it to prepare, activate, and release
 results.
 
 ---
@@ -136,19 +136,33 @@ instrument you can rename and shape:
 > 📷 **Screenshot —** `07-instrument-preview.png` — *the live Preview of the
 > reviewer form.*
 
-### 4c. Decide who reviews whom (Assignments)
+### 4c. Set who reviews whom (the assignment rule)
 
-Open the **Assignments** page (under Operations). The **Assignment Rule**
-generates the reviewer-reviewee pairings for you:
+**Each instrument carries its own pairing rule**, set in the **top band
+(Band 1)** of that instrument's card on the **Instruments** page — not on a
+separate page. Band 1 has three "Links":
 
-1. Choose/confirm the rule (the default pairs everyone with everyone
-   eligible).
-2. Click to **generate** the assignment pairs.
-3. Review the **Assignment pairs** table below; adjust the **Self-reviews**
-   toggle if you don't want people reviewing themselves.
+- **Pool of reviewers** — who does the reviewing.
+- **Pool of those reviewed** — who gets reviewed.
+- **Unit of review** — each reviewee individually, or as a group.
 
-> 📷 **Screenshot —** `08-assignments.png` — *the Assignments page after
-> generating pairs, showing the Assignment Rule card and the pairs table.*
+By default every Link is set to **all**, which pairs **everyone with
+everyone eligible** (a full matrix) — so if that's what you want, there's
+nothing to change. To narrow it (say, reviewers tagged "Group A" only review
+reviewees tagged "Group A"), switch a Link to **filter** and choose the tags.
+
+> 📷 **Screenshot —** `08-band1-rule.png` — *the top band (Band 1) of an
+> instrument card, showing the three Links (Pool of reviewers / Pool of those
+> reviewed / Unit of review).*
+
+You don't generate the pairs here — that happens when you **Prepare** the
+session (Section 5). Afterwards, the **Assignments** page (under Operations)
+shows the resulting **pairs** for each instrument, where you can spot-check
+coverage and use the **Self-reviews** toggle if you don't want people
+reviewing themselves.
+
+> 📷 **Screenshot —** `08a-assignments-preview.png` — *the Assignments page
+> showing the generated pairs and the Self-reviews toggle.*
 
 ### 4d. (Optional) visibility, relationships, observers
 
@@ -163,17 +177,20 @@ generates the reviewer-reviewee pairings for you:
 
 ---
 
-## 5. Check and launch
+## 5. Prepare and launch
 
-1. Back on Session Home, use the Workflow card's **Validate** action. This
-   runs a pre-flight check and lists anything missing or risky.
+1. Back on Session Home, click the Workflow card's **Prepare session**. In
+   one step this **generates the assignment pairs** from every instrument's
+   Band 1 rule **and** runs a pre-flight check, listing anything missing or
+   risky. Nothing goes live yet.
 2. Fix any blocking issues (warnings are fine to proceed past). The session
-   moves to **Validated**.
+   moves to **Validated**. (You can now review the pairs on the Assignments
+   page — Section 4c.)
 3. When you're ready, click **Activate**. The session becomes **Activated**
    and instruments open for responses.
 
-> 📷 **Screenshot —** `10-validate.png` — *the Validate page showing a clean
-> (or nearly clean) pre-flight result.*
+> 📷 **Screenshot —** `10-validate.png` — *the pre-flight result after
+> **Prepare session** — a clean (or nearly clean) check.*
 
 > 📷 **Screenshot —** `11-activated.png` — *Session Home once the session is
 > Activated, with the status badge/pill.*
@@ -302,8 +319,9 @@ So you know what you're asking people to do:
 Screenshot checklist (replace each 📷 callout above with an image):
   01-sign-in.png            02-empty-lobby.png         03-create-session.png
   04-session-home-draft.png 05-quick-setup.png         05a-reviewers-setup.png
-  06-instrument-editor.png  07-instrument-preview.png  08-assignments.png
-  09-visibility.png         10-validate.png            11-activated.png
+  06-instrument-editor.png  07-instrument-preview.png  08-band1-rule.png
+  08a-assignments-preview.png  09-visibility.png        10-validate.png
+  11-activated.png
   12-reviewer-dashboard.png 13-responses-coverage.png  14-release.png
   15-reviewee-results.png   16-extract-data.png        17-reviewer-surface.png
 Suggested location: docs/images/quickstart/<name>.png
