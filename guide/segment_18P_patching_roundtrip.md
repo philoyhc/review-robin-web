@@ -95,19 +95,23 @@ reviewees; smaller blast radius). Update `spec/csv_contracts.md`. Flip gap
 
 ### Part C — Roster status round-trip
 
-Reviewer / reviewee CSVs carry no `Status` column, so re-import
-reactivates everyone; the observers CSV *emits* `Status` but the importer
-ignores it. Decide the policy first (it's a real product call):
+**Decision: preserve status for all three participant rosters —
+reviewers, reviewees, and observers.** Rehydrate (and plain
+export→import) should bring back inactive members as inactive.
 
-- **Preserve** — add `Status` to the reviewer / reviewee extract headers +
-  importers, and have `parse_observer_csv` read the `Status` it already
-  exports; or
-- **Reset (documented)** — accept that re-import reactivates everyone and
-  say so in `spec/csv_contracts.md`.
+- Add a `Status` column to the reviewer / reviewee extract headers +
+  importers.
+- Have `parse_observer_csv` **read** the `Status` the observers extract
+  already emits (today it's exported but ignored on import).
 
-Recommend **Preserve** (rehydrate should bring back inactive members as
-inactive). Flip gap 4. *Small `AskUserQuestion`-worthy policy point at
-implementation time.*
+**Why observers are in, and operator roles are out.** Observers are a
+*participant roster* — on par with reviewers and reviewees, and
+disanalogous to true account-roles. Their status is per-session
+participant config, so it belongs in the round-trip. That's the line that
+keeps **session-operator role grants out of scope** (a real permission /
+account concern, not roster config — see "Deliberately out of scope").
+
+Flip gap 4.
 
 ### Part D — Clone ↔ settings-CSV convergence
 
@@ -182,6 +186,9 @@ rehydrate.
   the set under a short-TTL operator-scoped token → render findings). The
   Rehydrate button stays disabled until a clean verdict; the findings card
   reuses the Validate-page severity vocabulary (`spec/validate_page.md`).
+  **Stash needs no blob storage** — back it with a Postgres `bytea` row
+  (recommended; survives the autoscale-to-2–3-instances story), or local
+  temp-file / re-upload fallbacks (`docs/rehydrate.md` §3.3).
 
 ### Part H — Commit route + orchestrator
 
