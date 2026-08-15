@@ -7,6 +7,7 @@ from app.db.models.instrument_field import InstrumentDisplayField, InstrumentRes
 from app.db.models.instrument_view_policy import InstrumentViewPolicy
 from app.db.models.invitation import Invitation
 from app.db.models.observer import Observer
+from app.db.models.rehydrate_stash import RehydrateStash
 from app.db.models.relationship import Relationship
 from app.db.models.response import Response
 # Per-session ``response_type_definitions`` table retired 2026-05-26.
@@ -37,6 +38,7 @@ __all__ = [
     "InstrumentViewPolicy",
     "Invitation",
     "Observer",
+    "RehydrateStash",
     "Relationship",
     "Response",
     "ReviewSession",
