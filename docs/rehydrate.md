@@ -182,16 +182,21 @@ the way `session_clone._unique_code` does: `"<original code>-rehyd"`, then
 `"-rehyd-2"`, … until free.
 
 **Description.** Take the original `session.description` and append a
-provenance paragraph:
+provenance paragraph that states, succinctly, what was and wasn't brought
+across:
 
 ```
-[Rehydrated on {YYYY-MM-DD} from an extract of "{original name}"
-(code {original code}). Populations, settings, and responses were
-reconstructed from extract CSV files.]
+[Rehydrated {YYYY-MM-DD} from an extract of "{original name}"
+({original code}).
+Restored: settings, reviewers, reviewees, observers, relationships,
+assignments (regenerated), and submitted responses.
+Not restored: invitations, email send history, and participant
+results-acknowledgements.]
 ```
 
 (The date is stamped by the caller, not inside any pure/deterministic
-layer.)
+layer. The restored/not-restored split is grounded in
+`spec/roundtrip_coverage.md`.)
 
 ## 6. Reconstruction pipeline
 
@@ -336,19 +341,25 @@ Stated plainly so the card copy and the PR description can be honest:
   which is a hard dependency of rehydrate, so by ship time these are not
   gaps. (Only a legacy pre-prerequisite extract would fall back to default
   view policies + presence-inferred toggles.)
-- **Manual per-pair assignment toggles may not round-trip.** Assignments
-  are regenerated from rules; a session where the operator hand-toggled
-  individual `(reviewer, reviewee)` `include` flags on the Assignments
-  page isn't captured by the standard extract set (only the never-imported
-  coverage CSV holds it). Rehydrate backfills assignments for any pair
+- **Manual per-pair assignment overrides don't round-trip** (confirmed —
+  `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
+  Assignments page's bulk Activate / Inactivate (the `Assignment.include`
+  flag) is captured by no export and is reset to `include=True` when
+  assignments regenerate. Rehydrate backfills an assignment for any pair
   that *has* responses ([§6.3](#63-import-populations-and-regenerate-assignments)),
-  so no response is lost, but an *empty-but-included* manual assignment may
-  not reappear.
-- **Not restored:** invitations, email-outbox send history,
-  `Reviewee.results_acknowledged_at`, and participant anonymization
-  tokens (regenerated fresh for the new session, so they won't match the
-  original `participant_tokens.csv`). These match `session_clone`'s
-  existing exclusions and are acceptable for a working copy.
+  so no response is lost, but an *empty-but-included* manual assignment
+  won't reappear.
+- **Observer cohort rules aren't restored** (confirmed). The observers CSV
+  carries only Email/Name/Tag1/Status, so `Observer.cohort_rule` is lost —
+  rehydrated observers come back without their cohort scoping. *Fix path:*
+  carry `cohort_rule` in the observers CSV or serialize observers through
+  `session_config_io` (`spec/roundtrip_coverage.md` recommendation 2).
+- **Not restored** (confirmed): invitations, email-outbox send history,
+  `Reviewee.results_acknowledged_at`, and participant anonymization tokens
+  (regenerated fresh for the new session, so they won't match the original
+  `participant_tokens.csv`). These match `session_clone`'s existing
+  exclusions and are acceptable for a working copy — and are the basis of
+  the [description note](#5-naming-and-description)'s "not restored" line.
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph; the responses backfill covers any residual pairs.
@@ -419,6 +430,8 @@ Grounded in the existing seams so the diff stays small:
 - Create / clone / lifecycle: `app/services/sessions.py`,
   `app/services/session_clone.py`, `app/services/session_lifecycle.py`.
 - Assignments: `app/services/assignments/` + `spec/assignments.md`.
+- Round-trip coverage matrix: `spec/roundtrip_coverage.md` (what survives
+  export→import today, and the gaps this spec depends on closing).
 - Lobby / create UI: `spec/sessions_overview.md`,
   `app/web/routes_operator/_session_home.py`,
   `app/web/routes_operator/_quick_setup.py`.
