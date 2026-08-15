@@ -15,6 +15,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    InstrumentViewPolicy,
     Response,
     ReviewSession,
     SessionRuleSet,
@@ -30,12 +31,17 @@ from ._apply_shared import (
     _RX_INSTRUMENT,
     _RX_INSTRUMENT_DF,
     _RX_INSTRUMENT_RF,
+    _RX_INSTRUMENT_VP,
     _VALID_DF_SOURCE_TYPES,
+    _VALID_VP_AUDIENCES,
+    _VALID_VP_GRANULARITY,
+    _VALID_VP_IDENTIFICATION,
     _DisplayFieldSpec,
     _InstrumentSpec,
     _ParsedConfig,
     _ParseError,
     _ResponseFieldSpec,
+    _ViewPolicySpec,
     _parse_bool,
     _parse_decimal,
     _parse_group_kind,
@@ -131,6 +137,43 @@ def _apply_instrument_kv(
             )
         return
 
+    vp_match = _RX_INSTRUMENT_VP.match(field_path)
+    if vp_match is not None:
+        n, audience, attr = (
+            int(vp_match.group(1)),
+            vp_match.group(2),
+            vp_match.group(3),
+        )
+        if audience not in _VALID_VP_AUDIENCES:
+            raise _ParseError(
+                f"unknown view_policies audience {audience!r}; "
+                f"expected one of {sorted(_VALID_VP_AUDIENCES)}"
+            )
+        instrument = plan.instruments.setdefault(n, _InstrumentSpec())
+        vp = instrument.view_policies.setdefault(audience, _ViewPolicySpec())
+        if attr in {"while_ongoing_granularity", "after_release_granularity"}:
+            if value and value not in _VALID_VP_GRANULARITY:
+                raise _ParseError(
+                    f"unknown view-policy granularity {value!r}; "
+                    f"expected one of {sorted(_VALID_VP_GRANULARITY)}"
+                )
+            setattr(vp, attr, value or None)
+        elif attr in {
+            "while_ongoing_identification",
+            "after_release_identification",
+        }:
+            if value and value not in _VALID_VP_IDENTIFICATION:
+                raise _ParseError(
+                    f"unknown view-policy identification {value!r}; "
+                    f"expected one of {sorted(_VALID_VP_IDENTIFICATION)}"
+                )
+            setattr(vp, attr, value or None)
+        elif attr == "observer_tag":
+            vp.observer_tag = value or None
+        else:
+            raise _ParseError(f"unknown view_policies[] attribute {attr!r}")
+        return
+
     inst_match = _RX_INSTRUMENT.match(field_path)
     if inst_match is None:
         raise _ParseError(f"unrecognised instruments[] key {field_path!r}")
@@ -222,6 +265,7 @@ def _apply_instruments(
         "instruments": 0,
         "display_fields": 0,
         "response_fields": 0,
+        "view_policies": 0,
     }
     # Per-instrument rule pin (Segment 15B Slice 2b). The session-tier
     # ``session_rule_sets`` rows are upserted by
@@ -342,5 +386,28 @@ def _apply_instruments(
                 )
             )
             counts["response_fields"] += 1
+
+        # Segment 18P PR A2 — recreate the Band 3 visibility grid.
+        # View policies are children of the instrument, so the
+        # wipe-and-replace prelude cascaded them away with the old
+        # instrument; rebuild them from the parsed spec.
+        for audience in sorted(spec.view_policies.keys()):
+            vp_spec = spec.view_policies[audience]
+            db.add(
+                InstrumentViewPolicy(
+                    instrument_id=instrument.id,
+                    audience=audience,
+                    while_ongoing_granularity=vp_spec.while_ongoing_granularity,
+                    while_ongoing_identification=(
+                        vp_spec.while_ongoing_identification
+                    ),
+                    after_release_granularity=vp_spec.after_release_granularity,
+                    after_release_identification=(
+                        vp_spec.after_release_identification
+                    ),
+                    observer_tag=vp_spec.observer_tag,
+                )
+            )
+            counts["view_policies"] += 1
 
     return counts
