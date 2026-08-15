@@ -40,7 +40,10 @@ stay where they are. Blob storage earns its place only when a payload is
 
 ## Potential uses (if blob storage becomes available)
 
-Ordered roughly by how likely each is to clear the cost bar.
+Ordered roughly by how likely each is to clear the cost bar. The
+**Prioritization** section below records which of these are actually
+being pursued and in what order; #5 (hosted photos) and #8 (email
+attachments) are **parked** — not in the current set.
 
 ### 1. Large / async extract generation and delivery
 The Zip-all setup bundle and the responses bundle are streamed
@@ -105,6 +108,63 @@ The `email_outbox` today carries rendered text, no attachments. If a
 future feature emails a results PDF or a bundle, **blob would** hold the
 attachment bytes with the outbox row referencing a key — rather than
 inlining large binaries into the mail path or the DB.
+
+---
+
+## Prioritization
+
+The set being pursued is **#1, #2, #3, #4, #6, #7**. #5 (hosted photos)
+and #8 (email attachments) are parked. The ordering below reflects
+dependency structure, not just value: the six all sit on a foundation
+that isn't itself one of them, and two of them share plumbing.
+
+### Phase 0 — the prerequisite (gates everything)
+Provision the storage account + build the thin
+`app/services/blob_store.py` seam (`put` / `get` / `signed_url` /
+`delete` / `sweep`, same shape as `rehydrate_stash`) + the optional
+`blob_*` config that degrades to today's `bytea` / streaming paths. Not
+one of the six, but nothing below ships without it — so it is the real
+first move. See "If it lands — where it plugs in."
+
+### Tier 1 — pilot integration (do first)
+- **#2 Rehydrate stash offload.** Smallest, most self-contained, lowest
+  risk: the stash already exists as portable `LargeBinary`, the seam is
+  shaped like it, and the change is additive (nullable `blob_key` +
+  `bytea` fallback). Its role is to **validate the seam** on an existing
+  feature before anything bigger is built. Modest standalone value (only
+  bites at ~1,500-reviewer scale); high value as the de-risking step.
+
+### Tier 2 — the flagship pair (build the async-staging plumbing once)
+- **#1 Async extract generation + SAS delivery.** Highest user-facing
+  value; fixes a real latent pain (request timeouts + a worker held for
+  the whole generation on large sessions; "the only copy is the
+  operator's download"). The produce-once / serve-via-signed-URL pattern
+  is the reusable core.
+- **#3 Async / chunked large uploads.** The inbound mirror of #1 — reuses
+  the same staging plumbing in reverse for the uncapped rehydrate
+  `responses.csv` / large rosters. Ships right after #1 while that
+  machinery is fresh.
+
+### Tier 3 — deferred, gated on other work
+- **#6 Audit-log cold storage.** Gated on a retention / purge policy
+  decision (18C scheduled purge is partly deferred) and pairs with the
+  JSON→JSONB migration (`guide/deferred_infra.md` §2). A scale /
+  compliance concern that does not bite pre-pilot.
+- **#7 Backup / restore artifacts.** Largely overlaps the platform-level
+  Azure Postgres backup that already exists at the server tier; the
+  app-level "download everything" archive is a safety-net nicety. Lowest
+  urgency of the set.
+
+### Outside the ladder — blocked on product design
+- **#4 Operator- / Observer-published reports.** In the pursued set, but
+  **blocked on a feature that does not exist yet**, not on storage: the
+  published-report mechanism is only sketched in `spec/visibility_policy.md`
+  as future work, and blob is a *downstream dependency* of it. It cannot
+  be sequenced until that feature is specced — revisit when the report
+  feature is designed rather than slotting it into a tier above.
+
+**Build order:** Phase 0 seam → **#2** → **#1** → **#3**, then #6 / #7
+opportunistically; #4 waits on its own feature.
 
 ---
 
