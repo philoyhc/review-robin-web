@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,7 @@ from app.schemas.imports import (
     RevieweeImportRow,
 )
 from app.logging_config import get_logger
+from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_lifecycle as lifecycle
 
@@ -368,12 +371,18 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
 def parse_observer_csv(content: bytes) -> ParseResult:
     """Parse an Observers CSV upload. Required column:
     ``ObserverEmail``. Optional columns: ``ObserverName``,
-    ``ObserverTag1``. Other columns are ignored.
+    ``ObserverTag1``, ``CohortRule``. Other columns are ignored.
 
     Observers carry a single ``tag_1`` (not three) per the model
     note in ``app/db/models/observer.py``. Email is the auth-
     bearing identity and is required + strict-shape-validated;
     duplicate emails within the same CSV are blocking errors.
+
+    Segment 18P PR B — a ``CohortRule`` cell (compact JSON) round-
+    trips the per-observer cohort match rule. It's re-validated
+    through ``CohortRuleSet`` here (bad JSON / bad shape is a
+    blocking error), so an imported rule is as trustworthy as one
+    saved through the editor.
     """
     source = "observers"
     issues: list[ValidationIssue] = []
@@ -439,11 +448,47 @@ def parse_observer_csv(content: bytes) -> ParseResult:
             )
             continue
         seen_emails[email.lower()] = index
+
+        cohort_raw = _none_if_blank(raw, "CohortRule")
+        cohort_rule: dict[str, Any] | None = None
+        if cohort_raw is not None:
+            try:
+                loaded = json.loads(cohort_raw)
+            except json.JSONDecodeError:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source=source,
+                        row_number=index,
+                        field="CohortRule",
+                        message="CohortRule is not valid JSON",
+                    )
+                )
+                continue
+            try:
+                ruleset = CohortRuleSet.model_validate(loaded)
+            except ValidationError:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source=source,
+                        row_number=index,
+                        field="CohortRule",
+                        message=(
+                            "CohortRule failed cohort-rule schema "
+                            "validation"
+                        ),
+                    )
+                )
+                continue
+            cohort_rule = ruleset.model_dump(mode="json")
+
         parsed.append(
             ObserverImportRow(
                 email=email,
                 display_name=_none_if_blank(raw, "ObserverName"),
                 tag_1=_none_if_blank(raw, "ObserverTag1"),
+                cohort_rule=cohort_rule,
             )
         )
 
@@ -633,6 +678,7 @@ def _observer_to_kwargs(row: ObserverImportRow, session_id: int) -> dict[str, An
         "email": row.email,
         "display_name": row.display_name,
         "tag_1": row.tag_1,
+        "cohort_rule": row.cohort_rule,
     }
 
 

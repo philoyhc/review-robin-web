@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -32,6 +34,10 @@ class ObserverImportRow(BaseModel):
     email: str
     display_name: str | None = None
     tag_1: str | None = None
+    # Segment 18P PR B — the per-observer cohort match rule
+    # (``CohortRuleSet`` shape, already schema-validated by the
+    # parser), or ``None`` when the CohortRule cell is blank / absent.
+    cohort_rule: dict[str, Any] | None = None
 
 
 class RelationshipImportRow(BaseModel):

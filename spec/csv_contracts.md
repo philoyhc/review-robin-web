@@ -328,7 +328,9 @@ Shipped PR #1706. `parse_observer_csv(content: bytes) -> ParseResult`
 and `save_observers(db, session, rows, *, user, correlation_id)`.
 
 **Required columns:** `ObserverEmail`.
-**Optional columns:** `ObserverName`, `ObserverTag1`.
+**Optional columns:** `ObserverName`, `ObserverTag1`, `CohortRule`
+(Segment 18P PR B — a compact-JSON `cohort_rule` payload; the extract
+emits it and the importer reads it back).
 
 **Per-row validation:**
 
@@ -337,6 +339,7 @@ and `save_observers(db, session, rows, *, user, correlation_id)`.
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
+| `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's
 observer roster. Emits `observers.imported` audit event on success.

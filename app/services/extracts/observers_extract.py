@@ -12,6 +12,7 @@ Closes the Extract Setup leg of L2 from
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 
 from sqlalchemy import select
@@ -27,6 +28,10 @@ HEADER: tuple[str, ...] = (
     "ObserverName",
     "ObserverTag1",
     "Status",
+    # Segment 18P PR B — the per-observer cohort match rule, as a
+    # compact JSON cell (empty when unset). The Setup importer reads
+    # it back and re-validates through ``CohortRuleSet``.
+    "CohortRule",
 )
 
 
@@ -56,4 +61,9 @@ def serialize_observers(
             observer.display_name or "",
             observer.tag_1 or "",
             observer.status,
+            ""
+            if observer.cohort_rule is None
+            else json.dumps(
+                observer.cohort_rule, separators=(",", ":"), sort_keys=True
+            ),
         )
