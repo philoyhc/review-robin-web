@@ -591,6 +591,81 @@ def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
     assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
 
 
+def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
+    """18P PR A2 — the Band 3 visibility grid
+    (``instrument_view_policies``) survives a serialize → apply
+    round-trip. Two audiences with distinct per-window pairs + an
+    ``observer_tag``; pre-A2 every policy was silently dropped and the
+    imported session reverted to default visibility."""
+    from app.db.models import InstrumentResponseField, InstrumentViewPolicy
+
+    src = _session(db, code="rt-vp-src")
+    inst = Instrument(session_id=src.id, name="VP instrument", order=1)
+    db.add(inst)
+    db.flush()
+    db.add(
+        InstrumentResponseField(
+            instrument_id=inst.id,
+            field_key="q1",
+            label="Q1",
+            order=1,
+            _inline_data_type="Integer",
+            _inline_response_type="Likert5",
+            _inline_min=1.0,
+            _inline_max=5.0,
+            _inline_step=1.0,
+            visible=True,
+        )
+    )
+    db.add_all(
+        [
+            InstrumentViewPolicy(
+                instrument_id=inst.id,
+                audience="reviewee",
+                after_release_granularity="aggregated",
+                after_release_identification="deidentified",
+            ),
+            InstrumentViewPolicy(
+                instrument_id=inst.id,
+                audience="observer",
+                while_ongoing_granularity="aggregated",
+                while_ongoing_identification="deidentified",
+                after_release_granularity="row",
+                after_release_identification="identified",
+                observer_tag="cohort-A",
+            ),
+        ]
+    )
+    db.flush()
+    rows = serialize_session_config(db, src)
+
+    dst = _bare_session(db, code="rt-vp-dst")
+    result = apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-vp@e.edu")
+    )
+    assert result.errors == []
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    policies = {p.audience: p for p in dst_inst.view_policies}
+    assert set(policies) == {"reviewee", "observer"}
+
+    rv = policies["reviewee"]
+    assert rv.while_ongoing_granularity is None
+    assert rv.while_ongoing_identification is None
+    assert rv.after_release_granularity == "aggregated"
+    assert rv.after_release_identification == "deidentified"
+    assert rv.observer_tag is None
+
+    ob = policies["observer"]
+    assert ob.while_ongoing_granularity == "aggregated"
+    assert ob.while_ongoing_identification == "deidentified"
+    assert ob.after_release_granularity == "row"
+    assert ob.after_release_identification == "identified"
+    assert ob.observer_tag == "cohort-A"
+
+
 def test_round_trip_carries_starts_new_page(db: Session) -> None:
     """``Instrument.starts_new_page`` (the 18M page-break flag)
     survives the round-trip. Tests both flag states across two

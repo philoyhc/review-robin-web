@@ -53,6 +53,21 @@ class _ResponseFieldSpec:
 
 
 @dataclass
+class _ViewPolicySpec:
+    """One ``instruments[N].view_policies[<audience>].*`` row group —
+    Segment 18P PR A2. The five columns of one
+    ``InstrumentViewPolicy`` row (the two per-window
+    ``(granularity, identification)`` pairs + ``observer_tag``);
+    the audience is the dict key on ``_InstrumentSpec``."""
+
+    while_ongoing_granularity: str | None = None
+    while_ongoing_identification: str | None = None
+    after_release_granularity: str | None = None
+    after_release_identification: str | None = None
+    observer_tag: str | None = None
+
+
+@dataclass
 class _InstrumentSpec:
     name: str | None = None
     short_label: str | None = None
@@ -72,6 +87,10 @@ class _InstrumentSpec:
     band2_state: dict[str, Any] | None = None
     display_fields: dict[int, _DisplayFieldSpec] = _dataclass_field(default_factory=dict)
     response_fields: dict[int, _ResponseFieldSpec] = _dataclass_field(default_factory=dict)
+    # Segment 18P PR A2 — the Band 3 visibility grid, keyed by
+    # audience. Pre-A2 the round-trip dropped every view policy, so a
+    # ported / rehydrated session reverted to default visibility.
+    view_policies: dict[str, _ViewPolicySpec] = _dataclass_field(default_factory=dict)
 
 
 @dataclass
@@ -137,6 +156,17 @@ _VALID_COMBINATORS = frozenset({"ALL_OF", "ANY_OF", "PIPELINE"})
 _VALID_DF_SOURCE_TYPES = frozenset({"reviewee", "pair_context"})
 _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 
+# Segment 18P PR A2 — ``instruments[N].view_policies[<audience>].*``
+# validation. Mirrors ``visibility_policies.AUDIENCES`` +
+# ``MODE_LABELS`` axis values (defined locally to avoid importing the
+# view-time resolver into the import package). ``None``/empty is
+# always allowed (a window "off"); a present value must be in-set.
+# Per-cell mode-grid coherence is guaranteed by the source; this is a
+# light typo guard for hand-edited Settings CSVs.
+_VALID_VP_AUDIENCES = frozenset({"peer_reviewer", "reviewee", "observer"})
+_VALID_VP_GRANULARITY = frozenset({"row", "aggregated"})
+_VALID_VP_IDENTIFICATION = frozenset({"identified", "deidentified"})
+
 # Per-source allowlist for ``field_labels.*`` rows, mirroring
 # ``app.services.field_labels._VALID_SOURCE_FIELDS``. The DB column
 # is permissive (VARCHAR(64) with no enum gate); this map is the
@@ -158,6 +188,9 @@ _RX_INSTRUMENT_DF = re.compile(
 )
 _RX_INSTRUMENT_RF = re.compile(
     r"^instruments\[(\d+)\]\.response_fields\[(\d+)\]\.(\w+)$"
+)
+_RX_INSTRUMENT_VP = re.compile(
+    r"^instruments\[(\d+)\]\.view_policies\[(\w+)\]\.(\w+)$"
 )
 _RX_INSTRUMENT = re.compile(r"^instruments\[(\d+)\]\.(\w+)$")
 _RX_RULE_SET = re.compile(r"^session_rule_sets\[(\d+)\]\.(\w+)$")

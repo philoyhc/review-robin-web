@@ -46,8 +46,8 @@ Grounded in what the extract actually captures and what importers exist:
 | Relationships (reviewer↔reviewee pairs + status + pair tags) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets, then backfill any pair present in `responses.csv` |
 | **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | **Net-new importer** ([§6.4](#64-load-responses)) |
-| Instrument visibility policies (`instrument_view_policies`) | `settings.csv` **(via prerequisite)** | ✅ once the [prerequisite](#prerequisite-extend-the-settings-round-trip) lands | Apply as-is |
-| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` **(via prerequisite)** | ✅ once the [prerequisite](#prerequisite-extend-the-settings-round-trip) lands | Apply as-is |
+| Instrument visibility policies (`instrument_view_policies`) | `settings.csv` (18P PR A2) | ✅ | Apply as-is |
+| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` (18P PR A1) | ✅ | Apply as-is |
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
 
 Rows one to three, plus the two rows closed by the
@@ -57,7 +57,12 @@ row is the genuinely new work.
 
 ## Prerequisite: extend the settings round-trip
 
-**Separate work item, lands first — valuable on its own, and a hard
+> **Status: shipped** — the two session feature toggles landed in **18P PR
+> A1** and `instrument_view_policies` in **18P PR A2**. Both now round-trip
+> through `settings.csv`, so rehydrate inherits them. Section kept as the
+> design record.
+
+**Separate work item, landed first — valuable on its own, and a hard
 dependency of rehydrate.**
 
 `instrument_view_policies` (the per-instrument 3×2 visibility grid) and the

@@ -83,7 +83,7 @@ below plus responses. See `docs/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification`, `observer_tag` | ❌ | ❌ | **Gap — neither path** serializes or copies the Band 3 visibility grid. Reviewee `/results` + observer `/collation` visibility silently reverts to defaults on any round-trip. Being closed by the [rehydrate prerequisite](../docs/rehydrate.md#prerequisite-extend-the-settings-round-trip) |
+| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification`, `observer_tag` | ✅ | ❌ | Settings-CSV carries the Band 3 grid as of **18P PR A2** (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone still doesn't copy it — a clone reverts to default visibility |
 
 ### Rule sets (`session_rule_sets`)
 
@@ -143,8 +143,8 @@ The settings an operator can set that survive **no** export/import path
 (and, where relevant, aren't reproducible by regeneration):
 
 1. **Instrument visibility policies** (`instrument_view_policies`) — affects
-   `/results` + `/collation`. *Fix underway:* the
-   [rehydrate prerequisite](../docs/rehydrate.md#prerequisite-extend-the-settings-round-trip).
+   `/results` + `/collation`. Settings-CSV **done (18P PR A2)**; clone still
+   omits them (a clone reverts to default visibility).
 2. **`relationships_enabled` / `observers_enabled` toggles** — settings-CSV
    **done (18P PR A1)**; clone still omits them (Part D1).
 3. **Observer cohort rules** (`Observer.cohort_rule`) — the observers CSV

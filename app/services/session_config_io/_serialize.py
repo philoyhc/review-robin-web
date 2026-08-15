@@ -281,6 +281,7 @@ def _instrument_blocks(
         )
         rows.extend(_display_field_rows(instrument, n))
         rows.extend(_response_field_rows(instrument, n))
+        rows.extend(_view_policy_rows(instrument, n))
     return rows
 
 
@@ -433,6 +434,57 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
             )
         )
         rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
+    return rows
+
+
+def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
+    """Segment 18P PR A2 — the Band 3 visibility grid.
+
+    Emits one five-row block per ``InstrumentViewPolicy`` (per
+    audience), sorted by audience for byte-stable re-export. Each
+    cell is a nullable string (the ``(granularity, identification)``
+    pair members + ``observer_tag``); an empty cell round-trips to
+    ``NULL``.
+    """
+    rows: list[Row] = []
+    policies = sorted(instrument.view_policies, key=lambda p: p.audience)
+    for policy in policies:
+        prefix = f"instruments[{n}].view_policies[{policy.audience}]"
+        rows.append(
+            Row(
+                f"{prefix}.while_ongoing_granularity",
+                _str(policy.while_ongoing_granularity),
+                "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.while_ongoing_identification",
+                _str(policy.while_ongoing_identification),
+                "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.after_release_granularity",
+                _str(policy.after_release_granularity),
+                "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.after_release_identification",
+                _str(policy.after_release_identification),
+                "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.observer_tag",
+                _str(policy.observer_tag),
+                "string",
+            )
+        )
     return rows
 
 
