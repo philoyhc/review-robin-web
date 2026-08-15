@@ -97,7 +97,7 @@ below plus responses. See `docs/rehydrate.md`.
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
 | `reviewer/reviewee.tag_1..3`, `pair_context.1..3` | ✅ | ✅ | The tag-label allowlist |
-| labels outside that allowlist | ⚠️ | ✅ | Export emits any label row, but **import rejects** non-allowlist source types (`_ParseError`) — export-without-import. Clone copies all |
+| labels outside that allowlist | ✅ | ✅ | As of **18P PR E** export **filters to the allowlist**, so it never emits a row import would reject (was export-without-import). Clone copies all |
 
 ### Data shapes (`data_shapes`)
 
@@ -173,13 +173,16 @@ wrong tool):
 Places where a value *looks* carried but isn't faithfully restored:
 
 - **`instruments[n].order`** — serialized + parsed, but apply ignores it;
-  CSV row position is authoritative. Reordering the CSV reorders the
-  instruments; the `order` cell is decorative.
-- **`display_fields.label`** — serialized no longer; always restored empty.
+  CSV row position is authoritative *by design* (documented in
+  `spec/csv_contracts.md`, 18P PR E). Reordering the CSV reorders the
+  instruments; the `order` cell is informational.
+- **`display_fields.label`** — a dead column: not serialized, import
+  tolerates + drops it, always restored empty (documented, 18P PR E).
 - **`response_fields.validation`** — recomputed from inline bounds on
   import, not carried (fine as long as inline bounds are present).
-- **Field labels outside the tag allowlist** — exported but rejected on
-  import.
+- ~~**Field labels outside the tag allowlist**~~ — fixed in **18P PR E**:
+  export now filters to the allowlist, so nothing is exported that import
+  would reject.
 - **Roster `Status`** — as of **18P PR C** all four roster CSVs (reviewers,
   reviewees, observers, relationships) round-trip `status`; blank/absent →
   active.

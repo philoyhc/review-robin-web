@@ -591,6 +591,51 @@ def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
     assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
 
 
+def test_serialize_drops_non_allowlist_field_labels(db: Session) -> None:
+    """18P PR E — export emits only `field_labels.*` rows the importer
+    accepts. A legacy non-allowlist label (a retired reviewee-identity
+    field) is filtered out, so the exported file round-trips instead of
+    failing its own re-import."""
+    from app.db.models import SessionFieldLabel
+
+    src = _session(db, code="fl-allow")
+    db.add_all(
+        [
+            SessionFieldLabel(
+                session_id=src.id,
+                source_type="reviewer",
+                source_field="tag_1",
+                label="Team",
+            ),
+            SessionFieldLabel(
+                session_id=src.id,
+                source_type="reviewee",
+                source_field="email_or_identifier",
+                label="ID",
+            ),
+        ]
+    )
+    db.flush()
+
+    keys = {
+        row.field
+        for row in serialize_session_config(db, src)
+        if row.field.startswith("field_labels.")
+    }
+    assert "field_labels.reviewer.tag_1" in keys
+    assert "field_labels.reviewee.email_or_identifier" not in keys
+
+    # And what is emitted re-imports cleanly (no export-without-import).
+    dst = _bare_session(db, code="fl-allow-dst")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=serialize_session_config(db, src),
+        user=_user(db, email="fl@e.edu"),
+    )
+    assert result.errors == []
+
+
 def test_round_trip_carries_session_tags(db: Session) -> None:
     """18P PR D2 — session tags survive a serialize → apply round-trip.
     The destination pre-seeds a stale tag that must be dropped."""
