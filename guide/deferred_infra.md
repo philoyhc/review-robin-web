@@ -106,3 +106,5 @@ drift is caught in CI.
 
 - `guide/archive/segment_14A_production_hardening.md` — the in-app
   hardening 14A *does* cover, and its 6-PR ladder.
+- `spec/blob_storage.md` — candidate uses for object storage if a storage
+  account is ever provisioned (§1 above is the portal-side prerequisite).
