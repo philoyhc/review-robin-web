@@ -1929,15 +1929,16 @@ Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`)
 
 With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequisite (A1 + A2) is satisfied, so Group 2 is unblocked.
 
-**Group 2 — Rehydrate — upcoming** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`):
+**Group 2 — Rehydrate — upcoming** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach):
 
-- **PR F** — responses importer (net-new; sectioned `responses.csv` parser + `load_responses` with assignment backfill; own size limits). Lands first, independent.
+- **PR G0** — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
+- **PR F** — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill; own size limits). Independent.
 - **PR G1** — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
-- **PR G2** — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep service. Postgres-backed; **no blob storage**.
-- **PR G3** — rehydrate page + `Rehydrate` lobby button + `POST …/validate` (mandatory pre-flight gate).
-- **PR H** — commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit.
+- **PR G2** — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
+- **PR G3** — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).
+- **PR H** — wire Rehydrate: commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit.
 
-Landing order F → G1 → (G2 ∥ G3-scaffold) → G3 → H.
+Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 
 ---
 

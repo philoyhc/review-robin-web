@@ -46,6 +46,16 @@ the plan's "land X first as a self-contained Y" risk notes as the
 cut points. Don't bundle independent changes (e.g. an unrelated bug
 fix) into the same PR.
 
+**Consequential UI lands scaffold-first.** When a change adds a new
+page, a new card, or a new navigation affordance, land the
+**scaffold as its own reviewable slice before wiring any
+behaviour**: the nav / button plus the page with every card as a
+static placeholder — real copy and layout, inert controls (buttons
+present but no-op or disabled). Iterate the page shape on that
+placeholder, then wire each card / action in follow-up slices.
+Agreeing the surface before attaching logic keeps UI churn out of
+the wiring PRs and gives a cheap, early look at the real thing.
+
 ## Common commands
 
 Run all of these from the repository root with the project virtualenv activated (`pip install -e .[dev]` once).

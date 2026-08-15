@@ -328,20 +328,45 @@ rehydrate.
   load the set, **re-run the analyzer** (expired/altered stash fails safely),
   and on a clean verdict call H1 and redirect to the new Session Home.
 
-*Risk note — land F before G/H.* The responses importer is the only novel
-algorithm; getting it right (and tested) in isolation de-risks the whole
-feature. The analyzer (G1) reuses it; the page (G2) is testable against the
-analyzer; the orchestrator (H1) before the commit route (H2).
+*Risk note.* The UI **scaffold (G0) lands first** so the surface is agreed
+before any wiring (scaffold-first convention). The responses importer (F)
+is the only novel algorithm — get it right and tested in isolation to
+de-risk the feature. The analyzer (G1) reuses F; the wiring PRs (G3
+Validate, H Rehydrate/commit) attach behaviour to the G0 cards last. The
+detailed cut is in "Group 2 — implementation (PR ladder)" below.
 
 ---
 
 ## Group 2 — implementation (PR ladder)
 
-Five PRs. Unlike Group 1, **PR G2 carries the segment's one Alembic
-migration** (the stash table); everything else is service / route / template
-wiring. Land **F first** (independent, de-risks the novel algorithm), then
-the analyzer, then stash, then the page, then commit. Each PR that closes a
-`docs/rehydrate.md` item updates that spec in the same PR.
+Six PRs. Group 2 introduces **consequential UI** (a lobby affordance + a new
+page with three cards), so it follows the **scaffold-first** convention
+(`CLAUDE.md` → Working approach): **PR G0 lands the UI shell with inert
+placeholder cards first**, and the surface gets agreed / iterated before any
+logic is wired behind it. The remaining PRs are the novel algorithm (F), the
+pure analyzer (G1), the stash (**G2 carries the segment's one Alembic
+migration**), then the two wiring PRs (G3 validate, H commit). Each PR that
+closes a `docs/rehydrate.md` item updates that spec in the same PR.
+
+### PR G0 — UI scaffold (placeholders; lands first)
+
+The reviewable UI shell, no behaviour behind it — per the scaffold-first
+convention, so the page shape is agreed before wiring.
+
+- **Lobby button** — the `Rehydrate` `.btn` in the search-card row, next to
+  `Add new` (between `Add new` and `Go to Archive`) in `sessions_list.html`,
+  linking to `GET /operator/sessions/rehydrate`.
+- **The page** — `GET /operator/sessions/rehydrate` → new
+  `operator/session_rehydrate.html` with all three cards as **static
+  placeholders** (`docs/rehydrate.md` §3.2): the instructions card (real
+  copy — required file set + restored / not-restored summary); the upload +
+  actions card (a real file input, plus **Validate** and **Rehydrate**
+  buttons present but **inert** — Rehydrate disabled, Validate a no-op that
+  re-renders); and the full-width details + findings card (empty
+  placeholder / "run Validate to see findings"). Same operator chrome as
+  `/operator/sessions/new`. No analyzer, no stash, no POST routes yet.
+- **Tests:** the lobby renders the `Rehydrate` button linking to the page;
+  the page returns 200 with all three cards; Rehydrate is disabled.
 
 ### PR F — responses importer  *(net-new; independent)*
 
@@ -399,19 +424,19 @@ so the Validate → Commit hand-off survives App Service scale-out
 - **Tests:** put→get round-trip; expired token rejected; another operator's
   token rejected.
 
-### PR G3 — the rehydrate page + validate route + lobby button
+### PR G3 — wire the Validate action into the scaffold
 
-`GET /operator/sessions/rehydrate` → new `operator/session_rehydrate.html`
-(instructions ½ top-left; upload + Validate/Rehydrate ½ top-right; full-width
-details+findings below — `docs/rehydrate.md` §3.2); the `Rehydrate` `.btn`
-in the lobby search-card row (`sessions_list.html`, between `Add new` and
-`Go to Archive`); and `POST …/rehydrate/validate` (unpack ZIPs → G1 analyze
-→ G2 stash → render findings, Rehydrate button gated on a clean verdict,
-findings reusing the Validate-page severity vocabulary).
+Attach behaviour to G0's upload card. `POST …/rehydrate/validate` (unpack
+ZIPs → **G1** analyze → **G2** stash → re-render the page) turns the inert
+Validate button live: the full-width details + findings card populates with
+the report (derived name/code + preview counts + severity-chipped findings,
+reusing the Validate-page vocabulary), and the **Rehydrate** button enables
+only on a clean verdict, carrying the stash token. Still no session is
+created.
 
-- **Tests:** page renders with the button disabled; validate on a clean set
-  stashes + enables Rehydrate + shows the preview; validate on an
-  incomplete set blocks with specific messages and no session created.
+- **Tests:** validate on a clean set stashes + enables Rehydrate + shows the
+  preview; validate on an incomplete / cross-session-mixed set blocks with
+  specific messages, keeps Rehydrate disabled, and creates no session.
 
 ### PR H — commit route + orchestrator
 
@@ -431,8 +456,10 @@ findings reusing the Validate-page severity vocabulary).
   naming (`_REHYD` → `_REHYD_1`); mandatory-gate (commit with no / bad token
   rejected, no session); rollback leaves zero rows.
 
-**Landing order:** F → G1 → (G2 ∥ G3-scaffold) → G3 → H. F and G2 are
-mutually independent; G3 needs G1 + G2; H needs F + G1 + G3.
+**Landing order:** **G0 first** (the UI scaffold — surface agreed before
+wiring), then F / G1 / G2 in any order (all independent logic), then G3
+(wire Validate — needs G0 + G1 + G2), then H (wire Rehydrate/commit — needs
+G0 + F + G1 + G3).
 
 ---
 
