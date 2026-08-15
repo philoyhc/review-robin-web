@@ -78,6 +78,7 @@ Reading order: `visual_style_general.md` (portable design system)
 | `timezone_display.md` | Which timezone every date / time is rendered in — the workspace / operator / session layer model, the `resolve_session_timezone` order, per-surface rules (session-scoped surfaces + extracts localise; sessions lobby gets a Timezone column; the audit log stays UTC), and the canonical render format. |
 | `csv_contracts.md` | Column shapes + parsing rules for the five extracts (Reviewers / Reviewees / Relationships / Responses / Settings / audit events) and the four importers (Reviewers / Reviewees / Relationships / Settings). Round-trip stability rules, two-phase parse + apply contract for Settings, shared parsing primitives. |
 | `email_infra_options.md` | Email backend architecture — pluggable-sender scaffolding, Options A (SMTP) / B (Microsoft Graph) / C (Azure Communication Services) / D (third-party transactional), `email_outbox` schema. |
+| `blob_storage.md` | **Stub / not built.** Candidate uses for object storage if it is ever provisioned (currently none — deferred infra). Captures how each need is met today (Postgres `bytea` / streaming / external URLs) and the potential uses (async extracts, rehydrate-stash offload, large uploads, published reports, hosted photos, audit archival, backups). |
 
 ---
 
