@@ -16,11 +16,12 @@ inverse of the Extract surfaces (`app/web/routes_operator/_extracts.py`).
 
 The reconstructed session is always named **`<original name>_REHYD`**
 (with a numeric suffix on collision — [§5](#5-naming-and-description)),
-carries a provenance note appended to its Description, and is created
-through a dedicated **"Rehydrate Extracted Session"** card on the *Add New
-Session* page. When that card is used, **every other input on the Add New
-Session page is ignored** — the extract files are the sole source of
-truth.
+carries a provenance note appended to its Description, and is created on a
+**dedicated `/operator/sessions/rehydrate` page** reached from a
+**`Rehydrate`** button in the Sessions Lobby. Every run is **gated on a
+mandatory pre-flight validation** ([§3](#3-entry-point-and-page)): the
+operator uploads the extract set, runs **Validate**, sees a findings +
+preview report, and only then can **Rehydrate**.
 
 ### Why it's not just "clone"
 
@@ -83,42 +84,109 @@ rehydrate-specific view-policy code, and every session's export/import
 (clone-by-config, backup/restore) also stops losing them. This is why it's
 a prerequisite rather than a rehydrate sub-task.
 
-## 3. Entry point — the "Rehydrate Extracted Session" card
+## 3. Entry point and page
 
-**Location.** The *Add New Session* page, `GET /operator/sessions/new`
-(handler `new_session_form`, `app/web/routes_operator/_session_home.py`;
-template `operator/session_new.html`). Rehydrate is a **new card** on that
-page, visually separated from (and below) the normal create form + Quick
-Setup upload slots.
+### 3.1 Getting there — the lobby "Rehydrate" button
 
-**Card contents.**
+Rehydrate has its **own page**, not a card on Add New Session. It's reached
+from the **Sessions Lobby** (`/operator/sessions`): the search card's
+button row — today `Cancel` · `Add new` · `Go to Archive`
+(`app/web/templates/operator/sessions_list.html`) — gains a **`Rehydrate`**
+button **between `Add new` and `Go to Archive`**, linking to
+`GET /operator/sessions/rehydrate`. Same `.btn` styling as its siblings.
 
-- **Heading:** "Rehydrate Extracted Session".
-- **Warning block** (`.note`-style callout, Alert-tinted), verbatim intent:
-  > Rehydrating rebuilds a past session — its settings, people, and all
-  > collected responses — from a **complete set of extract files**. You
-  > need: **`reviewers.csv`**, **`reviewees.csv`**, **`settings.csv`**,
-  > and the CSVs from **Extract data → "Extract all data"** (the
-  > responses bundle). If your session used relationships or observers,
-  > include **`relationships.csv`** / **`observers.csv`** too.
-  >
-  > **Everything else on this page is ignored when you rehydrate** — the
-  > name, code, description, and any files staged in the Quick Setup slots
-  > above. The rehydrated session takes its identity and data entirely
-  > from the extract files.
-- **Upload control.** A single multi-file input **or** two ZIP inputs —
-  accept whichever the operator has to hand ([§4](#4-required-file-set)):
-  the Setup bundle (`{code}_setup.zip`) + the Responses bundle
-  (`{code}_responses.zip`), and/or the loose CSVs. `multiple` file input;
-  ZIPs are unpacked server-side.
-- **Submit.** A single Primary button "Rehydrate session", posting to a
-  new route **`POST /operator/sessions/rehydrate`** (multipart). This is a
-  distinct handler from `create_session` (`POST /operator/sessions`) so
-  the "ignore all other inputs" contract is structural, not conditional.
+Giving it its own page removes the whole "ignore the other inputs" problem
+the earlier Add-New-card design carried — there is no create form on this
+page to bleed into.
 
-**Button style.** Primary (per `spec/domain_assumptions.md`). The warning
-callout uses the Alert tint, not Danger — rehydrate is additive (it
-creates a new session; it never mutates or deletes an existing one).
+### 3.2 The rehydrate page (`GET /operator/sessions/rehydrate`)
+
+Same operator chrome and header nav as `/operator/sessions/new` (breadcrumb
+back to the lobby; no session context yet — this page creates one). Layout:
+
+```
+┌─ Instructions (½, top-left) ──┐  ┌─ Upload + actions (½, top-right) ─┐
+│ what a complete extract set   │  │ file upload (loose CSVs / ZIPs)   │
+│ is; what's restored / not     │  │ [ Validate ]   [ Rehydrate ]      │
+│ restored                      │  │        (Rehydrate disabled        │
+│                               │  │         until validation passes)  │
+└───────────────────────────────┘  └───────────────────────────────────┘
+┌─ Details + validation output (full width) ────────────────────────────┐
+│ empty until Validate runs; then the derived _REHYD name/code, preview  │
+│ counts, and the findings list (blocking errors vs warnings)            │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Instructions card (½, top-left).** Brief: what a complete extract set
+  is ([§4](#4-required-file-set)) and the restored / not-restored summary
+  (mirrors the description note, [§5](#5-naming-and-description)). Alert
+  tint. No "other inputs ignored" warning — there are none here.
+- **Upload + actions card (½, top-right).** A `multiple` file input taking
+  the loose CSVs and/or the two ZIP bundles (Setup + Responses, unpacked
+  server-side — [§4](#4-required-file-set)), plus two buttons:
+  - **Validate** — Primary Outline; always available. Runs the pre-flight
+    ([§3.3](#33-pre-flight-validation-mandatory)).
+  - **Rehydrate** — Primary; **disabled until the current upload has passed
+    validation**. Commits the validated set.
+- **Details + validation card (full width, below).** Empty on first load.
+  After Validate it populates with the run's **basic details** (derived
+  `_REHYD` name + unique code; preview counts — reviewers, reviewees,
+  observers, relationships, instruments, assignments-to-generate,
+  responses) and the **validation findings**, severity-chipped, reusing the
+  Validate page's vocabulary (`spec/validate_page.md`).
+
+### 3.3 Pre-flight validation (mandatory)
+
+**Every rehydration passes through validation first — there is no blind
+rehydrate.** The Rehydrate button is inert until a Validate run on the
+current upload returns no blocking errors.
+
+**One shared analyzer.** Both buttons route through a single pure function,
+`analyze_rehydrate_set(files) -> RehydrateReport` ([§11](#11-new-machinery-to-build)),
+so a green preview cannot diverge from what the commit actually does. The
+report carries:
+
+- **Completeness** — required files present, headers matching, and any
+  extra/ignored files ([§4](#4-required-file-set)).
+- **Cross-file integrity** — every reviewer/reviewee email in
+  `responses.csv` resolves in the roster CSVs; every instrument short-label
+  + field-key in `responses.csv` resolves in `settings.csv`;
+  relationship/observer emails resolve; `relationships.csv` /
+  `observers.csv` are present iff the settings imply them. These catch the
+  most common real mistake — **files from two different sessions or a stale
+  re-export**.
+- **Preview** — the derived `_REHYD` name + code and the counts, so the
+  operator can confirm it's the right session before committing.
+- **Verdict** — blocking errors (block Rehydrate) vs warnings (allow, but
+  surfaced).
+
+**Straight-from-verdict-to-run flow (the stash design).**
+
+1. **Validate** POSTs the upload to
+   `POST /operator/sessions/rehydrate/validate`. The handler runs
+   `analyze_rehydrate_set`, **stashes the uploaded set server-side** under a
+   short-TTL, operator-scoped token, and re-renders the page with the
+   full-width report + the token.
+2. On a clean verdict the **Rehydrate** button activates, carrying the
+   token. **The operator does not re-upload.**
+3. **Rehydrate** POSTs the token to
+   `POST /operator/sessions/rehydrate/commit`, which **re-runs
+   `analyze_rehydrate_set` on the stashed set** (so an expired or altered
+   stash fails safely), and — if still clean — runs the reconstruction
+   pipeline ([§6](#6-reconstruction-pipeline)) and redirects to the new
+   Session Home.
+
+**Stash mechanism.** RRW has no blob store, so the stash is a temp-file set
+under a per-token directory with a short TTL, cleaned up after commit or on
+expiry. The token is opaque and operator-scoped; another operator's token,
+or an expired one, is rejected and the page asks for a re-upload. This is
+the one piece of new infrastructure the straight-to-run flow adds; the
+fallback (re-upload on the commit POST) is available if temp-file handling
+is ever undesirable.
+
+**Button styles.** Validate = Primary Outline; Rehydrate = Primary (per
+`spec/domain_assumptions.md`). Rehydrate is additive — it creates a new
+session and never mutates or deletes an existing one.
 
 ## 4. Required file set
 
@@ -182,16 +250,21 @@ the way `session_clone._unique_code` does: `"<original code>-rehyd"`, then
 `"-rehyd-2"`, … until free.
 
 **Description.** Take the original `session.description` and append a
-provenance paragraph:
+provenance paragraph that states, succinctly, what was and wasn't brought
+across:
 
 ```
-[Rehydrated on {YYYY-MM-DD} from an extract of "{original name}"
-(code {original code}). Populations, settings, and responses were
-reconstructed from extract CSV files.]
+[Rehydrated {YYYY-MM-DD} from an extract of "{original name}"
+({original code}).
+Restored: settings, reviewers, reviewees, observers, relationships,
+assignments (regenerated), and submitted responses.
+Not restored: invitations, email send history, and participant
+results-acknowledgements.]
 ```
 
 (The date is stamped by the caller, not inside any pure/deterministic
-layer.)
+layer. The restored/not-restored split is grounded in
+`spec/roundtrip_coverage.md`.)
 
 ## 6. Reconstruction pipeline
 
@@ -336,19 +409,25 @@ Stated plainly so the card copy and the PR description can be honest:
   which is a hard dependency of rehydrate, so by ship time these are not
   gaps. (Only a legacy pre-prerequisite extract would fall back to default
   view policies + presence-inferred toggles.)
-- **Manual per-pair assignment toggles may not round-trip.** Assignments
-  are regenerated from rules; a session where the operator hand-toggled
-  individual `(reviewer, reviewee)` `include` flags on the Assignments
-  page isn't captured by the standard extract set (only the never-imported
-  coverage CSV holds it). Rehydrate backfills assignments for any pair
+- **Manual per-pair assignment overrides don't round-trip** (confirmed —
+  `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
+  Assignments page's bulk Activate / Inactivate (the `Assignment.include`
+  flag) is captured by no export and is reset to `include=True` when
+  assignments regenerate. Rehydrate backfills an assignment for any pair
   that *has* responses ([§6.3](#63-import-populations-and-regenerate-assignments)),
-  so no response is lost, but an *empty-but-included* manual assignment may
-  not reappear.
-- **Not restored:** invitations, email-outbox send history,
-  `Reviewee.results_acknowledged_at`, and participant anonymization
-  tokens (regenerated fresh for the new session, so they won't match the
-  original `participant_tokens.csv`). These match `session_clone`'s
-  existing exclusions and are acceptable for a working copy.
+  so no response is lost, but an *empty-but-included* manual assignment
+  won't reappear.
+- **Observer cohort rules aren't restored** (confirmed). The observers CSV
+  carries only Email/Name/Tag1/Status, so `Observer.cohort_rule` is lost —
+  rehydrated observers come back without their cohort scoping. *Fix path:*
+  carry `cohort_rule` in the observers CSV or serialize observers through
+  `session_config_io` (`spec/roundtrip_coverage.md` recommendation 2).
+- **Not restored** (confirmed): invitations, email-outbox send history,
+  `Reviewee.results_acknowledged_at`, and participant anonymization tokens
+  (regenerated fresh for the new session, so they won't match the original
+  `participant_tokens.csv`). These match `session_clone`'s existing
+  exclusions and are acceptable for a working copy — and are the basis of
+  the [description note](#5-naming-and-description)'s "not restored" line.
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph; the responses backfill covers any residual pairs.
@@ -369,22 +448,41 @@ Stated plainly so the card copy and the PR description can be honest:
 
 Grounded in the existing seams so the diff stays small:
 
-- **Route.** `POST /operator/sessions/rehydrate` +
-  card markup on `operator/session_new.html`
-  (`app/web/routes_operator/_session_home.py` / `_quick_setup.py`
-  sibling). Thin handler: unpack ZIPs, resolve files, call the service,
-  redirect to the new Session Home.
-- **Orchestrator service.** `app/services/session_rehydrate.py` —
-  `rehydrate_session(db, *, files, user, correlation_id) -> ReviewSession`,
-  running the [§6](#6-reconstruction-pipeline) pipeline and owning the
-  all-or-nothing rollback. Reuses `sessions.create_session`,
+- **Page + lobby button.** A new `operator/session_rehydrate.html`
+  template (the two half-width cards + full-width output,
+  [§3.2](#32-the-rehydrate-page-get-operatorsessionsrehydrate)) served by
+  `GET /operator/sessions/rehydrate`, plus the `Rehydrate` `.btn` in the
+  lobby search-card row (`sessions_list.html`,
+  [§3.1](#31-getting-there--the-lobby-rehydrate-button)).
+- **Analyzer (shared, pure).** `app/services/session_rehydrate.py` (or a
+  sibling) — `analyze_rehydrate_set(files) -> RehydrateReport`: the
+  completeness + cross-file-integrity + preview checks
+  ([§3.3](#33-pre-flight-validation-mandatory)). Called by **both** the
+  validate route and (re-run) the commit route, so validate and commit
+  can't drift. Pure and unit-testable against a produced extract set.
+- **Two routes, not one.**
+  - `POST /operator/sessions/rehydrate/validate` — unpack ZIPs, resolve
+    files, run the analyzer, **stash** the set under a token, re-render the
+    page with the report.
+  - `POST /operator/sessions/rehydrate/commit` — take the token, load the
+    stash, **re-run the analyzer**, and on a clean verdict call the
+    orchestrator, then redirect to the new Session Home.
+- **Stash.** A short-TTL, operator-scoped temp-file store keyed by token
+  (per-token directory), cleaned up after commit or on expiry — the one new
+  infra piece ([§3.3](#33-pre-flight-validation-mandatory)).
+- **Orchestrator service.** `session_rehydrate.rehydrate_session(db, *,
+  files, user, correlation_id) -> ReviewSession`, running the
+  [§6](#6-reconstruction-pipeline) pipeline and owning the all-or-nothing
+  rollback. Reuses `sessions.create_session`,
   `session_config_io.apply_session_config`, `csv_imports.save_*`,
-  `relationships.save_relationships`, and `assignments.generate`.
+  `relationships.save_relationships`, and `assignments.generate`. Assumes a
+  validated set (the commit route re-checks first).
 - **Responses importer.** `app/services/extracts/responses_import.py` (the
   net-new piece) — a streaming parser for the sectioned 21-column
   `responses.csv` and the identity→PK resolution + batched `Response`
   insert in [§6.4](#64-load-responses). Its own size limits, independent
-  of `csv_imports`.
+  of `csv_imports`. Shared by the analyzer (dry-run: resolve + count, don't
+  insert) and the orchestrator (insert).
 - **Audit.** Register `session.rehydrated` in `EVENT_SCHEMAS`.
 
 ## 12. Testing expectations
@@ -398,13 +496,20 @@ Grounded in the existing seams so the diff stays small:
   response values / `SavedAt` / `SubmittedAt` / `Version`.
 - **Collision test** — rehydrating the same extract twice yields `_REHYD`
   then `_REHYD_1`, with distinct unique codes.
-- **Incompleteness tests** — each missing required file (and a malformed
-  header) is rejected with a specific message and creates no session.
+- **Analyzer tests** — the shared `analyze_rehydrate_set` returns the right
+  verdict for: a complete clean set; each missing required file; a
+  malformed header; a `responses.csv` referencing an email absent from the
+  rosters (cross-session mix); an instrument short-label/field-key absent
+  from `settings.csv`; `observers.csv` present/absent vs the settings. Each
+  blocking case blocks; warnings don't.
+- **Mandatory-gate test** — `POST …/rehydrate/commit` with no prior
+  validation (or a bad/expired token) is rejected and creates no session.
+- **Stash round-trip test** — Validate stashes the set and returns a token;
+  Commit with that token reconstructs from the stash without re-upload;
+  another operator's token is rejected.
 - **Rollback test** — a mid-pipeline failure leaves zero new rows.
-- **Scale test** — a `responses.csv` well beyond 5000 rows imports fully
-  (guards the [§6.4](#64-load-responses) limit note).
-- **Ignore-other-inputs test** — posting the rehydrate form with a stray
-  name/code/staged file uses only the extract identity.
+- **Scale test** — a `responses.csv` well beyond 5000 rows validates and
+  imports fully (guards the [§6.4](#64-load-responses) limit note).
 
 ## 13. References
 
@@ -419,6 +524,12 @@ Grounded in the existing seams so the diff stays small:
 - Create / clone / lifecycle: `app/services/sessions.py`,
   `app/services/session_clone.py`, `app/services/session_lifecycle.py`.
 - Assignments: `app/services/assignments/` + `spec/assignments.md`.
-- Lobby / create UI: `spec/sessions_overview.md`,
-  `app/web/routes_operator/_session_home.py`,
-  `app/web/routes_operator/_quick_setup.py`.
+- Round-trip coverage matrix: `spec/roundtrip_coverage.md` (what survives
+  export→import today, and the gaps this spec depends on closing).
+- Lobby / entry UI: `spec/sessions_overview.md`,
+  `app/web/templates/operator/sessions_list.html` (the search-card button
+  row that gains `Rehydrate`), `app/web/routes_operator/_session_home.py`
+  (the `/operator/sessions/new` page whose chrome the rehydrate page
+  mirrors).
+- Validate-page vocabulary (findings / severity chips reused by the
+  full-width output card): `spec/validate_page.md`.
