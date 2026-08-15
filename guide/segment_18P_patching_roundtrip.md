@@ -335,6 +335,107 @@ analyzer; the orchestrator (H1) before the commit route (H2).
 
 ---
 
+## Group 2 — implementation (PR ladder)
+
+Five PRs. Unlike Group 1, **PR G2 carries the segment's one Alembic
+migration** (the stash table); everything else is service / route / template
+wiring. Land **F first** (independent, de-risks the novel algorithm), then
+the analyzer, then stash, then the page, then commit. Each PR that closes a
+`docs/rehydrate.md` item updates that spec in the same PR.
+
+### PR F — responses importer  *(net-new; independent)*
+
+`app/services/extracts/responses_import.py` — the only genuinely new
+algorithm (`docs/rehydrate.md` §6.4).
+
+- **`parse_responses_csv(content) -> list[_ParsedResponseRow]`** — a
+  streaming parser for the *sectioned* 21-column `responses.csv`
+  (per-instrument preamble → blank → header → data). Pure; **its own size
+  bound**, not `csv_imports`' 5000-row / 1 MiB caps (a 1,500-reviewer file
+  is far larger). Each row yields `(reviewer_email, reviewee_email,
+  instrument_short_label, field_key, value, saved_at, submitted_at,
+  version)` with the positional `instrument_{n}` as the short-label
+  fallback.
+- **`load_responses(db, *, review_session, rows) -> ResponseLoadResult`** —
+  resolve identity to the session's new PKs (reviewer/reviewee by lowered
+  email, instrument by short-label, field by `(instrument, field_key)`);
+  **find-or-create the assignment** for each `(reviewer, reviewee,
+  instrument)` (`include=True`, `created_by_mode="manual"`, `is_self_review`
+  = emails equal) so no response is orphaned; batched `Response` insert
+  (`saved_at` / `submitted_at` / `version` preserved). Returns counts +
+  unresolved-row warnings.
+- **Tests:** parse a real extract `responses.csv` (multi-instrument,
+  sectioned); load into a seeded session and assert byte-equal
+  value/timestamps/version + backfilled assignments; a scale test well
+  beyond 5000 rows.
+
+### PR G1 — the pre-flight analyzer  *(pure; needs F's parser)*
+
+`analyze_rehydrate_set(files) -> RehydrateReport` in
+`app/services/session_rehydrate.py` (`docs/rehydrate.md` §3.3). Completeness
+(required files + header match), **cross-file integrity** (responses emails
+resolve in the rosters; instrument short-labels + field-keys resolve in
+`settings.csv`; relationships/observers present iff the settings imply
+them — catches cross-session mixes), and a **preview** (derived `_REHYD`
+name/code + entity counts). Reuses F's parser in count-only mode + the
+settings/roster parsers. Pure and unit-testable; no route yet.
+
+- **Tests:** each verdict — clean, each missing file, malformed header,
+  responses referencing an absent email, an absent instrument/field, the
+  observers-vs-settings mismatch.
+
+### PR G2 — the stash  *(the segment's only migration)*
+
+`rehydrate_stashes` table (Alembic migration): `id`, `token` (unique),
+`operator_user_id` FK, `payload` (`LargeBinary` — the zipped/serialized
+file set; portable BLOB / bytea, **no `sqlalchemy.dialects.postgresql`
+import** per the model convention), `created_at`. A thin
+`rehydrate_stash` service: `put(files, user) -> token`, `get(token, user)`
+(TTL-checked, operator-scoped), and a sweep of expired rows. Postgres-backed
+so the Validate → Commit hand-off survives App Service scale-out
+(`docs/rehydrate.md` §3.3). Round-trips both dialects (SQLite tests +
+`ci-postgres`).
+
+- **Tests:** put→get round-trip; expired token rejected; another operator's
+  token rejected.
+
+### PR G3 — the rehydrate page + validate route + lobby button
+
+`GET /operator/sessions/rehydrate` → new `operator/session_rehydrate.html`
+(instructions ½ top-left; upload + Validate/Rehydrate ½ top-right; full-width
+details+findings below — `docs/rehydrate.md` §3.2); the `Rehydrate` `.btn`
+in the lobby search-card row (`sessions_list.html`, between `Add new` and
+`Go to Archive`); and `POST …/rehydrate/validate` (unpack ZIPs → G1 analyze
+→ G2 stash → render findings, Rehydrate button gated on a clean verdict,
+findings reusing the Validate-page severity vocabulary).
+
+- **Tests:** page renders with the button disabled; validate on a clean set
+  stashes + enables Rehydrate + shows the preview; validate on an
+  incomplete set blocks with specific messages and no session created.
+
+### PR H — commit route + orchestrator
+
+- **Orchestrator** `session_rehydrate.rehydrate_session(db, *, files, user,
+  correlation_id) -> ReviewSession` — the full pipeline (`docs/rehydrate.md`
+  §6): create draft → apply settings (with the `_REHYD` name + unique-code
+  rewrite) → import rosters + relationships + observers → generate
+  assignments → load responses via F → land **draft, not activated**; the
+  restored/not-restored description note; all-or-nothing rollback. Register
+  `session.rehydrated` in `EVENT_SCHEMAS`.
+- **Commit route** `POST …/rehydrate/commit` — load the stash by token,
+  **re-run the analyzer** (stale/expired stash fails safe), and on a clean
+  verdict call the orchestrator + redirect to the new Session Home.
+- **Tests:** the full round-trip integration (`docs/rehydrate.md` §12 —
+  build → extract → rehydrate → assert populations / instruments /
+  assignments / byte-equal responses / `_REHYD` name + note); collision
+  naming (`_REHYD` → `_REHYD_1`); mandatory-gate (commit with no / bad token
+  rejected, no session); rollback leaves zero rows.
+
+**Landing order:** F → G1 → (G2 ∥ G3-scaffold) → G3 → H. F and G2 are
+mutually independent; G3 needs G1 + G2; H needs F + G1 + G3.
+
+---
+
 ## Suggested landing order
 
 1. **A** (settings round-trip: view policies + toggles) — prerequisite,

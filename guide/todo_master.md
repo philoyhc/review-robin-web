@@ -1929,7 +1929,15 @@ Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`)
 
 With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequisite (A1 + A2) is satisfied, so Group 2 is unblocked.
 
-**Group 2 — Rehydrate — upcoming** (needs A + F): **PR F** responses importer → **PR G** analyzer + validate page + stash (mandatory pre-flight gate; lobby button → `/operator/sessions/rehydrate`) → **PR H** commit route + orchestrator.
+**Group 2 — Rehydrate — upcoming** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`):
+
+- **PR F** — responses importer (net-new; sectioned `responses.csv` parser + `load_responses` with assignment backfill; own size limits). Lands first, independent.
+- **PR G1** — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
+- **PR G2** — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep service. Postgres-backed; **no blob storage**.
+- **PR G3** — rehydrate page + `Rehydrate` lobby button + `POST …/validate` (mandatory pre-flight gate).
+- **PR H** — commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit.
+
+Landing order F → G1 → (G2 ∥ G3-scaffold) → G3 → H.
 
 ---
 
