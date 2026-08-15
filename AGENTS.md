@@ -99,7 +99,10 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    (Segment 18N PR 3 carve — Band 2 routes + 18M page-break /
    reorder routes), `_extracts.py`, `_extract_data.py` (the
    Operations-strip Extract data tab — per-instrument lens
-   cards + Data shaper), `_sys_admin.py`), with shared plumbing
+   cards + Data shaper), `_rehydrate.py` (Segment 18P Group 2 —
+   the Rehydrate page: Validate + Rehydrate/commit, rebuilding a
+   session from a complete extract set), `_sys_admin.py`), with
+   shared plumbing
    (the `Jinja2Templates` instance, lifecycle / edit-lock guards,
    Quick Setup cookie naming, the cross-slice Setup-roster
    import / redirect / field-label helpers, and per-instrument

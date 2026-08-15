@@ -1,6 +1,8 @@
 # Implementation status
 
-**As of:** 2026-06-05. Latest shipped — **Codex P0 identity case-normalization** (PRs **#1836 → #1839**): `get_or_create_user` and the per-row reviewer / reviewee / observer CRUD now use case-insensitive email comparison (`func.lower(<col>) == value.lower()`), aligning with the sys-admin invite path and the operator add-by-email lookup that already used the same pattern. The `get_or_create_user` lookup also carries an `.order_by(User.id).limit(1)` safeguard so historical case-variant duplicate rows resolve deterministically to the oldest match. Addendum archived to `guide/archive/weaknesses_and_bugs_found_by_codex.md` 2026-06-28; Slice D (storage-level lower-expression uniqueness guard) carried forward in `guide/deferred_until_pilot_feedback.md`.
+**As of:** 2026-06-05. Latest shipped — **Segment 18P — patching the round-trip** (PRs **#1864 → #1878**), two groups on top of the coverage sweep (`spec/roundtrip_coverage.md`). **Group 1** harmonized export→import + clone so neither silently drops hand-set config (feature toggles, instrument view policies, reviewer / reviewee / observer roster `status`, observer cohort rules, scheduling / retention anchors, data shapes, session tags, `band1_touched_links`). **Group 2 — Rehydrate** rebuilds a live draft session from a complete set of extract CSV files: the **Rehydrate** button in the lobby search-card row → the dedicated `/operator/sessions/rehydrate` page (Validate → Rehydrate), a pure pre-flight analyzer, an operator-scoped Postgres-backed stash (`rehydrate_stashes`, the segment's one migration), a sectioned-`responses.csv` importer (`responses_import.py`, with group fan-out + its own size bound), and the `session_rehydrate.rehydrate_session` orchestrator that lands a `<name>_REHYD` draft (assignments regenerated, not activated) with all-or-nothing rollback and a `session.rehydrated` audit event. See `docs/rehydrate.md`.
+
+Before 18P — **Codex P0 identity case-normalization** (PRs **#1836 → #1839**): `get_or_create_user` and the per-row reviewer / reviewee / observer CRUD now use case-insensitive email comparison (`func.lower(<col>) == value.lower()`), aligning with the sys-admin invite path and the operator add-by-email lookup that already used the same pattern. The `get_or_create_user` lookup also carries an `.order_by(User.id).limit(1)` safeguard so historical case-variant duplicate rows resolve deterministically to the oldest match. Addendum archived to `guide/archive/weaknesses_and_bugs_found_by_codex.md` 2026-06-28; Slice D (storage-level lower-expression uniqueness guard) carried forward in `guide/deferred_until_pilot_feedback.md`.
 
 Post-18N (2026-05-29 → 2026-06-05) the **participant model surfaces shipped end-to-end** — reviewee `/me/sessions/{id}/results` body across all three visibility modes (Raw / Anonymized / Summarized) with an Acknowledge stamp; observer `/me/sessions/{id}/collation` MVP with per-instrument 3-row stats (reviewer headcount + aggregate, reviewee headcount + aggregate, conditional CSV download) and Anonymized download tokens (`participant_tokens.csv` keys served from the Extract data tab); per-observer **Cohort match rule** editor (multi-rule + AND/OR) that partitions the session's assignment pool into the observer's view. **Segment 18O** (2026-06-03) four-track file splits brought every production file ≤1,300 LOC with no behaviour change (`scheduled_events.py`, `assignments.py`, `routes_reviewer/_surface.py`, `session_config_io/_apply.py` all carved into per-concern packages). The **Extract data Operations tab** carved out from the Session Home card (2026-05-29 → 2026-05-30) with a Data shaper UI + per-instrument metadata cards. **Workflow card Row 3** added manual Release-responses / Stop-releasing / Archive buttons (2026-06-02). The **URL remodel** (PRs **#1668 → #1669**, 2026-05-30) renamed `/reviewer/` → `/me/` across all four router prefixes. **Segment 18N** (2026-05-28) closed the last 1,300+ LOC band for production Python and brought the settings CSV round-trip current with 18G + 18J + 18M field additions. See "Project timeline" for per-cluster summaries and `guide/todo_master.md` for the per-PR Done log.
 
@@ -183,6 +185,8 @@ For the full long-term plan see
 | 18M | Operator instrument ordering + page breaks: per-instrument drag-gripper reorder + per-instrument `starts_new_page` toggle authored on Instruments. | 2026-05-27 → 2026-05-28 |
 | 18N | Housekeeping (file splits + reviewer-surface asymmetry + settings round-trip): unified `validate_page_n` helper; three biggest production files carved into per-concern slices; settings CSV round-trip closes 17 gaps (8 18G fields + 6 response-field inline fields + `column_widths` / `starts_new_page` / `band2_state`). | 2026-05-28 |
 | 18O | Post-participants-model file splits: four-track housekeeping pass on the 1,300+ LOC band (`scheduled_events.py`, `assignments.py`, `routes_reviewer/_surface.py`, `session_config_io/_apply.py` all carved into per-concern packages). ~5,500 LOC redistributed across ~23 small modules; biggest production file now ~764 LOC. | 2026-06-03 |
+| 18P G1 | Harmonize the round-trip (PRs #1864 → #1870): export→import + clone stop silently dropping hand-set config — feature toggles, instrument view policies, reviewer / reviewee / observer roster `status`, observer cohort rules, scheduling / retention anchors, data shapes, session tags, `band1_touched_links`. Closes the `spec/roundtrip_coverage.md` gaps. | 2026-06-05 |
+| 18P G2 | Rehydrate a complete extracted session (PRs #1872 → #1878): **Rehydrate** lobby button → `/operator/sessions/rehydrate` (Validate → Rehydrate); pure pre-flight analyzer; operator-scoped Postgres-backed stash (`rehydrate_stashes`, the segment's one migration); sectioned-`responses.csv` importer (`responses_import.py`, group fan-out + own size bound); `session_rehydrate.rehydrate_session` orchestrator lands a `<name>_REHYD` draft (assignments regenerated, not activated) with all-or-nothing rollback + `session.rehydrated` audit. See `docs/rehydrate.md`. | 2026-06-05 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres` job, which also runs the full pytest
@@ -441,6 +445,19 @@ The Cancel link on the surface is just `<a>` back to `GET /me/sessions/{id}` —
   events; a final `session.deleted` event with `session_id=None`
   survives in the global audit log. Requires explicit confirm
   checkbox.
+- **Rehydrate** a complete extracted session (Segment 18P Group 2) —
+  the **Rehydrate** button in the lobby search-card row opens
+  `/operator/sessions/rehydrate`, where a complete set of extract CSVs
+  (loose or zipped) is uploaded and **Validate**d (a mandatory
+  pre-flight: completeness + cross-file integrity + a `_REHYD`
+  name/code + entity-count preview). On a clean verdict the set is
+  stashed (`rehydrate_stashes`, operator-scoped, 1-hour TTL) and
+  **Rehydrate** re-runs the analyzer then rebuilds a `<name>_REHYD`
+  **draft** — settings, rosters, relationships, observers, regenerated
+  assignments, and byte-equal submitted responses — landing not
+  activated, with a provenance note and all-or-nothing rollback.
+  Invitations, email send history, and results-acknowledgements are
+  **not** restored. Emits `session.rehydrated`. See `docs/rehydrate.md`.
 
 ### Reviewers & reviewees
 

@@ -154,7 +154,12 @@ Post Segment 18A the lobby carries all three:
   lobby tag vocabulary, an AND/OR mode chip, and a clear chip.
   Client-side filtering against each row's `data-tags`.
 - **Search.** A Search card with a free-text input matching name,
-  code, or tag.
+  code, or tag. Its right-flushed `.sessions-action-buttons` row
+  carries **Cancel**, **Add new** (`/operator/sessions/new`),
+  **Rehydrate** (`/operator/sessions/rehydrate`), and **Go to
+  Archive** (`/operator/sessions/archived`). **Rehydrate** rebuilds a
+  live draft session from a complete set of extract CSV files — see
+  `docs/rehydrate.md` (Segment 18P Group 2).
 
 ## Bulk delete (`delete-selected`)
 

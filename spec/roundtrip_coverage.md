@@ -33,9 +33,9 @@ observer cohort rules, `band1_touched_links`, reviewer `profile_link`).
 | **Roster CSVs** | `extracts/*_extract.py` → `csv_imports` / `relationships` | Reviewers, reviewees, observers, relationships | Per-entity export routes; Quick Setup / Setup-page uploads |
 | **Clone** | `session_clone.clone_session` (in-DB, no CSV) | Config graph; `"all"` mode adds rosters | Lobby row-expander → Duplicate / Duplicate settings only |
 
-`rehydrate` (proposed) composes the settings CSV + roster CSVs + a new
-responses importer; its coverage is the union of the first two columns
-below plus responses. See `docs/rehydrate.md`.
+`rehydrate` (shipped, Segment 18P Group 2) composes the settings CSV +
+roster CSVs + the responses importer; its coverage is the union of the
+first two columns below plus responses. See `docs/rehydrate.md`.
 
 **Legend:** ✅ round-trips · ⚠️ partial / asymmetric (see notes) · ❌ lost ·
 — not applicable.
@@ -220,4 +220,4 @@ Ordered by user-visible impact:
 - Assignments: `app/services/assignments/` (`_generate.py`,
   `_coverage.py`), `app/web/routes_operator/_assignments.py`.
 - Full setting index: `spec/settings_inventory.md`.
-- Proposed consumer: `docs/rehydrate.md`.
+- Consumer: `docs/rehydrate.md` (shipped, Segment 18P Group 2).
