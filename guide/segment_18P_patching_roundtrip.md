@@ -145,6 +145,125 @@ Flip gaps 9–11 / mark as deliberately documented.
 
 ---
 
+## Group 1 — implementation (PR ladder)
+
+Seven small PRs, one (or two) per Part. Each is independent unless noted,
+each **flips its gap(s) in `spec/roundtrip_coverage.md` in the same PR**
+(the coverage matrix is the scoreboard), and each lands a round-trip test.
+No Alembic migrations are required in Group 1 — every column already
+exists; this is serialize/apply and extract/import wiring only. Land **A1 →
+A2** first (the rehydrate prerequisite); B, C, D1, D2, E are mutually
+independent.
+
+### PR A1 — settings CSV: feature toggles  *(gap 2; prereq)*
+
+- **Serialize** (`session_config_io/_serialize.py::_session_rows`): emit two
+  boolean rows, `session.relationships_enabled` and
+  `session.observers_enabled`.
+- **Apply** (`_apply_session.py`): parse + apply the two bools. Respect the
+  existing lock-on-data semantics (the toggles can't flip once
+  relationship/observer rows exist) — settings import is already
+  lifecycle-gated to draft/validated, so on the fresh rehydrate target
+  they apply cleanly; on an existing populated session, skip-with-warning
+  rather than fight the lock.
+- **Route** the two keys through `_apply_parse.py` (session-level, already a
+  routed prefix).
+- **Test:** round-trip both toggles at `true`/`false`.
+- Tiny (~2 serialize rows + apply). Ships on its own.
+
+### PR A2 — settings CSV: `instrument_view_policies`  *(gap 1; prereq)*
+
+The substantive prerequisite. Per `spec/visibility_policy.md` /
+`instrument_view_policy.py`.
+
+- **Serialize** (`_serialize.py`): new `_view_policy_rows(instrument, n)`
+  called from `_instrument_blocks`, emitting per present
+  `InstrumentViewPolicy` (per audience) the keys
+  `instruments[n].view_policies[<audience>].while_ongoing_granularity`,
+  `.while_ongoing_identification`, `.after_release_granularity`,
+  `.after_release_identification`, `.observer_tag`. Cells are the enum
+  strings + `observer_tag` string.
+- **Apply** (`_apply_instrument.py`): view policies are children of the
+  instrument, so recreate them inside the existing instrument
+  wipe-and-rebuild pass — collect the view-policy cells per `(instrument
+  index, audience)` in the parser, validate the enums against the model,
+  and insert `InstrumentViewPolicy` rows. Add the parse routing in
+  `_apply_parse.py` / a helper in `_apply_shared.py`.
+- **Test:** round-trip a session carrying per-audience policies (all three
+  audiences, both windows); assert unchanged.
+- **Doc follow:** once merged, drop the "via prerequisite" wording in
+  `docs/rehydrate.md` (§2 table, §6.2, §9) — view policies now round-trip.
+- Medium. Depends on nothing but is the gate for Group 2 fidelity.
+
+### PR B — observers CSV: `cohort_rule`  *(gap 3)*
+
+- **Export** (`extracts/observers_extract.py`): append a `CohortRule`
+  column to `HEADER`; serialize `json.dumps(observer.cohort_rule)` (empty
+  when null). Append at the end for round-trip stability.
+- **Import** (`csv_imports.py::parse_observer_csv`): read the optional
+  `CohortRule` column, `json.loads` with shape validation (dict/None),
+  thread it onto `ObserverImportRow` → `save_observers`.
+- **Doc:** `spec/csv_contracts.md` observers contract.
+- **Test:** observer round-trip incl. cohort rule; malformed JSON rejected.
+
+### PR C — roster CSVs: `status`  *(gap 4)*
+
+Decision recorded in Part C — preserve for all three participant rosters.
+
+- **Export** (`reviewers_extract.py`, `reviewees_extract.py`): append a
+  `Status` column; serialize `.status`. (Observers already export `Status`.)
+- **Import** (`csv_imports.py`): `parse_reviewer_csv` / `parse_reviewee_csv`
+  read the optional `Status` (default `"active"`, validated); make
+  `parse_observer_csv` **read** the `Status` it currently ignores. Thread
+  through the `*ImportRow` + `save_*`.
+- **Back-compat:** appended optional column — CSVs without `Status` still
+  import (→ active).
+- **Doc:** `spec/csv_contracts.md`.
+- **Test:** status round-trip for all three rosters; inactive preserved;
+  missing column → active.
+
+### PR D1 — clone: data shapes + retention  *(gap 6; gap 5 documented)*
+
+- **`session_clone.py`:** add `DataShape` to the copy set — copy each
+  `data_shapes` row, remapping `instrument_id` / `response_field_id`
+  through the id maps clone already builds during the instrument copy.
+  Copy `retention_exception` / `retention_overrides` in the `ReviewSession`
+  constructor.
+- **Scheduling anchors — deliberate split, not a copy.** Clone already
+  resets `deadline`; a duplicate is meant to be re-scheduled, so leave
+  `scheduled_activate_at` / `responses_release_at` / `_until` / the offset
+  lists **reset by design** and *document* that in `session_clone`'s
+  docstring + the coverage doc (rehydrate restores scheduling via the
+  settings-CSV path, not clone, so this doesn't affect rehydrate). Flip
+  gap 6 to ✅; annotate gap 5 as "intentional reset."
+- **Test:** clone preserves data shapes + retention; asserts scheduling
+  resets.
+
+### PR D2 — settings CSV: session tags + `band1_touched_links`  *(gaps 7–8)*
+
+- **Serialize** (`_serialize.py`): emit `session_tags[i]` rows (tag value)
+  and an `instruments[n].band1_touched_links` row (JSON).
+- **Apply:** upsert `SessionTag` rows (new `_apply_session_tag.py` or fold
+  into `_apply_session.py`); set `instrument.band1_touched_links` in the
+  instrument rebuild (`_apply_instrument.py`).
+- **Test:** round-trip tags + `band1_touched_links`.
+
+### PR E — asymmetry cleanups  *(gaps 9–11)*
+
+- **Field-label export allowlist** (real code): filter
+  `_serialize.py::_field_label_rows` to the same allowlist the importer
+  enforces (`reviewer/reviewee.tag_1..3`, `pair_context.1..3`) so
+  `settings.csv` never emits a row import would reject.
+- **Instrument `order`** (doc): position is authoritative on apply; document
+  that in `spec/csv_contracts.md` and leave the `order` cell as
+  informational. No behaviour change.
+- **`display_fields.label`** (doc): leave the dead column, note it; drop-via-
+  migration deferred.
+- **Test:** a `settings.csv` with only allowlisted labels round-trips; a
+  non-allowlist label is no longer emitted.
+
+---
+
 ## Group 2 — Rehydrate a complete extracted session
 
 Implements `docs/rehydrate.md`. Depends on **Part A** (and, for full
