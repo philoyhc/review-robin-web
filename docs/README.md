@@ -10,6 +10,7 @@ Authoritative for "what does the code currently do" — read
 | File | Covers |
 |---|---|
 | `status.md` | Current implementation state + segment history. Updated at the end of each segment. |
+| `quickstart.md` | **Operator manual** — a simple end-to-end walkthrough for a colleague running their first review (create → set up → activate → invite → monitor → release results). Carries marked slots for screen captures. |
 | `architecture.md` | Cloud / deployment topology (App Service + Postgres + Key Vault + Monitor + Storage behind Easy Auth), a rendered diagram, and the provisioned-resource cost table. The infra companion to `spec/architecture.md` (which covers the app's domain layering). |
 | `rehydrate.md` | **Shipped (Segment 18P Group 2).** Rebuilds a live draft session from a complete set of extract CSV files — same settings, populations, and repopulated responses — via the **Rehydrate** button in the lobby search-card row and the dedicated `/operator/sessions/rehydrate` page (Validate → Rehydrate). |
 | `authentication.md` | Easy Auth headers, `AuthenticatedUser`, `ALLOW_FAKE_AUTH`, identity resolution. |
