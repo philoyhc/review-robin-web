@@ -203,7 +203,7 @@ yourself** and let people sign in:
 
 1. Make sure the session is **Activated** (Section 5) and your reviewers are
    on the roster with the **emails they'll sign in with** (Section 4a).
-2. **Broadcast the Review Robin web address** to your participants through
+2. **Broadcast the RRW address for participants** to your participants through
    your own channel — an LMS announcement, an email you send the class, or a
    course page.
 3. Each person opens the link, **signs in with their institutional
@@ -268,7 +268,7 @@ reviewers, reviewees, relationships, settings, and the full responses table
 
 So you know what you're asking people to do:
 
-1. They open the **Review Robin link** you shared and **sign in** with their
+1. They open the **RRW link** you shared and **sign in** with their
    institutional account.
 2. Their **dashboard** lists the review(s) that apply to them; they click in
    to a **review form** listing the reviewees assigned to them and the
@@ -309,7 +309,7 @@ So you know what you're asking people to do:
 
 - Your session's **Validate** page explains most setup problems in plain
   language.
-- For anything else, contact your Review Robin administrator.
+- For anything else, contact your Review Robin Web administrator.
 
 <!--
 Screenshot checklist (replace each 📷 callout above with an image):
