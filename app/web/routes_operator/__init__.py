@@ -33,6 +33,7 @@ from . import (
     _operations,
     _preview_surface,
     _quick_setup,
+    _rehydrate,
     _session_home,
     _settings,
     _setup_invite,
@@ -51,6 +52,9 @@ router = APIRouter(
 )
 router.include_router(_lobby.router)
 router.include_router(_settings.router)
+# ``_rehydrate`` before ``_session_home`` so the literal
+# ``/sessions/rehydrate`` matches ahead of ``/sessions/{session_id}``.
+router.include_router(_rehydrate.router)
 router.include_router(_session_home.router)
 router.include_router(_quick_setup.router)
 router.include_router(_setup_reviewers.router)

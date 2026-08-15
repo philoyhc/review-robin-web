@@ -64,6 +64,13 @@ def operator_new_session() -> list[Crumb]:
     ]
 
 
+def operator_rehydrate_session() -> list[Crumb]:
+    return [
+        ("Sessions", "/operator/sessions"),
+        ("Rehydrate session", None),
+    ]
+
+
 def operator_sessions_child(label: str) -> list[Crumb]:
     """Breadcrumb for a child page of the Sessions lobby that is not
     session-scoped — e.g. the archived-sessions page."""

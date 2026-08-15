@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Rehydrate Session — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  {# Segment 18P PR G0 — UI scaffold. All three cards are
+     placeholders; the Validate / Rehydrate actions, the pre-flight
+     analyzer, the stash, and the commit orchestrator are wired in the
+     follow-up PRs (see guide/segment_18P_patching_roundtrip.md). #}
+  <div class="page-grid">
+    {# Instructions — half-width, top-left. #}
+    <div class="card">
+      <h2>Rehydrate an extracted session</h2>
+      <p class="form-help">
+        Rebuild a past session — its settings, people, and all collected
+        responses — from a <strong>complete set of extract files</strong>.
+      </p>
+      <p class="form-help">
+        You need <code>reviewers.csv</code>, <code>reviewees.csv</code>,
+        <code>settings.csv</code>, and the CSVs from
+        <strong>Extract data → &ldquo;Extract all data&rdquo;</strong> (the
+        responses bundle). If your session used relationships or observers,
+        include <code>relationships.csv</code> / <code>observers.csv</code>
+        too. You can also just upload the two ZIP bundles.
+      </p>
+      <p class="form-help">
+        <strong>Restored:</strong> settings, reviewers, reviewees,
+        observers, relationships, assignments (regenerated), and submitted
+        responses. <strong>Not restored:</strong> invitations, email send
+        history, and participant results-acknowledgements.
+      </p>
+      <p class="form-help">
+        The rebuilt session is named
+        <code>&lt;original name&gt;_REHYD</code> and lands as a draft — you
+        review and activate it yourself.
+      </p>
+    </div>
+
+    {# Upload + actions — half-width, top-right. #}
+    <div class="card">
+      <h2>Upload &amp; validate</h2>
+      <label for="rehydrate-files">Extract files (CSVs and/or ZIP bundles)</label>
+      <input type="file" id="rehydrate-files" name="rehydrate_files"
+             multiple accept=".csv,.zip" disabled>
+      <p class="form-help">
+        Every run is checked before anything is created:
+        <strong>Validate</strong> first, then <strong>Rehydrate</strong>.
+      </p>
+      <div class="btn-row" style="margin-top: var(--space-3);">
+        {# Placeholder actions — inert until the validate / commit
+           routes land (PRs G3 / H). Validate is a no-op; Rehydrate
+           stays disabled until a clean validation. #}
+        <button type="button" class="btn secondary" disabled
+                aria-disabled="true">Validate</button>
+        <button type="button" class="btn disabled" disabled
+                aria-disabled="true">Rehydrate</button>
+      </div>
+    </div>
+  </div>
+
+  {# Details + validation output — full width, below. Empty until a
+     Validate run populates it (PR G3). #}
+  <div class="card">
+    <h2>Details &amp; validation</h2>
+    <p class="form-help">
+      Upload your extract files and run <strong>Validate</strong> to see a
+      preview of what will be created — the new session name, the
+      populations and instruments, and any issues to fix before you
+      rehydrate.
+    </p>
+  </div>
+{% endblock %}
