@@ -349,31 +349,46 @@ leave view policies at defaults.)
 
 ### 6.4 Load responses
 
-**New machinery** (no importer exists). A responses parser reads
-`responses.csv` and, for each data row, resolves identity to the
-newly-created PKs and inserts a `Response`:
+**New machinery** (no importer existed — responses were export-only).
+Implemented in **18P PR F** (`app/services/extracts/responses_import.py`):
+`parse_responses_csv` + `load_responses`. For each data row, resolve
+identity to the newly-created PKs and insert a `Response`:
 
 - **Reviewer** ← `ReviewerEmail` (lower-cased) → new `Reviewer.id`.
-- **Reviewee** ← `RevieweeEmail` (lower-cased / identifier) → new
-  `Reviewee.id`.
 - **Instrument** ← `InstrumentShortLabel` (primary key for the match;
   unique per session), falling back to the positional `InstrumentName`
   = `instrument_{n}` → the instrument at `order = n`.
 - **Response field** ← `(instrument, FieldKey)` →
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
-- **Assignment** ← `(reviewer, reviewee, instrument)` → `Assignment.id`
-  (guaranteed to exist by [§6.3](#63-import-populations-and-regenerate-assignments)).
+- **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**
+  ← `RevieweeEmail` (lower-cased / identifier); **Assignment** ←
+  `(reviewer, reviewee, instrument)`, **find-or-create** (backfills a pair
+  the rules didn't regenerate — [§6.3](#63-import-populations-and-regenerate-assignments)).
 - **Insert** `Response(assignment_id, response_field_id, value=Value,
   saved_at=parse(SavedAt), submitted_at=parse(SubmittedAt),
   version=Version)`, respecting the unique `(assignment_id,
   response_field_id)` constraint. `Value` maps straight to the `Text`
-  column (no type coercion — numeric values are already stored as text).
+  column (empty cell → `NULL`; no type coercion).
 
-**Format details.** `responses.csv` is *sectioned*: per-instrument
-preamble rows (`instrument_{n}`, then `(field_key, help_text)` rows), a
-blank row, then the 21-column header, then data. The parser walks
-sections, using the preamble only to disambiguate instruments; the
-`InstrumentShortLabel` column on each data row is the durable key.
+**Group-scoped instruments — fan-out.** The export **collapses** a
+group-scoped instrument's per-member Response rows to *one row per group*:
+`RevieweeEmail` is empty and the group identity is composed into
+`RevieweeName` (e.g. `"Team A (Ana, Bo)"`), with
+`InstrumentFlavour = group-scoped`. So a group row is **fanned back out**
+to every member assignment of the matching group. The group is matched by
+**reusing the exporter's own identity computation**
+(`responses_extract._group_export_index`) on the reconstructed session —
+so the import identity is byte-identical to what the export composed — then
+the value is written to each member assignment's `Response`. (This is why
+the responses round-trip needs the assignments regenerated first: the
+member assignments are the fan-out targets.)
+
+**Format.** `responses.csv` is a field-dictionary **preamble** (per
+instrument: an `instrument_{n}` row then `(field_key, help_text)` rows), a
+blank row, then the single 21-column header, then one data table. The
+parser streams to the header, then reads data rows; the
+`InstrumentShortLabel` column (positional `InstrumentName` fallback) is the
+durable instrument key.
 
 **Scale.** `responses.csv` for a large session (e.g. 1,500 reviewers) far
 exceeds the roster importer's `MAX_ROWS = 5000` / `MAX_BYTES = 1 MiB`
