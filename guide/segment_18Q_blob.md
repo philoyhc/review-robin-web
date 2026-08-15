@@ -1,17 +1,29 @@
 # Segment 18Q — Blob storage (object store seam + first consumers)
 
-**Status:** Planning. Grounded in `spec/blob_storage.md` (candidate uses +
-prioritization) and `guide/deferred_infra.md` §1 (the portal-side storage
-prerequisite). Institutional Azure blob provisioning has been **requested**
-(account awaiting finalization), so object storage is now a real option
-rather than a hypothetical.
+**Status:** Planning — **gated on institutional Azure blob storage being
+confirmed.** Work does not start until the storage account is finalized and
+blob is confirmed available on the Azure host. Grounded in
+`spec/blob_storage.md` (candidate uses + prioritization) and
+`guide/deferred_infra.md` §1 (the portal-side storage prerequisite).
 
-> **Key sequencing fact:** the account is *not* a blocker for starting.
-> **Phase 0 and all Tier-1 test coverage are buildable and testable on
-> localhost today** — against an in-memory/filesystem backend (pytest/CI)
-> and the **Azurite** emulator (real SDK path) — with zero dependency on the
-> real storage account. The account only gates the final Tier-3 validation
-> on the Azure dev slot.
+> **The plan assumes blob storage is available on the Azure host** — that
+> is the deployment target. But it must be **implemented so every blob
+> function can be exercised on localhost *before* deployment.** These are
+> **co-equal requirements of Phase 0**, not a primary + a nicety:
+>
+> 1. **Deploy-ready with blob on Azure** — the real `AzureBlobStore` path
+>    (managed identity + container + SAS), wired end-to-end into config,
+>    requirements, and App Service settings.
+> 2. **Locally testable prior to deployment** — the same seam, exercised
+>    with **no Azure account**: in-memory/filesystem backends (pytest/CI)
+>    and the **Azurite** emulator for the real SDK path.
+>
+> The binding principle is **parity**: local and Azure go through the
+> *identical* `BlobStore` interface and the *identical* caller code paths,
+> so a green local/Azurite test is real evidence the Azure path will work —
+> not a divergent mock that passes while production breaks. The only things
+> that genuinely cannot be validated off-Azure are managed-identity token
+> auth and storage-side lifecycle policies (Tier-3, dev-slot).
 
 ---
 
@@ -39,10 +51,32 @@ call. It must leave the test suite **Azure-free** and every deployed/no-blob
 environment working exactly as before (`blob_backend` defaults to a
 non-Azure backend).
 
-Answering the framing question directly — **yes, several cross-cutting
-files need additions beyond the service code.** The full checklist:
+**Phase 0's dual mandate** (both required to call it done):
 
-### P0.1 — Dependencies (`pyproject.toml` **and** `requirements.txt`)
+- **(A) Deploy-ready with blob on Azure.** The `AzureBlobStore` backend is
+  real and wired end-to-end: dependencies in the shipped `requirements.txt`,
+  `blob_*` config read from App Service settings, managed-identity auth,
+  container + SAS. A deploy to the (future, confirmed) Azure host picks up
+  blob purely from configuration — no code change.
+- **(B) Locally testable before deployment.** Every blob function is
+  exercisable on localhost with **no Azure account** — through the *same*
+  `BlobStore` interface and the *same* caller paths — via the
+  memory/filesystem backends (pytest/CI) and Azurite (real SDK). This is a
+  **hard acceptance criterion**, not a convenience: a Phase 0 that can only
+  be validated after deployment is not done.
+
+The two are held together by the **parity rule**: there is exactly one seam
+(`BlobStore`) and exactly one set of callers; backends differ only in where
+bytes land. Local backends are *real implementations of the same contract*,
+not stand-in mocks — so local/Azurite green is genuine pre-deployment
+evidence. The plan below satisfies (A) and (B) together, item by item.
+
+Answering the framing question directly — **yes, several cross-cutting
+files need additions beyond the service code.** Each item notes which
+mandate it serves — **(A)** deploy-ready, **(B)** locally testable, or both.
+The full checklist:
+
+### P0.1 — Dependencies (`pyproject.toml` **and** `requirements.txt`) — (A)+(B)
 
 There is **no `requirements.md`** — runtime deps live in two files kept in
 sync by hand (same discipline as the `CLAUDE.md`/`AGENTS.md` twins):
@@ -69,7 +103,7 @@ because the deploy build installs `requirements.txt`, not an extra, so the
 SDK would be absent in production. Base deps + lazy import is simpler and
 correct.)
 
-### P0.2 — Config (`app/config.py` + `.env.example`)
+### P0.2 — Config (`app/config.py` + `.env.example`) — (A)+(B)
 
 New `Settings` fields (env-var-backed, `pydantic-settings`), all optional
 with safe defaults:
@@ -95,7 +129,7 @@ with safe defaults:
   no-Azurite path, plus the Azurite `BLOB_CONNECTION_STRING` /
   `BLOB_BACKEND=azure` recipe commented out.
 
-### P0.3 — The seam (`app/services/blob_store.py`)
+### P0.3 — The seam (`app/services/blob_store.py`) — (A)+(B), the parity anchor
 
 A small, backend-agnostic service shaped like `rehydrate_stash` so a
 `bytea` payload can be swapped to blob behind it without touching callers.
@@ -124,7 +158,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
   `None`, and the option the institution can prefer over exposing SAS URLs
   at all. Consumers branch: `signed_url(key) or app_download_url(key)`.
 
-### P0.4 — Tests (Azure-free by default) + optional Azurite CI job
+### P0.4 — Tests (Azure-free by default) + Azurite CI job — (B)
 
 - **Backend contract tests** — one parametrized suite run against
   `MemoryBlobStore` + `FilesystemBlobStore` asserting the `BlobStore`
@@ -146,7 +180,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
   managed-identity token auth or storage-lifecycle policies (Azurite
   emulates neither — those are Tier-3 dev-slot checks).
 
-### P0.5 — Deploy + runtime wiring (workflow, App Service, managed identity)
+### P0.5 — Deploy + runtime wiring (workflow, App Service, managed identity) — (A)
 
 - **Deploy workflow (`main_app-review-robin-web-dev.yml`).** The build job
   installs `requirements.txt`, so the added SDK ships automatically — **no
@@ -172,7 +206,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
   consider blob soft-delete + a lifecycle rule for transient prefixes
   (the storage-side counterpart to `sweep`).
 
-### P0.6 — Provisioning + docs
+### P0.6 — Provisioning + docs — (A) provisioning, (B) local-setup/Azurite
 
 - `docs/azure_provision.md` §7 — currently says "RRW's application code
   needs **no** blob storage (verified: no `azure-storage` dependency)".
@@ -262,8 +296,21 @@ slot" posture:
 
 ## Done when
 
+Phase 0 is done only when **both mandates** are demonstrably met:
+
+- **(A) deploy-ready:** the `AzureBlobStore` path is complete and reachable
+  purely by configuration — deps in the shipped `requirements.txt`, `blob_*`
+  App Settings honoured, managed-identity + container + SAS implemented — so
+  the (future, confirmed) Azure host needs no code change to turn blob on.
+- **(B) locally testable pre-deployment:** every blob function is exercised
+  on localhost with no Azure account, through the same interface — `memory`
+  + `filesystem` in the normal suite, the real SDK/SAS path under Azurite —
+  and that coverage gates the PR.
+
+Concretely:
+
 - `get_blob_store()` is callable; memory + filesystem + Azure backends pass
-  the shared contract suite; `ci-azurite` is green.
+  the **same** shared contract suite (parity); `ci-azurite` is green.
 - A no-blob (`blob_backend == "none"`) environment behaves exactly as
   before — no consumer regressions; the full existing suite stays green.
 - `azure-storage-blob` + `azure-identity` are in **both** `pyproject.toml`
