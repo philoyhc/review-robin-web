@@ -2,13 +2,17 @@
 route — Segment 18A Part 1 session cloning."""
 from __future__ import annotations
 
+import datetime as dt
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     AuditEvent,
+    DataShape,
     Instrument,
+    InstrumentResponseField,
     Relationship,
     ReviewSession,
     Reviewee,
@@ -90,6 +94,75 @@ def test_clone_all_copies_full_graph(db: Session) -> None:
     assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == [
         "pilot"
     ]
+
+
+def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
+    """18P PR D1 — clone carries the feature toggles, retention config,
+    and saved Data shapes (scope chips re-pointed at the clone), while
+    the schedule resets by design."""
+    source, op = _source_session(db, "clone-d1")
+    source.relationships_enabled = True
+    source.observers_enabled = True
+    source.retention_exception = True
+    source.retention_overrides = {"audit_log_days": 365}
+    # A scheduling anchor that must NOT survive the clone.
+    source.scheduled_activate_at = dt.datetime(
+        2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc
+    )
+    db.flush()
+
+    src_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == source.id)
+    ).scalars().first()
+    src_rf = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == src_inst.id
+        )
+    ).scalars().first()
+    db.add(
+        DataShape(
+            session_id=source.id,
+            name="My shape",
+            axis="reviewer",
+            instrument_id=src_inst.id,
+            response_field_id=src_rf.id,
+            column_chip_slots="[]",
+            created_by_user_id=op.id,
+        )
+    )
+    db.commit()
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="config"
+    )
+    db.refresh(clone)
+
+    assert clone.relationships_enabled is True
+    assert clone.observers_enabled is True
+    assert clone.retention_exception is True
+    assert clone.retention_overrides == {"audit_log_days": 365}
+    # Schedule resets by design.
+    assert clone.scheduled_activate_at is None
+
+    clone_shapes = db.execute(
+        select(DataShape).where(DataShape.session_id == clone.id)
+    ).scalars().all()
+    assert len(clone_shapes) == 1
+    shape = clone_shapes[0]
+    assert shape.name == "My shape"
+
+    clone_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == clone.id)
+    ).scalars().first()
+    clone_rf = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == clone_inst.id
+        )
+    ).scalars().first()
+    # Scope chips re-pointed at the clone's rows, not the source's.
+    assert shape.instrument_id == clone_inst.id
+    assert shape.response_field_id == clone_rf.id
+    assert shape.instrument_id != src_inst.id
 
 
 def test_clone_config_skips_roster(db: Session) -> None:

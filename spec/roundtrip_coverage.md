@@ -49,9 +49,9 @@ below plus responses. See `docs/rehydrate.md`.
 | `name`, `code`, `description`, `deadline`, `help_contact` | ✅ | ✅ | Settings-CSV applies these only when the target is empty (fallback semantics); clone rewrites name→"Copy of …", derives a unique code, resets deadline |
 | `display_timezone`, `self_reviews_active` | ✅ | ✅ | Force-applied |
 | `email_template_overrides` (12 keys + `responses_received_enabled`) | ✅ | ✅ | Whole-JSON replace |
-| `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ | **Clone drops all scheduling anchors/offsets** (omitted from its constructor) |
-| `retention_exception`, `retention_overrides` | ✅ | ❌ | Same — clone drops retention config |
-| **`relationships_enabled`, `observers_enabled`** | ✅ | ❌ | Settings-CSV carries them as of **18P PR A1** (`session.relationships_enabled` / `session.observers_enabled`, force-applied). Clone still omits them from its constructor (a cloned "all"-mode session copies relationship/observer *rows* but leaves the toggles `False`) — fold into Part D1 |
+| `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ *(by design)* | Clone resets the schedule **on purpose** (18P PR D1 documents it) — a clone is a fresh cycle the operator re-schedules, like the deadline. Settings-CSV still round-trips these for backup / restore |
+| `retention_exception`, `retention_overrides` | ✅ | ✅ | Clone copies retention config as of **18P PR D1** |
+| **`relationships_enabled`, `observers_enabled`** | ✅ | ✅ | Settings-CSV carries them as of **18P PR A1**; clone copies them as of **18P PR D1** (so a cloned "all"-mode session's copied observer / relationship rows aren't hidden by a `False` toggle) |
 | `assignment_mode` | ❌ | ✅ | Settings-CSV defensively drops it (machine-derived); clone copies it |
 | `status`, `activated_at`, `created_by_user_id` | — | — | Runtime / identity — intentionally reset |
 
@@ -103,7 +103,7 @@ below plus responses. See `docs/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `axis`, instrument/response-field refs (portable), `column_chip_slots`, `self_review_handling`, `include_empty_rows` | ✅ | ❌ | **Clone drops data shapes entirely** (`DataShape` isn't in its copy set); settings-CSV round-trips them |
+| `name`, `axis`, instrument/response-field refs (portable), `column_chip_slots`, `self_review_handling`, `include_empty_rows` | ✅ | ✅ | Clone copies data shapes as of **18P PR D1** (scope chips re-pointed at the clone's instrument + response field); settings-CSV round-trips them via portable refs |
 
 ### Session tags (`session_tags`)
 
@@ -158,8 +158,10 @@ The settings an operator can set that survive **no** export/import path
 Covered by **one** path but lost by another (footguns when you pick the
 wrong tool):
 
-7. **Scheduling anchors + retention overrides** — settings-CSV ✅, clone ❌.
-8. **Data shapes** — settings-CSV ✅, clone ❌.
+7. **Retention overrides** — **done (18P PR D1)**: clone now copies them.
+   **Scheduling anchors** stay clone-reset **by design** (a clone is a fresh
+   cycle); settings-CSV still round-trips them.
+8. **Data shapes** — **done (18P PR D1)**: clone now copies them.
 9. **`band1_touched_links`, session tags, `assignment_mode`,
    `library_origin_id`** — clone ✅, settings-CSV ❌.
 10. **Reviewer / reviewee `status`** — **done (18P PR C)**: both paths now
@@ -194,10 +196,10 @@ Ordered by user-visible impact:
 3. ~~**Decide the roster-`status` policy** (gap/footgun 10)~~ — **done (18P
    PR C)**: `Status` preserved on all four roster CSVs (blank/absent →
    active).
-4. **Reconcile clone with settings-CSV** (footguns 7–9) — clone silently
-   drops scheduling/retention/data-shapes and settings-CSV silently drops
-   tags/`band1_touched_links`. Converging them (or documenting the split)
-   removes a class of "why did my duplicate lose X?" surprises.
+4. **Reconcile clone with settings-CSV** (footguns 7–9) — clone side **done
+   (18P PR D1)**: it now copies retention config, the feature toggles, and
+   data shapes, and documents the deliberate schedule reset. The remaining
+   split is settings-CSV dropping tags / `band1_touched_links` (Part D2).
 5. **Manual assignment overrides** (gap 4) — only worth an importer if
    field use shows operators rely on hand-toggling pairs; otherwise
    document that assignments always regenerate from rules.

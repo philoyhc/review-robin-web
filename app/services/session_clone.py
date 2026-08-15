@@ -6,8 +6,8 @@ Two modes:
 - ``"all"`` — copies the full setup, including the reviewer /
   reviewee / relationship roster.
 - ``"config"`` — copies the configuration shell only (instruments,
-  response type definitions, rule sets, field-label overrides,
-  settings, tags) but not the roster.
+  rule sets, field-label overrides, settings, tags, saved Data
+  shapes) but not the roster.
 
 Never copied either way: responses, assignments, invitations, audit
 history, email-outbox rows — a clone always starts as a clean draft.
@@ -20,6 +20,7 @@ from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    DataShape,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
@@ -82,8 +83,17 @@ def clone_session(
     """Clone ``source`` into a fresh ``draft`` session owned by ``user``.
 
     The clone is named ``"Copy of {name}"`` with a derived unique code;
-    the operator renames it afterwards. The deadline resets (a clone is
-    a new cycle); tags are copied in both modes.
+    the operator renames it afterwards. Tags, retention config, feature
+    toggles, and (Segment 18P PR D1) saved Data shapes are copied in both
+    modes.
+
+    **Schedule resets by design.** The deadline and the 18G scheduling
+    anchors (``scheduled_activate_at`` / ``responses_release_at`` /
+    ``responses_release_until`` / the invite / reminder / archive offset
+    lists) are deliberately *not* carried — a clone is a fresh cycle the
+    operator re-schedules. (This is the one intentional gap in
+    ``spec/roundtrip_coverage.md``'s clone column; the settings-CSV path
+    still round-trips those anchors for backup / restore.)
     """
     if mode not in CLONE_MODES:
         raise ValueError(f"Unknown clone mode {mode!r}")
@@ -103,6 +113,18 @@ def clone_session(
             else None
         ),
         display_timezone=source.display_timezone,
+        # Segment 18P PR D1 — feature toggles + retention config the
+        # clone constructor used to drop (a cloned "all"-mode session
+        # copies observer / relationship rows, so the toggles must come
+        # along or the Setup pages would hide them).
+        relationships_enabled=source.relationships_enabled,
+        observers_enabled=source.observers_enabled,
+        retention_exception=source.retention_exception,
+        retention_overrides=(
+            dict(source.retention_overrides)
+            if source.retention_overrides
+            else None
+        ),
         created_by_user_id=user.id,
     )
     db.add(clone)
@@ -127,8 +149,12 @@ def clone_session(
         db.flush()
         rule_set_map[rule_set.id] = new_rule_set.id
 
-    # Instruments + their display / response fields.
+    # Instruments + their display / response fields. The source→clone
+    # id maps feed the Data-shape copy below (18P PR D1), whose scope
+    # chips reference an instrument + response field by FK.
     instrument_count = 0
+    instrument_map: dict[int, int] = {}
+    response_field_map: dict[int, int] = {}
     for instrument in source.instruments:
         new_instrument = Instrument(
             session_id=clone.id,
@@ -148,6 +174,7 @@ def clone_session(
         )
         db.add(new_instrument)
         db.flush()
+        instrument_map[instrument.id] = new_instrument.id
         instrument_count += 1
         for field in instrument.display_fields:
             db.add(
@@ -159,15 +186,16 @@ def clone_session(
         for field in instrument.response_fields:
             # iii-b4: response_type_id FK dropped; just clone every
             # mapped column (including the inline bounds).
-            db.add(
-                InstrumentResponseField(
-                    instrument_id=new_instrument.id,
-                    **_column_values(
-                        field,
-                        skip={"id", "instrument_id"},
-                    ),
-                )
+            new_field = InstrumentResponseField(
+                instrument_id=new_instrument.id,
+                **_column_values(
+                    field,
+                    skip={"id", "instrument_id"},
+                ),
             )
+            db.add(new_field)
+            db.flush()
+            response_field_map[field.id] = new_field.id
 
     # Field-label overrides + tags.
     for label in source.field_labels:
@@ -185,6 +213,40 @@ def clone_session(
                 session_id=clone.id,
                 **_column_values(
                     tag, skip={"id", "session_id", "created_at"}
+                ),
+            )
+        )
+
+    # Saved Data shapes — Segment 18P PR D1. Config, so copied in both
+    # modes. The instrument / response-field scope chips are remapped
+    # through the id maps built above; a shape with no instrument scope
+    # (both FKs NULL) copies straight across.
+    for shape in db.execute(
+        select(DataShape).where(DataShape.session_id == source.id)
+    ).scalars():
+        db.add(
+            DataShape(
+                session_id=clone.id,
+                instrument_id=(
+                    instrument_map.get(shape.instrument_id)
+                    if shape.instrument_id is not None
+                    else None
+                ),
+                response_field_id=(
+                    response_field_map.get(shape.response_field_id)
+                    if shape.response_field_id is not None
+                    else None
+                ),
+                created_by_user_id=user.id,
+                **_column_values(
+                    shape,
+                    skip=set(_SKIP_BASE)
+                    | {
+                        "session_id",
+                        "instrument_id",
+                        "response_field_id",
+                        "created_by_user_id",
+                    },
                 ),
             )
         )
