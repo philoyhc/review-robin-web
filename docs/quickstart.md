@@ -92,11 +92,13 @@ it's faster, far less error-prone, and it's the shape institutional rosters
 usually already come in. Each CSV just needs a **name** column and an
 **email** column.
 
-> ⚠️ **The emails must be the institutional emails people will sign in
-> with.** The app matches each person to their roster row by their
-> signed-in email, so an address that doesn't match means they won't see
-> their review. Getting the emails right here is the single most important
-> setup step.
+> ⚠️ **The email addresses must be the institutional ones people will sign
+> in with.** The app matches each person to their roster row by their
+> signed-in email address, so an address that doesn't match means they won't
+> see their review. Getting these addresses right is the single most
+> important setup step. (This is the app's *identifier* for each person — not
+> to be confused with invitation emails, which the app doesn't send yet;
+> see Section 6.)
 
 The quickest path, once you have the two CSVs ready, is the **Quick Setup**
 card on Session Home — it takes your **Reviewers** and **Reviewees** CSVs
@@ -202,15 +204,22 @@ reviewing themselves.
 
 ## 6. Give reviewers access
 
-Automated email invitations and one-click **magic links aren't switched on
-yet** — but you don't need them to run a review. Because access is based on
-the roster, you simply **share the app's link yourself** and let people sign
-in:
+The app can't **send invitation emails** yet, and one-click **magic links**
+aren't switched on either — but you don't need either to run a review.
+
+> This is about *outbound invitation emails the app would send*. It has
+> nothing to do with the **email addresses that identify** your reviewers
+> and reviewees — those are essential (Section 4a). The app just can't
+> *email people invitations* yet, and doesn't need to.
+
+Because access is based on the roster, you simply **share the app's link
+yourself** and let people sign in:
 
 1. Make sure the session is **Activated** (Section 5) and your reviewers are
    on the roster with the **emails they'll sign in with** (Section 4a).
 2. **Broadcast the Review Robin web address** to your participants through
-   your own channel — an LMS announcement, a class email, or a course page.
+   your own channel — an LMS announcement, an email you send the class, or a
+   course page.
 3. Each person opens the link, **signs in with their institutional
    account**, and immediately sees the review(s) that apply to them on their
    dashboard. No invitation or code needed — the app recognises them by
@@ -222,18 +231,18 @@ reviews.**
 > 📷 **Screenshot —** `12-reviewer-dashboard.png` — *a signed-in reviewer's
 > dashboard (`/me`) listing the review(s) that apply to them.*
 
-> **Coming later:** when email + magic-link invitations ship, this step
-> becomes a one-click "generate + send invitations" (with reminders) from the
-> Workflow card. The review runs perfectly well without them today — the
-> shared-link route above is all you need.
+> **Coming later:** when **invitation-email** sending + magic links ship,
+> this step becomes a one-click **Generate + send invitations** (with
+> reminders) from the Workflow card. The review runs perfectly well without
+> them today — the shared-link route above is all you need.
 
 ---
 
 ## 7. Watch progress
 
 - The **Invitations** page shows, per reviewer, how far through the form
-  each person is (its email/reminder columns simply sit idle until email is
-  switched on).
+  each person is (its invitation-email / reminder columns simply sit idle
+  until invitation-email sending is switched on).
 - The **Responses** page flips the view: per **reviewee**, how much coverage
   they've received (Complete / Adequate / At risk / No responses).
 
@@ -291,12 +300,13 @@ So you know what you're asking people to do:
 - **Import with CSVs.** For anything beyond a handful of people, upload
   reviewer/reviewee spreadsheets rather than typing rows — and it's what lets
   you use the one-shot **Quick Setup** card.
-- **Roster emails must match sign-in emails.** People are recognised by the
-  institutional email they log in with, so the roster addresses have to be
-  those exact emails.
-- **No emails needed to launch.** Email + magic-link invitations aren't on
-  yet; just share the app link (e.g. via your LMS) and signed-in participants
-  see their own reviews.
+- **Roster email addresses must match sign-in addresses.** People are
+  recognised by the institutional email address they log in with, so the
+  roster addresses have to be those exact addresses. (These identifying
+  addresses are essential — distinct from the invitation emails below.)
+- **No invitation emails needed to launch.** The app can't send invitation
+  emails yet — and doesn't need to. Just share the app link (e.g. via your
+  LMS) and signed-in participants see their own reviews.
 - **Everything's editable in Draft.** Set up freely before validating.
 - **Validate early.** The pre-flight catches missing pieces before you share
   the link.
