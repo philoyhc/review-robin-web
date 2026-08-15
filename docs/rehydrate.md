@@ -1,11 +1,12 @@
 # Rehydrate an extracted session — functional spec
 
-> **Status: proposed (not yet built).** This is a design spec for a new
-> capability, written against the current code seams. `docs/` normally
-> documents shipped behaviour; this file is the exception until the
-> feature lands, at which point it should be trimmed to "how it works
-> today." Companion to `spec/sessions_overview.md` (the lobby),
-> `spec/setup_pages.md`, and `spec/assignments.md`.
+> **Status: shipped (Segment 18P Group 2).** The full pipeline is live —
+> the `/operator/sessions/rehydrate` page (Validate + Rehydrate), the
+> pre-flight analyzer, the operator-scoped stash, the responses importer,
+> and the `session_rehydrate.rehydrate_session` orchestrator. This file
+> now describes how the feature works today. Companion to
+> `spec/sessions_overview.md` (the lobby), `spec/setup_pages.md`, and
+> `spec/assignments.md`.
 
 ## 1. What this is
 

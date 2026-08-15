@@ -419,6 +419,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # copied-entity tallies, ``refs.source_session_id`` the origin,
     # ``context.mode`` the clone mode (``all`` / ``config``).
     "session.cloned": EventSchema(_IDENTITY | {"counts", "refs", "context"}),
+    # Segment 18P Group 2 — rehydrate a session from a complete extract
+    # set. ``counts`` carries the reconstructed-entity tallies;
+    # ``context.source_code`` / ``context.source_name`` name the origin
+    # extract the new ``_REHYD`` session was rebuilt from.
+    "session.rehydrated": EventSchema(_IDENTITY | {"counts", "context"}),
     # Workflow super-button (per spec/workflow_card.md). The
     # ``started`` event marks each Activate-session click; per-step
     # success continues to write the underlying ``session.validated``

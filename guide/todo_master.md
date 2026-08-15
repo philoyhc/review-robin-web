@@ -1913,7 +1913,7 @@ Closed the P0 items from the Codex weaknesses assessment (addendum archived to `
 
 ---
 
-### Segment 18P — Patching the round-trip (harmonize + rehydrate) — Group 1 done 2026-06-05 (PRs #1864 → #1870); Group 2 upcoming (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
+### Segment 18P — Patching the round-trip (harmonize + rehydrate) — Group 1 done 2026-06-05 (PRs #1864 → #1870); Group 2 done (scaffold #1872, polish #1873, F / G1 / G2 / G3 #1877 / H) (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
 
 Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`): (1) **harmonize** the round-trip so export→import + clone stop silently dropping hand-set config; (2) **rehydrate** a complete session from its extract files. Group 1 lands first — it carries the rehydrate prerequisites. No new infra (Postgres-backed pre-flight stash; **no blob storage**).
 
@@ -1929,14 +1929,14 @@ Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`)
 
 With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequisite (A1 + A2) is satisfied, so Group 2 is unblocked.
 
-**Group 2 — Rehydrate — upcoming** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach):
+**Group 2 — Rehydrate — done** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach). `docs/rehydrate.md` flipped from "proposed" to "shipped":
 
-- **PR G0** — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
-- **PR F** — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill; own size limits). Independent.
-- **PR G1** — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
-- **PR G2** — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
-- **PR G3** — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).
-- **PR H** — wire Rehydrate: commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit.
+- **PR G0** ✅ — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
+- **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent.
+- **PR G1** ✅ — pre-flight analyzer `analyze_rehydrate_set` (completeness + cross-file integrity + preview). Pure.
+- **PR G2** ✅ — the stash: `rehydrate_stashes` table (**the segment's one migration**) + put/get/sweep. Postgres-backed; **no blob storage**.
+- **PR G3 (#1877)** ✅ — wire the Validate action (analyzer + stash into the scaffold; findings + preview; enables Rehydrate on a clean verdict).
+- **PR H** ✅ — wire Rehydrate: commit route + orchestrator `rehydrate_session` (create draft → apply settings → rosters → assignments → responses → land draft, not activated); `session.rehydrated` audit; all-or-nothing rollback.
 
 Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 

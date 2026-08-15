@@ -271,6 +271,12 @@ Decision recorded in Part C — preserve for all three participant rosters.
 
 ## Group 2 — Rehydrate a complete extracted session
 
+> **Status: shipped.** The full ladder landed — G0 scaffold (#1872), the
+> Upload/Validate/Rehydrate copy polish (#1873), F (responses importer),
+> G1 (analyzer), G2 (stash + migration), G3 (wire Validate, #1877), and H
+> (commit route + `rehydrate_session` orchestrator). `docs/rehydrate.md`
+> is flipped from "proposed" to "shipped."
+
 Implements `docs/rehydrate.md`. Depends on **Part A** (and, for full
 fidelity, **B** + **C**). The reconstruction pipeline, naming, atomicity,
 and target-lifecycle (`draft`, assignments generated, not activated) are
