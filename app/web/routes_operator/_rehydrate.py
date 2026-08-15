@@ -4,13 +4,15 @@ Segment 18P Group 2. Reached from the ``Rehydrate`` button in the
 Sessions Lobby search-card row; rebuilds a session from a complete set
 of extract CSV files (``docs/rehydrate.md``).
 
-**PR G0** landed the UI scaffold; **PR G3 (this file)** wires the
-mandatory pre-flight **Validate** action: the upload is analyzed
-(:func:`session_rehydrate.analyze_rehydrate_set`), stashed under a token
-(:mod:`rehydrate_stash`), and the page re-renders with the findings +
-preview; the **Rehydrate** button enables only on a clean verdict,
-carrying the stash token. The commit route + orchestrator land in **PR
-H** (``POST …/rehydrate/commit`` doesn't exist yet).
+**PR G0** landed the UI scaffold; **PR G3** wired the mandatory pre-flight
+**Validate** action (the upload is analyzed via
+:func:`session_rehydrate.analyze_rehydrate_set`, stashed under a token, and
+the page re-renders with the findings + preview; **Rehydrate** enables only
+on a clean verdict). **PR H (this file)** wires the **Rehydrate** commit:
+``POST …/rehydrate/commit`` loads the stashed set, re-runs the analyzer
+(a stale / expired stash fails safe), and on a clean verdict calls
+:func:`session_rehydrate.rehydrate_session` and redirects to the new draft's
+Session Home.
 """
 from __future__ import annotations
 
@@ -18,8 +20,8 @@ import io
 import os
 import zipfile
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.db.models import User
@@ -29,9 +31,11 @@ from app.services.session_rehydrate import (
     RehydrateReport,
     analyze_rehydrate_set,
     pack_file_set,
+    rehydrate_session,
+    unpack_file_set,
 )
 from app.web import breadcrumbs
-from app.web.deps import get_or_create_user
+from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
@@ -108,3 +112,48 @@ def rehydrate_validate(
             db, payload=pack_file_set(collected), user=user
         )
     return _render(request, user, report=report, token=token)
+
+
+@router.post("/sessions/rehydrate/commit", response_class=HTMLResponse)
+def rehydrate_commit(
+    request: Request,
+    token: str = Form(default=""),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Commit a validated set: load it from the stash, **re-run the
+    analyzer** (a stale / altered / expired stash fails safe), and on a
+    clean verdict rebuild the session and redirect to its Session Home.
+    An unusable token or a verdict that no longer passes re-renders the
+    page with the findings — no session is created."""
+    payload = rehydrate_stash.get(db, token=token or "", user=user)
+    if payload is None:
+        report = RehydrateReport(
+            ok=False,
+            errors=[
+                "Your validated upload expired or is no longer available — "
+                "re-upload the extract files and run Validate again."
+            ],
+        )
+        return _render(request, user, report=report)
+
+    files = unpack_file_set(payload)
+    # Re-run the mandatory pre-flight against the exact stashed bytes: the
+    # Validate verdict is authoritative but the world may have moved (a
+    # colliding session created since), so never commit on trust alone.
+    report = analyze_rehydrate_set(db, files=files, user=user)
+    if not report.ok:
+        return _render(request, user, report=report, token=token)
+
+    review_session = rehydrate_session(
+        db,
+        files=files,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    rehydrate_stash.delete(db, token=token)
+    db.commit()
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}?rehydrated=1",
+        status_code=303,
+    )

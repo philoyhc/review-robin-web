@@ -14,6 +14,7 @@ the commit orchestrator (PR H). No DB writes — this is read-only.
 from __future__ import annotations
 
 import csv
+import datetime as _dt
 import io
 import re
 import zipfile
@@ -23,7 +24,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, SessionOperator, User
+from app.db.models import Reviewee, Reviewer, ReviewSession, SessionOperator, User
 from app.services.extracts.responses_import import (
     ResponsesFormatError,
     parse_responses_csv,
@@ -365,3 +366,275 @@ def unpack_file_set(blob: bytes) -> dict[str, bytes]:
         for member in zf.namelist():
             out[member] = zf.read(member)
     return out
+
+
+# --------------------------------------------------------------------------- #
+# The commit orchestrator (PR H)
+# --------------------------------------------------------------------------- #
+
+
+class RehydrateError(Exception):
+    """A step of the reconstruction pipeline failed. The orchestrator
+    hard-deletes the partially-built session before re-raising, so no
+    half-rehydrated session survives (``docs/rehydrate.md`` §7)."""
+
+
+def _settings_rows(content: bytes) -> list[Any]:
+    """Parse the 3-column ``field,value,data_type`` settings CSV into
+    ``session_config_io.Row`` records for :func:`apply_session_config`."""
+    from app.services.session_config_io import HEADER, Row
+
+    reader = csv.reader(io.StringIO(_decode(content)))
+    rows_iter = iter(reader)
+    try:
+        header = next(rows_iter)
+    except StopIteration as exc:
+        raise RehydrateError("settings.csv is empty.") from exc
+    if [c.strip() for c in header] != list(HEADER):
+        raise RehydrateError("settings.csv header not recognised.")
+    out: list[Any] = []
+    for raw in rows_iter:
+        if not raw:
+            continue
+        if len(raw) < 3:
+            raise RehydrateError("settings.csv has a malformed row.")
+        out.append(Row(field=raw[0], value=raw[1], data_type=raw[2]))
+    return out
+
+
+def _rewrite_identity_rows(rows: list[Any], *, name: str, code: str) -> list[Any]:
+    """Return the settings rows with the ``session.name`` / ``session.code``
+    value cells replaced by the derived ``_REHYD`` name + unique code —
+    otherwise ``apply`` would restore the original name and collide on the
+    unique ``code`` index (``docs/rehydrate.md`` §6.2)."""
+    from app.services.session_config_io import Row
+
+    rewritten: list[Any] = []
+    for row in rows:
+        if row.field == "session.name":
+            rewritten.append(Row(field=row.field, value=name, data_type=row.data_type))
+        elif row.field == "session.code":
+            rewritten.append(Row(field=row.field, value=code, data_type=row.data_type))
+        else:
+            rewritten.append(row)
+    return rewritten
+
+
+def _compose_description(
+    settings: _SettingsInfo, *, original_description: str, today: _dt.date
+) -> str:
+    """Original description + the provenance note (``docs/rehydrate.md``
+    §5). The date is stamped by this (non-pure) layer, injectable for
+    deterministic tests."""
+    note = (
+        f'[Rehydrated {today.isoformat()} from an extract of '
+        f'"{settings.name}" ({settings.code}).\n'
+        "Restored: settings, reviewers, reviewees, observers, "
+        "relationships, assignments (regenerated), and submitted "
+        "responses.\n"
+        "Not restored: invitations, email send history, and participant "
+        "results-acknowledgements.]"
+    )
+    original = (original_description or "").strip()
+    return f"{original}\n\n{note}" if original else note
+
+
+def _original_description(rows: list[Any]) -> str:
+    for row in rows:
+        if row.field == "session.description":
+            return row.value or ""
+    return ""
+
+
+def rehydrate_session(
+    db: Session,
+    *,
+    files: dict[str, bytes],
+    user: User,
+    correlation_id: str | None = None,
+    today: _dt.date | None = None,
+) -> ReviewSession:
+    """Rebuild a live session from a complete extract file set.
+
+    Runs the full reconstruction pipeline (``docs/rehydrate.md`` §6) as
+    one logical unit: create the draft shell → apply settings (with the
+    ``_REHYD`` name + unique-code rewrite) → import reviewers / reviewees /
+    observers / relationships → regenerate assignments → load responses
+    (Part F, backfilling any missing assignment). The session lands in
+    **draft** — never auto-activated. On any failure the partially-built
+    session is hard-deleted so no half-rehydrated session survives.
+
+    Assumes the caller has already run :func:`analyze_rehydrate_set` on the
+    same set and got a clean verdict; the parsers here still fail safe.
+    """
+    from app.schemas.sessions import SessionCreate
+    from app.services import audit, csv_imports, relationships, sessions
+    from app.services.assignments import replace_assignments
+    from app.services.extracts.responses_import import load_responses
+    from app.services.session_config_io import apply_session_config
+
+    today = today or _dt.date.today()
+    resolved = _resolve_files(files)
+    if "settings" not in resolved:
+        raise RehydrateError("settings.csv is required to rehydrate.")
+    settings = _parse_settings(resolved["settings"])
+    if settings is None:
+        raise RehydrateError("settings.csv header/format not recognised.")
+
+    new_name = derive_rehydrate_name(
+        db, user=user, original_name=settings.name
+    )
+    new_code = derive_unique_code(db, original_code=settings.code)
+    settings_rows = _settings_rows(resolved["settings"])
+    description = _compose_description(
+        settings,
+        original_description=_original_description(settings_rows),
+        today=today,
+    )
+
+    review_session = sessions.create_session(
+        db,
+        user=user,
+        payload=SessionCreate(
+            name=new_name,
+            code=new_code,
+            description=description,
+            relationships_enabled="relationships" in resolved,
+            observers_enabled="observers" in resolved,
+        ),
+        correlation_id=correlation_id,
+    )
+
+    try:
+        # 1. Settings — rewrite the identity rows so apply keeps our
+        #    derived name / code, then rebuild instruments + config.
+        apply_rows = _rewrite_identity_rows(
+            settings_rows, name=new_name, code=new_code
+        )
+        apply_result = apply_session_config(
+            db, review_session, apply_rows, user=user, correlation_id=correlation_id
+        )
+        if not apply_result.ok:
+            raise RehydrateError(
+                "settings.csv failed to apply: "
+                + "; ".join(apply_result.errors)
+            )
+
+        # 2. Rosters.
+        reviewers_parse = csv_imports.parse_reviewer_csv(resolved["reviewers"])
+        if reviewers_parse.is_blocked:
+            raise RehydrateError("reviewers.csv failed validation.")
+        csv_imports.save_reviewers(
+            db,
+            session=review_session,
+            user=user,
+            rows=reviewers_parse.rows,
+            filename="reviewers.csv",
+            correlation_id=correlation_id or "",
+        )
+
+        reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
+        if reviewees_parse.is_blocked:
+            raise RehydrateError("reviewees.csv failed validation.")
+        csv_imports.save_reviewees(
+            db,
+            session=review_session,
+            user=user,
+            rows=reviewees_parse.rows,
+            filename="reviewees.csv",
+            correlation_id=correlation_id or "",
+        )
+
+        if "observers" in resolved:
+            observers_parse = csv_imports.parse_observer_csv(resolved["observers"])
+            if observers_parse.is_blocked:
+                raise RehydrateError("observers.csv failed validation.")
+            csv_imports.save_observers(
+                db,
+                session=review_session,
+                user=user,
+                rows=observers_parse.rows,
+                filename="observers.csv",
+                correlation_id=correlation_id or "",
+            )
+
+        # 3. Relationships — resolve against the just-imported rosters.
+        if "relationships" in resolved:
+            roster_reviewers = list(
+                db.execute(
+                    select(Reviewer).where(
+                        Reviewer.session_id == review_session.id
+                    )
+                ).scalars()
+            )
+            roster_reviewees = list(
+                db.execute(
+                    select(Reviewee).where(
+                        Reviewee.session_id == review_session.id
+                    )
+                ).scalars()
+            )
+            rel_parse = relationships.parse_relationship_csv(
+                resolved["relationships"],
+                reviewers=roster_reviewers,
+                reviewees=roster_reviewees,
+            )
+            if rel_parse.is_blocked:
+                raise RehydrateError("relationships.csv failed validation.")
+            relationships.save_relationships(
+                db,
+                session=review_session,
+                user=user,
+                rows=rel_parse.rows,
+                filename="relationships.csv",
+                correlation_id=correlation_id or "",
+            )
+
+        # 4. Assignments — regenerate from the restored rule sets.
+        replace_assignments(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id or "",
+        )
+
+        # 5. Responses — load, backfilling any assignment the rules didn't
+        #    regenerate (e.g. default Full-Matrix instruments).
+        parsed_responses = parse_responses_csv(resolved["responses"])
+        load_result = load_responses(
+            db, review_session=review_session, rows=parsed_responses
+        )
+
+        counts = {
+            "reviewers": len(reviewers_parse.rows),
+            "reviewees": len(reviewees_parse.rows),
+            "responses": load_result.responses,
+            "assignments_backfilled": load_result.assignments_created,
+        }
+        audit.write_event(
+            db,
+            event_type="session.rehydrated",
+            summary=(
+                f"Rehydrated session {review_session.code} from an extract "
+                f'of "{settings.name}" ({settings.code})'
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(**counts),
+            context={"source_code": settings.code, "source_name": settings.name},
+            correlation_id=correlation_id,
+        )
+        db.commit()
+    except Exception:
+        # Hard-delete the partially-built session so no half-rehydrated
+        # session survives (all-or-nothing — docs/rehydrate.md §7).
+        db.rollback()
+        fresh = db.get(ReviewSession, review_session.id)
+        if fresh is not None:
+            sessions.delete_session(
+                db, review_session=fresh, user=user, correlation_id=correlation_id
+            )
+        raise
+
+    db.refresh(review_session)
+    return review_session
