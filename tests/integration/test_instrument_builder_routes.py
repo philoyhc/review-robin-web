@@ -695,7 +695,7 @@ def test_add_new_model_creates_instrument(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "Assignment rule" in body  # Band 1 card title (18R Item 1)
+    assert "Instrument assignment rule" in body  # Band 1 card title (18R Item 1)
     assert "Who does the review" in body  # Band 1 Link 1 column
     assert "Who is being reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column

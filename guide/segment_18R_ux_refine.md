@@ -16,7 +16,7 @@ slices; the segment stays open as a home for further UX refinements.
 
 ---
 
-## Item 1 — Instrument card identity (retire "Band 1" → "Assignment rule")
+## Item 1 — Instrument card identity (retire "Band 1" → "Instrument assignment rule")
 
 **The problem.** On the per-instrument card (Instruments page,
 `app/web/templates/operator/instruments_index.html`), the **top band** — the
@@ -30,11 +30,12 @@ name for the single most important control on the page.
 
 **The fix.**
 
-1. **Give the top band a card title — "Assignment rule"**, **bold**, styled to
-   **match the other card names** on the instrument card (e.g. "Preview review
-   instrument"): same heading treatment, sitting between the Instrument Name
-   (above) and the Preview review instrument card (below). (Decided:
-   "Assignment rule", not the longer "Response assignment rule".)
+1. **Give the top band a card title — "Instrument assignment rule"**, **bold**,
+   styled to **match the other card names** on the instrument card (e.g.
+   "Preview review instrument"): same heading treatment, sitting between the
+   Instrument Name (above) and the Preview review instrument card (below). (The
+   "Instrument" prefix disambiguates the card from the Operations-row
+   **Assignments** page; chosen over plain "Assignment rule" for that reason.)
 2. **Relabel the three Links** (the sub-headings inside the card) to plainer
    operator language. These stay **unbold** — the bold card title vs unbold
    link labels gives the visual hierarchy:
@@ -47,11 +48,11 @@ name for the single most important control on the page.
 
 3. **Strengthen every section's identity in the same pass** — make the card
    set on the instrument card self-describing and visually consistent
-   (Instrument Name → Assignment rule → Preview review instrument →
+   (Instrument Name → Instrument assignment rule → Preview review instrument →
    Visibility → Response Fields). Titles / headings / labels only; no
    behaviour or layout-logic change.
 4. **Rename the operator-facing "Band 1" wording** in `spec/instruments.md`
-   and `spec/assignments.md` to "Assignment rule", and the Link labels to
+   and `spec/assignments.md` to "Instrument assignment rule", and the Link labels to
    match #2 (both specs describe the three Links by their old names). The
    **internal** `band1` code identifiers (`_band1.py`,
    `set_band1_assignment_rules`, `new_model_band1_state`, CSS/data attributes,
@@ -69,12 +70,12 @@ template-string assertion that greps for an old label (check `tests/` for
 
 **Definition of done.**
 
-- The instrument card's top band shows a **bold "Assignment rule"** title,
+- The instrument card's top band shows a **bold "Instrument assignment rule"** title,
   styled like the other card names; the five sections read as
   consistently-identified cards.
 - The three Links read **Who does the review / Who is being reviewed / Unit of
   review** (unbold).
-- `spec/instruments.md` / `spec/assignments.md` say "Assignment rule" and the
+- `spec/instruments.md` / `spec/assignments.md` say "Instrument assignment rule" and the
   new Link labels for the operator-facing names (internal `band1` / `linkN`
   identifiers unchanged, with a one-line note that the code names are
   retained).
@@ -249,7 +250,7 @@ problem / fix / scope / done-when shape, and keep each a self-contained slice.
 
 ## Doc impact
 
-- `spec/instruments.md`, `spec/assignments.md` — "Band 1" → "Assignment rule"
+- `spec/instruments.md`, `spec/assignments.md` — "Band 1" → "Instrument assignment rule"
   and the Link relabels (Who does the review / Who is being reviewed / Unit of
   review), per Item 1.
 - `docs/quickstart.md` §4c — update the three Link labels to match Item 1.

@@ -129,7 +129,7 @@ instrument you can rename and shape:
 
 ### 4c. Set who reviews whom (the assignment rule)
 
-**Each instrument carries its own assignment rule**, set in the **Assignment rule** card (the top band) of that instrument's card on the **Instruments** page:
+**Each instrument carries its own assignment rule**, set in the **Instrument assignment rule** card (the top band) of that instrument's card on the **Instruments** page:
 
 - **Who does the review** — the pool of reviewers.
 - **Who is being reviewed** — the pool of those reviewed.
@@ -139,9 +139,9 @@ Setting the links to **all, all, individual** pairs **everyone with
 everyone eligible, individually** (a full matrix). To narrow it (say, reviewers only review
 reviewees with the same tag), switch a Link to **filter** and choose the tags and appropriate connectors.
 
-> 📷 **Screenshot —** `08-assignment-rule.png` — *the **Assignment rule** card
-> (top band) of an instrument card, showing the three Links (Who does the
-> review / Who is being reviewed / Unit of review).*
+> 📷 **Screenshot —** `08-assignment-rule.png` — *the **Instrument assignment
+> rule** card (top band) of an instrument card, showing the three Links (Who
+> does the review / Who is being reviewed / Unit of review).*
 
 You don't generate the pairs here — that happens when you **Prepare** the
 session (Section 5). Afterwards, the **Assignments** page (under Operations)

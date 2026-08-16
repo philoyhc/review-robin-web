@@ -1053,11 +1053,13 @@
         {% set _ns.keys = _ns.keys + [source ~ "." ~ slot | replace("_", "")] %}
       {% endfor %}
       {% set _link3_selected = _ns.keys %}
-      {# Segment 18R Item 1 — the top band is the "Assignment rule" card.
-         Bold title matches the other card names (Preview review instrument
-         / Visibility); the three Link labels below stay unbold, so the
-         bold title vs unbold labels gives the visual hierarchy. #}
-      <h3 style="margin: 0 0 12px 0;">Assignment rule</h3>
+      {# Segment 18R Item 1 — the top band is the "Instrument assignment
+         rule" card ("Instrument" prefix disambiguates it from the
+         Operations-row Assignments page). Bold title matches the other card
+         names (Preview review instrument / Visibility); the three Link labels
+         below stay unbold, so the bold title vs unbold labels gives the
+         visual hierarchy. #}
+      <h3 style="margin: 0 0 12px 0;">Instrument assignment rule</h3>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
                   {% if not is_editing %}opacity: 0.75;{% endif %}"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
