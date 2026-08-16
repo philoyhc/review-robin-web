@@ -361,6 +361,20 @@ case, and a "nothing persists before Save" assertion.
   machine). The smaller reload-only alternative (fold band2 into the form Save,
   retire the immediate POSTs, keep reloads) was **considered and declined** in
   favour of the smoother no-reload feel.
+- **Inline ✎/✓ text editors retire — the boxes follow the card's lock
+  state (decided 2026-08-16).** The three per-field inline editors
+  (card-title `short_label`, Band 2 intro `description`, Band 2 preview
+  per-field help text) drop their ✎ (open) / ✓ (commit) affordance and
+  their immediate `/identity` + `/band2-state` POSTs. Instead:
+  **unlocked** → the box is a plain editable field (as if ✎ were already
+  clicked for all of them); editing marks the card **dirty**; **Save**
+  commits them via the consolidated `…/save`. **Locked** → the box
+  **disappears, showing just the rendered read-only text** (not a disabled
+  input) — i.e. the box is a view/edit swap keyed on the card lock state,
+  not an always-rendered-disabled control. Commit is **Save**, never Lock
+  (Lock only closes the boxes to their read-only view, with the standard
+  unsaved-changes confirm if the card is dirty). Lands in PR 4 (help text)
+  and PR 5 (description + short_label).
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
   **Save / Cancel** card A.
@@ -399,10 +413,15 @@ agree the always-rendered / toggle shape before wiring persistence.
    immediate-POSTing and flow through the store + the consolidated save;
    Response Fields **R / ≡ / ✓ / X** apply the button-state matrix, **✓**
    becomes push-to-preview only, and the **lost-edit is fixed** (all named
-   rows are captured). Retire `/band2-state`, `/column-widths` from the card.
+   rows are captured). The per-field **help-text ✎/✓ retires** — the help
+   box is a plain field when unlocked, rendered read-only text when locked
+   (per the inline-editors decision above), committed on Save. Retire
+   `/band2-state`, `/column-widths` from the card.
 5. **Migrate identity + display order → staging.** Name / short_label /
    description stop immediate-POSTing (retire `/identity` from the card);
-   display-field reorder folds into the payload (retire in-card
+   the **short_label + description ✎/✓ retire** — plain fields when
+   unlocked, rendered read-only text when locked, committed on Save.
+   Display-field reorder folds into the payload (retire in-card
    `/display-fields/order`). Band 1 + Band 3 (already staged) route into the
    consolidated save instead of `/fields/save`.
 6. **Cleanup + tests.** Retire now-unused endpoints (or keep server-side only
