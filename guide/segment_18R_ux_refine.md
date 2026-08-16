@@ -30,39 +30,58 @@ name for the single most important control on the page.
 
 **The fix.**
 
-1. **Give the top band a card title** — **"Assignment rule"** (alternative
-   considered: "Response assignment rule"; go with the shorter unless review
-   prefers the longer). It should read as a peer of the Response Fields /
-   Visibility / Preview cards: same heading treatment, sitting between the
-   Instrument Name (above) and the Preview review instrument card (below).
-2. **Strengthen every section's identity in the same pass** — make the card
+1. **Give the top band a card title — "Assignment rule"**, **bold**, styled to
+   **match the other card names** on the instrument card (e.g. "Preview review
+   instrument"): same heading treatment, sitting between the Instrument Name
+   (above) and the Preview review instrument card (below). (Decided:
+   "Assignment rule", not the longer "Response assignment rule".)
+2. **Relabel the three Links** (the sub-headings inside the card) to plainer
+   operator language. These stay **unbold** — the bold card title vs unbold
+   link labels gives the visual hierarchy:
+
+   | Current label | New label |
+   |---|---|
+   | Pool of reviewers | **Who does the review** |
+   | Pool of those reviewed | **Who is being reviewed** |
+   | Unit of review | *Unit of review* (unchanged) |
+
+3. **Strengthen every section's identity in the same pass** — make the card
    set on the instrument card self-describing and visually consistent
    (Instrument Name → Assignment rule → Preview review instrument →
-   Visibility → Response Fields). Titles / headings only; no behaviour or
-   layout-logic change.
-3. **Rename the operator-facing "Band 1" wording** in `spec/instruments.md`
-   and `spec/assignments.md` to "Assignment rule". The **internal** `band1`
-   code identifiers (`_band1.py`, `set_band1_assignment_rules`,
-   `new_model_band1_state`, CSS/data attributes, the `band1_touched_links`
-   column) **stay** — renaming those is churn with no user benefit; this item
-   is about the *operator-facing* name only.
+   Visibility → Response Fields). Titles / headings / labels only; no
+   behaviour or layout-logic change.
+4. **Rename the operator-facing "Band 1" wording** in `spec/instruments.md`
+   and `spec/assignments.md` to "Assignment rule", and the Link labels to
+   match #2 (both specs describe the three Links by their old names). The
+   **internal** `band1` code identifiers (`_band1.py`,
+   `set_band1_assignment_rules`, `new_model_band1_state`, CSS/data attributes,
+   the `band1_touched_links` column) and the internal `link1`/`link2`/`link3`
+   ids **stay** — renaming those is churn with no user benefit; this item is
+   about the *operator-facing* names only.
 
 **Scope / size.** A **small** template slice on `instruments_index.html`
-(add the heading, tidy the section identities) + the two spec wording
-updates. No route, service, model, or migration change. No test change
-expected beyond any template-string assertion that greps for the old label
-(check `tests/` for "Band 1" before pushing).
+(add the bold card title, relabel the three Link sub-headings, tidy the
+section identities) + the spec/quickstart wording updates. No route, service,
+model, or migration change — the Link `link1`/`link2`/`link3` ids and all
+`band1` internals are untouched. No test change expected beyond any
+template-string assertion that greps for an old label (check `tests/` for
+"Band 1" / "Pool of reviewers" / "Pool of those reviewed" before pushing).
 
 **Definition of done.**
 
-- The instrument card's top band shows a clear **"Assignment rule"** title;
-  the five sections read as consistently-identified cards.
-- `spec/instruments.md` / `spec/assignments.md` say "Assignment rule" for the
-  operator-facing name (internal `band1` identifiers unchanged, with a
-  one-line note that the code name is retained).
-- `docs/quickstart.md` §4c already says "Assignment rule" / "top band" — keep
-  it consistent (its `08-band1-rule.png` screenshot slot can be recaptioned
-  to `08-assignment-rule.png` when screenshots are produced).
+- The instrument card's top band shows a **bold "Assignment rule"** title,
+  styled like the other card names; the five sections read as
+  consistently-identified cards.
+- The three Links read **Who does the review / Who is being reviewed / Unit of
+  review** (unbold).
+- `spec/instruments.md` / `spec/assignments.md` say "Assignment rule" and the
+  new Link labels for the operator-facing names (internal `band1` / `linkN`
+  identifiers unchanged, with a one-line note that the code names are
+  retained).
+- `docs/quickstart.md` §4c updated to the new Link labels (it currently uses
+  "Pool of reviewers / Pool of those reviewed / Unit of review"); its
+  `08-band1-rule.png` screenshot slot recaptioned to `08-assignment-rule.png`
+  when screenshots are produced.
 - Full suite green; `ruff` clean.
 
 ---
@@ -231,7 +250,9 @@ problem / fix / scope / done-when shape, and keep each a self-contained slice.
 ## Doc impact
 
 - `spec/instruments.md`, `spec/assignments.md` — "Band 1" → "Assignment rule"
-  (operator-facing name), per Item 1.
+  and the Link relabels (Who does the review / Who is being reviewed / Unit of
+  review), per Item 1.
+- `docs/quickstart.md` §4c — update the three Link labels to match Item 1.
 - `spec/instruments.md`, `spec/operator_ui_concept.md` — the harmonized
   save / lock model + per-state button bar, per Item 2 (cites
   `guide/instrument_card_ux_audit.md`).
