@@ -176,6 +176,22 @@ follow the same lock-gated framework. Target behaviour:
     row** (title "Empty row — nothing to delete"); **active** otherwise
     (deletes the row and its paired pill).
 
+**Reinforce response-field shape protection (make it look inactive).** When a
+response field **has saved responses**, its **shape** is frozen — the field
+**type** (`data_type`) and the **bounds** (`min` / `max` / `step` / **list
+options**) — while its **name / Required / Help** stay editable (the confirmed
+semantics; server-guarded by `ResponseFieldShapeChangeError`). Those shape
+inputs already carry the `disabled` attribute, **but they don't *look*
+inactive**: `base.html` styles disabled *buttons* (which is why the **X**
+delete button reads correctly greyed) but has **no** disabled styling for
+`<input>` / `<select>`, so an operator moves to click into the box and only
+then discovers it's locked. **Fix:** give disabled shape inputs a clear
+inactive treatment — greyed background/text + `cursor: not-allowed`, matching
+the X button — so the freeze is obvious at a glance. Keep the "Clear responses
+first" tooltip. (Small CSS addition in `base.html` for disabled
+`input`/`select`, or a scoped class on the shape inputs; no logic change — the
+functional lock + server guard already exist.)
+
 **Dirty tracking.** One per-card dirty flag drives **Save**'s and **Cancel**'s
 enabled/greyed state, and the **unsaved-changes guard** fired on **Lock** and
 on navigating away. Every editable control flips the flag on change; a
@@ -218,6 +234,10 @@ case, and a "nothing persists before Save" assertion.
   inactive when locked; R/≡ inactive on a blank row; ✓ inactive when empty or
   already-in-preview-unchanged; X keeps its saved-responses / blank-row
   gates).
+- On a field with saved responses, the frozen **shape inputs** (type +
+  min/max/step/list) **look** inactive (greyed + `cursor: not-allowed`,
+  matching the X button), not just carry a silent `disabled` attribute; name /
+  Required / Help stay editable.
 - Leaving an unlocked card with pending edits **warns/confirms** before
   discarding.
 - **Save runs the full current validation set** (listed in Decisions
