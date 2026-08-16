@@ -881,7 +881,7 @@
         {% set _pill_state = "filter" if _filter_on else ("all" if _touched else "not_set") %}
         {% set _pill_label = on_label if _pill_state == "filter" else ("All" if _pill_state == "all" else "Not set") %}
         <div data-new-model-link-wrapper>
-          <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-weight: normal;">
             {{ title }}
             {# Mode-toggle pill: 3-state cycle "Not set" → "All" →
                "Filter using …" → "All" → … . "Not set" is the
@@ -1053,12 +1053,17 @@
         {% set _ns.keys = _ns.keys + [source ~ "." ~ slot | replace("_", "")] %}
       {% endfor %}
       {% set _link3_selected = _ns.keys %}
+      {# Segment 18R Item 1 — the top band is the "Assignment rule" card.
+         Bold title matches the other card names (Preview review instrument
+         / Visibility); the three Link labels below stay unbold, so the
+         bold title vs unbold labels gives the visual hierarchy. #}
+      <h3 style="margin: 0 0 12px 0;">Assignment rule</h3>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
                   {% if not is_editing %}opacity: 0.75;{% endif %}"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
-              "Pool of reviewers", _link1_tags,
+              "Who does the review", _link1_tags,
               on_label="Filter using tags",
               field_helper="Reviewer tag") }}
           {# "Refresh sample" was previously rendered as a row
@@ -1071,7 +1076,7 @@
         </div>
         <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
           {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
-              "Pool of those reviewed", _link2_tags,
+              "Who is being reviewed", _link2_tags,
               operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
               operand_tag_options=_link2_operand,
               on_label="Filter using tags",
@@ -1086,7 +1091,7 @@
             {% set _link3_pill_state = "group" if (_link3_touched and _link3_grouped) else ("individual" if _link3_touched else "not_set") %}
             {% set _link3_pill_label = "Group using tags" if _link3_pill_state == "group" else ("Individual" if _link3_pill_state == "individual" else "Not set") %}
             {% set _link3_builder_active = _link3_touched and _link3_grouped %}
-            <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+            <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-weight: normal;">
               Unit of review
               {# Mode-toggle pill: 3-state cycle "Not set" →
                  "Individual" → "Group using tags"

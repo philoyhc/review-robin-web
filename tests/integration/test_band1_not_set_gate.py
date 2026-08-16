@@ -1,7 +1,7 @@
 """Coverage for the Band 1 "Not set" pill safety gate.
 
 Wave 5 follow-up. Every new instrument starts with all three
-Band 1 link pills (Pool of reviewers / Pool of those reviewed /
+Band 1 link pills (Who does the review / Who is being reviewed /
 Unit of review) in the ``"Not set"`` state. Until the operator
 clicks each pill at least once, the instrument is considered
 unconfigured by the workflow card — preventing operators from

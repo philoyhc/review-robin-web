@@ -66,8 +66,9 @@ The on-page model maps onto these:
 
 - **Identity.** `name` / `short_label` / `description` /
   visibility flags.
-- **Band 1.** Three "Links" — Link 1: Pool of reviewers,
-  Link 2: Pool of those reviewed, Link 3: Unit of review (Individual
+- **Assignment rule** (the operator-facing card title; **Band 1**
+  internally). Three "Links" — Link 1: Who does the review,
+  Link 2: Who is being reviewed, Link 3: Unit of review (Individual
   vs Group). Together these define **the assignment rule** for
   this instrument (`SessionRuleSet` row materialised lazily on
   first non-empty filter).
@@ -195,8 +196,8 @@ Order of stripes (each separated by a horizontal rule):
 │ Identity (heading + pills + per-instrument open/close /        │
 │           visibility forms)                                     │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 1 — Pool of reviewers │ Pool of those reviewed │ Unit of  │
-│                            │                        │ review   │
+│ Assignment rule                                                │
+│ Who does the review │ Who is being reviewed │ Unit of review   │
 │  (three columns, vertical rules between)                       │
 ├────────────────────────────────────────────────────────────────┤
 │ Band 2 — display-field chips + preview row                     │
@@ -382,16 +383,19 @@ maps the service's `ValueError`s to 409; the
 includes the current instrument's id as `after` so the
 new instrument lands immediately below.
 
-### Band 1 — Assignment rule + Unit of review
+### Assignment rule (Band 1) + Unit of review
 
-Band 1 owns the **assignment rule** for this instrument. Three
-columns of equal width with a 1px vertical rule between them.
-Each column ("Link") is a self-contained sub-builder.
+The **Assignment rule** card (titled "Assignment rule" for the operator;
+**Band 1** internally, and the `band1` / `link1`–`link3` ids are retained
+in code) owns the **assignment rule** for this instrument. Three columns
+of equal width with a 1px vertical rule between them. Each column ("Link")
+is a self-contained sub-builder. The card title is bold (matching the
+other card names); the three Link labels below are unbold.
 
-| Column | Link | Vocabulary |
+| Column | Link (operator label) | Vocabulary |
 |---|---|---|
-| Left | Link 1 — Pool of reviewers | `reviewer.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` |
-| Centre | Link 2 — Pool of those reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
+| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` |
+| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee + pair-context boundary tags |
 
 #### Pill-driven state machine

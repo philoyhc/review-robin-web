@@ -240,8 +240,11 @@ substitutes the synthetic Full Matrix at evaluate time.
 > `operator_rule_sets` library + `rule_set_revisions` tables.
 
 Post-Wave-5, the only place to author a rule is **Band 1 of an
-instrument card** (see `spec/instruments.md` § Band 1). The
-rule is per-instrument and per-session:
+instrument card** — titled **"Assignment rule"** for the operator, with
+Links labelled *Who does the review* / *Who is being reviewed* / *Unit of
+review* (see `spec/instruments.md` § Assignment rule). "Band 1" and the
+`link1`–`link3` ids remain the internal names. The rule is per-instrument
+and per-session:
 
 - Each instrument's Band 1 either lazily materialises one
   `SessionRuleSet` row (when any Link is in `filter` / `group`
