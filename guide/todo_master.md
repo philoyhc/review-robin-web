@@ -2003,6 +2003,24 @@ dep chains called out at the bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
+- **Instrument card identity — card branding (UI polish)**
+  *(logged 2026-08-16; originally flagged as a "new 18P item," but
+  18P shipped, so it lands here in Upcoming)*. Give each section of
+  the per-instrument card on the **Instruments** page a clear, named
+  identity. Chiefly: **retire the informal "Band 1" label** for the
+  top band and title it the **Assignment rule** card (alt: "Response
+  assignment rule"). Today that band renders as three bare **Link**
+  sub-headings (Pool of reviewers / Pool of those reviewed / Unit of
+  review) directly under the editable **Instrument Name**, with **no
+  card title of its own** — while the cards below it (Preview review
+  instrument, Visibility, Response Fields) read as identified cards.
+  Add the missing top-band title and, in the same pass, strengthen
+  the identity of each card/portion consistently. A **small edit** to
+  `app/web/templates/operator/instruments_index.html`, plus renaming
+  the operator-facing "Band 1" wording in `spec/instruments.md` /
+  `spec/assignments.md` (the internal `band1` code identifiers can
+  stay). **Plan:** TBD (small, self-contained UI slice).
+
 ### Sequencing notes
 
 - **11C Part 2 → 14B Part A** is the email pipeline: the
