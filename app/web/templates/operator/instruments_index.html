@@ -1614,6 +1614,17 @@
                name="column_widths_snapshot"
                data-new-model-band2-widths-snapshot
                value="{{ (instrument.column_widths or {}) | tojson }}">
+        {# Segment 18R Item 2 PR 5b — Band 2 state snapshot. The client
+           stageBand2State() serializes the current field pills +
+           response-field rows (including typed-but-un-✓'d rows — the
+           lost-edit fix) into this input; the consolidated /save
+           applies it via set_band2_state, retiring the immediate
+           /band2-state POST. Starts empty — an empty snapshot means no
+           Band 2 edits to apply, so /save leaves the state untouched. #}
+        <input form="dfsave-{{ instrument.id }}" type="hidden"
+               name="band2_state_snapshot"
+               data-new-model-band2-state-snapshot
+               value="">
         {# Gap 3 (18J Wave 1) — sort-spec hidden inputs slot.
            Mirrors the legacy card's slot (same id, same parallel-
            array shape). ``toggleSort`` / ``_rebuildSortInputs``
@@ -2395,47 +2406,47 @@
           // field rows are matched to pills via data-row-key so
           // only ✓'d rows persist. Best-effort: failures are
           // logged but don't surface to the operator.
+          // Segment 18R Item 2 PR 5b — this now STAGES the Band 2 state
+          // (field pills + response-field rows) into the hidden
+          // ``band2_state_snapshot`` input and marks the card dirty,
+          // instead of an immediate /band2-state POST. The consolidated
+          // /save applies it on Save. Kept the ``saveBand2State`` name
+          // (every call site now stages) to avoid churn. ``opts
+          // .acknowledgedDrop`` (set by a confirmed chip un-pin) is
+          // remembered on the band2 element so it rides the next Save,
+          // then cleared on Save success.
           function saveBand2State(card, opts) {
-            var sessionId = card.getAttribute('data-new-model-band2-session-id');
-            var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
-            if (!sessionId || !instrumentId) { return; }
-            var acknowledgedDrop = !!(opts && opts.acknowledgedDrop);
+            if (!card) { return; }
+            if (opts && opts.acknowledgedDrop) {
+              card.setAttribute('data-band2-ack-drop', 'true');
+            }
+            var instrumentCard = card.closest('[id^="instrument-"]');
             var selectedDisplayKeys = [];
             card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (pill) {
               if (pill.getAttribute('data-source-type') !== 'response') {
                 selectedDisplayKeys.push(pill.getAttribute('data-key'));
               }
             });
-            var instrumentCard = card.closest('[id^="instrument-"]');
-            var responseFields = [];
-            card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"]').forEach(function (pill) {
-              var rowKey = pill.getAttribute('data-row-key');
-              if (!rowKey || !instrumentCard) { return; }
-              var row = instrumentCard.querySelector('[data-new-model-rf-row][data-row-key="' + rowKey + '"]');
-              if (!row) { return; }
+            // Serialize one response-field row into the payload shape.
+            // ``pill`` is the paired preview chip when the row has been
+            // ✓'d (drives ``selected`` + carries help_text); null for a
+            // typed-but-un-✓'d row (the lost-edit case) → unselected.
+            function serializeRow(row, pill) {
               var nameInput = row.querySelector('[data-new-model-rf-name]');
-              var typeSelect = row.querySelector('[data-new-model-rf-data-type]');
               var name = (nameInput && nameInput.value || '').trim();
-              if (!name) { return; }
+              if (!name) { return null; }
+              var typeSelect = row.querySelector('[data-new-model-rf-data-type]');
               var requiredBtn = row.querySelector('[data-new-model-rf-required]');
               var helpBtn = row.querySelector('[data-new-model-rf-help-visible]');
-              // Wave 3 PR i — include the DB row id when the
-              // Band 3 row has been server-rendered with one
-              // (existing InstrumentResponseField); the server
-              // dual-write uses it for id-match update vs
-              // create-new.
               var rfIdAttr = row.getAttribute('data-rf-id');
               var rf = {
                 name: name,
                 data_type: typeSelect ? typeSelect.value : 'string',
-                min: '',
-                max: '',
-                step: '',
-                list_options: '',
-                selected: pill.getAttribute('aria-pressed') === 'true',
+                min: '', max: '', step: '', list_options: '',
+                selected: pill ? (pill.getAttribute('aria-pressed') === 'true') : false,
                 required: !!(requiredBtn && requiredBtn.getAttribute('data-required') === 'true'),
                 help_text_visible: !!(helpBtn && helpBtn.getAttribute('data-help-visible') === 'true'),
-                help_text: pill.getAttribute('data-help-text') || '',
+                help_text: pill ? (pill.getAttribute('data-help-text') || '') : '',
               };
               if (rfIdAttr && /^\d+$/.test(rfIdAttr)) {
                 rf.id = parseInt(rfIdAttr, 10);
@@ -2445,53 +2456,43 @@
                 if (key === 'list') { key = 'list_options'; }
                 rf[key] = input.value || '';
               });
-              // width_px retired from the response_fields JSON
-              // payload; response-column widths stage under
-              // ``rf_<db_id>`` keys in the snapshot input, persisted
-              // by /save (saveBand2Widths).
-              responseFields.push(rf);
+              return rf;
+            }
+            var responseFields = [];
+            var seenRowKeys = {};
+            // ✓'d fields — from the preview chips, matched to their rows.
+            card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"]').forEach(function (pill) {
+              var rowKey = pill.getAttribute('data-row-key');
+              if (!rowKey || !instrumentCard) { return; }
+              var row = instrumentCard.querySelector('[data-new-model-rf-row][data-row-key="' + rowKey + '"]');
+              if (!row) { return; }
+              var rf = serializeRow(row, pill);
+              if (rf) { responseFields.push(rf); seenRowKeys[rowKey] = true; }
             });
-            // Use ``navigator.sendBeacon`` first — designed
-            // exactly for the "POST that must reach the server
-            // even if the page navigates immediately afterward"
-            // case. The keepalive fetch we use as the fallback
-            // works in modern browsers but is still subject to
-            // some abort paths on navigation; sendBeacon is the
-            // bulletproof primitive. The server's /band2-state
-            // route doesn't return data the JS uses, so the
-            // fire-and-forget shape is fine. ``sendBeacon``
-            // sends credentials (cookies) automatically per
-            // spec, matching fetch's ``credentials: same-origin``.
-            var url = '/operator/sessions/' + sessionId
-              + '/instruments/' + instrumentId + '/band2-state';
+            // Segment 18R Item 2 PR 5b — lost-edit fix: also capture
+            // named response-field rows typed but never ✓'d (no paired
+            // chip). They persist as unselected fields on Save instead
+            // of being silently dropped.
+            if (instrumentCard) {
+              instrumentCard.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
+                var rowKey = row.getAttribute('data-row-key');
+                if (rowKey && seenRowKeys[rowKey]) { return; }
+                var rf = serializeRow(row, null);
+                if (rf) { responseFields.push(rf); }
+              });
+            }
             var payload = {
               selected_display_keys: selectedDisplayKeys,
               response_fields: responseFields,
             };
-            // Segment 18K PR 4 — only stamp the flag on payloads
-            // originating from a confirmed chip un-pin. Other
-            // call sites (Save, R toggle, ✓, etc.) leave it false
-            // so the server-side guard still defends against
-            // accidental flips elsewhere in the flow.
-            if (acknowledgedDrop) { payload.acknowledged_drop = true; }
-            var body = JSON.stringify(payload);
-            if (navigator && navigator.sendBeacon) {
-              try {
-                var blob = new Blob(
-                  [body], {type: 'application/json'}
-                );
-                if (navigator.sendBeacon(url, blob)) { return; }
-              } catch (_) { /* fall through to fetch */ }
+            if (card.getAttribute('data-band2-ack-drop') === 'true') {
+              payload.acknowledged_drop = true;
             }
-            fetch(url, {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              credentials: 'same-origin',
-              keepalive: true,
-              body: body,
-            }).catch(function (err) {
-              if (window.console) { console.warn('Band 2 state save failed', err); }
-            });
+            var snapshot = card.querySelector('[data-new-model-band2-state-snapshot]');
+            if (snapshot) { snapshot.value = JSON.stringify(payload); }
+            if (instrumentCard && window.newModelMarkCardDirty) {
+              window.newModelMarkCardDirty(instrumentCard);
+            }
           }
           // Segment 18R Item 2 PR 4 — the per-field help ✎/✓ editor
           // retires. The help box is a plain textarea when the card is
@@ -3783,6 +3784,11 @@
           window.newModelOnSaveSuccess = window.newModelOnSaveSuccess || function (card) {
             if (!card) { return; }
             card.removeAttribute('data-instrument-dirty');
+            // Segment 18R Item 2 PR 5b — the staged un-pin
+            // acknowledgement was consumed by this Save; clear it so a
+            // later Save doesn't carry a stale acknowledged_drop.
+            var b2 = card.querySelector('[data-new-model-band2]');
+            if (b2) { b2.removeAttribute('data-band2-ack-drop'); }
             var banner = card.querySelector('[data-save-error-banner]');
             if (banner) {
               banner.hidden = true;

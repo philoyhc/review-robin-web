@@ -845,6 +845,68 @@ async def instrument_consolidated_save(
         except visibility_policies.VisibilityPolicyError as exc:
             return _fail(exc.message)
 
+    # Band 2 state (field pills + response-field rows) — staged into the
+    # hidden ``band2_state_snapshot`` form field by the client and
+    # committed here (Segment 18R Item 2 PR 5b, replacing the immediate
+    # /band2-state POST). Absent / empty snapshot means no Band 2 edits
+    # to apply, so the existing state is left untouched. Reproduces the
+    # four typed-error guards of the /band2-state route as summary-banner
+    # errors (the un-pin acknowledgement is confirmed client-side and
+    # rides ``acknowledged_drop`` in the snapshot, so that 409 is
+    # defence-in-depth here).
+    band2_snapshot = form.get("band2_state_snapshot")
+    if isinstance(band2_snapshot, str) and band2_snapshot.strip():
+        import json as _json
+
+        try:
+            band2_state = _json.loads(band2_snapshot)
+        except (TypeError, ValueError):
+            band2_state = None
+        if isinstance(band2_state, dict):
+            acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
+            try:
+                instruments_service.set_band2_state(
+                    db,
+                    instrument=instrument,
+                    state=band2_state,
+                    actor=user,
+                    acknowledged_drop=acknowledged_drop,
+                )
+            except instruments_service.ResponsesPresentError as exc:
+                return _fail(
+                    "A response field with "
+                    f"{exc.cascaded_response_count} saved response(s) can't "
+                    "be removed — clear its responses first."
+                )
+            except (
+                instruments_service.ResponseFieldDropAcknowledgementRequired
+            ) as exc:
+                return _fail(
+                    f"'{exc.field_label}' has {exc.cascaded_response_count} "
+                    "saved response(s) — hiding it needs confirmation; "
+                    "try again."
+                )
+            except instruments_service.ResponseFieldShapeChangeError as exc:
+                changed = (
+                    ", ".join(exc.changed_attrs)
+                    if exc.changed_attrs
+                    else "type / bounds"
+                )
+                return _fail(
+                    f"'{exc.field_label}' has saved responses — its shape "
+                    f"({changed}) can't change."
+                )
+            except instruments_service.InvalidResponseFieldShapeError as exc:
+                return JSONResponse(
+                    {
+                        "ok": False,
+                        "errors": [
+                            f"{label}: {msg}" for label, msg in exc.errors
+                        ],
+                    },
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
     db.commit()
     return JSONResponse({"ok": True})
 
