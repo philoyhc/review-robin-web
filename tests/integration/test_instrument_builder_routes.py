@@ -5660,6 +5660,28 @@ def test_pr4_inline_editor_retirement_wiring_ships(
     assert 'name="description"' in body
 
 
+def test_pr5a_column_widths_stage_no_immediate_post(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 5a — column-width drag stages into the
+    hidden snapshot input (persisted by the consolidated /save) and
+    marks the card dirty; the immediate /column-widths fetch retires
+    from the card."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr5a-col-widths"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # No immediate /column-widths POST is wired from the card anymore.
+    assert "/column-widths" not in body
+    # The snapshot input (consumed by /save) is still present, and the
+    # drag handler marks the card dirty via the shared helper.
+    assert "data-new-model-band2-widths-snapshot" in body
+    assert "window.newModelMarkCardDirty" in body
+    assert "window.newModelMarkCardDirty(instrumentCard)" in body
+
+
 def test_cancel_preserves_card_open_state_on_reload(
     client: TestClient, db: Session
 ) -> None:
