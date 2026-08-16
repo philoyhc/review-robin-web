@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -5658,6 +5660,156 @@ def test_pr4_inline_editor_retirement_wiring_ships(
     # short_label + description ride the dfsave form now.
     assert 'name="short_label"' in body
     assert 'name="description"' in body
+
+
+def test_pr5a_column_widths_stage_no_immediate_post(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 5a — column-width drag stages into the
+    hidden snapshot input (persisted by the consolidated /save) and
+    marks the card dirty; the immediate /column-widths fetch retires
+    from the card."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr5a-col-widths"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # No immediate /column-widths POST is wired from the card anymore.
+    assert "/column-widths" not in body
+    # The snapshot input (consumed by /save) is still present, and the
+    # drag handler marks the card dirty via the shared helper.
+    assert "data-new-model-band2-widths-snapshot" in body
+    assert "window.newModelMarkCardDirty" in body
+    assert "window.newModelMarkCardDirty(instrumentCard)" in body
+
+
+def test_pr5b_save_applies_band2_state_from_snapshot(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 5b — the consolidated /save applies the
+    staged Band 2 state from the ``band2_state_snapshot`` form field
+    (replacing the immediate /band2-state POST)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr5b-save-band2"
+    )
+    snapshot = json.dumps(
+        {
+            "selected_display_keys": [],
+            "response_fields": [
+                {
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "selected": True,
+                    "required": False,
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                },
+            ],
+        }
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"band2_state_snapshot": snapshot},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+            InstrumentResponseField.label == "Rating",
+        )
+    ).scalar_one_or_none()
+    assert field is not None
+
+
+def test_pr5b_save_band2_invalid_shape_returns_422(
+    client: TestClient, db: Session
+) -> None:
+    """A bad response-field shape in the staged snapshot surfaces as a
+    JSON summary-banner error (422), not a silent drop — the guard the
+    /band2-state route enforced is reproduced in /save."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr5b-band2-invalid"
+    )
+    snapshot = json.dumps(
+        {
+            "response_fields": [
+                {
+                    "name": "Bad",
+                    "data_type": "integer",
+                    "selected": True,
+                    "min": "5",
+                    "max": "1",  # max < min → invalid shape
+                    "step": "1",
+                },
+            ],
+        }
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"band2_state_snapshot": snapshot},
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["ok"] is False
+    assert body["errors"]
+
+
+def test_pr5b_save_empty_band2_snapshot_leaves_state_untouched(
+    client: TestClient, db: Session
+) -> None:
+    """An empty ``band2_state_snapshot`` means no Band 2 edits — /save
+    must leave the existing response fields untouched (not wipe them)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr5b-band2-empty"
+    )
+    before = db.execute(
+        select(InstrumentResponseField.id).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+        )
+    ).scalars().all()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"band2_state_snapshot": ""},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    after = db.execute(
+        select(InstrumentResponseField.id).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+        )
+    ).scalars().all()
+    assert set(before) == set(after)
+
+
+def test_pr5b_band2_staging_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 5b — the Band 2 staging JS ships: the
+    hidden snapshot input, the stage-into-snapshot write, and the
+    lost-edit capture of typed-but-un-✓'d rows."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr5b-wiring"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Hidden snapshot input consumed by /save.
+    assert 'name="band2_state_snapshot"' in body
+    assert "data-new-model-band2-state-snapshot" in body
+    # saveBand2State stages into the snapshot (no immediate POST).
+    assert "[data-new-model-band2-state-snapshot]" in body
+    assert "window.newModelMarkCardDirty(instrumentCard)" in body
+    # Lost-edit fix: orphan named rows without a paired chip are
+    # serialized too.
+    assert "serializeRow(row, null)" in body
 
 
 def test_cancel_preserves_card_open_state_on_reload(
