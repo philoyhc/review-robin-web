@@ -19,6 +19,7 @@ Authoritative for "what does the code currently do" — read
 | `local_setup.md` | Developer how-to for running tests, migrations, and the dev server locally. |
 | `codespace_setup.md` | Running the suite and the dev server from a GitHub Codespace (SQLite + fake auth, no external services); the Easy-Auth caveat; optional Postgres-parity and devcontainer. Companion to `local_setup.md`. |
 | `deployment_dev.md` | Dev Azure App Service deployment notes (resource names, env vars, GRANT bootstrap, planned production flow). |
+| `deployment_nus.md` | **Migration runbook** — moving the deploy target from personal Azure to the institutional (NUS) host while keeping localhost + CI unchanged, then retiring personal Azure. Comprehensive GitHub-side (OIDC federated identity, secrets, workflow target) + Azure-side (provisioning, NUS Entra Easy Auth, DB bootstrap, the migrate-job network gotcha) checklists, cutover order, and verification. |
 | `operations_runbook.md` | Day-to-day procedures for operating the deployed service (deploy, restart, logs, secrets). |
 | `troubleshooting.md` | Symptom-driven diagnosis for the deployed dev slot. |
 | `backup_restore.md` | Database backup / restore mechanism and data-retention notes. |
