@@ -343,22 +343,24 @@ case, and a "nothing persists before Save" assertion.
   **Save · Lock · Cancel** trio with progressive save is *already* how it
   works — the harmonization is about the *edit controls* feeding one save, not
   about the button semantics.
-- **Enter-edit UX → client-side toggle (no reload).** *(Flagged by the
-  accuracy review — see below; may be reconsidered.)* Every edit control is
-  **always rendered in the DOM**; when the card is **locked** they are
+- **Enter-edit UX → client-side toggle (no reload). Confirmed 2026-08-16**
+  (kept after the accuracy review, eyes open — see caveat). Every edit control
+  is **always rendered in the DOM**; when the card is **locked** they are
   disabled and styled read-only. `newModelLockClick` becomes a client
   **state machine** (locked ↔ unlocked) that enables/disables the controls,
   swaps the button cluster, and drives the per-row button-state matrix — no
   round-trip to enter/leave edit. (The server `?editing=<id>` gating is
-  retired; keep `?editing` only as an optional initial-unlock deep-link.)
-  **Caveat from the review:** the current Save/Lock flow is **entirely
-  reload-based and already works** — Save is a form POST → 303 redirect that
-  preserves `?editing`, Lock/Unlock is a `?editing` nav, and it already
-  delivers the trio + progressive save. "No reload" is therefore the **largest
-  and most optional** part of Item 2 (it rewrites a working flow: always-render
-  controls + JSON save + client state machine). A smaller alternative keeps the
-  reload model and only harmonizes the *edit controls* (fold band2 into the
-  form Save, retire the immediate POSTs). Decision pending.
+  retired; keep `?editing` only as an optional initial-unlock deep-link.) The
+  form Save (POST → 303) becomes a **JSON `…/save`** (fetch; on `ok` clear
+  dirty + stay unlocked, on `!ok` show the banner).
+  **Caveat (accepted):** the current Save/Lock flow is **entirely reload-based
+  and already works** — Save is a form POST → 303 that preserves `?editing`,
+  Lock/Unlock is a `?editing` nav, and it already delivers the trio +
+  progressive save. So "no reload" is knowingly the **largest** slice of Item 2:
+  it rewrites a working flow (always-render controls + JSON save + client state
+  machine). The smaller reload-only alternative (fold band2 into the form Save,
+  retire the immediate POSTs, keep reloads) was **considered and declined** in
+  favour of the smoother no-reload feel.
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
   **Save / Cancel** card A.
