@@ -26,7 +26,6 @@
        carry a Jinja data-unlock-only marker. `inert` on the lock
        region disables them but leaves them visible; hide them off the
        lock state directly, matching the other edit affordances. */
-    [data-instrument-card][data-instrument-locked="true"] button[data-help-card-key] { display: none !important; }
     /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
        Rendered per card (hidden until a fetch-Save comes back with
        validation errors); lists the blocking issues at the top of the
@@ -792,36 +791,26 @@
               style="margin: 2px 0 0 0; font-size: 1.5rem; flex: 1;
                      display: flex; align-items: center; gap: 8px;
                      flex-wrap: wrap;">
-            <span data-card-title-view
+            {# Segment 18R Item 2 PR 4 — the inline ✎/✓ editor retires.
+               The card-title short label is now a view/edit swap keyed
+               on the card lock state: the read-only view span shows
+               when locked (data-lock-only); the input shows when
+               unlocked (data-unlock-only) and rides the dfsave form so
+               it commits via the consolidated /save on Save (no more
+               immediate /identity POST). newModelSetLock syncs the
+               view span from the input when the card locks. #}
+            <span data-card-title-view data-lock-only
                   class="{% if not instrument.short_label %}card-title-fallback{% endif %}"
                   style="min-width: 0;">{{ instrument.short_label or "Instrument_" ~ instrument.id }}</span>
             <input type="text"
-                   data-card-title-input
+                   data-card-title-input data-unlock-only
+                   form="dfsave-{{ instrument.id }}" name="short_label"
                    maxlength="32"
                    value="{{ instrument.short_label or '' }}"
                    placeholder="Rename the instrument (32 chars max)"
-                   hidden
                    style="font: inherit; padding: 2px 6px;
                           flex: 0 1 50%; max-width: 50%;
                           min-width: 0; box-sizing: border-box;">
-            {# Segment 18R Item 2 PR 1 — always rendered; the
-               data-unlock-only marker hides the ✎/✓ affordance
-               while the card is locked (client lock-state layer). #}
-            <span data-unlock-only style="display: inline-flex; gap: 8px;">
-              <button type="button" class="btn-icon"
-                      data-card-title-edit
-                      onclick="cardTitleEdit(event, this)"
-                      title="Edit operator short label"
-                      aria-label="Edit operator short label"
-                      style="font-size: 1rem; padding: 2px 6px;">&#9998;</button>
-              <button type="button" class="btn-icon"
-                      data-card-title-save
-                      onclick="cardTitleSave(event, this)"
-                      title="Save operator short label"
-                      aria-label="Save operator short label"
-                      hidden
-                      style="font-size: 1rem; padding: 2px 6px;">&#10003;</button>
-            </span>
             {% if is_configured_by_instrument[instrument.id] %}
               <span class="pill pill-info">Set up</span>
             {% else %}
@@ -1699,51 +1688,27 @@
                   style="display: flex; align-items: baseline; gap: 8px;">
                 <span>#{{ loop.index }}{% if instrument.short_label %}: <span data-intro-short-label-view>{{ instrument.short_label }}</span>{% endif %}</span>
               </h2>
+              {# Segment 18R Item 2 PR 4 — the inline ✎/✓ editor
+                 retires. The description is a view/edit swap keyed on
+                 the card lock state: the read-only paragraph shows
+                 when locked (data-lock-only); the textarea shows when
+                 unlocked (data-unlock-only) and rides the dfsave form
+                 so it commits via the consolidated /save on Save (no
+                 more immediate /identity POST). newModelSetLock syncs
+                 the view paragraph from the textarea when the card
+                 locks. #}
               <div data-intro-description-block>
                 <p class="rs-instrument-subtitle muted"
-                   data-intro-description-view
+                   data-intro-description-view data-lock-only
                    style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
-                {# ``hidden`` on the textarea relies on UA
-                   stylesheet's [hidden] { display: none } rule —
-                   so the inline style must NOT carry an explicit
-                   display, or it would win on specificity and
-                   leave the textarea visible alongside the view
-                   paragraph in non-edit mode. JS toggles
-                   ``input.hidden`` to swap into edit mode. #}
-                <textarea data-intro-description-input
+                <textarea data-intro-description-input data-unlock-only
+                          form="dfsave-{{ instrument.id }}" name="description"
                           placeholder="(no description)"
                           maxlength="2000"
-                          hidden
                           style="width: 100%; margin-top: 4px;
                                  min-height: 4em; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
-              {# ✎ / ✓ pair at the card's bottom-right edits the
-                 description. short_label edit moved to the card
-                 title in the ``<summary>`` above per the
-                 2026-05-28 operator-identifier policy — the intro
-                 card is the reviewer-preview surface, not the
-                 operator's edit surface for the operator-facing
-                 short label. ``newModelIntroEdit`` / ``Save`` now
-                 only operate on description; they no-op cleanly
-                 when the short_label input isn't present. #}
-              {# Segment 18R Item 2 PR 1 — always rendered; data-unlock-only
-                 hides the ✎/✓ description editor while the card is locked. #}
-              <span data-unlock-only>
-                <button type="button" class="btn-icon"
-                        data-intro-edit
-                        onclick="newModelIntroEdit(this)"
-                        title="Edit description"
-                        aria-label="Edit description"
-                        style="position: absolute; bottom: 4px; right: 4px;">✎</button>
-                <button type="button" class="btn-icon"
-                        data-intro-save
-                        onclick="newModelIntroSave(this)"
-                        title="Save description"
-                        aria-label="Save description"
-                        hidden
-                        style="position: absolute; bottom: 4px; right: 4px;">✓</button>
-              </span>
             </div>
             {# Reviewer-surface preview — "Who can see what you
                wrote (other than admin)". Mirrors the read-only
@@ -2532,18 +2497,26 @@
               if (window.console) { console.warn('Band 2 state save failed', err); }
             });
           }
+          // Segment 18R Item 2 PR 4 — the per-field help ✎/✓ editor
+          // retires. The help box is a plain textarea when the card is
+          // unlocked (edited inline, staged into the pill's
+          // data-help-text via oninput, committed on Save through the
+          // Band 2 state flush) and rendered read-only text when the
+          // card is locked. Keyed on the band2 edit-mode flag, which
+          // newModelSetLock keeps in sync with the card lock state.
           function buildResponseFieldHelpCards(card) {
             var pills = helpVisibleResponsePills(card);
             if (pills.length === 0) { return ''; }
+            var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
             var html = '<div class="rs-help-grid" data-new-model-band2-help-cards>';
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
               var helpText = p.helpText || '';
               html += '<div class="card rs-help-card" '
                 + 'data-help-card-key="' + keyAttr + '" '
-                + 'style="position: relative; padding-right: 28px;">';
+                + 'style="position: relative;">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
-              if (p.editMode) {
+              if (unlocked) {
                 html += '<textarea data-help-card-textarea '
                   + 'data-help-card-key="' + keyAttr + '" '
                   + 'oninput="newModelHelpCardInput(this)" '
@@ -2552,20 +2525,8 @@
                   + 'min-height: 60px; box-sizing: border-box; '
                   + 'font: inherit; padding: 4px 6px;">'
                   + esc(helpText) + '</textarea>';
-                html += '<button type="button" class="btn-icon" '
-                  + 'data-help-card-key="' + keyAttr + '" '
-                  + 'onclick="newModelHelpCardSaveClick(this)" '
-                  + 'title="Save help text" '
-                  + 'aria-label="Save help text" '
-                  + 'style="position: absolute; bottom: 4px; right: 4px;">✓</button>';
-              } else {
-                if (helpText) { html += ' — ' + esc(helpText); }
-                html += '<button type="button" class="btn-icon" '
-                  + 'data-help-card-key="' + keyAttr + '" '
-                  + 'onclick="newModelHelpCardEditClick(this)" '
-                  + 'title="Edit help text" '
-                  + 'aria-label="Edit help text" '
-                  + 'style="position: absolute; bottom: 4px; right: 4px;">✎</button>';
+              } else if (helpText) {
+                html += ' — ' + esc(helpText);
               }
               html += '</div>';
             });
@@ -3695,6 +3656,50 @@
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) {
               b2.setAttribute('data-new-model-band2-edit-mode', locked ? '0' : '1');
+              // Segment 18R Item 2 PR 4 — re-render the Band 2 preview
+              // so the per-field help boxes swap between an editable
+              // textarea (unlocked) and read-only text (locked).
+              if (window.newModelRefreshBand2) { window.newModelRefreshBand2(b2); }
+            }
+            // Segment 18R Item 2 PR 4 — when locking, sync the
+            // read-only text views (card title, reviewer-preview
+            // heading, description) from their now-hidden inputs so the
+            // locked card shows the current text with no reload —
+            // consistent with how the other controls keep their edited
+            // state while locked.
+            if (locked) { window.newModelSyncTextViews(card); }
+          };
+          // Segment 18R Item 2 PR 4 — copy the short-label + description
+          // input values into their read-only view elements (shown when
+          // the card is locked). Handles the fallback heading nudge and
+          // the reviewer-preview ``#N: <label>`` separator.
+          window.newModelSyncTextViews = window.newModelSyncTextViews || function (card) {
+            if (!card) { return; }
+            var titleInput = card.querySelector('[data-card-title-input]');
+            var titleView = card.querySelector('[data-card-title-view]');
+            if (titleInput && titleView) {
+              var label = (titleInput.value || '').trim();
+              if (label) {
+                titleView.textContent = label;
+                titleView.classList.remove('card-title-fallback');
+              } else {
+                titleView.textContent = 'Instrument_'
+                  + (card.getAttribute('data-instrument-card') || '');
+                titleView.classList.add('card-title-fallback');
+              }
+              // The reviewer-preview heading span only exists when a
+              // short label was set at render time (``#N: <label>``);
+              // sync it when present. The blank → set case (a
+              // never-named instrument) stays ``#N`` until the next
+              // reload — the always-present card title already shows
+              // the new label.
+              var headView = card.querySelector('[data-intro-short-label-view]');
+              if (headView) { headView.textContent = label; }
+            }
+            var descInput = card.querySelector('[data-intro-description-input]');
+            var descView = card.querySelector('[data-intro-description-view]');
+            if (descInput && descView) {
+              descView.textContent = descInput.value || '';
             }
           };
           // Lock click handler. If Save is active (something is

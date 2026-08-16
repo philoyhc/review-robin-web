@@ -4646,50 +4646,62 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     assert 'class="pill pill-success"' in intro_block
 
 
-def test_band2_intro_card_description_textarea_hidden_uses_hidden_attr_only(
+def test_band2_intro_description_is_lock_driven_swap(
     client: TestClient, db: Session
 ) -> None:
-    """Regression: the description textarea must NOT carry an
-    explicit ``display`` value in its inline style, otherwise the
-    ``hidden`` attribute (which works via the UA stylesheet's
-    [hidden] { display: none } rule) gets out-specificity'd by the
-    inline style and the textarea remains visible alongside the
-    view paragraph in non-edit mode — appearing as a perceivable
-    empty box, and doubling up with the view text when JS enters
-    edit mode."""
+    """Segment 18R Item 2 PR 4 — the description ✎/✓ editor retires.
+    The description is a view/edit swap keyed on the card lock state:
+    the read-only paragraph carries ``data-lock-only`` (shown when
+    locked); the textarea carries ``data-unlock-only`` (shown when
+    unlocked) and rides the dfsave form (``name="description"``) so it
+    commits via the consolidated /save. The textarea must NOT carry an
+    inline ``display`` value — the lock layer's ``display: none`` owns
+    visibility."""
     review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-textarea-hidden"
+        client, db, code="band2-intro-desc-swap"
     )
-    new_model.short_label = "Hidden Test"
+    new_model.short_label = "Swap Test"
+    new_model.description = "Some description."
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
     intro_block = flat[intro_idx : intro_idx + 4000]
+
+    # View paragraph = the locked read-only display.
+    view_idx = intro_block.find("data-intro-description-view")
+    assert view_idx != -1
+    view_tag = intro_block[
+        intro_block.rfind("<p", 0, view_idx) : intro_block.find(">", view_idx) + 1
+    ]
+    assert "data-lock-only" in view_tag
+
+    # Textarea = the unlocked editor, riding the dfsave form.
     ta_idx = intro_block.find("data-intro-description-input")
     assert ta_idx != -1
-    # Walk back to the opening <textarea tag and scan its
-    # attributes for an inline display value.
-    ta_open = intro_block.rfind("<textarea", 0, ta_idx)
-    ta_close = intro_block.find(">", ta_idx)
-    ta_tag = intro_block[ta_open : ta_close + 1]
-    assert "hidden" in ta_tag
+    ta_tag = intro_block[
+        intro_block.rfind("<textarea", 0, ta_idx) : intro_block.find(">", ta_idx) + 1
+    ]
+    assert "data-unlock-only" in ta_tag
+    assert f'form="dfsave-{new_model.id}"' in ta_tag
+    assert 'name="description"' in ta_tag
     assert "display:" not in ta_tag.lower()
 
+    # The ✎/✓ editor onclick wiring is gone from the card.
+    assert "newModelIntroEdit(this)" not in intro_block
+    assert "newModelIntroSave(this)" not in intro_block
 
-def test_band2_intro_card_edit_icons_always_render_hidden_when_locked(
+
+def test_band2_intro_description_editor_no_onclick_wiring(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 18R Item 2 PR 1 — the intro card's unified ✎/✓ pair
-    (opens / saves the description) is now ALWAYS rendered as part
-    of the always-render scaffold, wrapped in a ``data-unlock-only``
-    element so the client lock layer hides it while the card is
-    locked and shows it once unlocked. The onclick wiring is present
-    in both view (locked) and edit (unlocked) renders."""
+    """Segment 18R Item 2 PR 4 — with the ✎/✓ retired, the intro
+    card no longer wires the ``newModelIntroEdit`` / ``newModelIntroSave``
+    onclick affordances in either the view (locked) or edit (unlocked)
+    render. The description is driven purely by the lock-state swap."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-intro-edit-gate"
     )
@@ -4697,25 +4709,22 @@ def test_band2_intro_card_edit_icons_always_render_hidden_when_locked(
     new_model.description = "View-mode placeholder."
     db.commit()
 
-    # View mode (no ``editing=...`` param) — the ✎/✓ wiring is in
-    # the DOM but sits inside a data-unlock-only wrapper (hidden by
-    # the lock layer because the card is locked).
-    view_body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-    assert "newModelIntroEdit(this)" in view_body
-    assert "newModelIntroSave(this)" in view_body
-    assert 'data-instrument-locked="true"' in view_body
-
-    # Edit mode — same ✎/✓ pair; the card is unlocked so the layer
-    # reveals them.
-    edit_body = client.get(
-        f"/operator/sessions/{review_session.id}"
-        f"/instruments?editing={new_model.id}"
-    ).text
-    assert "newModelIntroEdit(this)" in edit_body
-    assert "newModelIntroSave(this)" in edit_body
-    assert 'data-instrument-locked="false"' in edit_body
+    for url, locked in (
+        (f"/operator/sessions/{review_session.id}/instruments", "true"),
+        (
+            f"/operator/sessions/{review_session.id}"
+            f"/instruments?editing={new_model.id}",
+            "false",
+        ),
+    ):
+        body = client.get(url).text
+        flat = " ".join(body.split())
+        intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
+        assert intro_idx != -1
+        intro_block = flat[intro_idx : intro_idx + 4000]
+        assert "newModelIntroEdit(this)" not in intro_block
+        assert "newModelIntroSave(this)" not in intro_block
+        assert f'data-instrument-locked="{locked}"' in body
 
 
 def test_intro_identity_endpoint_updates_short_label(
@@ -5369,14 +5378,12 @@ def test_band2_intro_progress_pills_render_inside_preview_row(
     assert "justify-content: flex-end" in between
 
 
-def test_band2_intro_unified_edit_save_at_card_bottom_right(
+def test_band2_intro_inline_edit_icons_retired(
     client: TestClient, db: Session
 ) -> None:
-    """The intro card carries a single ✎ / ✓ pair at its bottom-right
-    corner that opens / saves BOTH the short_label and description
-    edit boxes in one go. Matches the help-text card placement
-    (``bottom: 4px; right: 4px``). Per-field ✎ / ✓ pairs no longer
-    render."""
+    """Segment 18R Item 2 PR 4 — the intro card's ✎ / ✓ buttons
+    (``data-intro-edit`` / ``data-intro-save``) retire entirely; the
+    description follows the card lock state instead."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-intro-unified-edit"
     )
@@ -5384,38 +5391,17 @@ def test_band2_intro_unified_edit_save_at_card_bottom_right(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
+    intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
+    assert intro_idx != -1
+    intro_block = flat[intro_idx : intro_idx + 4000]
 
-    # Per-field onclick handlers retired — only the unified pair
-    # is wired. (Substring checks on the attribute names would
-    # collide with ``data-intro-short-label-edit-wrap`` which is
-    # the kept wrapper span.)
-    assert "newModelIntroShortLabelEdit(this)" not in flat
-    assert "newModelIntroShortLabelSave(this)" not in flat
-    assert "newModelIntroDescriptionEdit(this)" not in flat
-    assert "newModelIntroDescriptionSave(this)" not in flat
-
-    # Unified ✎ / ✓ live on the card with bottom-right placement
-    # matching the help-text card pattern.
-    edit_idx = flat.find("data-intro-edit ")
-    save_idx = flat.find("data-intro-save ")
-    assert edit_idx != -1 and save_idx != -1
-    edit_tag = flat[
-        flat.rfind("<button", 0, edit_idx) : flat.find(">", edit_idx) + 1
-    ]
-    save_tag = flat[
-        flat.rfind("<button", 0, save_idx) : flat.find(">", save_idx) + 1
-    ]
-    for tag in (edit_tag, save_tag):
-        assert "position: absolute" in tag
-        assert "bottom: 4px" in tag
-        assert "right: 4px" in tag
-    # Initial state: ✎ visible, ✓ hidden.
-    assert "hidden" not in edit_tag
-    assert " hidden" in save_tag
-
-    # The unified edit handlers are wired.
-    assert "newModelIntroEdit(this)" in edit_tag
-    assert "newModelIntroSave(this)" in save_tag
+    # The ✎ / ✓ button markers + their onclick wiring are gone.
+    # (``data-intro-edit-block`` — the kept card wrapper — is a
+    # different attribute; check the button-specific markers.)
+    assert "data-intro-edit " not in intro_block
+    assert "data-intro-save " not in intro_block
+    assert "newModelIntroEdit(this)" not in intro_block
+    assert "newModelIntroSave(this)" not in intro_block
 
 
 
@@ -5546,25 +5532,30 @@ def test_lock_scaffold_ships_state_machine_js(
     assert "return newModelUnlockClick(event" in body
 
 
-def test_lock_hides_js_built_help_card_edit_pencil_when_locked(
+def test_help_card_editor_is_lock_driven_no_pencil(
     client: TestClient, db: Session
 ) -> None:
-    """The Band 2 preview help-card ✎/✓ affordances are built by JS
-    (renderHelpCard, keyed by ``data-help-card-key``), so they can't
-    carry a Jinja ``data-unlock-only`` marker; ``inert`` on the lock
-    region disables but does not hide them. The lock-layer CSS hides
-    them off the locked state directly — pin that rule so the pencil
-    doesn't leak through on a locked card."""
+    """Segment 18R Item 2 PR 4 — the Band 2 preview help-text ✎/✓
+    retires. The JS help-card builder renders an editable textarea when
+    the card is unlocked (keyed on the band2 edit-mode flag, which
+    newModelSetLock syncs to the lock state) and read-only text when
+    locked — no per-card ✎/✓ buttons. The old lock-layer CSS that hid
+    the pencil retires with it."""
     review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr1-help-pencil-hide"
+        client, db, code="pr4-help-lock"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert (
-        '[data-instrument-card][data-instrument-locked="true"] '
-        "button[data-help-card-key] { display: none !important; }"
-    ) in body
+    # Builder is lock-driven off the band2 edit-mode flag.
+    assert "data-new-model-band2-edit-mode') === '1'" in body
+    # The help textarea still stages via oninput while unlocked.
+    assert 'oninput="newModelHelpCardInput(this)"' in body
+    # No help ✎ / ✓ onclick wiring is emitted by the builder.
+    assert 'onclick="newModelHelpCardEditClick(this)"' not in body
+    assert 'onclick="newModelHelpCardSaveClick(this)"' not in body
+    # The dead lock-layer pencil-hide CSS is removed.
+    assert "button[data-help-card-key]" not in body
 
 
 def test_pr2_dirty_tracking_and_guards_ship(
@@ -5625,6 +5616,48 @@ def test_pr3_consolidated_save_wiring_ships(
         f'action="/operator/sessions/{review_session.id}'
         f'/instruments/{new_model.id}/fields/save"'
     ) in body
+
+
+def test_pr4_short_label_and_description_commit_via_save(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 4 — short_label + description now ride the
+    dfsave form and commit through the consolidated /save (the ✎/✓
+    immediate /identity POST retired)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr4-identity-save"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"short_label": "Renamed", "description": "Fresh description."},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    db.refresh(new_model)
+    assert new_model.short_label == "Renamed"
+    assert new_model.description == "Fresh description."
+
+
+def test_pr4_inline_editor_retirement_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 4 — the lock-driven text boxes ship: the
+    view-sync helper (fires on lock) and the short_label + description
+    inputs riding the dfsave form."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr4-inline-ships"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Sync the read-only views from their inputs when the card locks.
+    assert "window.newModelSyncTextViews" in body
+    assert "newModelSyncTextViews(card)" in body
+    # short_label + description ride the dfsave form now.
+    assert 'name="short_label"' in body
+    assert 'name="description"' in body
 
 
 def test_lock_unlock_replaces_edit_button_in_view_mode(
@@ -6322,48 +6355,45 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
     assert f'value="Instrument_{new_model.id}"' not in block
 
 
-def test_card_title_edit_icons_always_render_hidden_when_locked(
+def test_card_title_is_lock_driven_swap(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 18R Item 2 PR 1 — the card-title ✎ / ✓ pair is now
-    ALWAYS rendered (always-render scaffold), wrapped in a
-    ``data-unlock-only`` element so the client lock layer hides it
-    while the card is locked and reveals it once unlocked. The
-    markers are present in both the view (locked) and edit
-    (unlocked) renders."""
+    """Segment 18R Item 2 PR 4 — the card-title short-label ✎/✓
+    retires. The title is a view/edit swap keyed on the card lock
+    state: the view span carries ``data-lock-only`` (shown when
+    locked); the input carries ``data-unlock-only`` (shown when
+    unlocked) and rides the dfsave form (``name="short_label"``) so it
+    commits via the consolidated /save. No ✎/✓ buttons."""
     review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-edit-gate"
+        client, db, code="card-title-swap"
     )
     new_model.short_label = "Gate"
     db.commit()
 
-    # View mode — no editing= query param; card is locked.
-    body_view = client.get(
+    body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    block_view_start = body_view.find(
-        f'data-card-title-instrument-id="{new_model.id}"'
-    )
-    block_view_end = body_view.find("</h2>", block_view_start)
-    block_view = body_view[block_view_start:block_view_end]
-    assert "data-card-title-edit" in block_view
-    assert "data-card-title-save" in block_view
-    # The ✎/✓ pair is wrapped in a data-unlock-only element so the
-    # lock layer keeps it hidden while locked.
-    assert "data-unlock-only" in block_view
+    start = body.find(f'data-card-title-instrument-id="{new_model.id}"')
+    assert start != -1
+    block = " ".join(body[start : body.find("</h2>", start)].split())
 
-    # Edit mode — card unlocked; same markers present.
-    body_edit = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-        f"?editing={new_model.id}"
-    ).text
-    block_edit_start = body_edit.find(
-        f'data-card-title-instrument-id="{new_model.id}"'
-    )
-    block_edit_end = body_edit.find("</h2>", block_edit_start)
-    block_edit = body_edit[block_edit_start:block_edit_end]
-    assert "data-card-title-edit" in block_edit
-    assert "data-card-title-save" in block_edit
+    # View span = locked read-only display.
+    v = block.find("data-card-title-view")
+    assert v != -1
+    view_tag = block[block.rfind("<span", 0, v) : block.find(">", v) + 1]
+    assert "data-lock-only" in view_tag
+
+    # Input = unlocked editor riding the dfsave form.
+    i = block.find("data-card-title-input")
+    assert i != -1
+    input_tag = block[block.rfind("<input", 0, i) : block.find(">", i) + 1]
+    assert "data-unlock-only" in input_tag
+    assert f'form="dfsave-{new_model.id}"' in input_tag
+    assert 'name="short_label"' in input_tag
+
+    # The ✎ / ✓ buttons retire.
+    assert "data-card-title-edit" not in block
+    assert "data-card-title-save" not in block
 
 
 def test_card_title_save_endpoint_persists_short_label(
