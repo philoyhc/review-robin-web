@@ -135,12 +135,33 @@ and Lock**.
 
 **This fixes the lost-edit bug for free** — with all editable elements in the
 framework, a newly-typed Response Field is captured by Save and Lock whether
-or not the per-row control was clicked. The per-row **✓** is **re-glyphed as
-an upward-pointing arrow (⬆, pointing at the preview)** and becomes a
+or not the per-row control was clicked. The per-row **✓** becomes a pure
 **push-to-preview** affordance: clicking it registers the row's edit into the
 live preview but **does not persist** — persistence happens only on Save and
-Lock. (So its job is purely "reflect my edit in the preview now"; the arrow
-pointing up at the preview says exactly that.)
+Lock. **Glyph:** keep the **✓ tick** (the earlier ⬆ idea is optional — now
+that its meaning is "reflect my edit in the preview", the tick reads fine).
+
+**Per-row button states (R / ≡ / ✓ / X).** The Response-Field row controls
+follow the same lock-gated framework. Target behaviour:
+
+- **Locked card:** **all four inactive** (the whole card is read-only).
+- **Unlocked card:**
+  - **R** (required) and **≡** (help-text visibility): **inactive for a blank
+    row** awaiting input; active once the row has a field name. *(Today they
+    are always active — `newModelRfRecomputeActionStates` doesn't touch them
+    — so this is a new gate.)*
+  - **✓** (push-to-preview): **inactive** when the row is **empty** (no name /
+    invalid shape) **or** when the field is **already reflected in the preview
+    with no pending edits** (nothing to push); **active** otherwise (a new
+    named row, or an existing field with unsynced edits). *(Today ✓ only
+    gates on blank-name + invalid-shape; the "already in preview, unchanged"
+    gate is new and rides the per-row dirty tracking Item 2 introduces.)*
+  - **X** (delete): **keep current behaviour** — verified in code
+    (`newModelRfRecomputeActionStates` + the row template): **disabled when
+    the field has saved responses** (title "Cannot delete — this field has
+    saved responses"; must clear responses first) and **disabled on a blank
+    row** (title "Empty row — nothing to delete"); **active** otherwise
+    (deletes the row and its paired pill).
 
 **Dirty tracking.** One per-card dirty flag drives the primary button's label
 (Save-and-Lock vs Lock), Cancel's enabled/greyed state, and an
@@ -175,9 +196,13 @@ case, and a "nothing persists before Save and Lock" assertion.
 - The card no longer fires the in-card immediate POSTs (`/band2-state`,
   `/identity`, `/column-widths`, in-card `/display-fields/order`); those
   endpoints are removed or retained only for any non-card caller.
-- The per-row control is an **⬆ push-to-preview** arrow (updates the preview,
-  persists nothing); **column-width drag is fully staged** (live preview, no
-  server write until Save and Lock).
+- The per-row **✓** is push-to-preview only (updates the preview, persists
+  nothing); **column-width drag is fully staged** (live preview, no server
+  write until Save and Lock).
+- The per-row **R / ≡ / ✓ / X** button states follow the matrix above (all
+  inactive when locked; R/≡ inactive on a blank row; ✓ inactive when empty or
+  already-in-preview-unchanged; X keeps its saved-responses / blank-row
+  gates).
 - Leaving an unlocked card with pending edits **warns/confirms** before
   discarding.
 - **Save and Lock runs the full current validation set** (listed in Decisions
@@ -189,9 +214,12 @@ case, and a "nothing persists before Save and Lock" assertion.
 
 **Decisions (resolved 2026-08-16).**
 
-1. **Per-row ✓ → an upward-pointing arrow (⬆).** It becomes a
-   **push-to-preview** control: register the row's edit into the live preview,
-   **no persistence** until Save and Lock. (Covered in the body above.)
+1. **Per-row ✓ → push-to-preview.** It registers the row's edit into the live
+   preview, **no persistence** until Save and Lock. **Keep the ✓ tick glyph**
+   (the earlier ⬆ idea is optional). The R / ≡ / ✓ / X **button-state matrix**
+   is specified in the body above (locked → all inactive; unlocked → R/≡ gated
+   on a non-blank row, ✓ gated on empty / already-in-preview-unchanged, X
+   unchanged).
 2. **Column-width drag → fully staged.** The preview updates live as you drag,
    but the server write happens **only** on Save and Lock — the immediate
    `/column-widths` POST is retired. Chosen for consistency with every other
