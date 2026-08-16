@@ -5,6 +5,22 @@
 
 {% block extra_head %}
   <style>
+    /* Segment 18R Item 2 PR 1 — client lock-state scaffold.
+       Every instrument card carries data-instrument-locked
+       ("true" | "false"), seeded server-side from is_editing and
+       flipped client-side by newModelSetLock(). All edit controls
+       are always rendered; this layer swaps the Lock / Unlock /
+       Save / Cancel cluster on the lock state and gives the
+       editable regions a read-only look while locked. The `inert`
+       attribute on the band wrappers is what actually blocks
+       interaction (set server-side from is_editing, toggled by
+       newModelSetLock); the opacity here is only the visual cue.
+       PR 1 is scaffold-only — persistence endpoints are untouched;
+       the Lock / Unlock anchors keep their ?editing hrefs as the
+       no-JS fallback. */
+    [data-instrument-card][data-instrument-locked="true"] [data-unlock-only] { display: none !important; }
+    [data-instrument-card][data-instrument-locked="false"] [data-lock-only] { display: none !important; }
+    [data-instrument-card][data-instrument-locked="true"] [data-lock-region] { opacity: 0.75; }
     /* Segment 13B PR 2 — Display Fields Sort column. The
        per-row Sort cell hosts a tri-state click button + a
        priority badge. */
@@ -351,28 +367,30 @@
            "+Instrument" (renamed from +New model) is the sole add
            affordance. The legacy /add and /add-group POST routes
            still exist; only the buttons are gone. #}
-        {% if is_editing %}
-          {# Wave 4 PR 2 — Save starts disabled. The
-             ``newModelInitSaveDirtyTracking`` JS helper enables it
-             on the first dirty event (any Band 1 input change or
-             Band 3 row tick/X/+ click) and the server-side redirect
-             after a successful Save re-renders with Save disabled
-             again. ``data-new-model-save`` scopes the JS lookup. #}
-          <button form="dfsave-{{ instrument.id }}" type="submit"
-                  class="btn secondary"
-                  data-new-model-save
-                  disabled>Save</button>
-          {# Cancel — discards pending unsaved edits by reloading
-             the edit-mode page so the form re-renders from the
-             persisted state. Mirrors Save's dirty-aware enabled
-             state: when nothing is dirty there's nothing to
-             discard, so the button is disabled. #}
-          <button type="button"
-                  class="btn secondary"
-                  data-new-model-cancel="{{ instrument.id }}"
-                  onclick="newModelCancelEdits(this)"
-                  disabled>Cancel</button>
-        {% endif %}
+        {# Wave 4 PR 2 — Save starts disabled. The
+           ``newModelInitSaveDirtyTracking`` JS helper enables it
+           on the first dirty event (any Band 1 input change or
+           Band 3 row tick/X/+ click) and the server-side redirect
+           after a successful Save re-renders with Save disabled
+           again. ``data-new-model-save`` scopes the JS lookup.
+           Segment 18R Item 2 PR 1 — always rendered; data-unlock-only
+           hides Save + Cancel while the card is locked. #}
+        <button form="dfsave-{{ instrument.id }}" type="submit"
+                class="btn secondary"
+                data-unlock-only
+                data-new-model-save
+                disabled>Save</button>
+        {# Cancel — discards pending unsaved edits by reloading
+           the edit-mode page so the form re-renders from the
+           persisted state. Mirrors Save's dirty-aware enabled
+           state: when nothing is dirty there's nothing to
+           discard, so the button is disabled. #}
+        <button type="button"
+                class="btn secondary"
+                data-unlock-only
+                data-new-model-cancel="{{ instrument.id }}"
+                onclick="newModelCancelEdits(this)"
+                disabled>Cancel</button>
         {# Replicate — clone this instrument's content into a new
            card slotted immediately after it (Segment 13C PR 3). #}
         <form method="post"
@@ -425,23 +443,27 @@
            operator can keep editing after a Save without
            re-entering edit mode. Both disabled when the session
            is past setup phase (``is_ready``). #}
-        {% if is_editing %}
-          {# Wave 4 PR 3 — Lock prompts an "unsaved changes" confirm
-             when the Save button is active (dirty). The handler
-             returns false to cancel the navigation if the operator
-             declines, matching the user's expectation that Lock
-             should not silently discard work. #}
-          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-             data-instrument-lock-toggle="{{ instrument.id }}"
-             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-             onclick="return newModelLockClick(event, {{ instrument.id }})"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
-        {% else %}
-          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-             data-instrument-lock-toggle="{{ instrument.id }}"
-             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
-        {% endif %}
+        {# Wave 4 PR 3 — Lock prompts an "unsaved changes" confirm
+           when the Save button is active (dirty). The handler
+           returns false to cancel the navigation if the operator
+           declines, matching the user's expectation that Lock
+           should not silently discard work.
+           Segment 18R Item 2 PR 1 — Lock (unlocked state) and Unlock
+           (locked state) are both always rendered; the client lock
+           layer swaps them on data-instrument-locked. The ?editing
+           hrefs stay as the no-JS fallback. #}
+        <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+           data-unlock-only
+           data-instrument-lock-toggle="{{ instrument.id }}"
+           href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+           onclick="return newModelLockClick(event, {{ instrument.id }})"
+           {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
+        <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+           data-lock-only
+           data-instrument-unlock-toggle="{{ instrument.id }}"
+           href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+           onclick="return newModelUnlockClick(event, {{ instrument.id }})"
+           {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
       </div>
     </div>
   {% endmacro %}
@@ -480,29 +502,24 @@
     {% set _priority = (sort_spec
           | map(attribute='display_field_id') | list).index(df.id) + 1
           if _entry else 0 %}
+    {# Segment 18R Item 2 PR 1 — always render the interactive sort
+       button; the Band 2 region's ``inert`` makes it read-only when
+       the card is locked (no separate static-text branch). #}
     <td class="sort-cell">
-      {% if is_editing %}
-        <button type="button"
-                class="sort-btn"
-                data-df-id="{{ df.id }}"
-                data-instrument-id="{{ instrument.id }}"
-                data-priority="{{ _priority }}"
-                data-dir="{{ _entry.dir if _entry else '' }}"
-                onclick="toggleSort(this)"
-                title="Click to cycle sort: unsorted → asc → desc → unsorted">
-          {% if _entry %}
-            <span class="sort-badge">{{ _priority }}{{ '↑' if _entry.dir == 'asc' else '↓' }}</span>
-          {% else %}
-            <span class="sort-badge sort-badge-empty">↕</span>
-          {% endif %}
-        </button>
-      {% else %}
+      <button type="button"
+              class="sort-btn"
+              data-df-id="{{ df.id }}"
+              data-instrument-id="{{ instrument.id }}"
+              data-priority="{{ _priority }}"
+              data-dir="{{ _entry.dir if _entry else '' }}"
+              onclick="toggleSort(this)"
+              title="Click to cycle sort: unsorted → asc → desc → unsorted">
         {% if _entry %}
           <span class="sort-badge">{{ _priority }}{{ '↑' if _entry.dir == 'asc' else '↓' }}</span>
         {% else %}
-          <span class="muted">—</span>
+          <span class="sort-badge sort-badge-empty">↕</span>
         {% endif %}
-      {% endif %}
+      </button>
     </td>
   {% endmacro %}
 
@@ -528,17 +545,16 @@
             {% for field in sorted_response_fields %}
               <tr class="rf-row" data-rf-id="{{ field.id }}">
                 <td><code>{{ field.field_key }}</code></td>
+                {# Segment 18R Item 2 PR 1 — always rendered; the
+                   Band 3 region's ``inert`` makes it read-only while
+                   the card is locked. #}
                 <td>
-                  {% if is_editing %}
-                    <input form="dfsave-{{ instrument.id }}" type="text" name="label"
-                           value="{{ field.label }}"
-                           style="width: 100%;">
-                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
-                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ field.id }}">
-                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
-                  {% else %}
-                    {{ field.label }}
-                  {% endif %}
+                  <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                         value="{{ field.label }}"
+                         style="width: 100%;">
+                  <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
+                  <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ field.id }}">
+                  <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
                 </td>
                 <td>
                   <select disabled
@@ -548,55 +564,49 @@
                     {% endfor %}
                   </select>
                 </td>
+                {# Segment 18R Item 2 PR 1 — always the live checkbox;
+                   inert makes it read-only when locked. #}
                 <td>
-                  {% if is_editing %}
-                    <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                           name="required_ids" value="{{ field.id }}"
-                           {% if field.required %}checked{% endif %}>
-                  {% else %}
-                    <input type="checkbox" disabled
-                           {% if field.required %}checked{% endif %}>
-                  {% endif %}
+                  <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                         name="required_ids" value="{{ field.id }}"
+                         {% if field.required %}checked{% endif %}>
                 </td>
                 <td>
+                  {# Segment 18R Item 2 PR 1 — order arrows always
+                     rendered; inert makes them read-only when locked. #}
                   <div class="order-cell">
                     <span class="order-num">{{ loop.index }}</span>
-                    {% if is_editing %}
-                      <span class="order-arrows">
-                        <button type="button" onclick="moveRow(this, 'up')"
-                                class="btn-icon move-up" title="Move up"
-                                {% if loop.first %}disabled{% endif %}>&#9650;</button>
-                        <button type="button" onclick="moveRow(this, 'down')"
-                                class="btn-icon move-down" title="Move down"
-                                {% if loop.last %}disabled{% endif %}>&#9660;</button>
-                      </span>
-                    {% endif %}
+                    <span class="order-arrows">
+                      <button type="button" onclick="moveRow(this, 'up')"
+                              class="btn-icon move-up" title="Move up"
+                              {% if loop.first %}disabled{% endif %}>&#9650;</button>
+                      <button type="button" onclick="moveRow(this, 'down')"
+                              class="btn-icon move-down" title="Move down"
+                              {% if loop.last %}disabled{% endif %}>&#9660;</button>
+                    </span>
                   </div>
                 </td>
+                {# Segment 18R Item 2 PR 1 — row actions always
+                   rendered; inert makes them read-only when locked. #}
                 <td style="white-space: nowrap; width: 1%;">
-                  {% if is_editing %}
-                    <div style="display: inline-flex; gap: 0; align-items: center;">
-                      <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                              class="btn-icon danger rf-delete"
-                              title="Delete row (applied on Save)">&#10007;</button>
-                      <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                              class="btn-icon action rf-add"
-                              title="Add row after (applied on Save)">&#10133;</button>
-                    </div>
-                  {% else %}
-                    <span class="muted">—</span>
-                  {% endif %}
+                  <div style="display: inline-flex; gap: 0; align-items: center;">
+                    <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
+                            class="btn-icon danger rf-delete"
+                            title="Delete row (applied on Save)">&#10007;</button>
+                    <button type="button" onclick="addRow(this, {{ instrument.id }})"
+                            class="btn-icon action rf-add"
+                            title="Add row after (applied on Save)">&#10133;</button>
+                  </div>
                 </td>
               </tr>
             {% endfor %}
+            {# Segment 18R Item 2 PR 1 — the empty-row placeholder
+               always offers the add button; inert makes it read-only
+               when locked. #}
             <tr class="rf-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
               <td colspan="6" class="muted" style="font-style: italic;">
-                {% if is_editing %}
-                  <button type="button" class="btn secondary"
-                          onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
-                {% else %}
-                  No response fields.
-                {% endif %}
+                <button type="button" class="btn secondary"
+                        onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
               </td>
             </tr>
           </tbody>
@@ -623,25 +633,19 @@
             {% for field in sorted_response_fields %}
               <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
                 <td><code>{{ field.field_key }}</code></td>
+                {# Segment 18R Item 2 PR 1 — help text + show toggle
+                   always rendered; inert makes them read-only when
+                   the card is locked. #}
                 <td>
-                  {% if is_editing %}
-                    <input form="dfsave-{{ instrument.id }}" type="hidden"
-                           name="help_text_id" value="{{ field.id }}">
-                    <textarea form="dfsave-{{ instrument.id }}" name="help_text"
-                              rows="2" style="width: 100%;">{{ field.help_text or "" }}</textarea>
-                  {% else %}
-                    {% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}
-                  {% endif %}
+                  <input form="dfsave-{{ instrument.id }}" type="hidden"
+                         name="help_text_id" value="{{ field.id }}">
+                  <textarea form="dfsave-{{ instrument.id }}" name="help_text"
+                            rows="2" style="width: 100%;">{{ field.help_text or "" }}</textarea>
                 </td>
                 <td>
-                  {% if is_editing %}
-                    <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                           name="help_text_visible_ids" value="{{ field.id }}"
-                           {% if field.help_text_visible %}checked{% endif %}>
-                  {% else %}
-                    <input type="checkbox" disabled
-                           {% if field.help_text_visible %}checked{% endif %}>
-                  {% endif %}
+                  <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                         name="help_text_visible_ids" value="{{ field.id }}"
+                         {% if field.help_text_visible %}checked{% endif %}>
                 </td>
               </tr>
             {% endfor %}
@@ -685,7 +689,14 @@
       </div>
     {% endif %}
 
+    {# Segment 18R Item 2 PR 1 — data-instrument-locked seeds the
+       client lock-state machine (newModelSetLock) from the
+       server-side is_editing flag. Locked = view; unlocked = edit.
+       data-instrument-editing is kept for back-compat with existing
+       JS / selectors. #}
     <div class="card" id="instrument-{{ instrument.id }}"
+         data-instrument-card="{{ instrument.id }}"
+         data-instrument-locked="{{ 'false' if is_editing else 'true' }}"
          {% if is_editing %}data-instrument-editing="true"{% endif %}
          style="background: {{ instrument_palette[(instrument.id - 1) % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
@@ -697,16 +708,19 @@
          standard action row + delete-confirm checkbox at the
          bottom. Bands stay placeholder until the builder lands
          per-band. #}
-      {% if is_editing %}
-        {# Bulk-save form that the heading's Save button submits.
-           Picks up Band 1's Link 1 / Link 2 / Link 3 inputs (and
-           the column_widths_snapshot mirror) via ``form=`` on each
-           input. short_label + description used to ride this form
-           too; they now save independently via the Band 2 intro
-           card's ✎/✓ buttons → /identity endpoint. #}
-        <form id="dfsave-{{ instrument.id }}" method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
-      {% endif %}
+      {# Bulk-save form that the heading's Save button submits.
+         Picks up Band 1's Link 1 / Link 2 / Link 3 inputs (and
+         the column_widths_snapshot mirror) via ``form=`` on each
+         input. short_label + description used to ride this form
+         too; they now save independently via the Band 2 intro
+         card's ✎/✓ buttons → /identity endpoint.
+         Segment 18R Item 2 PR 1 — always rendered now (was
+         is_editing-gated) so a client-unlocked card's controls are
+         wired to submit without a page reload to re-enter edit mode.
+         Disabled controls in a locked card don't submit, and a
+         locked card is never Saved, so always-rendering is safe. #}
+      <form id="dfsave-{{ instrument.id }}" method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
       {# New-model card heading. Short_label + description used to
          render here (left-column input + right-column display /
          textarea inside a bottom-grid). Both moved into the Band 2
@@ -762,7 +776,10 @@
                    style="font: inherit; padding: 2px 6px;
                           flex: 0 1 50%; max-width: 50%;
                           min-width: 0; box-sizing: border-box;">
-            {% if is_editing %}
+            {# Segment 18R Item 2 PR 1 — always rendered; the
+               data-unlock-only marker hides the ✎/✓ affordance
+               while the card is locked (client lock-state layer). #}
+            <span data-unlock-only style="display: inline-flex; gap: 8px;">
               <button type="button" class="btn-icon"
                       data-card-title-edit
                       onclick="cardTitleEdit(event, this)"
@@ -776,17 +793,17 @@
                       aria-label="Save operator short label"
                       hidden
                       style="font-size: 1rem; padding: 2px 6px;">&#10003;</button>
-            {% endif %}
+            </span>
             {% if is_configured_by_instrument[instrument.id] %}
               <span class="pill pill-info">Set up</span>
             {% else %}
               <span class="pill pill-warning">Not set up</span>
             {% endif %}
-            {% if is_editing %}
-              <span class="pill pill-warning">Unlocked</span>
-            {% else %}
-              <span class="pill pill-info">Locked</span>
-            {% endif %}
+            {# Segment 18R Item 2 PR 1 — both pills rendered; the
+               client lock layer shows the one matching the card's
+               data-instrument-locked state. #}
+            <span class="pill pill-warning" data-unlock-only>Unlocked</span>
+            <span class="pill pill-info" data-lock-only>Locked</span>
           </h2>
           <span class="instrument-card-toggle-icon" aria-hidden="true">&#9662;</span>
         </summary>
@@ -800,32 +817,38 @@
                either button). Sits up here so the operator
                doesn't have to scroll past Bands 1+2+3 to flip
                edit mode on a long card. #}
-            {% if is_editing %}
-              <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-                 data-instrument-lock-toggle="{{ instrument.id }}"
-                 href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-                 onclick="return newModelLockClick(event, {{ instrument.id }})"
-                 {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
-              {# Heading-row mirror of the bottom action row's
-                 Save + Cancel. Share the same ``data-new-model-save``
-                 / ``data-new-model-cancel`` markers so the dirty-
-                 tracker enables / disables them in lockstep with
-                 their bottom-row counterparts. #}
-              <button form="dfsave-{{ instrument.id }}" type="submit"
-                      class="btn secondary"
-                      data-new-model-save
-                      disabled>Save</button>
-              <button type="button"
-                      class="btn secondary"
-                      data-new-model-cancel="{{ instrument.id }}"
-                      onclick="newModelCancelEdits(this)"
-                      disabled>Cancel</button>
-            {% else %}
-              <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-                 data-instrument-lock-toggle="{{ instrument.id }}"
-                 href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-                 {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
-            {% endif %}
+            {# Segment 18R Item 2 PR 1 — Lock / Save / Cancel (shown
+               when unlocked) and Unlock (shown when locked) are all
+               always rendered; the client lock layer swaps them on
+               data-instrument-locked. The anchors keep their
+               ?editing hrefs as the no-JS fallback — with JS,
+               newModelLockClick / newModelUnlockClick toggle the
+               lock in-page (no reload). Save + Cancel share the
+               ``data-new-model-*`` markers so the dirty tracker
+               enables them in lockstep with the bottom-row copies. #}
+            <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+               data-unlock-only
+               data-instrument-lock-toggle="{{ instrument.id }}"
+               href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+               onclick="return newModelLockClick(event, {{ instrument.id }})"
+               {% if is_ready %}aria-disabled="true"{% endif %}>Lock</a>
+            <button form="dfsave-{{ instrument.id }}" type="submit"
+                    class="btn secondary"
+                    data-unlock-only
+                    data-new-model-save
+                    disabled>Save</button>
+            <button type="button"
+                    class="btn secondary"
+                    data-unlock-only
+                    data-new-model-cancel="{{ instrument.id }}"
+                    onclick="newModelCancelEdits(this)"
+                    disabled>Cancel</button>
+            <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+               data-lock-only
+               data-instrument-unlock-toggle="{{ instrument.id }}"
+               href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+               onclick="return newModelUnlockClick(event, {{ instrument.id }})"
+               {% if is_ready %}aria-disabled="true"{% endif %}>Unlock</a>
             {% if is_ready and not instrument.accepting_responses %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
@@ -898,26 +921,28 @@
                   {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
                   title="{{ 'Click to cycle: Not set → All → ' ~ on_label ~ ' → Not set' if _is_active else 'No usable tags for this link' }}">{{ _pill_label }}</span>
           </h3>
-          {% if is_editing %}
-            {# Hidden inputs that carry mode + combinator state
-               alongside the per-rule arrays. newModelToggleRuleMode
-               and the AND/OR button below keep these in sync.
-               ``{link}_touched`` rides into set_band1_assignment_rules
-               so the touched bit is sticky once the operator clicks
-               the pill (Not set → All). #}
-            <input form="dfsave-{{ instrument_id }}" type="hidden"
-                   name="{{ link_id }}_mode"
-                   data-new-model-mode-input
-                   value="{{ _stored_mode if _touched else 'all' }}">
-            <input form="dfsave-{{ instrument_id }}" type="hidden"
-                   name="{{ link_id }}_combinator"
-                   data-new-model-combinator-input
-                   value="{{ _stored_combinator }}">
-            <input form="dfsave-{{ instrument_id }}" type="hidden"
-                   name="{{ link_id }}_touched"
-                   data-new-model-touched-input
-                   value="{{ 'true' if _touched else 'false' }}">
-          {% endif %}
+          {# Hidden inputs that carry mode + combinator state
+             alongside the per-rule arrays. newModelToggleRuleMode
+             and the AND/OR button below keep these in sync.
+             ``{link}_touched`` rides into set_band1_assignment_rules
+             so the touched bit is sticky once the operator clicks
+             the pill (Not set → All).
+             Segment 18R Item 2 PR 1 — always rendered (was
+             is_editing-gated) so a client-unlocked card's Band 1
+             state rides the dfsave form. The Band 1 grid's ``inert``
+             keeps them read-only while locked. #}
+          <input form="dfsave-{{ instrument_id }}" type="hidden"
+                 name="{{ link_id }}_mode"
+                 data-new-model-mode-input
+                 value="{{ _stored_mode if _touched else 'all' }}">
+          <input form="dfsave-{{ instrument_id }}" type="hidden"
+                 name="{{ link_id }}_combinator"
+                 data-new-model-combinator-input
+                 value="{{ _stored_combinator }}">
+          <input form="dfsave-{{ instrument_id }}" type="hidden"
+                 name="{{ link_id }}_touched"
+                 data-new-model-touched-input
+                 value="{{ 'true' if _touched else 'false' }}">
           <div data-new-model-rule-builder
                style="display: flex; align-items: stretch; gap: 8px;
                       {% if not _filter_on %}opacity: 0.5; pointer-events: none;{% endif %}">
@@ -962,7 +987,7 @@
                   {% endif %}
                   <div style="display: flex; align-items: center; gap: 4px;">
                     <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
-                            {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"{% endif %}>
+                            form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field">
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
@@ -972,12 +997,10 @@
                             data-new-model-operator-cycle="{{ _ops | join('|') }}"
                             onclick="newModelCycleOperator(this)"
                             title="Toggle operator">{{ _r.op if _r.op in _ops else _ops[0] }}</button>
-                    {% if is_editing %}
-                      <input form="dfsave-{{ instrument_id }}" type="hidden"
-                             name="{{ link_id }}_op"
-                             data-new-model-op-input
-                             value="{{ _r.op if _r.op in _ops else _ops[0] }}">
-                    {% endif %}
+                    <input form="dfsave-{{ instrument_id }}" type="hidden"
+                           name="{{ link_id }}_op"
+                           data-new-model-op-input
+                           value="{{ _r.op if _r.op in _ops else _ops[0] }}">
                   </div>
                   {# Optional caption above the operand-tag
                      dropdown (Link 2 only — Link 1's operator
@@ -1001,22 +1024,20 @@
                     {% if operand_tag_options %}
                       <select data-new-model-operand-tag
                               style="flex: 0 0 50%; min-width: 0; padding: 4px; {% if not _use_tag_operand %}display: none;{% endif %}"
-                              {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_tag"{% endif %}>
+                              form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_tag">
                         <option value="">—</option>
                         {% for key, label in operand_tag_options %}
                           <option value="{{ key }}" {% if key == _r.operand_tag %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                       </select>
                     {% else %}
-                      {% if is_editing %}
-                        <input form="dfsave-{{ instrument_id }}" type="hidden"
-                               name="{{ link_id }}_operand_tag" value="">
-                      {% endif %}
+                      <input form="dfsave-{{ instrument_id }}" type="hidden"
+                             name="{{ link_id }}_operand_tag" value="">
                     {% endif %}
                     <input data-new-model-operand-value type="text" placeholder="value"
                            style="flex: 1; min-width: 0; padding: 4px; {% if _use_tag_operand %}display: none;{% endif %}"
                            value="{{ _r.operand_value }}"
-                           {% if is_editing %}form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value"{% endif %}>
+                           form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value">
                     <button type="button" class="btn destructive"
                             style="padding: 4px 8px; flex-shrink: 0;"
                             data-new-model-rule-remove
@@ -1060,8 +1081,8 @@
          below stay unbold, so the bold title vs unbold labels gives the
          visual hierarchy. #}
       <h3 style="margin: 0 0 12px 0;">Instrument assignment rule</h3>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
-                  {% if not is_editing %}opacity: 0.75;{% endif %}"
+      <div data-lock-region
+           style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
@@ -1110,16 +1131,18 @@
                     {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
                     title="{{ 'Click to cycle: Not set → Individual → Group using tags → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
             </h3>
-            {% if is_editing %}
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="link3_mode"
-                     data-new-model-link3-mode-input
-                     value="{{ 'grouped' if (_link3_touched and _link3_grouped) else 'individual' }}">
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="link3_touched"
-                     data-new-model-link3-touched-input
-                     value="{{ 'true' if _link3_touched else 'false' }}">
-            {% endif %}
+            {# Segment 18R Item 2 PR 1 — always rendered so a
+               client-unlocked card's Link 3 state rides the dfsave
+               form; the unit-builder ``inert`` keeps it read-only
+               while locked. #}
+            <input form="dfsave-{{ instrument.id }}" type="hidden"
+                   name="link3_mode"
+                   data-new-model-link3-mode-input
+                   value="{{ 'grouped' if (_link3_touched and _link3_grouped) else 'individual' }}">
+            <input form="dfsave-{{ instrument.id }}" type="hidden"
+                   name="link3_touched"
+                   data-new-model-link3-touched-input
+                   value="{{ 'true' if _link3_touched else 'false' }}">
             {% set _link3_cells = _link3_selected if _link3_selected | length > 0 else [""] %}
             <div data-new-model-unit-builder
                  style="display: flex; align-items: stretch; gap: 8px;
@@ -1159,7 +1182,7 @@
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <select style="flex: 0 0 66.66%; min-width: 0; padding: 4px;"
                               onchange="newModelLink3BoundaryChanged(this)"
-                              {% if is_editing %}form="dfsave-{{ instrument.id }}" name="link3_boundary"{% endif %}>
+                              form="dfsave-{{ instrument.id }}" name="link3_boundary">
                         <option value="">—</option>
                         {% for key, label in _link3_tags %}
                           <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
@@ -1541,26 +1564,28 @@
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
           <h3 style="margin: 0;">Preview review instrument</h3>
-          {% if is_editing %}
-            {# Refresh only makes sense once the operator has
-               deliberately set every Band 1 link — running the
-               engine on a "Not set" link silently uses an empty
-               filter and can mislead. Gate on the same touched
-               set the workflow card's ``is_configured`` predicate
-               keys off. #}
-            {% set _band1_all_touched = (
-              instrument.band1_touched_links is not none
-              and "link1" in instrument.band1_touched_links
-              and "link2" in instrument.band1_touched_links
-              and "link3" in instrument.band1_touched_links
-            ) %}
-            <button type="button" class="btn secondary"
-                    data-new-model-band2-refresh
-                    style="padding: 4px 10px;"
-                    {% if not _band1_all_touched %}disabled aria-disabled="true"{% endif %}
-                    onclick="newModelBand2RefreshSample(this)"
-                    title="{% if _band1_all_touched %}Pick a new preview sample reviewee using the current Link 1 + Link 2 rules{% else %}Set every Band 1 link before refreshing — running on a Not-set link uses an empty filter{% endif %}">↻ Refresh sample</button>
-          {% endif %}
+          {# Refresh only makes sense once the operator has
+             deliberately set every Band 1 link — running the
+             engine on a "Not set" link silently uses an empty
+             filter and can mislead. Gate on the same touched
+             set the workflow card's ``is_configured`` predicate
+             keys off.
+             Segment 18R Item 2 PR 1 — always rendered; data-unlock-only
+             hides it while the card is locked (it sits outside the
+             band's inert region). #}
+          {% set _band1_all_touched = (
+            instrument.band1_touched_links is not none
+            and "link1" in instrument.band1_touched_links
+            and "link2" in instrument.band1_touched_links
+            and "link3" in instrument.band1_touched_links
+          ) %}
+          <button type="button" class="btn secondary"
+                  data-unlock-only
+                  data-new-model-band2-refresh
+                  style="padding: 4px 10px;"
+                  {% if not _band1_all_touched %}disabled aria-disabled="true"{% endif %}
+                  onclick="newModelBand2RefreshSample(this)"
+                  title="{% if _band1_all_touched %}Pick a new preview sample reviewee using the current Link 1 + Link 2 rules{% else %}Set every Band 1 link before refreshing — running on a Not-set link uses an empty filter{% endif %}">↻ Refresh sample</button>
         </div>
         {# Hidden form field that snapshots the current column
            widths as JSON. The drag-resize JS POSTs to
@@ -1570,37 +1595,36 @@
            through the form payload too — eliminates the race
            where a fast Save click can navigate the page before
            the async column-widths POST reaches the server. #}
-        {% if is_editing %}
-          <input form="dfsave-{{ instrument.id }}" type="hidden"
-                 name="column_widths_snapshot"
-                 data-new-model-band2-widths-snapshot
-                 value="{{ (instrument.column_widths or {}) | tojson }}">
-          {# Gap 3 (18J Wave 1) — sort-spec hidden inputs slot.
-             Mirrors the legacy card's slot (same id, same parallel-
-             array shape). ``toggleSort`` / ``_rebuildSortInputs``
-             (shared with the legacy card) populate / refresh these
-             on each badge click; the bulk-save form's
-             ``sort_display_field_id`` + ``sort_dir`` inputs ride
-             with submit. Initial fill round-trips a no-op save. #}
-          <div id="sort-spec-inputs-{{ instrument.id }}"
-               data-instrument-id="{{ instrument.id }}"
-               hidden>
-            {% for entry in _band2.sort_spec %}
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="sort_display_field_id"
-                     value="{{ entry.display_field_id }}">
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="sort_dir" value="{{ entry.dir }}">
-            {% endfor %}
-          </div>
-        {% endif %}
+        {# Segment 18R Item 2 PR 1 — always rendered (hidden inputs
+           only submitted when the unlocked card is Saved). #}
+        <input form="dfsave-{{ instrument.id }}" type="hidden"
+               name="column_widths_snapshot"
+               data-new-model-band2-widths-snapshot
+               value="{{ (instrument.column_widths or {}) | tojson }}">
+        {# Gap 3 (18J Wave 1) — sort-spec hidden inputs slot.
+           Mirrors the legacy card's slot (same id, same parallel-
+           array shape). ``toggleSort`` / ``_rebuildSortInputs``
+           (shared with the legacy card) populate / refresh these
+           on each badge click; the bulk-save form's
+           ``sort_display_field_id`` + ``sort_dir`` inputs ride
+           with submit. Initial fill round-trips a no-op save. #}
+        <div id="sort-spec-inputs-{{ instrument.id }}"
+             data-instrument-id="{{ instrument.id }}"
+             hidden>
+          {% for entry in _band2.sort_spec %}
+            <input form="dfsave-{{ instrument.id }}" type="hidden"
+                   name="sort_display_field_id"
+                   value="{{ entry.display_field_id }}">
+            <input form="dfsave-{{ instrument.id }}" type="hidden"
+                   name="sort_dir" value="{{ entry.dir }}">
+          {% endfor %}
+        </div>
         {# Gate pill clicks / drag-resize / drag-reorder behind the
            per-instrument Edit state — same pattern as Bands 1 + 3.
            ``inert`` blocks every interaction below (clicks, focus,
            native HTML5 drag); the opacity fade gives the visual
            cue that the band is view-only until Edit is engaged. #}
-        <div data-new-model-band2-editable
-             style="{% if not is_editing %}opacity: 0.75;{% endif %}"
+        <div data-new-model-band2-editable data-lock-region
              {% if not is_editing %}inert aria-hidden="true"{% endif %}>
           {# Replicate the reviewer-surface per-instrument intro
              card — short_label / description + completion-progress
@@ -1675,7 +1699,9 @@
                  short label. ``newModelIntroEdit`` / ``Save`` now
                  only operate on description; they no-op cleanly
                  when the short_label input isn't present. #}
-              {% if is_editing %}
+              {# Segment 18R Item 2 PR 1 — always rendered; data-unlock-only
+                 hides the ✎/✓ description editor while the card is locked. #}
+              <span data-unlock-only>
                 <button type="button" class="btn-icon"
                         data-intro-edit
                         onclick="newModelIntroEdit(this)"
@@ -1689,7 +1715,7 @@
                         aria-label="Save description"
                         hidden
                         style="position: absolute; bottom: 4px; right: 4px;">✓</button>
-              {% endif %}
+              </span>
             </div>
             {# Reviewer-surface preview — "Who can see what you
                wrote (other than admin)". Mirrors the read-only
@@ -3609,25 +3635,65 @@
             if (!ok) { return; }
             window.location.reload();
           };
-          // Wave 4 PR 3 — Lock click handler. If Save is active
-          // (something is dirty), confirm before navigating away.
-          // Returns false to cancel the navigation. Bound as
-          // ``onclick="return newModelLockClick(event, <id>)"`` on
-          // the Lock anchor (edit-mode only — Unlock doesn't risk
-          // losing work).
+          // Segment 18R Item 2 PR 1 — client lock-state machine.
+          // newModelSetLock flips data-instrument-locked on the card
+          // (which the CSS reads to swap the Lock/Unlock/Save/Cancel
+          // cluster and fade the editable regions) and toggles the
+          // ``inert`` attribute on every [data-lock-region] wrapper,
+          // which is what actually blocks interaction while locked.
+          window.newModelSetLock = window.newModelSetLock || function (card, locked) {
+            if (!card) { return; }
+            card.setAttribute('data-instrument-locked', locked ? 'true' : 'false');
+            card.querySelectorAll('[data-lock-region]').forEach(function (region) {
+              if (locked) {
+                region.setAttribute('inert', '');
+                region.setAttribute('aria-hidden', 'true');
+              } else {
+                region.removeAttribute('inert');
+                region.removeAttribute('aria-hidden');
+              }
+            });
+            // Keep the Band 2 edit-mode flag in sync so its preview
+            // JS (drag / resize / reorder gating) reads the live
+            // lock state after an in-page toggle.
+            var b2 = card.querySelector('[data-new-model-band2]');
+            if (b2) {
+              b2.setAttribute('data-new-model-band2-edit-mode', locked ? '0' : '1');
+            }
+          };
+          // Lock click handler. If Save is active (something is
+          // dirty), confirm before locking. On confirm (or when
+          // nothing is dirty) the card locks in-page — no reload
+          // (PR 1 keeps ?editing on the href only as a no-JS
+          // fallback). Bound as ``onclick="return
+          // newModelLockClick(event, <id>)"`` on the Lock anchor.
           window.newModelLockClick = window.newModelLockClick || function (ev, instrumentId) {
             var card = document.getElementById('instrument-' + instrumentId);
-            if (!card) { return true; }
+            if (!card) { return true; }  // no card in DOM → let the href fallback run
             var saveBtn = card.querySelector('[data-new-model-save]');
-            if (!saveBtn || saveBtn.disabled) { return true; }
-            var ok = window.confirm(
-              'You have unsaved changes. Lock anyway? Your changes will be lost.'
-            );
-            if (!ok) {
-              if (ev && ev.preventDefault) { ev.preventDefault(); }
-              return false;
+            if (saveBtn && !saveBtn.disabled) {
+              var ok = window.confirm(
+                'You have unsaved changes. Lock anyway? Your changes will be lost.'
+              );
+              if (!ok) {
+                if (ev && ev.preventDefault) { ev.preventDefault(); }
+                return false;
+              }
             }
-            return true;
+            if (ev && ev.preventDefault) { ev.preventDefault(); }
+            window.newModelSetLock(card, true);
+            return false;
+          };
+          // Unlock click handler — unlocks the card in-page (no
+          // reload). Bound as ``onclick="return
+          // newModelUnlockClick(event, <id>)"`` on the Unlock anchor;
+          // the ?editing href is the no-JS fallback.
+          window.newModelUnlockClick = window.newModelUnlockClick || function (ev, instrumentId) {
+            var card = document.getElementById('instrument-' + instrumentId);
+            if (!card) { return true; }  // no card in DOM → let the href fallback run
+            if (ev && ev.preventDefault) { ev.preventDefault(); }
+            window.newModelSetLock(card, false);
+            return false;
           };
           // Belt-and-suspenders flush: intercept every dfsave
           // form's submit (the bottom Save button) and fire
@@ -3722,10 +3788,9 @@
               onclick="newModelCycleVisibilityCell(this)"
               title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
       {% endmacro %}
-      <div data-new-model-band3
+      <div data-new-model-band3 data-lock-region
            style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-                  align-items: stretch;
-                  {% if not is_editing %}opacity: 0.75;{% endif %}"
+                  align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div data-new-model-vp-form
              data-new-model-instrument-id="{{ instrument.id }}">
