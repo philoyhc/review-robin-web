@@ -2016,12 +2016,16 @@ dep chains called out at the bottom of this file.
 
 - **18S — Security refinements** *(created 2026-08-16)*. Holding segment
   for small, self-contained in-app authorization / account-safety
-  hardening. **Item 1:** protected super-admin — a deployer-set
-  `SUPER_ADMIN_EMAILS` config list that the Sys Admin demote / revoke /
-  remove paths refuse to touch, so the seeded admin **cannot be removed
-  from within the app** (only via Azure config). Config + service guards
-  + bootstrap self-heal + tests; no migration. Further security items
-  land here as identified. **Plan:** `guide/segment_18S_security.md`.
+  hardening. **Item 1:** formalize a **three-tier role model** —
+  **operator** (managed by admins) ⊂ **admin** (`is_sys_admin`, managed
+  by super-admins only) ⊂ **super-admin** (derived from a deployer-set
+  `SUPER_ADMIN_EMAILS`, managed **only** via Azure App Settings), with
+  strict capability nesting. Super-admins can't be added/revoked in-app;
+  tightens admin promote/demote to super-admins only. Config + derived
+  property + sign-in self-heal + actor/target guards + Sys Admin tier
+  badges + tests; **no migration**. Rewrites `spec/audience_and_identity_model.md`
+  §4 (the prior two-tier doc). Further security items land here as
+  identified. **Plan:** `guide/segment_18S_security.md`.
 
 ### Sequencing notes
 

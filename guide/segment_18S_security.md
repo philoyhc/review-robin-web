@@ -12,76 +12,137 @@ they're identified.
 
 ---
 
-## Item 1 — Protected super-admin (unremovable in-app)
+## Item 1 — Three-tier role model + protected super-admin
 
-**The problem.** The Sys Admin page (`/operator/sys-admin/users`) can
-demote, revoke, and hard-remove any workspace user. The only guards today
-(`app/services/users.py`) are **identity-agnostic**:
+Formalize a **strict three-tier role hierarchy** with **nested
+capabilities** and a **config-anchored top tier**. This both adds a tier
+above today's model *and* tightens who may manage whom.
 
-- `_guard_self` — you can't act on *yourself*;
-- **last-sys-admin floor** — can't demote/remove the *only* remaining
-  sys-admin (count-based);
-- ownership guards (`still_owner` / `owns_sessions`).
+### The tiers
 
-So the **originally-seeded admin has no special standing** — any *other*
-sys-admin can demote or remove them as long as one admin remains. Two
-current behaviours make this an unreliable half-protection:
+| Tier | Stored as | Added / revoked by |
+|---|---|---|
+| **Operator** | `users.is_operator` | **Admins** (and super-admins, by nesting) |
+| **Admin** | `users.is_sys_admin` | **Super-admins only** |
+| **Super-admin** | *derived*: email ∈ `SUPER_ADMIN_EMAILS` (deployer config) | **Azure App Settings only** — never in-app |
 
-- `remove_user` **hard-deletes** the row; if that email is still in
-  `SYS_ADMIN_EMAILS`, the person is **re-seeded on next sign-in** (accidental
-  resurrection).
-- `demote` leaves the row, so the env-var seed list is **inert** afterwards —
-  the demotion sticks and the seed list does *not* protect them.
+- **Super-admin is set only via the `SUPER_ADMIN_EMAILS` App Setting.** No
+  in-app path adds or removes one; only someone with Azure config access can
+  (edit the setting + restart). App Settings aren't reachable from inside the
+  app, so this is the hard anchor.
+- **"Admin" is today's `is_sys_admin`.** The role keeps its name/flag; what
+  changes is that promoting/demoting it becomes **super-admin-only**.
 
-There is no way to designate an account that **cannot be removed or demoted
-from within the app**.
+### Capability nesting (strict superset)
 
-**The fix — anchor protection in deployer config.** Add a **`SUPER_ADMIN_EMAILS`**
-setting (App Service App Setting / `.env`), kept **distinct** from the general
-`SYS_ADMIN_EMAILS` seed list so "seeded once" ≠ "protected forever." Because
-App Settings are **not editable from inside the app**, no in-app admin can
-touch a protected account — only someone with Azure config access can, by
-editing the setting and restarting.
+**Everything an operator can do, an admin can do; everything an admin can do,
+a super-admin can do.** So **super-admin ⊇ admin ⊇ operator**. (Today's gates
+already treat sys-admin as implying operator; extend so super-admin implies
+admin — satisfied for free by the self-heal below.)
 
-1. **Config** — `app/config.py`: `super_admin_emails: list[str]` (same
-   `NoDecode` + comma-split validator as `operator_emails` /
-   `sys_admin_emails`). Env `SUPER_ADMIN_EMAILS`.
-2. **Guards** — in `app/services/users.py`, `demote` / `revoke` /
-   `remove_user` / `remove_from_all_sessions` refuse when
-   `target.email ∈ super_admin_emails` (case-insensitive), raising a new
-   `UserOperationError(code="protected_super_admin", …)`. This sits *above*
-   the last-admin floor — it protects a *specific* account, not just a count.
-3. **Self-healing (recommended)** — a `SUPER_ADMIN_EMAILS` address is always
-   granted `is_operator = is_sys_admin = True`. Decide between: (a) enforce
-   only at first-sign-in bootstrap (`app/web/deps.py`), matching the existing
-   seed model; or (b) **re-assert on every sign-in** for protected emails, so
-   a pre-feature manual demotion can't leave a "protected" account without
-   rights. Lean (b) — cheap, and it makes the guarantee real regardless of
-   prior DB state.
-4. **UI** — the Sys Admin user list shows a **"protected"** badge on those
-   rows and hides/disables the Demote / Revoke / Remove controls (the POST
-   guards remain the real enforcement; the UI is just honest about it).
+### Who can manage whom
 
-**Scope / size.** One config field + guards in ~4 service functions + the
-bootstrap tweak + a Sys Admin template touch + tests. No migration (config,
-not schema). Self-contained.
+| Actor ↓ \ can add/revoke → | Operator | Admin | Super-admin |
+|---|---|---|---|
+| **Operator** | ✗ | ✗ | ✗ |
+| **Admin** | ✓ | ✗ | ✗ |
+| **Super-admin** | ✓ | ✓ | ✗ (config only) |
 
-**Definition of done.**
+- **Operators** (`is_operator`) — admitted/revoked by **admins** (current
+  behaviour; keep).
+- **Admins** (`is_sys_admin`) — promoted/demoted by **super-admins only**.
+  This **tightens** today's behaviour, where *any* sys-admin can promote or
+  demote *any* sys-admin.
+- **Super-admins** — never added or revoked in-app; the Sys Admin
+  demote / revoke / remove / remove-from-all-sessions paths **refuse** to act
+  on a super-admin target (`protected_super_admin`).
 
-- With `SUPER_ADMIN_EMAILS=<email>` set, an in-app sys-admin **cannot**
-  demote, revoke, remove, or strip sessions from that account — each attempt
-  returns `protected_super_admin` and a clear message.
-- A protected email always resolves to a full-rights sys-admin on sign-in
-  (per the chosen self-healing rule).
-- Unit tests cover each guarded path + the bootstrap/self-heal; full suite +
-  `ruff` green.
-- `docs/deployment_dev.md` + `docs/deployment_nus.md` §7 document
-  `SUPER_ADMIN_EMAILS` (and §7.1 notes the seeded admin can be made
-  protected); `docs/security_posture.md` notes the protection.
+### Why this matters (today's gaps)
 
-**Open question.** Should the last-admin floor be *replaced* by
-"≥1 protected super-admin must exist," or kept as an independent backstop?
-Default: keep both — they guard different things (count vs identity).
+The Sys Admin page can demote / revoke / hard-remove any user. Today's guards
+(`app/services/users.py`) are **identity-agnostic**: `_guard_self` (not
+yourself), the **last-sys-admin count floor**, and ownership
+(`still_owner` / `owns_sessions`). So the seeded admin has **no special
+standing** — any other admin can demote or remove them. And the seed list is
+an unreliable protector: `remove_user` hard-deletes (a still-listed
+`SYS_ADMIN_EMAILS` re-seeds on next login), while `demote` leaves the row so
+the seed list is inert afterwards.
+
+### Design
+
+- **Config.** `super_admin_emails: list[str]` in `app/config.py` (same
+  `NoDecode` + comma-split validator as `operator_emails` /
+  `sys_admin_emails`); env `SUPER_ADMIN_EMAILS`.
+- **Derived, not stored.** `user.is_super_admin` is a **computed** property
+  (`email ∈ super_admin_emails`, case-insensitive) — never a DB column — so
+  it can't drift from config and can't be flipped in-app. **No migration.**
+- **Self-heal on sign-in.** A super-admin email always resolves to
+  `is_sys_admin = is_operator = True`, so every existing sys-admin/operator
+  gate passes for a super-admin with no special-casing. *(Open question:
+  enforce at first-sign-in only, or re-assert on every sign-in? Lean
+  **every sign-in** so a pre-feature manual demotion can't strand a
+  "protected" account without rights.)*
+- **Actor guard — managing admins.** The promote / demote (`is_sys_admin`)
+  paths require the **actor** to be a super-admin — a new
+  `require_super_admin`-style gate on those two routes / a service check.
+  Operator management (admit / revoke) keeps requiring admin.
+- **Target guard — protection.** demote / revoke / remove_user /
+  remove_from_all_sessions refuse when the **target** is a super-admin,
+  raising `UserOperationError(code="protected_super_admin", …)`. Sits *above*
+  the last-admin floor (protects a specific account, not just a count).
+- **UI.** Sys Admin user list shows **tier badges** (Operator / Admin /
+  Super-admin); Promote/Demote controls render only for a super-admin actor;
+  Demote/Revoke/Remove are hidden or disabled on super-admin rows (server
+  guards remain the real enforcement). Chrome may add a `(super admin)`
+  suffix alongside the existing `(sys admin)` one.
+- **Floors.** Keep the count-based `last_admin` floor as a backstop; a
+  non-empty `SUPER_ADMIN_EMAILS` also guarantees ≥1 protected admin.
+
+### Prior documentation (reconcile)
+
+The **current two-tier model is documented** and must be updated as part of
+this item:
+
+- **`spec/audience_and_identity_model.md` §4 "System administrator"** — the
+  authoritative prior doc: operator + sys-admin, the Accounts Management
+  page, and the `last_admin` / `owns_sessions` / `still_owner` guards.
+  Rewrite §4 to the three-tier model (tiers, nesting, the management matrix,
+  the config-anchored super tier).
+- Originated in `guide/archive/segment_16A_sys_admin_page.md` (the 16A design;
+  archived — historical only).
+- `spec/role_navigator.md` is about **participant** role-switching chips
+  (reviewer / reviewee / observer), **not** the admin hierarchy — no change.
+
+### Scope / size
+
+Config field + derived `is_super_admin` property + self-heal in
+`get_or_create_user` + actor-super guard on promote/demote + target-super
+guard on demote/revoke/remove(+from-all-sessions) + Sys Admin template (tier
+badges + conditional controls) + tests. **No migration** (super-admin is
+config-derived; `is_operator` / `is_sys_admin` columns already exist).
+
+### Definition of done
+
+- With `SUPER_ADMIN_EMAILS=<email>` set: a super-admin **cannot** be demoted,
+  revoked, removed, or stripped of sessions in-app (each returns
+  `protected_super_admin`); a **plain admin cannot promote/demote admins**
+  (only super-admins can); admins can still admit/revoke operators.
+- **Capability nesting holds:** a super-admin passes every admin gate; an
+  admin passes every operator gate.
+- A super-admin email always resolves to a full-rights admin on sign-in (per
+  the chosen self-heal rule).
+- `spec/audience_and_identity_model.md` §4 rewritten to the three-tier model;
+  `docs/deployment_dev.md` + `docs/deployment_nus.md` §7 document
+  `SUPER_ADMIN_EMAILS`; `docs/security_posture.md` records the hierarchy.
+- Unit tests cover the management matrix, the protection guards, and the
+  self-heal; full suite + `ruff` green.
+
+### Open questions
+
+- Self-heal on **every** sign-in vs first-only (lean every).
+- Keep the count-based `last_admin` floor alongside the identity-based
+  protection? Default: **keep both** — they guard different things (count vs
+  identity).
 
 ---
 
@@ -97,7 +158,11 @@ The user will populate this list as security refinements are identified.
 
 ## Doc impact
 
-- `docs/deployment_dev.md` / `docs/deployment_nus.md` — document
-  `SUPER_ADMIN_EMAILS` (Item 1).
-- `docs/security_posture.md` — note the protected-super-admin guarantee.
+- `spec/audience_and_identity_model.md` §4 — rewrite to the three-tier role
+  model (Item 1).
+- `docs/deployment_dev.md` / `docs/deployment_nus.md` §7 — document
+  `SUPER_ADMIN_EMAILS` (and §7.1: the seeded admin can be made a protected
+  super-admin).
+- `docs/security_posture.md` — record the role hierarchy + the
+  protected-super-admin guarantee.
 - `docs/status.md` — record when an item ships.
