@@ -304,6 +304,37 @@ start — restart after changes.
 > of `SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS` is non-empty (`validate_critical_settings`).
 > Get the whitelist right or the app won't start.
 
+### 7.1 Seed the first admin (operator + admin rights)
+
+Authorization gates on `is_operator OR is_sys_admin`, and **sys-admin implies
+operator**, so **one setting seeds a full-rights admin** — no DB surgery:
+
+1. Set the App Setting **`SYS_ADMIN_EMAILS=<admin@nus.edu.sg>`** (the exact
+   institutional email that person signs in with; case-insensitive).
+   `OPERATOR_EMAILS` is then optional — sys-admin already passes the operator
+   gate and additionally unlocks the **Sys Admin** page.
+2. **Restart** the app so it reads the setting.
+3. That person **signs in once** with that email. On **first sign-in** the
+   bootstrap stamps `is_sys_admin = true` on their new `users` row
+   (`app/web/deps.py` → `get_or_create_user`). They land on the Sessions
+   lobby (not `/request-access`) with the Sys Admin link present.
+
+> **Order matters — set it *before* their first sign-in.** The bootstrap
+> fires **only** on first sign-in; once a `users` row exists the env var is
+> **inert** (adding/removing an email never changes an existing row). If they
+> already signed in first, fix it from Azure Cloud Shell — prefer `UPDATE`
+> over `DELETE` (a delete cascades their `session_operators`):
+>
+> ```sql
+> UPDATE users SET is_operator = true, is_sys_admin = true
+> WHERE email = '<admin@nus.edu.sg>';
+> ```
+
+Additional operators can then be onboarded the same way (each fires on *that*
+person's first sign-in) or from the in-app Sys Admin page. Full mechanics +
+the first-16A-deploy backfill case: `docs/deployment_dev.md` → "Operator /
+sys-admin allowlist bootstrap."
+
 ---
 
 ## 8. First-time database bootstrap (one-time, on NUS Postgres)
