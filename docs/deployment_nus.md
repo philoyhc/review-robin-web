@@ -5,8 +5,11 @@ to the institutional (**NUS**) Azure host, while **continuing to develop and
 test on localhost exactly as today**. After NUS is verified and serving,
 **retire** the personal Azure web app + resource group.
 
-> **Status: plan.** NUS account/subscription is not finalized yet. Values
-> below are placeholders (`<nus-…>`) to be filled once the account lands.
+> **Status: plan.** NUS PRD resources are now provisioned (project **NRRW**,
+> subscription `sub-nrrw-prd-reviewrobinweb`, RG `rg-nrrw-prd-compute-01` —
+> see §1). A couple of resource names + credentials remain to confirm before
+> the first deploy. A manual test workflow (`deploy_nus.yml`) ships with this
+> plan but is **not wired to run automatically** — see §6.4.
 > This runbook mirrors the *working* dev setup documented in
 > `docs/deployment_dev.md` — read that first; NUS is the same topology in a
 > different subscription + tenant. Companion runbooks:
@@ -37,33 +40,47 @@ the `deploy`/`migrate` path and the Azure/Entra resources move.
 
 ---
 
-## 1. Decisions to lock before touching anything
+## 1. What NUS has provisioned — and what's left to decide
 
-Fill these in with NUS once the account is finalized — every later step
-depends on them:
+NUS has provisioned the **PRD** resources (project **NRRW**). Known values:
 
-- [ ] **Ownership model.** Do you get a **subscription with Contributor**
-  (you run the `az`/portal steps), or does **NUS IT provision** resources
-  from tickets? This decides who does §3–§4. (See `azure_ask.md`.)
-- [ ] **Subscription + Resource Group** name/region (NUS-approved region,
-  e.g. Southeast Asia).
-- [ ] **Resource names** — App Service, App Service Plan, Postgres server,
-  DB name (`rrw`), app user (`rrw_app`). Suggest dropping the `-dev` suffix
-  (e.g. `app-review-robin-web`, `rg-review-robin-web`).
-- [ ] **Entra tenant** = the NUS tenant. Confirm you (or an NUS app admin)
-  can **create an app registration** and grant **admin consent** there.
-- [ ] **Sign-in audience** — single-tenant (NUS accounts only). Confirm the
-  whitelist emails (`SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS`) are NUS emails.
-- [ ] **App Service Plan SKU** — move **off `F1`** (no Always On, cold
-  starts) to at least **B1**; size per `docs/azure_provision.md`.
-- [ ] **Networking policy** — is public-access-with-firewall acceptable, or
-  does NUS mandate **VNet integration / private endpoint / App Gateway +
-  WAF**? This drives the **migrate-job reachability** decision (§5, called
-  out because it's the sharpest gotcha).
-- [ ] **Custom domain?** An `nus.edu.sg` subdomain + managed TLS cert, or
-  ship on the default `*.azurewebsites.net` hostname.
-- [ ] **Data carry-over?** Start NUS with a clean database, or migrate
-  existing data from personal Postgres (§8).
+| Item | Value |
+|---|---|
+| Subscription | `sub-nrrw-prd-reviewrobinweb` |
+| Resource Group | `rg-nrrw-prd-compute-01` |
+| Region | Southeast Asia |
+| Cloud admin account | `admazclhc` |
+| App Service | **Premium V3 (P0V3)** — 1 vCPU / 4 GB / 250 GB, Linux (Always On capable) |
+| PostgreSQL | Flexible Server, **Burstable B2S** (2 vCores), Premium SSD, 32 GiB, LRS |
+| Key Vault | provisioned — secrets can live here (Key Vault references via managed identity) |
+| Storage Account | Block Blob, GPv2, LRS, Hot, 10 GB — **this is the Segment 18Q blob store** (`guide/segment_18Q_blob.md`) |
+| Monitoring | Azure Monitor — Log Analytics + Application Insights |
+
+Naming convention observed: `<type>-nrrw-prd-<purpose>-01`.
+
+Still to confirm / decide before the first deploy:
+
+- [x] **Region** — Southeast Asia.
+- [x] **SKUs** — App Service **Premium V3 P0V3**; Postgres **Burstable B2S**
+  (both comfortably above the dev `F1` / `B1ms`).
+- [ ] **Exact resource names** for the Web App and the Postgres server — the
+  CSV leaves those "Custom name" cells blank. Likely
+  `app-nrrw-prd-reviewrobinweb-01` / `psql-nrrw-prd-reviewrobinweb-01`;
+  **confirm the real provisioned names** before filling `NUS_WEBAPP_NAME`
+  and `NUS_DATABASE_URL` (§6.2).
+- [ ] **DB name + app user** — create `rrw` + `rrw_app` on the B2S server.
+- [ ] **Ownership** — do you have Contributor on `rg-nrrw-prd-compute-01`, or
+  does NUS IT run the portal steps? (The `admazclhc` admin account suggests
+  IT-managed; confirm what you can do yourself.)
+- [ ] **Entra tenant** — the NUS tenant; confirm you (or an NUS admin) can
+  **create app registrations** and grant **admin consent**.
+- [ ] **Networking** — public-access-with-firewall vs **private
+  endpoint / VNet**? Drives the migrate-job reachability decision (§5).
+- [ ] **Custom domain** under `nus.edu.sg`, or the default
+  `*.azurewebsites.net` hostname?
+- [ ] **Whitelist** — `SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS` = NUS emails.
+- [ ] **Data carry-over** — clean start on NUS, or migrate from personal
+  Postgres (§8)?
 
 ---
 
@@ -102,9 +119,19 @@ NUS subscription. Can run in parallel while personal Azure keeps serving.
   - *Private endpoint / VNet* (if NUS mandates): the App Service reaches the
     DB via VNet integration; the `migrate` job then needs a network path in
     (self-hosted runner / manual run) — again §5.
-- [ ] **(Optional, if NUS policy)** App Gateway + WAF, private endpoints,
-  Key Vault for secrets — see `guide/deferred_infra.md` §1. Not required to
-  ship; add when NUS policy requires.
+- [ ] **Already provisioned alongside the app — use them, don't re-create:**
+  - **Key Vault** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY` here and wire
+    the App Settings as **Key Vault references** through the Web App's
+    managed identity, removing plaintext secrets from App Settings (the
+    direction `guide/deferred_infra.md` §1 anticipated). Optional for the
+    first deploy; recommended before go-live.
+  - **Storage Account** (Block Blob, GPv2) — this is the **Segment 18Q blob
+    store**; once NUS is confirmed, 18Q Phase 0 wires to it
+    (`guide/segment_18Q_blob.md`). Not needed for the app to run.
+  - **Azure Monitor** (Log Analytics + Application Insights) — point App
+    Service diagnostics + application logging here.
+- [ ] **(Optional, if NUS policy)** App Gateway + WAF, private endpoints —
+  see `guide/deferred_infra.md` §1. Add when NUS policy requires.
 
 ---
 
@@ -182,21 +209,28 @@ credentials** (no publish profile). Recreate this in NUS:
     `repo:philoyhc/review-robin-web:environment:<env-name>` — otherwise
     `azure/login` fails with `AADSTS700213` (see `docs/deployment_dev.md`).
 
-### 6.2 Update the GitHub repository secrets
+### 6.2 Add NUS-scoped GitHub secrets + a variable
 
-Update the **values** of the existing three OIDC secrets (keep the names to
-avoid editing the workflow's `secrets.*` references), plus `DATABASE_URL`:
+The personal deploy stays live during testing (§6.3–§6.4), so the NUS deploy
+needs its **own** secrets rather than overwriting the personal ones. Add
+these repository **secrets**:
 
-| Secret | New (NUS) value |
+| Secret | Value |
 |---|---|
-| `AZUREAPPSERVICE_CLIENTID_BE4891FDE16B4522926171BF7D1D779F` | NUS deploy app-reg **client id** |
-| `AZUREAPPSERVICE_TENANTID_3B9A113C68284F578982060D01073DFE` | **NUS tenant id** |
-| `AZUREAPPSERVICE_SUBSCRIPTIONID_4290DEED4C5F409AB737C5CF65DC8A20` | **NUS subscription id** |
-| `DATABASE_URL` | `postgresql+psycopg://rrw_app:<pw>@<nus-server>.postgres.database.azure.com:5432/rrw?sslmode=require` |
+| `NUS_AZURE_CLIENT_ID` | NUS deploy app-reg **client id** (§6.1) |
+| `NUS_AZURE_TENANT_ID` | **NUS tenant id** |
+| `NUS_AZURE_SUBSCRIPTION_ID` | **NUS subscription id** (for `sub-nrrw-prd-reviewrobinweb`) |
+| `NUS_DATABASE_URL` | `postgresql+psycopg://rrw_app:<pw>@<nus-server>.postgres.database.azure.com:5432/rrw?sslmode=require` |
 
-> The GUID-suffixed secret names are just names; reusing them keeps the
-> workflow untouched. (If you prefer clearer names, rename the secrets **and**
-> update the `secrets.*` references in the workflow in the same PR.)
+…and one repository **variable** (not sensitive — it's just a name):
+
+| Variable | Value |
+|---|---|
+| `NUS_WEBAPP_NAME` | the provisioned Web App name (e.g. `app-nrrw-prd-reviewrobinweb-01` — confirm) |
+
+`deploy_nus.yml` (§6.4) reads exactly these four secrets + one variable.
+Keeping them NUS-scoped means the personal deploy's own secrets are
+untouched, so both pipelines can run side by side during cutover.
 
 ### 6.3 Update the deploy workflow
 
@@ -212,12 +246,39 @@ the file to `deploy_nus.yml` and updating the `name:`):
   credential (§6.1). This is the "manual approval before production" gate
   sketched in `docs/deployment_dev.md` → "Production deployment (planned)".
 
-> **Parallel-safe cutover option:** instead of editing the live workflow in
-> place, add a **second workflow** (`deploy_nus.yml`) triggered by
-> `workflow_dispatch` that targets NUS with the NUS secrets. Deploy + verify
-> NUS manually first; only once green, flip the `on: push` trigger to the NUS
-> workflow and retire the personal one (§9). This never disturbs the working
-> personal deploy while you validate NUS.
+> **Parallel-safe cutover — this plan takes this path.** Rather than editing
+> the live workflow in place, it adds a **second, manual workflow**
+> `deploy_nus.yml` (§6.4) that targets NUS via the NUS-scoped secrets and runs
+> only on `workflow_dispatch`. Deploy + verify NUS by hand first; only once
+> green do you flip `main`'s `on: push` deploy to NUS and retire the personal
+> one (§9, §11). The personal deploy is never disturbed while you validate.
+
+### 6.4 The temporary test workflow — `.github/workflows/deploy_nus.yml`
+
+Shipped with this plan. **It is `workflow_dispatch`-only** — there is
+deliberately **no `push` trigger**, so merging it changes nothing and deploys
+nothing; it runs only when you manually dispatch it from the **Actions** tab.
+Same build → migrate → deploy shape as the personal workflow, but:
+
+- authenticates + targets NUS via the **NUS-scoped secrets** +
+  `vars.NUS_WEBAPP_NAME` (§6.2), so it coexists with the personal deploy;
+- adds a **`run_migrate`** dispatch input (default `true`) so you can **skip
+  the migrate job** and run `alembic upgrade head` out-of-band when the NUS
+  DB isn't reachable from a GitHub-hosted runner (§5);
+- uses its own `concurrency` group, independent of the personal pipeline.
+
+**To test a NUS deploy — when you're ready, which is *not now*:**
+
+1. Finish §3–§4 (resources + Easy Auth) and §6.1–§6.2 (identity + the four
+   `NUS_*` secrets + `NUS_WEBAPP_NAME`).
+2. Actions → **Deploy to NUS Azure (manual test)** → *Run workflow* →
+   optionally untick `run_migrate` → *Run*.
+3. Verify per §10.
+
+Until those prerequisites exist the workflow just sits idle. **Adding the
+file starts nothing** — a `workflow_dispatch` workflow never runs on its own.
+At final cutover, either promote it to the `on: push` deploy (and retire the
+personal workflow) or fold its steps back into the primary workflow.
 
 ---
 
