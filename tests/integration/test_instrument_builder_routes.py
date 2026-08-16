@@ -5567,6 +5567,34 @@ def test_lock_hides_js_built_help_card_edit_pencil_when_locked(
     ) in body
 
 
+def test_pr2_dirty_tracking_and_guards_ship(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 2 — the staging harness JS ships:
+    the per-card dirty flag (the client store), the one-card-at-a-time
+    unlock guard, and the nav-away (beforeunload) guard with its
+    intentional-nav suppression. The behaviours run in the browser, so
+    this pins the wiring is present (the suite can't click)."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr2-staging-js"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Per-card dirty flag set by markDirty (the client store).
+    assert "data-instrument-dirty" in body
+    assert "setAttribute('data-instrument-dirty', 'true')" in body
+    # One-card-at-a-time guard: unlock resolves other unlocked cards,
+    # blocking on a dirty one.
+    assert '[data-instrument-card][data-instrument-locked="false"]' in body
+    assert "Save or cancel it before editing this one." in body
+    # Nav-away guard: beforeunload keyed on any dirty card, suppressed
+    # for the deliberate Save / Cancel navigation.
+    assert "beforeunload" in body
+    assert "_newModelIntentionalNav" in body
+    assert '[data-instrument-card][data-instrument-dirty="true"]' in body
+
+
 def test_lock_unlock_replaces_edit_button_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
