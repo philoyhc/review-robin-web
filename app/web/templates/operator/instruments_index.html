@@ -3630,7 +3630,22 @@
             // Segment 18R Item 2 PR 2 — this reload IS the discard, so
             // suppress the nav-away guard it would otherwise trip.
             window._newModelIntentionalNav = true;
-            window.location.reload();
+            // Segment 18R Item 2 — preserve every card's open/closed
+            // layout across the discard reload (same mechanism drag /
+            // +Page break use). Without this the reload leaves the
+            // <details> state to the browser's own restoration, which
+            // can pop a *different* card open. Also strip any stale
+            // ``#instrument-N`` hash so the openHashTarget IIFE doesn't
+            // auto-open that card after the reload.
+            if (window.newModelCaptureOpenState) {
+              window.newModelCaptureOpenState();
+            }
+            if (window.location.hash) {
+              window.location.href =
+                window.location.pathname + window.location.search;
+            } else {
+              window.location.reload();
+            }
           };
           // Segment 18R Item 2 PR 1 — client lock-state machine.
           // newModelSetLock flips data-instrument-locked on the card
@@ -4996,6 +5011,10 @@
           );
         } catch (err) {}
       }
+      // Segment 18R Item 2 — expose the capture so other reload paths
+      // (e.g. Cancel's discard reload) can preserve the per-card
+      // open/closed layout the same way drag / +Page break do.
+      window.newModelCaptureOpenState = captureOpenStateForReload;
 
       // Restore on page load if there's a pending capture. Each
       // captured card's open state is explicitly applied — open
