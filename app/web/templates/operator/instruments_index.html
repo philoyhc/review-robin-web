@@ -3538,6 +3538,11 @@
               '[data-new-model-cancel]'
             );
             function markDirty() {
+              // Segment 18R Item 2 PR 2 — the per-card dirty flag is
+              // the client store the one-card-at-a-time guard and the
+              // nav-away (beforeunload) guard both query. It rides the
+              // card element so a plain attribute selector finds it.
+              instrumentCard.setAttribute('data-instrument-dirty', 'true');
               saveBtns.forEach(function (b) {
                 if (b.disabled) { b.disabled = false; }
               });
@@ -3639,6 +3644,9 @@
             if (!btn || btn.disabled) { return; }
             var ok = window.confirm('Discard unsaved changes?');
             if (!ok) { return; }
+            // Segment 18R Item 2 PR 2 — this reload IS the discard, so
+            // suppress the nav-away guard it would otherwise trip.
+            window._newModelIntentionalNav = true;
             window.location.reload();
           };
           // Segment 18R Item 2 PR 1 — client lock-state machine.
@@ -3694,9 +3702,31 @@
           // reload). Bound as ``onclick="return
           // newModelUnlockClick(event, <id>)"`` on the Unlock anchor;
           // the ?editing href is the no-JS fallback.
+          //
+          // Segment 18R Item 2 PR 2 — one card editable at a time.
+          // Before unlocking this card, resolve any OTHER currently-
+          // unlocked card: a dirty one blocks (the operator must Save
+          // or Cancel it first); a clean one is locked silently so
+          // only one card is ever editable.
           window.newModelUnlockClick = window.newModelUnlockClick || function (ev, instrumentId) {
             var card = document.getElementById('instrument-' + instrumentId);
             if (!card) { return true; }  // no card in DOM → let the href fallback run
+            var others = document.querySelectorAll(
+              '[data-instrument-card][data-instrument-locked="false"]'
+            );
+            for (var i = 0; i < others.length; i++) {
+              var other = others[i];
+              if (other === card) { continue; }
+              if (other.getAttribute('data-instrument-dirty') === 'true') {
+                if (ev && ev.preventDefault) { ev.preventDefault(); }
+                window.alert(
+                  'Another instrument has unsaved changes. '
+                  + 'Save or cancel it before editing this one.'
+                );
+                return false;
+              }
+              window.newModelSetLock(other, true);
+            }
             if (ev && ev.preventDefault) { ev.preventDefault(); }
             window.newModelSetLock(card, false);
             return false;
@@ -3714,6 +3744,11 @@
               if (form._newModelFlushWired) { return; }
               form._newModelFlushWired = true;
               form.addEventListener('submit', function () {
+                // Segment 18R Item 2 PR 2 — Save navigates (form POST
+                // → 303 in PR 2; the JSON save lands in PR 3), so mark
+                // this navigation intentional to suppress the nav-away
+                // guard.
+                window._newModelIntentionalNav = true;
                 var instrumentCard = form.closest('[id^="instrument-"]');
                 if (!instrumentCard) { return; }
                 var band2 = instrumentCard.querySelector(
@@ -3723,9 +3758,31 @@
               });
             });
           }
+          // Segment 18R Item 2 PR 2 — nav-away guard. Warn before
+          // leaving the page while any card carries unsaved (un-Saved)
+          // edits. Wired once. Save (form submit) and Cancel (reload)
+          // set window._newModelIntentionalNav so their deliberate
+          // navigation doesn't self-trigger the warning.
+          function _newModelWireNavGuard() {
+            if (window._newModelNavGuardWired) { return; }
+            window._newModelNavGuardWired = true;
+            window._newModelIntentionalNav = false;
+            window.addEventListener('beforeunload', function (e) {
+              if (window._newModelIntentionalNav) { return undefined; }
+              if (document.querySelector(
+                '[data-instrument-card][data-instrument-dirty="true"]'
+              )) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+              }
+              return undefined;
+            });
+          }
           function _newModelOnReady() {
             _newModelInitialRefresh();
             _newModelWireSaveFlushers();
+            _newModelWireNavGuard();
           }
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', _newModelOnReady);
