@@ -75,8 +75,10 @@ def get_or_create_user(
     # Option C strict-allowlist bootstrap on first sign-in. Env vars
     # seed the persisted columns once; after that the columns are
     # authoritative. Removing an email from the env var does NOT
-    # auto-revoke — revocation goes through 16A PR 6's workspace UI.
-    # See ``guide/segment_16A_sys_admin_page.md`` F3.
+    # auto-revoke — ongoing role changes go through the in-app Sys
+    # Admin page (``/operator/sys-admin/users``; invite / admit /
+    # revoke / promote / demote / remove, each audited with a
+    # last-sys-admin floor). See ``app/services/users.py``.
     cfg = default_settings
     is_operator = _email_in(cfg.operator_emails, current_user.email)
     is_sys_admin = _email_in(cfg.sys_admin_emails, current_user.email)

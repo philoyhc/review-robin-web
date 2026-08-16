@@ -278,13 +278,18 @@ Once a `users` row exists for an email, the env vars are inert
 for that row. Editing `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` and
 restarting the app does **not** promote (or demote) anyone who's
 already signed in once. The persisted columns are the
-authoritative source of truth after first sign-in; revocation
-goes through the in-app workspace user-list UI (16A PR 6, not
-yet shipped).
+authoritative source of truth after first sign-in. Ongoing
+role changes go through the **in-app Sys Admin page**
+(`/operator/sys-admin/users`, sys-admin only): invite a new
+user by email, admit / revoke operator status, promote / demote
+sys-admin, and remove a user — each audited, with a last-sys-admin
+floor. (Shipped in Segment 16A; the earlier "PR 6 not yet shipped"
+note is retired.)
 
-If you change the env vars and need an existing principal to pick
-up the new flags before PR 6 ships, you have two manual escape
-hatches:
+If you change the env vars and need an *existing* principal to
+pick up new flags — or want to fix roles straight from the
+database — you have two manual escape hatches (the in-app Sys
+Admin page is the normal path):
 
 1. **Wipe the row.** Connect to the database as `rrw_app` and
    `DELETE FROM users WHERE email = '<email>'`. The next sign-in
