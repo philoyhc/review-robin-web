@@ -305,23 +305,60 @@ case, and a "nothing persists before Save" assertion.
 
 ### Item 2 — implementation (decisions + PR ladder)
 
+> **Accuracy review vs current code (2026-08-16).** A pass over the live
+> implementation corrected the *starting point* the earlier plan assumed:
+> **the consolidated save largely already exists**, and **Save already stays
+> unlocked** (the trio semantics the operator asked for are already the
+> behaviour). What genuinely changes is narrower than "build a new endpoint" —
+> see the corrected Save-writer decision below. Verified-accurate claims: the
+> three persistence paths; band2 → `/band2-state`; the lost-edit bug; column
+> widths → `/column-widths` + snapshot mirror; the inline `/identity` pencil;
+> `/display-fields/order`; the shape-field visual gap; **no migration**; and
+> the per-row button-state facts.
+
 **Decisions (2026-08-16).**
 
-- **Save writer → one consolidated endpoint.** A new
-  `POST /operator/sessions/{sid}/instruments/{iid}/save` takes the **whole
-  card** payload (assignment rule / Band 1, Band 2 state, visibility / Band 3,
-  response fields, identity, column widths, display-field order) and applies
-  it in **one transaction, one validation pass**, reusing the existing service
-  writers (`set_band1_assignment_rules`, `set_band2_state`, `bulk_save_fields`,
-  the view-policy + column-width writers, identity update). Returns JSON
-  (`{ok, errors}`) — no page render.
-- **Enter-edit UX → client-side toggle (no reload).** Every edit control is
+- **Save writer → extend the existing consolidated route; don't build anew.**
+  The current **Save** already POSTs the dfsave form to
+  `POST …/instruments/{iid}/fields/save` (`instrument_bulk_save_fields`),
+  which **already writes most of the card in one transaction / one commit**:
+  Band 1 (Links 1+2), Link 3 / Unit of review, column widths (from the
+  `column_widths_snapshot` mirror), sort spec, **identity**
+  (`short_label` / `description`), **and Band 3 visibility policies** — via
+  `set_band1_assignment_rules` / `set_unit_of_review` / `set_column_widths` /
+  `set_sort_display_fields` / `update_short_label` +
+  `update_instrument_description` / `visibility_policies.upsert_many`. The
+  **only** area *not* in it is **Band 2 response-field state** (pills +
+  type / bounds / required / help), which the new-model card persists
+  separately via `POST …/band2-state` (`set_band2_state`). So "consolidate" =
+  **fold `band2_state` into `fields/save`** (add `set_band2_state` to the same
+  transaction + validation pass) and retire the immediate-POST siblings —
+  **not** a brand-new endpoint, and **not** `bulk_save_fields` (that's the
+  legacy table path, not rendered on the new-model card). Return
+  JSON (`{ok, errors}`) *iff* we move off the current form-POST→303 redirect
+  (see the enter-edit decision).
+- **Save already stays unlocked — keep it.** The route deliberately preserves
+  `?editing=<id>` on Save ("Save doesn't re-lock … Lock/Unlock owns the
+  gating; Save owns persistence") and flashes `?saved=<id>`. So the
+  **Save · Lock · Cancel** trio with progressive save is *already* how it
+  works — the harmonization is about the *edit controls* feeding one save, not
+  about the button semantics.
+- **Enter-edit UX → client-side toggle (no reload).** *(Flagged by the
+  accuracy review — see below; may be reconsidered.)* Every edit control is
   **always rendered in the DOM**; when the card is **locked** they are
   disabled and styled read-only. `newModelLockClick` becomes a client
   **state machine** (locked ↔ unlocked) that enables/disables the controls,
   swaps the button cluster, and drives the per-row button-state matrix — no
   round-trip to enter/leave edit. (The server `?editing=<id>` gating is
   retired; keep `?editing` only as an optional initial-unlock deep-link.)
+  **Caveat from the review:** the current Save/Lock flow is **entirely
+  reload-based and already works** — Save is a form POST → 303 redirect that
+  preserves `?editing`, Lock/Unlock is a `?editing` nav, and it already
+  delivers the trio + progressive save. "No reload" is therefore the **largest
+  and most optional** part of Item 2 (it rewrites a working flow: always-render
+  controls + JSON save + client state machine). A smaller alternative keeps the
+  reload model and only harmonizes the *edit controls* (fold band2 into the
+  form Save, retire the immediate POSTs). Decision pending.
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
   **Save / Cancel** card A.
