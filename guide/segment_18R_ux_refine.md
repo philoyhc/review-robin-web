@@ -373,8 +373,9 @@ case, and a "nothing persists before Save" assertion.
   input) — i.e. the box is a view/edit swap keyed on the card lock state,
   not an always-rendered-disabled control. Commit is **Save**, never Lock
   (Lock only closes the boxes to their read-only view, with the standard
-  unsaved-changes confirm if the card is dirty). Lands in PR 4 (help text)
-  and PR 5 (description + short_label).
+  unsaved-changes confirm if the card is dirty). Lands as its own focused
+  PR — all three boxes together — ahead of the remaining Band 2 state
+  staging and identity work (PR 4 in the ladder below).
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
   **Save / Cancel** card A.
@@ -409,22 +410,29 @@ agree the always-rendered / toggle shape before wiring persistence.
    validate → atomic apply via existing writers → JSON). Wire the **Save**
    button to fetch-POST it; on `ok` clear the dirty flag and stay unlocked, on
    `!ok` render the summary banner and stay unlocked with edits intact.
-4. **Migrate Band 2 → staging.** Pills / help text / column widths stop
+4. **Retire the inline ✎/✓ text editors (all three boxes together).**
+   Per the inline-editors decision above: card-title `short_label`, Band 2
+   `description`, and Band 2 per-field help text drop their ✎/✓ affordance.
+   Unlocked → plain editable field; locked → rendered read-only text (a
+   view/edit swap keyed on lock state). `short_label` + `description` ride
+   the dfsave form → `/save` (which already accepts them); help text stages
+   into the band2 state the Save flow flushes. Retire the ✓-triggered
+   `/identity` + `/band2-state` immediate saves from these boxes. Done as one
+   focused, self-contained PR — smaller than folding into the Band 2 state
+   migration, and matches how the three boxes read as a single change.
+5. **Migrate Band 2 state → staging.** Pills / column widths stop
    immediate-POSTing and flow through the store + the consolidated save;
    Response Fields **R / ≡ / ✓ / X** apply the button-state matrix, **✓**
    becomes push-to-preview only, and the **lost-edit is fixed** (all named
-   rows are captured). The per-field **help-text ✎/✓ retires** — the help
-   box is a plain field when unlocked, rendered read-only text when locked
-   (per the inline-editors decision above), committed on Save. Retire
-   `/band2-state`, `/column-widths` from the card.
-5. **Migrate identity + display order → staging.** Name / short_label /
-   description stop immediate-POSTing (retire `/identity` from the card);
-   the **short_label + description ✎/✓ retire** — plain fields when
-   unlocked, rendered read-only text when locked, committed on Save.
-   Display-field reorder folds into the payload (retire in-card
-   `/display-fields/order`). Band 1 + Band 3 (already staged) route into the
-   consolidated save instead of `/fields/save`.
-6. **Cleanup + tests.** Retire now-unused endpoints (or keep server-side only
+   rows are captured). Fold the band2 help-text persistence (UI already done
+   in PR 4) fully into `/save`. Retire `/band2-state`, `/column-widths` from
+   the card.
+6. **Migrate identity + display order → staging.** Route `short_label` /
+   `description` (UI already done in PR 4) fully through `/save` and retire
+   `/identity` from the card; display-field reorder folds into the payload
+   (retire in-card `/display-fields/order`). Band 1 + Band 3 (already staged)
+   route into the consolidated save instead of `/fields/save`.
+7. **Cleanup + tests.** Retire now-unused endpoints (or keep server-side only
    where a verified non-card caller needs them); final button-state-matrix
    pass; update `spec/instruments.md` + `spec/operator_ui_concept.md`. Tests:
    the button-state matrix (locked / unlocked-clean / unlocked-dirty), staged
