@@ -141,6 +141,27 @@ def _instrument(db: Session, session_id: int) -> Instrument:
     ).scalar_one()
 
 
+def _card_slice(flat: str, instrument_id: int) -> str:
+    """Return the flattened HTML for a single instrument card — from
+    its ``id="instrument-<id>"`` opening to the next card's opening
+    (or end of document).
+
+    Segment 18R Item 2 PR 1 made every card always render the full
+    Save / Cancel / Lock / Unlock cluster (hidden by the client lock
+    layer when locked), so global counts / first-match lookups now
+    span every card. Tests that assert per-card structure slice the
+    one card they care about with this helper.
+    """
+    # Boundary on ``data-instrument-card="<id>"`` — unique to card
+    # ``<div>`` openings (``id="instrument-<id>"`` is not: the delete
+    # form is ``id="instrument-delete-<id>"``, which shares the
+    # prefix and would truncate the slice before the bottom row).
+    start = flat.find(f'data-instrument-card="{instrument_id}"')
+    assert start != -1, f"card for instrument {instrument_id} not found"
+    nxt = flat.find('data-instrument-card="', start + 1)
+    return flat[start : nxt if nxt != -1 else len(flat)]
+
+
 # --------------------------------------------------------------------------- #
 # Tests
 # --------------------------------------------------------------------------- #
@@ -1574,21 +1595,22 @@ def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     assert 'data-new-model-band2-unit-mode="grouped"' in view_body
-    # The link3_mode form input only renders as an <input> in edit
-    # mode (the attribute name appears in inline JS selectors on
-    # every page, hence the more specific check).
-    assert '<input ' not in view_body.split(
-        'data-new-model-link3-mode-input'
-    )[0].rsplit('<', 1)[-1] if 'data-new-model-link3-mode-input' in view_body else True
-    assert 'name="link3_mode"' not in view_body
+    # Segment 18R Item 2 PR 1 — the link3_mode hidden input is now
+    # ALWAYS rendered (the card is view-locked rather than stripped
+    # of its inputs), so a client-unlocked card can save Link 3
+    # state without a reload. The card carries
+    # data-instrument-locked="true" in view mode.
+    assert 'name="link3_mode"' in view_body
+    assert 'data-instrument-locked="true"' in view_body
 
-    # Edit mode — wrapper attr still carries the saved mode, and
-    # the form input is rendered.
+    # Edit mode — wrapper attr still carries the saved mode, the
+    # form input is rendered, and the edited card is unlocked.
     edit_body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     assert 'data-new-model-band2-unit-mode="grouped"' in edit_body
     assert 'name="link3_mode"' in edit_body
+    assert 'data-instrument-locked="false"' in edit_body
 
 
 def test_new_model_band2_preview_sample_filters_by_link1(
@@ -4659,13 +4681,15 @@ def test_band2_intro_card_description_textarea_hidden_uses_hidden_attr_only(
     assert "display:" not in ta_tag.lower()
 
 
-def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
+def test_band2_intro_card_edit_icons_always_render_hidden_when_locked(
     client: TestClient, db: Session
 ) -> None:
-    """The intro card's unified ✎/✓ pair (opens / saves both
-    short_label + description) only renders when the instrument is
-    in edit mode. In view mode (no ``editing=`` query param), the
-    icons are absent — operator cannot toggle the inline editor."""
+    """Segment 18R Item 2 PR 1 — the intro card's unified ✎/✓ pair
+    (opens / saves the description) is now ALWAYS rendered as part
+    of the always-render scaffold, wrapped in a ``data-unlock-only``
+    element so the client lock layer hides it while the card is
+    locked and shows it once unlocked. The onclick wiring is present
+    in both view (locked) and edit (unlocked) renders."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-intro-edit-gate"
     )
@@ -4673,22 +4697,25 @@ def test_band2_intro_card_edit_icons_only_render_in_edit_mode(
     new_model.description = "View-mode placeholder."
     db.commit()
 
-    # View mode (no ``editing=...`` param). The JS code that
-    # implements the toggle contains the function names so we
-    # look for the onclick wiring on the button element.
+    # View mode (no ``editing=...`` param) — the ✎/✓ wiring is in
+    # the DOM but sits inside a data-unlock-only wrapper (hidden by
+    # the lock layer because the card is locked).
     view_body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "newModelIntroEdit(this)" not in view_body
-    assert "newModelIntroSave(this)" not in view_body
+    assert "newModelIntroEdit(this)" in view_body
+    assert "newModelIntroSave(this)" in view_body
+    assert 'data-instrument-locked="true"' in view_body
 
-    # Edit mode — unified ✎/✓ pair renders (✓ hidden by default).
+    # Edit mode — same ✎/✓ pair; the card is unlocked so the layer
+    # reveals them.
     edit_body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
     assert "newModelIntroEdit(this)" in edit_body
     assert "newModelIntroSave(this)" in edit_body
+    assert 'data-instrument-locked="false"' in edit_body
 
 
 def test_intro_identity_endpoint_updates_short_label(
@@ -5451,8 +5478,72 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
 
 
 # --------------------------------------------------------------------------- #
-# Wave 4 — Lock / Unlock toggle replaces per-instrument Edit / Cancel
+# Segment 18R Item 2 PR 1 — client lock-state scaffold
 # --------------------------------------------------------------------------- #
+
+
+def test_lock_scaffold_seeds_locked_state_and_lock_regions(
+    client: TestClient, db: Session
+) -> None:
+    """PR 1 seeds the client lock-state machine from the server-side
+    edit flag: a view-mode card is ``data-instrument-locked="true"``
+    with its editable regions ``inert``; the edited card is
+    ``data-instrument-locked="false"`` with the regions interactive.
+    The card also carries ``data-instrument-card="<id>"`` and its
+    editable regions are marked ``data-lock-region`` so the JS
+    toggle (newModelSetLock) can find them."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr1-lock-scaffold"
+    )
+
+    # View mode — locked. The card + its lock regions are inert.
+    view = _card_slice(
+        " ".join(
+            client.get(
+                f"/operator/sessions/{review_session.id}/instruments"
+            ).text.split()
+        ),
+        new_model.id,
+    )
+    assert 'data-instrument-locked="true"' in view
+    assert "data-lock-region" in view
+    # Three lock regions (Band 1 grid, Band 2 editable, Band 3 grid),
+    # each carrying the ``inert aria-hidden="true"`` attribute pair in
+    # the locked render.
+    assert view.count('inert aria-hidden="true"') == 3
+
+    # Edit mode — unlocked. The regions drop inert (interactive).
+    edit = _card_slice(
+        " ".join(
+            client.get(
+                f"/operator/sessions/{review_session.id}"
+                f"/instruments?editing={new_model.id}"
+            ).text.split()
+        ),
+        new_model.id,
+    )
+    assert 'data-instrument-locked="false"' in edit
+    assert "data-lock-region" in edit
+    assert 'inert aria-hidden="true"' not in edit
+
+
+def test_lock_scaffold_ships_state_machine_js(
+    client: TestClient, db: Session
+) -> None:
+    """PR 1 ships the client lock-state machine — newModelSetLock
+    (flips data-instrument-locked + toggles inert on lock regions),
+    plus the Lock / Unlock click handlers wired to it."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr1-lock-js"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "window.newModelSetLock" in body
+    assert "window.newModelLockClick" in body
+    assert "window.newModelUnlockClick" in body
+    # The Unlock anchor is wired to the in-page toggle.
+    assert "return newModelUnlockClick(event" in body
 
 
 def test_lock_unlock_replaces_edit_button_in_view_mode(
@@ -5471,26 +5562,29 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
+    card = _card_slice(flat, new_model.id)
 
     # Edit / Cancel anchor text retires.
-    assert ">Edit</a>" not in flat
-    assert ">Cancel</a>" not in flat
+    assert ">Edit</a>" not in card
 
-    # The Unlock toggle exists on the new-model instrument's row
-    # and links to the editing URL.
-    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
-    toggle_idx = flat.find(toggle_marker)
+    # Segment 18R Item 2 PR 1 — the view-mode visible toggle is the
+    # Unlock anchor, now carrying its own ``data-instrument-unlock-
+    # toggle`` marker (the Lock anchor, present-but-hidden, keeps the
+    # ``data-instrument-lock-toggle`` marker). Unlock links to the
+    # editing URL — the same state Edit used to reach.
+    # rfind → the bottom action-row Unlock (the heading row renders a
+    # convenience Unlock too, which precedes +Instrument).
+    toggle_marker = f'data-instrument-unlock-toggle="{new_model.id}"'
+    toggle_idx = card.rfind(toggle_marker)
     assert toggle_idx != -1
-    toggle_tag = flat[
-        flat.rfind("<a", 0, toggle_idx) : flat.find(">", toggle_idx) + 1
+    toggle_tag = card[
+        card.rfind("<a", 0, toggle_idx) : card.find(">", toggle_idx) + 1
     ]
-    assert "Unlock" in flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
+    assert "Unlock" in card[card.find(">", toggle_idx) + 1 : card.find("</a>", toggle_idx)]
     assert f"editing={new_model.id}" in toggle_tag
 
-    # The toggle sits AFTER the +Instrument button in the row (the
-    # last action before the toggle is +Instrument). Wave 4 renamed
-    # +New model → +Instrument when the legacy add buttons retired.
-    add_btn_idx = flat.rfind("+Instrument", 0, toggle_idx)
+    # The bottom-row toggle sits AFTER the +Instrument button.
+    add_btn_idx = card.rfind("+Instrument", 0, toggle_idx)
     assert add_btn_idx != -1, "Unlock toggle must come after +Instrument"
 
 
@@ -5593,15 +5687,18 @@ def test_save_button_initial_state_is_disabled_in_edit_mode(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
+    # Segment 18R Item 2 PR 1 — every card renders Save now, so scope
+    # to this instrument's card before locating its Save button.
+    card = _card_slice(flat, new_model.id)
     # The Save button carries the data-new-model-save marker on
     # its tag. Find the literal Save button via its trailing
     # ``>Save</button>`` text — the JS code that mentions the
     # marker as a selector lives elsewhere and uses different
     # quoting / context.
-    save_btn_end = flat.find(">Save</button>")
+    save_btn_end = card.find(">Save</button>")
     assert save_btn_end != -1
-    btn_open = flat.rfind("<button", 0, save_btn_end)
-    btn_tag = flat[btn_open : save_btn_end + 1]
+    btn_open = card.rfind("<button", 0, save_btn_end)
+    btn_tag = card[btn_open : save_btn_end + 1]
     assert "data-new-model-save" in btn_tag
     assert "disabled" in btn_tag
     assert f'form="dfsave-{new_model.id}"' in btn_tag
@@ -5772,15 +5869,22 @@ def test_unlock_anchor_does_not_wire_confirm(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
+    card = _card_slice(flat, new_model.id)
 
-    toggle_marker = f'data-instrument-lock-toggle="{new_model.id}"'
-    toggle_idx = flat.find(toggle_marker)
+    # Segment 18R Item 2 PR 1 — the Unlock anchor carries the
+    # ``data-instrument-unlock-toggle`` marker and wires the plain
+    # ``newModelUnlockClick`` in-page toggle (NOT the confirm-
+    # bearing ``newModelLockClick``). Entering edit mode never risks
+    # losing work, so there is no "unsaved changes" confirm here.
+    toggle_marker = f'data-instrument-unlock-toggle="{new_model.id}"'
+    toggle_idx = card.find(toggle_marker)
     assert toggle_idx != -1
-    a_open = flat.rfind("<a", 0, toggle_idx)
-    a_close = flat.find(">", toggle_idx)
-    a_tag = flat[a_open : a_close + 1]
-    assert "Unlock" in flat[a_close + 1 : flat.find("</a>", a_close)]
+    a_open = card.rfind("<a", 0, toggle_idx)
+    a_close = card.find(">", toggle_idx)
+    a_tag = card[a_open : a_close + 1]
+    assert "Unlock" in card[a_close + 1 : card.find("</a>", a_close)]
     assert "newModelLockClick" not in a_tag
+    assert "newModelUnlockClick" in a_tag
 
 
 def test_heading_row_ships_save_and_cancel_in_edit_mode(
@@ -5799,6 +5903,9 @@ def test_heading_row_ships_save_and_cancel_in_edit_mode(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
+    # Segment 18R Item 2 PR 1 — every card always renders the
+    # cluster, so scope to this instrument's card.
+    card = _card_slice(flat, new_model.id)
 
     # Two rendered Save buttons + two Cancel buttons per card. Use
     # ``>Save</button>`` / ``>Cancel</button>`` to count the actual
@@ -5806,52 +5913,52 @@ def test_heading_row_ships_save_and_cancel_in_edit_mode(
     # ``data-new-model-cancel`` strings also appear in inline JS
     # source (as selector arguments), so a bare substring count
     # would over-count.
-    assert flat.count(">Save</button>") == 2
-    assert flat.count(">Cancel</button>") == 2
+    assert card.count(">Save</button>") == 2
+    assert card.count(">Cancel</button>") == 2
     # The attribute-syntax marker (with the instrument id) for
     # Cancel is unique to rendered buttons.
-    assert flat.count(f'data-new-model-cancel="{new_model.id}"') == 2
+    assert card.count(f'data-new-model-cancel="{new_model.id}"') == 2
 
     # The heading-row Lock anchor is the first ``data-instrument-
     # lock-toggle`` occurrence; the bottom-row Lock anchor is the
     # second. Save + Cancel sit between the heading Lock and the
     # bottom-row Lock — i.e. the heading-row Save/Cancel come
     # after the first Lock anchor and before the second Lock anchor.
-    first_lock = flat.find(f'data-instrument-lock-toggle="{new_model.id}"')
-    second_lock = flat.find(
+    first_lock = card.find(f'data-instrument-lock-toggle="{new_model.id}"')
+    second_lock = card.find(
         f'data-instrument-lock-toggle="{new_model.id}"', first_lock + 1
     )
     assert first_lock != -1 and second_lock != -1
 
-    heading_save = flat.find(">Save</button>")
-    heading_cancel = flat.find(">Cancel</button>")
+    heading_save = card.find(">Save</button>")
+    heading_cancel = card.find(">Cancel</button>")
     assert first_lock < heading_save < second_lock
     assert first_lock < heading_cancel < second_lock
 
     # The heading-row Save carries the same form + marker + disabled
     # attributes as the bottom-row one (mirrored contract).
-    save_open = flat.rfind("<button", 0, heading_save)
-    save_tag = flat[save_open : heading_save + 1]
+    save_open = card.rfind("<button", 0, heading_save)
+    save_tag = card[save_open : heading_save + 1]
     assert "data-new-model-save" in save_tag
     assert "disabled" in save_tag
     assert f'form="dfsave-{new_model.id}"' in save_tag
 
-    cancel_open = flat.rfind("<button", 0, heading_cancel)
-    cancel_tag = flat[cancel_open : heading_cancel + 1]
+    cancel_open = card.rfind("<button", 0, heading_cancel)
+    cancel_tag = card[cancel_open : heading_cancel + 1]
     assert f'data-new-model-cancel="{new_model.id}"' in cancel_tag
     assert "disabled" in cancel_tag
     assert "newModelCancelEdits(this)" in cancel_tag
 
 
-def test_heading_row_omits_save_and_cancel_in_view_mode(
+def test_heading_row_ships_save_and_cancel_hidden_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
-    """View mode never shows Save + Cancel — there's no dfsave
-    form to submit, and the heading row only carries the Unlock
-    anchor + Open/Close + visibility toggles. The marker strings
-    appear in inline JS source (the dirty tracker references them
-    as selectors); check the actual rendered button-attribute
-    syntax instead."""
+    """Segment 18R Item 2 PR 1 — Save + Cancel are now ALWAYS
+    rendered (always-render scaffold) and merely hidden by the
+    client lock layer while the card is locked. In view mode the
+    dfsave form + Save/Cancel buttons are present in the DOM, marked
+    ``data-unlock-only``, and the card carries
+    ``data-instrument-locked="true"``."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="heading-save-cancel-view"
     )
@@ -5859,16 +5966,16 @@ def test_heading_row_omits_save_and_cancel_in_view_mode(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    # The ``data-new-model-cancel="<id>"`` attribute is unique to
-    # rendered Cancel buttons (the JS selector uses the bare
-    # ``[data-new-model-cancel]`` form, no ``="``).
-    assert f'data-new-model-cancel="{new_model.id}"' not in flat
-    # ``<button form="dfsave-<id>"`` is unique to the Save button.
-    # (Band 3 visibility hidden inputs also reference
-    # ``form="dfsave-<id>"`` so they ride along on Save — those
-    # are ``<input``, not ``<button``, so the button-prefixed
-    # check still isolates the rendered Save submit.)
-    assert f'<button form="dfsave-{new_model.id}"' not in flat
+    card = _card_slice(flat, new_model.id)
+    # The rendered Save + Cancel buttons are present in the DOM.
+    assert f'data-new-model-cancel="{new_model.id}"' in card
+    assert f'<button form="dfsave-{new_model.id}"' in card
+    # Both sit inside data-unlock-only wrappers so the lock layer
+    # hides them while the card is locked (view mode).
+    assert "data-unlock-only" in card
+    assert 'data-instrument-locked="true"' in card
+    # The dfsave form itself is now always rendered (was edit-only).
+    assert f'id="dfsave-{new_model.id}"' in card
 
 
 def test_band3_row_pending_visual_css_ships_in_base(
@@ -5969,8 +6076,12 @@ def test_action_row_button_order_in_edit_mode(
 def test_action_row_button_order_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
-    """In view mode the per-instrument action row drops Save + Cancel
-    and shows: Replicate | Delete | +Instrument | Unlock."""
+    """Segment 18R Item 2 PR 1 — the per-instrument action row now
+    always renders the full cluster; the client lock layer hides
+    Save / Cancel / Lock and shows Unlock while the card is locked.
+    The rendered DOM order (left → right) in the bottom row is:
+    Replicate | Delete | +Instrument | Lock | Unlock, with the
+    always-rendered Save + Cancel present earlier in the row."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="w4-row-order-view"
     )
@@ -5978,40 +6089,37 @@ def test_action_row_button_order_in_view_mode(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
+    card = _card_slice(flat, new_model.id)
 
-    # Save and Cancel attached to instrument rows don't render in
-    # view mode. The marker strings appear elsewhere in inline JS
-    # source, so check the actual rendered button-attribute syntax.
-    assert 'data-new-model-cancel="' not in flat
-    # Save button is identified by ``<button form="dfsave-<id>"``.
-    # Band 3 visibility hidden ``<input>``s also reference
-    # ``form="dfsave-<id>"`` so they ride along on Save; the
-    # button-prefixed check isolates the rendered Save submit.
-    assert f'<button form="dfsave-{new_model.id}"' not in flat
+    # Save + Cancel are present in the DOM even in view mode (hidden
+    # by the lock layer via data-unlock-only).
+    assert f'data-new-model-cancel="{new_model.id}"' in card
+    assert f'<button form="dfsave-{new_model.id}"' in card
 
-    # Anchor on the action-row Unlock toggle for this instrument
-    # (rfind because the heading row now renders a convenience
-    # Lock/Unlock too — the canonical one sits at the bottom).
-    unlock_idx = flat.rfind(f'data-instrument-lock-toggle="{new_model.id}"')
-    assert unlock_idx != -1
-    replicate_idx = flat.rfind(
+    # Anchor on the bottom action-row Lock + Unlock toggles (rfind →
+    # the bottom row; the heading row renders a convenience pair
+    # too). Lock precedes Unlock in the rendered cluster.
+    lock_idx = card.rfind(f'data-instrument-lock-toggle="{new_model.id}"')
+    unlock_idx = card.rfind(f'data-instrument-unlock-toggle="{new_model.id}"')
+    assert lock_idx != -1 and unlock_idx != -1
+    replicate_idx = card.rfind(
         f'action="/operator/sessions/{review_session.id}'
         f'/instruments/{new_model.id}/replicate"',
         0,
-        unlock_idx,
+        lock_idx,
     )
-    delete_idx = flat.rfind(f'data-delete-btn="{new_model.id}"', 0, unlock_idx)
-    add_idx = flat.rfind(
+    delete_idx = card.rfind(f'data-delete-btn="{new_model.id}"', 0, lock_idx)
+    add_idx = card.rfind(
         f'<input type="hidden" name="after" value="{new_model.id}">',
         0,
-        unlock_idx,
+        lock_idx,
     )
     for idx, name in [
         (replicate_idx, "replicate"), (delete_idx, "delete"),
-        (add_idx, "add"), (unlock_idx, "unlock"),
+        (add_idx, "add"), (lock_idx, "lock"), (unlock_idx, "unlock"),
     ]:
         assert idx != -1, f"{name} marker missing"
-    assert replicate_idx < delete_idx < add_idx < unlock_idx
+    assert replicate_idx < delete_idx < add_idx < lock_idx < unlock_idx
 
 
 def test_cancel_button_starts_disabled_and_carries_marker(
@@ -6029,11 +6137,14 @@ def test_cancel_button_starts_disabled_and_carries_marker(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
+    # Segment 18R Item 2 PR 1 — every card renders Cancel now; scope
+    # to this instrument's card.
+    card = _card_slice(flat, new_model.id)
 
-    cancel_end = flat.find(">Cancel</button>")
+    cancel_end = card.find(">Cancel</button>")
     assert cancel_end != -1
-    btn_open = flat.rfind("<button", 0, cancel_end)
-    btn_tag = flat[btn_open : cancel_end + 1]
+    btn_open = card.rfind("<button", 0, cancel_end)
+    btn_tag = card[btn_open : cancel_end + 1]
     assert f'data-new-model-cancel="{new_model.id}"' in btn_tag
     assert "newModelCancelEdits(this)" in btn_tag
     assert "disabled" in btn_tag
@@ -6130,19 +6241,22 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
     assert f'value="Instrument_{new_model.id}"' not in block
 
 
-def test_card_title_edit_icons_only_render_in_edit_mode(
+def test_card_title_edit_icons_always_render_hidden_when_locked(
     client: TestClient, db: Session
 ) -> None:
-    """The card-title ✎ / ✓ pair only renders when the instrument
-    is in edit mode (matches the existing intro-card edit-icon
-    gate). In view mode the title is read-only."""
+    """Segment 18R Item 2 PR 1 — the card-title ✎ / ✓ pair is now
+    ALWAYS rendered (always-render scaffold), wrapped in a
+    ``data-unlock-only`` element so the client lock layer hides it
+    while the card is locked and reveals it once unlocked. The
+    markers are present in both the view (locked) and edit
+    (unlocked) renders."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="card-title-edit-gate"
     )
     new_model.short_label = "Gate"
     db.commit()
 
-    # View mode — no editing= query param.
+    # View mode — no editing= query param; card is locked.
     body_view = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
@@ -6151,10 +6265,13 @@ def test_card_title_edit_icons_only_render_in_edit_mode(
     )
     block_view_end = body_view.find("</h2>", block_view_start)
     block_view = body_view[block_view_start:block_view_end]
-    assert "data-card-title-edit" not in block_view
-    assert "data-card-title-save" not in block_view
+    assert "data-card-title-edit" in block_view
+    assert "data-card-title-save" in block_view
+    # The ✎/✓ pair is wrapped in a data-unlock-only element so the
+    # lock layer keeps it hidden while locked.
+    assert "data-unlock-only" in block_view
 
-    # Edit mode.
+    # Edit mode — card unlocked; same markers present.
     body_edit = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
         f"?editing={new_model.id}"
