@@ -5843,11 +5843,12 @@ def test_title_input_click_does_not_toggle_card_when_unlocked(
     ).text
     assert "_newModelWireTitleToggleGuard" in body
     assert "[data-card-title-edit-block]" in body
-    # Keyboard guard: Space / Enter in the name input must not bubble to
-    # the <summary> and toggle the card (they stay in the field).
+    # Keyboard guard: Space / Enter in the name input preventDefault the
+    # <summary> toggle; the space is re-inserted into the field so it
+    # still types (Enter is a no-op).
     assert "_titleKeyGuard" in body
-    assert "e.stopPropagation()" in body
     assert "[data-card-title-input]" in body
+    assert "input.selectionStart = input.selectionEnd = start + 1" in body
 
 
 def test_cancel_preserves_card_open_state_on_reload(
