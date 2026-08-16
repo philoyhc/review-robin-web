@@ -3643,11 +3643,21 @@
             if (window.newModelCaptureOpenState) {
               window.newModelCaptureOpenState();
             }
-            if (window.location.hash) {
-              window.location.href =
-                window.location.pathname + window.location.search;
-            } else {
+            // Segment 18R Item 2 — keep the card UNLOCKED after Cancel:
+            // reload with ?editing=<id> so the server re-renders this
+            // card in edit mode (discarding the client edits from
+            // persisted state) rather than dropping it back to the
+            // locked view. Strip any stale hash so the openHashTarget
+            // IIFE doesn't fight the open-state restore.
+            var instrumentId = btn.getAttribute('data-new-model-cancel');
+            var url = new URL(window.location.href);
+            url.hash = '';
+            url.searchParams.delete('saved');
+            if (instrumentId) { url.searchParams.set('editing', instrumentId); }
+            if (url.href === window.location.href) {
               window.location.reload();
+            } else {
+              window.location.href = url.href;
             }
           };
           // Segment 18R Item 2 PR 1 — client lock-state machine.
@@ -3890,10 +3900,33 @@
               return undefined;
             });
           }
+          // Segment 18R Item 2 — the instrument-name input lives inside
+          // the card's <summary>, so a click landing in the title area
+          // (rather than precisely on the input) can toggle the
+          // <details> shut mid-edit. When the card is unlocked, suppress
+          // the toggle for clicks within the title-edit block; the
+          // chevron and the rest of the summary still toggle normally,
+          // and a locked card's title still toggles as before. Click
+          // preventDefault cancels only the toggle — the input still
+          // focuses (that happens on mousedown) and stays editable.
+          function _newModelWireTitleToggleGuard() {
+            if (window._newModelTitleToggleWired) { return; }
+            window._newModelTitleToggleWired = true;
+            document.addEventListener('click', function (e) {
+              if (!e.target || !e.target.closest) { return; }
+              var block = e.target.closest('[data-card-title-edit-block]');
+              if (!block) { return; }
+              var card = block.closest('[data-instrument-card]');
+              if (card && card.getAttribute('data-instrument-locked') === 'false') {
+                e.preventDefault();
+              }
+            });
+          }
           function _newModelOnReady() {
             _newModelInitialRefresh();
             _newModelWireSaveFlushers();
             _newModelWireNavGuard();
+            _newModelWireTitleToggleGuard();
           }
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', _newModelOnReady);
