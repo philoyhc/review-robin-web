@@ -1,9 +1,13 @@
 # Segment 18P — Patching the round-trip (harmonize + rehydrate)
 
-**Status:** Planning. Grounded in the completed coverage sweep
+**Status:** Shipped — **Group 1** (harmonize the round-trip) done 2026-06-05
+(PRs #1864 → #1870); **Group 2** (rehydrate a complete extracted session)
+done (scaffold #1872, polish #1873, F / G1 / G2 / G3 #1877 / H #1878).
+`docs/rehydrate.md` flipped from "proposed" to "shipped". **Archived
+2026-08-16.** Grounded in the completed coverage sweep
 (`spec/roundtrip_coverage.md`) and the rehydrate design
-(`docs/rehydrate.md`). Two coupled work groups; Group 1 lands first because
-Group 2 sits on top of it.
+(`docs/rehydrate.md`). Two coupled work groups; Group 1 landed first because
+Group 2 sat on top of it.
 
 > Depends on the round-trip coverage doc (`spec/roundtrip_coverage.md`) and
 > the rehydrate spec (`docs/rehydrate.md`) already in the tree. This plan

@@ -1913,7 +1913,7 @@ Closed the P0 items from the Codex weaknesses assessment (addendum archived to `
 
 ---
 
-### Segment 18P — Patching the round-trip (harmonize + rehydrate) — Group 1 done 2026-06-05 (PRs #1864 → #1870); Group 2 done (scaffold #1872, polish #1873, F / G1 / G2 / G3 #1877 / H) (detailed plan: `guide/segment_18P_patching_roundtrip.md`)
+### Segment 18P — Patching the round-trip (harmonize + rehydrate) — Group 1 done 2026-06-05 (PRs #1864 → #1870); Group 2 done (scaffold #1872, polish #1873, F / G1 / G2 / G3 #1877 / H) (detailed plan: `guide/archive/segment_18P_patching_roundtrip.md`)
 
 Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`): (1) **harmonize** the round-trip so export→import + clone stop silently dropping hand-set config; (2) **rehydrate** a complete session from its extract files. Group 1 lands first — it carries the rehydrate prerequisites. No new infra (Postgres-backed pre-flight stash; **no blob storage**).
 
@@ -1929,7 +1929,7 @@ Two groups on top of the completed coverage sweep (`spec/roundtrip_coverage.md`)
 
 With Group 1 the coverage matrix has no unintended gaps; the rehydrate prerequisite (A1 + A2) is satisfied, so Group 2 is unblocked.
 
-**Group 2 — Rehydrate — done** (detailed PR ladder in `guide/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach). `docs/rehydrate.md` flipped from "proposed" to "shipped":
+**Group 2 — Rehydrate — done** (detailed PR ladder in `guide/archive/segment_18P_patching_roundtrip.md`; **scaffold-first** per `CLAUDE.md` → Working approach). `docs/rehydrate.md` flipped from "proposed" to "shipped":
 
 - **PR G0** ✅ — UI scaffold: `Rehydrate` lobby button (by `Add new`) + `GET /operator/sessions/rehydrate` page with all three cards as **inert placeholders** (real copy, buttons no-op / disabled). Surface agreed before any wiring. Lands first.
 - **PR F** ✅ — responses importer (sectioned `responses.csv` parser + `load_responses` with assignment backfill + group fan-out; own size limits). Independent.
@@ -2002,6 +2002,17 @@ dep chains called out at the bottom of this file.
   written for it. Workplan §18 items 1–10 (Start Here
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
+
+- **18R — UX refinement** *(created 2026-08-16)*. Holding segment for
+  small, self-contained operator-UX identity / label polish on shipped
+  surfaces (no behaviour change). **Item 1:** retire the informal
+  "**Band 1**" label on the per-instrument card and title the top band
+  the **Assignment rule** card (it currently has no title of its own,
+  just three bare Link sub-headings under the Instrument Name), and
+  strengthen each card's identity consistently — a small
+  `instruments_index.html` slice + "Band 1" → "Assignment rule" in
+  `spec/instruments.md` / `spec/assignments.md` (internal `band1` code
+  names stay). **Plan:** `guide/segment_18R_ux_refine.md`.
 
 ### Sequencing notes
 
