@@ -115,9 +115,12 @@ and Lock**.
 
 **This fixes the lost-edit bug for free** — with all editable elements in the
 framework, a newly-typed Response Field is captured by Save and Lock whether
-or not a per-row `✓` was clicked. The per-row **✓** either becomes a pure
-"apply to preview" affordance (no persistence meaning) or is retired in favour
-of live-on-edit preview — *open design choice*.
+or not the per-row control was clicked. The per-row **✓** is **re-glyphed as
+an upward-pointing arrow (⬆, pointing at the preview)** and becomes a
+**push-to-preview** affordance: clicking it registers the row's edit into the
+live preview but **does not persist** — persistence happens only on Save and
+Lock. (So its job is purely "reflect my edit in the preview now"; the arrow
+pointing up at the preview says exactly that.)
 
 **Dirty tracking.** One per-card dirty flag drives the primary button's label
 (Save-and-Lock vs Lock), Cancel's enabled/greyed state, and an
@@ -152,20 +155,68 @@ case, and a "nothing persists before Save and Lock" assertion.
 - The card no longer fires the in-card immediate POSTs (`/band2-state`,
   `/identity`, `/column-widths`, in-card `/display-fields/order`); those
   endpoints are removed or retained only for any non-card caller.
+- The per-row control is an **⬆ push-to-preview** arrow (updates the preview,
+  persists nothing); **column-width drag is fully staged** (live preview, no
+  server write until Save and Lock).
+- Leaving an unlocked card with pending edits **warns/confirms** before
+  discarding.
+- **Save and Lock runs the full current validation set** (listed in Decisions
+  #4); a validation failure leaves the card unlocked with edits intact.
 - `spec/instruments.md` + `spec/operator_ui_concept.md` (lock card /
   Save-Edit toggle) updated to the harmonized model; the audit
   (`guide/instrument_card_ux_audit.md`) cited as origin.
 - Full suite + `ruff` green.
 
-**Open questions.**
+**Decisions (resolved 2026-08-16).**
 
-- Fate of the per-row **✓** (preview-apply vs retire).
-- Column-width drag is a live direct-manipulation gesture; keep it immediate
-  for responsiveness *and* also capture on Save, or fully stage it (preview
-  updates live, server write only on Save)? **Default: fully staged** for
-  consistency.
-- Unsaved-changes guard on Unlock → navigate-away: confirm vs auto-discard.
-- Does **Save and Lock** run the same validation the current Save does?
+1. **Per-row ✓ → an upward-pointing arrow (⬆).** It becomes a
+   **push-to-preview** control: register the row's edit into the live preview,
+   **no persistence** until Save and Lock. (Covered in the body above.)
+2. **Column-width drag → fully staged.** The preview updates live as you drag,
+   but the server write happens **only** on Save and Lock — the immediate
+   `/column-widths` POST is retired. Chosen for consistency with every other
+   editable element.
+3. **Unsaved-changes guard → confirm/warn.** On Unlock → navigate-away (or any
+   attempt to leave with pending edits), **warn that there are unsaved edits**
+   and require confirmation before discarding.
+4. **Save and Lock runs the same validation the current Save does — yes.**
+   Because Save and Lock becomes the single writer for the whole card, it must
+   run the union of the validations the current per-endpoint writers run. The
+   current set (to preserve):
+
+   *Response fields (`_response_fields` / `_band2.set_band2_state`):*
+   - **Field key** — required; ≤ 64 chars; matches `^[a-z][a-z0-9_]*$`;
+     **unique within the instrument** (`FieldKeyError` / `_band2_unique_field_key`).
+   - **Label** — required (non-empty) when adding a field.
+   - **Inline shape well-formed** (`InvalidResponseFieldShapeError`, Wave 3
+     PR ii): `max ≥ min`; `step > 0`; List has ≥ 1 option; String
+     `max_length > 0`.
+   - **Shape-change lock when responses exist** (`ResponseFieldShapeChangeError`):
+     can't change a field's `data_type` or numeric/list bounds once it has
+     saved responses — clear responses first.
+   - **Delete-with-responses confirm** (`ResponsesPresentError`): deleting a
+     field that has saved responses needs an explicit cascade acknowledgement.
+   - **Un-pin-with-responses acknowledgement** (`ResponseFieldDropAcknowledgementRequired`,
+     18K PR 4): un-pinning a Band 2 response chip whose field has saved
+     responses needs `acknowledged_drop=true`.
+
+   *Assignment rule (Band 1, `set_band1_assignment_rules`):*
+   - **Payload well-formed** (`Band1ParseError`): the parallel rule arrays for
+     a link must align; chosen tags must be a subset of that link's allowed
+     tag set.
+
+   *Visibility (Band 3):* structural only — mode values must be valid; no
+   extra operator-facing block.
+
+   *Cross-cutting side effect (not a block, keep it):* a successful save
+   **invalidates a `validated` session back to `draft`**
+   (`lifecycle.invalidate_if_validated`), and the locked default rows
+   (Name / Email) stay pinned at the top.
+
+   The consolidated **Save and Lock** must surface each of these as a blocking
+   error (or its existing confirm gate) rather than silently dropping the edit
+   — and, per the new model, a failed validation keeps the card **unlocked
+   with edits intact** so the operator can fix and retry.
 
 ---
 
