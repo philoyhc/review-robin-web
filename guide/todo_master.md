@@ -2012,7 +2012,14 @@ dep chains called out at the bottom of this file.
   strengthen each card's identity consistently — a small
   `instruments_index.html` slice + "Band 1" → "Assignment rule" in
   `spec/instruments.md` / `spec/assignments.md` (internal `band1` code
-  names stay). **Plan:** `guide/segment_18R_ux_refine.md`.
+  names stay). **Item 2:** harmonize the instrument card's **save / lock
+  model** into one persistence path — locked shows only **Unlock**;
+  unlocked shows **Save and Lock** / **Lock** (by dirty state) + **Cancel**;
+  every editable element stages and persists **only** on Save and Lock
+  (retires the per-control immediate POSTs found in
+  `guide/instrument_card_ux_audit.md` and fixes the un-✓'d-new-field
+  lost-edit). Consequential UI → scaffold-first, several PRs. **Plan:**
+  `guide/segment_18R_ux_refine.md`.
 
 - **18S — Security refinements** *(created 2026-08-16)*. Holding segment
   for small, self-contained in-app authorization / account-safety
