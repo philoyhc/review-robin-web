@@ -5812,6 +5812,39 @@ def test_pr5b_band2_staging_wiring_ships(
     assert "serializeRow(row, null)" in body
 
 
+def test_cancel_keeps_card_unlocked_via_editing_reload(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 — Cancel reloads with ?editing=<id> so the
+    card stays unlocked (edits discarded from persisted state) rather
+    than dropping back to the locked view. Browser-only; pin the
+    wiring."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="cancel-keeps-unlocked"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "searchParams.set('editing', instrumentId)" in body
+
+
+def test_title_input_click_does_not_toggle_card_when_unlocked(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 — the instrument-name input lives inside the
+    card <summary>, so clicks in the title area could collapse the card
+    mid-edit. The toggle guard preventDefaults title-block clicks on an
+    unlocked card. Browser-only; pin the wiring."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="title-toggle-guard"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "_newModelWireTitleToggleGuard" in body
+    assert "[data-card-title-edit-block]" in body
+
+
 def test_cancel_preserves_card_open_state_on_reload(
     client: TestClient, db: Session
 ) -> None:
