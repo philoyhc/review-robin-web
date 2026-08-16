@@ -5546,6 +5546,27 @@ def test_lock_scaffold_ships_state_machine_js(
     assert "return newModelUnlockClick(event" in body
 
 
+def test_lock_hides_js_built_help_card_edit_pencil_when_locked(
+    client: TestClient, db: Session
+) -> None:
+    """The Band 2 preview help-card ✎/✓ affordances are built by JS
+    (renderHelpCard, keyed by ``data-help-card-key``), so they can't
+    carry a Jinja ``data-unlock-only`` marker; ``inert`` on the lock
+    region disables but does not hide them. The lock-layer CSS hides
+    them off the locked state directly — pin that rule so the pencil
+    doesn't leak through on a locked card."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr1-help-pencil-hide"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert (
+        '[data-instrument-card][data-instrument-locked="true"] '
+        "button[data-help-card-key] { display: none !important; }"
+    ) in body
+
+
 def test_lock_unlock_replaces_edit_button_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
