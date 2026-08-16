@@ -2014,6 +2014,15 @@ dep chains called out at the bottom of this file.
   `spec/instruments.md` / `spec/assignments.md` (internal `band1` code
   names stay). **Plan:** `guide/segment_18R_ux_refine.md`.
 
+- **18S — Security refinements** *(created 2026-08-16)*. Holding segment
+  for small, self-contained in-app authorization / account-safety
+  hardening. **Item 1:** protected super-admin — a deployer-set
+  `SUPER_ADMIN_EMAILS` config list that the Sys Admin demote / revoke /
+  remove paths refuse to touch, so the seeded admin **cannot be removed
+  from within the app** (only via Azure config). Config + service guards
+  + bootstrap self-heal + tests; no migration. Further security items
+  land here as identified. **Plan:** `guide/segment_18S_security.md`.
+
 ### Sequencing notes
 
 - **11C Part 2 → 14B Part A** is the email pipeline: the
