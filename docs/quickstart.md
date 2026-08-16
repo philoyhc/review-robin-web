@@ -129,19 +129,19 @@ instrument you can rename and shape:
 
 ### 4c. Set who reviews whom (the assignment rule)
 
-**Each instrument carries its own assignment rule**, set in the **top band** of that instrument's card on the **Instruments** page:
+**Each instrument carries its own assignment rule**, set in the **Instrument assignment rule** card (the top band) of that instrument's card on the **Instruments** page:
 
-- **Pool of reviewers** — who does the reviewing.
-- **Pool of those reviewed** — who gets reviewed by each reviewer.
+- **Who does the review** — the pool of reviewers.
+- **Who is being reviewed** — the pool of those reviewed.
 - **Unit of review** — each reviewee individually, or as a group.
 
 Setting the links to **all, all, individual** pairs **everyone with
 everyone eligible, individually** (a full matrix). To narrow it (say, reviewers only review
 reviewees with the same tag), switch a Link to **filter** and choose the tags and appropriate connectors.
 
-> 📷 **Screenshot —** `08-band1-rule.png` — *the top band (Band 1) of an
-> instrument card, showing the three Links (Pool of reviewers / Pool of those
-> reviewed / Unit of review).*
+> 📷 **Screenshot —** `08-assignment-rule.png` — *the **Instrument assignment
+> rule** card (top band) of an instrument card, showing the three Links (Who
+> does the review / Who is being reviewed / Unit of review).*
 
 You don't generate the pairs here — that happens when you **Prepare** the
 session (Section 5). Afterwards, the **Assignments** page (under Operations)
@@ -315,7 +315,7 @@ So you know what you're asking people to do:
 Screenshot checklist (replace each 📷 callout above with an image):
   01-sign-in.png            02-empty-lobby.png         03-create-session.png
   04-session-home-draft.png 05-quick-setup.png         05a-reviewers-setup.png
-  06-instrument-editor.png  07-instrument-preview.png  08-band1-rule.png
+  06-instrument-editor.png  07-instrument-preview.png  08-assignment-rule.png
   08a-assignments-preview.png  09-visibility.png        10-validate.png
   11-activated.png
   12-reviewer-dashboard.png 13-responses-coverage.png  14-release.png
