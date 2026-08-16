@@ -3924,15 +3924,33 @@
             // The name input sits inside the <summary>, so a Space (and
             // Enter) keypress with the input focused bubbles up and
             // activates the summary — toggling the card open/closed
-            // mid-type. Stop those keys from propagating out of the
-            // input so they stay in the field. stopPropagation (not
-            // preventDefault) keeps the character typing; ``keyup`` is
-            // covered too because summary activation for Space fires on
-            // key-up like a button.
+            // mid-type. The summary toggles via the browser's default
+            // key handler (which walks up from the focused input during
+            // default-action processing), so ``stopPropagation`` can't
+            // stop it — only ``preventDefault`` can, and that also
+            // swallows the keypress. So: preventDefault Space / Enter on
+            // every phase to kill the toggle, then re-apply the key in
+            // the field — insert the space at the cursor (respecting
+            // maxlength) and fire ``input`` so the dirty tracker sees
+            // it; Enter is a no-op (no toggle, no accidental Save).
             function _titleKeyGuard(e) {
-              if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
-                e.stopPropagation();
+              if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') {
+                return;
               }
+              e.preventDefault();
+              if (e.type !== 'keydown' || e.key === 'Enter') { return; }
+              var input = e.currentTarget;
+              var start = input.selectionStart;
+              var end = input.selectionEnd;
+              if (start == null) { return; }
+              var v = input.value;
+              if (input.maxLength > 0
+                  && (v.length - (end - start) + 1) > input.maxLength) {
+                return;
+              }
+              input.value = v.slice(0, start) + ' ' + v.slice(end);
+              input.selectionStart = input.selectionEnd = start + 1;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
             }
             document.querySelectorAll('[data-card-title-input]').forEach(function (input) {
               input.addEventListener('keydown', _titleKeyGuard);
