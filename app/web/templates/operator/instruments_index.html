@@ -27,6 +27,22 @@
        region disables them but leaves them visible; hide them off the
        lock state directly, matching the other edit affordances. */
     [data-instrument-card][data-instrument-locked="true"] button[data-help-card-key] { display: none !important; }
+    /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
+       Rendered per card (hidden until a fetch-Save comes back with
+       validation errors); lists the blocking issues at the top of the
+       still-unlocked card. */
+    .save-error-banner {
+      margin: 0 0 12px 0;
+      padding: 10px 14px;
+      border: 1px solid var(--danger-border, #f2b8b5);
+      border-left-width: 4px;
+      border-radius: 6px;
+      background: var(--danger-bg, #fdecea);
+      color: var(--danger-text, #8a1c14);
+      font-size: 0.9rem;
+    }
+    .save-error-banner ul { margin: 6px 0 0 0; padding-left: 20px; }
+    .save-error-banner strong { font-weight: 600; }
     /* Segment 13B PR 2 — Display Fields Sort column. The
        per-row Sort cell hosts a tri-state click button + a
        priority badge. */
@@ -727,6 +743,12 @@
          locked card is never Saved, so always-rendering is safe. #}
       <form id="dfsave-{{ instrument.id }}" method="post"
             action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
+      {# Segment 18R Item 2 PR 3 — consolidated-Save summary banner.
+         Hidden until a fetch-Save returns validation errors; the JS
+         fills it with the blocking issues and keeps the card unlocked
+         with edits intact. #}
+      <div data-save-error-banner="{{ instrument.id }}"
+           class="save-error-banner" role="alert" hidden></div>
       {# New-model card heading. Short_label + description used to
          render here (left-column input + right-column display /
          textarea inside a bottom-grid). Both moved into the Band 2
@@ -3731,30 +3753,91 @@
             window.newModelSetLock(card, false);
             return false;
           };
-          // Belt-and-suspenders flush: intercept every dfsave
-          // form's submit (the bottom Save button) and fire
-          // saveBand2State one more time before navigation, so
-          // any DOM-only state that didn't fire a save (or
-          // whose save was still in flight) gets dispatched.
-          // saveBand2State uses navigator.sendBeacon which is
-          // designed to survive page navigation, so the
-          // sequence is safe to do synchronously here.
+          // Segment 18R Item 2 PR 3 — on success clear the dirty
+          // store and reset Save/Cancel to their clean (disabled)
+          // state. The card stays unlocked (Lock owns the gate) and
+          // the DOM already holds the just-saved values, so there is
+          // no reload. Any prior error banner is cleared.
+          window.newModelOnSaveSuccess = window.newModelOnSaveSuccess || function (card) {
+            if (!card) { return; }
+            card.removeAttribute('data-instrument-dirty');
+            var banner = card.querySelector('[data-save-error-banner]');
+            if (banner) {
+              banner.hidden = true;
+              while (banner.firstChild) { banner.removeChild(banner.firstChild); }
+            }
+            card.querySelectorAll(
+              '[data-new-model-save], [data-new-model-cancel]'
+            ).forEach(function (b) { b.disabled = true; });
+          };
+          // Render the consolidated-Save validation summary at the top
+          // of the still-unlocked card; edits stay intact (dirty stays
+          // set so the operator can fix + retry). textContent avoids
+          // any markup injection from server messages.
+          window.newModelShowSaveErrors = window.newModelShowSaveErrors || function (card, errors) {
+            if (!card) { return; }
+            var banner = card.querySelector('[data-save-error-banner]');
+            if (!banner) { return; }
+            while (banner.firstChild) { banner.removeChild(banner.firstChild); }
+            var strong = document.createElement('strong');
+            strong.textContent = "Couldn't save this instrument:";
+            banner.appendChild(strong);
+            var ul = document.createElement('ul');
+            (errors || []).forEach(function (e) {
+              var li = document.createElement('li');
+              li.textContent = e;
+              ul.appendChild(li);
+            });
+            banner.appendChild(ul);
+            banner.hidden = false;
+            if (banner.scrollIntoView) { banner.scrollIntoView({ block: 'nearest' }); }
+          };
+          // Segment 18R Item 2 PR 3 — the JS Save path. Intercept the
+          // dfsave form submit and fetch-POST the consolidated JSON
+          // ``/save`` instead of navigating to the ``/fields/save``
+          // form action (which stays as the no-JS fallback). On ok the
+          // card stays unlocked with no reload; on validation failure
+          // the summary banner renders with edits intact.
           function _newModelWireSaveFlushers() {
             document.querySelectorAll('form[id^="dfsave-"]').forEach(function (form) {
               if (form._newModelFlushWired) { return; }
               form._newModelFlushWired = true;
-              form.addEventListener('submit', function () {
-                // Segment 18R Item 2 PR 2 — Save navigates (form POST
-                // → 303 in PR 2; the JSON save lands in PR 3), so mark
-                // this navigation intentional to suppress the nav-away
-                // guard.
-                window._newModelIntentionalNav = true;
+              form.addEventListener('submit', function (ev) {
+                if (ev && ev.preventDefault) { ev.preventDefault(); }
                 var instrumentCard = form.closest('[id^="instrument-"]');
                 if (!instrumentCard) { return; }
+                // Band 2 response-field state still persists via its
+                // own endpoint in PR 3 (folds into /save in PR 4);
+                // flush it alongside the consolidated save.
                 var band2 = instrumentCard.querySelector(
                   '[data-new-model-band2]'
                 );
                 if (band2) { saveBand2State(band2); }
+                var saveUrl = form.getAttribute('action')
+                  .replace('/fields/save', '/save');
+                fetch(saveUrl, {
+                  method: 'POST',
+                  body: new FormData(form),
+                  credentials: 'same-origin',
+                  headers: { 'X-Requested-With': 'fetch' }
+                }).then(function (resp) {
+                  return resp.json().catch(function () {
+                    return { ok: resp.ok, errors: ['Save failed — please retry.'] };
+                  }).then(function (data) {
+                    if (resp.ok && data && data.ok) {
+                      window.newModelOnSaveSuccess(instrumentCard);
+                    } else {
+                      window.newModelShowSaveErrors(
+                        instrumentCard,
+                        (data && data.errors) || ['Save failed — please retry.']
+                      );
+                    }
+                  });
+                }).catch(function () {
+                  window.newModelShowSaveErrors(
+                    instrumentCard, ['Save failed — please retry.']
+                  );
+                });
               });
             });
           }

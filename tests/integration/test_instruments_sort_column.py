@@ -407,3 +407,96 @@ def test_sort_error_banner_renders_on_redirect_target(
     # Banner with the error message rendered as banner-error.
     assert "banner banner-error" in body
     assert re.search(r"sideways|not one of", body)
+
+
+# ─────────────────────────────────────────────────────────────────
+# Segment 18R Item 2 PR 3 — consolidated Save route (JSON /save)
+# ─────────────────────────────────────────────────────────────────
+
+
+def test_consolidated_save_returns_ok_json_and_persists(
+    db: Session, client: TestClient
+) -> None:
+    """The JSON ``/save`` twin of ``/fields/save`` applies the same
+    payload and returns ``{"ok": true}`` (200) — no redirect. Persists
+    the sort spec so the client can stay unlocked with no reload."""
+    review_session = _make_session(client, db, code="save-json-ok")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    form = _bulk_save_form(instrument)
+    form["sort_display_field_id"] = [str(f1.id)]
+    form["sort_dir"] = ["asc"]
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"/{instrument.id}/save",
+        data=form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    db.refresh(instrument)
+    assert instrument.sort_display_fields == [
+        {"display_field_id": f1.id, "dir": "asc"}
+    ]
+
+
+def test_consolidated_save_misaligned_returns_422_json(
+    db: Session, client: TestClient
+) -> None:
+    """A validation failure returns ``{"ok": false, "errors": [...]}``
+    (422) instead of a 303 redirect — the client renders the summary
+    banner from ``errors`` and keeps the operator's edits."""
+    review_session = _make_session(client, db, code="save-json-misalign")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    form = _bulk_save_form(instrument)
+    form["sort_display_field_id"] = [str(f1.id)]
+    form["sort_dir"] = []  # misaligned arrays
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"/{instrument.id}/save",
+        data=form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["ok"] is False
+    assert any("misaligned" in e for e in body["errors"])
+
+
+def test_consolidated_save_over_cap_returns_422_json(
+    db: Session, client: TestClient
+) -> None:
+    """A service-level SortSpecError (sort over the 3-field cap)
+    surfaces as a JSON error, not a redirect."""
+    review_session = _make_session(client, db, code="save-json-cap")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f3 = InstrumentDisplayField(
+        instrument_id=instrument.id,
+        source_type="reviewee",
+        source_field="tag_3",
+        label="Tag 3",
+        order=max(df.order for df in instrument.display_fields) + 1,
+        visible=True,
+    )
+    db.add(f3)
+    db.commit()
+    form = _bulk_save_form(instrument)
+    form["sort_display_field_id"] = [
+        str(f1.id), str(f2.id), str(f3.id), str(f1.id)
+    ]
+    form["sort_dir"] = ["asc", "asc", "asc", "desc"]
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"/{instrument.id}/save",
+        data=form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["ok"] is False
+    assert any("maximum" in e for e in body["errors"])
