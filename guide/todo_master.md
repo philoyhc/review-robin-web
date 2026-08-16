@@ -1953,10 +1953,12 @@ rationalization on the Instruments page.
   Links relabelled **Who does the review / Who is being reviewed / Unit of
   review** (unbold). Operator-facing labels only; internal `band1` / `link1`–
   `link3` ids retained. Specs + quickstart §4c updated.
-- **Item 2 (planned)** — harmonize the card's save / lock model into one
-  staged-then-**Save and Lock** persistence path (retires the per-control
-  immediate POSTs; fixes the un-registered-new-field lost-edit; per-row
-  R/≡/✓/X button-state matrix). See **Upcoming** + the plan doc.
+- **Item 2 (planned)** — harmonize the card's edit controls into one
+  staged-then-**Save** persistence path (keeps the current **Save · Lock ·
+  Cancel** trio — Save persists progressively, Lock is the separate final
+  step; retires the per-control immediate POSTs; fixes the
+  un-registered-new-field lost-edit; per-row R/≡/✓/X button-state matrix).
+  See **Upcoming** + the plan doc.
 
 ---
 
@@ -2024,12 +2026,14 @@ dep chains called out at the bottom of this file.
 - **18R — UX refinement** *(Item 1 shipped #1899; Item 2 remaining)*.
   (Item 1 — instrument-card identity — is done; see the Segment 18R entry
   in the Done log above.) **Item 2 (remaining):** harmonize the instrument
-  card's **save / lock model** into one persistence path — locked shows
-  only **Unlock**; unlocked shows **Save and Lock** / **Lock** (by dirty
-  state) + **Cancel**; every editable element stages and persists **only**
-  on Save and Lock (retires the per-control immediate POSTs found in
-  `guide/instrument_card_ux_audit.md`, fixes the un-registered-new-field
-  lost-edit, and applies the per-row R/≡/✓/X button-state matrix).
+  card's edit controls into one persistence path — locked shows only
+  **Unlock**; unlocked keeps the current **Save · Lock · Cancel** trio
+  (Save persists staged edits progressively and stays unlocked, Lock is the
+  separate final read-only step, Cancel discards); every editable element
+  stages and persists **only** on **Save** (retires the per-control
+  immediate POSTs found in `guide/instrument_card_ux_audit.md`, fixes the
+  un-registered-new-field lost-edit, and applies the per-row R/≡/✓/X
+  button-state matrix).
   Consequential UI → scaffold-first, several PRs. **Plan:**
   `guide/segment_18R_ux_refine.md`.
 

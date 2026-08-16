@@ -115,39 +115,44 @@ contract.
 
 **The target model — one framework, every editable element inside it.**
 
-The card has two states, with a fixed button set governed entirely by
-edit-state and dirtiness. (This item governs **only** the edit / save / lock
-cluster. The card / session action buttons — **Replicate, Delete,
-+Instrument, +Page break** — are explicitly **out of scope** and unaffected.)
+**Keep the current button trio — Save · Lock · Cancel — in their current
+positions** (revised 2026-08-16 after hands-on testing). Save and Lock are
+**separate** so the operator can *save progressively* ("lock in" edits along
+the way) and only **Lock** the instrument when fully done. This item governs
+**only** the edit / save / lock cluster; the card / session action buttons —
+**Replicate, Delete, +Instrument, +Page break** — are explicitly **out of
+scope** and unaffected.
 
 | Card state | Editable? | Buttons in the edit/save/lock cluster |
 |---|---|---|
 | **Locked** (default) | No | **Unlock** — nothing else |
-| **Unlocked, no pending edits** | Yes | **Lock** · **Cancel** *(greyed)* |
-| **Unlocked, pending edits** | Yes | **Save and Lock** · **Cancel** *(active)* |
+| **Unlocked, clean** (no unsaved edits) | Yes | **Save** *(greyed)* · **Lock** · **Cancel** *(greyed)* |
+| **Unlocked, dirty** (unsaved edits) | Yes | **Save** *(active)* · **Lock** · **Cancel** *(active)* |
 
-- The primary slot switches by dirty state: **"Save and Lock"** when there
-  are unsaved edits, **"Lock"** when there are none. There is **no**
-  standalone "Save without locking" and **no** editing while locked —
-  committing and re-locking are the same gesture.
-- **Cancel** discards all pending edits and returns to **Locked**; greyed out
-  when nothing has been edited.
+- **Save** — persists **all** staged edits (the consolidated writer below) and
+  **stays unlocked** with the card now clean; greyed when there's nothing to
+  save. This is the progressive "save along the way" gesture.
+- **Lock** — returns the card to read-only. If there are unsaved edits, it
+  fires the **unsaved-changes guard** (warn → Save or discard first) — the same
+  guard as navigating away.
+- **Cancel** — discards all staged edits and returns the card to
+  **unlocked-clean** (still editable); greyed when there's nothing to discard.
+- **Unlock** — the only control on a locked card; enters edit mode.
 
 **Unified persistence.** Every editable / changeable element **stages** its
 change client-side (into one per-card pending-edit set / dirty tracker) and is
-persisted **only** by **Save and Lock**. This retires the in-card immediate
-POSTs: the current path-B controls fold into a single Save writer
-(`…/fields/save` or a consolidated commit route). The live **preview** still
-updates as you edit (client render), but **nothing hits the server until Save
-and Lock**.
+persisted **only** by **Save**. This retires the in-card immediate POSTs: the
+current path-B controls fold into a single consolidated Save writer. The live
+**preview** still updates as you edit (client render), but **nothing hits the
+server until Save**.
 
 **This fixes the lost-edit bug for free** — with all editable elements in the
-framework, a newly-typed Response Field is captured by Save and Lock whether
-or not the per-row control was clicked. The per-row **✓** becomes a pure
+framework, a newly-typed Response Field is captured by **Save** whether or not
+the per-row control was clicked. The per-row **✓** becomes a pure
 **push-to-preview** affordance: clicking it registers the row's edit into the
-live preview but **does not persist** — persistence happens only on Save and
-Lock. **Glyph:** keep the **✓ tick** (the earlier ⬆ idea is optional — now
-that its meaning is "reflect my edit in the preview", the tick reads fine).
+live preview but **does not persist** — persistence happens only on **Save**.
+**Glyph:** keep the **✓ tick** (the earlier ⬆ idea is optional — now that its
+meaning is "reflect my edit in the preview", the tick reads fine).
 
 **Per-row button states (R / ≡ / ✓ / X).** The Response-Field row controls
 follow the same lock-gated framework. Target behaviour:
@@ -171,10 +176,11 @@ follow the same lock-gated framework. Target behaviour:
     row** (title "Empty row — nothing to delete"); **active** otherwise
     (deletes the row and its paired pill).
 
-**Dirty tracking.** One per-card dirty flag drives the primary button's label
-(Save-and-Lock vs Lock), Cancel's enabled/greyed state, and an
-unsaved-changes guard on navigating away. Every editable control flips the
-flag on change.
+**Dirty tracking.** One per-card dirty flag drives **Save**'s and **Cancel**'s
+enabled/greyed state, and the **unsaved-changes guard** fired on **Lock** and
+on navigating away. Every editable control flips the flag on change; a
+successful Save clears it. (Lock is always clickable; Cancel/Save gate on the
+flag.)
 
 **Scaffold-first (consequential UI).** This changes the button set **and** the
 persistence contract, so land it scaffold-first (`CLAUDE.md` → Working
@@ -190,30 +196,31 @@ dirty-tracking / staging JS + consolidating the save route(s) + standing down
 the per-control POST paths. Likely **several PRs** (scaffold → per-band wiring
 → endpoint cleanup). Tests: the button-state matrix (locked / unlocked-clean /
 unlocked-dirty), staged round-trips per control group, the fixed lost-edit
-case, and a "nothing persists before Save and Lock" assertion.
+case, and a "nothing persists before Save" assertion.
 
 **Definition of done.**
 
-- Locked card shows **only Unlock**. Unlocked card shows **Save and Lock** /
-  **Lock** (by dirty state) + **Cancel** (greyed when clean).
+- Locked card shows **only Unlock**. Unlocked card shows the trio **Save ·
+  Lock · Cancel** (Save + Cancel greyed when clean; Lock always active, warns
+  on unsaved edits).
 - Editing any element — Assignment rule, Preview/Band 2 (pills, help, column
   widths), Visibility, Response Fields (incl. brand-new rows), instrument
   name / short_label / description — is **staged**; **nothing persists until
-  Save and Lock**; **Cancel** discards cleanly.
+  Save**; **Cancel** discards to clean-unlocked.
 - The un-`✓`'d-new-field lost-edit is gone.
 - The card no longer fires the in-card immediate POSTs (`/band2-state`,
   `/identity`, `/column-widths`, in-card `/display-fields/order`); those
   endpoints are removed or retained only for any non-card caller.
 - The per-row **✓** is push-to-preview only (updates the preview, persists
   nothing); **column-width drag is fully staged** (live preview, no server
-  write until Save and Lock).
+  write until Save).
 - The per-row **R / ≡ / ✓ / X** button states follow the matrix above (all
   inactive when locked; R/≡ inactive on a blank row; ✓ inactive when empty or
   already-in-preview-unchanged; X keeps its saved-responses / blank-row
   gates).
 - Leaving an unlocked card with pending edits **warns/confirms** before
   discarding.
-- **Save and Lock runs the full current validation set** (listed in Decisions
+- **Save runs the full current validation set** (listed in Decisions
   #4); a validation failure leaves the card unlocked with edits intact.
 - `spec/instruments.md` + `spec/operator_ui_concept.md` (lock card /
   Save-Edit toggle) updated to the harmonized model; the audit
@@ -223,22 +230,22 @@ case, and a "nothing persists before Save and Lock" assertion.
 **Decisions (resolved 2026-08-16).**
 
 1. **Per-row ✓ → push-to-preview.** It registers the row's edit into the live
-   preview, **no persistence** until Save and Lock. **Keep the ✓ tick glyph**
+   preview, **no persistence** until Save. **Keep the ✓ tick glyph**
    (the earlier ⬆ idea is optional). The R / ≡ / ✓ / X **button-state matrix**
    is specified in the body above (locked → all inactive; unlocked → R/≡ gated
    on a non-blank row, ✓ gated on empty / already-in-preview-unchanged, X
    unchanged).
 2. **Column-width drag → fully staged.** The preview updates live as you drag,
-   but the server write happens **only** on Save and Lock — the immediate
+   but the server write happens **only** on Save — the immediate
    `/column-widths` POST is retired. Chosen for consistency with every other
    editable element.
 3. **Unsaved-changes guard → confirm/warn.** On Unlock → navigate-away (or any
    attempt to leave with pending edits), **warn that there are unsaved edits**
    and require confirmation before discarding.
-4. **Save and Lock runs the same validation the current Save does — yes.**
-   Because Save and Lock becomes the single writer for the whole card, it must
-   run the union of the validations the current per-endpoint writers run. The
-   current set (to preserve):
+4. **Save runs the full current validation set — yes.**
+   Because the consolidated **Save** becomes the single writer for the whole
+   card, it must run the union of the validations the current per-endpoint
+   writers run. The current set (to preserve):
 
    *Response fields (`_response_fields` / `_band2.set_band2_state`):*
    - **Field key** — required; ≤ 64 chars; matches `^[a-z][a-z0-9_]*$`;
@@ -269,7 +276,7 @@ case, and a "nothing persists before Save and Lock" assertion.
    (`lifecycle.invalidate_if_validated`), and the locked default rows
    (Name / Email) stay pinned at the top.
 
-   The consolidated **Save and Lock** must surface each of these as a blocking
+   The consolidated **Save** must surface each of these as a blocking
    error (or its existing confirm gate) rather than silently dropping the edit
    — and, per the new model, a failed validation keeps the card **unlocked
    with edits intact** so the operator can fix and retry.
@@ -297,7 +304,7 @@ case, and a "nothing persists before Save and Lock" assertion.
   retired; keep `?editing` only as an optional initial-unlock deep-link.)
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
-  **Save and Lock / Cancel** card A.
+  **Save / Cancel** card A.
 - **Validation errors → summary banner at the top of the (still-unlocked)
   card**, listing the blocking issues; edits stay intact.
 
@@ -316,19 +323,19 @@ agree the always-rendered / toggle shape before wiring persistence.
 
 **PR ladder.**
 
-1. **Scaffold (inert).** The three-state button cluster (Locked → **Unlock**;
-   Unlocked-clean → **Lock** + greyed **Cancel**; Unlocked-dirty → **Save and
-   Lock** + **Cancel**) driven by a client lock-state machine, with all edit
-   controls present-but-disabled when locked. Current persistence untouched
-   (existing endpoints still fire). Agree the surface.
+1. **Scaffold (inert).** The button cluster per state (Locked → **Unlock**;
+   Unlocked → **Save · Lock · Cancel**, with Save + Cancel greyed until
+   dirty) driven by a client lock-state machine, with all edit controls
+   present-but-disabled when locked. Current persistence untouched (existing
+   endpoints still fire). Agree the surface.
 2. **Dirty-tracking + staging harness.** A per-card client store collecting
-   every edit; wire the state machine to it — Save-and-Lock vs Lock label,
-   Cancel greyed/active, the one-card-at-a-time guard, and the nav-away
-   `beforeunload` confirm. Not yet the server writer.
-3. **Consolidated Save-and-Lock route.** The new `…/save` endpoint (full
-   payload → validate → atomic apply via existing writers → JSON). Wire
-   Save-and-Lock to fetch-POST it; on `ok` flip to locked, on `!ok` render the
-   summary banner and stay unlocked with edits intact.
+   every edit; wire the state machine to it — Save + Cancel greyed/active by
+   the dirty flag, the one-card-at-a-time guard, and the unsaved-changes
+   confirm on **Lock** + nav-away (`beforeunload`). Not yet the server writer.
+3. **Consolidated Save route.** The new `…/save` endpoint (full payload →
+   validate → atomic apply via existing writers → JSON). Wire the **Save**
+   button to fetch-POST it; on `ok` clear the dirty flag and stay unlocked, on
+   `!ok` render the summary banner and stay unlocked with edits intact.
 4. **Migrate Band 2 → staging.** Pills / help text / column widths stop
    immediate-POSTing and flow through the store + the consolidated save;
    Response Fields **R / ≡ / ✓ / X** apply the button-state matrix, **✓**
