@@ -1,6 +1,7 @@
 # Segment 18R — UX refinement
 
-**Status:** Planning. A holding segment for **operator-UX refinement** on
+**Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
+planned**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -16,7 +17,14 @@ slices; the segment stays open as a home for further UX refinements.
 
 ---
 
-## Item 1 — Instrument card identity (retire "Band 1" → "Instrument assignment rule")
+## Item 1 — Instrument card identity (retire "Band 1" → "Instrument assignment rule") — ✅ shipped (PR #1899, 2026-08-16)
+
+**Shipped:** the top band is now the bold **Instrument assignment rule** card;
+the three Links read **Who does the review / Who is being reviewed / Unit of
+review** (unbold). Operator-facing labels only — internal `band1` / `link1`–
+`link3` ids retained. Specs (`instruments.md`, `assignments.md`) + quickstart
+§4c updated. Full suite green. The problem / fix record is kept below for
+history.
 
 **The problem.** On the per-instrument card (Instruments page,
 `app/web/templates/operator/instruments_index.html`), the **top band** — the

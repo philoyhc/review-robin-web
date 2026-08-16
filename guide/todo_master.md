@@ -1942,6 +1942,24 @@ Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 
 ---
 
+### Segment 18R — UX refinement — Item 1 done 2026-08-16 (PR #1899); Item 2 planned (detailed plan: `guide/segment_18R_ux_refine.md`)
+
+Holding segment for operator-UX identity / label polish + interaction-model
+rationalization on the Instruments page.
+
+- **Item 1 (shipped #1899)** — the per-instrument card's top band is now the
+  bold **Instrument assignment rule** card (the "Instrument" prefix
+  disambiguates it from the Operations-row Assignments page), with the three
+  Links relabelled **Who does the review / Who is being reviewed / Unit of
+  review** (unbold). Operator-facing labels only; internal `band1` / `link1`–
+  `link3` ids retained. Specs + quickstart §4c updated.
+- **Item 2 (planned)** — harmonize the card's save / lock model into one
+  staged-then-**Save and Lock** persistence path (retires the per-control
+  immediate POSTs; fixes the un-registered-new-field lost-edit; per-row
+  R/≡/✓/X button-state matrix). See **Upcoming** + the plan doc.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -2003,22 +2021,16 @@ dep chains called out at the bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **18R — UX refinement** *(created 2026-08-16)*. Holding segment for
-  small, self-contained operator-UX identity / label polish on shipped
-  surfaces (no behaviour change). **Item 1:** retire the informal
-  "**Band 1**" label on the per-instrument card and title the top band
-  the **Assignment rule** card (it currently has no title of its own,
-  just three bare Link sub-headings under the Instrument Name), and
-  strengthen each card's identity consistently — a small
-  `instruments_index.html` slice + "Band 1" → "Assignment rule" in
-  `spec/instruments.md` / `spec/assignments.md` (internal `band1` code
-  names stay). **Item 2:** harmonize the instrument card's **save / lock
-  model** into one persistence path — locked shows only **Unlock**;
-  unlocked shows **Save and Lock** / **Lock** (by dirty state) + **Cancel**;
-  every editable element stages and persists **only** on Save and Lock
-  (retires the per-control immediate POSTs found in
-  `guide/instrument_card_ux_audit.md` and fixes the un-✓'d-new-field
-  lost-edit). Consequential UI → scaffold-first, several PRs. **Plan:**
+- **18R — UX refinement** *(Item 1 shipped #1899; Item 2 remaining)*.
+  (Item 1 — instrument-card identity — is done; see the Segment 18R entry
+  in the Done log above.) **Item 2 (remaining):** harmonize the instrument
+  card's **save / lock model** into one persistence path — locked shows
+  only **Unlock**; unlocked shows **Save and Lock** / **Lock** (by dirty
+  state) + **Cancel**; every editable element stages and persists **only**
+  on Save and Lock (retires the per-control immediate POSTs found in
+  `guide/instrument_card_ux_audit.md`, fixes the un-registered-new-field
+  lost-edit, and applies the per-row R/≡/✓/X button-state matrix).
+  Consequential UI → scaffold-first, several PRs. **Plan:**
   `guide/segment_18R_ux_refine.md`.
 
 - **18S — Security refinements** *(created 2026-08-16)*. Holding segment
