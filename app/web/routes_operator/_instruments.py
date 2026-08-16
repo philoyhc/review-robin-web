@@ -690,6 +690,165 @@ async def instrument_bulk_save_fields(
         )
 
 
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/save")
+async def instrument_consolidated_save(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Segment 18R Item 2 PR 3 — consolidated Save (JSON).
+
+    The client Save button fetch-POSTs the dfsave form payload here.
+    On success the card stays unlocked with **no reload** (the DOM
+    already holds the just-saved values); on validation failure the
+    response carries ``errors`` the card renders as a summary banner,
+    edits intact.
+
+    This mirrors the ``/fields/save`` apply sequence (Band 1 + Link 3
+    + column widths + sort + identity + Band 3 visibility) but returns
+    JSON instead of a 303. ``/fields/save`` stays as the no-JS ``<form>``
+    fallback until PR 6 retires it; Band 2 response-field state and the
+    identity / display-order staging fold in here in PRs 4-5. Apply
+    semantics (including the internal commits in ``set_sort_display_fields``
+    / visibility ``upsert_many``) are unchanged from ``/fields/save``.
+    """
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+
+    form = await request.form()
+
+    def _fail(message: str) -> JSONResponse:
+        return JSONResponse(
+            {"ok": False, "errors": [message]},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+    # Band 1 (Link 1 / Link 2) + Link 3 unit-of-review.
+    try:
+        band1 = instruments_service.parse_band1_form(form)
+    except instruments_service.Band1ParseError as exc:
+        return _fail(str(exc))
+    link3_mode, link3_pairs, link3_touched = (
+        instruments_service.parse_link3_form(form)
+    )
+    instruments_service.set_band1_assignment_rules(
+        db, instrument=instrument, actor=user, **band1
+    )
+    instruments_service.set_unit_of_review(
+        db,
+        instrument=instrument,
+        mode=link3_mode,
+        boundary_pairs=link3_pairs,
+        actor=user,
+        touched=link3_touched,
+    )
+
+    # Column widths (mirrored into the form snapshot on every drag).
+    snapshot = form.get("column_widths_snapshot")
+    if isinstance(snapshot, str) and snapshot.strip():
+        import json as _json
+
+        try:
+            widths_payload = _json.loads(snapshot)
+        except (TypeError, ValueError):
+            widths_payload = None
+        if isinstance(widths_payload, dict):
+            instruments_service.set_column_widths(
+                db, instrument=instrument, widths=widths_payload, actor=user
+            )
+
+    # Sort spec (parallel ``sort_display_field_id`` / ``sort_dir`` arrays).
+    sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
+    sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
+    if len(sort_ids_raw) != len(sort_dirs_raw):
+        return _fail("Sort spec arrays misaligned.")
+    sort_pairs: list[tuple[int, str]] = []
+    for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
+        try:
+            sort_pairs.append((int(raw_id), raw_dir))
+        except ValueError:
+            return _fail("Sort spec ids must be integers.")
+    try:
+        instruments_service.set_sort_display_fields(
+            db,
+            instrument=instrument,
+            fields=sort_pairs,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except instruments_service.SortSpecError as exc:
+        return _fail(exc.message)
+
+    # Identity (description / short_label) — present only if the card
+    # still rides them on the form (defensive; new-model cards edit
+    # them inline via /identity).
+    if "description" in form:
+        submitted_desc = form.get("description")
+        cleaned = (
+            submitted_desc.strip()
+            if isinstance(submitted_desc, str)
+            else None
+        ) or None
+        if cleaned != instrument.description:
+            instruments_service.update_instrument_description(
+                db, instrument=instrument, description=cleaned, actor=user
+            )
+    if "short_label" in form:
+        submitted_label = form.get("short_label")
+        try:
+            instruments_service.update_short_label(
+                db,
+                instrument=instrument,
+                short_label=(
+                    submitted_label
+                    if isinstance(submitted_label, str)
+                    else None
+                ),
+                actor=user,
+            )
+        except ValueError as exc:
+            return _fail(str(exc))
+
+    # Band 3 visibility policies (chips ride ``form="dfsave-<id>"``).
+    vp_rows: list[dict[str, object]] = []
+    for audience in visibility_policies.AUDIENCES:
+        wo_raw = form.get(f"{audience}_while_ongoing_mode")
+        ar_raw = form.get(f"{audience}_after_release_mode")
+        if wo_raw is None and ar_raw is None:
+            continue
+        vp_rows.append(
+            {
+                "audience": audience,
+                "while_ongoing_mode": (
+                    (str(wo_raw).strip() or None)
+                    if wo_raw is not None
+                    else None
+                ),
+                "after_release_mode": (
+                    (str(ar_raw).strip() or None)
+                    if ar_raw is not None
+                    else None
+                ),
+            }
+        )
+    if vp_rows:
+        try:
+            visibility_policies.upsert_many(
+                db,
+                review_session=review_session,
+                instrument=instrument,
+                rows=vp_rows,
+                user=user,
+                correlation_id=request_correlation_id(),
+            )
+        except visibility_policies.VisibilityPolicyError as exc:
+            return _fail(exc.message)
+
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
 
 # Wave 5 PR 5.3 — the legacy ``/instruments/add`` POST route
 # retired (its ``+Add instrument`` button retired in Wave 4 PR

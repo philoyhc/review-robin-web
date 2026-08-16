@@ -5595,6 +5595,38 @@ def test_pr2_dirty_tracking_and_guards_ship(
     assert '[data-instrument-card][data-instrument-dirty="true"]' in body
 
 
+def test_pr3_consolidated_save_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 3 — the client Save path fetch-POSTs the
+    JSON ``/save`` route (no reload) and renders a summary banner on
+    failure. Pin the wiring: the per-card banner placeholder + CSS, the
+    success / error handlers, and the fetch to the /save URL (derived
+    from the /fields/save form action). The dfsave form keeps its
+    /fields/save action as the no-JS fallback."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="pr3-save-wiring"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Per-card error-banner placeholder + its CSS.
+    assert f'data-save-error-banner="{new_model.id}"' in body
+    assert ".save-error-banner" in body
+    # Success / error handlers.
+    assert "window.newModelOnSaveSuccess" in body
+    assert "window.newModelShowSaveErrors" in body
+    # Fetch derives the /save URL from the form action and reports
+    # success back to the handler.
+    assert "replace('/fields/save', '/save')" in body
+    assert "newModelOnSaveSuccess(instrumentCard)" in body
+    # No-JS fallback: the dfsave form still posts to /fields/save.
+    assert (
+        f'action="/operator/sessions/{review_session.id}'
+        f'/instruments/{new_model.id}/fields/save"'
+    ) in body
+
+
 def test_lock_unlock_replaces_edit_button_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
