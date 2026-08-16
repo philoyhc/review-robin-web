@@ -72,3 +72,53 @@ progressive-enhancement path is the plan.
 then 17A, then 22 — before being moved here on 2026-05-16. The
 superseded segment plan is recoverable from git history
 (`guide/segment_22_ag_grid_replacement.md`).*
+
+---
+
+## Randomizer / grouper
+
+**The idea.** A facility to assign reviewers to reviewees — or to
+partition either roster into groups — **at random**, individually
+or by group, rather than by an explicit rule. For example: "randomly
+pair each student with 3 peers," or "randomly split the cohort into
+review groups of 5, everyone reviews their group."
+
+**Why it is off the roadmap.** Random assignment at generate-time
+fights the engine's **idempotency** contract. Assignments are not
+authored row-by-row; they are *generated* by a deterministic
+per-instrument rule pass (Band 1 → the rule engine), and the app
+**re-runs that pass repeatedly** — on **Prepare**, and on the
+reconcile + regenerate path — precisely because regeneration must be
+safe to repeat without disturbing saved responses (responses are
+keyed to stable `(reviewer, reviewee, instrument)` pairs). A random
+draw *inside* generate is non-deterministic: every re-run would
+reshuffle the pairings, orphaning saved responses, and any
+**subsequent redraft** (add/remove a person, tweak a field, re-open
+setup) would silently re-draw *everyone*. Randomness at the generate
+step is fundamentally incompatible with a re-runnable generate.
+
+**What is being done / could be done instead.** Move the randomness
+**out of generate-time and into the data, once** — then let the
+existing deterministic, tag-based rules do the assignment. Concretely:
+a one-time **shuffle** step materializes the random result into
+persisted inputs — e.g. stamp a randomly-drawn group label into a
+reviewee **tag** column (`RevieweeTag2 = "Group C"`), or write random
+pairings directly as **relationships** rows. After that, assignment is
+an ordinary deterministic function of roster + rules (Band 1 filters
+on the group tag), and **Prepare / regenerate stay idempotent** —
+re-running never re-draws, because the draw is now fixed data. **Seed
+the shuffle** (persist the seed) for reproducibility and an audit
+trail. This is a **pre-processing utility** (a "randomize into N
+groups" / "random pairing" button that writes tags or relationships),
+**not a rule-engine mode** — which is exactly why it can be added
+without touching the idempotent generate path. And it is *already
+achievable manually today*: randomize in a spreadsheet, drop the
+groups into the tag columns, upload the CSV, and use a tag-based rule
+(the same tag → rule flow the quickstart describes for tutorial
+groups).
+
+**What would move it back onto the roadmap.** Pilot evidence that
+operators want random grouping / pairing often enough that the manual
+spreadsheet route is real friction. The shape to build then is the
+**seeded, data-materializing** "shuffle into tags / random pairings"
+pre-step above — deliberately never a non-deterministic generate mode.
