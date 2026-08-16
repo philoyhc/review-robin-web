@@ -276,6 +276,84 @@ case, and a "nothing persists before Save and Lock" assertion.
 
 ---
 
+### Item 2 — implementation (decisions + PR ladder)
+
+**Decisions (2026-08-16).**
+
+- **Save writer → one consolidated endpoint.** A new
+  `POST /operator/sessions/{sid}/instruments/{iid}/save` takes the **whole
+  card** payload (assignment rule / Band 1, Band 2 state, visibility / Band 3,
+  response fields, identity, column widths, display-field order) and applies
+  it in **one transaction, one validation pass**, reusing the existing service
+  writers (`set_band1_assignment_rules`, `set_band2_state`, `bulk_save_fields`,
+  the view-policy + column-width writers, identity update). Returns JSON
+  (`{ok, errors}`) — no page render.
+- **Enter-edit UX → client-side toggle (no reload).** Every edit control is
+  **always rendered in the DOM**; when the card is **locked** they are
+  disabled and styled read-only. `newModelLockClick` becomes a client
+  **state machine** (locked ↔ unlocked) that enables/disables the controls,
+  swaps the button cluster, and drives the per-row button-state matrix — no
+  round-trip to enter/leave edit. (The server `?editing=<id>` gating is
+  retired; keep `?editing` only as an optional initial-unlock deep-link.)
+- **One card editable at a time.** A page-level "currently-unlocked instrument"
+  state; unlocking card B while card A is unlocked-and-dirty first prompts to
+  **Save and Lock / Cancel** card A.
+- **Validation errors → summary banner at the top of the (still-unlocked)
+  card**, listing the blocking issues; edits stay intact.
+
+**No migration.** All targets are existing columns / relationships
+(`name` / `short_label` / `description`, `band1_touched_links` + `rule_set_id`
+/ `session_rule_sets`, `band2_state`, `sort_display_fields`, `column_widths`,
+`instrument_view_policies`, `response_fields` / `display_fields`). Staging is
+client-side (no server "draft" state); the consolidated route reuses the
+existing writers. **No Alembic migration.**
+
+**Key risk / where effort concentrates.** The template currently renders
+*different markup* for `is_editing` vs view (inputs vs text). "No reload"
+means **always rendering the editable controls** and presenting them as
+read-only when locked — a real template refactor. Scaffold-first de-risks it:
+agree the always-rendered / toggle shape before wiring persistence.
+
+**PR ladder.**
+
+1. **Scaffold (inert).** The three-state button cluster (Locked → **Unlock**;
+   Unlocked-clean → **Lock** + greyed **Cancel**; Unlocked-dirty → **Save and
+   Lock** + **Cancel**) driven by a client lock-state machine, with all edit
+   controls present-but-disabled when locked. Current persistence untouched
+   (existing endpoints still fire). Agree the surface.
+2. **Dirty-tracking + staging harness.** A per-card client store collecting
+   every edit; wire the state machine to it — Save-and-Lock vs Lock label,
+   Cancel greyed/active, the one-card-at-a-time guard, and the nav-away
+   `beforeunload` confirm. Not yet the server writer.
+3. **Consolidated Save-and-Lock route.** The new `…/save` endpoint (full
+   payload → validate → atomic apply via existing writers → JSON). Wire
+   Save-and-Lock to fetch-POST it; on `ok` flip to locked, on `!ok` render the
+   summary banner and stay unlocked with edits intact.
+4. **Migrate Band 2 → staging.** Pills / help text / column widths stop
+   immediate-POSTing and flow through the store + the consolidated save;
+   Response Fields **R / ≡ / ✓ / X** apply the button-state matrix, **✓**
+   becomes push-to-preview only, and the **lost-edit is fixed** (all named
+   rows are captured). Retire `/band2-state`, `/column-widths` from the card.
+5. **Migrate identity + display order → staging.** Name / short_label /
+   description stop immediate-POSTing (retire `/identity` from the card);
+   display-field reorder folds into the payload (retire in-card
+   `/display-fields/order`). Band 1 + Band 3 (already staged) route into the
+   consolidated save instead of `/fields/save`.
+6. **Cleanup + tests.** Retire now-unused endpoints (or keep server-side only
+   where a verified non-card caller needs them); final button-state-matrix
+   pass; update `spec/instruments.md` + `spec/operator_ui_concept.md`. Tests:
+   the button-state matrix (locked / unlocked-clean / unlocked-dirty), staged
+   round-trips per area, the fixed lost-edit, "nothing persists before Save
+   and Lock", validation-failure keeps edits + shows the banner, the
+   one-card-at-a-time guard, and the nav-away confirm.
+
+**Endpoint disposition** (retire *from the card*; check for non-card callers
+before deleting server-side): `/band2-state`, `/identity`, `/column-widths`,
+in-card `/display-fields/order`, and the old `/fields/save` are all replaced
+by the single `…/save`.
+
+---
+
 ## Future items (add as they come up)
 
 This segment is the landing place for further small operator-UX identity /
