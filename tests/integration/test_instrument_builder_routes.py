@@ -5660,6 +5660,27 @@ def test_pr4_inline_editor_retirement_wiring_ships(
     assert 'name="description"' in body
 
 
+def test_cancel_preserves_card_open_state_on_reload(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 — Cancel's discard reload preserves each
+    card's open/closed layout (via the shared open-state capture) and
+    strips a stale ``#instrument-N`` hash, so it doesn't pop a different
+    card open. The behaviour is browser-only; pin the wiring."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="cancel-open-state"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # The open-state capture is exposed for Cancel to reuse.
+    assert (
+        "window.newModelCaptureOpenState = captureOpenStateForReload" in body
+    )
+    # Cancel invokes it before the discard reload.
+    assert "window.newModelCaptureOpenState()" in body
+
+
 def test_lock_unlock_replaces_edit_button_in_view_mode(
     client: TestClient, db: Session
 ) -> None:
