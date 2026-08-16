@@ -21,6 +21,12 @@
     [data-instrument-card][data-instrument-locked="true"] [data-unlock-only] { display: none !important; }
     [data-instrument-card][data-instrument-locked="false"] [data-lock-only] { display: none !important; }
     [data-instrument-card][data-instrument-locked="true"] [data-lock-region] { opacity: 0.75; }
+    /* The Band 2 preview help-card ✎/✓ edit affordances are built by
+       JS (renderHelpCard, keyed by data-help-card-key) so they can't
+       carry a Jinja data-unlock-only marker. `inert` on the lock
+       region disables them but leaves them visible; hide them off the
+       lock state directly, matching the other edit affordances. */
+    [data-instrument-card][data-instrument-locked="true"] button[data-help-card-key] { display: none !important; }
     /* Segment 13B PR 2 — Display Fields Sort column. The
        per-row Sort cell hosts a tri-state click button + a
        priority badge. */
