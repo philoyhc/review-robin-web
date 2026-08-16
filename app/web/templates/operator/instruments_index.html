@@ -3921,6 +3921,24 @@
                 e.preventDefault();
               }
             });
+            // The name input sits inside the <summary>, so a Space (and
+            // Enter) keypress with the input focused bubbles up and
+            // activates the summary — toggling the card open/closed
+            // mid-type. Stop those keys from propagating out of the
+            // input so they stay in the field. stopPropagation (not
+            // preventDefault) keeps the character typing; ``keyup`` is
+            // covered too because summary activation for Space fires on
+            // key-up like a button.
+            function _titleKeyGuard(e) {
+              if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+                e.stopPropagation();
+              }
+            }
+            document.querySelectorAll('[data-card-title-input]').forEach(function (input) {
+              input.addEventListener('keydown', _titleKeyGuard);
+              input.addEventListener('keypress', _titleKeyGuard);
+              input.addEventListener('keyup', _titleKeyGuard);
+            });
           }
           function _newModelOnReady() {
             _newModelInitialRefresh();
