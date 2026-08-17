@@ -5878,6 +5878,78 @@ def test_pr5b_band2_staging_wiring_ships(
     assert "serializeRow(row, null)" in body
 
 
+def test_new_response_field_column_width_persists_via_save(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 — a newly-added response field's column width
+    persists on Save. saveBand2Widths can't key an id-less pill in the
+    column-widths snapshot, so stageBand2State sends ``width_px`` in the
+    band2 payload and set_band2_state re-maps it to the new field's
+    freshly-minted id. Without this the new column is unsized and
+    ``table-layout: fixed`` redistributes the whole preview on reload."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="new-rf-width"
+    )
+    existing = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == new_model.id
+        )
+    ).scalars().all()
+    resp = [
+        {
+            "name": r.label,
+            "data_type": "string",
+            "selected": True,
+            "id": r.id,
+            "width_px": 300,
+        }
+        for r in existing
+    ]
+    # A brand-new field: no id, but a resized column (width_px).
+    resp.append(
+        {
+            "name": "Fresh",
+            "data_type": "string",
+            "selected": True,
+            "width_px": 444,
+        }
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={
+            "band2_state_snapshot": json.dumps(
+                {"selected_display_keys": [], "response_fields": resp}
+            )
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    db.refresh(new_model)
+    fresh = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+            InstrumentResponseField.label == "Fresh",
+        )
+    ).scalar_one()
+    assert (new_model.column_widths or {}).get(f"rf_{fresh.id}") == 444
+
+
+def test_stage_band2_sends_response_column_width_px(
+    client: TestClient, db: Session
+) -> None:
+    """The stager includes ``width_px`` (from the pill's data-width) so
+    a new field's width has a persistence path."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="width-px-wiring"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "rf.width_px = pillWidth" in body
+
+
 def test_pr5c_button_state_matrix_and_shape_css_ship(
     client: TestClient, db: Session
 ) -> None:
