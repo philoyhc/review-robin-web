@@ -115,10 +115,11 @@ this item:
 
 ### Scope / size
 
-Config field + derived `is_super_admin` property + self-heal in
-`get_or_create_user` + actor-super guard on promote/demote + target-super
-guard on demote/revoke/remove(+from-all-sessions) + Sys Admin template (tier
-badges + conditional controls) + tests. **No migration** (super-admin is
+Config field (+ `fake_auth_super_admin` sandbox toggle) + derived
+`is_super_admin` helper + self-heal in `get_or_create_user` + actor-super
+guard on promote/demote + target-super guard on
+demote/revoke/remove(+from-all-sessions) + Sys Admin template (tier badges +
+conditional controls) + tests. **No migration** (super-admin is
 config-derived; `is_operator` / `is_sys_admin` columns already exist).
 
 ### Definition of done
@@ -175,6 +176,18 @@ config-derived; `is_operator` / `is_sys_admin` columns already exist).
    `validate_critical_settings` fail-fast (`app/config.py:116-120`); making it
    required would break existing deployments. A non-empty list still
    guarantees ≥1 protected admin as a bonus.
+5. **Local-dev fake super-admin via a sandbox toggle.** The localhost fake
+   operator (`fake_auth_email`, default `operator@example.edu`) needs
+   super-admin rights for testing. Mirror the existing
+   `fake_auth_operator` / `fake_auth_sys_admin` pattern with
+   `fake_auth_super_admin: bool = True` — honoured **only** when
+   `allow_fake_auth` + `is_fake`, so it's inert in any deployed env. The fake
+   email is folded into the *effective* super-admin set the resolver consults
+   (not stored, not a real `SUPER_ADMIN_EMAILS` entry), preserving the
+   config-derived invariant. (Alternative considered: document
+   `SUPER_ADMIN_EMAILS=operator@example.edu` in `.env.example` / local-setup
+   instead — rejected as the default because it needs per-machine env
+   coordination and doesn't match the seamless fake-auth precedent.)
 
 **PR ladder** (each slice independently reviewable + shippable; backend tiers
 land before the UI that surfaces them):
@@ -184,14 +197,31 @@ land before the UI that surfaces them):
    - Add `super_admin_emails: Annotated[list[str], NoDecode] = []` to
      `app/config.py` (mirror `:39-40`) and extend the `_split_email_list`
      validator target list (`:47-52`); env `SUPER_ADMIN_EMAILS`.
-   - Add an `is_super_admin(email, settings)` helper (casefold membership,
-     mirroring `deps._email_in:31-35`).
+   - **Local-dev super-admin (Decision 5).** Add a sandbox toggle
+     `fake_auth_super_admin: bool = True` alongside `fake_auth_operator` /
+     `fake_auth_sys_admin` (`config.py:24-25`). When `allow_fake_auth` +
+     `is_fake` + `fake_auth_super_admin`, the fake identity
+     (`fake_auth_email`, default `operator@example.edu`) resolves as
+     super-admin — so the localhost operator has full super-admin rights with
+     zero env coordination. Inert in prod (`allow_fake_auth` must be false).
+     Implement by folding the fake email into the **effective** super-admin
+     set the `is_super_admin` resolver / self-heal consults (e.g. an
+     `effective_super_admin_emails(settings)` helper = `super_admin_emails +
+     [fake_auth_email] if (allow_fake_auth and fake_auth_super_admin)`), so
+     the "derived from config, never stored" invariant still holds.
+   - Add an `is_super_admin(email, settings)` helper (casefold membership vs
+     the effective set, mirroring `deps._email_in:31-35`).
    - In `get_or_create_user`, add the super-admin-only re-assertion (per
      Decision 1) for both the existing-row path (`:65-70`) and the
-     first-sign-in path (`:82-97`).
+     first-sign-in path (`:82-97`). The every-sign-in rule means an
+     already-existing local `operator@example.edu` row (created before this
+     feature under the once-only operator/sys-admin bootstrap) is elevated on
+     its next request without a DB reset.
    - Tests: self-heal on first **and** subsequent sign-in; a manually-demoted
      super-admin re-asserts to full rights; a non-super email is unaffected
-     (once-only contract intact).
+     (once-only contract intact); **fake-auth super-admin** — with
+     `allow_fake_auth` + `fake_auth_super_admin`, the fake email is
+     super-admin, and it is *not* when either flag is off.
    - *Risk note:* smallest, self-contained slice; establishes super-admin ⊇
      admin ⊇ operator before any guard depends on it. Land first.
 
@@ -233,6 +263,11 @@ land before the UI that surfaces them):
      `docs/deployment_nus.md` §7 (incl. §7.1: the seeded admin can be made a
      protected super-admin); record the hierarchy + protected-super-admin
      guarantee in `docs/security_posture.md`; note the ship in `docs/status.md`.
+   - Document the `fake_auth_super_admin` sandbox toggle in
+     `spec/settings_inventory.md` (alongside the existing `FAKE_AUTH_*` rows)
+     and in the local-dev notes (`docs/local_setup.md` / `docs/codespace_setup.md`,
+     which already state the fake operator carries "operator + sys-admin" — update
+     to "operator + sys-admin + super-admin").
 
 **Sequencing:** 1 → 2 → 3 (→ 3a → 3b) → 4. PR 1 must precede PR 2 (guards
 assume nesting); PR 3 must follow PR 2 (UI mirrors the server guards). PR 4 can
