@@ -187,6 +187,8 @@ For the full long-term plan see
 | 18O | Post-participants-model file splits: four-track housekeeping pass on the 1,300+ LOC band (`scheduled_events.py`, `assignments.py`, `routes_reviewer/_surface.py`, `session_config_io/_apply.py` all carved into per-concern packages). ~5,500 LOC redistributed across ~23 small modules; biggest production file now ~764 LOC. | 2026-06-03 |
 | 18P G1 | Harmonize the round-trip (PRs #1864 → #1870): export→import + clone stop silently dropping hand-set config — feature toggles, instrument view policies, reviewer / reviewee / observer roster `status`, observer cohort rules, scheduling / retention anchors, data shapes, session tags, `band1_touched_links`. Closes the `spec/roundtrip_coverage.md` gaps. | 2026-06-05 |
 | 18P G2 | Rehydrate a complete extracted session (PRs #1872 → #1878): **Rehydrate** lobby button → `/operator/sessions/rehydrate` (Validate → Rehydrate); pure pre-flight analyzer; operator-scoped Postgres-backed stash (`rehydrate_stashes`, the segment's one migration); sectioned-`responses.csv` importer (`responses_import.py`, group fan-out + own size bound); `session_rehydrate.rehydrate_session` orchestrator lands a `<name>_REHYD` draft (assignments regenerated, not activated) with all-or-nothing rollback + `session.rehydrated` audit. See `docs/rehydrate.md`. | 2026-06-05 |
+| 18R | Operator-UX refinement (holding segment): Item 1 — instrument-card identity relabel (Instrument assignment rule + Who does / is / unit-of-review links, #1899); Item 2 — save/lock harmonization of the Instruments card into one consolidated `/save` path (PR ladder 1–7, cleanup #1921); Item 3 (open) — small card tweaks (taller description box, Link 2 operator-cycle reorder, #1923). | 2026-08-17 |
+| 18S | Security refinements (holding segment): Item 1 — three-tier role model (operator ⊂ admin ⊂ **super-admin**). Config-derived, protected super-admin (`SUPER_ADMIN_EMAILS`, `app/auth/roles.py`); every-sign-in self-heal; actor-super guard on promote/demote + target-super protection on demote/revoke/remove; Sys Admin tier badges + conditional controls; `(super admin)` chrome. Localhost `fake_auth_super_admin` toggle. No migration. | 2026-08-17 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres` job, which also runs the full pytest
@@ -231,6 +233,12 @@ suite against a `postgres:16` service container).
 - **`require_session_operator`** dependency gates every operator route
   on a `SessionOperator(user, session)` row — non-operators get **403**
   and never see another operator's session.
+- **Three-tier role model** (Segment 18S): operator ⊂ admin
+  (`is_sys_admin`) ⊂ **super-admin**. Super-admin is derived from
+  `SUPER_ADMIN_EMAILS` (config, never stored), self-heals to full admin
+  rights on every sign-in, is the only actor who can promote/demote
+  admins, and is protected from in-app demote/revoke/remove. See
+  `docs/security_posture.md` + `spec/audience_and_identity_model.md` §4.
 - **Diagnostic pages**: `/me` (JSON), `/me/debug` (HTML with the raw
   claims list and a sign-out link).
 

@@ -27,6 +27,33 @@ Three layers, all in `app/web/deps.py`:
   unless the caller has an *active* `Reviewer` row whose email
   matches the authenticated identity (case-insensitive).
 
+### Three-tier role hierarchy (Segment 18S)
+
+**operator ⊂ admin (`is_sys_admin`) ⊂ super-admin.** Capabilities nest
+strictly (super-admin ⊇ admin ⊇ operator). The top tier is
+**config-anchored and protected**:
+
+- **Super-admin is derived from `SUPER_ADMIN_EMAILS`** (deployer config),
+  never a DB column (`app/auth/roles.py::is_super_admin`). No in-app path
+  adds or removes one — only editing the App Setting can. App Settings are
+  unreachable from inside the app, so this is the hard anchor. A super-admin
+  **self-heals** to full admin rights on every sign-in
+  (`_reassert_super_admin`).
+- **Admin promote / demote is super-admin-only.** The `promote` / `demote`
+  service functions require the **actor** to be a super-admin
+  (`requires_super_admin` → 403); a plain sys-admin can no longer change who
+  is an admin. Operator admit / revoke stays admin-gated.
+- **Protected-super-admin guarantee.** No in-app action can demote, revoke,
+  hard-remove, or detach-from-all-sessions a super-admin: `demote` /
+  `revoke` / `remove_user` / `remove_from_all_sessions` refuse a super-admin
+  **target** (`protected_super_admin` → 409), a guard that sits *above* the
+  count-based `last_admin` floor (it protects a specific identity, not just a
+  count). The Sys Admin UI mirrors this (controls hidden/disabled), but the
+  service guards are the enforcement.
+- **Local dev.** With `ALLOW_FAKE_AUTH=true`, `FAKE_AUTH_SUPER_ADMIN`
+  (default on) treats the fake operator as a super-admin — inert in any
+  deployed env (where `allow_fake_auth` must be false).
+
 ## §5.6 Permission audit
 
 Reviewed 2026-05-18. Every route family resolves identity through
@@ -38,7 +65,7 @@ the dependencies above; no route trusts a client-supplied actor id.
 | Operator session-scoped routes | `require_session_operator` | Direct or via `_require_*_in_session` helpers. |
 | `/operator/sessions` bulk routes (tags / archive / delete-selected) | `require_operator` + per-id check | Each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped. |
 | `/operator/settings/library/*` deletes | `require_operator` + owner check | Query filters `owner_user_id == user.id`; cross-operator id 404s. |
-| `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. |
+| `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
 | Reviewer surface + save/submit/clear | `require_reviewer_in_session` | |

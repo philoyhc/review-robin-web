@@ -292,8 +292,9 @@ start — restart after changes.
 |---|---|
 | `APP_ENV` | `production` (any non-`local` value activates fail-fast startup checks) |
 | `DATABASE_URL` | same NUS connection string as the GitHub secret (identical value in both places) |
-| `SYS_ADMIN_EMAILS` | NUS sys-admin email(s), comma-separated |
+| `SYS_ADMIN_EMAILS` | NUS sys-admin (admin) email(s), comma-separated |
 | `OPERATOR_EMAILS` | NUS operator email(s), comma-separated |
+| `SUPER_ADMIN_EMAILS` | NUS **super-admin** email(s), comma-separated — the protected top tier (Segment 18S). Derived, not stored; the only actor who can promote/demote admins, and can't be demoted/removed in-app. Optional but recommended (guarantees ≥1 protected admin). |
 | `OPERATOR_CONTACT_EMAIL` | contact shown on `/request-access` (optional) |
 | `ALLOW_FAKE_AUTH` | **`false`** (must never be true in a deployed env) |
 | `LOG_LEVEL` | `INFO` |
@@ -313,6 +314,16 @@ operator**, so **one setting seeds a full-rights admin** — no DB surgery:
    institutional email that person signs in with; case-insensitive).
    `OPERATOR_EMAILS` is then optional — sys-admin already passes the operator
    gate and additionally unlocks the **Sys Admin** page.
+
+   **Recommended: also make that person a protected super-admin (Segment 18S).**
+   Set **`SUPER_ADMIN_EMAILS=<admin@nus.edu.sg>`** (same email). Super-admin is
+   the top tier: derived from config (never a DB column), it self-heals to full
+   admin rights on **every** sign-in — so unlike `SYS_ADMIN_EMAILS` it also
+   fixes an already-existing row and can't be stranded by a mis-click. A
+   super-admin is the only actor who can promote/demote admins and **cannot be
+   demoted, revoked, or removed in-app** — the anchor that keeps the workspace
+   from locking itself out. To hand the role to someone else later, edit this
+   App Setting and restart (there is deliberately no in-app path).
 2. **Restart** the app so it reads the setting.
 3. That person **signs in once** with that email. On **first sign-in** the
    bootstrap stamps `is_sys_admin = true` on their new `users` row

@@ -423,6 +423,12 @@ deployed environments. Source: `app/config.py`.
 | `FAKE_AUTH_PRINCIPAL_ID` | `local-dev` | Fake-auth identity slot. |
 | `FAKE_AUTH_EMAIL` | `operator@example.edu` | Fake-auth identity slot. |
 | `FAKE_AUTH_NAME` | `Local Operator` | Fake-auth identity slot. |
+| `FAKE_AUTH_OPERATOR` | `True` | Sandbox-only: the fake identity is seeded as operator. Honoured only when `ALLOW_FAKE_AUTH` is also `True`; inert in deployed envs. |
+| `FAKE_AUTH_SYS_ADMIN` | `True` | Sandbox-only: the fake identity is seeded as sys-admin (admin tier). Same gating. |
+| `FAKE_AUTH_SUPER_ADMIN` | `True` | Sandbox-only (Segment 18S): the fake identity is treated as **super-admin** — its email is folded into the effective super-admin set by `app/auth/roles.py`. Honoured only when `ALLOW_FAKE_AUTH` is also `True`, so the localhost operator holds super-admin for testing with zero env coordination; inert in deployed envs. |
+| `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap of `users.is_operator`). |
+| `SYS_ADMIN_EMAILS` | empty | Comma-separated admin allowlist (first-sign-in bootstrap of `users.is_sys_admin`). In a deployed env, at least one of `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` must be non-empty or the app refuses to boot. |
+| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier (Segment 18S). **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
 | `DATABASE_URL` | `sqlite:///./review_robin_web.db` | SQLAlchemy connection string. Postgres in deployed environments; SQLite locally / in tests. |
 | `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |

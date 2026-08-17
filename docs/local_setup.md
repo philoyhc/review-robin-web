@@ -102,6 +102,14 @@ FAKE_AUTH_NAME=Local Operator
 > default in `app/config.py` is `False`; the variable only takes effect if
 > a `.env` (local) or App Setting (deployed, **don't**) overrides it.
 
+Under fake auth the local `operator@example.edu` carries **operator +
+sys-admin + super-admin** rights — `fake_auth_operator` /
+`fake_auth_sys_admin` / `fake_auth_super_admin` all default to `True` in
+`app/config.py`. Super-admin (Segment 18S) is derived, so you don't set
+`SUPER_ADMIN_EMAILS` locally; the fake toggle covers it and self-heals your
+existing local row on the next sign-in. All three are inert in deployed
+envs (where `ALLOW_FAKE_AUTH` is false).
+
 ### `review_robin_web.db` (created automatically)
 
 Alembic creates this SQLite file on the first `alembic upgrade head`. It is

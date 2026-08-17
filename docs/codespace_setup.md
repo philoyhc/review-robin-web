@@ -105,9 +105,11 @@ forwarded URL (an `*.app.github.dev` address, private to your GitHub
 account by default).
 
 Because `ALLOW_FAKE_AUTH=true`, you land signed in as the fake
-`operator@example.edu`, which carries **operator + sys-admin** rights
-locally (`fake_auth_operator` / `fake_auth_sys_admin` default to `True`
-in `app/config.py`). Quick surface check on the forwarded URL:
+`operator@example.edu`, which carries **operator + sys-admin +
+super-admin** rights locally (`fake_auth_operator` /
+`fake_auth_sys_admin` / `fake_auth_super_admin` default to `True` in
+`app/config.py`; super-admin is Segment 18S). Quick surface check on the
+forwarded URL:
 
 | Path | Expected |
 |---|---|

@@ -101,19 +101,63 @@ results). Phase 1 has:
 Observers are always email-identified (`observers.email` is NOT
 NULL); no parse check is needed before identity matching.
 
-### 4. System administrator
+### 4. System administrator (three-tier role model)
 
-Cross-session admin role with two surfaces:
+Since Segment 18S Item 1 the admin surface is a **strict three-tier
+hierarchy** with **nested capabilities** and a **config-anchored top
+tier**:
+
+| Tier | Stored as | Added / revoked by |
+|---|---|---|
+| **Operator** | `users.is_operator` | Admins (and super-admins, by nesting) |
+| **Admin** | `users.is_sys_admin` | **Super-admins only** |
+| **Super-admin** | *derived*: email ∈ `SUPER_ADMIN_EMAILS` (deployer config) | **Azure App Settings only** — never in-app |
+
+**Capability nesting (strict superset).** Everything an operator can do
+an admin can do; everything an admin can do a super-admin can do, i.e.
+**super-admin ⊇ admin ⊇ operator**. Today's gates already treat sys-admin
+as implying operator (`is_operator OR is_sys_admin`); a super-admin
+**self-heals** to `is_sys_admin = is_operator = True` on **every** sign-in
+(`app/web/deps.py::_reassert_super_admin`, narrow — super-admin emails
+only), so every admin/operator gate passes for a super-admin with no
+special-casing, and a manual/pre-feature demotion can't strand a
+protected account.
+
+**Super-admin is derived, never stored** (`app/auth/roles.py::is_super_admin`
+— case-insensitive membership in `SUPER_ADMIN_EMAILS`, plus a fake-auth
+fold-in for local dev; see `spec/settings_inventory.md`). No DB column, no
+migration; it can't drift from config or be flipped in-app.
+
+**Who can manage whom:**
+
+| Actor ↓ \ can add/revoke → | Operator | Admin | Super-admin |
+|---|---|---|---|
+| **Operator** | ✗ | ✗ | ✗ |
+| **Admin** | ✓ | ✗ | ✗ |
+| **Super-admin** | ✓ | ✓ | ✗ (config only) |
+
+Two surfaces:
 
 1. **Workspace allowlist** — admit / revoke `users.is_operator`,
    promote / demote `users.is_sys_admin`, delete `users` rows
    outright, and bulk-remove a user from every session they
    appear on, all via the Sys Admin → Accounts Management page
    (Segment 16A PR 6, reshaped 2026-05-12 to a per-row checkbox
-   + bulk toolbar). Delete + Revoke + Remove-from-all-sessions
-   carry their own server-side guards (`owns_sessions`,
-   `still_owner`, `sole_owner`); `last_admin` blocks demoting
-   or deleting the sole sys-admin in the workspace.
+   + bulk toolbar). Server-side guards (`app/services/users.py`):
+   - **Actor guard** — `promote` / `demote` require the **actor** to be
+     a super-admin (`requires_super_admin` → 403). Operator admit /
+     revoke stays admin-gated.
+   - **Target guard** — `demote` / `revoke` / `remove_user` /
+     `remove_from_all_sessions` refuse when the **target** is a
+     super-admin (`protected_super_admin` → 409), sitting *above* the
+     count-based `last_admin` floor — it protects a specific identity,
+     not just a count.
+   - Plus the pre-existing `owns_sessions` / `still_owner` / `sole_owner`
+     / `last_admin` guards.
+   The Accounts page mirrors these in the UI (three-tier badges;
+   Promote/Demote shown only to a super-admin actor; destructive controls
+   disabled on super-admin rows) — the server guards are the real
+   enforcement.
 2. **Per-session diagnostics + self-add** — Sessions
    Diagnostics page lists every session in the workspace;
    the "Details" action lands on the session's Edit page,
@@ -123,9 +167,9 @@ Cross-session admin role with two surfaces:
    typical first step before acting on a session through
    the normal operator-permission path.
 
-Surfaced in the chrome top-right user card via a
-`(sys admin)` suffix on the "Signed in as ..." label so
-elevated state is visible at a glance.
+Surfaced in the chrome top-right user card via a `(super admin)` /
+`(sys admin)` suffix on the "Signed in as ..." label so elevated state is
+visible at a glance.
 
 Multi-tenancy + system-wide settings remain forward-looking.
 
