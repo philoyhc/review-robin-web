@@ -970,9 +970,11 @@ def test_plain_sys_admin_cannot_promote(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Actor is a plain sys-admin (NOT super-admin). Promoting an
-    operator to admin is now super-admin-only → 403."""
+    """Actor is a plain sys-admin (NOT super-admin), and a super tier
+    IS configured (someone else), so the strict rule applies: promoting
+    an operator to admin is super-admin-only → 403."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
     response = client.post(
@@ -989,9 +991,10 @@ def test_plain_sys_admin_cannot_demote(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Actor is a plain sys-admin. Demoting another admin is now
-    super-admin-only → 403."""
+    """Actor is a plain sys-admin, with a super tier configured, so the
+    strict rule applies: demoting another admin is super-admin-only → 403."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
     target = _seed_target(
         db, email="bob@example.edu", is_operator=True, is_sys_admin=True
     )
@@ -1173,10 +1176,11 @@ def test_promote_demote_controls_hidden_for_plain_sys_admin_actor(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A plain sys-admin actor doesn't see the Promote/Demote form
-    (admin management is super-admin-only). Operator + delete forms
-    still render."""
+    """A plain sys-admin actor doesn't see the Promote/Demote form when
+    a super tier is configured (admin management is super-admin-only).
+    Operator + delete forms still render."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
     assert 'data-action-form="sys-admin-toggle"' not in body
@@ -1218,3 +1222,64 @@ def test_chrome_shows_sys_admin_suffix_for_plain_admin(
     body = client.get("/operator/sys-admin/users").text
     assert "(sys admin)" in body
     assert "(super admin)" not in body
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18S Item 2 — no-super-tier fallback (fix the lockout)
+# --------------------------------------------------------------------------- #
+
+
+def test_plain_admin_can_promote_when_no_super_tier_configured(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With SUPER_ADMIN_EMAILS empty (no super tier at all), a plain
+    sys-admin can promote again — the fallback avoids locking admin
+    management out entirely."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", [])
+    target = _seed_target(db, email="bob@example.edu", is_operator=True)
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/promote",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(target)
+    assert target.is_sys_admin is True
+
+
+def test_plain_admin_can_demote_when_no_super_tier_configured(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", [])
+    # Two admins so the demote isn't the last-admin case.
+    target = _seed_target(
+        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
+    )
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/demote",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(target)
+    assert target.is_sys_admin is False
+
+
+def test_promote_demote_controls_visible_to_plain_admin_when_no_super_tier(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The UI mirrors the fallback: with no super tier configured, a
+    plain sys-admin sees the Promote/Demote controls again."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", [])
+    _seed_target(db, email="bob@example.edu", is_operator=True)
+    body = client.get("/operator/sys-admin/users").text
+    assert 'data-action-form="sys-admin-toggle"' in body

@@ -42,7 +42,13 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 - **Admin promote / demote is super-admin-only.** The `promote` / `demote`
   service functions require the **actor** to be a super-admin
   (`requires_super_admin` → 403); a plain sys-admin can no longer change who
-  is an admin. Operator admit / revoke stays admin-gated.
+  is an admin. Operator admit / revoke stays admin-gated. **No-super-tier
+  fallback (18S Item 2):** when `SUPER_ADMIN_EMAILS` is empty (no super tier
+  configured at all), this guard falls back to the pre-18S rule — any admin may
+  promote/demote admins — so a deploy that never sets the list can't lock its
+  own admin management out. The strict rule engages only once a super-admin
+  exists. A deployed env that boots with no super-admin logs a startup warning
+  (`super_admin.unconfigured`).
 - **Protected-super-admin guarantee.** No in-app action can demote, revoke,
   hard-remove, or detach-from-all-sessions a super-admin: `demote` /
   `revoke` / `remove_user` / `remove_from_all_sessions` refuse a super-admin

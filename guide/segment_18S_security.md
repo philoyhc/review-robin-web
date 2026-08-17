@@ -292,6 +292,50 @@ ride alongside PR 3 or land as its own slice.
 
 ---
 
+## Item 2 — No-super-tier fallback (fix the admin-management lockout)
+
+**Status: building 2026-08-17.**
+
+**The problem (footgun from Item 1).** `promote` / `demote` require the
+**actor** to be a super-admin (`requires_super_admin`), but super-admin is
+derived only from `SUPER_ADMIN_EMAILS`. A deployment that leaves that list
+empty — e.g. one bootstrapped only via `SYS_ADMIN_EMAILS` (the documented
+"seed the first admin" path) — has **no valid actor**, so admin promote/demote
+becomes impossible for everyone. `SUPER_ADMIN_EMAILS` is optional (Item 1
+Decision 4), so this is reachable by a correct-looking config.
+
+**The fix (Option A — graceful fallback).** When **no super-admin tier is
+configured at all** (`effective_super_admin_emails()` is empty), fall back to
+the pre-18S rule: any admin may promote/demote admins. The strict
+super-admin-only enforcement engages **only once a super-admin exists**. This
+can never lock anyone out, keeps `SUPER_ADMIN_EMAILS` optional, and the
+no-super case simply behaves like the old two-tier model. (Rejected
+alternative: requiring `SUPER_ADMIN_EMAILS` in the `validate_critical_settings`
+fail-fast — secure-by-default but a breaking config requirement that reverses
+Decision 4.)
+
+**Scope.**
+- `app/services/users.py::_guard_actor_super_admin` — early-return (allow) when
+  `effective_super_admin_emails()` is empty; enforce only when the tier exists.
+- `app/web/routes_operator/_sys_admin.py` — pass `can_manage_admins`
+  (`user.is_super_admin OR no super tier configured`) to the page.
+- `templates/operator/sys_admin_users.html` — gate the Promote/Demote toolbar
+  on `can_manage_admins` (else the UI hides controls a plain admin is now
+  allowed to use).
+- `app/main.py::create_app` — a startup **warning** log (not a raise) when a
+  deployed (non-local) env boots with no super-admin configured, so the
+  degraded-to-two-tier state is visible in logs.
+- Tests: plain admin **can** promote/demote when `SUPER_ADMIN_EMAILS` is empty;
+  **cannot** once a super-admin exists (Item 1 behaviour preserved); the UI gate
+  follows.
+- Docs: note the fallback in `docs/security_posture.md` + this plan.
+
+**Definition of done.** With `SUPER_ADMIN_EMAILS` unset, a plain admin can
+promote/demote admins again (no lockout); with it set, Item 1's strict rule and
+the protected-super-admin guarantee are unchanged. Full suite + `ruff` green.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small in-app security / authz refinements

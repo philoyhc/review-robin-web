@@ -38,6 +38,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth.roles import effective_super_admin_emails
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import audit, invitations, sessions, users as users_service
@@ -221,6 +222,13 @@ def sys_admin_users(
             "user": user,
             "rows": users_service.list_workspace_users(db),
             "actor_is_super_admin": user.is_super_admin,
+            # Segment 18S Item 2 — the Promote/Demote controls follow the
+            # same rule as the service actor guard: a super-admin actor,
+            # OR (no super tier configured) any admin, so the UI never
+            # hides a control the server would actually accept.
+            "can_manage_admins": (
+                user.is_super_admin or not effective_super_admin_emails()
+            ),
             "invite_error": invite_error,
             "toggle_error": toggle_error,
             "selected_user_id": selected,
