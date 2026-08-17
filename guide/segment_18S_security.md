@@ -1,9 +1,10 @@
 # Segment 18S — Security refinements
 
-**Status:** Planning. A holding segment for **small, self-contained security
-/ authorization hardening** on shipped surfaces. Items land as independent
-slices; the segment stays open as a home for further security refinements as
-they're identified.
+**Status:** In progress — **Item 1 shipped 2026-08-17** (three-tier role
+model; PR ladder 1–4: config + self-heal #1925, guards #1926, UI #1927, docs).
+A holding segment for **small, self-contained security / authorization
+hardening** on shipped surfaces. Items land as independent slices; the segment
+stays open as a home for further security refinements as they're identified.
 
 > Distinct from `guide/deferred_infra.md` (Azure-portal / platform hardening
 > — Key Vault, VNet, private endpoints) and from `docs/security_posture.md`
@@ -13,6 +14,16 @@ they're identified.
 ---
 
 ## Item 1 — Three-tier role model + protected super-admin
+
+**Status: ✅ Shipped 2026-08-17** (PRs #1925 config+self-heal, #1926 guards,
+#1927 UI, + docs). Outcome vs plan: implemented as designed. Decision 3 was
+relaxed — a thin delegating `User.is_super_admin` property **was** added (the
+"can be added later if callers want it" clause) because the chrome needs the
+predicate across all template envs; the config-derived resolver lives in the
+new `app/auth/roles.py`. The `requires_super_admin` actor guard means a
+deployment with **no** `SUPER_ADMIN_EMAILS` set has no one who can
+promote/demote admins — acceptable (localhost uses `fake_auth_super_admin`;
+deploys set the list), flagged for follow-up if a fallback is wanted.
 
 Formalize a **strict three-tier role hierarchy** with **nested
 capabilities** and a **config-anchored top tier**. This both adds a tier

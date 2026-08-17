@@ -109,10 +109,11 @@ restart the app after a change.
 | `DATABASE_URL` | local SQLite | Database connection string. Postgres in deployed environments — see "Database configuration" below. |
 | `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup. |
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap). |
-| `SYS_ADMIN_EMAILS` | empty | Comma-separated sys-admin allowlist. In a non-local environment, at least one of these two must be non-empty or the app refuses to boot. |
+| `SYS_ADMIN_EMAILS` | empty | Comma-separated sys-admin (admin) allowlist. In a non-local environment, at least one of these two must be non-empty or the app refuses to boot. |
+| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier (Segment 18S). Derived, not stored; set **only** here. Optional (not part of the boot fail-fast). A super-admin can't be demoted/removed in-app and is the only actor who can promote/demote admins. |
 | `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/request-access` page. |
 | `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
-| `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. |
+| `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` / `FAKE_AUTH_SUPER_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. `FAKE_AUTH_SUPER_ADMIN` (default on) makes the local fake operator a super-admin. |
 | `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. Needed once email infrastructure (Segment 14B) is in use. |
 | `AUDIT_STRICT_MODE` | `false` | When true, `audit.write_event` raises on a detail-shape violation. Tests enable it; production leaves it off. |
 
@@ -271,6 +272,25 @@ SYS_ADMIN_EMAILS=alice@example.edu
 Comma-separated, case-insensitive. Sys-admin implies operator at
 the read-path predicate, so an email in `SYS_ADMIN_EMAILS` alone
 also passes the operator gate.
+
+**Super-admin (the protected top tier, Segment 18S)** is a third,
+config-only list:
+
+```
+SUPER_ADMIN_EMAILS=admin@example.edu
+```
+
+Unlike the two above it is **derived, not stored** — `is_super_admin`
+is computed from this list on every request, never persisted to a
+column, so it can't be flipped in-app and needs no migration. A
+super-admin self-heals to full admin rights on **every** sign-in
+(so it also fixes an already-existing row, unlike the once-only
+operator/sys-admin bootstrap below), is the only actor who can
+promote/demote admins, and can't be demoted / revoked / removed
+in-app. It's optional (not part of the boot fail-fast), but setting
+it guarantees ≥1 protected admin. Local dev doesn't need it — with
+`ALLOW_FAKE_AUTH=true`, `FAKE_AUTH_SUPER_ADMIN` (default on) makes the
+fake operator a super-admin.
 
 ### First-sign-in only — the bootstrap doesn't re-apply
 
