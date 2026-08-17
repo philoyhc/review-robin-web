@@ -3750,21 +3750,28 @@
           // (PR 1 keeps ?editing on the href only as a no-JS
           // fallback). Bound as ``onclick="return
           // newModelLockClick(event, <id>)"`` on the Lock anchor.
-          window.newModelLockClick = window.newModelLockClick || function (ev, instrumentId) {
-            var card = document.getElementById('instrument-' + instrumentId);
-            if (!card) { return true; }  // no card in DOM → let the href fallback run
+          // Segment 18R Item 2 — shared "lock this card" with the
+          // unsaved-changes confirm. Returns true if the card ends up
+          // locked, false if the operator declined (dirty + cancelled).
+          // Used by the Lock button and by collapse ⇒ lock.
+          window.newModelTryLock = window.newModelTryLock || function (card) {
+            if (!card) { return true; }
             var saveBtn = card.querySelector('[data-new-model-save]');
             if (saveBtn && !saveBtn.disabled) {
-              var ok = window.confirm(
+              if (!window.confirm(
                 'You have unsaved changes. Lock anyway? Your changes will be lost.'
-              );
-              if (!ok) {
-                if (ev && ev.preventDefault) { ev.preventDefault(); }
+              )) {
                 return false;
               }
             }
-            if (ev && ev.preventDefault) { ev.preventDefault(); }
             window.newModelSetLock(card, true);
+            return true;
+          };
+          window.newModelLockClick = window.newModelLockClick || function (ev, instrumentId) {
+            var card = document.getElementById('instrument-' + instrumentId);
+            if (!card) { return true; }  // no card in DOM → let the href fallback run
+            if (ev && ev.preventDefault) { ev.preventDefault(); }
+            window.newModelTryLock(card);
             return false;
           };
           // Unlock click handler — unlocks the card in-page (no
@@ -3972,11 +3979,46 @@
               input.addEventListener('keyup', _titleKeyGuard);
             });
           }
+          // Segment 18R Item 2 — collapse ⇒ lock. Collapsing an
+          // unlocked card Locks it (with the unsaved-changes confirm);
+          // declining re-expands and leaves it unlocked, so a card is
+          // never unlocked-and-collapsed. Expanding never touches the
+          // lock state. Programmatic open-state changes (the on-reload
+          // open-state restore) set window._newModelSuppressCollapseLock
+          // so they don't fire the confirm. Expand-/Collapse-all flow
+          // through here too: expand is a no-op, and collapse-all locks
+          // the one open card (there's at most one) as it collapses.
+          function _onCardDetailsToggle(e) {
+            if (window._newModelSuppressCollapseLock) { return; }
+            var details = e.currentTarget;
+            if (details.open) { return; }  // expand — never changes lock state
+            var card = details.closest('[data-instrument-card]');
+            if (!card
+                || card.getAttribute('data-instrument-locked') !== 'false') {
+              return;  // no card, or already locked
+            }
+            if (!window.newModelTryLock(card)) {
+              // Declined → re-expand and keep it unlocked (invariant).
+              window._newModelSuppressCollapseLock = true;
+              details.open = true;
+              window._newModelSuppressCollapseLock = false;
+            }
+          }
+          function _newModelWireCollapseLock() {
+            if (window._newModelCollapseLockWired) { return; }
+            window._newModelCollapseLockWired = true;
+            document.querySelectorAll(
+              'details.instrument-card-collapsible'
+            ).forEach(function (d) {
+              d.addEventListener('toggle', _onCardDetailsToggle);
+            });
+          }
           function _newModelOnReady() {
             _newModelInitialRefresh();
             _newModelWireSaveFlushers();
             _newModelWireNavGuard();
             _newModelWireTitleToggleGuard();
+            _newModelWireCollapseLock();
           }
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', _newModelOnReady);
@@ -5159,6 +5201,10 @@
         if (raw) {
           sessionStorage.removeItem(PENDING_OPEN_KEY);
           const states = JSON.parse(raw);
+          // Segment 18R Item 2 — this restore is programmatic; suppress
+          // the collapse ⇒ lock handler so it doesn't fire a confirm on
+          // reload if a card is restored collapsed.
+          window._newModelSuppressCollapseLock = true;
           Object.keys(states).forEach(function (id) {
             const card = document.getElementById(id);
             if (!card) { return; }
@@ -5167,6 +5213,7 @@
             );
             if (d) { d.open = !!states[id]; }
           });
+          window._newModelSuppressCollapseLock = false;
         }
       } catch (err) {}
 

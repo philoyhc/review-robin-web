@@ -5838,6 +5838,32 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
     assert "[data-new-model-rf-bound]:disabled" in body
 
 
+def test_collapse_lock_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 — collapse ⇒ lock: collapsing an unlocked card
+    Locks it (with the unsaved-changes confirm); expanding never changes
+    the lock state; a card is never unlocked-and-collapsed. Behaviour is
+    browser-only; pin the wiring."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="collapse-lock"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Shared lock helper + the toggle handler wired on each card
+    # <details>.
+    assert "window.newModelTryLock" in body
+    assert "_onCardDetailsToggle" in body
+    assert "d.addEventListener('toggle', _onCardDetailsToggle)" in body
+    # Expand (details.open) is a no-op; collapse of an unlocked card
+    # triggers a lock via the shared helper.
+    assert "if (details.open) { return; }" in body
+    assert "newModelTryLock(card)" in body
+    # Programmatic open-state restore suppresses the confirm.
+    assert "window._newModelSuppressCollapseLock" in body
+
+
 def test_cancel_keeps_card_unlocked_via_editing_reload(
     client: TestClient, db: Session
 ) -> None:
