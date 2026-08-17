@@ -1,7 +1,8 @@
 # Segment 18R — UX refinement
 
 **Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
-planned**. A holding segment for **operator-UX refinement** on
+shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
+closed by PR #1921)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -96,6 +97,11 @@ template-string assertion that greps for an old label (check `tests/` for
 ---
 
 ## Item 2 — Harmonize the save / lock model (one persistence path)
+
+**Status: ✅ Completed 2026-08-17.** PR ladder 1–7 (incl. 5c) shipped;
+cleanup closed by PR #1921. The card now drives a single consolidated
+`/save`; the per-concern routes are retired from the card but kept
+server-side (see the Route-retirement outcome note below).
 
 **The problem.** The per-instrument card mixes **three** persistence paths
 (full audit: `guide/instrument_card_ux_audit.md`):
