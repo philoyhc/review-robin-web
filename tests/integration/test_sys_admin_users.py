@@ -31,6 +31,16 @@ def _bootstrap_sys_admin(
     monkeypatch.setattr(settings, "sys_admin_emails", [email])
 
 
+def _bootstrap_super_admin(
+    monkeypatch: pytest.MonkeyPatch, *, email: str
+) -> None:
+    """Segment 18S — actor becomes a super-admin (top tier). Super-admin
+    implies is_sys_admin + is_operator via the sign-in self-heal, so the
+    actor passes ``require_sys_admin`` AND the actor-super guard on
+    promote / demote."""
+    monkeypatch.setattr(settings, "super_admin_emails", [email])
+
+
 def _seed_target(
     db: Session,
     *,
@@ -218,7 +228,7 @@ def test_promote_with_confirm_flips_is_sys_admin_and_emits_audit(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
     response = client.post(
@@ -250,7 +260,7 @@ def test_promote_without_confirm_still_succeeds(
     single row now, no inline safety checkbox). Posting without
     confirm now promotes successfully.
     """
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
     response = client.post(
@@ -268,9 +278,10 @@ def test_demote_with_confirm_flips_is_sys_admin_and_emits_audit(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    # Alice will sign in via the gate; bob is pre-seeded as a
-    # second sys-admin so demoting him isn't the last-admin case.
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
+    # Alice signs in via the gate as a super-admin (self-heals to
+    # is_sys_admin=True); bob is pre-seeded as a second sys-admin so
+    # demoting him isn't the last-admin case.
     target = _seed_target(
         db, email="bob@example.edu", is_operator=True, is_sys_admin=True
     )
@@ -298,66 +309,44 @@ def test_demote_with_confirm_flips_is_sys_admin_and_emits_audit(
 
 def test_demote_last_sys_admin_at_service_layer(
     db: Session,
-    make_client,
-    alice,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Direct service-call covers the 'sole sys-admin' invariant
-    cleanly. Route-level call is awkward to exercise because the
-    actor must themselves be sys-admin (so by definition isn't
-    the sole admin unless they ARE the target — which the
-    self-action guard catches first)."""
+    """The count-based ``last_admin`` floor still fires under the 18S
+    actor-super guard (Decision 2 — both floors kept).
+
+    Since promote / demote now require a **super-admin** actor, the
+    actor is a super-admin. To exercise the count floor in isolation we
+    give the super actor an unset ``is_sys_admin`` column (its
+    pre-sign-in state; ``is_super_admin`` is derived from config, so the
+    actor guard still passes) — that keeps it out of ``_sys_admin_count``
+    so we can drive the count down to the sole column-True admin."""
     from app.services import users as users_service
 
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    alice_client = make_client(alice)
-    alice_client.get("/operator/sys-admin/users")  # bootstrap alice
-
-    alice_row = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
-    second_admin = _seed_target(
-        db, email="second@example.edu", is_operator=True, is_sys_admin=True
+    _bootstrap_super_admin(monkeypatch, email="super@example.edu")
+    super_actor = _seed_target(db, email="super@example.edu", is_operator=True)
+    solo_admin = _seed_target(
+        db, email="solo@example.edu", is_operator=True, is_sys_admin=True
     )
 
-    # Now demote the second admin via service (actor is alice; not
-    # the self-action case). After this, alice is sole admin.
-    users_service.demote(
-        db,
-        actor=alice_row,
-        target=second_admin,
-        correlation_id="corr-1",
-    )
-
-    # Try to demote alice via service with second_admin as actor —
-    # but second is no longer admin, so the constraint is "if I
-    # demote alice, the count goes to zero". Need a third admin
-    # to be actor.
-    third_admin = _seed_target(
-        db, email="third@example.edu", is_operator=True, is_sys_admin=True
-    )
-    # Now alice + third are admins. Demote alice (count -> 1).
-    users_service.demote(
-        db, actor=third_admin, target=alice_row, correlation_id="corr-2"
-    )
-    db.refresh(third_admin)
-    db.refresh(alice_row)
-    assert third_admin.is_sys_admin is True
-    assert alice_row.is_sys_admin is False
-
-    # Now third is the sole admin. Demoting them must raise.
-    # Use a non-admin actor — guard only checks sole-admin
-    # state, not whether actor is admin.
-    operator_actor = _seed_target(
-        db, email="op@example.edu", is_operator=True, is_sys_admin=False
-    )
+    # Only one column-True sys-admin exists → demoting them trips the
+    # floor even though the actor is a valid super-admin.
     with pytest.raises(users_service.UserOperationError) as excinfo:
         users_service.demote(
-            db, actor=operator_actor, target=third_admin, correlation_id="corr-3"
+            db, actor=super_actor, target=solo_admin, correlation_id="corr-floor"
         )
     assert excinfo.value.code == "last_admin"
-    db.refresh(third_admin)
-    assert third_admin.is_sys_admin is True  # unchanged
+    db.refresh(solo_admin)
+    assert solo_admin.is_sys_admin is True  # unchanged
+
+    # A non-last demote succeeds: add a second admin, then demote one.
+    _seed_target(
+        db, email="second@example.edu", is_operator=True, is_sys_admin=True
+    )
+    users_service.demote(
+        db, actor=super_actor, target=solo_admin, correlation_id="corr-ok"
+    )
+    db.refresh(solo_admin)
+    assert solo_admin.is_sys_admin is False
 
 
 # --- Self-actions blocked (F6/F7) ------------------------------------------
@@ -965,3 +954,172 @@ def test_toolbar_left_aligned(
     body = client.get("/operator/sys-admin/users").text
     assert "justify-content:flex-start" in body
     assert "justify-content:flex-end" not in body
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18S Item 1 — three-tier management guards
+# (actor-super on promote/demote; target-super protection)
+# --------------------------------------------------------------------------- #
+
+
+def test_plain_sys_admin_cannot_promote(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Actor is a plain sys-admin (NOT super-admin). Promoting an
+    operator to admin is now super-admin-only → 403."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=True)
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/promote",
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+    db.refresh(target)
+    assert target.is_sys_admin is False  # unchanged
+
+
+def test_plain_sys_admin_cannot_demote(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Actor is a plain sys-admin. Demoting another admin is now
+    super-admin-only → 403."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(
+        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
+    )
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/demote",
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+    db.refresh(target)
+    assert target.is_sys_admin is True  # unchanged
+
+
+def test_plain_sys_admin_can_still_admit_and_revoke_operators(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Operator management stays admin-gated (not super-admin-only):
+    a plain sys-admin can admit and revoke operators."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=False)
+
+    admit = client.post(
+        f"/operator/sys-admin/users/{target.id}/admit",
+        follow_redirects=False,
+    )
+    assert admit.status_code == 303
+    db.refresh(target)
+    assert target.is_operator is True
+
+    revoke = client.post(
+        f"/operator/sys-admin/users/{target.id}/revoke",
+        follow_redirects=False,
+    )
+    assert revoke.status_code == 303
+    db.refresh(target)
+    assert target.is_operator is False
+
+
+def test_super_admin_target_cannot_be_demoted(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Even a super-admin actor can't demote a super-admin target —
+    super-admin is config-only (protected). 409."""
+    monkeypatch.setattr(
+        settings,
+        "super_admin_emails",
+        ["alice@example.edu", "boss@example.edu"],
+    )
+    target = _seed_target(
+        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
+    )
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/demote",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    db.refresh(target)
+    assert target.is_sys_admin is True  # unchanged
+
+
+def test_super_admin_target_cannot_be_revoked(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        settings,
+        "super_admin_emails",
+        ["alice@example.edu", "boss@example.edu"],
+    )
+    target = _seed_target(
+        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
+    )
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/revoke",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    db.refresh(target)
+    assert target.is_operator is True  # unchanged
+
+
+def test_super_admin_target_cannot_be_removed(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        settings,
+        "super_admin_emails",
+        ["alice@example.edu", "boss@example.edu"],
+    )
+    target = _seed_target(
+        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
+    )
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/remove",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    still = db.execute(
+        select(User).where(User.email == "boss@example.edu")
+    ).scalar_one_or_none()
+    assert still is not None  # not deleted
+
+
+def test_super_admin_target_cannot_be_removed_from_all_sessions(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Service-layer: the target-super guard blocks detaching a
+    super-admin from its sessions (protected_super_admin)."""
+    from app.services import users as users_service
+
+    monkeypatch.setattr(
+        settings,
+        "super_admin_emails",
+        ["actor@example.edu", "boss@example.edu"],
+    )
+    actor = _seed_target(db, email="actor@example.edu", is_operator=True)
+    target = _seed_target(db, email="boss@example.edu", is_operator=True)
+
+    with pytest.raises(users_service.UserOperationError) as excinfo:
+        users_service.remove_from_all_sessions(
+            db, actor=actor, target=target, correlation_id="corr-x"
+        )
+    assert excinfo.value.code == "protected_super_admin"

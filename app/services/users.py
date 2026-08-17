@@ -40,6 +40,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth.roles import is_super_admin
 from app.db.models import SessionOperator, User
 from app.services import audit
 
@@ -136,6 +137,37 @@ def _sys_admin_count(db: Session) -> int:
     )
 
 
+def _guard_actor_super_admin(actor: User) -> None:
+    """Segment 18S Item 1 — admin (``is_sys_admin``) promote / demote is
+    **super-admin-only**. A plain sys-admin can no longer change who is
+    an admin. Operator admit / revoke keeps requiring only admin."""
+    if not is_super_admin(actor.email):
+        raise UserOperationError(
+            code="requires_super_admin",
+            message=(
+                "Only a super-admin can promote or demote admins. "
+                "Ask a super-admin to change admin roles."
+            ),
+        )
+
+
+def _guard_target_not_super_admin(target: User, action: str) -> None:
+    """Segment 18S Item 1 — a super-admin is a protected account. No
+    in-app path may demote / revoke / remove one, or strip it from its
+    sessions; super-admin is set only via ``SUPER_ADMIN_EMAILS``
+    (deployer config). Sits *above* the count-based ``last_admin`` floor
+    — it protects a specific identity, not just a count."""
+    if is_super_admin(target.email):
+        raise UserOperationError(
+            code="protected_super_admin",
+            message=(
+                f"{target.email} is a protected super-admin and can't be "
+                f"{action}. Super-admin is granted only via the "
+                "SUPER_ADMIN_EMAILS deployer config."
+            ),
+        )
+
+
 def admit(
     db: Session,
     *,
@@ -175,6 +207,7 @@ def revoke(
     inconsistent state where a non-operator owns a session.
     """
     _guard_self(actor, target)
+    _guard_target_not_super_admin(target, "revoked")
     owned = int(
         db.execute(
             select(func.count(SessionOperator.id)).where(
@@ -214,6 +247,7 @@ def promote(
     correlation_id: str | None = None,
 ) -> None:
     _guard_self(actor, target)
+    _guard_actor_super_admin(actor)
     old = target.is_sys_admin
     target.is_sys_admin = True
     audit.write_event(
@@ -236,6 +270,8 @@ def demote(
     correlation_id: str | None = None,
 ) -> None:
     _guard_self(actor, target)
+    _guard_actor_super_admin(actor)
+    _guard_target_not_super_admin(target, "demoted")
     if _sys_admin_count(db) <= 1 and target.is_sys_admin:
         raise UserOperationError(
             code="last_admin",
@@ -280,6 +316,7 @@ def remove_from_all_sessions(
     silently and returns ``0`` without emitting an audit event.
     """
     _guard_self(actor, target)
+    _guard_target_not_super_admin(target, "removed from sessions")
 
     rows = list(
         db.execute(
@@ -360,6 +397,7 @@ def remove_user(
     last-known role state and the deleted email.
     """
     _guard_self(actor, target)
+    _guard_target_not_super_admin(target, "removed")
     if target.is_sys_admin and _sys_admin_count(db) <= 1:
         raise UserOperationError(
             code="last_admin",
