@@ -268,9 +268,13 @@ single-row `<summary>` carrying a left-edge grip-dot drag
 handle, the title (operator-facing short label with the
 muted-italic `Instrument_{id}` fallback when no short label
 is set — see `spec/instruments.md` "Title" + the
-2026-05-28 operator-identifier policy), an inline ✎/✓
-editor that posts the rename to `/identity` without a page
-reload, two status pills (`Set up` / `Not set up` +
+2026-05-28 operator-identifier policy), which since
+Segment 18R Item 2 is a lock-driven view/edit swap — a
+read-only span when the card is locked, an inline rename
+`<input>` bound to the card's bulk-Save form when unlocked,
+committed by the consolidated `/save` (no per-title ✎/✓
+button, no immediate `/identity` POST) — two status pills
+(`Set up` / `Not set up` +
 `Locked` / `Unlocked`), and a right-edge chevron toggle. Default state on first render is
 all-collapsed; an `Expand all instruments` /
 `Collapse all instruments` pair lives in the Status +

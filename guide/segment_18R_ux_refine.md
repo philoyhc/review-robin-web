@@ -414,14 +414,31 @@ agree the always-rendered / toggle shape before wiring persistence.
 
 **PR ladder.**
 
-**Status (2026-08-17):** PRs 1–5 + 5c **shipped and merged**, plus several
+**Status (2026-08-17):** PRs 1–6 + 5c **shipped and merged**, plus several
 dev-slot follow-up fixes not in the original ladder (Cancel keeps the card
 unlocked + preserves per-card open state on its discard reload; the
 instrument-name input no longer collapses the card on click/Space/Enter).
-Audited against code 2026-08-17 — the ladder below reflects what's actually
-left: PR 6 is now essentially just **display-field reorder staging** (the rest
-of its original scope shipped in PRs 3–4), plus the new **collapse ⇒ lock**
+**PR 7 (cleanup) is up as #1921** — dead ✎/✓ handler sweep + spec / template-
+comment alignment. Item 2's ladder is functionally complete; the segment
+**stays open** for further Item N refinements.
+
+Audited against code 2026-08-17 — the ladder below reflects what actually
+shipped: PR 6 was essentially just **display-field reorder staging** (the rest
+of its original scope shipped in PRs 3–4), plus the **collapse ⇒ lock**
 behaviour; PR 7 is cleanup.
+
+**Route-retirement outcome (PR 7, 2026-08-17).** The "check for non-card
+callers before deleting server-side" gate below (Endpoint disposition) was
+run: `/fields/save`, `/band2-state`, `/column-widths`,
+`/display-fields/order`, and `/identity` have **~92 direct test call sites
+across 7 integration files** (`fields/save` 26, `band2-state` 53, the rest a
+handful each). They are **retired from the card** (the page drives only
+`/save`) but **kept server-side** — the precondition for deletion (card is
+the sole caller) is false, so deleting them would be a ~92-site test refactor
++ dropping the no-JS `<form>` fallback for no user-facing gain. This revises
+the earlier "make `/save` the sole writer / drop the no-JS fallback" decision.
+Full server-side deletion + test migration is logged as an **optional** Future
+item below.
 
 1. **Scaffold (inert).** The button cluster per state (Locked → **Unlock**;
    Unlocked → **Save · Lock · Cancel**, with Save + Cancel greyed until
@@ -467,15 +484,16 @@ behaviour; PR 7 is cleanup.
    - **Collapse ⇒ lock.** Wire the invariant above: collapsing an unlocked card
      Locks it (with the unsaved-changes confirm; decline re-expands), expanding
      never changes lock state, and no card is ever unlocked-and-collapsed.
-7. **Cleanup + tests.** Retire the now-unused endpoints (verified card-only
-   callers): `/band2-state`, `/column-widths`, `/identity`, and
-   `/display-fields/order`; **retire `/fields/save` too and make `/save` the
-   sole writer — the no-JS form fallback is dropped (the card requires JS
-   already).** Sweep the six dead ✎/✓ handlers (`cardTitleEdit` / `cardTitleSave`
-   / `newModelIntroEdit` / `newModelIntroSave` / `newModelHelpCardEditClick` /
-   `newModelHelpCardSaveClick`) confirmed unreferenced by the audit. Final
-   button-state-matrix pass; update `spec/instruments.md` +
-   `spec/operator_ui_concept.md` to the harmonized model. Tests: the
+7. **Cleanup + tests.** ✅ **Shipped as #1921 (2026-08-17).** Swept the dead
+   ✎/✓ handlers (`cardTitleEdit` / `cardTitleSave` / `newModelIntroEdit` /
+   `newModelIntroSave` / `newModelHelpCardEditClick` /
+   `newModelHelpCardSaveClick`) confirmed unreferenced by the audit, and
+   aligned `spec/instruments.md` + `spec/operator_ui_concept.md` + the stale
+   in-template comment blocks to the harmonized model. **Endpoints kept
+   server-side, not deleted** — the card-only-caller precondition is false
+   (~92 test call sites; see the Route-retirement outcome note above), so
+   `/band2-state`, `/column-widths`, `/identity`, `/display-fields/order`, and
+   `/fields/save` (with its no-JS `<form>` fallback) all stay. Tests: the
    button-state matrix (locked / unlocked-clean / unlocked-dirty), staged
    round-trips per area, the fixed lost-edit, "nothing persists before Save
    and Lock", validation-failure keeps edits + shows the banner, the
@@ -485,8 +503,12 @@ behaviour; PR 7 is cleanup.
 **Endpoint disposition** (retire *from the card*; check for non-card callers
 before deleting server-side): `/band2-state`, `/identity`, `/column-widths`,
 in-card `/display-fields/order`, and the old `/fields/save` are all replaced
-by the single `…/save`. **Decision (2026-08-17): retire `/fields/save`** — no
-no-JS Save fallback is kept; `/save` is the sole writer.
+*from the card* by the single `…/save`. **Outcome (2026-08-17):** the
+non-card-caller check found ~92 direct test call sites, so the server-side
+routes are **kept** (retired from the card only). The earlier "retire
+`/fields/save` / `/save` is the sole writer / drop the no-JS fallback"
+decision is **superseded** by this check; full server-side deletion + the
+test migration it requires is an optional Future item.
 
 ---
 
@@ -495,6 +517,19 @@ no-JS Save fallback is kept; `/save` is the sole writer.
 This segment is the landing place for further small operator-UX identity /
 label refinements. Log new ones here as `Item N` with the same
 problem / fix / scope / done-when shape, and keep each a self-contained slice.
+
+- **(Optional) Full server-side retirement of the per-concern instrument
+  routes.** `/band2-state`, `/column-widths`, `/identity`,
+  `/display-fields/order`, and `/fields/save` are dead from the card
+  (everything routes through `/save`) but kept server-side because ~92
+  integration-test call sites still exercise them directly. Retiring them
+  means migrating those tests to POST `/save` snapshots (or to call the
+  service writers directly) and dropping the no-JS `<form>` fallback. Pure
+  cleanup, no user-facing change — do it only if the route surface is worth
+  shrinking. Scope: 7 test files (`test_instrument_builder_routes`,
+  `test_route_persistence`, `test_display_field_routes`,
+  `test_reviewer_summary_visibility`, `test_reviewee_results_body`,
+  `test_instrument_view_policy_routes`, `test_instruments_sort_column`).
 
 ---
 

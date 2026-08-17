@@ -5936,6 +5936,31 @@ def test_new_response_field_column_width_persists_via_save(
     assert (new_model.column_widths or {}).get(f"rf_{fresh.id}") == 444
 
 
+def test_pr7_dead_inline_editor_handlers_swept(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 7 — the retired inline ✎/✓ handlers
+    (unreferenced since PR 4) are removed from the page; the live
+    help-text input handler stays."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr7-sweep"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    for dead in (
+        "window.cardTitleEdit",
+        "window.cardTitleSave",
+        "window.newModelIntroEdit",
+        "window.newModelIntroSave",
+        "window.newModelHelpCardEditClick",
+        "window.newModelHelpCardSaveClick",
+    ):
+        assert dead not in body
+    # The live help-textarea input handler is kept.
+    assert "window.newModelHelpCardInput" in body
+
+
 def test_stage_band2_sends_response_column_width_px(
     client: TestClient, db: Session
 ) -> None:
