@@ -695,9 +695,12 @@ def test_workspace_users_page_renders_bulk_action_toolbar(
 
     Toolbar carries four action forms:
     Operator: Admit / Revoke (one form) + Remove from all sessions,
-    Sys Admin: Promote / Demote (one form), and Delete.
+    Admin: Promote / Demote (one form), and Delete.
+
+    The Promote/Demote form is super-admin-only (Segment 18S), so the
+    actor here is a super-admin to see all four forms.
     """
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
     # Toolbar exists.
@@ -1123,3 +1126,95 @@ def test_super_admin_target_cannot_be_removed_from_all_sessions(
             db, actor=actor, target=target, correlation_id="corr-x"
         )
     assert excinfo.value.code == "protected_super_admin"
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18S PR 3 — tier badges + conditional controls + chrome
+# --------------------------------------------------------------------------- #
+
+
+def test_super_admin_row_shows_super_admin_badge(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A super-admin user's row carries the violet Super-admin tier
+    badge + the data-is-super-admin marker the JS gates on."""
+    monkeypatch.setattr(
+        settings,
+        "super_admin_emails",
+        ["alice@example.edu", "boss@example.edu"],
+    )
+    _seed_target(
+        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
+    )
+    body = client.get("/operator/sys-admin/users").text
+    assert "pill-super" in body
+    assert "Super-admin" in body
+    assert 'data-is-super-admin="true"' in body
+
+
+def test_plain_admin_row_shows_admin_badge(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
+    _seed_target(
+        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
+    )
+    body = client.get("/operator/sys-admin/users").text
+    # bob is a plain admin (not super) → the Admin (info) badge.
+    assert '<span class="pill pill-info">Admin</span>' in body
+
+
+def test_promote_demote_controls_hidden_for_plain_sys_admin_actor(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A plain sys-admin actor doesn't see the Promote/Demote form
+    (admin management is super-admin-only). Operator + delete forms
+    still render."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _seed_target(db, email="bob@example.edu", is_operator=True)
+    body = client.get("/operator/sys-admin/users").text
+    assert 'data-action-form="sys-admin-toggle"' not in body
+    # But operator management + delete remain.
+    assert 'data-action-form="operator-toggle"' in body
+    assert 'data-action-form="delete"' in body
+
+
+def test_promote_demote_controls_visible_for_super_admin_actor(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
+    _seed_target(db, email="bob@example.edu", is_operator=True)
+    body = client.get("/operator/sys-admin/users").text
+    assert 'data-action-form="sys-admin-toggle"' in body
+
+
+def test_chrome_shows_super_admin_suffix(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The top-right chrome labels a super-admin as (super admin),
+    not (sys admin)."""
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
+    body = client.get("/operator/sys-admin/users").text
+    assert "(super admin)" in body
+    assert "(sys admin)" not in body
+
+
+def test_chrome_shows_sys_admin_suffix_for_plain_admin(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    body = client.get("/operator/sys-admin/users").text
+    assert "(sys admin)" in body
+    assert "(super admin)" not in body

@@ -52,6 +52,7 @@ class WorkspaceUserRow:
     display_name: str | None
     is_operator: bool
     is_sys_admin: bool
+    is_super_admin: bool
     created_at: datetime
     session_operator_count: int
     sole_owner_count: int
@@ -110,6 +111,7 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
             display_name=user.display_name,
             is_operator=user.is_operator,
             is_sys_admin=user.is_sys_admin,
+            is_super_admin=is_super_admin(user.email),
             created_at=user.created_at,
             session_operator_count=user_total.get(user.id, 0),
             sole_owner_count=user_sole.get(user.id, 0),

@@ -120,17 +120,23 @@
                   data-action-btn="remove-sessions"
                   disabled>Remove from all sessions</button>
         </form>
-        <span class="muted">Sys Admin:</span>
-        <form method="post" action="" data-action-form="sys-admin-toggle"
-              style="margin:0">
-          <input type="hidden" name="user_id" value="">
-          <button class="btn secondary" type="submit"
-                  data-action-btn="sys-admin-toggle"
-                  data-label-promote="Promote"
-                  data-label-demote="Demote"
-                  disabled>Promote</button>
-        </form>
-        <span class="muted" aria-hidden="true">|</span>
+        {# Admin promote / demote is super-admin-only (Segment 18S).
+           A plain sys-admin actor doesn't see these controls; the
+           server guards (`requires_super_admin`) are the real
+           enforcement. #}
+        {% if actor_is_super_admin %}
+          <span class="muted">Admin:</span>
+          <form method="post" action="" data-action-form="sys-admin-toggle"
+                style="margin:0">
+            <input type="hidden" name="user_id" value="">
+            <button class="btn secondary" type="submit"
+                    data-action-btn="sys-admin-toggle"
+                    data-label-promote="Promote"
+                    data-label-demote="Demote"
+                    disabled>Promote</button>
+          </form>
+          <span class="muted" aria-hidden="true">|</span>
+        {% endif %}
         <form method="post" action="" data-action-form="delete"
               style="margin:0">
           <input type="hidden" name="user_id" value="">
@@ -146,7 +152,7 @@
           <th>Name</th>
           <th>First sign-in</th>
           <th>Operator</th>
-          <th>Sys-admin</th>
+          <th>Admin</th>
           <th>Sessions</th>
         </tr>
         {% for row in rows %}
@@ -155,6 +161,7 @@
               data-is-self="{{ 'true' if is_self else 'false' }}"
               data-is-operator="{{ 'true' if row.is_operator else 'false' }}"
               data-is-sys-admin="{{ 'true' if row.is_sys_admin else 'false' }}"
+              data-is-super-admin="{{ 'true' if row.is_super_admin else 'false' }}"
               data-session-count="{{ row.session_operator_count }}"
               data-sole-owner-count="{{ row.sole_owner_count }}">
             <td class="col-shrink">
@@ -178,8 +185,11 @@
               {% endif %}
             </td>
             <td>
-              {% if row.is_sys_admin %}
-                <span class="pill pill-info">yes</span>
+              {% if row.is_super_admin %}
+                <span class="pill pill-super"
+                      title="Protected top tier — set only via SUPER_ADMIN_EMAILS">Super-admin</span>
+              {% elif row.is_sys_admin %}
+                <span class="pill pill-info">Admin</span>
               {% else %}
                 <span class="pill pill-empty">no</span>
               {% endif %}
@@ -274,6 +284,12 @@
             var userId = row.getAttribute("data-user-id");
             var isOperator = row.getAttribute("data-is-operator") === "true";
             var isSysAdmin = row.getAttribute("data-is-sys-admin") === "true";
+            // Segment 18S — a super-admin is a protected target: no
+            // in-app demote / revoke / remove / detach. Mirrors the
+            // server guards (protected_super_admin); the server stays
+            // the real enforcement.
+            var isSuperAdmin =
+              row.getAttribute("data-is-super-admin") === "true";
             var sessionCount = parseInt(
               row.getAttribute("data-session-count") || "0", 10);
             var soleOwnerCount = parseInt(
@@ -297,7 +313,7 @@
                 .replace("{id}", userId);
               setupButton(
                 "operator-toggle",
-                sessionCount === 0 ? revokeUrl : null,
+                sessionCount === 0 && !isSuperAdmin ? revokeUrl : null,
                 revokeLabel
               );
             } else {
@@ -314,7 +330,7 @@
             // Remove from all sessions: only when user has
             // sessions AND is not the sole owner of any.
             var canRemoveSessions =
-              sessionCount > 0 && soleOwnerCount === 0;
+              sessionCount > 0 && soleOwnerCount === 0 && !isSuperAdmin;
             setupButton(
               "remove-sessions",
               canRemoveSessions
@@ -331,7 +347,7 @@
             );
             if (isSysAdmin) {
               var demoteLabel = sysBtn.getAttribute("data-label-demote");
-              var canDemote = sysAdminCount > 1;
+              var canDemote = sysAdminCount > 1 && !isSuperAdmin;
               setupButton(
                 "sys-admin-toggle",
                 canDemote
@@ -350,10 +366,11 @@
               );
             }
 
-            // Delete: only when user has zero sessions.
+            // Delete: only when user has zero sessions and is not a
+            // protected super-admin.
             setupButton(
               "delete",
-              sessionCount === 0
+              sessionCount === 0 && !isSuperAdmin
                 ? actionUrls["delete"].replace("{id}", userId)
                 : null,
               null
