@@ -3,10 +3,10 @@
   "config": "auto-detected",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "5a5ccbc",
+    "head": "75eea4e",
     "since": "0e14a93",
-    "merge_commits": 104,
-    "non_merge_commits": 129,
+    "merge_commits": 106,
+    "non_merge_commits": 132,
     "pr_numbers": [
       1827,
       1828,
@@ -109,20 +109,22 @@
       1925,
       1926,
       1927,
-      1928
+      1928,
+      1929,
+      1930
     ],
-    "pr_range": "#1827\u2013#1928",
+    "pr_range": "#1827\u2013#1930",
     "first_date": "2026-06-03",
     "last_date": "2026-08-18"
   },
   "areas": {
     "docs": {
-      "files": 200,
-      "loc": 88312
+      "files": 201,
+      "loc": 88729
     },
     "production": {
       "files": 192,
-      "loc": 55136
+      "loc": 55165
     },
     "migrations": {
       "files": 77,
@@ -130,11 +132,11 @@
     },
     "templates": {
       "files": 60,
-      "loc": 21771
+      "loc": 21772
     },
     "tests": {
       "files": 251,
-      "loc": 86743
+      "loc": 86808
     }
   },
   "biggest_production": [
@@ -643,7 +645,7 @@
       "production"
     ],
     "app/main.py": [
-      87,
+      99,
       "production"
     ],
     "app/schemas/__init__.py": [
@@ -1031,7 +1033,7 @@
       "production"
     ],
     "app/services/users.py": [
-      507,
+      516,
       "production"
     ],
     "app/services/validation.py": [
@@ -1159,7 +1161,7 @@
       "production"
     ],
     "app/web/routes_operator/_sys_admin.py": [
-      398,
+      406,
       "production"
     ],
     "app/web/routes_operator/_workflow.py": [
@@ -1403,7 +1405,7 @@
       "templates"
     ],
     "app/web/templates/operator/sys_admin_users.html": [
-      398,
+      399,
       "templates"
     ],
     "app/web/templates/request_access.html": [
@@ -1603,7 +1605,7 @@
       "docs"
     ],
     "docs/security_posture.md": [
-      197,
+      203,
       "docs"
     ],
     "docs/status.md": [
@@ -1614,12 +1616,12 @@
       68,
       "docs"
     ],
-    "guide/18R_testing.md": [
-      164,
-      "docs"
-    ],
     "guide/README.md": [
       27,
+      "docs"
+    ],
+    "guide/archive/18R_testing.md": [
+      164,
       "docs"
     ],
     "guide/archive/README.md": [
@@ -1632,6 +1634,10 @@
     ],
     "guide/archive/codebase_assessment_01jun.md": [
       478,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_03jun.md": [
+      534,
       "docs"
     ],
     "guide/archive/codebase_assessment_09may.md": [
@@ -1676,6 +1682,10 @@
     ],
     "guide/archive/instrument_builder_project.md": [
       992,
+      "docs"
+    ],
+    "guide/archive/instrument_card_ux_audit.md": [
+      194,
       "docs"
     ],
     "guide/archive/low_intensity_workplan_review_robin_web.md": [
@@ -2094,8 +2104,8 @@
       161,
       "docs"
     ],
-    "guide/codebase_assessment_03jun.md": [
-      534,
+    "guide/codebase_assessment_17aug.md": [
+      367,
       "docs"
     ],
     "guide/deferred_infra.md": [
@@ -2108,10 +2118,6 @@
     ],
     "guide/future_possibilities.md": [
       135,
-      "docs"
-    ],
-    "guide/instrument_card_ux_audit.md": [
-      194,
       "docs"
     ],
     "guide/segment_14B_email_infrastructure.md": [
@@ -2127,7 +2133,7 @@
       "docs"
     ],
     "guide/segment_18S_security.md": [
-      314,
+      358,
       "docs"
     ],
     "guide/segment_19_spec_documentation.md": [
@@ -2983,7 +2989,7 @@
       "tests"
     ],
     "tests/integration/test_sys_admin_users.py": [
-      1220,
+      1285,
       "tests"
     ],
     "tests/integration/test_user_preferences_schema.py": [
