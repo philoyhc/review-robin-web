@@ -265,11 +265,18 @@ def _handle_toggle(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
             ) from exc
+        if exc.code == "requires_super_admin":
+            # Actor lacks super-admin — forbidden to manage admins
+            # (Segment 18S Item 1).
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=exc.message
+            ) from exc
         if exc.code in {
             "last_admin",
             "owns_sessions",
             "still_owner",
             "sole_owner",
+            "protected_super_admin",
         }:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
