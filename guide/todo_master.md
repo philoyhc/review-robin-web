@@ -2026,12 +2026,6 @@ dep chains called out at the bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **18R — UX refinement** *(Items 1 & 2 shipped; no queued items)*. Items 1
-  (instrument-card identity, #1899) and 2 (save/lock harmonization, PR ladder
-  1–7, cleanup #1921) are both done — see the Segment 18R entry in the Done
-  log above. The segment **stays open** as a home for further operator-UX
-  refinements; log new ones as `Item N` in `guide/segment_18R_ux_refine.md`.
-
 - **18S — Security refinements** *(created 2026-08-16)*. Holding segment
   for small, self-contained in-app authorization / account-safety
   hardening. **Item 1:** formalize a **three-tier role model** —
