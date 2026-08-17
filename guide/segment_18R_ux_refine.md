@@ -105,7 +105,7 @@ cleanup closed by PR #1921. The card now drives a single consolidated
 server-side (see the Route-retirement outcome note below).
 
 **The problem.** The per-instrument card mixes **three** persistence paths
-(full audit: `guide/instrument_card_ux_audit.md`):
+(full audit: `guide/archive/instrument_card_ux_audit.md`):
 
 - **A — staged → Save** (Assignment rule / Band 1; Visibility / Band 3);
 - **B — immediate async POST on click** (most of Preview / Band 2 — field
@@ -254,7 +254,7 @@ case, and a "nothing persists before Save" assertion.
   #4); a validation failure leaves the card unlocked with edits intact.
 - `spec/instruments.md` + `spec/operator_ui_concept.md` (lock card /
   Save-Edit toggle) updated to the harmonized model; the audit
-  (`guide/instrument_card_ux_audit.md`) cited as origin.
+  (`guide/archive/instrument_card_ux_audit.md`) cited as origin.
 - Full suite + `ruff` green.
 
 **Decisions (resolved 2026-08-16).**
@@ -576,7 +576,7 @@ problem / fix / scope / done-when shape, and keep each a self-contained slice.
 - `docs/quickstart.md` §4c — update the three Link labels to match Item 1.
 - `spec/instruments.md`, `spec/operator_ui_concept.md` — the harmonized
   save / lock model + per-state button bar, per Item 2 (cites
-  `guide/instrument_card_ux_audit.md`).
+  `guide/archive/instrument_card_ux_audit.md`).
 - `docs/status.md` — note the rename (Item 1) and the save/lock
   rationalization (Item 2) when they ship.
 - `docs/quickstart.md` — keep §4c wording + the screenshot slot consistent.
