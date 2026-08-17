@@ -410,6 +410,9 @@
       .pill-warning { background: #fef3c7; color: #92400e; }
       .pill-info { background: #dbeafe; color: #1e40af; }
       .pill-success { background: #dcfce7; color: #166534; }
+      /* Super-admin tier badge (18S) — violet, distinct from the
+         blue admin/info pill so the protected top tier stands out. */
+      .pill-super { background: #ede9fe; color: #5b21b6; }
       .session-meta-row {
         display: flex;
         gap: 16px;
@@ -2188,6 +2191,10 @@
         background: var(--accent-green-bg);
         color: var(--accent-green);
       }
+      body.ui-v2 .pill.pill-super {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
       /* draft = "not ready for action" — same warning treatment as
          .pill-empty so the status badge reads as "needs work". */
       body.ui-v2 .pill-lifecycle-draft {
@@ -2824,7 +2831,7 @@
         </div>
         {% if user %}
           <div class="chrome-user">
-            <div>Signed in as {{ user.display_name or user.email }}{% if user.is_sys_admin %} (sys admin){% endif %}</div>
+            <div>Signed in as {{ user.display_name or user.email }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
             {% if request.url.path != "/operator/settings" %}
               <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
             {% endif %}

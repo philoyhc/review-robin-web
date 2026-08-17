@@ -220,6 +220,7 @@ def sys_admin_users(
         {
             "user": user,
             "rows": users_service.list_workspace_users(db),
+            "actor_is_super_admin": user.is_super_admin,
             "invite_error": invite_error,
             "toggle_error": toggle_error,
             "selected_user_id": selected,

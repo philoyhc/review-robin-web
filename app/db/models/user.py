@@ -76,6 +76,17 @@ class User(Base, TimestampMixin):
     # reads or writes the column until 18B PR 2 lights it up.
     preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    @property
+    def is_super_admin(self) -> bool:
+        """Segment 18S Item 1 — the protected top tier. Derived from
+        config (``SUPER_ADMIN_EMAILS`` + the fake-auth fold-in), never a
+        stored column, so it can't drift or be flipped in-app. Thin
+        delegate to ``app.auth.roles`` (lazy import keeps the model's
+        module-level dependency graph free of the auth layer)."""
+        from app.auth.roles import is_super_admin
+
+        return is_super_admin(self.email)
+
     review_sessions: Mapped[list[ReviewSession]] = relationship(
         back_populates="created_by_user",
         cascade="all, delete-orphan",
