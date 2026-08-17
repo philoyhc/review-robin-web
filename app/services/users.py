@@ -40,7 +40,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth.roles import is_super_admin
+from app.auth.roles import effective_super_admin_emails, is_super_admin
 from app.db.models import SessionOperator, User
 from app.services import audit
 
@@ -142,7 +142,16 @@ def _sys_admin_count(db: Session) -> int:
 def _guard_actor_super_admin(actor: User) -> None:
     """Segment 18S Item 1 — admin (``is_sys_admin``) promote / demote is
     **super-admin-only**. A plain sys-admin can no longer change who is
-    an admin. Operator admit / revoke keeps requiring only admin."""
+    an admin. Operator admit / revoke keeps requiring only admin.
+
+    Item 2 — no-super-tier fallback. When **no** super-admin tier is
+    configured (``SUPER_ADMIN_EMAILS`` empty, and no fake-auth fold-in),
+    fall back to the pre-18S rule (any admin manages admins) rather than
+    locking admin management out entirely — the strict rule engages only
+    once a super-admin actually exists.
+    """
+    if not effective_super_admin_emails():
+        return
     if not is_super_admin(actor.email):
         raise UserOperationError(
             code="requires_super_admin",

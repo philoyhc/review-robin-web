@@ -4,8 +4,9 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
+from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
-from app.logging_config import configure_logging
+from app.logging_config import configure_logging, get_logger
 from app.web.deps import OperatorAllowlistDenied
 from app.web.error_handlers import register_error_handlers
 from app.web.routes_about import router as about_router
@@ -36,6 +37,17 @@ _QUICK_SETUP_COOKIE_RE = re.compile(r"^qsu_(\d+)$")
 def create_app() -> FastAPI:
     configure_logging()
     validate_critical_settings(settings)
+    # Segment 18S Item 2 — surface the degraded (no-super-tier) state.
+    # A deployed env with no super-admin configured falls back to
+    # "any admin manages admins"; that's intentional (no lockout) but
+    # worth a loud line in the logs so it isn't a silent surprise.
+    if settings.app_env != "local" and not effective_super_admin_emails(settings):
+        get_logger(__name__).warning(
+            "no super-admin configured (SUPER_ADMIN_EMAILS empty) — "
+            "admin promote/demote falls back to any-admin; set "
+            "SUPER_ADMIN_EMAILS to enable the protected top tier",
+            extra={"event": "super_admin.unconfigured"},
+        )
     app = FastAPI(title="Review Robin Web")
     app.include_router(health_router)
     app.include_router(about_router)

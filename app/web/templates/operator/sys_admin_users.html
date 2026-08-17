@@ -120,11 +120,12 @@
                   data-action-btn="remove-sessions"
                   disabled>Remove from all sessions</button>
         </form>
-        {# Admin promote / demote is super-admin-only (Segment 18S).
-           A plain sys-admin actor doesn't see these controls; the
-           server guards (`requires_super_admin`) are the real
-           enforcement. #}
-        {% if actor_is_super_admin %}
+        {# Admin promote / demote is super-admin-only (Segment 18S) —
+           except when no super tier is configured at all, where any
+           admin may manage admins (Item 2 fallback). ``can_manage_admins``
+           mirrors the server actor guard exactly; the server guard is the
+           real enforcement. #}
+        {% if can_manage_admins %}
           <span class="muted">Admin:</span>
           <form method="post" action="" data-action-form="sys-admin-toggle"
                 style="margin:0">
