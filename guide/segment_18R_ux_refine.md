@@ -2,7 +2,8 @@
 
 **Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
 shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
-closed by PR #1921)**. A holding segment for **operator-UX refinement** on
+closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
+shipped 2026-08-17, PR #1923)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -515,6 +516,34 @@ routes are **kept** (retired from the card only). The earlier "retire
 `/fields/save` / `/save` is the sole writer / drop the no-JS fallback"
 decision is **superseded** by this check; full server-side deletion + the
 test migration it requires is an optional Future item.
+
+---
+
+## Item 3 — Instrument-card UX tweaks (open-ended)
+
+A running home for **small, self-contained polish on the per-instrument
+card** — layout, control ordering, affordance sizing — that doesn't warrant
+its own item. Each tweak is a bullet with a one-line problem → fix and its
+shipping PR; land them individually or batched as convenient.
+
+**Shipped:**
+
+- **Taller description edit box** (PR #1923). The preview-band instrument
+  description edit box only used `min-height: 4em`, leaving dead space now
+  that the inline ✎/✓ buttons are retired (Item 2). Grown to `6.5em` so the
+  box reclaims that space; the locked read view is unchanged, so the card's
+  resting height doesn't grow.
+- **Link 2 operator-cycle reorder** (PR #1923). "Who is being reviewed"
+  (Link 2) cycled `IS → IS NOT → IS THE SAME AS → IS DIFFERENT FROM`. Reordered
+  to lead with the cross-side tag operators:
+  `IS THE SAME AS → IS DIFFERENT FROM → IS → IS NOT`, so the Reviewer-tag
+  relationship is the default for a fresh Link 2 rule (the common
+  reviewee-matches-reviewer case; the last two keep the freeform value box).
+  `newModelAddRule` now seeds a cloned cell's operand box from the cycle's
+  default operator rather than a hardcoded `IS`, so a newly-added Link 2 row
+  shows the tag dropdown.
+
+**Open** — log further card tweaks here as they come up.
 
 ---
 
