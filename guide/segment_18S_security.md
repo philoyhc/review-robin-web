@@ -146,6 +146,106 @@ config-derived; `is_operator` / `is_sys_admin` columns already exist).
 
 ---
 
+### Item 1 — implementation (decisions + PR ladder)
+
+> **Grounded against the live code (2026-08-17).** File/line anchors below are
+> from a read of the current implementation. No migration: `super_admin_emails`
+> is config-derived and `is_operator` / `is_sys_admin` columns already exist.
+
+**Decisions (resolving the open questions + design choices).**
+
+1. **Self-heal = every sign-in, but super-admin-only.** `get_or_create_user`
+   (`app/web/deps.py:47-102`) currently bootstraps role flags **only on
+   first sign-in** and returns existing rows untouched (`:65-81`), a
+   once-only contract guarded by
+   `test_bootstrap_runs_once_env_var_removal_does_not_auto_revoke`. The
+   super-admin self-heal is added as a **narrow** re-assertion that fires for
+   super-admin emails *only* (force `is_sys_admin = is_operator = True` on
+   every sign-in, existing rows included). Normal operator/sys-admin bootstrap
+   stays once-only. This guarantees a manual demotion can't strand a protected
+   account without loosening the existing contract for everyone else.
+2. **Keep both floors** — the count-based `last_admin` floor stays alongside
+   the identity-based `protected_super_admin` guard.
+3. **`is_super_admin` is a service helper, not a model `@property`.** The
+   `User` model (`app/db/models/user.py`) has no computed properties and does
+   not import config; add a casefold-membership helper (mirroring
+   `deps._email_in`) rather than coupling the model to settings. A thin
+   delegating property can be added later if callers want `user.is_super_admin`.
+4. **`SUPER_ADMIN_EMAILS` stays optional** — it is *not* added to the
+   `validate_critical_settings` fail-fast (`app/config.py:116-120`); making it
+   required would break existing deployments. A non-empty list still
+   guarantees ≥1 protected admin as a bonus.
+
+**PR ladder** (each slice independently reviewable + shippable; backend tiers
+land before the UI that surfaces them):
+
+1. **Config + derived super-admin + self-heal** *(backend; no guards / no UI —
+   delivers capability nesting for free).*
+   - Add `super_admin_emails: Annotated[list[str], NoDecode] = []` to
+     `app/config.py` (mirror `:39-40`) and extend the `_split_email_list`
+     validator target list (`:47-52`); env `SUPER_ADMIN_EMAILS`.
+   - Add an `is_super_admin(email, settings)` helper (casefold membership,
+     mirroring `deps._email_in:31-35`).
+   - In `get_or_create_user`, add the super-admin-only re-assertion (per
+     Decision 1) for both the existing-row path (`:65-70`) and the
+     first-sign-in path (`:82-97`).
+   - Tests: self-heal on first **and** subsequent sign-in; a manually-demoted
+     super-admin re-asserts to full rights; a non-super email is unaffected
+     (once-only contract intact).
+   - *Risk note:* smallest, self-contained slice; establishes super-admin ⊇
+     admin ⊇ operator before any guard depends on it. Land first.
+
+2. **Management guards** *(backend; no UI).*
+   - **Actor guard:** `promote` / `demote` (`app/services/users.py:209` /
+     `:231`) require the **actor** to be super-admin →
+     `UserOperationError(code="requires_super_admin", …)`; operator
+     admit / revoke keeps requiring admin. (Confirm the exact
+     `promote`/`demote` actor-vs-target signature when wiring.)
+   - **Target guard:** `demote` / `revoke` / `remove_user` /
+     `remove_from_all_sessions` refuse when the **target** is super-admin →
+     `UserOperationError(code="protected_super_admin", …)`, placed *above* the
+     `last_admin` count floor (`:239-246`, `:363-370`).
+   - Extend `_handle_toggle` (`routes_operator/_sys_admin.py:254-278`):
+     `requires_super_admin` → 403, `protected_super_admin` → 409.
+   - Tests: the full who-manages-whom matrix (admin **cannot** promote/demote;
+     super-admin can; admin **can** still admit/revoke operators) + the
+     protection guard on all four target paths.
+
+3. **Sys Admin page UI + chrome** *(consequential UI → scaffold-first per
+   `CLAUDE.md`; may split 3a / 3b).*
+   - `GET /sys-admin/users` (`_sys_admin.py:208`) passes `actor_is_super_admin`
+     + per-row `is_super_admin` into the template context.
+   - **3a (scaffold):** `templates/operator/sys_admin_users.html` — render the
+     three-tier badge (reshape the two yes/no columns `:173-186`), add
+     `data-is-super-admin` to each `<tr>` (`:154-159`); add the `(super admin)`
+     chrome suffix in **both** `base.html:2827` and
+     `reviewer/_top_bar.html:22`. Static, no control-gating yet.
+   - **3b (wiring):** Promote/Demote controls render only for a super-admin
+     actor; Demote / Revoke / Remove hidden or disabled on super-admin rows;
+     update the inline JS gating (`:191-376`). Server guards from PR 2 remain
+     the real enforcement — the UI is advisory.
+
+4. **Docs** *(fold into the relevant PRs or land last).*
+   - Rewrite `spec/audience_and_identity_model.md` §4 (`:104-130`) to the
+     three-tier model (tiers, nesting, the management matrix, the
+     config-anchored super tier).
+   - Document `SUPER_ADMIN_EMAILS` in `docs/deployment_dev.md` +
+     `docs/deployment_nus.md` §7 (incl. §7.1: the seeded admin can be made a
+     protected super-admin); record the hierarchy + protected-super-admin
+     guarantee in `docs/security_posture.md`; note the ship in `docs/status.md`.
+
+**Sequencing:** 1 → 2 → 3 (→ 3a → 3b) → 4. PR 1 must precede PR 2 (guards
+assume nesting); PR 3 must follow PR 2 (UI mirrors the server guards). PR 4 can
+ride alongside PR 3 or land as its own slice.
+
+**Test files to extend** (existing coverage to build on): the guard suite
+`tests/integration/test_sys_admin_users.py`; the self-heal / bootstrap seam
+`tests/integration/test_operator_allowlist_gate.py`; chrome + `require_sys_admin`
+`tests/integration/test_sys_admin_chrome.py`; config validation
+`tests/unit/test_config_validation.py`.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small in-app security / authz refinements
