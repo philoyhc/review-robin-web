@@ -1639,6 +1639,16 @@
                name="band2_state_snapshot"
                data-new-model-band2-state-snapshot
                value="">
+        {# Segment 18R Item 2 PR 6 — display-field order snapshot. The
+           client stages the ordered (non-locked) display-field ids here
+           on a Band 2 display-pill drag reorder; /save applies it via
+           reorder_display_fields, retiring the immediate
+           /display-fields/order POST. Starts empty — empty means no
+           reorder to apply. #}
+        <input form="dfsave-{{ instrument.id }}" type="hidden"
+               name="display_field_order_snapshot"
+               data-new-model-band2-display-order-snapshot
+               value="">
         {# Gap 3 (18J Wave 1) — sort-spec hidden inputs slot.
            Mirrors the legacy card's slot (same id, same parallel-
            array shape). ``toggleSort`` / ``_rebuildSortInputs``
@@ -3376,8 +3386,8 @@
           // Pills carrying ``data-reorderable="true"`` (every
           // non-locked display field) are HTML5-draggable. On
           // drop, we move the DOM node, recompute the ordered list
-          // of unlocked-pill display_field_ids, then POST to the
-          // display-fields/order route. The locked Name + Email
+          // of unlocked-pill display_field_ids, then stage it for
+          // Save (Segment 18R Item 2 PR 6). The locked Name + Email
           // pills sit at the front and are never draggable.
           var dragSource = null;
           window.newModelBand2DragStart = function (event) {
@@ -3459,27 +3469,26 @@
               rebuildPreview(band2Card);
             }
           };
-          // POST the current order of reorderable pill display
-          // field ids to the display-fields/order route. Locked
-          // pills (Name, Email) are excluded — the server already
-          // pins them at orders 0 and 1.
+          // Locked pills (Name, Email) are excluded — the server
+          // already pins them at orders 0 and 1.
+          // Segment 18R Item 2 PR 6 — stage the current display-field
+          // order (non-locked display pills, in DOM order) into the
+          // hidden snapshot input and mark the card dirty, instead of an
+          // immediate /display-fields/order POST. /save applies it on
+          // Save via reorder_display_fields.
           function saveBand2DisplayFieldOrder(card) {
-            var sessionId = card.getAttribute('data-new-model-band2-session-id');
-            var instrumentId = card.getAttribute('data-new-model-band2-instrument-id');
-            if (!sessionId || !instrumentId) { return; }
+            if (!card) { return; }
             var orderedIds = [];
             card.querySelectorAll('[data-new-model-band2-pill][data-reorderable="true"]').forEach(function (pill) {
               var id = parseInt(pill.getAttribute('data-display-field-id') || '', 10);
               if (id > 0) { orderedIds.push(id); }
             });
-            fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/display-fields/order', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              credentials: 'same-origin',
-              body: JSON.stringify({ordered_ids: orderedIds}),
-            }).catch(function (err) {
-              if (window.console) { console.warn('Band 2 display field reorder save failed', err); }
-            });
+            var snapshot = card.querySelector('[data-new-model-band2-display-order-snapshot]');
+            if (snapshot) { snapshot.value = JSON.stringify(orderedIds); }
+            var instrumentCard = card.closest('[data-instrument-card]');
+            if (instrumentCard && window.newModelMarkCardDirty) {
+              window.newModelMarkCardDirty(instrumentCard);
+            }
           }
           // Wire each Band 2 card on the page on first load.
           // Deferred to DOMContentLoaded because this <script>

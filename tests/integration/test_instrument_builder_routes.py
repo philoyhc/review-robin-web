@@ -1217,6 +1217,72 @@ def test_new_model_band2_display_fields_order_round_trip(
     assert tag_1.order == 2
 
 
+def test_pr6_save_applies_display_field_order_from_snapshot(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 6 — /save applies the staged display-field
+    order from the ``display_field_order_snapshot`` form field, replacing
+    the immediate /display-fields/order POST. Locked Name + Email stay
+    pinned; the reordered non-locked field takes the first free slot."""
+    review_session = _make_session(client, db, code="pr6-order")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+    db.refresh(new_model)
+    by_source = {
+        f.source_field: f
+        for f in new_model.display_fields
+        if f.source_type == "reviewee"
+    }
+    tag_1 = by_source["tag_1"]
+    unlocked_ids = [
+        f.id
+        for f in new_model.display_fields
+        if (f.source_type, f.source_field)
+        not in (("reviewee", "name"), ("reviewee", "email_or_identifier"))
+    ]
+    new_order = [tag_1.id] + [fid for fid in unlocked_ids if fid != tag_1.id]
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"display_field_order_snapshot": json.dumps(new_order)},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+    db.refresh(tag_1)
+    assert tag_1.order == 2
+
+
+def test_pr6_display_order_staging_wiring_ships(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 6 — display-field reorder stages into the
+    hidden snapshot (consumed by /save) instead of an immediate POST."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr6-wiring"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'name="display_field_order_snapshot"' in body
+    assert "data-new-model-band2-display-order-snapshot" in body
+    # Reorder stages into the snapshot + marks the card dirty …
+    assert "snapshot.value = JSON.stringify(orderedIds)" in body
+    # … and the old immediate-POST body is gone.
+    assert "{ordered_ids: orderedIds}" not in body
+
+
 def test_new_model_band2_display_fields_order_rejects_locked_id(
     client: TestClient, db: Session
 ) -> None:
