@@ -42,6 +42,20 @@
     }
     .save-error-banner ul { margin: 6px 0 0 0; padding-left: 20px; }
     .save-error-banner strong { font-weight: 600; }
+    /* Segment 18R Item 2 PR 5c — a response field with saved responses
+       has its shape (type + bounds) frozen; the data-type select + the
+       bound inputs already carry `disabled`, but base.html only styles
+       disabled *buttons* (so the X reads correctly greyed while these
+       looked live). Give the disabled shape controls a matching
+       inactive treatment so the freeze is obvious at a glance; the
+       "Clear responses first" title stays as the explanation. */
+    [data-new-model-rf-data-type]:disabled,
+    [data-new-model-rf-bound]:disabled {
+      background: var(--surface-muted, #f1f5f9);
+      color: var(--text-muted, #94a3b8);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
     /* Segment 13B PR 2 — Display Fields Sort column. The
        per-row Sort cell hosts a tri-state click button + a
        priority badge. */
@@ -4544,13 +4558,51 @@
           var name = (nameInput && nameInput.value || '').trim();
           var saveBtn = row.querySelector('[data-new-model-rf-save]');
           var deleteBtn = row.querySelector('[data-new-model-rf-delete]');
+          var requiredBtn = row.querySelector('[data-new-model-rf-required]');
+          var helpBtn = row.querySelector('[data-new-model-rf-help-visible]');
           var hasResponses = row.getAttribute('data-has-responses') === 'true';
+          // Segment 18R Item 2 PR 5c — R (required) + ≡ (help-text
+          // visibility) are inactive on a blank row awaiting input;
+          // active once the row has a field name to attach the flag to.
+          function _blankRowGate(btn, activeTitle) {
+            if (!btn) { return; }
+            if (!name) {
+              btn.setAttribute('disabled', '');
+              btn.setAttribute('aria-disabled', 'true');
+              btn.setAttribute('title', 'Enter a field name first.');
+            } else {
+              btn.removeAttribute('disabled');
+              btn.removeAttribute('aria-disabled');
+              btn.setAttribute('title', activeTitle);
+            }
+          }
+          _blankRowGate(requiredBtn, 'Toggle whether this field is required');
+          _blankRowGate(
+            helpBtn, 'Toggle whether the help text shows to reviewers'
+          );
           if (saveBtn) {
             var reason = null;
             if (!name) {
               reason = 'Enter a field name to save.';
             } else {
               reason = window.newModelRfValidateShape(row);
+            }
+            // Segment 18R Item 2 PR 5c — ✓ is push-to-preview. Once the
+            // field is reflected in the preview (has a paired pill) with
+            // no pending edits, there is nothing to push, so grey it out
+            // until the row changes again.
+            if (!reason) {
+              var rowKey = row.getAttribute('data-row-key');
+              var instrumentCard = row.closest('[id^="instrument-"]');
+              var pairedPill = (rowKey && instrumentCard)
+                ? instrumentCard.querySelector(
+                    '[data-new-model-band2-pill][data-row-key="' + rowKey + '"]'
+                  )
+                : null;
+              if (pairedPill
+                  && row.getAttribute('data-row-pending') !== 'true') {
+                reason = 'Already in the preview — no changes to push.';
+              }
             }
             if (reason) {
               saveBtn.setAttribute('disabled', '');
@@ -4561,7 +4613,7 @@
               saveBtn.removeAttribute('aria-disabled');
               saveBtn.setAttribute(
                 'title',
-                'Save this response field to the pills + preview'
+                'Push this response field to the pills + preview'
               );
             }
           }
@@ -4724,6 +4776,11 @@
             window.newModelUpdateIntroProgress(band2);
           }
           saveBand2State(band2);
+          // Segment 18R Item 2 PR 5c — the row is now reflected in the
+          // preview with no pending edits; clear the pending flag and
+          // recompute so ✓ greys out until the row changes again.
+          row.removeAttribute('data-row-pending');
+          window.newModelRfRecomputeActionStates(row);
         };
         // X on a row: remove the row + its paired pill if saved.
         // If this was the only row, leave one empty row in its
