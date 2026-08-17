@@ -240,6 +240,9 @@ case, and a "nothing persists before Save" assertion.
   Required / Help stay editable.
 - Leaving an unlocked card with pending edits **warns/confirms** before
   discarding.
+- **No unlocked-and-collapsed card:** collapsing an unlocked card Locks it
+  (usual unsaved-changes confirm; decline re-expands); expanding never changes
+  lock state.
 - **Save runs the full current validation set** (listed in Decisions
   #4); a validation failure leaves the card unlocked with edits intact.
 - `spec/instruments.md` + `spec/operator_ui_concept.md` (lock card /
@@ -268,8 +271,13 @@ case, and a "nothing persists before Save" assertion.
    writers run. The current set (to preserve):
 
    *Response fields (`_response_fields` / `_band2.set_band2_state`):*
-   - **Field key** — required; ≤ 64 chars; matches `^[a-z][a-z0-9_]*$`;
-     **unique within the instrument** (`FieldKeyError` / `_band2_unique_field_key`).
+   - **Field key** — *(audit 2026-08-17: not an operator-facing gate on this
+     card)*. `set_band2_state` **auto-generates** a unique, well-formed field
+     key from each field's name (`_band2_unique_field_key`), so the
+     `FieldKeyError` required/format/uniqueness checks belong to the retired
+     legacy table path, not the new-model card. `/save` reproduces the four
+     exceptions `set_band2_state` actually raises (below); it does not need a
+     `FieldKeyError` block.
    - **Label** — required (non-empty) when adding a field.
    - **Inline shape well-formed** (`InvalidResponseFieldShapeError`, Wave 3
      PR ii): `max ≥ min`; `step > 0`; List has ≥ 1 option; String
@@ -379,6 +387,15 @@ case, and a "nothing persists before Save" assertion.
 - **One card editable at a time.** A page-level "currently-unlocked instrument"
   state; unlocking card B while card A is unlocked-and-dirty first prompts to
   **Save / Cancel** card A.
+- **Collapse ⇒ lock (no unlocked-but-collapsed card) — added 2026-08-17.**
+  Expand / collapse (the card's `<details>`) and lock state are coupled in one
+  direction: **collapsing an unlocked card triggers a Lock** (running the usual
+  unsaved-changes confirm — decline re-expands the card and leaves it
+  unlocked). **Expanding never changes the lock state.** Invariant: a card is
+  never *unlocked **and** collapsed* — editing controls are only reachable on
+  an expanded card. (Programmatic open-state changes — the on-reload open-state
+  restore and Expand-/Collapse-all — must not fire the confirm; the bulk
+  Collapse-all locks the open card as part of collapsing it.)
 - **Validation errors → summary banner at the top of the (still-unlocked)
   card**, listing the blocking issues; edits stay intact.
 
@@ -396,6 +413,15 @@ read-only when locked — a real template refactor. Scaffold-first de-risks it:
 agree the always-rendered / toggle shape before wiring persistence.
 
 **PR ladder.**
+
+**Status (2026-08-17):** PRs 1–5 + 5c **shipped and merged**, plus several
+dev-slot follow-up fixes not in the original ladder (Cancel keeps the card
+unlocked + preserves per-card open state on its discard reload; the
+instrument-name input no longer collapses the card on click/Space/Enter).
+Audited against code 2026-08-17 — the ladder below reflects what's actually
+left: PR 6 is now essentially just **display-field reorder staging** (the rest
+of its original scope shipped in PRs 3–4), plus the new **collapse ⇒ lock**
+behaviour; PR 7 is cleanup.
 
 1. **Scaffold (inert).** The button cluster per state (Locked → **Unlock**;
    Unlocked → **Save · Lock · Cancel**, with Save + Cancel greyed until
@@ -427,23 +453,40 @@ agree the always-rendered / toggle shape before wiring persistence.
    rows are captured). Fold the band2 help-text persistence (UI already done
    in PR 4) fully into `/save`. Retire `/band2-state`, `/column-widths` from
    the card.
-6. **Migrate identity + display order → staging.** Route `short_label` /
-   `description` (UI already done in PR 4) fully through `/save` and retire
-   `/identity` from the card; display-field reorder folds into the payload
-   (retire in-card `/display-fields/order`). Band 1 + Band 3 (already staged)
-   route into the consolidated save instead of `/fields/save`.
-7. **Cleanup + tests.** Retire now-unused endpoints (or keep server-side only
-   where a verified non-card caller needs them); final button-state-matrix
-   pass; update `spec/instruments.md` + `spec/operator_ui_concept.md`. Tests:
-   the button-state matrix (locked / unlocked-clean / unlocked-dirty), staged
+6. **Display-field reorder staging + collapse ⇒ lock.** *(Audit 2026-08-17 —
+   the rest of the original "identity + display order" scope already shipped:
+   `short_label` / `description` route through `/save` since PR 4, the card
+   makes no `/identity` calls since PR 4, and Band 1 + Band 3 route into `/save`
+   since PR 3. The only staging left is display-field reorder.)*
+   - **Display-field reorder → `/save`.** Dragging a *display* pill still fires
+     an immediate `POST /display-fields/order` (`saveBand2DisplayFieldOrder`);
+     stage the order into the payload (a hidden snapshot input, like
+     `column_widths_snapshot`) and apply it in `/save`, retiring the in-card
+     immediate POST. (Response-pill reorder already stages via `saveBand2State`
+     since PR 5b.) This closes the last "nothing persists before Save" gap.
+   - **Collapse ⇒ lock.** Wire the invariant above: collapsing an unlocked card
+     Locks it (with the unsaved-changes confirm; decline re-expands), expanding
+     never changes lock state, and no card is ever unlocked-and-collapsed.
+7. **Cleanup + tests.** Retire the now-unused endpoints (verified card-only
+   callers): `/band2-state`, `/column-widths`, `/identity`, and
+   `/display-fields/order`; **retire `/fields/save` too and make `/save` the
+   sole writer — the no-JS form fallback is dropped (the card requires JS
+   already).** Sweep the six dead ✎/✓ handlers (`cardTitleEdit` / `cardTitleSave`
+   / `newModelIntroEdit` / `newModelIntroSave` / `newModelHelpCardEditClick` /
+   `newModelHelpCardSaveClick`) confirmed unreferenced by the audit. Final
+   button-state-matrix pass; update `spec/instruments.md` +
+   `spec/operator_ui_concept.md` to the harmonized model. Tests: the
+   button-state matrix (locked / unlocked-clean / unlocked-dirty), staged
    round-trips per area, the fixed lost-edit, "nothing persists before Save
    and Lock", validation-failure keeps edits + shows the banner, the
-   one-card-at-a-time guard, and the nav-away confirm.
+   one-card-at-a-time guard, the nav-away confirm, and the collapse ⇒ lock
+   invariant.
 
 **Endpoint disposition** (retire *from the card*; check for non-card callers
 before deleting server-side): `/band2-state`, `/identity`, `/column-widths`,
 in-card `/display-fields/order`, and the old `/fields/save` are all replaced
-by the single `…/save`.
+by the single `…/save`. **Decision (2026-08-17): retire `/fields/save`** — no
+no-JS Save fallback is kept; `/save` is the sole writer.
 
 ---
 
