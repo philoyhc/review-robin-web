@@ -1,8 +1,11 @@
 # Segment 18S — Security refinements
 
 **Status:** In progress — **Item 1 shipped 2026-08-17** (three-tier role
-model; PR ladder 1–4: config + self-heal #1925, guards #1926, UI #1927, docs).
-A holding segment for **small, self-contained security / authorization
+model; PR ladder 1–4: config + self-heal #1925, guards #1926, UI #1927, docs);
+**Item 2 shipped 2026-08-17** (no-super-tier fallback, #1930); **Item 3 planned
+2026-08-17** (tighten sys-admin cross-session writes to explicit ownership +
+self-add/clone bootstrap; not started; 18R Item 4 depends on it). A holding
+segment for **small, self-contained security / authorization
 hardening** on shipped surfaces. Items land as independent slices; the segment
 stays open as a home for further security refinements as they're identified.
 
@@ -294,7 +297,7 @@ ride alongside PR 3 or land as its own slice.
 
 ## Item 2 — No-super-tier fallback (fix the admin-management lockout)
 
-**Status: building 2026-08-17.**
+**Status: ✅ Shipped 2026-08-17 (#1930).**
 
 **The problem (footgun from Item 1).** `promote` / `demote` require the
 **actor** to be a super-admin (`requires_super_admin`), but super-admin is
@@ -333,6 +336,79 @@ Decision 4.)
 **Definition of done.** With `SUPER_ADMIN_EMAILS` unset, a plain admin can
 promote/demote admins again (no lockout); with it set, Item 1's strict rule and
 the protected-super-admin guarantee are unchanged. Full suite + `ruff` green.
+
+---
+
+## Item 3 — Tighten sys-admin cross-session writes (explicit ownership + self-add bootstrap)
+
+**Status: planned (2026-08-17). Not started.**
+
+**The problem (audit).** The only mechanism that lets a sys-admin act on a
+session they don't own is the `require_sys_admin_or_session_operator` gate
+(`app/web/deps.py:205`), which bypasses `session_operators` membership when
+`user.is_sys_admin`. Everything else that touches a session (the bulk lobby
+tag / archive / delete routes) uses `require_operator` **plus** a per-id
+ownership re-check (`sessions.get_for_user`), so non-owned ids are skipped —
+those are safe, and no route hand-rolls an `is_sys_admin` bypass. So the whole
+exposure is the live callers of that one gate:
+
+| Route | Handler | What a non-owner sys-admin can do | Disposition |
+|---|---|---|---|
+| `GET /sessions/{id}/edit` | `session_edit_form` | open the config edit page | **tighten** → require ownership |
+| `POST /sessions/{id}/edit` | `session_edit_submit` | **edit config** (name/code/desc/schedule/UI settings) | **tighten** → require ownership |
+| `POST /sessions/{id}/owners/add` | `session_owners_add` | add an owner (self *or* anyone) | **keep, but self-only** |
+| `POST /sessions/{id}/owners/{uid}/remove` | `session_owners_remove` | remove an owner | **tighten** → require ownership |
+| `POST /sessions/{id}/lobby-edit` | `lobby_edit_submit` | rename / re-tag from the lobby | **tighten** → require ownership |
+| `POST /sessions/{id}/clone` | `clone_session_submit` | clone (→ becomes owner of the new clone; original untouched) | **keep relaxed** |
+
+(Already fine: `/export/audit_log.csv` was tightened to `require_sys_admin` in
+16C PR 1 — no longer uses the relaxed gate.)
+
+**The policy (decided 2026-08-17).** Least privilege + explicit, audited
+elevation. A sys-admin (incl. super-admin) may do exactly two things on a
+session they don't own, both audited:
+
+1. **Add themselves as an owner** (the self-add bootstrap — chicken-and-egg:
+   you can't be an owner to add yourself). Tighten `owners/add` so a non-owner
+   sys-admin may add **only themselves**; adding *other* people requires
+   ownership (once self-added, they're an owner and add others normally).
+2. **Clone** the session — clone only reads the original and creates a new
+   session the cloner owns, so it's low-risk; keep it relaxed.
+
+Everything else — **edit config, lobby rename/tag, remove owners** — requires
+real `session_operators` membership. The sys-admin **Diagnostics → "Details"**
+entry point routes through self-add-as-owner rather than a back-door edit page.
+No shadow editing: every config mutation is by a recorded owner.
+
+**Scope.**
+- `edit` (GET + POST), `lobby-edit`, `owners/remove`: swap
+  `require_sys_admin_or_session_operator` → `require_session_operator`.
+- `owners/add`: keep the relaxed entry but add a **self-only** check for the
+  non-owner sys-admin path (actor may only add their own user id unless they're
+  a session operator).
+- `clone`: unchanged (stays relaxed).
+- Retire `require_sys_admin_or_session_operator` itself **iff** no caller
+  remains after the above (clone still uses it — so it stays, now with only the
+  clone + self-add callers; rename/re-document it to reflect the narrowed use).
+- Re-point the sys-admin **Diagnostics "Details"** action (Sessions
+  Diagnostics) to the self-add-as-owner → open-session flow.
+- Docs: `docs/security_posture.md` (the per-session gate table) +
+  `spec/audience_and_identity_model.md` §4 / §4b (the sys-admin cross-session
+  access posture).
+- Tests: a non-owner sys-admin is **403** on edit / lobby-edit / owners-remove;
+  **can** self-add as owner (only self, not others) and **can** clone; an
+  owner (or self-added sys-admin) passes all.
+
+**Coordination with 18R Item 4.** 18R Item 4 (consolidate session config onto
+Session Home + retire the Edit page) has the *same* Decision 2 — it depends on
+this ownership posture existing. **Land 18S Item 3 first** so Item 4's
+Edit-retirement inherits a clean gate rather than re-deriving it. (Item 4 is
+UI-iteration-first + not started, so the ordering is natural.)
+
+**Definition of done.** A non-owner sys-admin can only self-add-as-owner and
+clone on a session they don't own; edit / rename-tag / remove-owner all require
+ownership; the Diagnostics entry point elevates via audited self-add; docs +
+tests updated; full suite + `ruff` green.
 
 ---
 
