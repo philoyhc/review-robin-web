@@ -6882,3 +6882,68 @@ def test_band2_preview_ships_textarea_rows_for_helper(
     assert "PX_PER_CHAR = 8" in body
     assert "TYPICAL_RESPONSE_FRACTION = 0.5" in body
     assert "textareaRowsFor(maxLenInt, colPx)" in body
+
+# --------------------------------------------------------------------------- #
+# 18R follow-up — instrument-card UX edits (description box height; Link 2
+# operator-cycle order)
+# --------------------------------------------------------------------------- #
+
+
+def test_link2_operator_cycle_leads_with_same_as(client: TestClient, db: Session):
+    """Link 2 (Who is being reviewed) cycles the cross-side tag
+    operators FIRST: IS THE SAME AS → IS DIFFERENT FROM → IS →
+    IS NOT. This makes the tag-operand relationship the default
+    for a fresh Link 2 rule (the common reviewee-matches-reviewer
+    case). Guards the order string on the operator-cycle button."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="link2-cycle-order"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # The link2 cell carries the reordered cycle on its toggle button.
+    assert (
+        'data-new-model-operator-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT"'
+        in body
+    )
+    # And the old order is gone.
+    assert (
+        'data-new-model-operator-cycle="IS|IS NOT|IS THE SAME AS|IS DIFFERENT FROM"'
+        not in body
+    )
+
+
+def test_new_rule_operand_visibility_follows_cycle_default(
+    client: TestClient, db: Session
+):
+    """newModelAddRule must seed a cloned cell's operand box from
+    cycle[0], not a hardcoded "IS". With Link 2 now leading with a
+    tag operator, a freshly-added row must show the tag dropdown —
+    so the clone-init derives visibility from the cycle's default."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="link2-clone-default"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # The clone-init reads cycle[0] and toggles operand visibility
+    # off it, rather than always showing the freeform value box.
+    assert "defaultUseTag" in body
+    assert (
+        "defaultCycle[0] === 'IS THE SAME AS' || defaultCycle[0] === 'IS DIFFERENT FROM'"
+        in body
+    )
+
+
+def test_description_edit_box_is_taller(client: TestClient, db: Session):
+    """The preview-band description edit box reclaims the vertical
+    space the retired ✎/✓ buttons used to occupy — a taller
+    min-height on the unlock-only textarea."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="descr-box-height"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    assert "data-intro-description-input" in body
+    assert "min-height: 6.5em" in body

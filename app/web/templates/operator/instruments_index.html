@@ -1139,7 +1139,7 @@
         <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
           {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
               "Who is being reviewed", _link2_tags,
-              operator_cycle=["IS", "IS NOT", "IS THE SAME AS", "IS DIFFERENT FROM"],
+              operator_cycle=["IS THE SAME AS", "IS DIFFERENT FROM", "IS", "IS NOT"],
               operand_tag_options=_link2_operand,
               on_label="Filter using tags",
               field_helper="Reviewee tag",
@@ -1266,21 +1266,28 @@
             var cycle = (btnCycle && btnCycle.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
             i.value = cycle[0];
           });
-          // Reset operand variants on the cloned cell: value input
-          // shown, tag dropdown (if present) hidden — matching the
-          // default operator state (IS). The operand-tag helper row
-          // (if present) follows the tag select's visibility.
+          // Reset operand variants on the cloned cell to match the
+          // cycle's DEFAULT operator (cycle[0]) — not a hardcoded
+          // "IS". A link whose cycle leads with a tag operator
+          // (e.g. Link 2's "IS THE SAME AS") must show the tag
+          // dropdown, not the freeform value box. The operand-tag
+          // helper row (if present) follows the tag select's
+          // visibility, toggled to explicit 'flex' like
+          // ``newModelCycleOperator`` does.
+          var defaultBtn = clone.querySelector('button[data-new-model-operator-cycle]');
+          var defaultCycle = (defaultBtn && defaultBtn.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
+          var defaultUseTag = defaultCycle[0] === 'IS THE SAME AS' || defaultCycle[0] === 'IS DIFFERENT FROM';
           var tagSel = clone.querySelector('[data-new-model-operand-tag]');
           var valInput = clone.querySelector('[data-new-model-operand-value]');
           if (tagSel && valInput) {
-            tagSel.style.display = 'none';
-            valInput.style.display = '';
+            tagSel.style.display = defaultUseTag ? '' : 'none';
+            valInput.style.display = defaultUseTag ? 'none' : '';
           }
           var operandHelperRow = clone.querySelector(
             '[data-new-model-rule-operand-helper-row]'
           );
           if (operandHelperRow) {
-            operandHelperRow.style.display = 'none';
+            operandHelperRow.style.display = defaultUseTag ? 'flex' : 'none';
           }
           // New cell's X is active (only the first cell's X stays disabled).
           clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
@@ -1747,7 +1754,7 @@
                           placeholder="(no description)"
                           maxlength="2000"
                           style="width: 100%; margin-top: 4px;
-                                 min-height: 4em; box-sizing: border-box;
+                                 min-height: 6.5em; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
             </div>
