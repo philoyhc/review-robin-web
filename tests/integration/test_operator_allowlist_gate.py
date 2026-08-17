@@ -238,6 +238,85 @@ def test_sys_admin_without_operator_flag_still_passes_gate(
     assert response.json()["is_sys_admin"] is True
 
 
+# --- Super-admin self-heal (Segment 18S Item 1) ----------------------------
+
+
+def test_super_admin_email_seeds_full_rights_on_first_sign_in(
+    db: Session,
+    auth_alice: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    client = _make_client(db, auth_alice)
+
+    response = client.get("/__test/operator-gated")
+    assert response.status_code == 200
+    # Super-admin implies full admin rights (capability nesting).
+    assert response.json() == {
+        "email": "alice@example.edu",
+        "is_operator": True,
+        "is_sys_admin": True,
+    }
+
+
+def test_super_admin_self_heals_existing_demoted_row_every_sign_in(
+    db: Session,
+    auth_alice: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A pre-existing row for a super-admin email that has been stripped
+    # of both flags (e.g. a pre-feature manual demotion) must re-assert
+    # to full rights on the next sign-in — the every-sign-in self-heal.
+    user = User(
+        email="alice@example.edu",
+        display_name="Alice",
+        is_operator=False,
+        is_sys_admin=False,
+    )
+    db.add(user)
+    db.commit()
+
+    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    client = _make_client(db, auth_alice)
+
+    response = client.get("/__test/operator-gated")
+    assert response.status_code == 200
+    assert response.json()["is_operator"] is True
+    assert response.json()["is_sys_admin"] is True
+
+    # And the flags are persisted, not just computed for the response.
+    db.expire_all()
+    refreshed = db.execute(
+        select(User).where(User.email == "alice@example.edu")
+    ).scalar_one()
+    assert refreshed.is_operator is True
+    assert refreshed.is_sys_admin is True
+
+
+def test_non_super_admin_demotion_is_not_re_asserted(
+    db: Session,
+    auth_alice: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The self-heal is super-admin-only: a demoted NON-super-admin row
+    # stays demoted (the once-only bootstrap contract is untouched).
+    user = User(
+        email="alice@example.edu",
+        display_name="Alice",
+        is_operator=False,
+        is_sys_admin=False,
+    )
+    db.add(user)
+    db.commit()
+
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    client = _make_client(db, auth_alice)
+
+    response = client.get("/__test/operator-gated")
+    # Not an operator, not a super-admin → bounced to /request-access.
+    assert response.status_code == 303
+
+
 # --- Revocation: previously admitted operator loses access -----------------
 
 

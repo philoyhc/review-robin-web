@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
+from app.auth.roles import is_super_admin
 from app.config import settings as default_settings
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
@@ -33,6 +34,26 @@ def _email_in(allowlist: list[str], email: str | None) -> bool:
         return False
     target = email.casefold()
     return any(item.casefold() == target for item in allowlist)
+
+
+def _reassert_super_admin(db: Session, user: User) -> None:
+    """Super-admins self-heal to full admin rights on **every** sign-in
+    (Segment 18S Item 1). Narrow by design: only super-admin emails
+    re-assert, so the once-only bootstrap contract for normal
+    operator / sys-admin roles is untouched. This guarantees a manual
+    (or pre-feature) demotion can't strand a config-protected account
+    without rights — every admin/operator gate passes for a super-admin
+    with no special-casing at the gate.
+    """
+    if not is_super_admin(user.email, default_settings):
+        return
+    if user.is_sys_admin and user.is_operator:
+        return
+    user.is_operator = True
+    user.is_sys_admin = True
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
 
 def _stash_display_timezone(request: Request, user: User) -> None:
@@ -69,6 +90,7 @@ def get_or_create_user(
         .limit(1)
     ).scalar_one_or_none()
     if user is not None:
+        _reassert_super_admin(db, user)
         _stash_display_timezone(request, user)
         return user
 
@@ -87,6 +109,13 @@ def get_or_create_user(
             is_operator = True
         if cfg.fake_auth_sys_admin:
             is_sys_admin = True
+    # Super-admin (Segment 18S Item 1) implies full admin rights. This
+    # both seeds a first-sign-in super-admin and — together with
+    # ``_reassert_super_admin`` on the existing-row path — keeps the
+    # capability nesting super-admin ⊇ admin ⊇ operator holding.
+    if is_super_admin(current_user.email, cfg):
+        is_operator = True
+        is_sys_admin = True
 
     user = User(
         email=current_user.email,

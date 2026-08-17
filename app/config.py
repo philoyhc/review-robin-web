@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # local dev loop seamless under the 16A PR 1 operator gate.
     fake_auth_operator: bool = True
     fake_auth_sys_admin: bool = True
+    # Segment 18S Item 1 — sandbox-only super-admin for the fake
+    # identity. Honoured only when ``allow_fake_auth`` is also true AND
+    # the resolved identity is ``is_fake=True`` (folded into the
+    # effective super-admin set by ``app/auth/roles.py``), so the
+    # localhost operator holds super-admin for testing with zero env
+    # coordination. Inert in any deployed environment.
+    fake_auth_super_admin: bool = True
 
     # Strict-allowlist (Option C) bootstrap sources read once by
     # ``get_or_create_user`` on first sign-in. Email match is
@@ -38,13 +45,22 @@ class Settings(BaseSettings):
     # validator below handles comma-separated parsing instead.
     operator_emails: Annotated[list[str], NoDecode] = []
     sys_admin_emails: Annotated[list[str], NoDecode] = []
+    # Segment 18S Item 1 — the top tier. Super-admin is **derived**
+    # from this list (email membership, case-insensitive), never a DB
+    # column, so it can't drift from config or be flipped in-app. Set
+    # only via the ``SUPER_ADMIN_EMAILS`` App Setting — no in-app path
+    # adds or removes one. Optional (unlike operator/sys-admin it is
+    # not part of the fail-fast in ``validate_critical_settings``).
+    super_admin_emails: Annotated[list[str], NoDecode] = []
 
     # Optional contact line surfaced on the Request-access landing
     # page (16A PR 1). When set, the page renders a ``mailto:`` link;
     # when unset, falls back to generic copy.
     operator_contact_email: str | None = None
 
-    @field_validator("operator_emails", "sys_admin_emails", mode="before")
+    @field_validator(
+        "operator_emails", "sys_admin_emails", "super_admin_emails", mode="before"
+    )
     @classmethod
     def _split_email_list(cls, value: object) -> object:
         if isinstance(value, str):
