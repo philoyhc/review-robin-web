@@ -907,6 +907,34 @@ async def instrument_consolidated_save(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 )
 
+    # Display-field reorder — staged into the hidden
+    # ``display_field_order_snapshot`` form field by the client (drag
+    # reorder of the Band 2 display pills) and committed here (Segment
+    # 18R Item 2 PR 6, replacing the immediate /display-fields/order
+    # POST). Absent / empty snapshot means no reorder to apply.
+    order_snapshot = form.get("display_field_order_snapshot")
+    if isinstance(order_snapshot, str) and order_snapshot.strip():
+        import json as _json
+
+        try:
+            ordered_ids_raw = _json.loads(order_snapshot)
+        except (TypeError, ValueError):
+            ordered_ids_raw = None
+        if isinstance(ordered_ids_raw, list):
+            try:
+                ordered_ids = [int(v) for v in ordered_ids_raw]
+            except (TypeError, ValueError):
+                return _fail("Display-field order must be a list of integers.")
+            try:
+                instruments_service.reorder_display_fields(
+                    db,
+                    instrument=instrument,
+                    ordered_ids=ordered_ids,
+                    actor=user,
+                )
+            except ValueError as exc:
+                return _fail(str(exc))
+
     db.commit()
     return JSONResponse({"ok": True})
 
