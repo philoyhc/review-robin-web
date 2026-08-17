@@ -518,8 +518,11 @@
      - title + pills → the <summary> block on each per-instrument
        <details class="instrument-card-collapsible"> (with Segment
        18M's new Set up / Locked pills + id-based title).
-     - short_label / description editors → Band 2's intro card
-       (inline ✎/✓ pair POSTing to /identity).
+     - short_label → the <summary> title view/edit swap;
+       description → Band 2's intro card view/edit swap. Both are
+       lock-driven inputs on the dfsave form that commit via the
+       consolidated /save (Segment 18R Item 2 retired the ✎/✓
+       pair + the immediate /identity POST).
      - Open / Close lifecycle buttons → inlined directly in the
        per-instrument loop body.
      - Show / Don't show when closed → retired entirely; sole
@@ -746,9 +749,11 @@
       {# Bulk-save form that the heading's Save button submits.
          Picks up Band 1's Link 1 / Link 2 / Link 3 inputs (and
          the column_widths_snapshot mirror) via ``form=`` on each
-         input. short_label + description used to ride this form
-         too; they now save independently via the Band 2 intro
-         card's ✎/✓ buttons → /identity endpoint.
+         input, plus short_label (card-title swap) + description +
+         each field's help_text — all bound here since Segment 18R
+         Item 2 so one bulk Save commits identity together with
+         Band 1 / Band 3 via the consolidated /save. (The separate
+         /identity POST + the per-field ✎/✓ editors are gone.)
          Segment 18R Item 2 PR 1 — always rendered now (was
          is_editing-gated) so a client-unlocked card's controls are
          wired to submit without a page reload to re-enter edit mode.
@@ -764,11 +769,12 @@
            class="save-error-banner" role="alert" hidden></div>
       {# New-model card heading. Short_label + description used to
          render here (left-column input + right-column display /
-         textarea inside a bottom-grid). Both moved into the Band 2
-         intro card's inline ✎/✓ editors — the heading now carries
-         just the "Instrument #N" title pill row + the action
-         buttons. The bottom-grid wrapper and the right-column
-         description card are gone. #}
+         textarea inside a bottom-grid). short_label now lives in the
+         <summary> title swap and description in the Band 2 intro
+         card — both lock-driven inputs on the dfsave form (Segment
+         18R Item 2). The heading now carries just the "Instrument #N"
+         title pill row + the action buttons. The bottom-grid wrapper
+         and the right-column description card are gone. #}
       {# Segment 18M PR 0 — collapsible instrument card. Native
          <details>/<summary>; the chevron rotates via the
          details[open] CSS selector (no JS for the per-card toggle).
@@ -796,9 +802,11 @@
              short label. The ``#`` prefix is reserved for the
              reviewer-facing ``#{N}: …`` heading rendered inside
              Band 2's "Preview reviewer instrument" card below.
-             Inline ✎/✓ edit affordance posts to the existing
-             ``/identity`` endpoint without a page reload so the
-             card's expand/collapse state survives the save. #}
+             Since Segment 18R Item 2 the title is a lock-driven
+             view/edit swap (read-only span when locked; rename
+             ``<input>`` on the dfsave form when unlocked) that
+             commits via the consolidated /save — no ✎/✓ button and
+             no immediate /identity POST. #}
           <h2 data-card-title-edit-block
               data-card-title-session-id="{{ session.id }}"
               data-card-title-instrument-id="{{ instrument.id }}"
@@ -1683,14 +1691,16 @@
              those with the required flag. Preview is always at
              ``0 done`` since no real responses exist here.
 
-             This card also owns the inline edit surface for the
-             instrument's short_label and description (replaces the
-             legacy heading-area inputs and the right-column
-             display card the new-model layout used to carry).
-             Each field has its own ✎/✓ toggle that POSTs to
-             /identity (independent of the bottom Save button —
-             same pattern as the help-text cards). The toggles
-             only render when the instrument is in edit mode. #}
+             This card also owns the edit surface for the
+             instrument's description (short_label is edited from
+             the <summary> title swap; this replaces the legacy
+             heading-area inputs and the right-column display card
+             the new-model layout used to carry). Since Segment 18R
+             Item 2 the description is a lock-driven view/edit swap
+             on the dfsave form — visible/editable only when the
+             card is unlocked, committed by the bottom Save via the
+             consolidated /save (no per-field ✎/✓, no /identity
+             POST). #}
           {# Counts reflect the operator-authored response-field
              set as a whole, NOT just the chips currently toggled
              on in the preview. Pill-toggle visibility is a
