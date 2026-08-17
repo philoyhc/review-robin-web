@@ -3,7 +3,9 @@
 **Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
 shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
 closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
-shipped 2026-08-17, PR #1923)**. A holding segment for **operator-UX refinement** on
+shipped 2026-08-17, PR #1923)**; **Item 4 planned (consolidate session config
+onto Session Home + retire the Edit page — Option 2; UI-iteration first, not
+started)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -544,6 +546,104 @@ shipping PR; land them individually or batched as convenient.
   shows the tag dropdown.
 
 **Open** — log further card tweaks here as they come up.
+
+---
+
+## Item 4 — Consolidate session config onto Session Home (retire the Edit page)
+
+**Status: planned (2026-08-17). Not started — UI iteration first (see Sequence).**
+
+**The decision (Option 2, as scoped down).** Consolidate the session's
+config **display + edit onto Session Home** and **retire the separate Edit
+page** (`/operator/sessions/{id}/edit`). This is *not* the instrument-card
+per-card lock harness — it's a plain **display ↔ edit** swap for one config
+region (one Edit button flips the whole region; Save/Cancel commits, reusing
+the existing Edit-page form + dirty Save/Cancel + schedule-bounds JS). No
+collapsible cards (config sits low on the page; the operator scrolls only when
+needed).
+
+Considered and rejected: **Option 1** (distribute — keep Edit as a separate
+config page, move Quick Setup off Home onto Edit, Home becomes a dashboard).
+Option 1 is lower-effort and needs no new interaction model, but the operator
+prefers the single-canonical-page end state (view + edit in one place, no hop).
+Option 2 is the bigger rebuild but produces the preferred shape.
+
+### Target layout (Session Home)
+
+- **Top (unchanged):** chrome nav + setup-status row + **Workflow card**.
+- **Middle — Session config card** (new): sub-cards for **Details**
+  (name / code / description / help contact / timezone) and **Schedule**
+  (the 3×2 anchors/offsets grid) and **Owners** and **UI settings**
+  (relationships / observers toggles). Renders **display mode** (read-only
+  values) by default; an **Edit** button flips the whole card to **edit mode**
+  (the forms, reusing the current Edit page's `#edit-session-form` + dirty
+  Save/Cancel + `_schedule_ordering_js`). Edit-mode state carried on a **URL
+  param** (`?editing=1`, matching the app's existing `?editing=` convention —
+  survives reload, no-JS friendly).
+- **Bottom — two half-width cards side by side:** **Quick Setup** (kept a
+  *distinct* card with its own existing lock/greying model — it does **not**
+  fold into the config card's display/edit swap) and **Danger Zone** (Delete
+  data / Delete session, moved to the very bottom, confirm-gated).
+- **Retire** `session_edit.html` + the `/edit` GET/POST routes; redirect
+  `/edit` → Home; re-point any links (the "← Back to Session Home" link, the
+  Session Details card's Edit button, the sys-admin Diagnostics "Details"
+  action — see Auth below).
+
+Orthogonal (do regardless): **fold the Extract Setup card into the Extract data
+tab** (`_extract_data_card.html` → the Operations-strip Extract data page);
+drop it from Home. Loose coupling — mostly a template relocation.
+
+### Decisions (locked 2026-08-17)
+
+1. **Quick Setup — distinct card**, not part of the config display/edit swap
+   (its lock model + Home cookie differ). Sits bottom-left, half-width, beside
+   Danger Zone.
+2. **Auth — fix the sys-admin-edits-non-owned-session gap.** Today the Edit
+   page uses the looser `require_sys_admin_or_session_operator` (a sys-admin can
+   reach a non-owned session's Edit), while Home uses `require_session_operator`
+   (a non-owner sys-admin can't even *view* Home). Retiring Edit onto Home must
+   not silently either strip or widen that. **Best practice = least privilege +
+   explicit, audited elevation:** a sys-admin (incl. super-admin) editing a
+   session they don't own **adds themselves as an owner first** (the one-click,
+   audited `session.owner_added` gesture from Segment 16B), then edits via the
+   normal operator path. So: **retire the looser gate with the Edit page**; the
+   consolidated config on Home stays `require_session_operator`-gated; the
+   sys-admin **Diagnostics → "Details"** action becomes "self-add as owner →
+   open session". No shadow editing; every config edit is by a recorded owner.
+   *This is an authorization change (18S-flavoured) that the Edit-retirement
+   slice depends on — coordinate it there (or as a small 18S item) and update
+   `spec/audience_and_identity_model.md` §4b accordingly.*
+3. **Edit-mode state — URL param** (`?editing=1`), not a pure client toggle.
+4. **Extract Setup → Extract data tab — yes**, fold it in (orthogonal slice,
+   worth doing either way).
+
+### Sequence (UI-first)
+
+Per the operator: **iterate on the UI before wiring.** Scaffold-first per
+`CLAUDE.md`:
+
+1. **Display-mode scaffold** — build the read-only Session config card (all
+   sub-cards) + the bottom Quick Setup / Danger Zone half-width pair on Home,
+   below Workflow, with an inert **Edit** button. Edit page stays live. **Iterate
+   the page shape here** (layout, sub-card grouping, read-only rendering) before
+   any wiring.
+2. **Edit-mode swap** — wire the Edit button to `?editing=1`; swap the config
+   card into the existing forms (reuse `#edit-session-form` + dirty Save/Cancel
+   + schedule JS); Save/Cancel returns to display mode on Home.
+3. **Owners + UI settings** into the config card (their own POST forms).
+4. **Extract Setup → Extract data tab** (orthogonal; can land anytime).
+5. **Retire Edit + auth fix** — redirect `/edit` → Home; delete
+   `session_edit.html`; retire the looser gate; re-point Diagnostics "Details"
+   to the self-add-as-owner flow; update the audience-model spec.
+
+### Cost / risk notes
+
+Bigger rebuild than Option 1, but "more build," not "new hard mechanism" — the
+display/edit swap is a whole-region toggle, not the instrument lock harness.
+Real work: building read-only display renderings for every config aspect (Owners
+table, UI settings, schedule) that today only exist as forms; relocating Quick
+Setup's Home coupling stays put (it's already on Home); the auth-gate change
+(Decision 2) is the one item with cross-cutting security reach.
 
 ---
 
