@@ -5812,6 +5812,32 @@ def test_pr5b_band2_staging_wiring_ships(
     assert "serializeRow(row, null)" in body
 
 
+def test_pr5c_button_state_matrix_and_shape_css_ship(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 18R Item 2 PR 5c — the Response-Field row button-state
+    matrix + the disabled-shape-input treatment ship: R/≡ gate on a
+    blank row; ✓ greys once the field is already in the preview with no
+    pending edits; and the frozen shape controls get a visibly-disabled
+    style."""
+    review_session, _new_model = _new_model_with_tags(
+        client, db, code="pr5c-matrix"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # R / ≡ blank-row gate.
+    assert "_blankRowGate(requiredBtn" in body
+    assert "'Enter a field name first.'" in body
+    # ✓ "already in the preview, nothing to push" gate rides the paired
+    # pill + the per-row pending flag.
+    assert "Already in the preview" in body
+    assert "data-row-pending" in body
+    # Disabled-shape inputs (frozen type / bounds) look inactive.
+    assert "[data-new-model-rf-data-type]:disabled" in body
+    assert "[data-new-model-rf-bound]:disabled" in body
+
+
 def test_cancel_keeps_card_unlocked_via_editing_reload(
     client: TestClient, db: Session
 ) -> None:
