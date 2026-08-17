@@ -1942,7 +1942,7 @@ Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 
 ---
 
-### Segment 18R — UX refinement — Item 1 done 2026-08-16 (PR #1899); Item 2 planned (detailed plan: `guide/segment_18R_ux_refine.md`)
+### Segment 18R — UX refinement — Item 1 done 2026-08-16 (PR #1899); Item 2 done 2026-08-17 (PR ladder 1–7, cleanup #1921) (detailed plan: `guide/segment_18R_ux_refine.md`)
 
 Holding segment for operator-UX identity / label polish + interaction-model
 rationalization on the Instruments page.
@@ -1953,12 +1953,15 @@ rationalization on the Instruments page.
   Links relabelled **Who does the review / Who is being reviewed / Unit of
   review** (unbold). Operator-facing labels only; internal `band1` / `link1`–
   `link3` ids retained. Specs + quickstart §4c updated.
-- **Item 2 (planned)** — harmonize the card's edit controls into one
-  staged-then-**Save** persistence path (keeps the current **Save · Lock ·
-  Cancel** trio — Save persists progressively, Lock is the separate final
-  step; retires the per-control immediate POSTs; fixes the
-  un-registered-new-field lost-edit; per-row R/≡/✓/X button-state matrix).
-  See **Upcoming** + the plan doc.
+- **Item 2 (shipped; PR ladder 1–7 incl. 5c, cleanup #1921)** — harmonized the
+  card's edit controls into one staged-then-**Save** persistence path (kept the
+  **Save · Lock · Cancel** trio — Save persists progressively via the
+  consolidated `/save`, Lock is the separate final step; retired the
+  per-control immediate POSTs *from the card*; fixed the
+  un-registered-new-field lost-edit; per-row R/≡/✓/X button-state matrix; added
+  the collapse⇒lock invariant + retired the inline ✎/✓ text editors). The
+  per-concern routes are kept server-side (test callers); full server-side
+  retirement is logged as an optional Future item in the plan doc.
 
 ---
 
@@ -2023,19 +2026,11 @@ dep chains called out at the bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **18R — UX refinement** *(Item 1 shipped #1899; Item 2 remaining)*.
-  (Item 1 — instrument-card identity — is done; see the Segment 18R entry
-  in the Done log above.) **Item 2 (remaining):** harmonize the instrument
-  card's edit controls into one persistence path — locked shows only
-  **Unlock**; unlocked keeps the current **Save · Lock · Cancel** trio
-  (Save persists staged edits progressively and stays unlocked, Lock is the
-  separate final read-only step, Cancel discards); every editable element
-  stages and persists **only** on **Save** (retires the per-control
-  immediate POSTs found in `guide/instrument_card_ux_audit.md`, fixes the
-  un-registered-new-field lost-edit, and applies the per-row R/≡/✓/X
-  button-state matrix).
-  Consequential UI → scaffold-first, several PRs. **Plan:**
-  `guide/segment_18R_ux_refine.md`.
+- **18R — UX refinement** *(Items 1 & 2 shipped; no queued items)*. Items 1
+  (instrument-card identity, #1899) and 2 (save/lock harmonization, PR ladder
+  1–7, cleanup #1921) are both done — see the Segment 18R entry in the Done
+  log above. The segment **stays open** as a home for further operator-UX
+  refinements; log new ones as `Item N` in `guide/segment_18R_ux_refine.md`.
 
 - **18S — Security refinements** *(created 2026-08-16)*. Holding segment
   for small, self-contained in-app authorization / account-safety
