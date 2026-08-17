@@ -2475,6 +2475,18 @@
               if (rfIdAttr && /^\d+$/.test(rfIdAttr)) {
                 rf.id = parseInt(rfIdAttr, 10);
               }
+              // Segment 18R Item 2 — carry the response column's width.
+              // A newly-added field has no rf-id yet, so saveBand2Widths
+              // can't key its width as ``rf_<id>`` in the column-widths
+              // snapshot (it skips id-less pills) — the width would be
+              // lost and the unsized column would redistribute the whole
+              // preview on the next reload. Sending ``width_px`` here
+              // lets set_band2_state key it by name and re-map it to the
+              // freshly-minted id.
+              if (pill) {
+                var pillWidth = parseInt(pill.getAttribute('data-width') || '', 10);
+                if (pillWidth > 0) { rf.width_px = pillWidth; }
+              }
               row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
                 var key = input.getAttribute('data-new-model-rf-bound');
                 if (key === 'list') { key = 'list_options'; }
