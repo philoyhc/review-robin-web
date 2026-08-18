@@ -178,6 +178,10 @@
                 Admit them via <code>Admin → Accounts Management</code> first.
               {% elif owners_error == "not_owner" %}
                 That user isn't an owner of this session anymore.
+              {% elif owners_error == "self_only" %}
+                As a sys-admin who isn't an owner of this session, you can
+                only add <em>yourself</em> as an owner. Add yourself first,
+                then add others.
               {% else %}
                 Couldn't apply that change ({{ owners_error }}).
               {% endif %}

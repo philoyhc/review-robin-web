@@ -22,7 +22,12 @@ Three layers, all in `app/web/deps.py`:
   that also re-scope any child id to the session.
 - **`require_sys_admin`** — workspace sys-admin gate; strictly
   tighter than `require_operator`. `require_sys_admin_or_session_operator`
-  relaxes the per-session check for sys-admins on diagnostic routes.
+  relaxes the per-session check for sys-admins — **narrowed by Segment 18S
+  Item 3** to only `owners/add` (self-add bootstrap, self-only in the handler
+  for non-owners) and `clone`. Every other session mutation (edit config,
+  lobby rename/tag, remove owners) now requires `require_session_operator`
+  (real ownership); a non-owner sys-admin elevates via the audited self-add
+  door `POST /operator/sys-admin/sessions/{id}/adopt` (Diagnostics "Manage").
 - **`require_reviewer_in_session`** — reviewer identity gate. 403s
   unless the caller has an *active* `Reviewer` row whose email
   matches the authenticated identity (case-insensitive).

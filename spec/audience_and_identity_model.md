@@ -158,14 +158,19 @@ Two surfaces:
    Promote/Demote shown only to a super-admin actor; destructive controls
    disabled on super-admin rows) — the server guards are the real
    enforcement.
-2. **Per-session diagnostics + self-add** — Sessions
-   Diagnostics page lists every session in the workspace;
-   the "Details" action lands on the session's Edit page,
-   gated by `require_sys_admin_or_session_operator` so a
-   sys-admin can reach a session they don't own. Adding
-   themselves via the Owners card (Segment 16B PR 2) is the
-   typical first step before acting on a session through
-   the normal operator-permission path.
+2. **Per-session diagnostics + explicit self-add** — the Sessions
+   Diagnostics page lists every session in the workspace. Since
+   **Segment 18S Item 3**, a sys-admin can *read* a non-owned session's
+   diagnostics (Outbox, Audit log) but must **own** it to edit. The
+   row's **"Manage"** action is a POST to
+   `/operator/sys-admin/sessions/{id}/adopt` that **self-adds the
+   sys-admin as an owner** (audited `session.owner_added`) and opens the
+   session — the explicit, recorded elevation door. Every session
+   *mutation* (edit config, lobby rename/tag, remove owners) is gated on
+   `require_session_operator` (real ownership); the only relaxations left
+   for a non-owner sys-admin are the self-add bootstrap (`owners/add`,
+   self-only) and `clone` (which makes them owner of the new copy). No
+   shadow editing — every config change is by a recorded owner.
 
 Surfaced in the chrome top-right user card via a `(super admin)` /
 `(sys admin)` suffix on the "Signed in as ..." label so elevated state is

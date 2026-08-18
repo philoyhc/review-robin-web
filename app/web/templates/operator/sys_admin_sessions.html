@@ -51,8 +51,18 @@
               <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
             </td>
             <td class="col-shrink">
-              <a class="chrome-link"
-                 href="/operator/sessions/{{ s.id }}/edit">Details</a>
+              {# Segment 18S Item 3 — editing a session now requires
+                 ownership. This "Manage" action self-adds the sys-admin as
+                 an owner (audited) and opens the session, replacing the old
+                 back-door link straight to /edit. #}
+              <form method="post"
+                    action="/operator/sys-admin/sessions/{{ s.id }}/adopt"
+                    style="display:inline; margin:0;">
+                <button type="submit" class="chrome-link"
+                        title="Adds you as an owner of this session, then opens it"
+                        style="background:none; border:none; padding:0;
+                               font:inherit; cursor:pointer;">Manage</button>
+              </form>
               <a class="chrome-link"
                  href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
               <a class="chrome-link"

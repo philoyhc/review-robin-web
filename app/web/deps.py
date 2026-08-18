@@ -208,12 +208,20 @@ def require_sys_admin_or_session_operator(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> ReviewSession:
-    """16A PR 3 relaxation. Used on the per-session diagnostic
-    routes (Outbox, audit-log CSV) so a sys-admin reaching them from
-    the workspace Admin chrome doesn't also need to be a
-    ``session_operators`` member. Sys-admins bypass the membership
-    check; everyone else falls through to the standard
-    ``require_session_operator`` path.
+    """16A PR 3 relaxation — **narrowed by Segment 18S Item 3**. Now
+    used on only two routes where a non-owner sys-admin is legitimately
+    allowed to act: ``owners/add`` (the self-add-as-owner bootstrap,
+    which additionally enforces *self-only* for non-owners in its
+    handler) and ``clone`` (cloning a session the sys-admin can see
+    makes them owner of the new copy; the original is untouched).
+
+    Everything else that mutates a session — edit config, lobby
+    rename/tag, remove owners — was moved to the strict
+    ``require_session_operator`` gate in 18S Item 3, so a sys-admin
+    must self-add as an owner first (the audited elevation door; see
+    ``sys_admin_adopt_session``). Sys-admins bypass the membership
+    check here; everyone else falls through to
+    ``require_session_operator``.
     """
     if user.is_sys_admin:
         review_session = db.execute(

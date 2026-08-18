@@ -341,7 +341,7 @@ the protected-super-admin guarantee are unchanged. Full suite + `ruff` green.
 
 ## Item 3 — Tighten sys-admin cross-session writes (explicit ownership + self-add bootstrap)
 
-**Status: planned (2026-08-17). Not started.**
+**Status: ✅ Implemented 2026-08-17 (single PR).**
 
 **The problem (audit).** The only mechanism that lets a sys-admin act on a
 session they don't own is the `require_sys_admin_or_session_operator` gate
@@ -409,6 +409,39 @@ UI-iteration-first + not started, so the ordering is natural.)
 clone on a session they don't own; edit / rename-tag / remove-owner all require
 ownership; the Diagnostics entry point elevates via audited self-add; docs +
 tests updated; full suite + `ruff` green.
+
+### PR plan (single PR)
+
+The gate-tightening and the Diagnostics elevation are **coupled** — tightening
+`/edit` strands the non-owner sys-admin whose only cross-session entry today is
+the Diagnostics "Details" link to `/edit`, so the new self-add entry must land
+**in the same PR**. Docs ride along. Components:
+
+1. **Gate swaps** (`require_sys_admin_or_session_operator` →
+   `require_session_operator`): `session_edit_form` (GET `/edit`),
+   `session_edit_submit` (POST `/edit`), `session_owners_remove`
+   (`_session_home.py`), `lobby_edit_submit` (`_lobby.py`).
+2. **`owners/add` self-only** (`session_owners_add`): keep the relaxed gate;
+   after resolving the target, if the actor is **not** a session operator
+   (`permissions.user_can_view_session` is False) and `target.id != actor.id`,
+   reject with a `self_only` owners-error redirect. A session operator still
+   adds anyone.
+3. **`clone` unchanged** (stays relaxed — cloner owns the new session).
+4. **Diagnostics elevation:** new `POST /operator/sys-admin/sessions/{id}/adopt`
+   (gated `require_sys_admin`) — self-adds the actor as owner via
+   `session_owners.add_owner` when not already one (idempotent: skip on
+   `already_owner`), audited `session.owner_added`, then 303 → `/operator/
+   sessions/{id}` (Home, now viewable as owner). Change the "Details" cell in
+   `sys_admin_sessions.html` from a GET link to `/edit` into a POST form button
+   (relabel **"Manage"**, `title` explains it adds you as owner).
+5. **Keep `require_sys_admin_or_session_operator`** (2 callers remain: `owners/
+   add`, `clone`) — update its docstring to the narrowed use.
+6. **Docs:** `docs/security_posture.md` gate table +
+   `spec/audience_and_identity_model.md` §4 / §4b.
+7. **Tests:** non-owner sys-admin → 403 on edit (GET+POST) / lobby-edit /
+   owners-remove; `owners/add` self-only (self ok, other → error); adopt adds
+   owner + redirects (idempotent when already owner); clone still works; an
+   owner passes all.
 
 ---
 
