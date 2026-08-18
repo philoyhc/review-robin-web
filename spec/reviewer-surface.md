@@ -304,13 +304,12 @@ clicks Save (and the page re-renders).
 | `complete` | `.pill.pill-success` | Every required field on every assignment in this page has a saved value. |
 | `submitted` | `.pill.pill-success` | Every assignment in this page has `submitted_at` set (i.e. the session has been submitted; all pages flip together). |
 
-Pill copy: `Page #1: in progress`, `Page #2: complete`, etc.
-Single-instrument sessions still show one pill (`Page #1: …`),
-since the overview card renders whenever there are status pills. Pill copy uses bare
-`Page #{N}` rather than `Page #{N}: {short_label}` to keep the
-panel compact — short labels live on the Page button labels and
-on the per-instrument H2 above each table, where the reviewer
-needs them to navigate or orient.
+Pill copy is `{label}: {state}`, where `label` follows the same
+`#{N} {short_label}` (or bare `#{N}` when no short label is set)
+convention as the per-instrument heading — e.g. `#1 Skills: in
+progress`, `#2: complete`. Single-instrument sessions still show
+one pill, since the overview card renders whenever there are
+status pills.
 
 The route threads a `page_statuses: list[PageStatus]` into context
 (`PageStatus = {position: int, label: str, state: Literal[…]}`),
@@ -580,7 +579,7 @@ reviewer-surface specifics:
   into groups — two reviewees share a group iff they share the
   same value for every group-boundary tag (`responses.group_keys`).
   Each group is one table row. `_collapse_group_rows` in
-  `routes_reviewer/_surface.py` does the collapse; the
+  `routes_reviewer/_surface/_group_collapse.py` does the collapse; the
   lowest-id member assignment is the row's **representative** —
   the response inputs key off it (`response[{rep_id}][{field}]`)
   and the write fan-out spreads the answer to every member of the
@@ -939,8 +938,14 @@ dashboard's Session column once Reviewer Status is
   built from `MAX(response.submitted_at)` across the
   reviewer's rows.
 - **Action row** — primary "Download my responses (CSV)"
-  button linking to `/me/sessions/{id}/summary.csv` +
-  a secondary "Your reviewer dashboard" link.
+  button linking to `/me/sessions/{id}/summary.csv`, a
+  "Recall my submission" control (`POST /me/sessions/{id}/recall`),
+  and a secondary "Your reviewer dashboard" link. Recall renders
+  only while the session is still `ready` (`can_recall =
+  lifecycle.is_ready`); it rolls the reviewer's submission back to
+  draft (nulls `submitted_at`) and 303s to the surface so they can
+  keep editing. Handled by `reviewer_recall` in
+  `routes_reviewer/_surface/_routes.py`.
 - **Sections** — one `.card` per instrument the reviewer
   responded on, in `(Instrument.order, Instrument.id)` order.
   Each section's `<h2>` shows the instrument's short label +

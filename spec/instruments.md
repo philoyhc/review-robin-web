@@ -768,8 +768,13 @@ Bottom row of the card, right-aligned, in this order:
 - **Save** — only in edit mode. Starts disabled; the
   `newModelInitSaveDirtyTracking` JS helper enables it on the
   first dirty event (any Band 1 input change or Band 3 row
-  edit / X / + click). The server-side redirect after a
-  successful save re-renders with Save disabled again.
+  edit / X / + click). With JS the Save submit is intercepted
+  and fetch-POSTs the consolidated JSON `/save` (Segment 18R
+  Item 2 PR 3); on success the card stays unlocked with **no
+  reload** and the dirty tracker resets in place, re-disabling
+  Save. On a 422 the summary banner renders with edits intact.
+  The `/fields/save` 303-redirect form action stays as the
+  no-JS fallback.
 - **Cancel** — only in edit mode. Reloads the same edit-mode
   URL to discard unsaved edits. Same dirty-aware enable
   contract as Save.
@@ -809,8 +814,10 @@ Bottom row of the card, right-aligned, in this order:
   cancels the navigation.
 - **Save-when-dirty.** Both Save and Cancel start disabled.
   Every editable input on the card is bound to a dirty-tracker
-  that enables them on first change. After Save, the
-  full-page redirect resets the tracker.
+  that enables them on first change. On a successful JSON
+  `/save` the tracker resets in place with no reload (the
+  full-page redirect only happens on the no-JS `/fields/save`
+  fallback).
 
 ## Add / Replicate / Delete
 
@@ -924,10 +931,6 @@ status aside.
 
 ## Open / deferred
 
-- **Drag-reorder of cards.** Card order today is mutable via
-  `+Instrument after=…` and Replicate but not by drag. Out of
-  scope for now; the current affordances cover the dominant
-  use cases.
 - **Bulk Band-1 templating.** Operators occasionally want
   "apply this Band 1 to every instrument in the session." Not
   surfaced; the workaround is Replicate then trim.

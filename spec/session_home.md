@@ -57,52 +57,47 @@ states.
 
 ## Layout
 
-Two-column body below the chrome and status strip.
+Two full-width stacked cards below the chrome and status strip,
+then a two-column bottom row.
 
-### Page-card layout (workflow card + two columns)
+### Page-card layout (18R Item 4)
 
 ```
 ┌────────────── Workflow ──────────────────────────────────────┐
 │  full-width, just below the chrome                           │
 └──────────────────────────────────────────────────────────────┘
-┌── Session Details ───────┐  ┌── Quick Setup ───────────┐
-│   metadata + Edit        │  │   scaffolded bulk        │
+┌────────────── Session details ───────────────────────────────┐
+│  full-width; display ↔ edit swap (?editing=1)                │
+│  + Owners / UI-settings sub-cards                            │
+└──────────────────────────────────────────────────────────────┘
+┌── Quick Setup ───────────┐  ┌── Danger Zone ───────────┐
+│   scaffolded bulk        │  │   Delete Data / Delete   │
 └──────────────────────────┘  └──────────────────────────┘
-                              ┌── Extract Setup ─────────┐
-                              │   porting CSVs           │
-                              └──────────────────────────┘
 ```
 
-> **Note.** The right-column card was renamed from "Extract
-> Data" → "Extract Setup" on 2026-05-29 (per
-> `guide/archive/extract_data.md`) to mark it as the porting / archival
-> surface — Reviewers / Reviewees / Relationships / Session
-> settings, the inputs Quick Setup can re-ingest. Fine-grained
-> shaping of response data moved to a new **Extract data**
-> Operations-strip tab. The card's DOM id (`extract-data`) was
-> kept stable to avoid a wider sweep.
+> **Note.** Segment 18R Item 4 consolidated the session config
+> display **and** edit onto Session Home. The standalone Edit
+> page (`session_edit.html` + its GET/POST routes) was retired;
+> `GET /operator/sessions/{id}/edit` now 301-redirects to
+> `…?editing=1#session-config`. The old read-only "Session
+> Details" metadata card (Created by / Created / Modified grid)
+> and the Schedule-timeline card were both removed — the config
+> card carries the same fields, and resolved fire-moments show
+> inline next to each offset. The Extract Setup card (porting
+> CSVs) moved off Home to the **Extract data** Operations-strip
+> tab (`_extract_data_card.html`); see §2.
 
 The Workflow card sits full-width at the top of the page-card
 region, just below the chrome (same `next_action_card.html`
-partial the Operations-row pages render). Underneath it, the
-remaining three cards lay out in two **independent flex columns**
-(`.bottom-left` flex-column wrappers); each column flows
-independently so Extract Setup sits directly below Quick Setup
-with the normal inter-card gap regardless of how tall Session
-Details grows in the other column.
+partial the Operations-row pages render). The **Session details**
+card sits full-width directly below it — a display ↔ edit swap
+(see §4). Below those two full-width cards, Quick Setup and
+Danger Zone lay out as a `.bottom-grid` half-width pair.
 
 DOM source order = mobile-collapse order:
-**Workflow → Session Details → Quick Setup → Extract Setup**.
-Below ~800px viewport width the columns collapse into a single
-stacked column in that same order.
-
-Session Details anchors the left column on its own; Quick Setup
-and Extract Setup stack in the right column so the bulk-setup
-affordances cluster together. Extract Setup anchors the bottom of
-the right column — operators reach for it when porting or
-archiving the session. The Danger Zone card
-(Delete Data + Delete Session) lives on the Edit Session Details
-page, not on Home — see §3 below.
+**Workflow → Session details → Quick Setup → Danger Zone**.
+Below a narrow viewport threshold the bottom pair collapses into
+a single stacked column in that same order.
 
 *Layout history:*
 - 2026-05-14 (PR #967): Workflow card retired from Session Home;
@@ -121,10 +116,17 @@ page, not on Home — see §3 below.
   (`session_edit.html`) so destructive operations live alongside
   the other edit affordances. The left column now carries Session
   Details alone.
+- 2026-08 (Segment 18R Item 4): the standalone Edit page retired;
+  session config display + edit consolidated onto Home as the
+  full-width **Session details** card (`?editing=1` swap, `/config`
+  POST). Extract Setup relocated to the Extract data tab; the
+  read-only metadata card + Schedule-timeline card removed; Danger
+  Zone moved **back** to Home's bottom-right, paired with Quick
+  Setup in the `.bottom-grid`.
 
 ## Cards
 
-### 1. Workflow card (left column, top)
+### 1. Workflow card (full-width, top)
 
 The page's center of gravity. Shows the single lifecycle-advancing
 action appropriate to the session's current state, plus supporting
@@ -227,7 +229,17 @@ Notes specific to Session Home:
   - **Archived** likely renders the card empty or with a
     "Restore" affordance.
 
-### 2. Extract Setup card (right column, below Quick Setup)
+### 2. Extract Setup card — relocated to the Extract data tab
+
+**As of Segment 18R Item 4 the Extract Setup card no longer
+renders on Session Home.** It moved to the **Extract data**
+Operations-strip tab (`session_extract_data.html`, via the
+`_extract_data_card.html` partial), where it sits in the
+page's right-hand wrap-up column alongside the Archive-session
+and (observers-gated) Token-keys cards. Its contract is
+unchanged — the tile table and grey-out rules below still
+describe it, they just live on the Extract data page now, not
+Home. The rest of this section is retained for that contract.
 
 The card for porting / archiving — the CSVs Quick Setup can
 re-ingest. Four always-present per-entity download tiles, plus a
@@ -293,149 +305,135 @@ state — `draft` (sanity-check the configured artefacts),
 inert. Excel-format export was never an MVP item. The audit-log
 tile relocates to Sys Admin in Segment 16A.
 
-### 3. Danger Zone card — relocated to Edit Session Details
+### 3. Danger Zone card (bottom-right)
 
 The Danger Zone card (Delete Data + Delete Session) lived on
-Session Home through 2026-05-21. On 2026-05-22 (commit b490825)
-it moved to the **Edit Session Details page**
-(`session_edit.html`), occupying the bottom-right of that page's
-edit-half-grid. The rationale: destructive operations cluster
-naturally with the other edit affordances, and Session Home is
-freed up for read-only / navigational shape.
+Session Home through 2026-05-21, moved to the Edit Session
+Details page on 2026-05-22 (commit b490825), and **returned to
+Session Home in Segment 18R Item 4** when the Edit page retired.
+It now occupies the bottom-right of Home's `.bottom-grid`,
+paired with Quick Setup in the bottom-left (`#danger-zone`).
 
 The card's contents and behaviour are unchanged:
 
 - **Delete Data** — wipes all reviewer responses while preserving
-  setup. Confirmation checkbox + Destructive button.
+  setup. Confirmation checkbox (`required`) + Destructive button.
+  POSTs to `/operator/sessions/{id}/delete-data`.
 - **Delete Session** — removes the session entirely. Confirmation
-  checkbox + Destructive button. **Visible-but-disabled while
-  Activated**: form, button, and confirm checkbox all render but
-  carry the `disabled` attribute, with an explanatory note ("Pause
-  the session first to enable deletion."). The server-side
-  lifecycle gate in `/delete` is the source of truth — a direct
-  POST while Activated still 4xxs. Visible greyed-out so the
-  operator always sees the affordance and the path forward (Pause
-  via the Workflow card first, then delete).
+  checkbox (`required`) + Destructive button. **Visible-but-disabled
+  while Activated**: the button and confirm checkbox carry the
+  `disabled` attribute, with an explanatory note ("Pause the
+  session first to enable deletion."). The server-side lifecycle
+  gate (`_require_editable`) in `/delete` is the source of truth —
+  a direct POST while Activated still 4xxs. Visible greyed-out so
+  the operator always sees the affordance and the path forward
+  (Pause via the Workflow card first, then delete).
 
-Description copy on the relocated card: "Delete Data wipes every
-reviewer response while leaving session setup intact. Delete
-session removes the entire session and is locked while session is
+Description copy on the card: "Delete Data wipes every reviewer
+response while leaving session setup intact. Delete session
+removes the entire session and is locked while session is
 Activated."
 
-Both actions follow the inline-confirmation pattern: the operator
-ticks the checkbox to enable the destructive submit.
+Both confirm checkboxes are `required`, so the destructive submit
+is blocked without JavaScript unless the operator ticks the box.
 
-### 4. Session Details card (left column)
+### 4. Session details card (full-width, below Workflow)
 
-Reference metadata with an edit affordance. Read-mostly, but the
-operator does occasionally need to update session metadata
-(revising the deadline, fixing a typo in the description, etc.),
-and Home is the natural place for that since it's where session
-identity lives.
+**Segment 18R Item 4 consolidated the session config display
+*and* edit onto Session Home.** The standalone Edit page was
+retired; this full-width card (`#session-config`) carries every
+config field in an in-place **display ↔ edit swap**. The card
+element carries `data-config-mode="display|edit"`; each field
+holds one slot in the same position — a read-only value
+(`data-display-only`) in display mode and its `<input>`
+(`data-edit-only`) in edit mode — toggled by the card's mode.
 
-**Contents.** Top to bottom — there is no "Session Details" card
-heading; the card title *is* the session:
+**Contents.** The card's `<h2>` is the literal string "Session
+details". Then a two-column body of config fields, each with a
+`form-help` label above its value:
 
-- **Title row.** The card's `<h2>` is the **session name**. The
-  **session code** trails it inline in body-text size + weight
-  (the `.session-detail-code` class) so it reads as secondary
-  metadata, not part of the heading. Neither carries a label.
-- **Description.** Directly below the title, unlabelled, full
-  width — plain text, "—" when null. Renders with
-  `white-space: pre-line` (the `.session-detail-description`
-  class), so the line and paragraph breaks the operator typed in
-  the edit `<textarea>` are preserved rather than collapsing to
-  whitespace.
-- **Three-column labelled meta grid** (`.session-meta-row`) — each
-  cell is a `form-help` label above its value:
-  - **Column 1:** Created by · Timezone. Created by is a count
-    pill; Timezone is a count pill with the session's resolved
-    zone as a compact GMT-offset + raw IANA id (e.g. "GMT+8
-    Asia/Singapore") via `date_formatting.gmt_offset_zone_label`
-    — see `spec/timezone_display.md`.
-  - **Column 2:** Created · Help contact. Created is a count pill
-    carrying the canonical `YYYY-MM-DD HH:MM` timestamp in the
-    session's resolved display zone; Help contact is plain text
-    ("—" when null).
-  - **Column 3:** Modified (count pill with the canonical
-    timestamp in the session's resolved display zone).
-- **Schedule timeline card** — half-width sibling card directly
-  below the Session Details card in the left column of the
-  `.bottom-grid` flex layout (i.e. `.bottom-left` ↦ Session
-  Details ↦ Schedule timeline). Carries an `<h2>` "Schedule
-  timeline" title, a one-line subtitle ("Resolved fire moments
-  for the session's anchors + offsets."), and a two-column
-  table (`When` / `Event`) listing every resolved anchor +
-  offset on the session in chronological order (Start, End,
-  auto-send invites, auto-send reminders). Built by
-  `views.build_schedule_timeline` — the same builder Create /
-  Edit Session use. Hidden when no rows resolve (e.g. a fresh
-  session with neither Start nor offsets set). Promoted from a
-  nested sub-card inside Session Details on 2026-06-03 so the
-  timeline reads as its own glanceable surface and the meta
-  grid + Edit affordance keep a focused Session Details body.
-- **Edit button** (Secondary styling), bottom-right of the
-  Session Details card. Opens `session_edit.html` as a sub-page
-  of Home for full metadata editing.
+- **Name / Code** — the two identity fields, top-left.
+- **Description** — full-width `<textarea>` in edit mode; a
+  `.config-value-multiline` block in display mode ("—" when null).
+- **Help contact / Timezone** — top-right. Timezone renders the
+  resolved zone as a compact GMT-offset + IANA id (e.g. "GMT+8
+  Asia/Singapore") via `date_formatting.gmt_offset_zone_label`;
+  edit mode is a datalist typeahead over the timezone options.
+- **Schedule fields** — Start / End / Release-responses-from /
+  Release-responses-until (`datetime-local` in edit mode) plus
+  the **Send invites** (offset from Start) and **Send reminders**
+  (offset from End) offset lists. In display mode each offset
+  shows as a pill next to its **resolved send datetime**
+  (`views.build_offset_display_rows`) — the Schedule-timeline
+  card that formerly sat below Session Details was retired, its
+  resolved fire-moments now shown inline here.
+
+Below the field block, a half-width `.bottom-grid` pair of
+**sub-cards**:
+
+- **Owners** (`#config-owners-card`, Segment 16B PR 2) —
+  display mode is a read-only Email / Name / Role / Added table;
+  edit mode gains an Action (Remove) column plus an Add-owner
+  typeahead over the workspace operator allowlist. Owner
+  add/remove POST to `/owners/add` + `/owners/{user_id}/remove`
+  and redirect back to Home in edit mode
+  (`?editing=1#config-owners-card`); `owners_error` surfaces
+  inline. (Owners moved onto Home with the config consolidation —
+  it no longer lives only on a separate Edit sub-page.)
+- **User interface settings** (`#config-ui-settings-card`,
+  PR #1705) — two checkboxes: **Relationships tab and page**
+  (`relationships_enabled`) and **Observers tab and page**
+  (`observers_enabled`), letting the operator opt into those
+  optional Setup tabs at any point. Each is lock-on-data:
+  disabled once the corresponding roster has rows
+  (`has_relationships` / `has_observers`), mirroring the
+  service-layer guard against orphaning data.
 
 **Edit affordance behavior:**
 
-- A live link in Draft and Validated states — the editable
-  states the edit route's `_require_editable` gate accepts.
-- In Activated state (and any other non-editable state) the Edit
-  button renders **inert** — `aria-disabled="true"`, no `href`,
-  with a "Revert the session to draft to edit its details"
-  tooltip — mirroring the route gate so the button never offers
-  an action the route would reject. The operator reverts to
-  draft to edit.
+- Canonical edit state is the **`?editing=1`** URL param,
+  server-set into `config_editing` and gated on the session
+  actually being editable (`is_draft` or `is_validated`) so a
+  stale link on an Activated session degrades to display mode.
+- The Save / Cancel / Lock-toggle cluster sits bottom-right of
+  the UI-settings sub-card. **Unlock** (display mode) links to
+  `?editing=1`; **Lock** (edit mode) drops it. **Cancel** and
+  **Lock** are anchors carrying real `?editing` hrefs so no-JS
+  degrades to navigation; with JS the inline `sessionConfig`
+  script swaps mode in place and resets the form on discard.
+  **Save** submits the config form and starts `disabled` (a
+  dirty-tracking script enables it once an edit is made, but it
+  renders enabled server-side so no-JS still works).
+- In Activated (and any non-editable) state the Lock toggle
+  renders **inert** — `aria-disabled="true"` with a "Revert the
+  session to draft to edit its details" tooltip.
 - Editing session metadata (name / code / description / deadline
-  / help contact / timezone) is non-destructive: it never
-  deletes assignments or responses, so the edit form carries no
+  / schedule / help contact / timezone) is non-destructive: it
+  never deletes assignments or responses, so the form carries no
   response-loss acknowledgement gate.
-- No inline editing on the card itself. Edit always opens the
-  sub-page. Keeps Home's left column read-only-feeling and
-  avoids a mid-card form that competes with the action work in
-  the Workflow card above.
-- The Edit sub-page carries a `← Back to Session Home` link
-  above the card (matching the chrome-detour `.back-link` shape
-  used by Operator Settings / About). Inside the **Edit Session
-  Details** card, the
-  form fields sit above a half-width inner grid carrying two
-  side-by-side cards: the **Schedule timeline** preview on the
-  left and the **Owners** card on the right. The form also
-  carries a **User interface settings** card (PR #1705) with
-  two checkboxes — **Enable Relationships tab**
-  (`relationships_enabled`) and **Enable Observers tab**
-  (`observers_enabled`) — so the operator can opt in to those
-  optional Setup tabs at any point after session creation. The
-  **Danger Zone** card (Delete Data + Delete Session) sits in
-  the bottom-right of the Edit page's outer half-grid alongside
-  the form — moved here from Session Home on 2026-05-22 (commit
-  b490825). Save + Cancel buttons render at the bottom of the
-  outer card; both start `disabled` and enable only when an
-  input has changed (inline dirty-tracking JS, with Cancel
-  resetting the form to its loaded values in-place). Save POST
-  redirects back to the Edit page rather than Home so the
-  operator can verify the change in place.
-- **Owners** card (Segment 16B PR 2) — current co-owners + an
-  Add-owner typeahead picker over the workspace operator
-  allowlist. Doesn't render on Session Home itself:
-  per-session permission management is rare enough that
-  surfacing it on Home would steal real estate from the
-  next-action work, and the Edit sub-page is already the
-  canonical landing page for session-identity changes.
+- The Details / Schedule / UI-settings inputs submit as one form
+  via the HTML5 `form="config-save-{id}"` association (they can't
+  physically nest — the Owners sub-card carries its own form).
+  **Save POSTs to `/operator/sessions/{id}/config`** (shared
+  persistence helper `_apply_session_config_form`) and redirects
+  back to Home in **display** mode (`#session-config`) — the
+  operator saves in place instead of hopping to a child page.
+- `GET /operator/sessions/{id}/edit` survives only as a **301
+  redirect** to `…?editing=1#session-config` for stale bookmarks.
 
-The previously-rendered duplicate `Status:` pill on this card
-was retired in PR #375; lifecycle state is shown in the chrome
-status strip and (on Home) in the Workflow card's body copy
-when relevant.
+Lifecycle state is shown in the chrome status strip and (on Home)
+in the Workflow card's body copy when relevant.
 
-### 5. Quick Setup card (right column, bottom)
+### 5. Quick Setup card (bottom-left)
 
-The Quick Setup card on Session Home renders the real four-slot
-shape, all wired: Reviewers / Reviewees (Segment 11J),
-Relationships (Segment 15D PR 7c), Settings (Segment 12A-3 PR 4).
-The functional spec is `spec/quick_setup_card_spec.md`.
+The Quick Setup card sits in the bottom-left of Home's
+`.bottom-grid`, paired with the Danger Zone card on the right
+(18R Item 4 — relocated from the old right column). It renders
+the real four-slot shape, all wired: Reviewers / Reviewees
+(Segment 11J), Relationships (Segment 15D PR 7c), Settings
+(Segment 12A-3 PR 4), plus a conditional Observers slot when
+`observers_enabled` (W12). The functional spec is
+`spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column grid (post-15D cleanup polish #768) — Reviewers
 + Reviewees stack in the left column; Relationships + Settings
@@ -510,11 +508,16 @@ Cards that have graduated out of the placeholder pattern:
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Live but body-greyed | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
-The **Danger Zone** card (Delete Data + Delete Session) lives on
-the Edit Session Details page, not Home, as of 2026-05-22. Its
-per-state availability matches the table's missing column:
-Delete Data is active in every state, Delete Session is active in
-`draft` / `validated` and visible-but-disabled in `ready`.
+The **Extract Data** column above describes the Extract Setup
+card as it now renders on the **Extract data** Operations tab —
+it relocated off Session Home in 18R Item 4 (see §2); its
+per-state rendering is unchanged.
+
+The **Danger Zone** card (Delete Data + Delete Session) returned
+to Home's bottom-right in 18R Item 4 (see §3). Its per-state
+availability: Delete Data is active in every state; Delete
+Session is active in `draft` / `validated` and visible-but-
+disabled in `ready`.
 
 **Disabled treatment on Home is plain greying-out, not yellow
 lock cards.** The Workflow card carries any explanatory

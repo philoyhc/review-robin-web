@@ -379,16 +379,18 @@ vocabulary as follows.
 
 > **Inline-style buttons** — ad-hoc buttons that bypass the `.btn`
 > family entirely.
-> *Current:* found in `instruments_index.html` (rf-delete /
-> rf-add row buttons using inline `style="background: none;
-> border: none; color: #dc2626/#2563eb"`); `session_detail.html`
-> (Delete Data / Delete session with inline
-> `style="background: #b91c1c; border-color: #b91c1c;"`);
-> `review_surface.html` ("Clear all" with the same inline red).
-> *Canonical:* all migrate to a canonical class — Destructive for
-> the danger-zone forms, `.btn-icon` (or a new `.btn-icon.danger`
-> variant) for the row-level rf-delete.
-> *Migration delta:* sweep; delete inline styles.
+> *Current:* migrated. The row-level rf-delete / rf-add buttons in
+> `instruments_index.html` now use `.btn-icon.danger` /
+> `.btn-icon.action` (rules in `base.html`); the `session_detail.html`
+> Delete Data / Delete session buttons relocated to
+> `session_edit.html`'s Danger Zone as `.btn.destructive`
+> (2026-05-22); `review_surface.html`'s "Clear all" is
+> `.btn.destructive`. No inline-styled buttons remain in these
+> templates.
+> *Canonical:* Destructive for the danger-zone forms, `.btn-icon`
+> variants (`.danger` / `.action`) for the row-level rf-delete /
+> rf-add.
+> *Migration delta:* complete.
 > *PR:* B (buttons).
 
 ### 7. Tables
@@ -556,8 +558,9 @@ spacing.
 ### 11. Misc one-offs
 
 > **`.btn-icon`** — borderless inline action (move-up, move-down,
-> rf-delete, rf-add). Keep; add `.btn-icon.danger` modifier so the
-> red rf-delete inline `style` can be retired.
+> rf-delete, rf-add). The `.btn-icon.danger` (red rf-delete) and
+> `.btn-icon.action` (blue rf-add) modifiers shipped in `base.html`
+> under `body.ui-v2` and the inline-styled variants are retired.
 > *PR:* B.
 
 > **`<pre>` blocks (outbox preview)** — currently inline-styled in

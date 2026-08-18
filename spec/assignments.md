@@ -301,7 +301,7 @@ layers so it can't be silently re-enabled:
 
 1. The `RuleSetOptions.excludeSelfReviews` Pydantic default is
    `False`.
-2. `assignments._schema_from_row` hard-codes
+2. `assignments._session_rule_set_to_schema` hard-codes
    `excludeSelfReviews=False` when wrapping a `SessionRuleSet`
    row into a schema — the row's `exclude_self_reviews` column is
    ignored (it stays `False` on every Band-1 materialisation

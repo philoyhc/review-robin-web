@@ -81,9 +81,10 @@ Every Setup Page renders, top-to-bottom:
      grid (identity + tags, 6 cells). Save + Cancel pair in
      Secondary style, both starting `disabled` until the form is
      dirty (inline JS toggles via an initial-value snapshot).
-     POST handlers in
-     `app/web/routes_operator/_setup_rosters.py` upsert / clear
-     via `app/services/field_labels.py`.
+     POST handlers in the per-entity setup modules
+     (`app/web/routes_operator/_setup_reviewers.py` /
+     `_setup_reviewees.py` / `_setup_relationships.py`) upsert /
+     clear via `app/services/field_labels.py`.
    - The **Operator actions card** (Segment 15F) is the per-row
      authoring surface — search / status filter strip + a
      selection-driven button row (Edit · Inactivate · Activate ·

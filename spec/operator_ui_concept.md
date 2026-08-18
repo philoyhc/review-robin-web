@@ -129,9 +129,16 @@ The row pairs are deliberate: pre-flight (Validate, Assignments, Previews), moni
 
 **Outbox is not a chrome tab.** `session_outbox.html` at `/sessions/{id}/outbox` is a dev-diagnostic surface — useful for inspecting the rendered email body / token URL during pilot or when debugging a send issue, but not part of the operator's day-to-day Operations row taxonomy. It's reachable via a "View outbox" button on the Manage Invitations page; that button is the canonical entry point. A future cross-session admin surface would belong to the System Admin group below.
 
-### 6. System Admin / System Setup Pages (placeholder)
+### 6. System Admin / System Setup Pages
 
-A future grouping for **cross-session** admin (operator permissioning, system-wide settings, multi-tenant config). Empty today; flagged so the taxonomy has a slot for it when the work surfaces. If a cross-session admin page is added, it sits at the Operator's Overview level (or above), not inside a session.
+The **cross-session** admin grouping. Shipped in Segment 16A and extended by Segment 18S (three-tier operator / admin / super-admin role model — see `spec/audience_and_identity_model.md` §4). It sits at the Operator's Overview level (above any single session, not inside one), is gated by `require_sys_admin`, and carries its own chrome distinct from the per-session two-row nav. Routes live in `app/web/routes_operator/_sys_admin.py`; the entry point `GET /operator/sys-admin` redirects to the default tab (Sessions Diagnostics).
+
+Two surfaces today:
+
+- **Accounts Management** (`/operator/sys-admin/users`, `sys_admin_users.html`) — the workspace allowlist: admit / revoke `is_operator`, promote / demote `is_sys_admin` (super-admin actor only), invite, delete users, and bulk-remove a user from every session. Server-side guards in `app/services/users.py`.
+- **Sessions Diagnostics** (`/operator/sys-admin/sessions`, `sys_admin_sessions.html`) — every session in the workspace, each row exposing Outbox + Audit log (read-only for a non-owner sys-admin since 18S Item 3) and a **Manage** action that self-adds the sys-admin as an owner (`POST …/sessions/{id}/adopt`, audited `session.owner_added`) before opening the session.
+
+System-wide settings + multi-tenant config remain forward-looking.
 
 ## Design principles
 
@@ -358,7 +365,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
 - **Two-row chrome → single row.** With the Operations row at four tabs after the Invitations + Responses consolidation (and the Outbox de-tabbed) per `spec/operations_pages.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
-- **Cross-session System Admin** — when added, sits at Operator's Overview level (or above), not inside a session. Implies its own chrome (different from the per-session two-row nav). Not a per-session Operations Page.
+- **Cross-session System Admin** — shipped (Segment 16A + 18S); see §6 above. Sits at Operator's Overview level (above any single session), with its own chrome distinct from the per-session two-row nav. Remaining cross-session admin (system-wide settings, multi-tenant config) is still forward-looking.
 
 ## Cross-references
 

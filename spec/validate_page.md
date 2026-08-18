@@ -8,7 +8,7 @@ triggered the check. Shipped in Segment 11G.
 The Validate page sits in the Operations row (post-15D) and is
 the canonical pre-activation gate. The operator iterates on
 errors here until the readiness report passes; the Activate
-button on Session Home then flips `validated → ready`.
+button on the Workflow card then flips `validated → ready`.
 
 Cross-references:
 
@@ -48,14 +48,26 @@ inventories the current session against the rule set.
 - `?severity=<error|warning|info>` — severity-chip filter. The
   setup-coverage grid always renders the full picture; only the
   issue list below is filtered.
-- `?activate=1` — Activate-warns detour. Session Home's
+- `?activate=1` — Activate-warns detour. The Workflow card's
   Activate button 303s here when warnings exist; the page
   renders an inline "Acknowledge and activate" banner instead
-  of the bare issue list.
+  of the bare issue list. On ineligible states (not `validated`)
+  or when there is nothing to acknowledge, the route drops the
+  param and 303s to the clean URL.
 
 ---
 
 ## 2. Page body (top to bottom)
+
+### 2.0 Chrome + Workflow card
+
+Like every Operations-row page, the Validate page renders the
+two-row session chrome (top-nav + setup-status strip) followed by
+the full-width **Workflow card** (`next_action_card.html`, per
+`spec/workflow_card.md`) at the top of the body, above the
+Activate banner. The Workflow card carries the Prepare / Activate
+lifecycle actions; the Validate page body below it is the
+read-only readiness inventory.
 
 ### 2.1 Activate banner (state-conditional)
 

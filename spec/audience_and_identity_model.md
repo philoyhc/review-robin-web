@@ -376,8 +376,10 @@ Recorded for visibility; **none committed.**
   collation surface (W17) shipped 2026-06-02 as the MVP — per-
   instrument 3-row table + cohort-scoped CSV downloads via
   `app/web/routes_reviewer/_collation.py`.
-- **System administrator surface.** Cross-session admin grouping;
-  not yet scoped.
+- **System administrator surface.** Shipped — the three-tier
+  operator / admin / super-admin model + Accounts Management +
+  Sessions Diagnostics (Segment 16A + 18S); see §4 above.
+  Multi-tenancy + system-wide settings remain forward-looking.
 - **Vetted institutional wordmarks** as a constrained customization
   vector for operators — drawn from a registry rather than uploaded.
   Possible future enhancement to the customization boundary; not

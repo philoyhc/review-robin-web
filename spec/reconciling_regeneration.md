@@ -9,7 +9,7 @@ impact-driven super-button confirmation: `assignments.reconcile_impact`
 
 `assignments.replace_assignments(...)` materialises `Assignment`
 rows from each instrument's pinned rule. Its per-instrument worker,
-`_materialise_one_instrument` (`app/services/assignments.py`), does
+`_materialise_one_instrument` (`app/services/assignments/_generate.py`), does
 a **wholesale replace**: delete every `Assignment` row for the
 instrument, then insert the engine's full pair fan-out. Since
 `Assignment.responses` cascades, that delete takes every saved
@@ -183,7 +183,7 @@ acceptable.
 
 ## Source-of-truth pointers
 
-- Materialisation: `app/services/assignments.py`
+- Materialisation: `app/services/assignments/_generate.py`
   (`_materialise_one_instrument`, `replace_assignments`).
 - Rule engine: `app/services/rules/engine.py` (`evaluate`,
   `EvaluationResult`).
