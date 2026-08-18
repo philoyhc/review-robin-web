@@ -551,7 +551,11 @@ shipping PR; land them individually or batched as convenient.
 
 ## Item 4 — Consolidate session config onto Session Home (retire the Edit page)
 
-**Status: planned (2026-08-17). Not started — UI iteration first (see Sequence).**
+**Status: planned (2026-08-17). Starts with Slice 1 — the low-risk relocations
+(Quick Setup → Home bottom-left; Extract Setup → Extract data page bottom-left;
+reserve the Extract-data bottom-right for a later Archive session card). UI
+iteration first; the config-consolidation + Edit-retirement slices follow (see
+Sequence). Not started.**
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit
@@ -580,18 +584,21 @@ Option 2 is the bigger rebuild but produces the preferred shape.
   Save/Cancel + `_schedule_ordering_js`). Edit-mode state carried on a **URL
   param** (`?editing=1`, matching the app's existing `?editing=` convention —
   survives reload, no-JS friendly).
-- **Bottom — two half-width cards side by side:** **Quick Setup** (kept a
-  *distinct* card with its own existing lock/greying model — it does **not**
-  fold into the config card's display/edit swap) and **Danger Zone** (Delete
-  data / Delete session, moved to the very bottom, confirm-gated).
+- **Bottom of Session Home — two half-width cards side by side:** **Quick Setup**
+  (bottom-**left**; kept a *distinct* card with its own existing lock/greying
+  model — it does **not** fold into the config card's display/edit swap) and
+  **Danger Zone** (bottom-**right**; Delete data / Delete session, confirm-gated,
+  arrives when the Edit page is retired).
+- **Bottom of the Extract data page — two half-width cards side by side:**
+  **Extract Setup** (bottom-**left**; relocated off Session Home — the
+  porting/archival download list, `_extract_data_card.html`) and a planned
+  **Archive session card** (bottom-**right**, half-width — ***for later***:
+  reserve the slot now, build in a follow-up). Gives the Extract data page a
+  coherent "wrap-up" row: **export + archive**.
 - **Retire** `session_edit.html` + the `/edit` GET/POST routes; redirect
   `/edit` → Home; re-point any links (the "← Back to Session Home" link, the
   Session Details card's Edit button, the sys-admin Diagnostics "Details"
   action — see Auth below).
-
-Orthogonal (do regardless): **fold the Extract Setup card into the Extract data
-tab** (`_extract_data_card.html` → the Operations-strip Extract data page);
-drop it from Home. Loose coupling — mostly a template relocation.
 
 ### Decisions (locked 2026-08-17)
 
@@ -610,31 +617,53 @@ drop it from Home. Loose coupling — mostly a template relocation.
    consolidated config on Home stays `require_session_operator`-gated; the
    sys-admin **Diagnostics → "Details"** action becomes "self-add as owner →
    open session". No shadow editing; every config edit is by a recorded owner.
-   *This is an authorization change (18S-flavoured) that the Edit-retirement
-   slice depends on — coordinate it there (or as a small 18S item) and update
-   `spec/audience_and_identity_model.md` §4b accordingly.*
+   *This authorization change is now logged as **18S Item 3** (tighten
+   sys-admin cross-session writes to explicit ownership + self-add/clone
+   bootstrap) — **land 18S Item 3 before the Edit-retirement slice** so it
+   inherits a clean gate. Updates `spec/audience_and_identity_model.md` §4/§4b.*
 3. **Edit-mode state — URL param** (`?editing=1`), not a pure client toggle.
-4. **Extract Setup → Extract data tab — yes**, fold it in (orthogonal slice,
-   worth doing either way).
+4. **Extract Setup → Extract data page bottom-left** — relocate the card off
+   Session Home to the Operations-strip Extract data page (loose coupling,
+   mostly a template move). This is the **opening slice** (Slice 1), not a
+   "whenever" orthogonal.
+5. **Archive session card — planned, later.** A half-width card at the Extract
+   data page bottom-**right**, beside the relocated Extract Setup (export +
+   archive "wrap-up" row). Reserve the slot in Slice 1; build it as its own
+   follow-up (Slice 6). Distinct from the Workflow card's existing Archive
+   button and from Danger Zone's *delete* — this is the lifecycle **archive**
+   surfaced next to the extract flow.
 
 ### Sequence (UI-first)
 
 Per the operator: **iterate on the UI before wiring.** Scaffold-first per
-`CLAUDE.md`:
+`CLAUDE.md`. **Start with the low-risk relocations** (pure template moves, no
+new mechanism), then the config-consolidation work.
 
-1. **Display-mode scaffold** — build the read-only Session config card (all
-   sub-cards) + the bottom Quick Setup / Danger Zone half-width pair on Home,
-   below Workflow, with an inert **Edit** button. Edit page stays live. **Iterate
-   the page shape here** (layout, sub-card grouping, read-only rendering) before
-   any wiring.
-2. **Edit-mode swap** — wire the Edit button to `?editing=1`; swap the config
+1. **Relocations (start here).**
+   - **Quick Setup → Session Home bottom-left.** Reposition the card *within*
+     Home — keep it distinct; its lock/greying model + Home cookie stay put (no
+     move to Edit, so none of the cookie-regex / redirect coupling applies).
+   - **Extract Setup → Extract data page bottom-left.** Move
+     `_extract_data_card.html` off Home onto the Operations-strip Extract data
+     page; drop it from Home.
+   - **Reserve the Extract data page bottom-right** for the planned Archive
+     session card (Slice 6; not built now).
+2. **Display-mode scaffold** — build the read-only Session config card (all
+   sub-cards) in the middle of Home, below Workflow, with an inert **Edit**
+   button. Edit page stays live. **Iterate the page shape here** (layout,
+   sub-card grouping, read-only rendering) before any wiring. (Quick Setup is
+   already at bottom-left from Slice 1; Danger Zone stays on Edit until Slice 5.)
+3. **Edit-mode swap** — wire the Edit button to `?editing=1`; swap the config
    card into the existing forms (reuse `#edit-session-form` + dirty Save/Cancel
    + schedule JS); Save/Cancel returns to display mode on Home.
-3. **Owners + UI settings** into the config card (their own POST forms).
-4. **Extract Setup → Extract data tab** (orthogonal; can land anytime).
+4. **Owners + UI settings** into the config card (their own POST forms).
 5. **Retire Edit + auth fix** — redirect `/edit` → Home; delete
-   `session_edit.html`; retire the looser gate; re-point Diagnostics "Details"
-   to the self-add-as-owner flow; update the audience-model spec.
+   `session_edit.html`; bring **Danger Zone** to Home bottom-right; retire the
+   looser gate; re-point Diagnostics "Details" to the self-add-as-owner flow
+   (**depends on 18S Item 3**); update the audience-model spec.
+6. **(Later) Archive session card** — add the half-width Archive session card to
+   the Extract data page bottom-right (the slot reserved in Slice 1). Its own
+   follow-up slice.
 
 ### Cost / risk notes
 
