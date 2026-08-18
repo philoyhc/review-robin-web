@@ -803,7 +803,7 @@ def test_session_config_card_display_edit_swap(
     assert workflow_pos < config_pos  # below Workflow
     assert "<h2>Session details</h2>" in body
 
-    end = body.find('window.toggleSessionConfigMode', config_pos)
+    end = body.find('window.sessionConfig', config_pos)
     card = body[config_pos:end]
 
     # Card defaults to display mode; both view + edit slots exist.
@@ -829,11 +829,15 @@ def test_session_config_card_display_edit_swap(
     ):
         assert f'id="{fid}"' in card
 
-    # Edit button is an active toggle wired to the swap (both ways).
-    assert "data-config-toggle" in card
-    assert 'onclick="toggleSessionConfigMode(this)"' in card
-    assert ">Edit</button>" in card
-    assert "window.toggleSessionConfigMode" in body
+    # Mode-control cluster: Save + Cancel (inactive by default) + the
+    # Unlock / Lock toggle, wired to sessionConfig.
+    assert "data-config-save" in card
+    assert ">Save</button>" in card
+    assert "data-config-cancel" in card
+    assert ">Cancel</button>" in card
+    assert "data-config-lock-toggle" in card
+    assert ">Unlock</button>" in card
+    assert "window.sessionConfig" in body
 
 
 def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
@@ -852,7 +856,7 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
     config_pos = body.find('id="session-config"')
-    end = body.find('window.toggleSessionConfigMode', config_pos)
+    end = body.find('window.sessionConfig', config_pos)
     card = body[config_pos:end]
 
     # The offset pill.
@@ -873,7 +877,7 @@ def test_session_config_card_has_owners_subcard(
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     config_pos = body.find('id="session-config"')
-    end = body.find('window.toggleSessionConfigMode', config_pos)
+    end = body.find('window.sessionConfig', config_pos)
     card = body[config_pos:end]
 
     assert ">Owners</h3>" in card

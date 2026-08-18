@@ -226,42 +226,95 @@
         <div class="card" id="config-ui-settings-card">
           <h3 style="margin-top: 0;">User interface settings</h3>
           <p class="muted">Per-session toggles for the optional Setup tabs.</p>
-          {# Both items on one line in both modes; the On/Off pill (display)
-             and the checkbox (edit) occupy the same slot after each item's
-             label, at normal font size/weight. #}
+          {# Both items on one line in both modes at normal card body font.
+             Display mode shows an inactive (disabled) checkbox reflecting
+             the current state; edit mode shows an active checkbox. #}
           <div class="ui-settings-row">
             <label class="ui-setting">
               Relationships tab and page
-              <span class="config-value" data-display-only>{{ "On" if session.relationships_enabled else "Off" }}</span>
-              <input type="checkbox" data-edit-only disabled
+              <input type="checkbox" data-display-only disabled
+                     {% if session.relationships_enabled %}checked{% endif %}>
+              <input type="checkbox" data-edit-only data-config-input
                      {% if session.relationships_enabled %}checked{% endif %}>
             </label>
             <label class="ui-setting">
               Observers tab and page
-              <span class="config-value" data-display-only>{{ "On" if session.observers_enabled else "Off" }}</span>
-              <input type="checkbox" data-edit-only disabled
+              <input type="checkbox" data-display-only disabled
+                     {% if session.observers_enabled %}checked{% endif %}>
+              <input type="checkbox" data-edit-only data-config-input
                      {% if session.observers_enabled %}checked{% endif %}>
             </label>
           </div>
         </div>
-        {# Edit / Done toggle just below the User interface settings card,
-           flushed right. Flips the card's data-config-mode both ways. #}
-        <div style="display: flex; justify-content: flex-end;">
-          <button type="button" class="btn secondary" data-config-toggle
-                  onclick="toggleSessionConfigMode(this)">Edit</button>
+        {# Save / Cancel / Lock cluster just below the UI settings card,
+           flushed right. Save + Cancel are inactive until an edit is made in
+           edit mode; the lock toggle reads Unlock (display) / Lock (edit) and
+           flips data-config-mode. Save is a mock for now (no persistence yet;
+           it just re-locks). #}
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
+          <button type="button" class="btn secondary" data-config-save disabled
+                  onclick="sessionConfig.save(this)">Save</button>
+          <button type="button" class="btn secondary" data-config-cancel disabled
+                  onclick="sessionConfig.cancel(this)">Cancel</button>
+          <button type="button" class="btn secondary" data-config-lock-toggle
+                  onclick="sessionConfig.toggle(this)">Unlock</button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    window.toggleSessionConfigMode = window.toggleSessionConfigMode || function (btn) {
-      var card = btn.closest('[data-config-mode]');
-      if (!card) return;
-      var editing = card.getAttribute('data-config-mode') === 'edit';
-      card.setAttribute('data-config-mode', editing ? 'display' : 'edit');
-      btn.textContent = editing ? 'Edit' : 'Done';
-    };
+    window.sessionConfig = window.sessionConfig || (function () {
+      function cardOf(el) { return el.closest('[data-config-mode]'); }
+      function sync(card) {
+        var editing = card.getAttribute('data-config-mode') === 'edit';
+        var dirty = card.getAttribute('data-config-dirty') === 'true';
+        var lock = card.querySelector('[data-config-lock-toggle]');
+        if (lock) lock.textContent = editing ? 'Lock' : 'Unlock';
+        // Save + Cancel are active only in edit mode with unsaved edits.
+        var save = card.querySelector('[data-config-save]');
+        var cancel = card.querySelector('[data-config-cancel]');
+        if (save) save.disabled = !(editing && dirty);
+        if (cancel) cancel.disabled = !(editing && dirty);
+      }
+      function setMode(card, mode) {
+        card.setAttribute('data-config-mode', mode);
+        if (mode === 'display') card.removeAttribute('data-config-dirty');
+        sync(card);
+      }
+      return {
+        toggle: function (btn) {
+          var card = cardOf(btn);
+          if (!card) return;
+          setMode(
+            card,
+            card.getAttribute('data-config-mode') === 'edit' ? 'display' : 'edit'
+          );
+        },
+        markDirty: function (card) {
+          card.setAttribute('data-config-dirty', 'true');
+          sync(card);
+        },
+        // Mock: no persistence yet — Save / Cancel just re-lock (display
+        // mode re-renders the saved values). Cancel discards edits.
+        save: function (btn) { setMode(cardOf(btn), 'display'); },
+        cancel: function (btn) { setMode(cardOf(btn), 'display'); },
+      };
+    })();
+
+    // Dirty tracking: any edit on an edit-mode field marks the card dirty,
+    // which lights up Save + Cancel.
+    (function () {
+      document.querySelectorAll('[data-config-mode]').forEach(function (card) {
+        function onEdit(e) {
+          if (e.target.closest('[data-edit-only]')) {
+            window.sessionConfig.markDirty(card);
+          }
+        }
+        card.addEventListener('input', onEdit);
+        card.addEventListener('change', onEdit);
+      });
+    })();
   </script>
 
   {# Two-column layout. Left column: Session Details → Quick Setup.
