@@ -355,3 +355,69 @@ def test_extract_data_card_renders_when_session_is_activated(
     ):
         assert f'id="extract-data-{key}"' in body
     assert 'id="extract-data-responses"' not in body
+
+
+# ── Item 5 — Archive session card (Extract data page) ─────────────────
+
+
+def test_archive_card_disabled_when_not_expired(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 5 — the Archive session card mirrors the Workflow card's
+    gate: on a draft (not-yet-ended) session the Archive control is an
+    inert, aria-disabled affordance and no archive form is posted."""
+    review_session = _make_session(client, db, code="ed-arch-draft")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+
+    card_pos = body.find('id="extract-data-archive-session"')
+    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
+    assert "Archiving becomes available once the session has ended" in card
+    assert 'aria-disabled="true"' in card
+    # No live archive form while the session hasn't ended.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
+        not in card
+    )
+
+
+def test_archive_card_active_when_expired(
+    client: TestClient, db: Session
+) -> None:
+    """Once the session is expired, the card posts to the Workflow card's
+    archive route (any-state, reversible, no purge)."""
+    review_session = _make_session(client, db, code="ed-arch-exp")
+    review_session.status = "expired"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    card_pos = body.find('id="extract-data-archive-session"')
+    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
+    assert (
+        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
+        in card
+    )
+    assert ">Archive session</button>" in card
+
+
+def test_archive_card_shows_already_archived(
+    client: TestClient, db: Session
+) -> None:
+    """An archived session's card reads 'Already archived' (inert)."""
+    review_session = _make_session(client, db, code="ed-arch-done")
+    review_session.status = "archived"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    card_pos = body.find('id="extract-data-archive-session"')
+    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
+    assert ">Already archived</a>" in card
+    assert (
+        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
+        not in card
+    )
