@@ -822,6 +822,7 @@ def test_session_config_card_mockup_renders_below_workflow(
         "mock-reminder-offsets",
         "mock-release-until",
         "mock-timezone",
+        "mock-help-contact",
     ):
         assert f'id="{fid}"' in card
     # Edit button still inert.
