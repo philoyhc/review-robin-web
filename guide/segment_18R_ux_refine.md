@@ -544,6 +544,12 @@ shipping PR; land them individually or batched as convenient.
   `newModelAddRule` now seeds a cloned cell's operand box from the cycle's
   default operator rather than a hardcoded `IS`, so a newly-added Link 2 row
   shows the tag dropdown.
+- **Vertical-only textarea resize.** Instrument-card textareas (the
+  server-rendered description / help-text boxes and the JS-generated help /
+  preview ones) could be dragged wider than their column via the default
+  two-axis resize grip. A page-scoped `body.ui-v2 textarea { resize: vertical }`
+  rule in `instruments_index.html` locks them to up/down resizing only,
+  matching the Session details description textarea (18R Item 4).
 
 **Open** — log further card tweaks here as they come up.
 
