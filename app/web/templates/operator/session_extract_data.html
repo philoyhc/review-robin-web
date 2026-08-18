@@ -781,48 +781,17 @@
     </div>
   </div>
 
-  {# Token keys card — half-width, left column. Only renders
-     when the session has ``observers_enabled`` on; the tokens
-     are the deanonymization key for the observer-side
-     Anonymized output and have no other consumer today. The
-     right column is intentionally empty so the card reads as
-     a deliberate half-width affordance under the full-width
-     Data shaper. #}
-  {% if session.observers_enabled %}
-  <div class="extract-data-grid">
-    <div class="extract-data-column">
-      <div class="card extract-data-card-stack" id="extract-data-token-keys">
-        <div>
-          <h2 style="margin-top: 0;">Token keys</h2>
-          <p class="form-help" style="margin-bottom: 0;">
-            Operator-side deanonymization key — one row per
-            Reviewer + Reviewee with their per-session opaque
-            token. Look up a token from an Anonymized observer
-            download to recover the underlying name + email.
-          </p>
-        </div>
-        <div class="extract-data-card-actions">
-          <a class="btn secondary"
-             id="extract-data-token-keys-download"
-             href="/operator/sessions/{{ session.id }}/export/participant_tokens.csv">
-            Download token keys
-          </a>
-        </div>
-      </div>
-    </div>
-    <div class="extract-data-column"></div>
-  </div>
-  {% endif %}
-
-  {# 18R Item 4 Slice 1 — "wrap-up" row: the Extract Setup card
-     (porting / archival CSV downloads, relocated here from Session
-     Home) at bottom-left, and a placeholder Archive session card
-     (half-width) at bottom-right, to be wired in a follow-up slice. #}
-  <div class="extract-data-grid">
-    <div class="extract-data-column">
-      {% include "operator/partials/_extract_data_card.html" %}
-    </div>
-    <div class="extract-data-column">
+  {# Extract data page "wrap-up" cards (18R — layout tidy 2026-08-18):
+     - Token keys (left) is half-width and only renders when
+       ``observers_enabled`` (the tokens deanonymize the observer-side
+       Anonymized output; no other consumer today).
+     - Extract Setup (porting / archival CSV downloads, relocated here from
+       Session Home) sits to the **right of Token keys**.
+     - Archive session (18R Item 5) drops to the row **below Token keys**.
+     When observers are off there's no Token keys card, so Extract Setup and
+     Archive fall back to a single side-by-side row. The Archive card markup
+     is captured once and placed per-branch to avoid duplication. #}
+  {% set archive_card %}
       <div class="card extract-data-card-stack" id="extract-data-archive-session">
         <div>
           <h2 style="margin-top: 0;">Archive session</h2>
@@ -852,8 +821,46 @@
           {% endif %}
         </div>
       </div>
+  {% endset %}
+
+  {% if session.observers_enabled %}
+  <div class="extract-data-grid">
+    <div class="extract-data-column">
+      <div class="card extract-data-card-stack" id="extract-data-token-keys">
+        <div>
+          <h2 style="margin-top: 0;">Token keys</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Operator-side deanonymization key — one row per
+            Reviewer + Reviewee with their per-session opaque
+            token. Look up a token from an Anonymized observer
+            download to recover the underlying name + email.
+          </p>
+        </div>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-token-keys-download"
+             href="/operator/sessions/{{ session.id }}/export/participant_tokens.csv">
+            Download token keys
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="extract-data-column">
+      {% include "operator/partials/_extract_data_card.html" %}
     </div>
   </div>
+  <div class="extract-data-grid">
+    <div class="extract-data-column">{{ archive_card }}</div>
+    <div class="extract-data-column"></div>
+  </div>
+  {% else %}
+  <div class="extract-data-grid">
+    <div class="extract-data-column">
+      {% include "operator/partials/_extract_data_card.html" %}
+    </div>
+    <div class="extract-data-column">{{ archive_card }}</div>
+  </div>
+  {% endif %}
 
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
