@@ -803,8 +803,8 @@ def test_session_config_card_display_edit_swap(
     assert workflow_pos < config_pos  # below Workflow
     assert "<h2>Session details</h2>" in body
 
-    grid_pos = body.find('class="bottom-grid"', config_pos)
-    card = body[config_pos:grid_pos]
+    end = body.find('window.toggleSessionConfigMode', config_pos)
+    card = body[config_pos:end]
 
     # Card defaults to display mode; both view + edit slots exist.
     assert 'data-config-mode="display"' in card
@@ -852,8 +852,8 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
     config_pos = body.find('id="session-config"')
-    grid_pos = body.find('class="bottom-grid"', config_pos)
-    card = body[config_pos:grid_pos]
+    end = body.find('window.toggleSessionConfigMode', config_pos)
+    card = body[config_pos:end]
 
     # The offset pill.
     assert ">-P1D</span>" in card
@@ -861,3 +861,26 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     assert "config-value-resolved" in card
     # Both live inside an offset row.
     assert "config-offset-row" in card
+
+
+def test_session_config_card_has_owners_subcard(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 — the Session details card carries an Owners sub-card
+    (half-width, inside the card) showing the current owners; edit mode
+    has a mock, inert add/remove UI. The Schedule timeline card is gone."""
+    review_session = _make_session(client, db, code="cfg-owners")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    config_pos = body.find('id="session-config"')
+    end = body.find('window.toggleSessionConfigMode', config_pos)
+    card = body[config_pos:end]
+
+    assert ">Owners</h3>" in card
+    # The creator is an owner — a display pill shows their identity.
+    assert "alice@example.edu" in card or "Alice" in card
+    # Edit-mode mock add-owner control lives inside the card.
+    assert 'id="mock-add-owner"' in card
+
+    # Schedule timeline card retired from Session Home.
+    assert "<h2>Schedule timeline</h2>" not in body

@@ -186,10 +186,10 @@ def session_detail(
                 review_session.reminder_offsets,
                 session_tz,
             ),
-            "schedule_timeline_rows": views.build_schedule_timeline(
-                review_session,
-                sessions.resolve_session_timezone(review_session),
-            ),
+            # 18R Item 4 — current owners for the Session config card's
+            # Owners sub-card. (The Schedule timeline card retired; its
+            # resolved datetimes now show inline beside the offsets.)
+            "config_owners": session_owners.list_owners(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },
