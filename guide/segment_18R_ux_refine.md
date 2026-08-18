@@ -688,20 +688,37 @@ new mechanism), then the config-consolidation work.
    mocks** — the swap flips text↔input and shows the buttons, but nothing
    persists yet. Edit page stays live.
 3. **Wire edit-mode persistence (Save). ← next / main business.** Make the mock
-   real: on **Save**, POST the details + schedule fields and persist them
-   (reuse the Edit route's service path — `sessions.update_session` /
-   `scheduled_events` — behind a Home-side route, e.g.
-   `POST /operator/sessions/{id}` or `.../config`), then re-render Home in
-   display mode; **Cancel** reverts to the stored values (no nav). Keep the
-   card's existing dirty-tracking + schedule-bounds validation. Decide
-   edit-mode persistence across reload: either the locked `?editing=1` URL param
-   (Decision 3) or accept the client-only toggle now that the swap is in place —
-   **confirm before building.** Gate: `require_session_operator` (owners only).
-4. **Wire Owners + UI settings.** Turn the inert Owners Add/Remove controls and
-   the UI-settings checkboxes into live POST forms (reuse `session_owners` +
-   the settings service). **Re-point the owner-route redirects from `/edit` to
-   Home** (they currently return to the Edit page). Emit the existing audit
-   events unchanged.
+   real: on **Save**, POST the details + schedule + **UI-settings** fields and
+   persist them, then re-render Home in display mode; **Cancel** discards edits
+   and returns to display; keep the card's dirty-tracking + schedule-bounds
+   validation. Gate: `require_session_operator` (owners only).
+   - **Edit-mode state — resolved (2026-08-18): match the instruments card.**
+     `?editing=1` is the **canonical server state** (the `session_detail` GET
+     reads it → `data-config-mode`), the existing `data-config-mode` JS is the
+     **instant-swap enhancement**, and the **Unlock / Lock / Cancel controls are
+     anchors that keep real `?editing=` hrefs** so no-JS degrades to navigation.
+     No pure-client toggle — every other edit surface in the app is
+     server-recoverable (roster pages + instruments use `?…` params, Quick Setup
+     a cookie), and this keeps the config card consistent with that universal
+     assumption. See "Edit-mode persistence assumptions" below.
+   - **Route** — reuse the Edit route's parse/validate/persist body (extract it
+     to a shared helper `_apply_session_config_form(...)`); add a Home-side
+     `POST /operator/sessions/{id}/config` that calls it and redirects to
+     `…/{id}#session-config` (display mode). The existing `/edit` POST keeps
+     calling the same helper (redirect to `/edit`) until Slice 5 retires it.
+   - **UI-settings toggles ride in this form, not Slice 4.** `update_session`
+     applies the whole `SessionCreate` payload (it diffs every field including
+     `relationships_enabled` / `observers_enabled`), so the toggles must post
+     **atomically with the details** — omitting them could flip a toggle off.
+     The card uses the HTML5 `form="config-save-{id}"` association (same trick as
+     the instruments `dfsave-` textareas) so the details/schedule inputs and the
+     two UI-settings checkboxes submit as one form without physically nesting
+     inside the Owners sub-card.
+4. **Wire Owners Add / Remove.** Turn the inert Owners controls into live POST
+   forms (reuse `session_owners`); its own form, separate from the config form.
+   **Re-point the owner-route redirects from `/edit` to Home.** Emit the
+   existing audit events unchanged. *(UI-settings moved up into Slice 3 — see
+   above — so this slice is Owners only.)*
 5. **Retire Edit + auth fix.** Redirect `/edit` → Home; delete
    `session_edit.html` + the `/edit` GET/POST routes; retire the looser
    `require_sys_admin_or_session_operator` gate; re-point Diagnostics "Details"
@@ -733,6 +750,41 @@ template move on a separate page).** Scope:
 
 Pure presentation on the create page; no route/persistence change. Land as its
 own small slice.
+
+### Edit-mode persistence assumptions (survey, 2026-08-18)
+
+How every existing edit surface holds its "am I in edit mode" state — the basis
+for the Slice 3 resolution above. **No surface uses a pure ephemeral client-only
+toggle; every one is server-recoverable and survives reload.**
+
+- **Roster setup pages** (Reviewers / Reviewees / Observers / Relationships) —
+  pure server state from URL query params:
+  `edit_mode = (edit_id is not none) or add_mode`, with `?edit_id=<row>` /
+  `?add=1` arriving as GET params. Edit/Add is a real navigation; Save is a
+  POST→redirect (PRG) back to the param-less list. Stale-id safety drops edit
+  mode if the id no longer matches a row. No client toggle; fully no-JS.
+- **Instruments page** *(closest analog — in-place display↔edit on one card
+  with a Lock/Unlock affordance)* — **hybrid**: `?editing=<id>` URL param is
+  canonical (`is_editing = editing_instrument_id == instrument.id`), plus a
+  client JS layer for instant swap (`data-instrument-locked` toggled by
+  `data-instrument-unlock-toggle`; CSS `[data-unlock-only]` / `[data-lock-only]`).
+  The Lock/Unlock controls are **anchors that keep real `?editing=` hrefs** —
+  JS toggles instantly, no-JS navigates. Save/Lock strips `?editing`.
+- **Quick Setup card** — lock held in a per-session `HttpOnly` cookie
+  (`qsu_{id}`), flipped by `POST /quick-setup/lock`, redirect-based; visual only
+  (greying + disabling inputs). Survives reload + cross-page nav (cookie path
+  `/`), per-operator.
+- **Edit page itself** — no edit-mode concept; the whole page is the form.
+  Dirty-tracking JS only manages Save/Cancel enabled state; Cancel resets fields
+  client-side; Save is POST→redirect.
+- **Cross-cutting** — write-protection is a **separate server-side lifecycle
+  gate** (`_require_editable`: session must be draft/validated), enforced at POST
+  time regardless of how the UI entered edit mode. There is **no per-user edit
+  lock / concurrency token** anywhere.
+
+**Implication (locked):** the Session details card matches the instruments card
+— canonical `?editing=1`, JS enhancement, anchor hrefs for no-JS — rather than
+becoming the app's first pure-client edit toggle.
 
 ### Cost / risk notes
 
