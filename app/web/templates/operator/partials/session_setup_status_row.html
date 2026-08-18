@@ -72,8 +72,9 @@
     {% endif %}
     &middot;
     Responses:
-    {# Before activation: Awaiting. Once activated (and while closed /
-       expired / archived): submitted reviews over reviewee count, following
+    {# Awaiting only while no review has been submitted yet; once any
+       is in, submitted reviews over reviewee count — shown regardless of
+       lifecycle state (including a session reverted to draft), following
        the reviewee-centric Responses page. #}
     {% if status_pills.responses_reportable %}
       <span class="pill pill-info">{{ status_pills.responses_submitted }} / {{ status_pills.reviewee_count }}</span>

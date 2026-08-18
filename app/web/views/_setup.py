@@ -33,7 +33,6 @@ from app.db.models import (
 from app.services import assignments, csv_imports, field_labels
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
-from app.services import session_lifecycle as lifecycle
 
 
 @dataclass
@@ -123,14 +122,16 @@ class SessionStatusPills:
     ``Invitation`` rows at all vs. rows generated but no outbox email
     delivered yet) so the chrome status strip can read them apart."""
     responses_reportable: bool
-    """``False`` before activation (draft / validated) — the Responses pill
-    reads ``Awaiting``. ``True`` once the session has been activated (ready /
-    expired / archived) — the pill reports ``<submitted> / <reviewees>``."""
+    """``True`` iff at least one review has been submitted
+    (``responses_submitted > 0``) — the Responses pill then reports
+    ``<submitted> / <reviewees>``. ``False`` (pill reads ``Awaiting``) only
+    while no review has been submitted yet. Data-driven, not lifecycle-driven:
+    a session reverted to draft after submissions still reports the numbers."""
     responses_submitted: int
     """Number of **submitted reviews** — ``include`` assignments in the
     session with at least one response bearing a ``submitted_at`` — reported
     over ``reviewee_count`` (reviewee-centric, matching the Responses page).
-    Computed only when ``responses_reportable``; ``0`` otherwise."""
+    Always computed."""
 
 
 _INVITATION_STATES: tuple[str, ...] = (
@@ -182,25 +183,23 @@ def session_status_pills(
     db: Session, review_session: ReviewSession
 ) -> SessionStatusPills:
     sid = review_session.id
-    # Responses pill: "Awaiting" before activation, then
-    # "<submitted reviews> / <reviewees>". Only run the submitted-count
-    # aggregate once activated (the strip renders on every session page).
-    responses_reportable = not (
-        lifecycle.is_draft(review_session)
-        or lifecycle.is_validated(review_session)
-    )
-    responses_submitted = 0
-    if responses_reportable:
-        responses_submitted = db.execute(
-            select(func.count(distinct(Response.assignment_id)))
-            .select_from(Response)
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
-                Assignment.session_id == sid,
-                Assignment.include.is_(True),
-                Response.submitted_at.is_not(None),
-            )
-        ).scalar_one()
+    # Responses pill: "Awaiting" only while no review has been submitted
+    # yet; once at least one is in, report "<submitted reviews> /
+    # <reviewees>" regardless of lifecycle state — so a session reverted
+    # to draft after submissions keeps showing the numbers rather than
+    # snapping back to "Awaiting". Gate is data-driven, not lifecycle-
+    # driven. The submitted-count aggregate runs on every session page.
+    responses_submitted = db.execute(
+        select(func.count(distinct(Response.assignment_id)))
+        .select_from(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(
+            Assignment.session_id == sid,
+            Assignment.include.is_(True),
+            Response.submitted_at.is_not(None),
+        )
+    ).scalar_one()
+    responses_reportable = responses_submitted > 0
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
