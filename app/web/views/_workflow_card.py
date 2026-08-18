@@ -490,6 +490,43 @@ def build_schedule_timeline(
     ]
 
 
+def build_offset_display_rows(
+    anchor: datetime | None,
+    offsets: object,
+    session_timezone: str,
+) -> list[dict[str, str]]:
+    """Resolve each ISO-8601 offset string in ``offsets`` against
+    ``anchor`` into a localized send datetime, for the Session config
+    card's display mode (invite offsets vs Start; reminder offsets vs
+    End). Returns ``[{"offset": "<str>", "at": "<localized or ''>"}]`` —
+    ``at`` is empty when the anchor is unset or the offset can't be
+    parsed (the offset still shows). Mirrors the resolution
+    ``build_schedule_timeline`` does for the same list columns.
+    """
+    rows: list[dict[str, str]] = []
+    if not isinstance(offsets, list):
+        return rows
+    anchor_aware = None
+    if anchor is not None:
+        anchor_aware = (
+            anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+        )
+    for entry in offsets:
+        if not isinstance(entry, str) or not entry:
+            continue
+        at = ""
+        if anchor_aware is not None:
+            try:
+                delta = scheduled_events.parse_iso_duration(entry)
+                at = date_formatting.format_datetime(
+                    anchor_aware + delta, session_timezone
+                )
+            except (ValueError, AttributeError):
+                at = ""
+        rows.append({"offset": entry, "at": at})
+    return rows
+
+
 def build_auto_send_invites_caption(
     db: Session,
     review_session: ReviewSession,

@@ -174,6 +174,18 @@ def session_detail(
             "reminder_offsets_input_value": ", ".join(
                 review_session.reminder_offsets or []
             ),
+            # 18R Item 4 — display mode shows each offset + its resolved
+            # send datetime (invites off Start, reminders off End).
+            "invite_offset_rows": views.build_offset_display_rows(
+                review_session.scheduled_activate_at,
+                review_session.invite_offsets,
+                session_tz,
+            ),
+            "reminder_offset_rows": views.build_offset_display_rows(
+                review_session.deadline,
+                review_session.reminder_offsets,
+                session_tz,
+            ),
             "schedule_timeline_rows": views.build_schedule_timeline(
                 review_session,
                 sessions.resolve_session_timezone(review_session),
