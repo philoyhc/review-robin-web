@@ -226,29 +226,22 @@
         <div class="card" id="config-ui-settings-card">
           <h3 style="margin-top: 0;">User interface settings</h3>
           <p class="muted">Per-session toggles for the optional Setup tabs.</p>
-          <div data-display-only>
-            <p style="margin: 0 0 var(--space-2) 0;">
-              Relationships tab and page:
-              <span class="config-value">{{ "On" if session.relationships_enabled else "Off" }}</span>
-            </p>
-            <p style="margin: 0;">
-              Observers tab and page:
-              <span class="config-value">{{ "On" if session.observers_enabled else "Off" }}</span>
-            </p>
-          </div>
-          <div data-edit-only>
-            <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
-              <label>
-                <input type="checkbox" disabled
-                       {% if session.relationships_enabled %}checked{% endif %}>
-                Relationships tab and page
-              </label>
-              <label>
-                <input type="checkbox" disabled
-                       {% if session.observers_enabled %}checked{% endif %}>
-                Observers tab and page
-              </label>
-            </div>
+          {# Both items on one line in both modes; the On/Off pill (display)
+             and the checkbox (edit) occupy the same slot after each item's
+             label, at normal font size/weight. #}
+          <div class="ui-settings-row">
+            <label class="ui-setting">
+              Relationships tab and page
+              <span class="config-value" data-display-only>{{ "On" if session.relationships_enabled else "Off" }}</span>
+              <input type="checkbox" data-edit-only disabled
+                     {% if session.relationships_enabled %}checked{% endif %}>
+            </label>
+            <label class="ui-setting">
+              Observers tab and page
+              <span class="config-value" data-display-only>{{ "On" if session.observers_enabled else "Off" }}</span>
+              <input type="checkbox" data-edit-only disabled
+                     {% if session.observers_enabled %}checked{% endif %}>
+            </label>
           </div>
         </div>
       </div>
