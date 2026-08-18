@@ -409,10 +409,11 @@ def test_archive_card_controls_disabled_when_activated(
         ).text
     )
     assert "Pause the session before archiving" in card
-    # All three purge checkboxes are disabled.
+    # All three purge checkboxes are disabled + the whole block greyed.
     assert card.count('name="purge"') == 3
     assert card.count("disabled") >= 4  # 3 checkboxes + the button
     assert 'aria-disabled="true"' in card  # the button
+    assert "exp-purge-opts is-disabled" in card  # greyed block
 
 
 def test_archive_card_shows_already_archived(
@@ -432,6 +433,7 @@ def test_archive_card_shows_already_archived(
     assert "Already archived" in card
     assert "This session is already archived." in card
     assert card.count("disabled") >= 4  # 3 checkboxes + the button
+    assert "exp-purge-opts is-disabled" in card  # greyed block
 
 
 def test_archive_card_post_archives_and_redirects_to_archived_index(

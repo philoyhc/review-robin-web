@@ -386,6 +386,9 @@
           node.querySelectorAll("input[name='purge']").forEach(
             function (cb) { cb.checked = false; cb.disabled = true; }
           );
+          // Grey the whole purge block (caption + labels) to match the card.
+          var opts = node.querySelector(".exp-purge-opts");
+          if (opts) opts.classList.add("is-disabled");
         }
 
         function fillSingle(row) {

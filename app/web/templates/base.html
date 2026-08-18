@@ -1876,6 +1876,14 @@
         display: inline-flex;
         align-items: center;
       }
+      /* Inactive purge options — when the session can't be archived, the
+         whole "Archive after purging" block (caption + labels + checkboxes)
+         greys out uniformly. The inputs are also ``disabled`` for real
+         non-interactivity; this is the shared look for the lobby expander
+         and the Extract data card (18R archive harmonization). */
+      body.ui-v2 .exp-purge-opts.is-disabled {
+        opacity: 0.5;
+      }
       /* Divider between the Allow-delete control and the purge options. */
       body.ui-v2 .exp-sep {
         align-self: center;

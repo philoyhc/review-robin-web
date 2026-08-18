@@ -811,7 +811,8 @@
               style="margin: 0;">
           <input type="hidden" name="session_ids" value="{{ session.id }}">
           <input type="hidden" name="return_to" value="archived">
-          <div class="exp-purge-opts" style="margin-bottom: var(--space-3);">
+          <div class="exp-purge-opts{% if not archivable %} is-disabled{% endif %}"
+               style="margin-bottom: var(--space-3);">
             <span class="exp-purge-title">Archive after purging</span>
             <label><input type="checkbox" name="purge" value="responses"
                    {% if not archivable %}disabled{% endif %}> Responses</label>
