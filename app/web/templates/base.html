@@ -1847,6 +1847,7 @@
         align-items: center;
         gap: var(--space-1);
         font-size: var(--fs-small);
+        margin: 0;  /* reset the global body.ui-v2 label margin */
       }
       /* Purge-on-archive checkboxes — sit beside Allow delete; the
          auto right-margin pushes the action buttons to the right. */
@@ -1862,6 +1863,11 @@
         display: flex;
         align-items: center;
         gap: var(--space-1);
+        /* Reset the global ``body.ui-v2 label`` margin (space-3 top /
+           space-1 bottom). Left in place, that asymmetric margin — centered
+           in the flex row — pushes each checkbox label's content down, so
+           the no-margin "Archive after purging" caption reads as too high. */
+        margin: 0;
       }
       /* "Archive after purging" caption — a flex item like the checkbox
          labels beside it, so its text vertically aligns with them (rather
