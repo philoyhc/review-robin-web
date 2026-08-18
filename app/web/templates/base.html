@@ -405,7 +405,17 @@
          switch doesn't shift the layout. */
       [data-config-mode="display"] [data-edit-only] { display: none; }
       [data-config-mode="edit"] [data-display-only] { display: none; }
-      .config-value { padding: 8px 0; min-height: 1.25em; }
+      /* Display value = a sky/light-blue chip so the DATA reads distinct
+         from the bold labels, without changing font size/weight (not a
+         .pill — no uppercase / shrink). Content-hugging inline-block. */
+      .config-value {
+        display: inline-block;
+        padding: 6px 10px;
+        min-height: 1.25em;
+        background: #e0f2fe;
+        color: #075985;
+        border-radius: 6px;
+      }
       .config-value-multiline { white-space: pre-wrap; }
       .pill {
         display: inline-block;
