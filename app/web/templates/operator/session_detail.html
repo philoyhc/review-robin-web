@@ -32,10 +32,10 @@
       wiring lands in a follow-up slice.
     </p>
     {# 18R Item 4 Slice 2 mock-up — Name / Code / Description (left) +
-       the date/timing fields (right), replicated from the Edit page as
-       inert (``disabled``), value-filled edit boxes. Timezone is
-       included as the reference zone; Help contact + the read-only
-       Schedule timeline are not part of this mock-up. #}
+       Help contact / Timezone / the date/timing fields (right),
+       replicated from the Edit page as inert (``disabled``),
+       value-filled edit boxes. The read-only Schedule timeline card is
+       not part of this mock-up. #}
     <div class="page-grid" style="margin-bottom: 0;">
       <div style="display: flex; flex-direction: column; min-width: 0;">
         <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
@@ -58,11 +58,16 @@
       <div class="fill-col" style="min-width: 0;">
         <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
           <div>
+            <label for="mock-help-contact">Help contact (optional)</label>
+            <input type="text" id="mock-help-contact" maxlength="320" disabled
+                   value="{{ session.help_contact or '' }}"
+                   placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+          </div>
+          <div>
             <label for="mock-timezone">Timezone</label>
             <input type="text" id="mock-timezone" disabled
                    value="{{ session_timezone_label }}">
           </div>
-          <div></div>
         </div>
         <div style="display: grid;
                     grid-template-columns: 1fr 1fr;
