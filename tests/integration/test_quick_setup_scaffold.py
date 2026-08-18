@@ -307,36 +307,37 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
 def test_quick_setup_card_lives_at_bottom_left(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 Slice 1 — Session Home layout:
+    """18R Item 4 Slices 1/5b — Session Home layout:
 
        Workflow                  (full-width, top)
+       Session details           (#session-config, editable in place)
        ┌───────────────────┐  ┌───────────────────┐
-       │  Session Details  │  │  (reserved for     │
-       │  Schedule         │  │   Danger Zone)     │
-       │  Quick Setup      │  │                    │
+       │  Quick Setup      │  │  Danger Zone       │
        └───────────────────┘  └───────────────────┘
 
-    Quick Setup moved to the bottom of the left column ("bottom
-    left"); Extract Setup moved off Home to the Extract data page.
-    Mobile collapse order: Workflow → Session Details → Quick Setup.
+    The old read-only Session Details metadata card was retired (Slice 5b)
+    and Quick Setup moved up to the top of the left column. Extract Setup
+    lives on the Extract data page.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     workflow_pos = body.find('id="next-action"')
-    session_details_pos = body.find('class="session-detail-code')
+    config_pos = body.find('id="session-config"')
     quick_setup_pos = body.find('id="quick-setup"')
 
-    assert -1 not in (workflow_pos, session_details_pos, quick_setup_pos)
-    # 18R Item 4 Slice 5 — Danger Zone is now wired on Home (bottom-right).
+    assert -1 not in (workflow_pos, config_pos, quick_setup_pos)
+    # 18R Item 4 Slice 5 — Danger Zone is wired on Home (bottom-right).
     # Extract Setup moved to the Extract data page (no longer on Home).
     assert body.find('id="danger-zone"') != -1
     assert body.find('id="extract-data"') == -1
 
-    # Source order = mobile DOM collapse order: Quick Setup sits below
-    # Session Details (bottom-left).
-    assert workflow_pos < session_details_pos < quick_setup_pos
+    # The retired metadata card's markers are gone from Home.
+    assert body.find('class="session-detail-code') == -1
+
+    # Source order: Workflow → Session details card → Quick Setup (bottom-left).
+    assert workflow_pos < config_pos < quick_setup_pos
 
 
 def test_quick_setup_top_grid_layout(

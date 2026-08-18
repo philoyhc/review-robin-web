@@ -454,20 +454,8 @@
       /* Super-admin tier badge (18S) — violet, distinct from the
          blue admin/info pill so the protected top tier stands out. */
       .pill-super { background: #ede9fe; color: #5b21b6; }
-      .session-meta-row {
-        display: flex;
-        gap: 16px;
-        margin: 0 0 6px 0;
-      }
-      .session-meta-row > div { flex: 1; }
-      /* Session code trailing the session name in the Session
-         Details card's H2 — body-text size + weight so it reads
-         as secondary metadata, not part of the heading. */
-      .session-detail-code {
-        font-size: var(--fs-body);
-        font-weight: 400;
-        margin-left: var(--space-2);
-      }
+      /* .session-meta-row / .session-detail-code retired with the old
+         read-only Session Details card (18R Item 4 Slice 5b). */
       .session-status-row {
         display: flex;
         justify-content: space-between;
@@ -2667,12 +2655,9 @@
       body.ui-v2 .rs-status-panel .rs-session-description:not(:last-child) {
         margin-bottom: var(--space-3);
       }
-      /* Session Details card description (Session Home) — same
-         line-break preservation as the reviewer-surface variant. */
-      .session-detail-description {
-        margin: 0 0 var(--space-3) 0;
-        white-space: pre-line;
-      }
+      /* .session-detail-description retired with the old read-only Session
+         Details card (18R Item 4 Slice 5b); the #session-config description
+         uses .config-value-multiline (white-space: pre-wrap). */
       body.ui-v2 .rs-status-panel .rs-page-status-pills {
         list-style: none;
         margin: 0 0 var(--space-3) 0;

@@ -228,14 +228,19 @@ def test_session_detail_renders_in_override_zone(
     client: TestClient, db: Session
 ) -> None:
     """A session-scoped page localises timestamps to the session's
-    own override zone — not the viewing operator's default."""
+    own override zone — not the viewing operator's default. The End
+    (deadline) datetime on the #session-config card is the localised
+    timestamp under test (18R Item 4 Slice 5b retired the old card's
+    Created pill)."""
     session = _create_session(client, db, code="tz-render")
     _set_session_timezone(client, session, "Asia/Singapore")
+    session.deadline = datetime(2026, 9, 1, 12, 0)  # naive UTC
+    db.commit()
     db.refresh(session)
 
     body = client.get(f"/operator/sessions/{session.id}").text
-    assert format_datetime(session.created_at, "Asia/Singapore") in body
-    assert format_datetime(session.created_at, "UTC") not in body
+    assert format_datetime(session.deadline, "Asia/Singapore") in body
+    assert format_datetime(session.deadline, "UTC") not in body
 
 
 def test_session_with_null_timezone_resolves_to_operator_default(
@@ -251,10 +256,13 @@ def test_session_with_null_timezone_resolves_to_operator_default(
         follow_redirects=False,
     )
     session.display_timezone = None
+    session.deadline = datetime(2026, 9, 1, 12, 0)  # naive UTC
     db.commit()
 
     body = client.get(f"/operator/sessions/{session.id}").text
-    assert format_datetime(session.created_at, "Asia/Singapore") in body
+    # Null session zone → resolves to the operator's default (Singapore);
+    # the End datetime on #session-config localises accordingly.
+    assert format_datetime(session.deadline, "Asia/Singapore") in body
 
 
 def test_session_detail_shows_timezone_label(
