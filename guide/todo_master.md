@@ -1963,7 +1963,7 @@ rationalization on the Instruments page.
   per-concern routes are kept server-side (test callers); full server-side
   retirement is logged as an optional Future item in the plan doc.
 
-### Segment 18S — Security refinements — Item 1 shipped 2026-08-17 (#1925 → #1927 + docs); Item 2 shipped 2026-08-17 (#1930); Item 3 planned (detailed plan: `guide/segment_18S_security.md`)
+### Segment 18S — Security refinements — Item 1 shipped 2026-08-17 (#1925 → #1927 + docs); Item 2 shipped 2026-08-17 (#1930); Item 3 shipped 2026-08-18 (#1935) (detailed plan: `guide/segment_18S_security.md`)
 
 Holding segment for small, self-contained in-app authorization / account-safety
 hardening. Stays open for further security items.
@@ -1981,27 +1981,37 @@ hardening. Stays open for further security items.
 - **Item 2 (shipped #1930)** — no-super-tier fallback: when `SUPER_ADMIN_EMAILS`
   is empty, admin promote/demote falls back to any-admin (no lockout); the
   strict rule engages once a super-admin exists.
-- **Item 3 (planned; not started)** — tighten sys-admin cross-session writes to
+- **Item 3 (shipped #1935)** — tightened sys-admin cross-session writes to
   explicit ownership. A non-owner sys-admin may **only** self-add-as-owner
-  (tighten `owners/add` to self-only) + clone; `edit` / `lobby-edit` /
-  `owners-remove` require real `session_operators` membership; Diagnostics
-  "Details" routes through audited self-add. **18R Part 2 Item 4 depends on
-  this.**
+  (`owners/add` self-only) + clone; `edit` / `lobby-edit` / `owners-remove`
+  require real `session_operators` membership; Diagnostics "Manage" routes
+  through the audited self-add/adopt door. (18R Part 2 Item 4 built on this.)
 
-### Segment 18R Part 2 — UX refinement (Items 3–4) (detailed plan: `guide/segment_18R_ux_refine.md`)
+### Segment 18R Part 2 — UX refinement (Items 3–5) — Items 4 + 5 done 2026-08-18 (detailed plan: `guide/segment_18R_ux_refine.md`)
 
 Continues the 18R holding segment beyond the Items 1–2 work above.
 
-- **Item 3 (open; first tweaks shipped #1923)** — instrument-card UX tweaks:
-  taller preview-band description edit box + Link 2 operator-cycle reorder
-  (IS THE SAME AS → IS DIFFERENT FROM → IS → IS NOT). Open-ended home for
-  further small per-card polish.
-- **Item 4 (planned; not started, UI-iteration-first)** — consolidate the
-  session's config **display + edit onto Session Home** (a plain display↔edit
-  swap — *not* the instrument-card lock harness, no collapse) and **retire the
-  separate Edit page**. Quick Setup + Danger Zone become the two half-width
-  bottom cards; Extract Setup folds into the Extract data tab. **Depends on 18S
-  Item 3** (sys-admin cross-session ownership posture) — land that first.
+- **Item 3 (open; tweaks shipped #1923 + vertical-resize textareas app-wide
+  2026-08-18)** — instrument-card UX tweaks: taller preview-band description
+  edit box + Link 2 operator-cycle reorder + `resize: vertical` on all
+  textareas. Open-ended home for further small per-card polish.
+- **Item 4 (done 2026-08-18)** — consolidated the session's config **display +
+  edit onto Session Home** (a plain `?editing=1` display↔edit swap matching the
+  instruments card) and **retired the Edit page** (routes + template deleted;
+  `/edit` 301-redirects to Home). Slices 1–5b: relocations → display scaffold →
+  Save persistence → Owners Add/Remove → Danger Zone on Home → old metadata card
+  retired (Quick Setup moved up) → `/edit` teardown (~55 test sites migrated to
+  `/config`). Quick Setup + Danger Zone are the two half-width Home bottom
+  cards; Extract Setup relocated to the Extract data page. Plus the
+  `operator/sessions/new` alignment follow-up. Inherited the clean auth posture
+  from **18S Item 3**.
+- **Item 5 (done 2026-08-18)** — **Archive session card** on the Extract data
+  page (bottom-right, beside Extract Setup), **harmonized with the sessions
+  lobby's "Purge and archive"**: one `lifecycle.can_archive` gate (any
+  non-activated, non-archived session), one `session_purge.purge_and_archive`
+  service, the shared `/sessions/archive-selected` route (with `return_to`), and
+  the same Responses / Rosters / Audit-log purge options. Controls grey off in
+  both locations when a session can't be archived.
 
 ---
 
