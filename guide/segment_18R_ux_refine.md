@@ -877,33 +877,40 @@ index; the service is reversible and destroys no data.
   hard `delete_session`). Archived sessions are excluded from the main lobby and
   counted in the lobby's `archived` pill.
 
-**Key finding — two gating rules for one service.** The lobby path is
+**Key finding — two gating rules for one service.** The lobby path was
 *draft-only + optional purge*; the Workflow-card path is *any-state, surfaced
-when expired, no purge*. The **Extract data page card's intent matches the
-Workflow-card path** (archive a finished session whose data was just extracted —
-keep the data, don't purge, stay reversible), so it should reuse
-`POST /workflow/archive` rather than the draft-only lobby route.
+when expired, no purge*.
 
-### Plan — ✅ built 2026-08-18
+### Plan — ✅ built 2026-08-18, then harmonized with the lobby 2026-08-18
 
-- **Reused `POST /operator/sessions/{id}/workflow/archive`** — no new route. The
-  Extract-data route already spreads `**workflow_ctx`, so `is_archived` /
-  `archive_visible` were already in the template.
-- **Wired the placeholder card** (`#extract-data-archive-session`): the inert
-  `aria-disabled` button is now a real `btn destructive` submit (matching the
-  Workflow card's archive button). Copy says archiving files the session out of
-  the active lobby, **keeps every response + setup row**, and is **reversible**
-  from the archived page.
-- **Gating — resolved: mirror the Workflow card.** The button is active only when
-  `archive_visible` (= `is_expired`) **and** not `is_archived`; otherwise it's an
-  inert `aria-disabled` affordance with an "available once the session has ended"
-  title. One consistent archive-availability rule across the Workflow card and
-  the Extract data page.
-- **No confirm gate** (parity with the Workflow card; archiving is reversible).
-  Shows an "Already archived" state when `is_archived`.
-- Tests (`test_extract_data_scaffold.py`): active form when expired; inert +
-  no-form when draft; "Already archived" when archived. (The archive route +
-  redirect + audit are already pinned by `test_workflow_row3_buttons.py`.)
+Initially the card reused `POST /workflow/archive` (gated on `is_expired`, no
+purge). The operator then asked to **harmonize the card with the lobby's "Purge
+and archive"** — one gate, one route, the same purge options:
+
+- **Shared gate `lifecycle.can_archive`** = `not is_ready and not is_archived`
+  (any **non-activated**, non-archived session: draft / validated / expired). An
+  activated session must be paused first. Both the lobby route and the card now
+  use it (the lobby was widened from its old draft-only filter).
+- **Shared service `session_purge.purge_and_archive`** — optionally purges the
+  ticked categories (audit-log → responses → rosters) then archives; no-ops
+  unless `can_archive`. Called by both surfaces.
+- **Shared route `POST /operator/sessions/archive-selected`** — now takes an
+  optional `return_to`; the card posts to it with `session_ids=<id>`, the three
+  `purge` checkboxes, and `return_to=archived` so archiving from the Extract
+  data page lands on the **archived-sessions index**. The lobby keeps landing on
+  the main lobby.
+- **Card UI** — button renamed **"Purge and archive"** (`btn alert`, matching
+  the lobby); the same **"Archive after purging" + Responses / Rosters / Audit
+  log** checkboxes render above it (reusing the `.exp-purge-opts` /
+  `.exp-purge-title` primitives). Inert "Pause the session before archiving"
+  when activated; "Already archived" when archived.
+- **Lobby cosmetics** — a `|` separator (`.exp-sep`) between "Allow delete" and
+  "Archive after purging"; the caption wrapped in `.exp-purge-title`
+  (inline-flex) so it aligns with the checkbox labels instead of sitting high.
+- Tests: `can_archive` gate matrix; card renders the purge form for a
+  non-activated session, inert when activated, "Already archived" when archived;
+  card POST archives + redirects to the archived index; lobby archive widened to
+  validated / expired (activated still skipped).
 
 ---
 

@@ -468,11 +468,11 @@ def test_archive_selected_archives_draft_and_excludes_from_lobby(
     assert "1 archived" in body
 
 
-def test_archive_selected_skips_non_draft(
+def test_archive_selected_skips_activated(
     client: TestClient, db: Session
 ) -> None:
-    """A non-draft session ticked for archive is silently skipped —
-    archiving is draft-only."""
+    """An activated (ready) session ticked for archive is silently skipped —
+    archiving applies to non-activated sessions only (18R harmonization)."""
     client.post(
         "/operator/sessions",
         data={"name": "Running", "code": "arch-running"},
@@ -493,6 +493,31 @@ def test_archive_selected_skips_non_draft(
 
     db.expire_all()
     assert db.get(ReviewSession, session_id).status == "ready"
+
+
+def test_archive_selected_archives_non_activated_states(
+    client: TestClient, db: Session
+) -> None:
+    """18R harmonization — archive now applies to any non-activated session,
+    not just draft. A validated and an expired session both archive."""
+    for code, state in (("arch-validated", "validated"), ("arch-expired", "expired")):
+        client.post(
+            "/operator/sessions",
+            data={"name": code, "code": code},
+            follow_redirects=False,
+        )
+        rs = db.execute(
+            select(ReviewSession).where(ReviewSession.code == code)
+        ).scalar_one()
+        rs.status = state
+        db.commit()
+        client.post(
+            "/operator/sessions/archive-selected",
+            data={"session_ids": [rs.id]},
+            follow_redirects=False,
+        )
+        db.expire_all()
+        assert db.get(ReviewSession, rs.id).status == "archived"
 
 
 def test_lobby_search_card_has_go_to_archive(client: TestClient) -> None:

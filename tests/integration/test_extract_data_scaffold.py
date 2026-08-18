@@ -360,47 +360,54 @@ def test_extract_data_card_renders_when_session_is_activated(
 # ── Item 5 — Archive session card (Extract data page) ─────────────────
 
 
-def test_archive_card_disabled_when_not_expired(
+def _archive_card(body: str) -> str:
+    start = body.find('id="extract-data-archive-session"')
+    # The Extract Setup card (id="extract-data") follows in the right column;
+    # bound the archive card there. (id="extract-data-archive-session" has no
+    # closing quote after "extract-data", so it won't self-match.)
+    end = body.find('id="extract-data"', start)
+    return body[start:end if end != -1 else len(body)]
+
+
+def test_archive_card_purge_and_archive_active_for_non_activated(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 5 — the Archive session card mirrors the Workflow card's
-    gate: on a draft (not-yet-ended) session the Archive control is an
-    inert, aria-disabled affordance and no archive form is posted."""
+    """18R archive harmonization — on a non-activated session (draft here)
+    the card offers the same "Purge and archive" affordance as the lobby:
+    the three purge checkboxes + a button posting to the shared
+    archive-selected route, landing on the archived index."""
     review_session = _make_session(client, db, code="ed-arch-draft")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
-    ).text
-
-    card_pos = body.find('id="extract-data-archive-session"')
-    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
-    assert "Archiving becomes available once the session has ended" in card
-    assert 'aria-disabled="true"' in card
-    # No live archive form while the session hasn't ended.
-    assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
-        not in card
+    card = _archive_card(
+        client.get(
+            f"/operator/sessions/{review_session.id}/extract-data"
+        ).text
     )
+    assert 'action="/operator/sessions/archive-selected"' in card
+    assert f'name="session_ids" value="{review_session.id}"' in card
+    assert 'name="return_to" value="archived"' in card
+    assert ">Archive after purging</span>" in card
+    for value in ("responses", "rosters", "audit_log"):
+        assert f'name="purge" value="{value}"' in card
+    assert ">Purge and archive</button>" in card
 
 
-def test_archive_card_active_when_expired(
+def test_archive_card_disabled_when_activated(
     client: TestClient, db: Session
 ) -> None:
-    """Once the session is expired, the card posts to the Workflow card's
-    archive route (any-state, reversible, no purge)."""
-    review_session = _make_session(client, db, code="ed-arch-exp")
-    review_session.status = "expired"
+    """An activated (ready) session must be paused first — the card shows an
+    inert "Purge and archive" affordance and posts no form."""
+    review_session = _make_session(client, db, code="ed-arch-ready")
+    review_session.status = "ready"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
-    ).text
-    card_pos = body.find('id="extract-data-archive-session"')
-    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
-    assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
-        in card
+    card = _archive_card(
+        client.get(
+            f"/operator/sessions/{review_session.id}/extract-data"
+        ).text
     )
-    assert ">Archive session</button>" in card
+    assert 'aria-disabled="true"' in card
+    assert "Pause the session before archiving" in card
+    assert 'action="/operator/sessions/archive-selected"' not in card
 
 
 def test_archive_card_shows_already_archived(
@@ -411,16 +418,30 @@ def test_archive_card_shows_already_archived(
     review_session.status = "archived"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
-    ).text
-    card_pos = body.find('id="extract-data-archive-session"')
-    card = body[card_pos:body.find("</div>\n    </div>", card_pos)]
-    assert ">Already archived</a>" in card
-    assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/archive"'
-        not in card
+    card = _archive_card(
+        client.get(
+            f"/operator/sessions/{review_session.id}/extract-data"
+        ).text
     )
+    assert ">Already archived</a>" in card
+    assert 'action="/operator/sessions/archive-selected"' not in card
+
+
+def test_archive_card_post_archives_and_redirects_to_archived_index(
+    client: TestClient, db: Session
+) -> None:
+    """Submitting the card's Purge-and-archive form archives the session and
+    lands on the archived-sessions index (return_to=archived)."""
+    review_session = _make_session(client, db, code="ed-arch-post")
+    response = client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [review_session.id], "return_to": "archived"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/operator/sessions/archived"
+    db.expire_all()
+    assert db.get(ReviewSession, review_session.id).status == "archived"
 
 
 def test_extract_data_wrapup_layout_with_token_keys(

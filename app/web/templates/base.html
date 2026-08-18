@@ -1863,6 +1863,18 @@
         align-items: center;
         gap: var(--space-1);
       }
+      /* "Archive after purging" caption — a flex item like the checkbox
+         labels beside it, so its text vertically aligns with them (rather
+         than sitting high as a bare inline text node). */
+      body.ui-v2 .exp-purge-title {
+        display: inline-flex;
+        align-items: center;
+      }
+      /* Divider between the Allow-delete control and the purge options. */
+      body.ui-v2 .exp-sep {
+        align-self: center;
+        color: var(--border-default);
+      }
       body.ui-v2 .session-expander-actions {
         display: flex;
         flex-wrap: wrap;
