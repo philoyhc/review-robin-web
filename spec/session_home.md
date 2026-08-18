@@ -6,19 +6,19 @@ and provides launch points for setup, operations, and metadata.
 
 ## Lifecycle state vocabulary
 
-The session lifecycle has three live states and two reserved
-(future) states. Internal enum values and user-facing display
-labels differ for one of them; this spec uses enum values when
-referring to code behavior and display labels when referring to
-UI copy.
+The session lifecycle has five live states. Internal enum values and
+user-facing display labels differ for one of them; this spec uses enum
+values when referring to code behavior and display labels when referring
+to UI copy. See `spec/lifecycle.md` for the full state machine and
+transitions.
 
 | Enum | Display label | Status |
 |---|---|---|
 | `draft` | Draft | live |
 | `validated` | Validated | live |
 | `ready` | **Activated** | live |
-| `expired` | Expired | reserved (Segment 9.3+; deadline has passed) |
-| `archived` | Archived | reserved (Segment 12+) |
+| `expired` | Expired | live (Workflow-card "Close session": `ready → expired`) |
+| `archived` | Archived | live (Workflow "Archive" / lobby "Purge and archive"; reversible via unarchive → draft) |
 
 The enum/display divergence on `ready` → "Activated" exists because
 "ready" reads as "ready to be activated" rather than "currently
