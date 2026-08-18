@@ -55,7 +55,7 @@ def _set_session_timezone(
             "display_timezone": zone}
     data.update(extra)
     return client.post(
-        f"/operator/sessions/{session.id}/edit",
+        f"/operator/sessions/{session.id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -216,9 +216,9 @@ def test_edit_page_renders_timezone_field(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="tz-card")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
-    # The timezone is a field of the Edit Session Details form now,
-    # not a standalone card (18B PR 5). Datalist options carry the
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    # The timezone is a field of the Session Home config card's edit
+    # mode now, not a standalone card. Datalist options carry the
     # GMT-prefixed form so the operator can search by offset.
     assert 'name="display_timezone"' in body
     assert '<option value="GMT+8 Asia/Singapore">' in body
@@ -429,22 +429,23 @@ def test_settings_card_renders_timezone_sample(
     assert 'timeZoneName: "shortOffset"' in body
 
 
-def test_edit_card_includes_timezone_preview_script(
+def test_config_card_timezone_field_uses_gmt_offset_datalist(
     client: TestClient, db: Session
 ) -> None:
-    """The `_timezone_preview.html` partial still ships on the Edit
-    page — the deadline-zone re-render is the one progressive
-    enhancement it drives — even though the worked-sample line
-    above the picker was retired in favour of the GMT-prefixed
-    datalist. The Operator Settings page is now the canonical home
-    for the live worked-sample readout."""
+    """On the Session Home config card the timezone edit affordance
+    is a text input wired to a GMT-prefixed datalist so the operator
+    can search by offset (GMT+8) or name (Singapore). The Edit page's
+    worked-sample line and its live-preview JS partial
+    (`_timezone_preview.html`) are not carried by the in-place config
+    card — the Operator Settings page is the canonical home for the
+    live worked-sample readout."""
     session = _create_session(client, db, code="tz-sample")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
-    # Sample line / IDs are gone from the Edit page; the partial's
-    # JS now tolerates missing `tz-sample` / `tz-sample-zone`
-    # spans and just drives the deadline re-render.
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    # The worked-sample line is absent here.
     assert 'id="tz-sample"' not in body
-    # The script still loads (shared partial), and its IANA-from-
-    # value parser is present.
-    assert "ianaFromValue" in body
-    assert 'timeZoneName: "shortOffset"' in body
+    # The timezone input is bound to the GMT-offset datalist, whose
+    # options carry the searchable GMT-prefixed labels.
+    assert 'name="display_timezone"' in body
+    assert 'list="config-timezone-options"' in body
+    assert 'id="config-timezone-options"' in body
+    assert '<option value="GMT+8 Asia/Singapore">' in body

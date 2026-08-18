@@ -195,15 +195,12 @@ def test_back_links_are_removed_from_nested_operator_pages(
     )
 
 
-def test_edit_session_has_danger_zone_anchor(
+def test_session_home_has_danger_zone_anchor(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 Slice 5 — Danger Zone is wired on Session Home now. The
-    retired-but-test-harness Edit page still carries its own copy."""
+    """18R Item 4 — Danger Zone is wired on Session Home (bottom-right),
+    relocated from the retired Edit page."""
     review_session = _create_session(client, db)
-    body = client.get(f"/operator/sessions/{review_session.id}/edit").text
-    assert 'id="danger-zone"' in body
-    # And it's now on Session Home too (relocated there).
     home_body = client.get(f"/operator/sessions/{review_session.id}").text
     assert 'id="danger-zone"' in home_body
 

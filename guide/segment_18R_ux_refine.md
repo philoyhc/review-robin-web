@@ -5,9 +5,9 @@ shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
 closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
 shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
 2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
-Home + retire the Edit page — Option 2; Slices 1–5 done 2026-08-18 (config
-save + owners wired, Edit page retired from the UI + Danger Zone on Home);
-remaining: Slice 5b route deletion, Slice 6 Archive card, sessions/new
+Home + retire the Edit page — Option 2; Slices 1–5b done 2026-08-18 (config
+save + owners wired, Edit page fully retired — routes + template deleted, /edit
+301-redirects to Home); remaining: Slice 6 Archive card, sessions/new
 follow-up)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
@@ -588,11 +588,12 @@ shipping PR; land them individually or batched as convenient.
   (Save / Cancel / Add / Remove / the UI-settings checkboxes do not yet
   persist).
 
-**Slices 3–5 ✅ done 2026-08-18** — config-card Save persistence (Slice 3),
-Owners Add/Remove wired (Slice 4), and the Edit page retired from the UI with
-Danger Zone wired on Home (Slice 5). Remaining: **Slice 5b** (delete the
-kept-for-tests `/edit` routes + template after migrating ~55 test sites),
-**Slice 6** (Archive card), and the **`sessions/new` alignment** follow-up.
+**Slices 3–5b ✅ done 2026-08-18** — config-card Save persistence (Slice 3),
+Owners Add/Remove wired (Slice 4), Edit page retired from the UI + Danger Zone
+on Home (Slice 5), the old metadata card retired with Quick Setup moved up, and
+the `/edit` routes + template deleted (Slice 5b — ~55 test sites migrated to
+`/config` + Home; `/edit` now 301-redirects). Remaining: **Slice 6** (Archive
+card) and the **`sessions/new` alignment** follow-up.
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit
@@ -755,12 +756,13 @@ new mechanism), then the config-consolidation work.
      deprecated; no UI links to them. Mirrors the "dead-from-the-card,
      kept-for-tests" pattern used for the per-concern instrument routes.
 
-5b. **(Follow-up) Delete the `/edit` routes + template.** Migrate the ~55 test
-   call sites off `GET/POST /edit` onto `POST /config` + Home `?editing=1`
-   (pure test refactor — the two share `_apply_session_config_form`, so
-   behaviour is identical), then delete `session_edit_form` /
-   `session_edit_submit` / `session_edit.html` and add a `GET /edit` → Home
-   redirect for stale bookmarks. Its own slice; no user-facing change.
+5b. **Delete the `/edit` routes + template. ✅ done 2026-08-18.** Migrated all
+   ~55 test call sites off `GET/POST /edit` onto `POST /config` + Home
+   `?editing=1` (pure test refactor — they share `_apply_session_config_form`,
+   so behaviour is identical), then deleted `session_edit_form` /
+   `session_edit_submit` / `session_edit.html`. A thin `GET /edit` →
+   `?editing=1#session-config` **301 redirect** (still `require_session_operator`-
+   gated) preserves stale bookmarks. No user-facing change.
    - **De-dupe the working "Session Details" metadata card. ✅ done 2026-08-18.**
      The operator chose to **retire** the read-only card outright (rather than
      fold): it duplicated `#session-config`'s name / code / description / help

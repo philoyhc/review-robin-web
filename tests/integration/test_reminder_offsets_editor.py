@@ -212,7 +212,7 @@ def test_edit_round_trips_reminder_offsets(
 
     # Set
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-rem",
             "code": "edit-rem",
@@ -226,7 +226,7 @@ def test_edit_round_trips_reminder_offsets(
     assert rs.reminder_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
-    page = client.get(f"/operator/sessions/{session_id}/edit")
+    page = client.get(f"/operator/sessions/{session_id}?editing=1")
     assert page.status_code == 200
     assert 'name="reminder_offsets"' in page.text
     # The disabled attribute should be gone now.
@@ -235,7 +235,7 @@ def test_edit_round_trips_reminder_offsets(
 
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-rem",
             "code": "edit-rem",
@@ -254,7 +254,7 @@ def test_edit_emits_reminder_schedule_updated_audit(
     _, _, session_id = _create_session(client, "audit-rem")
     deadline = datetime.now(timezone.utc) + timedelta(days=30)
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "x",
             "code": "audit-rem",

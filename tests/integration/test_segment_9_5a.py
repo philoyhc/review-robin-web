@@ -288,7 +288,7 @@ def test_session_edit_invalidates_validated(
     session = _validated_session(client, db, code="inv-se")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/edit",
+        f"/operator/sessions/{session.id}/config",
         data={"name": "Renamed", "code": "inv-se"},
         follow_redirects=False,
     )

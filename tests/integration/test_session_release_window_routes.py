@@ -66,7 +66,7 @@ def _submit_edit(
     }
     data.update(overrides)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -259,7 +259,7 @@ def test_edit_form_prefills_saved_release_window_values(
         },
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}?editing=1"
     ).text
     # Both inputs prefilled in session zone (UTC).
     assert 'value="2027-03-01T10:00"' in body
@@ -273,9 +273,9 @@ def test_edit_until_renders_as_datetime_local_input(
     ``datetime-local``. The text input shape is gone."""
     review_session = _make_session(client, db, code="rw-shape")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}?editing=1"
     ).text
     assert (
-        'type="datetime-local" id="responses_release_until"' in body
+        'type="datetime-local" id="mock-release-until"' in body
     )
     assert 'name="release_until_offset"' not in body

@@ -108,7 +108,7 @@ def test_edit_start_change_revalidates_invite_offsets(
     # to 4 days ago — well before now + 1hr operational lead.
     near_start = datetime.now(timezone.utc) + timedelta(days=1)
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "x",
             "code": "revalidate",
@@ -138,7 +138,7 @@ def test_edit_start_change_within_rules_succeeds(
 
     further_start = datetime.now(timezone.utc) + timedelta(days=20)
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "x",
             "code": "revalidate-ok",

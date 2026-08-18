@@ -145,7 +145,7 @@ def _submit_edit(
     }
     data.update(overrides)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -237,12 +237,16 @@ def test_edit_accepts_chain_in_order(
 # ── Client-side: min / max attributes on the inputs ────────────────────
 
 
-def test_edit_form_renders_min_max_on_dependent_inputs(
+def test_edit_form_renders_ordered_chain_prefills(
     client: TestClient, db: Session
 ) -> None:
-    """The Edit GET render carries the ordering bounds as
-    ``min`` / ``max`` so the browser picker blocks invalid
-    choices at keyboard / picker time."""
+    """The Session Home config card (edit mode) renders the full
+    four-datetime chain with each field's saved value prefilled, so
+    the operator sees and can edit the ordered chain. (The Edit
+    page's ``min`` / ``max`` picker-clamp progressive enhancement is
+    not carried by the in-place config card — the server-side
+    ordering validation pinned by the route tests above is the
+    load-bearing safety net.)"""
     review_session = _make_session(
         client,
         db,
@@ -256,19 +260,18 @@ def test_edit_form_renders_min_max_on_dependent_inputs(
         },
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}?editing=1"
     ).text
-    # Start's max is End.
+    # All four datetime inputs render, each prefilled with its saved
+    # value in the local-input format.
     assert 'name="scheduled_activate_at"' in body
-    assert (
-        'name="scheduled_activate_at"\n                     value="2027-01-01T09:00"\n                     max="2027-01-15T09:00"'
-        in body
-    )
-    # End's min is Start; max is Release-from.
-    assert 'min="2027-01-01T09:00"' in body
-    assert 'max="2027-01-20T09:00"' in body
-    # Release-until's min is Release-from.
-    assert 'min="2027-01-20T09:00"' in body
+    assert 'value="2027-01-01T09:00"' in body
+    assert 'name="deadline"' in body
+    assert 'value="2027-01-15T09:00"' in body
+    assert 'name="responses_release_at"' in body
+    assert 'value="2027-01-20T09:00"' in body
+    assert 'name="responses_release_until"' in body
+    assert 'value="2027-01-30T09:00"' in body
 
 
 def test_new_session_form_includes_live_update_script(

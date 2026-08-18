@@ -225,7 +225,7 @@ def test_each_mutating_endpoint_returns_409_while_ready(
     sid = session.id
 
     targets: list[tuple[str, dict, dict]] = [
-        (f"/operator/sessions/{sid}/edit", {"name": "x", "code": "x", "description": ""}, {}),
+        (f"/operator/sessions/{sid}/config", {"name": "x", "code": "x", "description": ""}, {}),
         (f"/operator/sessions/{sid}/delete", {"confirm": "true"}, {}),
         (
             f"/operator/sessions/{sid}/reviewers/import",

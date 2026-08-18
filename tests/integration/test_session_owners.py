@@ -1,7 +1,7 @@
 """Coverage for Segment 16B PR 2 — per-session owner management.
 
-Exercises the new Owners section on
-``/operator/sessions/{id}/edit``:
+Exercises the Owners section, which lives on Session Home's config card
+(``#config-owners-card``) since 18R Item 4 retired the Edit page:
 
 - Owner can add another workspace operator as a co-owner.
 - Owner can remove a non-self owner.
@@ -12,12 +12,12 @@ Exercises the new Owners section on
 - Add target already an owner → 303 with
   ``owners_error=already_owner``.
 - Segment 18S Item 3: a sys-admin who isn't a session_operator is
-  DENIED /edit (and lobby-edit / owners-remove); they self-add as
-  owner via the Diagnostics "Manage"/adopt action, then have full
-  operator access via the normal session-operator path. owners/add is
-  self-only for a non-owner sys-admin; clone stays allowed.
+  DENIED the session config surface (and lobby-edit / owners-remove);
+  they self-add as owner via the Diagnostics "Manage"/adopt action, then
+  have full operator access via the normal session-operator path.
+  owners/add is self-only for a non-owner sys-admin; clone stays allowed.
 - Audit events emitted with correct envelope.
-- Plain non-owner operator still 403s on /edit.
+- Plain non-owner operator still 403s on the session config surface.
 """
 from __future__ import annotations
 
@@ -70,10 +70,11 @@ def test_edit_page_renders_owners_section_for_owner(
     client: TestClient,
 ) -> None:
     review_session = _make_session(client, db, code="own-1")
-    response = client.get(f"/operator/sessions/{review_session.id}/edit")
+    # 18R Item 4 — owners live on Session Home's config Owners sub-card.
+    response = client.get(f"/operator/sessions/{review_session.id}?editing=1")
     assert response.status_code == 200
-    # Owners card present; creator (alice) is the single owner.
-    assert 'id="owners"' in response.text
+    # Owners sub-card present; creator (alice) is the single owner.
+    assert 'id="config-owners-card"' in response.text
     assert "alice@example.edu" in response.text
 
 
@@ -85,8 +86,9 @@ def test_edit_page_403s_for_plain_non_member_operator(
 ) -> None:
     review_session = _make_session(client, db, code="own-403")
     bob_client = make_client(bob)
+    # 18R Item 4 — Session Home is the config surface; a non-owner 403s.
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -99,16 +101,16 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
     bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Segment 18S Item 3 — editing a non-owned session now requires
-    ownership. Sys-admin Bob (not a session_operator on alice's
-    session) is **denied** /edit until he self-adds as owner via the
-    Diagnostics adopt action, after which /edit renders."""
+    """Segment 18S Item 3 — editing a non-owned session requires ownership.
+    Sys-admin Bob (not a session_operator on alice's session) is **denied**
+    Session Home until he self-adds as owner via the Diagnostics adopt
+    action, after which Home renders (18R Item 4 retired the Edit page)."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="own-sa")
 
     bob_client = make_client(bob)
     # Denied before adopting.
-    denied = bob_client.get(f"/operator/sessions/{review_session.id}/edit")
+    denied = bob_client.get(f"/operator/sessions/{review_session.id}")
     assert denied.status_code == 403
 
     # The audited elevation door: self-add as owner, land on Home.
@@ -119,10 +121,10 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
     assert adopt.status_code == 303
     assert adopt.headers["location"] == f"/operator/sessions/{review_session.id}"
 
-    # Now an owner → /edit renders.
-    response = bob_client.get(f"/operator/sessions/{review_session.id}/edit")
+    # Now an owner → Home renders with the Owners sub-card.
+    response = bob_client.get(f"/operator/sessions/{review_session.id}?editing=1")
     assert response.status_code == 200
-    assert 'id="owners"' in response.text
+    assert 'id="config-owners-card"' in response.text
 
 
 # --- Add owner --------------------------------------------------------------
@@ -344,15 +346,15 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Bob is a sys-admin (env-var bootstrap) but isn't a
-    session_operator on alice's session. He reaches /edit, then
-    submits the Add-owner form pointing at himself. After: he's a
-    session_operator and can access the rest of the session
-    routes normally."""
+    session_operator on alice's session. He submits the Add-owner form
+    pointing at himself. After: he's a session_operator and can access
+    the rest of the session routes normally."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="own-sa-self")
-    # Bob hits /edit first to land his user row via the bootstrap.
+    # Bob hits a session route first to land his user row via the bootstrap
+    # (get_or_create_user runs even though the operator gate 403s him).
     bob_client = make_client(bob)
-    bob_client.get(f"/operator/sessions/{review_session.id}/edit")
+    bob_client.get(f"/operator/sessions/{review_session.id}")
 
     response = bob_client.post(
         f"/operator/sessions/{review_session.id}/owners/add",
@@ -409,8 +411,9 @@ def test_non_owner_sys_admin_denied_edit_submit(
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="deny-edit")
+    # 18R Item 4 — config edits go through /config (require_session_operator).
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data={"name": "x", "code": "deny-edit", "description": ""},
         follow_redirects=False,
     )

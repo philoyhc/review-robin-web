@@ -115,7 +115,7 @@ def test_edit_accepts_setting_scheduled_activate_at(
     future = datetime.now(timezone.utc) + timedelta(hours=24)
 
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-set",
             "code": "edit-set",
@@ -137,7 +137,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     # Set
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-clear",
             "code": "edit-clear",
@@ -147,7 +147,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     )
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-clear",
             "code": "edit-clear",
@@ -171,7 +171,7 @@ def test_edit_rejects_too_soon(client: TestClient) -> None:
     session_id = _create_session(client, "edit-too-soon")
     too_soon = datetime.now(timezone.utc) + timedelta(minutes=10)
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-too-soon",
             "code": "edit-too-soon",
@@ -189,7 +189,7 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
     session_id = _create_session(client, "edit-prefill")
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-prefill",
             "code": "edit-prefill",
@@ -197,9 +197,9 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
         },
         follow_redirects=False,
     )
-    page = client.get(f"/operator/sessions/{session_id}/edit")
+    page = client.get(f"/operator/sessions/{session_id}?editing=1")
     assert page.status_code == 200
-    assert 'id="scheduled_activate_at"' in page.text
+    assert 'id="mock-start"' in page.text
     # The input's value attribute should carry the prefilled datetime
     # in the local-input format (YYYY-MM-DDTHH:MM); presence is enough
     # without parsing the rendered HTML.

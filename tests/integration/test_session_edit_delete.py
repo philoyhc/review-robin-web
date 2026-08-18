@@ -70,7 +70,7 @@ def test_session_edit_persists_and_audits_changes(
     review_session = _make_session(client, db)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data={
             "name": "Spring v2",
             "code": "edit-test",
@@ -282,7 +282,7 @@ def test_non_operator_gets_403_on_destructive_routes(
     bob_client = make_client(bob)
 
     edit = bob_client.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data={"name": "x", "code": "y"},
         follow_redirects=False,
     )
