@@ -17,12 +17,13 @@
      303 back here after firing. per spec/workflow_card.md. #}
   {% include "operator/partials/next_action_card.html" %}
 
-  {# Two-column flex layout for the remaining cards. Columns flow
-     independently, so Extract Data (right column) sits directly
-     below Quick Setup with the normal inter-card gap regardless
-     of how tall Danger Zone (left column) grows. Mobile collapse
-     order follows the source: Workflow → Session Details → Danger
-     Zone → Quick Setup → Extract Data. #}
+  {# Two-column layout. Left column: Session Details → Schedule →
+     Quick Setup. 18R Item 4 Slice 1 relocated Quick Setup to the
+     bottom of the left column ("bottom left") and moved Extract
+     Setup off to the Extract data page. The right column is
+     reserved for Danger Zone, which arrives when the Edit page is
+     retired in a later slice. Mobile collapse order: Workflow →
+     Session Details → Schedule → Quick Setup. #}
   <div class="bottom-grid">
     <div class="bottom-left">
       <div class="card">
@@ -101,14 +102,16 @@
         </div>
       {% endif %}
 
-      {# Danger Zone moved to the Edit Session Details page
-         (bottom-right of the Edit half-grid) so destructive
-         operations live alongside the other edit affordances. #}
+      {# 18R Item 4 Slice 1 — Quick Setup relocated to the bottom of
+         the left column ("bottom left"). Kept a distinct card with
+         its own lock/greying model; its Home cookie + redirects are
+         unchanged (still on Home). #}
+      {% include "operator/partials/_quick_setup_card.html" %}
     </div>
 
-    <div class="bottom-left">
-      {% include "operator/partials/_quick_setup_card.html" %}
-      {% include "operator/partials/_extract_data_card.html" %}
-    </div>
+    {# Bottom-right reserved for Danger Zone, which relocates here
+       when the Edit page is retired (18R Item 4 later slice). Empty
+       for now. #}
+    <div class="bottom-left"></div>
   </div>
 {% endblock %}

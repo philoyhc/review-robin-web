@@ -551,11 +551,12 @@ shipping PR; land them individually or batched as convenient.
 
 ## Item 4 — Consolidate session config onto Session Home (retire the Edit page)
 
-**Status: planned (2026-08-17). Starts with Slice 1 — the low-risk relocations
-(Quick Setup → Home bottom-left; Extract Setup → Extract data page bottom-left;
-reserve the Extract-data bottom-right for a later Archive session card). UI
-iteration first; the config-consolidation + Edit-retirement slices follow (see
-Sequence). Not started.**
+**Status: in progress. Slice 1 ✅ done 2026-08-18** — Quick Setup relocated to
+Session Home's bottom-left; Extract Setup moved to the Extract data page
+(bottom-left) with a placeholder **Archive session** card (half-width) reserved
+to its right; Home's bottom-right reserved for Danger Zone (later slice).
+Remaining: display-mode scaffold → edit-mode swap → owners/UI → retire Edit +
+auth → wire the Archive card (see Sequence). UI iteration first.
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit

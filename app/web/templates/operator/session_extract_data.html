@@ -814,6 +814,33 @@
   </div>
   {% endif %}
 
+  {# 18R Item 4 Slice 1 — "wrap-up" row: the Extract Setup card
+     (porting / archival CSV downloads, relocated here from Session
+     Home) at bottom-left, and a placeholder Archive session card
+     (half-width) at bottom-right, to be wired in a follow-up slice. #}
+  <div class="extract-data-grid">
+    <div class="extract-data-column">
+      {% include "operator/partials/_extract_data_card.html" %}
+    </div>
+    <div class="extract-data-column">
+      <div class="card extract-data-card-stack" id="extract-data-archive-session">
+        <div>
+          <h2 style="margin-top: 0;">Archive session</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Placeholder — archiving from here lands in a follow-up
+            slice. Archiving closes the session for good once the
+            data has been extracted; until then, use the Workflow
+            card's Archive action.
+          </p>
+        </div>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary" role="button" aria-disabled="true"
+             title="Coming in a follow-up slice">Archive session</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
      plus the By-instrument card's ``data-by-instrument-chip``

@@ -304,55 +304,39 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
     assert 'class="quick-setup-body locked"' in body
 
 
-def test_quick_setup_card_lives_in_right_column_above_extract_data(
+def test_quick_setup_card_lives_at_bottom_left(
     client: TestClient, db: Session
 ) -> None:
-    """Per ``spec/session_home.md`` the Session Home page-card
-    layout (post-PR-6) is:
+    """18R Item 4 Slice 1 — Session Home layout:
 
        Workflow                  (full-width, top)
        ┌───────────────────┐  ┌───────────────────┐
-       │  Session Details  │  │  Quick Setup      │
-       │                   │  │  Extract Setup    │
+       │  Session Details  │  │  (reserved for     │
+       │  Schedule         │  │   Danger Zone)     │
+       │  Quick Setup      │  │                    │
        └───────────────────┘  └───────────────────┘
 
-    Danger Zone moved to the Edit Session page; the remaining
-    layout is two independent flex columns, with Quick Setup +
-    Extract Setup stacked in the right column (the card was
-    renamed from "Extract Data" → "Extract Setup" on 2026-05-29;
-    DOM id ``extract-data`` kept stable).
-
-    Mobile collapse order follows source: Workflow → Session
-    Details → Quick Setup → Extract Setup.
+    Quick Setup moved to the bottom of the left column ("bottom
+    left"); Extract Setup moved off Home to the Extract data page.
+    Mobile collapse order: Workflow → Session Details → Quick Setup.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     workflow_pos = body.find('id="next-action"')
-    # The Session Details card's H2 is the session name; its
-    # code span is the stable anchor.
     session_details_pos = body.find('class="session-detail-code')
     quick_setup_pos = body.find('id="quick-setup"')
-    extract_data_pos = body.find('id="extract-data"')
 
-    # All anchors found — Workflow card now on Home too.
-    assert -1 not in (
-        workflow_pos,
-        session_details_pos,
-        quick_setup_pos,
-        extract_data_pos,
-    )
-    # Danger Zone is no longer on Home — it moved to Edit.
+    assert -1 not in (workflow_pos, session_details_pos, quick_setup_pos)
+    # Danger Zone still on Edit (not Home); Extract Setup moved to the
+    # Extract data page (no longer on Home).
     assert body.find('id="danger-zone"') == -1
+    assert body.find('id="extract-data"') == -1
 
-    # Source order = mobile DOM collapse order.
-    assert (
-        workflow_pos
-        < session_details_pos
-        < quick_setup_pos
-        < extract_data_pos
-    )
+    # Source order = mobile DOM collapse order: Quick Setup sits below
+    # Session Details (bottom-left).
+    assert workflow_pos < session_details_pos < quick_setup_pos
 
 
 def test_quick_setup_top_grid_layout(

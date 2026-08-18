@@ -658,78 +658,28 @@ def test_delete_session_post_still_rejected_when_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_data_card_renders_scaffold_in_draft(
+def test_extract_setup_card_relocated_off_session_home(
     client: TestClient, db: Session
 ) -> None:
-    """The Extract Setup card on Session Home renders four
-    per-entity rows + a "Zip all" cell in a 2-col grid:
+    """18R Item 4 Slice 1 — the Extract Setup card moved off Session
+    Home to the Extract data page. Home no longer renders it; the
+    Extract data page does (its scaffold is covered by
+    ``test_extract_data_scaffold.py``)."""
 
-        Reviewers       |  Session settings
-        Reviewees       |  Zip all
-        Relationships   |
+    review_session = _make_session(client, db, code="extract-moved")
 
-    Originally five rows; the Responses row moved to the new
-    Extract data Operations-strip tab on 2026-05-29."""
+    home = client.get(f"/operator/sessions/{review_session.id}").text
+    assert 'id="extract-data"' not in home
+    assert "<h2>Extract Setup</h2>" not in home
 
-    review_session = _make_session(client, db, code="extract-draft")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-
-    assert 'id="extract-data"' in body
-    # Renamed from "Extract Data" → "Extract Setup" on 2026-05-29
-    # (per ``guide/extract_data.md``).
-    assert "<h2>Extract Setup</h2>" in body
-    # Card subtitle reflects the porting / archival framing.
-    assert "Download the setup CSVs" in body
-    # Two-column grid wraps the cells.
-    assert 'class="extract-data-grid"' in body
-    # Four rows + bundle cell with stable fragment anchors
-    # (Responses row relocated to the Extract data Ops tab).
-    for key in (
-        "settings",
-        "reviewers",
-        "reviewees",
-        "relationships",
-        "bundle",
-    ):
-        assert f'id="extract-data-{key}"' in body
-    # Assignments tile retired in 12A-3 PR 2.
-    assert 'id="extract-data-assignments"' not in body
-    # Responses row no longer here.
-    assert 'id="extract-data-responses"' not in body
-    # Cell labels — bundle is "Zip all".
-    assert "Zip all" in body
-    # Wiring tooltips: every row — including the zip bundle
-    # (Segment 18D PR E1) — is live, so no wiring tooltip remains.
-    assert "Wired in Segment 12A PR 1" not in body  # settings — live
-    assert "Wired in Segment 12A PR 3" not in body  # reviewers/reviewees — live
-    assert "Wired in Segment 12A PR 5" not in body  # responses — live
-    assert "Wired in Segment 12A PR 6" not in body  # bundle — live
-
-
-def test_extract_data_card_stays_interactive_in_ready(
-    db: Session,
-    alice: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Segment 11H PR B — the Extract Data card has no lifecycle
-    gate. Per ``guide/segment_12A.md`` the card stays interactive
-    in every lifecycle state; in 11H every row is inert across the
-    board, so this only confirms that ready doesn't add a
-    ``.disabled`` class."""
-
-    operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="extract-ready", reviewer_email="r@example.edu"
-    )
-    _activate(operator, db, review_session)
-
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
-
-    # No ``disabled`` modifier on the Extract Setup card.
-    assert 'id="extract-data"' in body
-    assert 'class="card disabled" id="extract-data"' not in body
-    # Rows still render — sample one to confirm.
-    assert 'id="extract-data-reviewers"' in body
+    tab = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    assert 'id="extract-data"' in tab
+    assert "<h2>Extract Setup</h2>" in tab
+    # And the placeholder Archive session card sits beside it.
+    assert 'id="extract-data-archive-session"' in tab
+    assert ">Archive session</h2>" in tab
 
 
 # ---------------------------------------------------------------------------

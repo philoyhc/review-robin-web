@@ -140,7 +140,6 @@ def session_detail(
                 error_kind=quick_setup_error,
                 error_reason=quick_setup_reason,
             ),
-            "extract_data": views.build_extract_data_context(db, review_session),
             "session_timezone_label": date_formatting.gmt_offset_zone_label(
                 sessions.resolve_session_timezone(review_session)
             ),
