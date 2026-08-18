@@ -139,6 +139,49 @@
         </div>
       </div>
     </div>
+
+    {# 18R Item 4 — Owners sub-card, below the unified details block,
+       half-width on the left. Display mode shows the current owners as
+       pills; edit mode shows a (mock, inert) add / remove management UI.
+       Participates in the same card-wide data-config-mode swap. #}
+    <div class="bottom-grid" style="margin-top: var(--space-3);">
+      <div class="bottom-left">
+        <div class="card">
+          <h3 style="margin-top: 0;">Owners</h3>
+          <div data-display-only>
+            {% for o in config_owners %}
+              <span class="config-value">{{ o.display_name or o.email }}</span>
+            {% else %}
+              <span class="config-value">—</span>
+            {% endfor %}
+          </div>
+          <div data-edit-only>
+            {# Mock, inert — real add / remove wiring lands with the
+               edit-mode persistence slice. #}
+            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-3) 0;">
+              {% for o in config_owners %}
+                <li style="display: flex; align-items: center;
+                           justify-content: space-between; gap: var(--space-2);
+                           padding: 4px 0;">
+                  <span>{{ o.display_name or o.email }}</span>
+                  <button type="button" class="btn secondary" disabled
+                          title="Mock — not wired yet">Remove</button>
+                </li>
+              {% endfor %}
+            </ul>
+            <label for="mock-add-owner">Add owner</label>
+            <div style="display: flex; gap: var(--space-2); align-items: flex-start;">
+              <input type="text" id="mock-add-owner" placeholder="operator email"
+                     disabled>
+              <button type="button" class="btn secondary" disabled
+                      title="Mock — not wired yet">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-left"></div>
+    </div>
+
     {# Edit / Done toggle on its own row, flushed right. Flips the card's
        ``data-config-mode`` between display and edit (both ways). #}
     <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
@@ -157,13 +200,13 @@
     };
   </script>
 
-  {# Two-column layout. Left column: Session Details → Schedule →
-     Quick Setup. 18R Item 4 Slice 1 relocated Quick Setup to the
-     bottom of the left column ("bottom left") and moved Extract
-     Setup off to the Extract data page. The right column is
+  {# Two-column layout. Left column: Session Details → Quick Setup.
+     18R Item 4 Slice 1 relocated Quick Setup to the bottom of the left
+     column ("bottom left") and moved Extract Setup off to the Extract
+     data page; the Schedule timeline card retired (resolved datetimes
+     now show inline in the Session details card). The right column is
      reserved for Danger Zone, which arrives when the Edit page is
-     retired in a later slice. Mobile collapse order: Workflow →
-     Session Details → Schedule → Quick Setup. #}
+     retired in a later slice. #}
   <div class="bottom-grid">
     <div class="bottom-left">
       <div class="card">
@@ -215,32 +258,9 @@
         </div>
       </div>
 
-      {# Schedule timeline — half-width card below Session Details,
-         listing every resolved anchor + offset on the session in
-         chronological order. Same builder
-         (``views.build_schedule_timeline``) as the Create / Edit
-         Session forms use. Hidden when no rows resolve. #}
-      {% if schedule_timeline_rows %}
-        <div class="card">
-          <h2>Schedule timeline</h2>
-          <p class="muted" style="margin: 0 0 var(--space-2) 0;">
-            Resolved fire moments for the session's anchors +
-            offsets.
-          </p>
-          <table style="margin-top: var(--space-2);">
-            <tr>
-              <th>When</th>
-              <th>Event</th>
-            </tr>
-            {% for row in schedule_timeline_rows %}
-              <tr>
-                <td>{{ row.at }}</td>
-                <td>{{ row.label }}</td>
-              </tr>
-            {% endfor %}
-          </table>
-        </div>
-      {% endif %}
+      {# Schedule timeline card retired (18R Item 4) — the resolved
+         send datetimes now render inline beside each invite / reminder
+         offset in the Session details card. #}
 
       {# 18R Item 4 Slice 1 — Quick Setup relocated to the bottom of
          the left column ("bottom left"). Kept a distinct card with
