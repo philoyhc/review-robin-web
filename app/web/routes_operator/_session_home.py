@@ -123,6 +123,11 @@ def session_detail(
         ),
         prepare_confirm=prepare_confirm,
     )
+    # 18R Item 4 Slice 2 (mock-up) — the same schedule input-value
+    # prefills the Edit route builds, so the inert Session config card
+    # can render filled edit boxes. Reused verbatim; the edit-mode
+    # wiring in a later slice consumes them for real.
+    session_tz = sessions.resolve_session_timezone(review_session)
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -141,7 +146,33 @@ def session_detail(
                 error_reason=quick_setup_reason,
             ),
             "session_timezone_label": date_formatting.gmt_offset_zone_label(
-                sessions.resolve_session_timezone(review_session)
+                session_tz
+            ),
+            # Schedule input-value prefills for the Session config card
+            # mock-up (18R Item 4 Slice 2) — mirror the Edit route.
+            "scheduled_activate_at_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.scheduled_activate_at, session_tz
+                )
+            ),
+            "deadline_input_value": date_formatting.format_datetime_local(
+                review_session.deadline, session_tz
+            ),
+            "responses_release_at_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.responses_release_at, session_tz
+                )
+            ),
+            "responses_release_until_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.responses_release_until, session_tz
+                )
+            ),
+            "invite_offsets_input_value": ", ".join(
+                review_session.invite_offsets or []
+            ),
+            "reminder_offsets_input_value": ", ".join(
+                review_session.reminder_offsets or []
             ),
             "schedule_timeline_rows": views.build_schedule_timeline(
                 review_session,

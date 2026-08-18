@@ -26,12 +26,83 @@
      below) folds into this one. #}
   <div class="card" id="session-config">
     <h2>Session details</h2>
-    <p class="muted" style="margin: 0;">
-      Placeholder — the session's configuration (details, schedule,
-      owners, interface settings) will render here in display mode, with
-      Edit flipping the card into edit mode. Wiring lands in a follow-up
-      slice.
+    <p class="muted" style="margin: 0 0 var(--space-3) 0;">
+      Preview (non-editable mock-up) of the session's details + timing —
+      the fields below are inert filled edit boxes. Edit is inert too;
+      wiring lands in a follow-up slice.
     </p>
+    {# 18R Item 4 Slice 2 mock-up — Name / Code / Description (left) +
+       the date/timing fields (right), replicated from the Edit page as
+       inert (``disabled``), value-filled edit boxes. Timezone is
+       included as the reference zone; Help contact + the read-only
+       Schedule timeline are not part of this mock-up. #}
+    <div class="page-grid" style="margin-bottom: 0;">
+      <div style="display: flex; flex-direction: column; min-width: 0;">
+        <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
+          <div>
+            <label for="mock-name">Name</label>
+            <input type="text" id="mock-name" maxlength="255" disabled
+                   value="{{ session.name }}">
+          </div>
+          <div>
+            <label for="mock-code">Code</label>
+            <input type="text" id="mock-code" maxlength="64" disabled
+                   value="{{ session.code }}">
+          </div>
+        </div>
+        <label for="mock-description">Description</label>
+        <textarea id="mock-description" maxlength="2000" disabled
+                  style="flex: 1 1 auto; min-height: 8em;">{{ session.description or "" }}</textarea>
+      </div>
+
+      <div class="fill-col" style="min-width: 0;">
+        <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
+          <div>
+            <label for="mock-timezone">Timezone</label>
+            <input type="text" id="mock-timezone" disabled
+                   value="{{ session_timezone_label }}">
+          </div>
+          <div></div>
+        </div>
+        <div style="display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    grid-template-rows: auto auto auto;
+                    grid-auto-flow: column;
+                    column-gap: 20px;
+                    margin: 0;">
+          <div>
+            <label for="mock-start">Start (optional)</label>
+            <input type="datetime-local" id="mock-start" disabled
+                   value="{{ scheduled_activate_at_input_value }}">
+          </div>
+          <div>
+            <label for="mock-end">End (optional)</label>
+            <input type="datetime-local" id="mock-end" disabled
+                   value="{{ deadline_input_value }}">
+          </div>
+          <div>
+            <label for="mock-release-from">Release responses from (optional)</label>
+            <input type="datetime-local" id="mock-release-from" disabled
+                   value="{{ responses_release_at_input_value }}">
+          </div>
+          <div>
+            <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
+            <input type="text" id="mock-invite-offsets" disabled
+                   value="{{ invite_offsets_input_value }}">
+          </div>
+          <div>
+            <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
+            <input type="text" id="mock-reminder-offsets" disabled
+                   value="{{ reminder_offsets_input_value }}">
+          </div>
+          <div>
+            <label for="mock-release-until">Release responses until (optional)</label>
+            <input type="datetime-local" id="mock-release-until" disabled
+                   value="{{ responses_release_until_input_value }}">
+          </div>
+        </div>
+      </div>
+    </div>
     {# Edit button on its own row, flushed right, inert for now. #}
     <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
       <a class="btn secondary" aria-disabled="true"
