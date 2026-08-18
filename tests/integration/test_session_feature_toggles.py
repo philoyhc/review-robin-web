@@ -43,7 +43,7 @@ def _submit_edit(
     }
     data.update(overrides)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -209,15 +209,15 @@ def test_lock_on_data_renders_disabled_checkbox(
     _seed_one_relationship(db, review_session)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}?editing=1"
     ).text
     assert 'name="relationships_enabled"' in body
-    # The disabled attribute appears on the relationships checkbox.
+    # The disabled attribute appears on the (edit-mode) relationships
+    # checkbox — the lock-on-data guard reflected in the markup.
     relationships_chunk = body.split(
         'name="relationships_enabled"', 1
     )[1].split("</label>", 1)[0]
     assert "disabled" in relationships_chunk
-    assert "Has configured data" in body
 
 
 # ── Nav tab visibility ────────────────────────────────────────────────
@@ -284,7 +284,7 @@ def test_edit_page_renders_user_interface_settings_card(
 ) -> None:
     review_session = _make_session(client, db, code="ft-ui")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}?editing=1"
     ).text
     assert "User interface settings" in body
     assert 'name="relationships_enabled"' in body

@@ -11,10 +11,10 @@
    re-runs ``scheduled_events.validate_schedule_ordering`` as
    the load-bearing safety net.
 
-   Used by ``session_edit.html`` and ``session_new.html``.
-   Both forms wire the same four input ``id``s
-   (``scheduled_activate_at``, ``deadline``,
-   ``responses_release_at``, ``responses_release_until``). #}
+   Used by ``session_new.html`` (the create form). The Session Home
+   config card (#session-config, 18R Item 4) uses its own inline
+   ``sessionConfig`` script instead; the server-side
+   ``validate_schedule_ordering`` remains the load-bearing gate for both. #}
 <script>
   (function () {
     var IDS = [

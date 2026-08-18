@@ -119,7 +119,7 @@ def test_session_edit_renders_two_row_chrome_with_no_active_tab(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
     # Body class flips onto v2.
     assert '<body class="ui-v2">' in body
     # Two-row chrome included.
@@ -127,19 +127,20 @@ def test_session_edit_renders_two_row_chrome_with_no_active_tab(
     assert 'class="session-home-anchor' in body
     assert 'class="tab-strip tab-strip-setup' in body
     assert 'class="tab-strip tab-strip-ops"' in body
-    # Per spec, sub-pages of Home render the chrome with no tab active —
-    # neither a Setup nor an Operations tab carries the active class.
+    # The config card now lives on Session Home — the Home anchor is the
+    # active nav element, and no Setup / Operations tab carries the active
+    # class.
     assert "nav-tab active" not in body
-    assert "session-home-anchor active" not in body
-    # Sub-page heading inside the body identifies the sub-page (the chrome doesn't).
-    assert "<h2>Edit session details</h2>" in body
+    assert "session-home-anchor active" in body
+    # The config card heading identifies the Session details surface.
+    assert "<h2>Session details</h2>" in body
 
 
 def test_session_edit_renders_status_row_with_lifecycle_pill(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit2")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
     # The status row partial requires status_pills in context — confirm
     # the route now passes it (B1 prerequisite from the spike).
     assert 'class="status-row"' in body
@@ -150,43 +151,40 @@ def test_session_edit_form_lives_inside_a_card(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit3")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
-    # Form is wrapped in a `.card` (Edit Session Details) and carries
-    # the `edit-session-form` id so the Save button below the half-
-    # width Schedule timeline + Owners row can re-associate via the
-    # HTML5 `form=` attribute.
-    assert "<div class=\"card\">" in body
-    assert 'id="edit-session-form"' in body
-    assert f'action="/operator/sessions/{session.id}/edit"' in body
-    # Save = primary (`btn`); Cancel = secondary; both disabled until
-    # an input changes (the dirty-tracking JS clears `disabled` on
-    # first edit and re-disables on full revert / after Cancel).
-    assert 'id="edit-save-btn"' in body
-    assert 'id="edit-cancel-btn"' in body
-    assert 'form="edit-session-form"' in body
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    # The config card carries the `session-config` id and its own form
+    # (`config-save-{id}`) so the Save button + the scattered inputs
+    # re-associate via the HTML5 `form=` attribute.
+    assert 'id="session-config"' in body
+    assert f'id="config-save-{session.id}"' in body
+    assert f'action="/operator/sessions/{session.id}/config"' in body
+    # Save + Cancel controls carry the config-card hooks; both are gated
+    # by the dirty-tracking JS until an input changes.
+    assert "data-config-save" in body
+    assert "data-config-cancel" in body
+    assert f'form="config-save-{session.id}"' in body
 
 
 def test_session_edit_has_back_link_to_session_home(
     client: TestClient, db: Session
 ) -> None:
-    """Edit Session is a child page of Session Home — same back-link
-    affordance as the Rule Builder page."""
+    """The config card lives on Session Home; its Cancel / Lock controls
+    return to Home display mode (dropping the ?editing param)."""
     session = _create_session(client, db, code="rrw-edit-back")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
     assert (
-        f'<a class="back-link"\n     href="/operator/sessions/{session.id}">'
-        in body
+        f'href="/operator/sessions/{session.id}#session-config"' in body
     )
-    assert "Back to Session Home" in body
 
 
 def test_session_edit_save_redirects_back_to_edit(
     client: TestClient, db: Session
 ) -> None:
-    """Save stays on the Edit page rather than jumping to Session Home."""
+    """Save on the config card redirects back to Session Home, anchored
+    on the config card."""
     session = _create_session(client, db, code="rrw-edit-stay")
     response = client.post(
-        f"/operator/sessions/{session.id}/edit",
+        f"/operator/sessions/{session.id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -196,21 +194,22 @@ def test_session_edit_save_redirects_back_to_edit(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/edit"
+        f"/operator/sessions/{session.id}#session-config"
     )
 
 
 def test_session_edit_owners_card_is_half_width_inside_edit_card(
     client: TestClient, db: Session
 ) -> None:
-    """Owners now lives inside the Edit Session Details card as a
-    half-width sibling of the Schedule timeline (no longer its own
-    top-level card)."""
+    """Owners now lives inside the Session details config card as a
+    half-width sub-card, alongside the User interface settings sub-card
+    (no longer its own top-level card)."""
     session = _create_session(client, db, code="rrw-edit-own")
-    body = client.get(f"/operator/sessions/{session.id}/edit").text
-    # The half-width flex container holds both cards.
-    assert 'class="edit-half-grid"' in body
-    # Owners pane carries the original #owners anchor + the half-card class.
-    assert 'class="card edit-half-card" id="owners"' in body
-    # Schedule timeline pane is the sibling.
-    assert "Schedule timeline" in body
+    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    # The half-width grid holds both sub-cards.
+    assert 'class="bottom-grid"' in body
+    # Owners pane carries the config-owners-card anchor.
+    assert 'id="config-owners-card"' in body
+    # User interface settings pane is the sibling.
+    assert 'id="config-ui-settings-card"' in body
+    assert "User interface settings" in body

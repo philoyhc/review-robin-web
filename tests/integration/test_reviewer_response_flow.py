@@ -649,10 +649,10 @@ def test_surface_renders_help_contact_line_when_set(
         reviewee_ident="carol@example.edu",
         activate=False,
     )
-    # Operator sets the help contact via /edit (only allowed while
-    # the session is editable — i.e. before activation).
+    # Operator sets the help contact via the config card (only allowed
+    # while the session is editable — i.e. before activation).
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data={
             "name": review_session.name,
             "code": review_session.code,

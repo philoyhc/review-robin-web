@@ -224,99 +224,20 @@ def session_detail(
     )
 
 
-# --- DEPRECATED: the standalone Edit page (18R Item 4 Slice 5) --------------
+# --- Retired Edit page → Session Home redirect (18R Item 4 Slice 5b) --------
 #
-# The Edit page is **retired from the UI** — no operator surface links to
-# ``/edit`` any more; session config is edited in place on Session Home's
-# Session details card (#session-config), owners on its Owners sub-card, and
-# destructive ops in Home's Danger Zone. The GET render + POST submit routes
-# below (and ``operator/session_edit.html``) are kept **solely because ~55
-# integration-test call sites across ~18 files still drive them as the config /
-# schedule / timezone / offsets persistence + render harness**. A follow-up
-# slice migrates those tests onto ``POST /config`` + Home ``?editing=1`` and
-# then deletes these two routes and the template (see
-# ``guide/segment_18R_ux_refine.md`` Item 4 Slice 5b). Do not add new links to
-# these routes. This mirrors the "dead-from-the-card, kept-for-tests" pattern
-# already used for the per-concern instrument routes.
-@router.get("/sessions/{session_id}/edit", response_class=HTMLResponse)
-def session_edit_form(
-    request: Request,
-    owners_error: str | None = Query(default=None),
+# The standalone Edit page and its GET/POST routes were deleted once every
+# caller (UI links + tests) moved to Session Home's in-place config card
+# (#session-config, edited via ?editing=1) and the shared /config POST route.
+# This thin GET redirect preserves any stale ``/edit`` bookmarks; it keeps the
+# ``require_session_operator`` gate so a non-owner still gets 403, not a bounce.
+@router.get("/sessions/{session_id}/edit")
+def session_edit_redirect(
     review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    session_timezone = sessions.resolve_session_timezone(review_session)
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_edit.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "is_ready": lifecycle.is_ready(review_session),
-            "owners": session_owners.list_owners(db, review_session),
-            "owner_candidates": session_owners.workspace_operator_candidates(
-                db, review_session
-            ),
-            "owners_error": owners_error,
-            "timezone_options": operator_settings.timezone_options(),
-            "current_session_timezone": session_timezone,
-            "timezone_sample": date_formatting.format_datetime(
-                datetime.now(timezone.utc), session_timezone
-            ),
-            "deadline_input_value": date_formatting.format_datetime_local(
-                review_session.deadline, session_timezone
-            ),
-            # 18G PR 1C: prefill the Start input from the persisted
-            # scheduled_activate_at (None ⇒ empty string).
-            "scheduled_activate_at_input_value": (
-                date_formatting.format_datetime_local(
-                    review_session.scheduled_activate_at, session_timezone
-                )
-            ),
-            # 18G PR 2B: prefill the invite_offsets input as a
-            # comma-separated string (None / empty ⇒ "").
-            "invite_offsets_input_value": ", ".join(
-                review_session.invite_offsets or []
-            ),
-            # 18G PR 3B: same prefill pattern for reminder_offsets.
-            "reminder_offsets_input_value": ", ".join(
-                review_session.reminder_offsets or []
-            ),
-            # Participant-model W14 + S12 — prefill the Release-from
-            # and Release-until datetime inputs from the persisted
-            # columns (None ⇒ empty).
-            "responses_release_at_input_value": (
-                date_formatting.format_datetime_local(
-                    review_session.responses_release_at, session_timezone
-                )
-            ),
-            "responses_release_until_input_value": (
-                date_formatting.format_datetime_local(
-                    review_session.responses_release_until, session_timezone
-                )
-            ),
-            # 18G PR 2B: read-only Schedule timeline preview rendered
-            # beneath the form when any anchor / offset is set.
-            "schedule_timeline_rows": views.build_schedule_timeline(
-                review_session, session_timezone
-            ),
-            # Participant-model §3.8 — lock-on-data signals for the
-            # User interface settings card. Each ``True`` disables the
-            # corresponding checkbox in the UI; the service-layer
-            # toggle handler also rejects True→False flips when rows
-            # exist, so direct API calls can't bypass the lock.
-            "has_relationships": sessions._has_relationships(
-                db, review_session.id
-            ),
-            "has_observers": sessions._has_observers(
-                db, review_session.id
-            ),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Edit details"
-            ),
-        },
+) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}?editing=1#session-config",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY,
     )
 
 
@@ -486,52 +407,6 @@ def _apply_session_config_form(
         user=user,
         payload=payload,
         correlation_id=correlation_id,
-    )
-
-
-@router.post("/sessions/{session_id}/edit")
-def session_edit_submit(
-    name: str = Form(...),
-    code: str = Form(...),
-    description: str | None = Form(default=None),
-    deadline: str | None = Form(default=None),
-    scheduled_activate_at: str | None = Form(default=None),
-    invite_offsets: str | None = Form(default=None),
-    reminder_offsets: str | None = Form(default=None),
-    display_timezone: str = Form(default=""),
-    help_contact: str | None = Form(default=None),
-    relationships_enabled: bool = Form(default=False),
-    observers_enabled: bool = Form(default=False),
-    responses_release_at: str | None = Form(default=None),
-    responses_release_until: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _apply_session_config_form(
-        db=db,
-        review_session=review_session,
-        user=user,
-        name=name,
-        code=code,
-        description=description,
-        deadline=deadline,
-        scheduled_activate_at=scheduled_activate_at,
-        invite_offsets=invite_offsets,
-        reminder_offsets=reminder_offsets,
-        display_timezone=display_timezone,
-        help_contact=help_contact,
-        relationships_enabled=relationships_enabled,
-        observers_enabled=observers_enabled,
-        responses_release_at=responses_release_at,
-        responses_release_until=responses_release_until,
-    )
-    # Stay on the Edit page after Save (per the page's child-of-
-    # Session-Home framing); the operator clicks the back-link to
-    # return to Session Home explicitly.
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/edit",
-        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

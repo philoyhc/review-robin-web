@@ -219,7 +219,7 @@ def test_edit_round_trips_invite_offsets(
 
     # Set
     response = client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-inv",
             "code": "edit-inv",
@@ -233,14 +233,14 @@ def test_edit_round_trips_invite_offsets(
     assert rs.invite_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
-    page = client.get(f"/operator/sessions/{session_id}/edit")
+    page = client.get(f"/operator/sessions/{session_id}?editing=1")
     assert page.status_code == 200
     assert 'name="invite_offsets"' in page.text
     assert "-P1D" in page.text
 
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "Sess edit-inv",
             "code": "edit-inv",
@@ -259,7 +259,7 @@ def test_edit_emits_invite_schedule_updated_audit(
     _, _, session_id = _create_session(client, "audit-inv")
     start = datetime.now(timezone.utc) + timedelta(days=30)
     client.post(
-        f"/operator/sessions/{session_id}/edit",
+        f"/operator/sessions/{session_id}/config",
         data={
             "name": "x",
             "code": "audit-inv",

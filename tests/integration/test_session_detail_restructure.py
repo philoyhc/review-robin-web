@@ -392,7 +392,7 @@ def test_edit_session_details_succeeds_with_responses_present(
     assert revert.status_code == 303
 
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/edit",
+        f"/operator/sessions/{review_session.id}/config",
         data={"name": "Renamed Session", "code": "renamed-code"},
         follow_redirects=False,
     )
@@ -461,6 +461,23 @@ def test_delete_data_allowed_in_ready_status(
 # ---------------------------------------------------------------------------
 # Edit-lock visibility on Session card / Danger Zone
 # ---------------------------------------------------------------------------
+
+
+def test_retired_edit_url_redirects_to_home_config(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 Slice 5b — the Edit page routes/template are deleted; a
+    stale ``/edit`` bookmark 301-redirects to Session Home's config card in
+    edit mode (the redirect keeps the operator gate)."""
+    review_session = _make_session(client, db, code="edit-redirect")
+    resp = client.get(
+        f"/operator/sessions/{review_session.id}/edit",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 301
+    assert resp.headers["location"] == (
+        f"/operator/sessions/{review_session.id}?editing=1#session-config"
+    )
 
 
 def test_session_card_buttons_when_draft(
@@ -594,12 +611,10 @@ def test_delete_session_visible_but_disabled_when_ready(
     )
     _activate(operator, db, review_session)
 
-    # Danger Zone moved to the Edit Session page — assert the
-    # visible-but-disabled state there. The Edit page is reachable
-    # in `ready` (sys-admin / session-operator gate), but the form
-    # is gated by ``is_ready`` to render the disabled state.
+    # 18R Item 4 — Danger Zone lives on Session Home; assert the
+    # visible-but-disabled Delete session state there (gated by ``is_ready``).
     body = operator.get(
-        f"/operator/sessions/{review_session.id}/edit"
+        f"/operator/sessions/{review_session.id}"
     ).text
 
     # Form, button, and confirmation checkbox all rendered.
