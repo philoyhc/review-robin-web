@@ -113,14 +113,6 @@
       padding: var(--space-1) var(--space-2);
       font-size: var(--fs-small);
     }
-    /* 18R Item 3 — instrument-card textareas resize vertically only,
-       never horizontally, so a long entry can't be dragged wider than
-       its column. Matches the Session details description textarea.
-       Page-scoped selector covers both the server-rendered textareas
-       and the JS-generated help / preview ones. */
-    body.ui-v2 textarea {
-      resize: vertical;
-    }
     /* Band 3 Visibility — Reviewees + Observers audience chips
        in their unselected state are styled to match the
        greyed-out What / When cycle chips in the same row (filled
