@@ -792,6 +792,35 @@ bottom row so create and view/edit feel like one surface:
 Pure presentation on the create page; no route/persistence change (the two
 toggles still submit via `form="create-session-form"`).
 
+### Follow-up — Extract data page "wrap-up" layout + Archive card polish. ✅ done 2026-08-18
+
+Iterative tidy of the Extract data page's bottom section (which Slice 1 seeded
+with the relocated Extract Setup card + a reserved Archive slot). The Archive
+card's *substantive* wiring lives in **Item 5**; these are the layout/cosmetic
+passes that followed:
+
+- **Wrap-up reflow** (PRs #1961 / #1962). First laid Token keys (left) beside
+  Extract Setup (right) with Archive below; then collapsed to a single grid
+  where the **left column stacks Token keys → Archive** and the **right column
+  is Extract Setup**, `align-items: start` so Archive seats **directly below
+  Token keys** (or below the full-width Data shaper when observers are off)
+  rather than at Extract Setup's bottom edge. When observers are off there's no
+  Token keys card, so Archive (left) + Extract Setup (right) is a plain row. The
+  Archive card markup is captured once via `{% set %}` and placed per-branch.
+- **"Archive after purging" caption alignment** (PR #1963). The global
+  `body.ui-v2 label` rule leaks an asymmetric margin (`space-3` top / `space-1`
+  bottom); `.exp-purge-opts label` / `.exp-allow-delete` overrode `display` but
+  not that margin, so centred in the flex row the checkbox labels dropped and
+  the no-margin caption read as too high. Fixed with `margin: 0` on both — in
+  both the lobby expander and the card (shared classes).
+- **Inactive archive controls** (PRs #1964 / #1965). When a session can't be
+  archived (activated / already archived), the **"Purge and archive" button and
+  the three purge checkboxes render disabled**, and the whole purge block greys
+  (`.exp-purge-opts.is-disabled`, opacity 0.5) — identically in the card
+  (server-rendered `disabled` + class) and the lobby expander
+  (`gateArchiveControls` JS off the row's `data-status`: single = that row;
+  bulk = greyed only when none of the selection is archivable).
+
 ### Edit-mode persistence assumptions (survey, 2026-08-18)
 
 How every existing edit surface holds its "am I in edit mode" state — the basis
