@@ -877,8 +877,12 @@ def test_session_config_card_has_owners_subcard(
     card = body[config_pos:end]
 
     assert ">Owners</h3>" in card
-    # The creator is an owner — a display pill shows their identity.
-    assert "alice@example.edu" in card or "Alice" in card
+    # Mirrors the Edit Owners card columns.
+    for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Joined</th>"):
+        assert col in card
+    assert 'class="col-shrink">Action</th>' in card  # edit-mode Action column
+    # The creator is an owner — their email shows in the table.
+    assert "alice@example.edu" in card
     # Edit-mode mock add-owner control lives inside the card.
     assert 'id="mock-add-owner"' in card
 
