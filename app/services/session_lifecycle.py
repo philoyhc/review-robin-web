@@ -77,6 +77,15 @@ def is_archived(review_session: ReviewSession) -> bool:
     return review_session.status == SessionStatus.archived.value
 
 
+def can_archive(review_session: ReviewSession) -> bool:
+    """Archivable = any **non-activated**, non-archived session (draft /
+    validated / expired). An activated (``ready``) session must be paused
+    first; an already-archived one is a no-op. Shared gate for the lobby
+    "Purge and archive" and the Extract data page's Archive card (18R —
+    archive harmonization)."""
+    return not is_ready(review_session) and not is_archived(review_session)
+
+
 def _as_utc(value: datetime | None) -> datetime | None:
     """Normalise a stored datetime to UTC-aware. SQLite's
     ``DateTime(timezone=True)`` column round-trips can read
@@ -1024,6 +1033,7 @@ __all__ = [
     "is_validated",
     "is_expired",
     "is_archived",
+    "can_archive",
     "is_editable",
     "build_readiness_report",
     "mark_validated",

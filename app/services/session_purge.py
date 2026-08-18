@@ -28,10 +28,16 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit
+from app.services import session_lifecycle as lifecycle
 
 log = get_logger(__name__)
 
-__all__ = ["purge_responses", "purge_rosters", "purge_audit_log"]
+__all__ = [
+    "purge_responses",
+    "purge_rosters",
+    "purge_audit_log",
+    "purge_and_archive",
+]
 
 
 def _assignment_ids(session_id: int):
@@ -198,3 +204,47 @@ def purge_audit_log(
             "correlation_id": correlation_id,
         },
     )
+
+
+def purge_and_archive(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    purge: "list[str] | set[str]",
+    correlation_id: str | None = None,
+) -> bool:
+    """Optionally purge the ticked data categories, then archive.
+
+    Shared by the sessions-lobby "Purge and archive" action and the Extract
+    data page's Archive card (18R — archive harmonization). No-ops (returns
+    ``False``) unless the session is archivable via
+    ``lifecycle.can_archive`` (any non-activated, non-archived session).
+
+    ``purge`` is any subset of ``{"responses", "rosters", "audit_log"}``.
+    Purge order is audit-log → responses → rosters so the ``session.archived``
+    event written by ``archive_session`` survives an audit-log purge. With an
+    empty ``purge`` this is a plain archive. Returns ``True`` when archived.
+    """
+    if not lifecycle.can_archive(review_session):
+        return False
+    if "audit_log" in purge:
+        purge_audit_log(
+            db, review_session=review_session, user=user,
+            correlation_id=correlation_id,
+        )
+    if "responses" in purge:
+        purge_responses(
+            db, review_session=review_session, user=user,
+            correlation_id=correlation_id,
+        )
+    if "rosters" in purge:
+        purge_rosters(
+            db, review_session=review_session, user=user,
+            correlation_id=correlation_id,
+        )
+    lifecycle.archive_session(
+        db, review_session=review_session, user=user,
+        correlation_id=correlation_id,
+    )
+    return True

@@ -146,3 +146,23 @@ def test_purge_responses_and_archive(
     assert _count(db, Invitation, review_session.id) == 0
     assert _count(db, Assignment, review_session.id) >= 1
     assert _count(db, Reviewer, review_session.id) == 1
+
+
+def test_can_archive_gates_on_non_activated(
+    client: TestClient, db: Session
+) -> None:
+    """18R harmonization — ``can_archive`` is True for non-activated,
+    non-archived states (draft / validated / expired) and False for an
+    activated (ready) or already-archived session."""
+    from app.services import session_lifecycle as lifecycle
+
+    review_session = _draft_session(client, db, "can-archive")
+    for state, expected in (
+        ("draft", True),
+        ("validated", True),
+        ("expired", True),
+        ("ready", False),
+        ("archived", False),
+    ):
+        review_session.status = state
+        assert lifecycle.can_archive(review_session) is expected

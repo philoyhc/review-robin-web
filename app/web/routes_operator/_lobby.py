@@ -363,48 +363,41 @@ def clone_session_submit(
 def sessions_archive_selected(
     session_ids: list[int] = Form(default=[]),
     purge: list[str] = Form(default=[]),
+    return_to: str = Form(default=""),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Purge-and-archive the ticked sessions — backs the expander's
-    "Purge and archive" action.
+    """Purge-and-archive the ticked sessions — backs both the lobby
+    expander's "Purge and archive" action and the Extract data page's
+    Archive card (18R — archive harmonization).
 
-    Filters server-side to caller-owned ``draft`` sessions; anything
-    not in draft is silently skipped (archiving is draft-only). With
-    no ``purge`` values this is a plain archive. Any of
-    ``responses`` / ``rosters`` / ``audit_log`` runs that purge first,
-    in audit-log → responses → rosters order, then archives.
+    Filters server-side to caller-owned **archivable** sessions
+    (``lifecycle.can_archive`` — any non-activated, non-archived session;
+    an activated session must be paused first and is silently skipped).
+    ``purge`` is any subset of ``responses`` / ``rosters`` / ``audit_log``,
+    applied audit-log → responses → rosters before the archive; empty ⇒
+    plain archive. ``return_to=archived`` lands on the archived-sessions
+    index (the Extract data card's choice); otherwise the main lobby.
     """
     correlation_id = request_correlation_id()
     for session_id in session_ids:
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None:
             continue
-        if not lifecycle.is_draft(review_session):
-            continue
-        if "audit_log" in purge:
-            session_purge.purge_audit_log(
-                db, review_session=review_session, user=user,
-                correlation_id=correlation_id,
-            )
-        if "responses" in purge:
-            session_purge.purge_responses(
-                db, review_session=review_session, user=user,
-                correlation_id=correlation_id,
-            )
-        if "rosters" in purge:
-            session_purge.purge_rosters(
-                db, review_session=review_session, user=user,
-                correlation_id=correlation_id,
-            )
-        lifecycle.archive_session(
+        session_purge.purge_and_archive(
             db,
             review_session=review_session,
             user=user,
+            purge=purge,
             correlation_id=correlation_id,
         )
+    target = (
+        "/operator/sessions/archived"
+        if return_to == "archived"
+        else "/operator/sessions"
+    )
     return RedirectResponse(
-        url="/operator/sessions",
+        url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

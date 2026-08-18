@@ -782,50 +782,61 @@
   </div>
 
   {# Extract data page "wrap-up" cards (18R — layout tidy 2026-08-18):
-     - Token keys (left) is half-width and only renders when
-       ``observers_enabled`` (the tokens deanonymize the observer-side
-       Anonymized output; no other consumer today).
-     - Extract Setup (porting / archival CSV downloads, relocated here from
-       Session Home) sits to the **right of Token keys**.
-     - Archive session (18R Item 5) drops to the row **below Token keys**.
-     When observers are off there's no Token keys card, so Extract Setup and
-     Archive fall back to a single side-by-side row. The Archive card markup
-     is captured once and placed per-branch to avoid duplication. #}
+     Left column stacks Token keys (only when ``observers_enabled``) then
+     Archive session directly beneath it; the right column holds Extract Setup.
+     ``align-items: start`` overrides the grid's default ``end`` alignment so
+     the left-column cards sit at the top — Archive lands **just below Token
+     keys** (or just below the full-width Data shaper when observers are off),
+     rather than being pushed down to Extract Setup's bottom edge.
+     The Archive card markup is captured once and placed via the left column. #}
   {% set archive_card %}
       <div class="card extract-data-card-stack" id="extract-data-archive-session">
         <div>
           <h2 style="margin-top: 0;">Archive session</h2>
           <p class="form-help" style="margin-bottom: 0;">
-            Archiving files the session out of the active lobby once you've
-            extracted the data you need. It keeps every response and setup
-            row, and is reversible from the archived-sessions page.
+            Files the session out of the active lobby once you've extracted the
+            data you need. Optionally purge responses, rosters, and/or the audit
+            log first; archiving is otherwise non-destructive and reversible
+            from the archived-sessions page.
           </p>
         </div>
-        {# 18R Item 5 — reuses the Workflow card's archive route + gate:
-           active only once the session has ended (``archive_visible`` =
-           ``is_expired``) and isn't already archived. No purge, no confirm —
-           archiving is reversible and destroys no data. #}
-        <div class="extract-data-card-actions">
-          {% if is_archived %}
+        {# 18R archive harmonization — same route + purge options as the
+           lobby's "Purge and archive" (POST /sessions/archive-selected).
+           Available for any non-activated, non-archived session; an activated
+           session must be paused first. ``return_to=archived`` lands on the
+           archived-sessions index. #}
+        {% if is_archived %}
+          <div class="extract-data-card-actions">
             <a class="btn secondary" role="button" aria-disabled="true"
                title="This session is already archived.">Already archived</a>
-          {% elif archive_visible %}
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/workflow/archive"
-                  style="margin: 0;">
-              <button class="btn destructive" type="submit">Archive session</button>
-            </form>
-          {% else %}
+          </div>
+        {% elif is_ready %}
+          <div class="extract-data-card-actions">
             <a class="btn secondary" role="button" aria-disabled="true"
-               title="Archiving becomes available once the session has ended.">Archive session</a>
-          {% endif %}
-        </div>
+               title="Pause the session before archiving.">Purge and archive</a>
+          </div>
+        {% else %}
+          <form method="post" action="/operator/sessions/archive-selected"
+                style="margin: 0;">
+            <input type="hidden" name="session_ids" value="{{ session.id }}">
+            <input type="hidden" name="return_to" value="archived">
+            <div class="exp-purge-opts" style="margin-bottom: var(--space-3);">
+              <span class="exp-purge-title">Archive after purging</span>
+              <label><input type="checkbox" name="purge" value="responses"> Responses</label>
+              <label><input type="checkbox" name="purge" value="rosters"> Rosters</label>
+              <label><input type="checkbox" name="purge" value="audit_log"> Audit log</label>
+            </div>
+            <div class="extract-data-card-actions">
+              <button class="btn alert" type="submit">Purge and archive</button>
+            </div>
+          </form>
+        {% endif %}
       </div>
   {% endset %}
 
-  {% if session.observers_enabled %}
-  <div class="extract-data-grid">
+  <div class="extract-data-grid" style="align-items: start;">
     <div class="extract-data-column">
+      {% if session.observers_enabled %}
       <div class="card extract-data-card-stack" id="extract-data-token-keys">
         <div>
           <h2 style="margin-top: 0;">Token keys</h2>
@@ -844,23 +855,13 @@
           </a>
         </div>
       </div>
+      {% endif %}
+      {{ archive_card }}
     </div>
     <div class="extract-data-column">
       {% include "operator/partials/_extract_data_card.html" %}
     </div>
   </div>
-  <div class="extract-data-grid">
-    <div class="extract-data-column">{{ archive_card }}</div>
-    <div class="extract-data-column"></div>
-  </div>
-  {% else %}
-  <div class="extract-data-grid">
-    <div class="extract-data-column">
-      {% include "operator/partials/_extract_data_card.html" %}
-    </div>
-    <div class="extract-data-column">{{ archive_card }}</div>
-  </div>
-  {% endif %}
 
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
