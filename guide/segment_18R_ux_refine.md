@@ -3,9 +3,10 @@
 **Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
 shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
 closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
-shipped 2026-08-17, PR #1923)**; **Item 4 planned (consolidate session config
-onto Session Home + retire the Edit page — Option 2; UI-iteration first, not
-started)**. A holding segment for **operator-UX refinement** on
+shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
+2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
+Home + retire the Edit page — Option 2; Slices 1–2 + the display/edit UX frozen
+2026-08-18, wiring next)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -562,12 +563,32 @@ shipping PR; land them individually or batched as convenient.
 
 ## Item 4 — Consolidate session config onto Session Home (retire the Edit page)
 
-**Status: in progress. Slice 1 ✅ done 2026-08-18** — Quick Setup relocated to
-Session Home's bottom-left; Extract Setup moved to the Extract data page
-(bottom-left) with a placeholder **Archive session** card (half-width) reserved
-to its right; Home's bottom-right reserved for Danger Zone (later slice).
-Remaining: display-mode scaffold → edit-mode swap → owners/UI → retire Edit +
-auth → wire the Archive card (see Sequence). UI iteration first.
+**Status: in progress. Slices 1–2 ✅ + the display/edit *UX* finalized
+2026-08-18.**
+
+- **Slice 1 ✅** — Quick Setup relocated to Session Home's bottom-left; Extract
+  Setup moved to the Extract data page (bottom-left) with a placeholder
+  **Archive session** card (half-width) reserved to its right.
+- **Slice 2 (display scaffold) ✅ + the whole display↔edit *presentation*
+  iterated to sign-off ✅.** The **Session details** card now renders, as a
+  finalized mock: the unified fields block (name / code / description / help
+  contact / timezone + the schedule datetime fields, each a display value that
+  swaps to an input in edit mode); resolved send datetimes shown inline beside
+  each invite / reminder offset (Schedule timeline card retired); an **Owners**
+  sub-card (Email / Name / Role / Added + edit-mode Action + Add-owner form) and
+  a **User interface settings** sub-card side by side; a **Save / Cancel /
+  Unlock·Lock** cluster with client-side dirty tracking; the whole-card
+  display↔edit swap driven by `data-config-mode`; and a **Danger Zone** mock in
+  Home's bottom-right. Textareas are vertical-resize-only app-wide.
+  **The operator has signed off on this display/edit UX — it is frozen; no
+  further visual iteration on the Session details card is expected.** What
+  remains is **wiring** (below): the edit-mode controls are still inert mocks
+  (Save / Cancel / Add / Remove / the UI-settings checkboxes do not yet
+  persist).
+
+Remaining (all wiring / teardown — see Sequence): edit-mode persistence →
+owners + UI-settings actions → retire Edit + auth fix → wire the Archive card,
+plus the **`sessions/new` alignment** follow-up (below).
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit
@@ -651,31 +672,67 @@ Per the operator: **iterate on the UI before wiring.** Scaffold-first per
 `CLAUDE.md`. **Start with the low-risk relocations** (pure template moves, no
 new mechanism), then the config-consolidation work.
 
-1. **Relocations (start here).**
-   - **Quick Setup → Session Home bottom-left.** Reposition the card *within*
-     Home — keep it distinct; its lock/greying model + Home cookie stay put (no
-     move to Edit, so none of the cookie-regex / redirect coupling applies).
-   - **Extract Setup → Extract data page bottom-left.** Move
+1. **Relocations. ✅ done 2026-08-18.**
+   - **Quick Setup → Session Home bottom-left.** Repositioned *within* Home —
+     kept distinct; its lock/greying model + Home cookie stayed put.
+   - **Extract Setup → Extract data page bottom-left.** Moved
      `_extract_data_card.html` off Home onto the Operations-strip Extract data
-     page; drop it from Home.
-   - **Reserve the Extract data page bottom-right** for the planned Archive
-     session card (Slice 6; not built now).
-2. **Display-mode scaffold** — build the read-only Session config card (all
-   sub-cards) in the middle of Home, below Workflow, with an inert **Edit**
-   button. Edit page stays live. **Iterate the page shape here** (layout,
-   sub-card grouping, read-only rendering) before any wiring. (Quick Setup is
-   already at bottom-left from Slice 1; Danger Zone stays on Edit until Slice 5.)
-3. **Edit-mode swap** — wire the Edit button to `?editing=1`; swap the config
-   card into the existing forms (reuse `#edit-session-form` + dirty Save/Cancel
-   + schedule JS); Save/Cancel returns to display mode on Home.
-4. **Owners + UI settings** into the config card (their own POST forms).
-5. **Retire Edit + auth fix** — redirect `/edit` → Home; delete
-   `session_edit.html`; bring **Danger Zone** to Home bottom-right; retire the
-   looser gate; re-point Diagnostics "Details" to the self-add-as-owner flow
-   (**depends on 18S Item 3**); update the audience-model spec.
+     page.
+   - **Reserved the Extract data page bottom-right** for the planned Archive
+     session card (Slice 6).
+2. **Display scaffold + display↔edit presentation. ✅ done 2026-08-18 (UX
+   frozen).** Built the Session details card below Workflow with all sub-cards,
+   the whole-card `data-config-mode` display↔edit swap, the Save/Cancel/Lock
+   cluster (client dirty-tracking), and the Danger Zone mock (bottom-right).
+   Iterated to operator sign-off. **All edit-mode controls are still inert
+   mocks** — the swap flips text↔input and shows the buttons, but nothing
+   persists yet. Edit page stays live.
+3. **Wire edit-mode persistence (Save). ← next / main business.** Make the mock
+   real: on **Save**, POST the details + schedule fields and persist them
+   (reuse the Edit route's service path — `sessions.update_session` /
+   `scheduled_events` — behind a Home-side route, e.g.
+   `POST /operator/sessions/{id}` or `.../config`), then re-render Home in
+   display mode; **Cancel** reverts to the stored values (no nav). Keep the
+   card's existing dirty-tracking + schedule-bounds validation. Decide
+   edit-mode persistence across reload: either the locked `?editing=1` URL param
+   (Decision 3) or accept the client-only toggle now that the swap is in place —
+   **confirm before building.** Gate: `require_session_operator` (owners only).
+4. **Wire Owners + UI settings.** Turn the inert Owners Add/Remove controls and
+   the UI-settings checkboxes into live POST forms (reuse `session_owners` +
+   the settings service). **Re-point the owner-route redirects from `/edit` to
+   Home** (they currently return to the Edit page). Emit the existing audit
+   events unchanged.
+5. **Retire Edit + auth fix.** Redirect `/edit` → Home; delete
+   `session_edit.html` + the `/edit` GET/POST routes; retire the looser
+   `require_sys_admin_or_session_operator` gate; re-point Diagnostics "Details"
+   to the self-add-as-owner flow (**depends on 18S Item 3, already landed**);
+   update `spec/audience_and_identity_model.md`. (Danger Zone already mocked on
+   Home in Slice 2 — this slice wires its Delete data / Delete session forms.)
 6. **(Later) Archive session card** — add the half-width Archive session card to
    the Extract data page bottom-right (the slot reserved in Slice 1). Its own
    follow-up slice.
+
+### Follow-up — align `operator/sessions/new` with the finalized Home layout
+
+Once the Session details card's shape is frozen (Slice 2, done), the **New
+session** page (`session_new.html`) should echo the same conventions so create
+and view/edit feel like one surface. **Logged as a follow-up to the main
+wiring business — sequence after Slice 3 (or alongside, since it's a pure
+template move on a separate page).** Scope:
+
+- **Move the User interface settings block to the right** — match Home's
+  Owners-left / UI-settings-right two-column bottom row (New has no Owners yet,
+  so the left column is the Details/Schedule block).
+- **Move Quick Setup (optional) up** — currently low on the New page; raise it
+  so the optional quick-start path is visible without scrolling past the full
+  form.
+- **Make the User interface settings card consistent with Home's** — same
+  heading, same normal-size labels, same inline checkbox-after-label row layout
+  (the `.ui-settings-row` / `.ui-setting` primitives from Slice 2), instead of
+  the New page's current one-off styling.
+
+Pure presentation on the create page; no route/persistence change. Land as its
+own small slice.
 
 ### Cost / risk notes
 

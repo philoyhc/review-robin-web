@@ -882,7 +882,7 @@ def test_session_config_card_has_owners_subcard(
 
     assert ">Owners</h3>" in card
     # Mirrors the Edit Owners card columns.
-    for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Joined</th>"):
+    for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Added</th>"):
         assert col in card
     assert 'class="col-shrink">Action</th>' in card  # edit-mode Action column
     # The creator is an owner — their email shows in the table.

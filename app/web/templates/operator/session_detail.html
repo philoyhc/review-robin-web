@@ -143,7 +143,7 @@
     {# 18R Item 4 — half-width sub-cards inside the Session details card,
        below the unified details block: Owners (left) + User interface
        settings (right), both mirroring their Edit-page cards. Owners is an
-       Email / Name / Role / Joined table in display mode, gaining an Action
+       Email / Name / Role / Added table in display mode, gaining an Action
        (Remove) column + an Add-owner form in edit mode. Add / Remove and the
        UI-settings checkboxes are mock (inert) until the edit-mode
        persistence slice; both participate in the card-wide data-config-mode
@@ -163,7 +163,7 @@
               <th>Email</th>
               <th>Name</th>
               <th>Role</th>
-              <th>Joined</th>
+              <th>Added</th>
             </tr>
             {% for owner in config_owners %}
               <tr>
@@ -183,7 +183,7 @@
                 <th>Email</th>
                 <th>Name</th>
                 <th>Role</th>
-                <th>Joined</th>
+                <th>Added</th>
                 <th class="col-shrink">Action</th>
               </tr>
               {% for owner in config_owners %}
