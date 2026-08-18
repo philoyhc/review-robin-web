@@ -97,6 +97,7 @@ def session_detail(
     super_step: str | None = Query(default=None),
     super_error: str | None = Query(default=None),
     prepare_confirm: str | None = Query(default=None),
+    editing: bool = Query(default=False),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -193,6 +194,26 @@ def session_detail(
             "config_owner_candidates": (
                 session_owners.workspace_operator_candidates(db, review_session)
             ),
+            # 18R Item 4 Slice 3 — edit-mode wiring for the Session details
+            # card. ``config_editing`` is the canonical server state (from
+            # ``?editing=1``), gated on the session actually being editable so a
+            # stale link on an activated session degrades to display mode. The
+            # timezone options + current zone feed the edit-mode timezone
+            # datalist; the has-* signals lock the UI-settings checkboxes when a
+            # roster has rows (mirrors the Edit page + service-layer guard).
+            "config_editing": (
+                editing
+                and (
+                    lifecycle.is_draft(review_session)
+                    or lifecycle.is_validated(review_session)
+                )
+            ),
+            "timezone_options": operator_settings.timezone_options(),
+            "current_session_timezone": session_tz,
+            "has_relationships": sessions._has_relationships(
+                db, review_session.id
+            ),
+            "has_observers": sessions._has_observers(db, review_session.id),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },
@@ -281,36 +302,41 @@ def session_edit_form(
     )
 
 
-@router.post("/sessions/{session_id}/edit")
-def session_edit_submit(
-    name: str = Form(...),
-    code: str = Form(...),
-    description: str | None = Form(default=None),
-    deadline: str | None = Form(default=None),
-    scheduled_activate_at: str | None = Form(default=None),
-    invite_offsets: str | None = Form(default=None),
-    reminder_offsets: str | None = Form(default=None),
-    display_timezone: str = Form(default=""),
-    help_contact: str | None = Form(default=None),
-    relationships_enabled: bool = Form(default=False),
-    observers_enabled: bool = Form(default=False),
-    responses_release_at: str | None = Form(default=None),
-    responses_release_until: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
+def _apply_session_config_form(
+    *,
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    name: str,
+    code: str,
+    description: str | None,
+    deadline: str | None,
+    scheduled_activate_at: str | None,
+    invite_offsets: str | None,
+    reminder_offsets: str | None,
+    display_timezone: str,
+    help_contact: str | None,
+    relationships_enabled: bool,
+    observers_enabled: bool,
+    responses_release_at: str | None,
+    responses_release_until: str | None,
+) -> None:
+    """Parse + validate + persist the session-config form fields.
+
+    Shared by the (legacy) Edit page POST and the Session Home config-card
+    POST (18R Item 4 Slice 3) — both surfaces edit the same scalar
+    ``sessions`` columns via ``update_session`` (which never touches
+    assignments or responses, so no response-loss ack gate). Raises
+    ``HTTPException(422)`` on any field / ordering validation error.
+    """
     # Editing session metadata (name / code / description / deadline /
     # help contact / timezone / scheduled_activate_at) touches only
-    # scalar ``sessions`` columns — ``update_session`` never deletes
-    # assignments or responses — so this route carries no
-    # response-loss acknowledgement gate.
+    # scalar ``sessions`` columns.
     _require_editable(review_session)
 
-    # 18B PR 5: the display timezone is a field of this form (folded
-    # in from the former standalone card). Blank ⇒ leave the session's
-    # current zone unchanged. The deadline picker is wall-clock in
-    # this zone.
+    # 18B PR 5: the display timezone is a field of this form. Blank ⇒
+    # leave the session's current zone unchanged. The deadline picker is
+    # wall-clock in this zone.
     timezone_name = (
         operator_settings.parse_display_timezone_input(display_timezone)
         or sessions.resolve_session_timezone(review_session)
@@ -443,11 +469,99 @@ def session_edit_submit(
         payload=payload,
         correlation_id=correlation_id,
     )
+
+
+@router.post("/sessions/{session_id}/edit")
+def session_edit_submit(
+    name: str = Form(...),
+    code: str = Form(...),
+    description: str | None = Form(default=None),
+    deadline: str | None = Form(default=None),
+    scheduled_activate_at: str | None = Form(default=None),
+    invite_offsets: str | None = Form(default=None),
+    reminder_offsets: str | None = Form(default=None),
+    display_timezone: str = Form(default=""),
+    help_contact: str | None = Form(default=None),
+    relationships_enabled: bool = Form(default=False),
+    observers_enabled: bool = Form(default=False),
+    responses_release_at: str | None = Form(default=None),
+    responses_release_until: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _apply_session_config_form(
+        db=db,
+        review_session=review_session,
+        user=user,
+        name=name,
+        code=code,
+        description=description,
+        deadline=deadline,
+        scheduled_activate_at=scheduled_activate_at,
+        invite_offsets=invite_offsets,
+        reminder_offsets=reminder_offsets,
+        display_timezone=display_timezone,
+        help_contact=help_contact,
+        relationships_enabled=relationships_enabled,
+        observers_enabled=observers_enabled,
+        responses_release_at=responses_release_at,
+        responses_release_until=responses_release_until,
+    )
     # Stay on the Edit page after Save (per the page's child-of-
     # Session-Home framing); the operator clicks the back-link to
     # return to Session Home explicitly.
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/edit",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/config")
+def session_config_submit(
+    name: str = Form(...),
+    code: str = Form(...),
+    description: str | None = Form(default=None),
+    deadline: str | None = Form(default=None),
+    scheduled_activate_at: str | None = Form(default=None),
+    invite_offsets: str | None = Form(default=None),
+    reminder_offsets: str | None = Form(default=None),
+    display_timezone: str = Form(default=""),
+    help_contact: str | None = Form(default=None),
+    relationships_enabled: bool = Form(default=False),
+    observers_enabled: bool = Form(default=False),
+    responses_release_at: str | None = Form(default=None),
+    responses_release_until: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """18R Item 4 Slice 3 — Save from the Session Home config card.
+
+    Same persistence path as the Edit page POST (shared helper), but
+    redirects back to Session Home in **display** mode (no ``?editing``)
+    — the operator saves in place instead of hopping to a child page.
+    """
+    _apply_session_config_form(
+        db=db,
+        review_session=review_session,
+        user=user,
+        name=name,
+        code=code,
+        description=description,
+        deadline=deadline,
+        scheduled_activate_at=scheduled_activate_at,
+        invite_offsets=invite_offsets,
+        reminder_offsets=reminder_offsets,
+        display_timezone=display_timezone,
+        help_contact=help_contact,
+        relationships_enabled=relationships_enabled,
+        observers_enabled=observers_enabled,
+        responses_release_at=responses_release_at,
+        responses_release_until=responses_release_until,
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}#session-config",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

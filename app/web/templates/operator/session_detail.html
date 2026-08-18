@@ -24,32 +24,50 @@
      display content + edit-mode wiring land in follow-up sub-slices, at
      which point the existing Session Details card (in the left column
      below) folds into this one. #}
-  <div class="card" id="session-config" data-config-mode="display">
+  <div class="card" id="session-config"
+       data-config-mode="{{ 'edit' if config_editing else 'display' }}">
     <h2>Session details</h2>
-    {# 18R Item 4 Slice 2 — in-place display <-> edit swap. Each field keeps
+    {# 18R Item 4 Slice 2/3 — in-place display <-> edit swap. Each field keeps
        one slot in the same position: a read-only value in display mode
        (``data-display-only``) and its input in edit mode (``data-edit-only``),
-       toggled by the card's ``data-config-mode`` and the Edit button (inline
-       script below). Same positions both ways so the switch isn't jarring. #}
+       toggled by the card's ``data-config-mode``. Canonical edit state is the
+       ``?editing=1`` URL param (server-set above); the inline script below is
+       an instant-swap enhancement, and the Unlock/Lock/Cancel controls keep
+       real ``?editing`` hrefs so no-JS degrades to navigation.
+
+       Details / Schedule / UI-settings inputs submit as one form via the HTML5
+       ``form="config-save-{id}"`` association (they can't physically nest —
+       the Owners sub-card carries its own form in a later slice). Save posts to
+       the config route (Slice 3); the fields mirror the Edit page's names. #}
+    <form id="config-save-{{ session.id }}" method="post"
+          action="/operator/sessions/{{ session.id }}/config"></form>
+    <datalist id="config-timezone-options">
+      {% for tz in timezone_options %}
+        <option value="{{ gmt_offset_zone_label(tz) }}"></option>
+      {% endfor %}
+    </datalist>
     <div class="page-grid" style="margin-bottom: 0;">
       <div style="display: flex; flex-direction: column; min-width: 0;">
         <div class="page-grid" style="margin: 0;">
           <div>
             <label for="mock-name">Name</label>
             <div class="config-value" data-display-only>{{ session.name }}</div>
-            <input type="text" id="mock-name" maxlength="255" data-edit-only
+            <input type="text" id="mock-name" name="name" maxlength="255"
+                   required data-edit-only form="config-save-{{ session.id }}"
                    value="{{ session.name }}">
           </div>
           <div>
             <label for="mock-code">Code</label>
             <div class="config-value" data-display-only>{{ session.code }}</div>
-            <input type="text" id="mock-code" maxlength="64" data-edit-only
+            <input type="text" id="mock-code" name="code" maxlength="64"
+                   required data-edit-only form="config-save-{{ session.id }}"
                    value="{{ session.code }}">
           </div>
         </div>
         <label for="mock-description">Description</label>
         <div class="config-value config-value-multiline" data-display-only>{{ session.description or "—" }}</div>
-        <textarea id="mock-description" maxlength="2000" data-edit-only
+        <textarea id="mock-description" name="description" maxlength="2000"
+                  data-edit-only form="config-save-{{ session.id }}"
                   style="flex: 1 1 auto; min-height: 8em;">{{ session.description or "" }}</textarea>
       </div>
 
@@ -58,15 +76,20 @@
           <div>
             <label for="mock-help-contact">Help contact (optional)</label>
             <div class="config-value" data-display-only>{{ session.help_contact or "—" }}</div>
-            <input type="text" id="mock-help-contact" maxlength="320" data-edit-only
+            <input type="text" id="mock-help-contact" name="help_contact"
+                   maxlength="320" data-edit-only
+                   form="config-save-{{ session.id }}"
                    value="{{ session.help_contact or '' }}"
                    placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
           </div>
           <div>
             <label for="mock-timezone">Timezone</label>
             <div class="config-value" data-display-only>{{ session_timezone_label }}</div>
-            <input type="text" id="mock-timezone" data-edit-only
-                   value="{{ session_timezone_label }}">
+            <input type="text" id="mock-timezone" name="display_timezone"
+                   data-edit-only form="config-save-{{ session.id }}"
+                   list="config-timezone-options" autocomplete="off" required
+                   value="{{ session_timezone_label }}"
+                   placeholder="Search by offset (GMT+8) or name (Singapore)">
           </div>
         </div>
         <div style="display: grid;
@@ -78,19 +101,24 @@
           <div>
             <label for="mock-start">Start (optional)</label>
             <div class="config-value" data-display-only>{{ (session.scheduled_activate_at | format_datetime) if session.scheduled_activate_at else "—" }}</div>
-            <input type="datetime-local" id="mock-start" data-edit-only
+            <input type="datetime-local" id="mock-start"
+                   name="scheduled_activate_at" data-edit-only
+                   form="config-save-{{ session.id }}"
                    value="{{ scheduled_activate_at_input_value }}">
           </div>
           <div>
             <label for="mock-end">End (optional)</label>
             <div class="config-value" data-display-only>{{ (session.deadline | format_datetime) if session.deadline else "—" }}</div>
-            <input type="datetime-local" id="mock-end" data-edit-only
+            <input type="datetime-local" id="mock-end" name="deadline"
+                   data-edit-only form="config-save-{{ session.id }}"
                    value="{{ deadline_input_value }}">
           </div>
           <div>
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
-            <input type="datetime-local" id="mock-release-from" data-edit-only
+            <input type="datetime-local" id="mock-release-from"
+                   name="responses_release_at" data-edit-only
+                   form="config-save-{{ session.id }}"
                    value="{{ responses_release_at_input_value }}">
           </div>
           <div>
@@ -109,7 +137,8 @@
                 <span class="config-value">—</span>
               {% endif %}
             </div>
-            <input type="text" id="mock-invite-offsets" data-edit-only
+            <input type="text" id="mock-invite-offsets" name="invite_offsets"
+                   data-edit-only form="config-save-{{ session.id }}"
                    value="{{ invite_offsets_input_value }}">
           </div>
           <div>
@@ -127,13 +156,16 @@
                 <span class="config-value">—</span>
               {% endif %}
             </div>
-            <input type="text" id="mock-reminder-offsets" data-edit-only
+            <input type="text" id="mock-reminder-offsets" name="reminder_offsets"
+                   data-edit-only form="config-save-{{ session.id }}"
                    value="{{ reminder_offsets_input_value }}">
           </div>
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
-            <input type="datetime-local" id="mock-release-until" data-edit-only
+            <input type="datetime-local" id="mock-release-until"
+                   name="responses_release_until" data-edit-only
+                   form="config-save-{{ session.id }}"
                    value="{{ responses_release_until_input_value }}">
           </div>
         </div>
@@ -233,76 +265,117 @@
               Relationships tab and page
               <input type="checkbox" data-display-only disabled
                      {% if session.relationships_enabled %}checked{% endif %}>
-              <input type="checkbox" data-edit-only data-config-input
-                     {% if session.relationships_enabled %}checked{% endif %}>
+              {# Lock-on-data — once a roster has rows the toggle can't flip
+                 True→False (would orphan data); mirror the Edit page by
+                 disabling it, and the service-layer guard rejects the flip
+                 for direct API calls. #}
+              <input type="checkbox" name="relationships_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.relationships_enabled %}checked{% endif %}
+                     {% if has_relationships %}disabled{% endif %}>
             </label>
             <label class="ui-setting">
               Observers tab and page
               <input type="checkbox" data-display-only disabled
                      {% if session.observers_enabled %}checked{% endif %}>
-              <input type="checkbox" data-edit-only data-config-input
-                     {% if session.observers_enabled %}checked{% endif %}>
+              <input type="checkbox" name="observers_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.observers_enabled %}checked{% endif %}
+                     {% if has_observers %}disabled{% endif %}>
             </label>
           </div>
         </div>
         {# Save / Cancel / Lock cluster just below the UI settings card,
-           flushed right. Save + Cancel are inactive until an edit is made in
-           edit mode; the lock toggle reads Unlock (display) / Lock (edit) and
-           flips data-config-mode. Save is a mock for now (no persistence yet;
-           it just re-locks). #}
+           flushed right (18R Item 4 Slice 3 — wired).
+           - Save submits the config form (POST → Home display mode). Rendered
+             enabled so no-JS works; the dirty-tracking script disables it until
+             an edit is made.
+           - Cancel / Lock are anchors carrying real ``?editing`` hrefs (no-JS
+             degrades to navigation). With JS, they discard edits (form.reset)
+             and swap back to display in place.
+           - Unlock (display) links to ``?editing=1``; Lock (edit) drops it.
+           The whole cluster is gated on the session being editable, mirroring
+           the working card's Edit button. #}
         <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
-          <button type="button" class="btn secondary" data-config-save disabled
-                  onclick="sessionConfig.save(this)">Save</button>
-          <button type="button" class="btn secondary" data-config-cancel disabled
-                  onclick="sessionConfig.cancel(this)">Cancel</button>
-          <button type="button" class="btn secondary" data-config-lock-toggle
-                  onclick="sessionConfig.toggle(this)">Unlock</button>
+          <button type="submit" form="config-save-{{ session.id }}"
+                  class="btn secondary" data-config-save data-edit-only>Save</button>
+          <a class="btn secondary" data-config-cancel data-edit-only
+             href="{{ request.url.path }}#session-config"
+             onclick="return sessionConfig.cancel(this);">Cancel</a>
+          {% if is_draft or is_validated %}
+            <a class="btn secondary" data-config-lock-toggle
+               href="{{ request.url.path }}{% if not config_editing %}?editing=1{% endif %}#session-config"
+               onclick="return sessionConfig.toggle(this);">{{ 'Lock' if config_editing else 'Unlock' }}</a>
+          {% else %}
+            <a class="btn secondary" data-config-lock-toggle aria-disabled="true"
+               title="Revert the session to draft to edit its details.">Unlock</a>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    // 18R Item 4 Slice 3 — instant-swap enhancement over the canonical
+    // ``?editing=1`` server state. With JS off, the Unlock/Lock/Cancel anchors
+    // navigate (their hrefs carry the param) and Save submits normally; with JS
+    // on, we swap in place and reset the form on discard.
     window.sessionConfig = window.sessionConfig || (function () {
       function cardOf(el) { return el.closest('[data-config-mode]'); }
+      function formOf(card) { return card ? card.querySelector('form') : null; }
       function sync(card) {
         var editing = card.getAttribute('data-config-mode') === 'edit';
         var dirty = card.getAttribute('data-config-dirty') === 'true';
         var lock = card.querySelector('[data-config-lock-toggle]');
-        if (lock) lock.textContent = editing ? 'Lock' : 'Unlock';
-        // Save + Cancel are active only in edit mode with unsaved edits.
+        if (lock && lock.getAttribute('aria-disabled') !== 'true') {
+          lock.textContent = editing ? 'Lock' : 'Unlock';
+        }
+        // Save is submittable in edit mode once an edit is made; Cancel is
+        // active in edit mode with unsaved edits. (No-JS: server renders them
+        // without these gates so a plain submit / navigation still works.)
         var save = card.querySelector('[data-config-save]');
         var cancel = card.querySelector('[data-config-cancel]');
         if (save) save.disabled = !(editing && dirty);
-        if (cancel) cancel.disabled = !(editing && dirty);
+        if (cancel) cancel.setAttribute('aria-disabled', String(!(editing && dirty)));
       }
       function setMode(card, mode) {
         card.setAttribute('data-config-mode', mode);
-        if (mode === 'display') card.removeAttribute('data-config-dirty');
+        if (mode === 'display') {
+          card.removeAttribute('data-config-dirty');
+          var form = formOf(card);
+          if (form) form.reset();
+        }
         sync(card);
       }
       return {
-        toggle: function (btn) {
-          var card = cardOf(btn);
-          if (!card) return;
+        toggle: function (link) {
+          var card = cardOf(link);
+          if (!card) return true;  // no card → let the href navigate
           setMode(
             card,
             card.getAttribute('data-config-mode') === 'edit' ? 'display' : 'edit'
           );
+          return false;  // handled in place — suppress navigation
+        },
+        cancel: function (link) {
+          var card = cardOf(link);
+          if (!card) return true;
+          setMode(card, 'display');  // resets the form (discards edits)
+          return false;
         },
         markDirty: function (card) {
           card.setAttribute('data-config-dirty', 'true');
           sync(card);
         },
-        // Mock: no persistence yet — Save / Cancel just re-lock (display
-        // mode re-renders the saved values). Cancel discards edits.
-        save: function (btn) { setMode(cardOf(btn), 'display'); },
-        cancel: function (btn) { setMode(cardOf(btn), 'display'); },
+        refresh: sync,
       };
     })();
 
-    // Dirty tracking: any edit on an edit-mode field marks the card dirty,
-    // which lights up Save + Cancel.
+    // Dirty tracking + initial sync: any edit on an edit-mode field marks the
+    // card dirty (lighting up Save + Cancel); sync once on load so a card
+    // rendered in edit mode (``?editing=1``) starts with Save/Cancel gated.
     (function () {
       document.querySelectorAll('[data-config-mode]').forEach(function (card) {
         function onEdit(e) {
@@ -312,6 +385,7 @@
         }
         card.addEventListener('input', onEdit);
         card.addEventListener('change', onEdit);
+        window.sessionConfig.refresh(card);
       });
     })();
   </script>

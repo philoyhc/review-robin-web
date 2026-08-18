@@ -829,15 +829,111 @@ def test_session_config_card_display_edit_swap(
     ):
         assert f'id="{fid}"' in card
 
-    # Mode-control cluster: Save + Cancel (inactive by default) + the
-    # Unlock / Lock toggle, wired to sessionConfig.
+    # Mode-control cluster (Slice 3 wired): Save is a real submit for the
+    # config form; Cancel + Unlock are anchors carrying ?editing hrefs.
     assert "data-config-save" in card
     assert ">Save</button>" in card
+    assert 'type="submit"' in card
+    assert f'form="config-save-{review_session.id}"' in card
     assert "data-config-cancel" in card
-    assert ">Cancel</button>" in card
+    assert ">Cancel</a>" in card
     assert "data-config-lock-toggle" in card
-    assert ">Unlock</button>" in card
+    assert ">Unlock</a>" in card
+    # Display mode → the Unlock link points at ?editing=1.
+    assert "?editing=1" in card
     assert "window.sessionConfig" in body
+
+    # The edit inputs post as one form to the config route.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/config"' in card
+    )
+    assert 'name="name"' in card
+    assert 'name="display_timezone"' in card
+    assert 'name="relationships_enabled"' in card
+
+
+def test_config_card_editing_param_renders_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 Slice 3 — ``?editing=1`` is the canonical edit-mode state:
+    the GET renders the card in edit mode and the Lock link drops the param."""
+    review_session = _make_session(client, db, code="cfg-editing")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?editing=1"
+    ).text
+
+    config_pos = body.find('id="session-config"')
+    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    assert 'data-config-mode="edit"' in card
+    # Edit mode → the toggle reads Lock and its href has no ?editing param.
+    assert ">Lock</a>" in card
+
+
+def test_config_card_editing_param_ignored_when_not_editable(
+    client: TestClient, db: Session
+) -> None:
+    """An activated session isn't editable — ``?editing=1`` degrades to
+    display mode (the route gates the flag on lifecycle)."""
+    review_session = _seed_pair(
+        client, db, code="cfg-noedit", reviewer_email="rev@example.edu"
+    )
+    _activate(client, db, review_session)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?editing=1"
+    ).text
+
+    config_pos = body.find('id="session-config"')
+    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    assert 'data-config-mode="display"' in card
+
+
+def test_config_card_save_persists_and_redirects_home(
+    client: TestClient, db: Session
+) -> None:
+    """Saving the config card POSTs to /config, persists the change, and
+    redirects back to Session Home in display mode (#session-config)."""
+    review_session = _make_session(client, db, code="cfg-save")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/config",
+        data={
+            "name": "Renamed Session",
+            "code": review_session.code,
+            "description": "New description",
+            "display_timezone": "",
+            "relationships_enabled": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}#session-config"
+    )
+    db.refresh(review_session)
+    assert review_session.name == "Renamed Session"
+    assert review_session.description == "New description"
+    assert review_session.relationships_enabled is True
+
+
+def test_config_card_save_rejects_bad_schedule_ordering(
+    client: TestClient, db: Session
+) -> None:
+    """The config route reuses the Edit route's validation — an End before
+    Start is a 422, and nothing is persisted."""
+    review_session = _make_session(client, db, code="cfg-badorder")
+    original_name = review_session.name
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/config",
+        data={
+            "name": "Should Not Save",
+            "code": review_session.code,
+            "scheduled_activate_at": "2099-06-01T10:00",
+            "deadline": "2099-05-01T10:00",  # End before Start
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422, response.text
+    db.refresh(review_session)
+    assert review_session.name == original_name
 
 
 def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
