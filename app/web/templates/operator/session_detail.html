@@ -430,61 +430,15 @@
     })();
   </script>
 
-  {# Two-column layout. Left column: Session Details → Quick Setup.
-     18R Item 4 Slice 1 relocated Quick Setup to the bottom of the left
-     column ("bottom left") and moved Extract Setup off to the Extract
-     data page; the Schedule timeline card retired (resolved datetimes
-     now show inline in the Session details card). The right column is
-     reserved for Danger Zone, which arrives when the Edit page is
-     retired in a later slice. #}
+  {# Two-column bottom layout: Quick Setup (left) + Danger Zone (right).
+     18R Item 4 Slice 5b — the old read-only "Session Details" metadata card
+     was retired (its name / code / description / timezone / help contact all
+     live on the #session-config card above; Created by / Created / Modified
+     were dropped). Quick Setup moved up to take its place at the top of the
+     left column. Extract Setup lives on the Extract data page; the Schedule
+     timeline card retired (resolved datetimes show inline on #session-config). #}
   <div class="bottom-grid">
     <div class="bottom-left">
-      <div class="card">
-        {# Card title is the session name; the session code follows
-           inline in body-text font. No separate "Session Details"
-           heading. #}
-        <h2>{{ session.name }}<span class="session-detail-code muted">{{ session.code }}</span></h2>
-        <p class="session-detail-description">{{ session.description or "—" }}</p>
-        <div class="session-meta-row">
-          <div>
-            <p class="form-help" style="margin: 0;">Created by</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
-            </p>
-            <p class="form-help" style="margin: 0;">Timezone</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session_timezone_label }}</span>
-            </p>
-          </div>
-          <div>
-            <p class="form-help" style="margin: 0;">Created</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_at | format_datetime }}</span>
-            </p>
-            <p class="form-help" style="margin: 0;">Help contact</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
-          </div>
-          <div>
-            <p class="form-help" style="margin: 0;">Modified</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.updated_at | format_datetime }}</span>
-            </p>
-          </div>
-        </div>
-
-        {# Lifecycle state shown in the chrome status strip — no
-           duplicate Status pill here per spec/session_home.md.
-           18R Item 4 Slice 5 — the Edit button is retired: session config
-           is now edited in place on the Session details card (#session-config)
-           above via its Unlock affordance, and the separate Edit page is no
-           longer linked from the UI. This card is read-only session metadata
-           (Created by / Created / Modified). #}
-      </div>
-
-      {# Schedule timeline card retired (18R Item 4) — the resolved
-         send datetimes now render inline beside each invite / reminder
-         offset in the Session details card. #}
-
       {# 18R Item 4 Slice 1 — Quick Setup relocated to the bottom of
          the left column ("bottom left"). Kept a distinct card with
          its own lock/greying model; its Home cookie + redirects are

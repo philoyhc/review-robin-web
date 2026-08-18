@@ -761,13 +761,14 @@ new mechanism), then the config-consolidation work.
    behaviour is identical), then delete `session_edit_form` /
    `session_edit_submit` / `session_edit.html` and add a `GET /edit` → Home
    redirect for stale bookmarks. Its own slice; no user-facing change.
-   - **Also fold / de-dupe the working "Session Details" metadata card.** With
-     the Edit button gone it is a read-only card that still duplicates most of
-     `#session-config` (name / code / description / help contact / timezone);
-     its only unique fields are **Created by / Created / Modified**. Decide with
-     the operator: fold those three into `#session-config`'s display mode, or
-     slim the card to just those three. (Left as-is in Slice 5 to avoid touching
-     the frozen `#session-config` UX unilaterally.)
+   - **De-dupe the working "Session Details" metadata card. ✅ done 2026-08-18.**
+     The operator chose to **retire** the read-only card outright (rather than
+     fold): it duplicated `#session-config`'s name / code / description / help
+     contact / timezone, and its unique **Created by / Created / Modified**
+     fields were dropped. **Quick Setup moved up** to the top of the bottom-left
+     column to take its place; the now-dead `.session-meta-row` /
+     `.session-detail-code` / `.session-detail-description` CSS was removed.
+     (Route + template deletion above is the remaining 5b work.)
 6. **(Later) Archive session card** — add the half-width Archive session card to
    the Extract data page bottom-right (the slot reserved in Slice 1). Its own
    follow-up slice.

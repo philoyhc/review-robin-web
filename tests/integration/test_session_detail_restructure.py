@@ -132,10 +132,12 @@ def test_session_detail_renders_session_layout(
     body = response.text
 
     assert response.status_code == 200
-    # The Session Details card's H2 is the session name, with the
-    # session code trailing inline in body-text font.
-    assert 'class="session-detail-code' in body
-    assert "<h2>Spring<span" in body
+    # 18R Item 4 Slice 5b — the old read-only Session Details metadata card
+    # is retired; its markers (session-detail-code, the name-in-h2) are gone.
+    # Session identity now lives on the #session-config card.
+    assert 'class="session-detail-code' not in body
+    assert 'id="session-config"' in body
+    assert "<h2>Session details</h2>" in body
     # Per spec/workflow_card.md, the Workflow card
     # back to Session Home (full-width, just below the chrome).
     assert 'id="next-action"' in body
@@ -157,9 +159,11 @@ def test_session_detail_renders_session_layout(
 def test_session_detail_description_preserves_line_breaks(
     client: TestClient, db: Session
 ) -> None:
-    """A multi-paragraph session description renders in a <p> with the
-    ``session-detail-description`` styling hook so the operator's
-    line breaks survive instead of collapsing to whitespace."""
+    """A multi-paragraph session description renders in the #session-config
+    display value with the ``config-value-multiline`` styling hook
+    (``white-space: pre-wrap``) so the operator's line breaks survive
+    instead of collapsing to whitespace. (18R Item 4 Slice 5b — the old
+    ``session-detail-description`` card was retired.)"""
     description = "First paragraph.\n\nSecond paragraph."
     response = client.post(
         "/operator/sessions",
@@ -176,9 +180,9 @@ def test_session_detail_description_preserves_line_breaks(
     ).scalar_one()
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert 'class="session-detail-description"' in body
+    assert 'class="config-value config-value-multiline"' in body
     # The newline-bearing text reaches the page verbatim; the CSS
-    # ``white-space: pre-line`` renders the breaks.
+    # ``white-space: pre-wrap`` renders the breaks.
     assert description in body
 
 
