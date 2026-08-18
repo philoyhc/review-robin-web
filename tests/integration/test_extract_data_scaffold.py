@@ -246,7 +246,7 @@ def test_extract_data_dom_carries_wire_target_attributes(
     seam."""
 
     review_session = _make_session(client, db, code="ed-wire")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
 
     for key in (
         "settings",
@@ -280,7 +280,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     review_session = _seed_pair(
         client, db, code="ed-counts", reviewer_email="r@example.edu"
     )
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
 
     # Entity rows render their count after the title.
     assert "Reviewers <span" in body
@@ -314,7 +314,7 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
     on a fresh draft."""
 
     review_session = _make_session(client, db, code="ed-anchors")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
 
     # Inert rows render as aria-disabled anchors.
     download_count = body.count(
@@ -341,7 +341,7 @@ def test_extract_data_card_renders_when_session_is_activated(
     )
     _activate(operator, db, review_session)
 
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    body = operator.get(f"/operator/sessions/{review_session.id}/extract-data").text
 
     # Card rendered without a ``.disabled`` modifier.
     assert 'id="extract-data"' in body

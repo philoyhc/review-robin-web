@@ -247,6 +247,9 @@ def session_extract_data(
             "reviewee_tag_labels": reviewee_tag_labels,
             "field_discrete_steps": field_discrete_steps,
             "saved_shapes": saved_shape_rows,
+            # 18R Item 4 Slice 1 — the Extract Setup card (porting /
+            # archival CSV downloads) relocated here from Session Home.
+            "extract_data": views.build_extract_data_context(db, review_session),
             **workflow_ctx,
         },
     )
