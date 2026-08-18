@@ -427,7 +427,17 @@
          edit modes; label text at normal weight/size with the On/Off pill
          (display) or checkbox (edit) inline after it, in the same slot. */
       .ui-settings-row { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: center; }
-      .ui-setting { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 400; margin: 0; }
+      /* body.ui-v2 selector so it beats ``body.ui-v2 label`` (which sets a
+         smaller --fs-small size + 500 weight) — the toggle text should read
+         as normal card body text. */
+      body.ui-v2 .ui-setting {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-weight: 400;
+        font-size: 1rem;
+        margin: 0;
+      }
       .pill {
         display: inline-block;
         padding: 1px 8px;

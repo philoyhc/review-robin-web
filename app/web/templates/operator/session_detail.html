@@ -148,7 +148,7 @@
        UI-settings checkboxes are mock (inert) until the edit-mode
        persistence slice; both participate in the card-wide data-config-mode
        swap. #}
-    <div class="bottom-grid" style="margin-top: var(--space-3);">
+    <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2);">
       <div class="bottom-left">
         <div class="card" id="config-owners-card">
           <h3 style="margin-top: 0;">Owners</h3>
@@ -244,14 +244,13 @@
             </label>
           </div>
         </div>
+        {# Edit / Done toggle just below the User interface settings card,
+           flushed right. Flips the card's data-config-mode both ways. #}
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn secondary" data-config-toggle
+                  onclick="toggleSessionConfigMode(this)">Edit</button>
+        </div>
       </div>
-    </div>
-
-    {# Edit / Done toggle on its own row, flushed right. Flips the card's
-       ``data-config-mode`` between display and edit (both ways). #}
-    <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
-      <button type="button" class="btn secondary" data-config-toggle
-              onclick="toggleSessionConfigMode(this)">Edit</button>
     </div>
   </div>
 
