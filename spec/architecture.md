@@ -1,29 +1,100 @@
 # Architecture Notes
 
+**Current as of 2026-08-18.** Domain entities, the three-layer
+code split, and the conceptual data-model hierarchy. Per-page
+surface behaviour lives in the surface specs (`spec/lifecycle.md`,
+`spec/instruments.md`, `spec/assignments.md`,
+`spec/participant_model.md`, `spec/session_home.md`, …); this file
+stays at the architectural altitude and points to them.
+
 Review Robin Web is organized around explicit domain entities:
 
 - sessions
 - reviewers
 - reviewees
 - observers
-- instruments
+- relationships (per-pair context)
+- instruments (+ their response / display fields)
+- rule sets (per-instrument assignment rules)
 - assignments
 - responses
 - invitations
 - audit events
-- exports
-- retention actions
+- extracts (CSV / ZIP data exports)
+- retention actions (scheduled archive / delete — partially deferred)
 
-**Participant-model context.** The three participant rosters —
-reviewers, reviewees, and observers — are per-session tables whose
-rows are matched to a signed-in user by case-insensitive email.
-`observers` (landed inert in Phase 1; full CRUD wired in PR #1706)
-is the third audience: participants who view collated results
-without filling out response forms. Its Setup page is gated by
-`session.observers_enabled`; the collation surface at
-`/me/sessions/{id}/collation` is its reviewer-facing entry point
-(a per-instrument 3-row table with per-instrument CSV download,
-gated by `require_observer_in_session` in `app/web/deps.py`).
+**Participant-model context.** The domain has **four participant
+roles** — operator, reviewer, reviewee, observer. The three
+participant rosters (reviewers, reviewees, observers) are
+per-session tables whose rows are matched to a signed-in user by
+case-insensitive email; only email-identified rows confer access
+(a confidential reviewee with a non-email identifier never reaches
+their results surface, by construction). Both participant-facing
+read surfaces are live:
+
+- **Reviewee results** — `GET /me/sessions/{id}/results` renders a
+  reviewee's own incoming results per instrument (raw / anonymized
+  / summarized, per the per-instrument visibility policy) plus an
+  Acknowledge gesture. Gated by `require_reviewee_in_session`
+  (`app/web/deps.py`).
+- **Observer collation** — observers view *collated* results across
+  the session (not just their own). `observers` has a dedicated CRUD
+  Setup page gated by `session.observers_enabled` and an
+  `observers.cohort_rule` JSON column scoping each observer's view.
+  `GET /me/sessions/{id}/collation` renders a per-instrument 3-row
+  table (reviewer / reviewee aggregates + a conditional cohort-scoped
+  CSV download). Gated by `require_observer_in_session`.
+
+See `spec/participant_model.md`, `spec/visibility_policy.md`, and
+`spec/audience_and_identity_model.md` for the full participant model.
+
+## Three-layer split
+
+The app is a server-rendered FastAPI + Jinja monolith with a strict
+three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
+
+1. **Route handlers** parse the request, resolve identity via
+   dependencies, and call into services — no SQL, no business rules.
+   Operator routes live in the `app/web/routes_operator/` package
+   (split by feature area — `_lobby.py`, `_session_home.py`,
+   `_settings.py`, the `_setup_*` slices, `_assignments.py`,
+   `_operations.py`, `_instruments*.py`, `_extracts.py`,
+   `_extract_data.py`, `_rehydrate.py`, `_workflow.py`,
+   `_sys_admin.py`, …, with shared plumbing in `_shared.py`).
+   Participant-facing routes live in `app/web/routes_reviewer/`
+   under the `/me/` prefix (`_dashboard.py`, `_surface/`,
+   `_summary.py`, `_results.py`, `_collation.py`, `_invite.py`).
+
+2. **Service modules** (`app/services/*.py`) hold all business logic —
+   querying, mutation, validation, lifecycle transitions, audit-event
+   emission. Several are **packages split by concern**, each
+   re-exporting its public surface via `__init__.py` so callers write
+   the unqualified import unchanged:
+   - `app/services/instruments/` — `_state.py`, `_display_fields.py`,
+     `_response_fields.py`, `_band1.py`, `_band2.py`, `_pagination.py`,
+     `_instrument_crud.py`, `_field_presets.py`.
+   - `app/services/assignments/` — `_shared.py`, `_coverage.py`,
+     `_self_review.py`, `_generate.py` (18O Track B carve).
+   - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`.
+   - `app/services/rules/` — the pure rule engine (`engine.py`,
+     `predicates.py`, `quotas.py`, `preview.py`, `fields.py`).
+   Other notable services: `session_lifecycle.py`, `validation.py`,
+   `visibility_policies.py`, `observers.py` / `observer_cohort.py`,
+   `participant_tokens.py`, `audit.py`, the `extracts/` package, the
+   `scheduled_events/` package, and `session_config_io/`.
+
+3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative
+   classes using `Mapped[]` / `mapped_column`. **No
+   `sqlalchemy.dialects.postgresql` imports here** — Postgres-specific
+   column types are deferred infrastructure.
+
+A fourth seam — **`app/web/views/`** — holds view-shape adapters that
+translate domain objects into the dataclasses / row tuples templates
+iterate over (`_setup.py`, `_instruments.py`, `_validate.py`,
+`_reviewee_results.py`, `_observer_collation.py`, `_workflow_card.py`,
+…). Services stay business-logic-only, templates stay markup-only, and
+anything in between (e.g. computing a status label from instrument
+state) lives here.
 
 ## Conceptual hierarchy
 
@@ -31,14 +102,15 @@ The shape of the data model is deliberate. From the operator's
 perspective:
 
 - **Session** is the top-level container. A session defines the
-  *universe* of reviewers and reviewees and carries one assignment
-  matrix that determines which reviewer-reviewee pairs are reviewed.
-  The matrix is computed once per session — manually (Manual import)
-  or via a deterministic preset (FullMatrix today, RuleBased in
-  Segment 13A).
+  *universe* of reviewers and reviewees. It does **not** carry a
+  single session-wide matrix — assignments are generated
+  **per-instrument** (see below), so a session can carry several
+  distinct assignment sets at once.
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
-  response fields and display fields. The schema, services, and
+  response fields and display fields **and its own assignment rule**
+  (`Instrument.rule_set_id` → a `session_rule_sets` row, or NULL for
+  the synthetic Full Matrix default). The schema, services, and
   audit events are fully multi-instrument-aware
   (`Instrument.session_id`, `Instrument.order`, FK delete-orphan
   cascades, `create_instrument` / `delete_instrument` services with
@@ -46,18 +118,31 @@ perspective:
   session is auto-created with one instrument (system handle
   `Default`, operator-editable `description`); the operator's
   `Add an instrument` and `Delete this instrument` buttons are
-  wired (Segment 10D Slice 5, 2026-05-02) with mutual-exclusion +
-  single-instrument-floor gates. Per-instrument assignment sets
-  + reviewer-dashboard per-instrument grouping are the remaining
-  multi-instrument items — tracked at `docs/status.md` "What's
-  deliberately not yet there" (Segment 15B). The original Segment
-  13 plan is archived as
-  `guide/archive/segment_13_multi_instrument_sessions_superseded.md`.
+  wired with mutual-exclusion + single-instrument-floor gates.
+  See `spec/instruments.md`.
+- **Rule sets** drive assignment generation. Each instrument's
+  Band 1 either materialises one `session_rule_sets` row (when any
+  Link carries filter / group rules) or leaves `rule_set_id=NULL`
+  and inherits the synthetic **Full Matrix** default. The rule
+  engine lives in `app/services/rules/` (`engine.py`,
+  `predicates.py`, `quotas.py`, `preview.py`, `fields.py`) and is
+  pure — it evaluates a rule set against the reviewer × active-
+  reviewee universe and returns surviving pairs. The write-side
+  caller (`app/services/assignments/`) materialises those pairs into
+  `Assignment` rows. The per-instrument rule engine **has shipped**
+  (through Wave 5); the earlier operator-side RuleSet *library* tier
+  and standalone Rule Builder page were retired in Wave 5 — every
+  rule now lives on its instrument's Band 1. See `spec/assignments.md`.
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
-  rows. They link the assignment matrix (the pair) to the response
-  form (the instrument). The same `(reviewer, reviewee)` pair may
-  appear in zero, one, or many instruments within a session,
-  depending on how generation runs against each instrument.
+  rows (`session_id` is denormalised onto the row; the logical key is
+  the reviewer × reviewee × instrument triple). Each row carries
+  `include` (whether the reviewer sees this reviewee on their
+  per-instrument page) and `is_self_review` (the persisted self-review
+  classification). Group scoping is a computed collapse over the
+  boundary tags rather than a stored column. The same
+  `(reviewer, reviewee)` pair may appear in zero, one, or many
+  instruments within a session, depending on how generation ran
+  against each instrument's rule.
 - **Responses** are `(assignment, response_field)` rows: the
   reviewer's answer to one field on one instrument for one assigned
   reviewee.
@@ -89,10 +174,10 @@ stacked. Each table is independent: its own rows (assignments scoped
 to that instrument), its own display columns, its own response
 columns. The same `(reviewer, reviewee)` pair may appear in zero,
 one, or many instruments depending on how generation ran. The
-reviewer-surface render path loops by instrument and the operator
-UI for creating / deleting instruments shipped in Segment 10D
-Slice 5 (2026-05-02). Per-instrument assignment sets are the
-last remaining multi-instrument item (Segment 15B).
+reviewer-surface render path loops by instrument. Per-instrument
+assignment generation (each instrument runs its own Band 1 rule)
+has shipped; a group-scoped instrument collapses its per-member
+rows into one card per group at render time.
 
 ### Practical implications today
 
@@ -103,47 +188,64 @@ authoritative "what works today" list, read **`docs/status.md`**
 
 - Session creation auto-seeds one instrument (system handle
   `Default`) with two response fields (`rating` integer 1–5
-  required, `comments` long text optional) and three pair-context
-  display fields. See `app/services/instruments/_instrument_crud.py`
+  required, `comments` long text optional). Display fields are
+  seeded lazily from import data, not on session creation (see
+  "Lazy display-field seeding" below). See
+  `app/services/instruments/_instrument_crud.py`
   (`ensure_default_instrument`).
+- Response fields carry a plain `data_type` (String / Integer /
+  Decimal / List) plus bounds and an optional `list_options` string.
+  The former per-session **Response Type Definitions** table +
+  `_rtds.py` slice retired 2026-05-26; a small set of operator-facing
+  quick-fill list presets (`instruments/_field_presets.py`) replaced
+  the RTD catalogue.
 - `/operator/sessions/{id}/instruments` is the single consolidated
   page for everything per-instrument: All Instrument Status card +
-  one card per instrument (description, acceptance + visibility
-  toggles, response-fields builder, display-fields card, live
-  preview). See `spec/instruments.md` for the per-section
-  contract.
+  one card per instrument (identity + Bands 1/2/3 — the assignment
+  rule, response fields, display fields — acceptance + visibility
+  toggles, live preview). See `spec/instruments.md` for the
+  per-section contract.
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.description`
   (fallback to handle) and a per-field help block above each table.
 - Schema + services + operator UI are multi-instrument-aware
   (`create_instrument`, `delete_instrument`, FK cascades; the
-  `Add an instrument` and `Delete this instrument` buttons shipped
-  in Segment 10D Slice 5).
+  `Add an instrument` and `Delete this instrument` buttons).
 
 Items still deliberately deferred (see `docs/status.md` "What's
-deliberately not yet there" for the canonical list): per-instrument
-assignment sets (Segment 15B), reviewer-dashboard per-instrument
-grouping, and response-field type changes after creation (data
-migration concern).
+deliberately not yet there" for the canonical list): reviewer-
+dashboard per-instrument grouping and response-field type changes
+after creation (data-migration concern).
 
-### Session lifecycle (Segment 9.1)
+### Session lifecycle
 
-`ReviewSession.status` is the canonical lifecycle column. Live values
-are `draft`, `validated`, `ready`, and `archived` (the last written by
-`archive_session` / `unarchive_session`); `expired` is reserved in
-`app/services/session_lifecycle.py::SessionStatus` and not yet
-written by any route. The column stays a `String(32)` — the value
-set is enforced at the application layer, not via a DB CHECK
-constraint. See `spec/lifecycle.md` for the full state machine; this
-section is the original 9.1 write-path narrative.
+`ReviewSession.status` is the canonical lifecycle column. **Five
+states are live**: `draft`, `validated`, `ready`, `expired`, and
+`archived`. `expired` is written by `expire_session` (the Workflow
+card's **Close session** button, `ready → expired`); `archived` by
+`archive_session` / `unarchive_session`. No `SessionStatus` value is
+purely reserved today. The column stays a `String(32)` — the value
+set is enforced at the application layer (the `SessionStatus` enum in
+`app/services/session_lifecycle.py`), not via a DB CHECK constraint.
+
+**`spec/lifecycle.md` is the single source of truth** for the state
+machine — the transitions (`mark_validated`, `activate_session`,
+`invalidate_session` / `invalidate_if_validated`,
+`revert_session_to_draft`, `expire_session`, `archive_session` /
+`unarchive_session`), the route-layer gates, the per-instrument
+open/close model, and the UI lock-card pattern. The paragraphs below
+are the original write-path narrative kept for architectural context;
+where they and `spec/lifecycle.md` diverge, the lifecycle spec wins.
 
 **Session status overrides instrument acceptance.** Activation
-(`draft → ready`) flips every instrument's `accepting_responses` to
-`true`. Revert (`ready → draft`) flips them all back to `false` in the
-same transaction and emits a single `session.reverted_to_draft` audit
-event (no per-instrument close events on the revert path). Existing
-`Response` rows are preserved untouched on revert; the reviewer surface
-returns to read-only.
+(`validated → ready`, `activate_session`) flips every instrument's
+`accepting_responses` to `true`. Revert (`ready → draft`,
+`revert_session_to_draft`) and Close (`ready → expired`,
+`expire_session`) flip them all back to `false` in the same
+transaction — revert emits a single `session.reverted_to_draft`
+audit event (no per-instrument close events on that path). Existing
+`Response` rows are preserved untouched on revert and on close; the
+reviewer surface returns to read-only.
 
 The reviewer write-path predicate
 `session_lifecycle.session_accepts_responses(session, instrument)`
@@ -155,13 +257,17 @@ observes the deadline has passed sets `accepting_responses=false`,
 stamps `Instrument.deadline_closed_at`, and emits a single
 `instrument.closed reason=deadline` audit event per instrument.
 
-While `status == ready`, every operator setup-mutation endpoint
-(session edit/delete, roster import + delete-all, assignment generate
-+ delete-all) returns **HTTP 409**. The corresponding GET pages render
-read-only banners. Operators must revert to draft to make further
-setup changes; if any `Response` rows already exist, response-loss
-acknowledgment (`acknowledge_response_loss=true`) is required on
-operations that would invalidate them.
+Setup is open only while the session is **editable** — `draft` OR
+`validated` (`is_editable`). Once the session leaves that band
+(`ready` / `expired` / `archived`), every operator setup-mutation
+endpoint (session edit/delete, roster import + delete-all, instrument
+CRUD, assignment generate + delete-all) returns **HTTP 409** via the
+`_require_editable` route gate in
+`app/web/routes_operator/_shared.py`. The corresponding GET pages
+render read-only banners. Operators must revert to draft to make
+further setup changes; if any `Response` rows already exist,
+response-loss acknowledgment (`acknowledge_response_loss=true`) is
+required on operations that would invalidate them.
 
 ### Invitations + dev outbox (Segment 9.2)
 
@@ -529,16 +635,35 @@ decide which shape to interpret.
   `require_operator` / `require_session_operator` in
   `app/web/deps.py`. A user's membership in **any participant
   roster** (reviewer, reviewee, or observer) never confers
-  operator access; only a `session_operators` row or
-  `users.is_sys_admin` does. This invariant is pinned by a
+  operator access; only `users.is_operator`, a `session_operators`
+  row, or an elevated role does. This invariant is pinned by a
   regression test in
-  `tests/integration/test_operator_lobby_access_gate.py`
-  (PR #1710).
+  `tests/integration/test_operator_lobby_access_gate.py`.
+
+- **Three-tier role model (Segment 18S).** The admin surface is a
+  strict, nested hierarchy: **super-admin ⊇ admin ⊇ operator**.
+  `users.is_operator` and `users.is_sys_admin` (admin) are stored
+  columns; **super-admin is derived, never stored** —
+  `app/auth/roles.py::is_super_admin` tests case-insensitive
+  membership in the deployer-config `SUPER_ADMIN_EMAILS`. Gates
+  treat admin as implying operator; a super-admin self-heals to
+  `is_sys_admin = is_operator = True` on every sign-in
+  (`deps.py::_reassert_super_admin`). Admins add/revoke operators;
+  super-admins add/revoke admins; the super-admin tier moves only in
+  Azure App Settings. See `spec/audience_and_identity_model.md` §4.
+
+- **Per-session owner delegation.** The session creator becomes the
+  inaugural `session_operators` row (`role="owner"`); additional
+  owners are added/removed by current owners, guarded by a
+  last-owner floor, and audited via `session.owner_added` /
+  `session.owner_removed`.
 
 - **Participant gates** — `require_reviewee_in_session` /
   `require_observer_in_session` gate the reviewee results and
-  observer collation routes. The reviewer write-path gates
-  (`require_reviewer_in_session`) remain unchanged.
+  observer collation routes; `require_reviewer_in_session` gates the
+  reviewer write-path. All three match the signed-in user's email
+  (case-insensitive) against the session roster and require the row
+  to be `active`.
 
 ## Implementation principles
 
@@ -557,6 +682,7 @@ decide which shape to interpret.
   than replaces — inserting newly eligible pairs, dropping orphaned
   ones, and leaving matched pairs (and their saved responses)
   untouched. See `spec/reconciling_regeneration.md`.
-- Materialise rather than virtualise: FullMatrix generates concrete
-  Assignment rows rather than implying them, so downstream features
-  query one uniform table regardless of mode.
+- Materialise rather than virtualise: the rule engine (including the
+  synthetic Full Matrix default) generates concrete Assignment rows
+  rather than implying them, so downstream features query one uniform
+  table regardless of instrument rule or group scoping.

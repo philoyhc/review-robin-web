@@ -13,7 +13,7 @@
 > and in `docs/status.md` for ship-state. Cross-references are
 > noted in [§19 Reading guide](#19-reading-guide).
 >
-> **Currency.** Aligned with the system as of 2026-05-22. The
+> **Currency.** Aligned with the system as of 2026-08-18. The
 > functional contract is stable; ship-state may move ahead.
 
 ---
@@ -122,8 +122,14 @@ The system must:
     CSV extract, with the sys-admin audit-log viewer as the
     deliberate UTC exception.
 14. Provide **system-administrator surfaces** for workspace
-    governance (operator allowlist), cross-session diagnostics, and
-    per-session audit-log inspection.
+    governance (operator / admin / super-admin roles), cross-session
+    diagnostics, and per-session audit-log inspection.
+15. Give **reviewees and observers** authenticated read access to
+    the review data collected about them (reviewee) or across the
+    session (observer), in the operator-controlled form (Raw /
+    Anonymized / Summarized) and release window each per-instrument
+    visibility policy allows, plus a reviewee **Acknowledge**
+    gesture.
 
 ---
 
@@ -157,29 +163,53 @@ The system does not:
 
 ## 4. User roles
 
-Four roles interact with the system. The first three are
-authenticated users; the fourth is a target audience but not an
-in-system actor.
+Five roles interact with the system. The operator, reviewer,
+reviewee, and observer are authenticated users; the downstream
+data consumer is a target audience but not an in-system actor.
+The administrator tier (admin / super-admin) is a governance
+elevation of the operator role, not a separate login.
 
-### 4.1 System administrator
+### 4.1 System administrator (three-tier model)
 
-Workspace-level governance. A sys-admin can:
+Since Segment 18S Item 1 workspace governance is a **strict
+three-tier hierarchy** with **nested capabilities**
+(super-admin ⊇ admin ⊇ operator) and a **config-anchored top
+tier**:
 
-- **Manage the operator allowlist** — promote workspace members to
-  operator status, revoke operator status, delete users entirely.
-- **Manage per-session owners** — add or remove a co-owner from
-  any session in the workspace, even ones they do not personally
-  operate.
+| Tier | Stored as | Added / revoked by |
+|---|---|---|
+| **Operator** | `users.is_operator` | Admins (and super-admins by nesting) |
+| **Admin** | `users.is_sys_admin` | Super-admins only |
+| **Super-admin** | *derived*: email ∈ `SUPER_ADMIN_EMAILS` (deployer config) | Azure App Settings only — never in-app |
+
+Super-admin is **derived, never stored** — no DB column, no
+migration; it can't drift from config or be flipped in-app. A
+super-admin self-heals to `is_sys_admin = is_operator = True` on
+every sign-in, so every admin/operator gate passes with no
+special-casing.
+
+An **admin** (`is_sys_admin`) can, on top of operator capability:
+
+- **Manage the workspace allowlist** — admit / revoke operator
+  status and delete users entirely (Accounts Management page). A
+  **super-admin** actor is additionally required to promote /
+  demote the admin (`is_sys_admin`) flag, and destructive actions
+  refuse when the target is a super-admin.
 - **Bulk-remove a user from all sessions** they appear on
   (departure cleanup).
 - **View cross-session diagnostics** — a Sessions Diagnostics
-  surface that lists every session in the workspace with summary
+  surface listing every session in the workspace with summary
   state.
-- **Read the per-session audit log viewer** for any session.
-- **Download the audit-events CSV** for any session.
+- **Read the per-session audit log viewer** and **download the
+  audit-events CSV** for any session.
 
-The sys-admin role is workspace-wide. It is not implied by being
-an operator on every session; it is a separate flag.
+Reading a non-owned session's diagnostics does **not** grant
+edit rights. Since Segment 18S Item 3, editing a non-owned
+session requires **ownership**: the Diagnostics **"Manage"**
+action self-adds the admin as an owner (audited
+`session.owner_added`) and opens the session, after which they
+act through the normal operator path. There is no shadow
+editing — every config change is by a recorded owner.
 
 ### 4.2 Operator
 
@@ -203,12 +233,11 @@ operator can:
 - **Archive and unarchive** sessions they own.
 - **Purge and archive** a session they own (operator-triggered
   hard delete of responses + rosters + audit log).
-- **Manage their own operator settings** — email-send credentials,
-  default display timezone, personal library of reusable Response
-  Type Definitions and RuleSets.
+- **Manage their own operator settings** — email-send (SMTP)
+  credentials and default display timezone.
 
 Operators do **not** see other operators' sessions in their lobby
-unless they have been added as a co-owner. Sys-admins reach
+unless they have been added as a co-owner. Admins reach
 non-owned sessions through the Sessions Diagnostics surface: they can
 *read* diagnostics (Outbox, Audit log), but **editing requires
 ownership** (Segment 18S Item 3) — the Diagnostics **"Manage"** action
@@ -222,25 +251,73 @@ form. Reviewers can:
 
 - **Sign in** through institutional identity or through a unique
   invitation link.
-- **See a dashboard** of sessions they are invited to.
-- **Open a session's review surface** and see one row per
-  reviewee (or per group) for each instrument they are assigned to.
+- **See the `/me` dashboard** — a cross-role lobby of every
+  session they touch in any participant role (reviewer / reviewee
+  / observer).
+- **Open a session's review surface** (`/me/sessions/{id}/{page}`)
+  and see one row per reviewee (or per group) for each instrument
+  they are assigned to.
 - **Save draft responses** at any time during the session's
   accepting-responses window.
 - **Submit** their work to lock in a "complete" state on the
   operator's monitoring surfaces.
 - **Continue editing** previously-submitted responses while the
   session remains open — submission is a status marker, not a
-  lock.
+  lock — and **Recall** a submission back to draft while the
+  session is still `ready`.
 - **Clear all** their responses with explicit confirmation (a
   per-reviewer destructive action).
-- **Download** a CSV of their own response history once the
-  session is fully submitted.
+- **Download** a CSV of their own response history, and view a
+  read-only per-session **summary** page, once they have fully
+  submitted.
 
 Reviewers do **not** see other reviewers' responses, do not see
 session configuration, and have no operator affordances.
 
-### 4.4 Downstream data consumer
+### 4.4 Reviewee
+
+A session-scoped participant — the person being evaluated. Unlike
+the pre-participant-model era, an email-identified reviewee is now
+a **live authenticated audience** (shipped 2026-05-30 → 06-03).
+A reviewee can:
+
+- **Sign in** and reach their `/me` dashboard.
+- **Open the results surface** (`/me/sessions/{id}/results`) —
+  per-instrument sections rendering the responses collected *about
+  them* in the operator-chosen form (Raw / Anonymized /
+  Summarized) and only while the per-instrument visibility policy's
+  window is open.
+- **Acknowledge** they have seen their results (a one-shot,
+  idempotent gesture stamping `results_acknowledged_at`).
+
+Access is gated on the reviewee's `email_or_identifier` parsing
+as a real email that matches the signed-in user
+(case-insensitive). **Confidential reviewees** (non-email
+identifiers, used for analysis-only sessions) cannot reach the
+results surface by construction — there is no inbox to
+authenticate against.
+
+### 4.5 Observer
+
+A session-scoped participant who views **collated** results across
+the session (as opposed to a reviewee, who sees only their own).
+The observer roster is opt-in per session
+(`observers_enabled`). An observer can:
+
+- **Sign in** and reach their `/me` dashboard.
+- **Open the collation surface** (`/me/sessions/{id}/collation`) —
+  per-instrument tables aggregating responses across the reviewers
+  and reviewees in the observer's **cohort** (a per-observer match
+  rule authored on the Observers Setup page), in the form the
+  per-instrument observer visibility policy allows (Raw /
+  Anonymized rows / Anonymized summaries), with per-instrument CSV
+  downloads. Anonymized downloads swap names for per-session
+  opaque tokens the operator can reverse via the Extract-data Token
+  keys card.
+
+Observers are always email-identified.
+
+### 4.6 Downstream data consumer
 
 The audience for the export. Not an in-system actor; treated as
 the target of the extract files. Their analysis happens outside
@@ -277,8 +354,8 @@ session-resident — they exist only within the session they were
 imported into; there is no cross-session reviewer table.
 
 **User-supplied fields:** name, email (used for identity matching
-and invitation delivery), up to three free-form tags, status
-(active or inactive).
+and invitation delivery), up to three free-form tags, photo /
+profile link, status (active or inactive).
 
 **System-derived fields:** unique within-session row id, created-
 at, updated-at.
@@ -324,53 +401,64 @@ distinct review surfaces (e.g., "Skills assessment" and
 label (≤32 characters, reviewer-facing — appears on the per-page
 nav button and the H2 title), friendly description (≤2000
 characters, reviewer-facing — appears as subtitle below the H2),
-mode (per-reviewee vs group-scoped), pinned rule (which RuleSet
-selects the assignment universe), accepting-responses flag,
-visibility-when-closed flag, ordered list of response fields,
-ordered list of display fields with per-field include/exclude and
-sort-priority annotations.
+unit of review (per-reviewee vs group-scoped), the instrument's
+**assignment rule** (Band 1 — which reviewer × reviewee pairs are
+eligible), accepting-responses flag, visibility-when-closed flag,
+page-break flag (`starts_new_page` — where the reviewer surface
+breaks to a new page), ordered list of response fields, ordered
+list of display fields, and per-audience **visibility policies**
+(see [§5.16](#516-visibility-policy)).
 
 **System-derived fields:** the materialised assignment rows the
-pinned rule produces, the cached eligible-pair count, the
-per-instrument fan-out copies for group-scoped instruments.
+rule produces, the cached eligible-pair count, the per-instrument
+fan-out copies for group-scoped instruments.
 
-A session may have any number of instruments. Each instrument
-defines its own response fields, display fields, sort defaults,
-rule, and group mode independently of the others.
+A session may have any number of instruments (no cap). Each
+instrument defines its own response fields, display fields, rule,
+unit of review, page-break, and visibility policies independently
+of the others. The default instrument is created with the session
+and ships with one Rating + one Comments response field.
 
-### 5.6 Response Type Definition (RTD)
+### 5.6 Observer
 
-A reusable definition of one *kind* of response — its data type,
-its validation rules, its rendering as an input control.
+A person who views collated session results. Observers live in a
+per-session `observers` roster, opt-in via the `observers_enabled`
+feature toggle.
 
-**User-supplied fields:** name (e.g., `Likert5`, `1-to-5dec`,
-`Short_text`, `Yes_no`), data type (String / Integer / Decimal /
-List), min, max, step, list options, description.
+**User-supplied fields:** email (required identity — always
+email-shaped), optional display name, a single free-form tag, a
+per-observer **cohort match rule** (JSON, authored on the
+Observers Setup page — selects which reviewers / reviewees the
+observer's collation aggregates over), status.
 
-**System-derived fields:** per-session id; one of 10 default
-seeds materialised into every newly-created session
-(`Long_text` / `Short_text` / `Yes_no` / `Grade` / `Likert5` /
-`100int` / `0-to-2int` / `1-to-5int` / `1-to-5half` /
-`1-to-5dec`).
-
-Operators may add custom RTDs to a session or to their personal
-library; library RTDs auto-copy into new sessions the operator
-creates. Seeded RTDs are spec-locked — they cannot be edited or
-deleted; the operator copies them ("Save as") to customise.
+**System-derived fields:** unique within-session row id,
+timestamps. Cohort membership is materialised at request time on
+the collation surface (no junction table).
 
 ### 5.7 Response Field
 
 A column on an instrument — one question the reviewer answers
 per reviewee row.
 
-**User-supplied fields:** field key (machine-friendly id, often
-auto-derived from label), friendly label, the RTD it references,
-required flag, help text, visibility flag, order within the
-instrument.
+**User-supplied fields:** friendly label, **data type** (`String`
+/ `Integer` / `Decimal` / `List`), inline bounds (`min` / `max` /
+`step` for numeric; `list_options` for List; length min/max for
+String), required flag, help text (+ its visibility flag),
+visibility flag, order within the instrument.
 
-**System-derived fields:** the inputs that render in each row's
-cell (a text input, a number input, a select, etc.) — driven by
-the referenced RTD's data type.
+**System-derived fields:** the field key (machine id, derived from
+the label); the input control that renders in each cell (text
+input, textarea, number input, or select) — driven directly by
+the field's own `data_type`.
+
+The per-session Response Type Definition catalogue **retired
+2026-05-26** (the `response_type_definitions` table + `_rtds.py`
+are gone). Each response field now carries its own inline
+`data_type` + bounds rather than referencing a shared RTD row. A
+small set of pre-filled **List presets** (Boolean / Agreement /
+Grades, in `instruments/_field_presets.py`) is baked into the
+Band 3 type picker for convenience; the preset's identity is not
+stored — only the resulting `data_type` + `list_options`.
 
 ### 5.8 Display Field
 
@@ -416,7 +504,7 @@ the rule or the rosters and regenerating.
 A reviewer's answer to one response field for one assignment.
 
 **Fields:** assignment id, response field id, value (typed
-according to the RTD), saved-at, submitted-at.
+according to the field's `data_type`), saved-at, submitted-at.
 
 A response row is created the first time a reviewer enters a
 value into that cell; clearing the value back to empty deletes
@@ -435,21 +523,25 @@ A **rule** is a predicate over `(reviewer, reviewee)` pairs that
 selects which pairs are eligible for an instrument. A **RuleSet**
 is a named bundle of rules.
 
-Rule predicates can match against reviewer tags, reviewee tags,
-pair-context tags, the reviewer's self-pairing relationship, the
-reviewee's self-pairing relationship, and the include flag.
+Rule predicates match against reviewer tags, reviewee tags, and
+pair-context tags, using per-predicate operators (`IS` / `IS NOT`
+and the cross-side `IS THE SAME AS` / `IS DIFFERENT FROM`).
 
-A RuleSet is either **seeded** (system-provided, spec-locked,
-copyable but not editable in place) or **personal** (operator-
-authored, editable, optionally saved to the operator's library
-for reuse across future sessions). Three seeded RuleSets always
-exist in a new session: a full-matrix everyone-reviews-everyone
-rule, an exclude-self-review variant, and an empty starter.
+Every RuleSet is **per-session** — the cross-session operator
+**RuleSet library tier retired in Wave 5** (the
+`operator_rule_sets` + `rule_set_revisions` tables and the
+standalone Rule Builder page are gone). There is no
+`personal` / `library` / `seeded` scope distinction anymore.
 
-Each instrument **pins exactly one RuleSet**. Pinned rules drive
-assignment generation per instrument; the operator changes a
-rule by editing it (personal) or by saving-as-then-editing
-(seeded).
+Each instrument owns its rule via **`Instrument.rule_set_id`**,
+authored inline in the instrument card's **Instrument assignment
+rule** (Band 1). When every Link is left in its "all"/"individual"
+state the instrument keeps `rule_set_id = NULL` and the engine
+substitutes a **synthetic Full Matrix** (everyone reviews
+everyone) at evaluate time; the moment a Link carries a filter, a
+`SessionRuleSet` row is materialised lazily. The operator changes
+a rule by editing Band 1; sharing a rule across instruments is via
+Replicate-the-instrument, not a library.
 
 ### 5.12 Invitation
 
@@ -494,6 +586,38 @@ ids for idempotency, and the status of the dispatch attempt.
 The outbox is written *before* dispatch is attempted, so a
 crash mid-dispatch leaves the queue recoverable.
 
+### 5.16 Visibility policy
+
+A per-instrument, per-audience grant controlling **who** may see
+an instrument's responses, **in what form**, and **during which
+window**. Stored one row per `(instrument, audience)` on
+`instrument_view_policies`; resolved at view time (no
+materialisation onto assignments).
+
+- **Audiences** (3): peer reviewer (a reviewer viewing their own
+  work), reviewee, observer. The operator is not a configurable
+  audience — the operator always sees everything, identified.
+- **Form** (3 coherent modes): **Raw** (each reviewer's response,
+  attributed), **Anonymized** (each response, attribution
+  stripped), **Summarized** (per-data-type aggregate stats, no
+  individual rows).
+- **Window**: `while_ongoing` (session lifetime),
+  `after_release` (the operator's Release-responses window),
+  `throughout` (either), stored as a per-window mode pair.
+
+Default on instrument create: no rows — an instrument is invisible
+to every participant audience until the operator opts each one in
+on the instrument card's Band 3 editor.
+
+### 5.17 Feature toggles
+
+Two per-session boolean toggles (`sessions.relationships_enabled`
+/ `sessions.observers_enabled`, both default `False`) gate the
+optional **Relationships** and **Observers** Setup tabs and their
+participant surfaces. Set on the Session details config card. Once
+the corresponding roster has any rows the toggle locks on (can't
+be flipped back off) to avoid orphaning data behind a hidden tab.
+
 ---
 
 ## 6. Session lifecycle
@@ -504,11 +628,11 @@ treats the session in lobby and extract surfaces.
 
 | State | Display label | Meaning |
 |---|---|---|
-| `draft` | Draft | Setup is open. Operator may edit any aspect. Reviewer surface is closed. |
+| `draft` | Draft | Setup is open. Operator may edit any aspect. Reviewer surface is read-only (pre-open). |
 | `validated` | Validated | Setup has been validated and passed all blocking checks. Setup is still open. Any setup mutation auto-invalidates back to `draft`. |
 | `ready` | Activated | Reviewer surface is open and accepting responses. Setup is locked. Operator may pause back to `draft`. |
-| `archived` | Archived | Session is filed away; not shown in the main lobby. No data deleted. Can be unarchived (returns to `draft`). |
-| `expired` | Expired | Reserved terminal state for deadline-passed sessions. Not in active use today. |
+| `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. **Live** (no longer reserved). |
+| `archived` | Archived | Session is filed out of the active lobby; no data deleted. Since the 18R archive harmonization it can be reached from **any non-archived** state. Unarchive returns it to `draft`. |
 
 ### 6.1 Transitions
 
@@ -526,9 +650,20 @@ treats the session in lobby and extract surfaces.
 - **`ready → draft`** (pause / revert): Operator clicks Pause
   Session. The operator must tick a confirmation checkbox; the
   reviewer surface closes; responses are preserved.
-- **`draft ↔ archived`**: Operator archives from the lobby
-  (any non-`ready` state can archive); operator unarchives from
-  the archived-sessions child page (returns to `draft`).
+- **`ready → expired`** (Close session): Operator clicks the
+  Workflow card's **Close session** button. Every instrument is
+  closed and all responses are preserved. From `expired` the
+  operator can **Revert to draft** to reopen the session for
+  editing (the revert path accepts both `ready` and `expired`).
+- **`* → archived`**: Operator archives via the Workflow card's
+  Archive button from **any non-archived** state (draft /
+  validated / ready / expired), or via the lobby bulk-archive
+  (which still pre-filters to `draft`). Unarchive returns the
+  session to `draft`.
+- **Release-responses window**: within `ready` (and after close),
+  the operator can open the reviewee/observer results window early
+  with **Release responses** and end it with **Stop releasing**
+  (Workflow card, `ready` / `expired`).
 
 The reviewer surface is open for writes **only in `ready`**. In
 every other state the reviewer surface still loads, but inputs
@@ -544,10 +679,11 @@ and offering a one-click Pause action. While locked, upload
 affordances and destructive-action cards are hidden; form
 controls inside builders are disabled.
 
-The Edit Session Details page is also lifecycle-gated — its
-form fields refuse changes that would alter the deadline,
-timezone, or rosters of an active session unless the operator
-first pauses.
+The Session details config card on Session Home is also
+lifecycle-gated — its edit swap (`?editing=1`) is only reachable
+in `draft` / `validated`; on an active session the Lock toggle
+renders inert with a "revert to draft to edit" tooltip, and a
+direct POST to `/config` is rejected server-side.
 
 ### 6.3 Lazy deadline closure
 
@@ -603,38 +739,45 @@ Reviewers can access only the sessions they are listed in.
 ### 7.3 Workspace allowlist
 
 The workspace allowlist is the gate between authenticated
-identity and operator capability. A user is one of:
+identity and operator capability. A user is one of (three-tier
+model, [§4.1](#41-system-administrator-three-tier-model)):
 
 - **Not allowlisted** — authenticated but cannot reach operator
   routes; sees an access-denied page.
-- **Operator** — can create sessions and is automatically the
-  owner of sessions they create; can be added as co-owner to
-  other operators' sessions.
-- **Sys admin** — operator privileges plus workspace governance
-  capability.
+- **Operator** (`is_operator`) — can create sessions and is
+  automatically the owner of sessions they create; can be added
+  as co-owner to other operators' sessions.
+- **Admin** (`is_sys_admin`) — operator capability plus workspace
+  governance (Accounts Management, Sessions Diagnostics, audit-log
+  viewer).
+- **Super-admin** — derived from `SUPER_ADMIN_EMAILS` deployer
+  config; the only actor who can promote / demote the admin flag,
+  and protected from demotion / deletion in-app.
 
-The allowlist is managed in the sys-admin surface; promotion,
-demotion, and removal are audit-logged.
+The allowlist is managed on the Accounts Management page;
+promotion, demotion, and removal are audit-logged.
 
 ### 7.4 Session ownership
 
 Each session has one or more **operator owners**. Ownership is
-managed on the session's Owners card on the Edit Session Details
-page (visible to existing owners and to sys-admins). An owner
-can add another allowlisted operator as a co-owner; an owner can
-remove a co-owner. The last owner cannot be removed; a sys-admin
-must transfer ownership first.
-
-Sys-admins can manage any session's owners via the per-session
-ownership management page in the sys-admin surface.
+managed on the **Owners** sub-card of the Session details config
+card on Session Home (visible to existing owners and admins). An
+owner can add another allowlisted operator as a co-owner and
+remove a co-owner; the last owner cannot be removed. A non-owner
+admin can only **self-add** (the adopt bootstrap from Sessions
+Diagnostics) or clone; removing owners and editing config require
+real ownership.
 
 ---
 
 ## 8. Per-session metadata and settings
 
-A session carries metadata that the operator edits on the
-session's Create / Edit Session Details form, plus per-session
-preferences accessible from setup pages or operator settings.
+A session carries metadata that the operator edits on the Create
+New Session form and, thereafter, in-place on the **Session
+details** config card on Session Home (`?editing=1` display ↔ edit
+swap; the standalone Edit page retired in 18R Item 4), plus
+per-session preferences accessible from setup pages or operator
+settings.
 
 ### 8.1 Identity fields
 
@@ -665,27 +808,32 @@ preferences accessible from setup pages or operator settings.
 ### 8.3 Schedule fields
 
 The session optionally carries scheduled-event anchors and
-offsets:
+offsets (Segment 18G schema; the activation / invite / reminder
+consumers are wired, archive / retention are deferred):
 
-- **Scheduled activation timestamp** — moment at which a
-  `validated` session auto-promotes to `ready`.
-- **Invite offsets** — comma-separated durations (e.g., `0h`,
-  `-1d`) anchored on the scheduled activation. Each offset
-  triggers one auto-send of invitations.
-- **Reminder offsets** — comma-separated durations anchored on
-  the deadline. Each offset triggers one auto-send of
-  reminders.
+- **Scheduled activation timestamp** (`scheduled_activate_at`) —
+  moment at which a `validated` session auto-promotes to `ready`.
+- **Invite offsets** — JSON list of ISO 8601 durations (e.g.,
+  `-P1D`, `-PT2H`) anchored on the scheduled activation. Each
+  offset triggers one auto-send of invitations.
+- **Reminder offsets** — JSON list of ISO 8601 durations anchored
+  on the deadline. Each triggers one auto-send of reminders.
+- **Release-responses window** (`responses_release_at` /
+  `responses_release_until`) — the absolute datetime window during
+  which reviewee/observer `after_release` visibility policies open.
 - **Archive offset** — duration anchored on the deadline at
-  which the session auto-archives (currently inert pending
-  pilot demand).
-- **Retention exception** / **retention overrides** — per-
-  session retention policy overrides (inert pending pilot
-  demand).
+  which the session auto-archives (schema present; consumer
+  deferred pending pilot demand).
+- **Retention overrides** — per-session retention policy overrides
+  (schema present; consumer deferred).
 
-The Edit Session Details form previews every resolved schedule
-moment in a chronological "Schedule timeline" sub-card: Start
-(scheduled activation), invite fires, End (deadline), reminder
-fires.
+Every scheduled anchor obeys a save-time ordering chain
+(`scheduled_activate_at ≤ deadline ≤ responses_release_at <
+responses_release_until`) and an anchor-null inertness rule (an
+offset whose anchor is NULL never fires). Triggers fire via the
+lazy-observer pattern (on the next operator GET past the
+scheduled time), not a background worker. The Session details
+config card shows each offset's resolved fire moment inline.
 
 ### 8.4 Email-template fields
 
@@ -743,11 +891,24 @@ Distinct from per-session settings, each operator owns:
   workspace-level sender.
 - **Default display timezone** — falls in when a new session is
   created.
-- **Personal library of RTDs and RuleSets** — operator-curated
-  reusable artefacts that auto-copy into newly-created sessions.
 
-The operator's settings page also supports clear/reset of each
-section.
+(The personal library of reusable RTDs and RuleSets that once
+lived here retired in Wave 5 / Segment 18J alongside the RTD table
+and the operator RuleSet library tier.) The operator's settings
+page also supports clear/reset of the SMTP section.
+
+### 8.8 User-interface feature toggles
+
+Two per-session booleans, set on the config card's **User
+interface settings** sub-card, opt the session into the optional
+Setup tabs (see [§5.17](#517-feature-toggles)):
+
+- **`relationships_enabled`** — the Relationships Setup tab + page.
+- **`observers_enabled`** — the Observers Setup tab + page, the
+  Extract-data Observers/Token-keys cards, and the observer
+  collation surface.
+
+Each locks on once its roster has rows.
 
 A full catalogue of every persisted setting lives in
 `spec/settings_inventory.md`.
@@ -792,68 +953,88 @@ The Create Session form (`/operator/sessions/new`) asks for the
 core metadata: name, code, timezone, deadline, description,
 help contact.
 
-The form **gates submit on Name + Code** being non-empty
-(commit 9cfb70e, 2026-05-22). On submit, the session is created
-as `draft`, the operator is set as the first owner, and the
-operator lands on the **Edit Session Details** page to fill in
-any remaining fields. The same redirect-to-Edit pattern applies
-to the Sessions-lobby Clone action.
+The form **gates submit on Name + Code** being non-empty, and also
+carries the User-interface settings toggles
+(`relationships_enabled` / `observers_enabled`) and the schedule
+fields. On submit, the session is created as `draft`, the operator
+is set as the first owner, and the operator lands on **Session
+Home** — where the Session details config card (`?editing=1`) is
+the surface for filling in any remaining fields. The Sessions-lobby
+Clone action lands on Session Home the same way.
 
 ### 9.3 Session Home
 
 The Session Home page (`/operator/sessions/{id}`) is the
-operator's primary working surface for a session. It carries:
+operator's primary working surface for a session. Since 18R
+Item 4 it consolidated session-config **display and edit** onto
+Home (the standalone Edit page retired; `/edit` now
+301-redirects to `…?editing=1#session-config`). Top → bottom:
 
-- **Workflow card** at the top (full width) — the lifecycle-
-  driven card explaining the current state and offering the
-  single most-important next action(s). The card frame is
-  constant (H2 "Workflow", accent-blue border, height grows
-  to fit); the contents differ across the ten lifecycle states
-  (see [§9.7](#97-validation-and-activation)).
-- **Session Details card** in the left column of the bottom
-  grid — read-mostly metadata, the resolved Schedule timeline
-  sub-card, and an Edit button to open the Edit Session
-  Details sub-page.
-- **Quick Setup card** in the right column — a four-slot
-  surface (Reviewers / Reviewees / Relationships / Session
-  settings) carrying one CSV upload affordance per slot plus a
-  "Submit all" action that chains the imports in dependency
-  order.
-- **Extract Data card** below Quick Setup — five live CSV
-  download tiles (Reviewers, Reviewees, Relationships, Settings,
-  Responses) plus an inert zip-all bundle footer (the zip
-  itself ships as part of the response-flavour follow-on).
+- **Workflow card** (full width) — the lifecycle-driven card
+  explaining the current state and offering the single
+  most-important next action(s). The card frame is constant (H2
+  "Workflow", accent-blue border, height grows to fit); the
+  contents differ across the lifecycle states (see
+  [§9.8](#98-validation-and-activation)).
+- **Session details card** (full width, below Workflow) — a
+  display ↔ edit swap (`?editing=1`) carrying every config field
+  (name, code, description, help contact, timezone, and the
+  Start / End / Release-from / Release-until schedule + invite /
+  reminder offsets, each showing its resolved fire moment inline),
+  plus **Owners** and **User interface settings** sub-cards. Save
+  POSTs to `/config` and redirects back to Home in display mode.
+- **Quick Setup card** (bottom-left of a `.bottom-grid`) — a
+  bulk-import surface with one CSV upload affordance per roster /
+  settings slot (Reviewers / Reviewees / Relationships / Settings,
+  plus a conditional Observers slot when `observers_enabled`) and a
+  "Submit all" action that chains the imports in dependency order.
+  Defaults to locked (Lock/Unlock toggle).
+- **Danger Zone card** (bottom-right of the `.bottom-grid`) —
+  **Delete Data** (wipes every reviewer response, preserves setup;
+  confirm-gated; any state) and **Delete Session** (removes the
+  session entirely; confirm-gated; visible-but-disabled in `ready`,
+  route-enforced server-side). Returned to Home in 18R Item 4 when
+  the Edit page retired.
 
-The **Danger Zone card** (Delete Data + Delete Session) was
-moved off Session Home into the bottom-right of the Edit Session
-Details page on 2026-05-22 — destructive operations cluster
-with the other edit affordances rather than competing for
-attention on Home.
+The **Extract Data / Extract Setup card** — the round-trip
+setup CSV download tiles — moved off Session Home to the
+Operations-strip **Extract data** tab in 18R Item 4 (see
+[§9.12](#912-extract-data)).
 
-### 9.4 Edit Session Details
+### 9.4 Session details config card
 
-The Edit Session Details sub-page (`/operator/sessions/{id}/edit`)
-opens from the Session Home Session Details card's Edit button.
-It is a `.bottom-grid` split:
+The Session details card on Session Home (`#session-config`) is
+the successor to the retired standalone Edit Session Details page.
+`GET /operator/sessions/{id}/edit` now 301-redirects to
+`…?editing=1#session-config`.
 
-- **Left column** — the full metadata edit form (name, code,
-  description, deadline, timezone, help contact, scheduled
-  activation timestamp, invite offsets, reminder offsets), with
-  inner half-width cards for the **Schedule timeline** preview
-  and the **Owners** card.
-- **Right column, bottom** — the **Danger Zone** card:
-  - **Delete Data** — wipes every reviewer response in the
-    session while preserving setup. Confirmation-checkbox gated.
-    Always available, regardless of session state.
-  - **Delete Session** — removes the session entirely.
-    Confirmation-checkbox gated. Visible-but-disabled in
-    `ready` (operator must pause first); the route also enforces
-    the gate server-side as the source of truth.
+- **Display ↔ edit swap.** The card carries
+  `data-config-mode="display|edit"`; each field holds one slot —
+  a read-only value in display mode, its `<input>` in edit mode.
+  The canonical edit state is the `?editing=1` URL param, gated on
+  the session being editable (`draft` / `validated`) so a stale
+  link on an active session degrades to display mode.
+- **Fields.** Name / Code, Description, Help contact, Timezone,
+  and the four schedule datetimes (Start / End / Release-from /
+  Release-until) plus the Send-invites and Send-reminders offset
+  lists — each offset shown in display mode next to its resolved
+  send datetime.
+- **Owners sub-card** — read-only Email / Name / Role / Added
+  table in display mode; add-owner typeahead + Remove column in
+  edit mode. Owner add/remove POST to `/owners/*`.
+- **User interface settings sub-card** — the
+  `relationships_enabled` / `observers_enabled` checkboxes, each
+  lock-on-data.
+- **Save** POSTs to `/operator/sessions/{id}/config` and redirects
+  back to Home in display mode. Editing metadata is
+  non-destructive (never touches assignments or responses), so
+  there is no response-loss acknowledgement gate.
 
 ### 9.5 Populate rosters
 
-Three Setup pages share an identical chrome shape: Reviewers,
-Reviewees, Relationships.
+Up to four Setup pages share an identical chrome shape: Reviewers,
+Reviewees, **Relationships** (gated on `relationships_enabled`),
+and **Observers** (gated on `observers_enabled`).
 
 Each page offers:
 
@@ -877,11 +1058,15 @@ Each page offers:
 - **Danger Zone card** below the upload — Delete All (confirm-
   gated, wipes the whole roster).
 
-The Reviewers page collects: name, email, tag 1 / 2 / 3.
+The Reviewers page collects: name, email, tag 1 / 2 / 3, photo
+link, status.
 The Reviewees page collects: name, email_or_identifier, tag 1 /
-2 / 3, photo link.
+2 / 3, photo link, status.
 The Relationships page collects: reviewer email, reviewee email,
 pair-context tag 1 / 2 / 3, status.
+The Observers page collects: email, display name, a single tag,
+the per-observer cohort match rule, status — no friendly-label
+editor (single-tag observers don't need one).
 
 CSV import is **wipe-and-replace**: on each upload the whole
 existing roster is dropped and the new file's rows take its
@@ -899,38 +1084,50 @@ instrument), visibility-when-closed pill row, bulk Open/Close
 and Show/Don't-show actions, and a Preview Instrument button
 linking into the Previews hub.
 
-Below it, one **per-instrument card** per instrument, each
-carrying:
+Below it, one **per-instrument card** per instrument, each a
+collapsible `<details>` with a locked/unlocked edit state (at
+most one instrument unlocked at a time). Its stripes:
 
-- **Identity row** — short label, operator-internal name,
-  rule picker (current pinned RuleSet + eligible-pair count),
-  accepting-responses toggle, visibility-when-closed toggle.
-- **Display Fields table** — one row per included display
-  field, with Source / Friendly Label / Include / Order / Sort
-  controls. The seven D6 sources are choosable; reviewee name
-  and email are always present.
-- **Response Fields table** — one row per response field,
-  with Field Key / Friendly Label / Type (RTD picker) /
-  Required / Order. Type is editable on add but locked once
-  the field has saved responses (matches the validation
-  guarantees).
-- **Response Fields Help table** — per-field help text and
-  visibility flag (full-width below the field-builder grid).
-- **Action row** — Save / Cancel / Edit (mutually exclusive
-  state machine; only one instrument can be in edit mode at
-  a time), Add new instrument, Add group instrument,
-  Replicate (clones the current instrument's content into a
-  new instrument after this one), Delete this instrument
-  (cascade-confirm-gated; blocked when there is only one
-  instrument).
+- **Identity** (in the card `<summary>`) — the reviewer-facing
+  short label (editable inline when unlocked), Set-up / Not-set-up
+  and Locked / Unlocked pills, drag handle for reorder, and (when
+  expanded, in `ready`) the per-instrument open/close form.
+- **Instrument assignment rule** (Band 1) — three "Links" of equal
+  width: Link 1 *Who does the review*, Link 2 *Who is being
+  reviewed*, Link 3 *Unit of review* (Individual vs Group). Each
+  Link cycles a `Not set → All → Filter/Group` pill. A **"Not set"
+  safety gate** requires the operator to deliberately touch every
+  Link before the instrument reads as configured, so the implicit
+  Full Matrix default can't ship silently. (The band renamed from
+  "Band 1" to "Instrument assignment rule" in 18R Item 1; the
+  standalone Rule Builder page retired in Wave 5.)
+- **Band 2 — Display fields + preview** — a chip row of populated
+  display-field sources (Reviewee Name / Email always shown; the
+  rest opt-in) plus a live preview of one sample reviewee row, with
+  drag-resizable column widths and the instrument description
+  (lock-driven edit swap). Band 2 also renders a read-only "Who can
+  see what you wrote" preview of the visibility policy.
+- **Band 3 — Response fields** — a stack of inline editor rows,
+  one per response field: Name, **Type** (`String / Integer /
+  Decimal / List` + a Quick-fill List presets `<optgroup>`),
+  inline bounds (`min` / `max` / `step` or `list_options`),
+  Required toggle, help-text toggle. Type + bounds lock once the
+  field has saved responses. Per-field surface visibility is
+  toggled from the paired Band 2 pill. Band 3 also hosts the
+  **per-audience visibility-policy editor** — a 3 × 2 chip grid
+  (Reviewers / Reviewees / Observers × Session-ongoing /
+  Responses-released) picking Raw / Anonymized / Summarized (or
+  off) per audience per window (see
+  [§5.16](#516-visibility-policy)).
+- **Action row** — Save / Cancel (edit only) / Replicate / Delete
+  (confirm-gated; blocked when only one instrument) / **+Instrument**
+  / **+Page break** / Lock-Unlock. One bulk Save commits identity,
+  Band 1, Band 3, visibility policies, and column widths together
+  through the consolidated `/save` endpoint (18R Item 2).
 
-The **Response Type Definitions card** lives below all per-
-instrument cards: a full catalogue of every RTD in the
-session with operator add / edit / delete. Editing an RTD
-re-derives validation on every response field that references
-it. Deleting an RTD that is referenced by any response field
-shows a cascade-warning banner and is blocked until the
-referencing fields are removed.
+There is **no Response Type Definitions card** — the per-session
+RTD catalogue retired 2026-05-26; each Band 3 row carries its own
+inline `data_type` + bounds instead.
 
 ### 9.7 Configure assignments
 
@@ -938,10 +1135,12 @@ The Assignments page (`/operator/sessions/{id}/assignments`) is
 on the Operations row of the chrome. It carries:
 
 - **Per-instrument status card** — one block per instrument,
-  showing type (Individual / Group), pinned RuleSet, generated
-  pair count, per-instrument self-review toggle (locked while
-  `ready`), per-instrument "Show in preview table" filter
-  checkbox.
+  showing type (Individual / Group), generated pair count (with a
+  `stale` pill when the current rule + roster would produce a
+  different set), group count, self-review count + per-instrument
+  self-review toggle (locked while `ready`), included count, and a
+  per-instrument "Show in preview table" filter checkbox. (The
+  Rule column retired 2026-05-26 — the rule lives on Band 1.)
 - **Self-reviews card** — session-wide self-reviews-active
   toggle.
 - **Operator-actions card** — search box + Search-by
@@ -954,10 +1153,13 @@ on the Operations row of the chrome. It carries:
   toggles.
 
 Assignments are not edited row by row. The operator changes
-which pairs exist by changing the rule (in Band 1 of an
-instrument card on the Instruments page; the standalone Rule
-Builder sub-page retired in Wave 5 PR 5.1) or the rosters and
-**regenerating** via the Workflow card's Prepare action. See
+which pairs exist by changing the rule (in the **Instrument
+assignment rule** card / Band 1 on the Instruments page; the
+standalone Rule Builder sub-page retired in Wave 5) or the
+rosters and **regenerating** via the Workflow card's Prepare
+action. Generation runs a per-instrument rule pass over the
+session's reviewer × reviewee matrix; an instrument with
+`rule_set_id = NULL` uses the synthetic Full Matrix. See
 [§14](#14-reconciling-regeneration) for what regeneration
 preserves.
 
@@ -1062,23 +1264,45 @@ activating.
 
 ### 9.12 Extract data
 
-The Extract Data card on Session Home (and the equivalent
-operator-facing surface inside the chrome) offers five live CSV
-downloads per session:
+Extraction now splits across two surfaces:
 
-- **Reviewers** — roster columns.
-- **Reviewees** — roster columns.
-- **Relationships** — pair tags + status.
-- **Settings** — full session-wide configuration round-trip.
-- **Responses** — long-format reviewer × reviewee × instrument
-  response data.
+**Extract Setup card** (the round-trip / porting CSVs) — moved off
+Session Home to the **Extract data** Operations tab in 18R Item 4.
+It offers per-entity download tiles — Reviewers, Reviewees,
+Relationships (gated on `relationships_enabled`), Settings, and a
+conditional Observers tile (`observers_enabled`) — plus a Zip-all
+footer bundling the setup CSVs as `{code}_setup.zip`. Each tile
+greys its Download button when its roster is empty; Settings is
+always clickable. Filenames follow `{session_code}_{kind}.csv`.
 
-Each tile shows the live row count; tiles for empty rosters
-grey their Download button. Filenames follow
-`{session_code}_{kind}.csv`. A zip-all bundle footer collects
-all five files plus per-instrument response CSVs into a single
-`{code}_bundle.zip`. The **audit-events CSV** is deliberately
-not on this card; it lives behind the sys-admin gate.
+**Extract data page** (`/operator/sessions/{id}/extract-data`) —
+the Operations-strip workbench for **shaping response data** for
+offline analysis. It is deliberately not an in-app analysis tool
+(no charts, no pivots); it cuts the response data along the
+dimension the operator asks for. Cards:
+
+- **Extract all data** — a top-level `Zip all` of the response
+  files (`{code}_responses.zip`), scoped by chip.
+- **By instrument** — one wide CSV per instrument (rows =
+  reviewer × reviewee pairs, columns = response fields
+  side-by-side) for cross-reviewer comparison.
+- **Reviewer / Reviewee response metadata** — per-entity activity
+  rollups (assigned / answered counts + per-field aggregates by
+  data type), with a Self-review handling chip (`Include self` /
+  `Exclude self` / `Both`).
+- **Data shaper** — a generalised builder: pick axis (reviewer /
+  reviewee), instrument / response-field scope, identification and
+  aggregate columns via chips, see a live preview row, save the
+  shape under a name (`data_shapes` table), and download its CSV.
+- **Token keys** (conditional, `observers_enabled`) — the
+  operator-side deanonymization key (Role / Name / Email / Token)
+  mapping each participant to the per-session opaque token used in
+  Anonymized observer downloads.
+
+Every download emits an audit event. The **audit-events CSV**
+lives behind the admin gate, not here. Round-trip session rehydrate
+(18P — rebuild a session from a complete extract set via the
+Rehydrate page) is a related operator surface.
 
 Full export contracts: see [§12](#12-data-export).
 
@@ -1086,17 +1310,16 @@ Full export contracts: see [§12](#12-data-export).
 
 The operator's Settings page (`/operator/settings`) carries:
 
-- **Email-send credentials** — host, port, username, password
-  (encrypted at rest), display name, encryption mode (TLS,
-  STARTTLS, none).
-- **Default display timezone** — IANA picker with a worked-
-  example preview.
-- **Library RTDs card** — every RTD the operator has saved to
-  their personal library, with per-row delete and per-row
-  "in N sessions" count.
-- **Library RuleSets card** — every RuleSet the operator has
-  saved to their personal library, with the same per-row
-  affordances.
+- **Email send (SMTP)** — host, port, from-email / username,
+  password (encrypted at rest), display name, encryption mode
+  (TLS / STARTTLS / none).
+- **Date & time** — the operator's default display timezone (IANA
+  typeahead with a worked-example live preview).
+- **Clear all settings** — wipes the SMTP fields on the account.
+
+(The personal Library RTDs and Library RuleSets cards that once
+sat here retired in Wave 5 / Segment 18J together with the RTD
+table and the operator RuleSet library tier.)
 
 ### 9.14 Sys admin surface
 
@@ -1134,12 +1357,22 @@ A reviewer reaches their work through one of two entry points
 
 After sign-in, the reviewer lands on:
 
-- The **reviewer dashboard** (`/me`) — a list of sessions
-  the signed-in identity is invited to or active in, with one
-  card per session showing session name, deadline, status,
-  and a "Open review" button.
+- The **`/me` dashboard** — a cross-role participant lobby
+  (shipped 2026-05-30) listing **every session the signed-in
+  identity touches in any participant role** (reviewer / reviewee
+  / observer). One table row per session carries the session name
+  with per-role pills beneath it, Start / End / Timezone columns,
+  a Session-status pill, and a Reviewer-status pill. The
+  session-name link targets the first reachable role in priority
+  order Reviewer → Reviewee → Observer; each role pill deep-links
+  to its own surface.
 - The **session review surface** for a given session — see
   below.
+
+Every participant surface also carries a **role-navigator chip
+strip** below the page header, letting a multi-role user swap
+between their reviewer / reviewee / observer surfaces on the same
+session without bouncing through `/me`.
 
 ### 10.2 Pre-open and post-close behaviour
 
@@ -1174,17 +1407,16 @@ visible instrument. The reviewer's draft data on every page
 persists in the form while they navigate between pages, and is
 written together on Save / Submit.
 
-**Cell rendering** is driven by each response field's RTD:
+**Cell rendering** is driven by each response field's own
+`data_type` + inline bounds:
 
-- String fields render as `<input type="text">` (≤100
-  characters) or `<textarea>` (>100 characters, two-row
-  default).
-- Integer fields render as `<input type="number">` with min /
-  max / step from the RTD.
-- Decimal fields render as `<input type="number">` with a
-  step ≤ 1.
-- List fields render as `<select>` with an empty leading
-  option plus the RTD's list values.
+- `String` fields render as `<input type="text">` (`max_length`
+  ≤ 100) or `<textarea>` (`max_length` > 100, initial height
+  derived from the length cap and column width).
+- `Integer` / `Decimal` fields render as `<input type="number">`
+  with `min` / `max` / `step` from the field's bounds.
+- `List` fields render as `<select>` with an empty leading
+  option plus the field's `list_options`.
 
 Display columns render as plain text (or as an anchor for
 photo / profile-link sources).
@@ -1263,13 +1495,55 @@ zone) wipes every response across every instrument for that
 reviewer. Confirmation checkbox required. Audit-logged as
 `responses.cleared`.
 
-### 10.8 Reviewer's own CSV download
+### 10.8 Reviewer's own CSV download and summary page
 
 Once the session has fully submitted (every required cell
-populated and stamped), the reviewer can download a CSV of
-their own response history — `{code}_my_responses.csv`,
-same 21-column shape as the operator-facing Responses
-extract narrowed to this reviewer's rows.
+populated and stamped), the reviewer sees a read-only
+**summary page** (`/me/sessions/{id}/summary`) — one section per
+instrument they responded on, a submitted-on timestamp, a
+**Recall my submission** control (rolls the submission back to
+draft while the session is still `ready`), and a **Download my
+responses (CSV)** button emitting `{code}_my_responses.csv` (same
+21-column shape as the operator Responses extract, narrowed to
+this reviewer's rows).
+
+### 10.9 Reviewee results surface
+
+An email-identified reviewee reaches
+`/me/sessions/{id}/results` (gated by
+`require_reviewee_in_session`). The body is per-instrument
+sections — one section per instrument that carries a `reviewee`
+visibility policy — rendering the responses collected *about this
+reviewee* in the policy's mode:
+
+- **Raw** — one row per reviewer who responded, identified.
+- **Anonymized** — the same per-row table with every
+  identification cell stripped to a muted em-dash.
+- **Summarized** — one aggregate row per instrument, with
+  per-data-type stats (Integer/Decimal: average / median / min /
+  max / N; List: per-choice frequency; String: total + average
+  length).
+
+Sections only surface values while the policy's window
+(`while_ongoing` / `after_release`) is open. An **Acknowledge
+card** at the foot lets the reviewee confirm they've seen their
+results — a one-shot, idempotent gesture stamping
+`results_acknowledged_at` and emitting
+`reviewee.results_acknowledged`.
+
+### 10.10 Observer collation surface
+
+An observer reaches `/me/sessions/{id}/collation` (gated by
+`require_observer_in_session`). The body is a per-instrument
+3-row collation table scoped to the observer's **cohort**: a
+distinct-reviewer headcount + shared aggregate, a
+distinct-reviewee headcount + the same aggregate, and a
+conditional per-instrument **Download CSV** button. Identification
+mode follows the per-instrument observer visibility policy (Raw /
+Anonymized rows / Anonymized summaries); Anonymized downloads
+substitute per-session opaque tokens for names (reversible via the
+operator's Extract-data Token keys card). Per-instrument rendering
+is gated on the active window the same way the reviewee surface is.
 
 ---
 
@@ -1369,10 +1643,9 @@ reasons) record every firing. Per-reviewer dedupe via the
 outbox's correlation_id prevents duplicate reminders to the
 same reviewer for the same offset.
 
-The Session Details edit form previews every resolved fire
-moment in chronological order in the Schedule timeline sub-
-card; the Manage Invitations page surfaces the same
-information as a captioned auto-send line.
+The Session details config card previews every resolved fire
+moment inline next to its offset; the Manage Invitations page
+surfaces the same information as a captioned auto-send line.
 
 ### 11.5 Backend options
 
@@ -1411,7 +1684,7 @@ infrastructure, and cost trade-offs lives in
 
 ### 11.6 What is wired today, what is not
 
-As of 2026-05-22, the following invitation-and-email surface
+As of 2026-08-18, the following invitation-and-email surface
 is **wired**:
 
 - Per-session invitation, reminder, and responses-received
@@ -1428,26 +1701,31 @@ is **wired**:
   the lazy observer that fires per offset, the per-offset
   audit events on fire and skip, the manual-activate modal
   that warns the operator about pending auto-sends.
-- The Schedule timeline preview on Edit Session Details
-  showing every resolved fire moment.
+- The resolved fire-moment preview inline on the Session
+  details config card, showing every scheduled send.
 - The Manage Invitations page with per-reviewer status,
   per-row Send / Send-reminder / Regenerate buttons, and
   the auto-send captions.
 - The chrome strip's four-state Invitations pill
   (`Not created` / `Not sent` / `Partially sent` / `All
   sent`).
-- The operator settings page for the SMTP credentials and
-  the deployment configuration switch for the active
-  backend.
+- The operator settings page for the SMTP credentials
+  (`smtp` is the only legal transport today).
+- A concrete `SmtpEmailTransport` over `smtplib` (STARTTLS /
+  implicit TLS), plus a typed `GraphEmailTransport` stub, behind
+  the `EmailTransport` seam and the `transport_for(settings)`
+  factory.
 
-What is **not yet wired**: the actual transport dispatch.
-The `EmailTransport` seam is in place, the SMTP backend
-(Option A) is stubbed, but no message is actually delivered
-to a mail server today. Invitations and reminders accumulate
-in the outbox with status `queued`; the Manage Invitations
-page reflects them as queued. The functional contract is
-complete and ready to be exercised; only the last mile (the
-backend connection) is pending.
+What is **not yet wired**: the send routes do **not** invoke the
+transport. When the operator (or an auto-send offset) issues an
+invitation or reminder, the system renders the message, writes the
+outbox row, and flips its status straight to `sent` as a
+**dev-mode preview** — no message is actually handed to a mail
+server. The `SmtpEmailTransport` exists and is unit-tested but has
+no caller on the live send path; lighting it up is the scope of
+Segment 14-1 Part A. The functional contract (templates, tokens,
+outbox, scheduling, transport class) is complete; only the last
+mile (invoking the transport from the send path) is pending.
 
 This gap is the scope of an upcoming segment of work. **The
 functional spec describes RRW's intended invitation and
@@ -1459,12 +1737,16 @@ deployment-level concern, not a functional one.
 
 ## 12. Data export
 
-Five **live CSV downloads** ship on Extract Data per session:
-Reviewers, Reviewees, Relationships, Settings, Responses. A
-sixth file — the **audit-events CSV** — is reachable from the
-per-session audit-log viewer behind the sys-admin gate. A
-**zip-all bundle** wraps all six plus per-instrument response
-CSVs and per-entity stats CSVs into a single archive.
+Extraction splits across two surfaces (see
+[§9.12](#912-extract-data)): the **Extract data** Operations tab
+hosts the response-shaping lenses + Data shaper, and the **Extract
+Setup** card (relocated to that same tab) hosts the round-trip
+setup CSVs — Reviewers, Reviewees, Relationships (gated),
+Observers (gated), Settings — plus a `{code}_setup.zip` bundle.
+The response CSVs (unified Responses, per-instrument files, and
+entity-stats files) ship via the `{code}_responses.zip` bundle.
+The **audit-events CSV** is reachable from the per-session
+audit-log viewer behind the admin gate.
 
 ### 12.1 Envelope
 
@@ -1478,21 +1760,23 @@ exception, called out on the file's surface).
 ### 12.2 Per-entity files
 
 - **Reviewers.csv** — `ReviewerName, ReviewerEmail,
-  ReviewerTag1, ReviewerTag2, ReviewerTag3`. Active rows
-  first, then by name, then by email. Status is **not**
-  exported (operator manages via Setup UI).
-- **Reviewees.csv** — `RevieweeName, RevieweeEmail_or_Identifier,
-  RevieweeTag1, RevieweeTag2, RevieweeTag3, PhotoLink`. Same
-  sort discipline.
+  ReviewerTag1, ReviewerTag2, ReviewerTag3, PhotoLink, Status`.
+  Active rows first, then by name, then by email.
+- **Reviewees.csv** — `RevieweeName, RevieweeEmail,
+  RevieweeTag1, RevieweeTag2, RevieweeTag3, PhotoLink, Status`.
+  Same sort discipline.
 - **Relationships.csv** — `ReviewerEmail, RevieweeEmail,
   PairContextTag1, PairContextTag2, PairContextTag3, Status`.
   Active rows first, by reviewer email, then by reviewee
-  identifier.
+  identifier. (Gated on `relationships_enabled`.)
+- **Observers.csv** — `ObserverEmail, ObserverName, ObserverTag1,
+  Status, CohortRule`. Conditional on `observers_enabled`.
 - **Settings.csv** — three-column `field, value, data_type`
-  format spanning six sections (session-level fields, email
-  templates, RTDs, instruments, session RuleSets, friendly
-  labels). Round-trips perfectly back through the Settings
-  import path.
+  format spanning five sections (session-level fields, email
+  templates, instruments, session RuleSets, friendly labels).
+  Round-trips perfectly back through the Settings import path.
+  (The former RTDs section retired 2026-05-26 with the RTD
+  table; legacy `rtds[...]` rows are silently ignored on import.)
 
 ### 12.3 Responses extract
 
@@ -1545,7 +1829,7 @@ the Settings extract together guarantee this.
 
 In addition to the operator-facing files, the reviewer can
 download their own response history once the session is fully
-submitted (see [§10.8](#108-reviewers-own-csv-download)).
+submitted (see [§10.8](#108-reviewers-own-csv-download-and-summary-page)).
 
 The full per-file column listing, validation rules, and round-
 trip guarantees are documented in `spec/csv_contracts.md`.
@@ -1584,10 +1868,15 @@ documented checklist that gates `draft → validated`:
 
 - Session metadata is complete (name, code, deadline, timezone).
 - Rosters are non-empty and consistent.
-- Each instrument has at least one response field.
-- Each instrument has a pinned rule.
+- Each instrument has at least one visible response field.
+- Each instrument's assignment rule is deliberately configured
+  (the "Not set" safety gate — all three Links touched — plus a
+  non-empty materialised set; an untouched rule reads as
+  unconfigured even though the synthetic Full Matrix would
+  otherwise cover it).
 - Generated assignments cover every active reviewer (with
-  warnings, not errors, for under-covered reviewees).
+  warnings, not errors, for under-covered reviewees) and no
+  instrument has every row excluded.
 - Email templates are not empty.
 - For group-scoped instruments, at least one boundary tag is
   marked.
@@ -1599,9 +1888,10 @@ relevant Setup page.
 
 ### 13.3 Reviewer response validation
 
-On Save, only RTD-level validation runs (e.g., the numeric
-value parses, the chosen list option exists). Empty cells are
-allowed during Save — drafts may be partial.
+On Save, only data-type-level validation runs (e.g., the numeric
+value parses within the field's bounds, the chosen list option
+exists). Empty cells are allowed during Save — drafts may be
+partial.
 
 On Submit, required-field validation runs across every
 instrument's every assigned row. Missing required fields
@@ -1680,54 +1970,75 @@ Coverage:
 - **Email send attempts** — `email.send_attempted`,
   `email.send_succeeded`, `email.send_failed` (the last two
   rely on the transport leg shipping).
-- **Workspace admin** — `user.promoted_to_operator`,
-  `user.demoted_to_member`, `user.deleted`.
+- **Workspace admin** — operator admit / revoke, `is_sys_admin`
+  promote / demote, user delete, `session.owner_added` /
+  `session.owner_removed`.
+- **Participant model** — `observer.created` /
+  `observers.imported`, `instrument.view_policy_set`,
+  `reviewee.results_acknowledged`,
+  `session.feature_toggled`.
+- **Extract data** — `session.data_shape_saved` /
+  `_deleted` / `_extracted`, `session.by_instrument_bundle_extracted`,
+  `session.participant_tokens_extracted`.
 - **Scheduled-event lifecycle** —
   `session.scheduled_activation_fired`,
   `session.scheduled_invites_skipped`,
   `session.scheduled_reminders_fired`, etc.
 
-Operators read their own session's audit log via the per-
-session audit-log viewer in the sys-admin surface (the viewer
-is gated on sys-admin, not on session ownership, so operator-
-side reading is mediated through the sys-admin role). The
-audit-events CSV is reachable from the same surface.
+Admins read a session's audit log via the per-session audit-log
+viewer in the admin surface (gated on `is_sys_admin`, not on
+session ownership). The audit-events CSV is reachable from the
+same surface.
 
 ---
 
 ## 16. Retention, archive, and deletion
 
-RRW offers three distinct mechanisms to remove data, in
-increasing order of permanence.
+RRW offers several distinct mechanisms to retire a session or
+remove its data, in increasing order of permanence — from the
+reversible Close and Archive states through data / session
+deletion and operator-triggered purge.
 
-### 16.1 Archive
+### 16.1 Close session
 
-Operator-driven, reversible. A session moves from `draft` (or
-any non-`ready` state) into `archived`. Archived sessions:
+Operator-driven, reversible. From `ready`, the Workflow card's
+**Close session** button moves the session to `expired`
+(display label "Closed"): every instrument closes, all responses
+are preserved, and the operator can Revert to draft to reopen for
+editing. Distinct from Pause (`ready → draft`) — Close is the
+end-of-cycle transition; Pause is a mid-cycle setup edit.
+
+### 16.2 Archive
+
+Operator-driven, reversible. Since the 18R archive harmonization
+a session moves into `archived` from **any non-archived** state
+(draft / validated / ready / expired) via the Workflow card's
+Archive button; the Sessions-lobby bulk-archive still pre-filters
+to `draft`. Archived sessions:
 
 - Disappear from the main Sessions lobby.
 - Are visible on the archived-sessions child page.
 - Have all data preserved on disk.
 - Can be unarchived back to `draft` at any time.
 
-### 16.2 Delete data
+### 16.3 Delete data
 
-A per-session operator action on the Edit Session Details
-Danger Zone. Wipes every reviewer response in the session
-while preserving the rosters, instruments, assignments, and
-configuration. Available in any state. Audit-logged as
-`responses.deleted_all`. Useful for clearing a session between
-two pilot runs without rebuilding the configuration.
+A per-session operator action on the Session Home Danger Zone.
+Wipes every reviewer response in the session while preserving the
+rosters, instruments, assignments, and configuration. Available in
+any state. Audit-logged as `responses.deleted_all`. Useful for
+clearing a session between two pilot runs without rebuilding the
+configuration.
 
-### 16.3 Delete session
+### 16.4 Delete session
 
-A per-session operator action on the Edit Session Details
-Danger Zone. Removes the session entirely and cascades to
-every dependent row (rosters, assignments, responses, audit
-events for the session). Visible-but-disabled while the
-session is `ready`; the operator must pause first.
+A per-session operator action on the Session Home Danger Zone.
+Removes the session entirely and cascades to every dependent row
+(rosters, assignments, responses, audit events for the session).
+Visible-but-disabled while the session is `ready`; the operator
+must pause first.
 
-### 16.4 Operator-triggered purge and archive
+### 16.5 Operator-triggered purge and archive
 
 A bulk action on the Sessions lobby row expander: hard-
 deletes a session's responses + rosters + audit log, then
@@ -1735,7 +2046,7 @@ archives the configuration shell. Useful for sessions that
 have served their purpose but whose configuration the
 operator wants to keep as a template.
 
-### 16.5 Per-session retention
+### 16.6 Per-session retention
 
 Two inert columns sit on each session — a per-session
 retention exception and a per-session retention overrides
@@ -1746,7 +2057,7 @@ distinct from a workspace default; the manual archive +
 operator-triggered purge cover the per-session needs in the
 meantime.
 
-### 16.6 Scheduled archive and purge
+### 16.7 Scheduled archive and purge
 
 Deferred. The functional intent — auto-archive after a
 configurable offset from the deadline; auto-purge per a
@@ -1834,10 +2145,14 @@ A full security-posture catalogue lives in
 - **Response** — A reviewer's value for one response field of
   one assignment.
 - **Response field** — A column on an instrument that
-  collects reviewer input. Typed by an RTD.
-- **Response Type Definition (RTD)** — A reusable spec for
-  one kind of response field (data type, validation, input
-  control).
+  collects reviewer input. Carries its own `data_type` +
+  validation bounds inline (no shared type row); quick-fill
+  list presets live in `instruments/_field_presets.py`.
+- **Response Type Definition (RTD)** — *Retired 2026-05-26.*
+  Formerly a reusable, per-session type row shared by
+  response fields; the `response_type_definitions` table and
+  its editor were removed. Response fields now carry their
+  type inline (see **Response field**).
 - **Reviewee** — A person being reviewed.
 - **Reviewer** — A person giving feedback.
 - **RuleSet** — A bundle of rules selecting which
