@@ -787,22 +787,43 @@ def test_session_card_buttons_when_ready(
     )
 
 
-def test_session_config_placeholder_card_renders_below_workflow(
+def test_session_config_card_mockup_renders_below_workflow(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 Slice 2 scaffold — a placeholder "Session details"
-    config card sits directly below the Workflow card, with an inert
-    Edit button flushed right (wiring lands in a follow-up slice)."""
-    review_session = _make_session(client, db, code="cfg-placeholder")
+    """18R Item 4 Slice 2 mock-up — the "Session details" config card
+    sits directly below Workflow and shows Name / Code / Description +
+    the date/timing fields as inert (disabled), value-filled edit boxes,
+    with an inert Edit button (wiring lands in a follow-up slice)."""
+    review_session = _make_session(client, db, code="cfg-mockup")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     workflow_pos = body.find('id="next-action"')
     config_pos = body.find('id="session-config"')
     assert -1 not in (workflow_pos, config_pos)
-    # Below Workflow.
-    assert workflow_pos < config_pos
+    assert workflow_pos < config_pos  # below Workflow
     assert "<h2>Session details</h2>" in body
-    # Edit button present but inert for now.
-    card = body[config_pos : config_pos + 800]
+
+    # Card region (the config card ends before the bottom-grid layout).
+    grid_pos = body.find('class="bottom-grid"', config_pos)
+    card = body[config_pos:grid_pos]
+
+    # Details fields — inert (disabled) + filled (Name = the code we set).
+    assert 'id="mock-name"' in card
+    assert "disabled" in card
+    assert f'value="{review_session.name}"' in card
+    assert 'id="mock-code"' in card
+    assert 'id="mock-description"' in card
+    # Date/timing fields present.
+    for fid in (
+        "mock-start",
+        "mock-end",
+        "mock-release-from",
+        "mock-invite-offsets",
+        "mock-reminder-offsets",
+        "mock-release-until",
+        "mock-timezone",
+    ):
+        assert f'id="{fid}"' in card
+    # Edit button still inert.
     assert 'aria-disabled="true"' in card
     assert ">Edit</a>" in card
