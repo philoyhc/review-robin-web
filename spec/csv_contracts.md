@@ -264,7 +264,7 @@ reviewer + reviewee row count, header excluded). Closes
 
 ---
 
-## 3. Four importers (input contracts)
+## 3. Five importers (input contracts)
 
 ### 3.1 Reviewers + Reviewees — `csv_imports.py`
 

@@ -197,26 +197,20 @@ Zero behaviour change for any existing session until an operator explicitly conf
 
 ## Audit event
 
-`instrument.sort_fields_updated` with detail:
+`instrument.sort_fields_updated`, emitted via the canonical
+`audit.changes(...)` envelope (`spec/architecture.md` "Audit-event
+detail schema") with a single before/after pair on
+`sort_display_fields`:
 
-```json
-{
-  "before": [
-    {"display_field_id": 5, "dir": "asc"}
-  ],
-  "after": [
-    {"display_field_id": 5, "dir": "asc"},
-    {"display_field_id": 7, "dir": "desc"}
-  ],
-  "diff": {
-    "added":   [{"display_field_id": 7, "dir": "desc", "position": 2}],
-    "removed": [],
-    "reordered": []
-  }
-}
+```python
+payload=audit.changes({"sort_display_fields": [old_value, normalised]})
 ```
 
-Mirrors the existing `instrument.display_fields_saved` D11 diff shape. The `before` / `after` snapshots are explicit (not derivable from the diff alone) so the audit row stands on its own without requiring a join to the previous event.
+`old_value` / `normalised` are the full pre- / post-save spec lists
+(`[{"display_field_id": …, "dir": "asc|desc"}, …]`), so the audit row
+carries the complete before/after snapshots and stands on its own
+without a join to the previous event. The service skips the emit
+entirely on a no-op save (when `old_value == normalised`).
 
 ---
 

@@ -22,8 +22,8 @@ is the third audience: participants who view collated results
 without filling out response forms. Its Setup page is gated by
 `session.observers_enabled`; the collation surface at
 `/me/sessions/{id}/collation` is its reviewer-facing entry point
-(placeholder body, gated by `require_observer_in_session` in
-`app/web/deps.py`).
+(a per-instrument 3-row table with per-instrument CSV download,
+gated by `require_observer_in_session` in `app/web/deps.py`).
 
 ## Conceptual hierarchy
 

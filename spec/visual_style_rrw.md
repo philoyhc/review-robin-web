@@ -122,7 +122,7 @@ The session-scoped chrome consists of:
 **Chrome itself**: a double-height **Home** anchor on the left, two rows of phase tabs to its right.
 
 ```
-┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
+┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]
 │  Home  │
 └────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses][Extract data]
 ```
@@ -135,6 +135,7 @@ Specifics:
 - **Active row** (the one containing the active tab): row label renders at `text-primary` instead of `text-muted`; the `▶` glyph emphasizes correspondingly.
 - **Hovering a tab** in a non-active row previews-emphasizes that row's label without transferring active state — gives the operator a sense of "this is the row you're about to enter."
 - **Same tab shape** across both rows. Differences between rows are carried by row labels and row tints, not by tab shape.
+- **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (User interface settings on Edit Session Details). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
 
 **On Home itself**: chrome renders in the same shape, with no tab active. Both rows remain visible and clickable.
 
@@ -147,10 +148,10 @@ Specifics:
 The status strip sits below the chrome and above the page body on all session-scoped pages. Composition, left to right:
 
 ```
-Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Instruments: [count]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
+Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [count]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
 ```
 
-Lifecycle badge first, then the five Setup entities in canonical order (Reviewers, Reviewees, Relationships, Instruments, Email Template), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
+Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 

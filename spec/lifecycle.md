@@ -40,8 +40,8 @@ draft                    validated                    ready
 | `draft` | Draft | Setup is open; reviewer surface read-only. |
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
-| `expired` | Expired | Reserved (Segment 9.3+, deadline-passed terminal state). Not written by any current route. |
-| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session` (`draft ⇄ archived`, Segment 18A Part 3). |
+| `expired` | Expired | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
+| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session` (Segment 18A Part 3). Since the 18R archive harmonization `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired) — the Workflow card's per-session Archive button can fire from any state, while the lobby bulk-archive still pre-filters to `draft`. `unarchive_session` restores `archived → draft`. |
 
 The internal enum is `SessionStatus` in
 `app/services/session_lifecycle.py`. The display-label divergence
@@ -57,7 +57,10 @@ in URLs, logs, audit events, and CSS classes.
 | `is_draft(session)` | session is `draft` |
 | `is_validated(session)` | session is `validated` |
 | `is_ready(session)` | session is `ready` |
+| `is_expired(session)` | session is `expired` |
+| `is_archived(session)` | session is `archived` |
 | `is_editable(session)` | session is `draft` OR `validated` (the **editable-state predicate** that every route-layer gate consults) |
+| `can_archive(session)` | session is **not** `ready` and **not** `archived` — the shared gate for the lobby "Purge and archive" and the Extract-data page's Archive card (18R archive harmonization) |
 
 ## 2. Transitions
 
@@ -121,8 +124,6 @@ Call sites (every setup-mutating service in the codebase):
   (full settings import)
 - `app/services/instruments/_instrument_crud.py`
   (instrument CRUD)
-- `app/services/instruments/_rtds.py` (RTD CRUD + cascade
-  delete)
 - `app/services/instruments/_response_fields.py` (response
   field CRUD + bulk save)
 - `app/services/instruments/_display_fields.py` (display
@@ -162,7 +163,7 @@ Audit event: `session.activated` with `counts={"warnings": N,
 "info": N, "instruments": N}` and `context={"prev_status":
 "validated", "override_warnings": bool}`.
 
-### 2.5 `ready → draft` — `revert_session_to_draft(...)`
+### 2.5 `ready`/`expired → draft` — `revert_session_to_draft(...)`
 
 The "Pause Session" path. Called by `POST
 /operator/sessions/{id}/revert`. Flips to `draft` and sets
@@ -171,9 +172,14 @@ transaction. **Existing `Response` rows are preserved untouched**
 — the reviewer surface returns to read-only, but the data is
 intact.
 
+Accepts both `ready` (the live mid-session pause) and `expired`
+(the recovery path after the operator closed the session with
+**Close session** and wants to reopen it for editing) as the
+starting state.
+
 Pre-conditions:
 
-- Session is `ready`. (Raises `not_ready`.)
+- Session is `ready` or `expired`. (Raises `not_ready`.)
 - The route layer passes `confirm=true` from the confirm
   checkbox. (Raises `needs_confirm`.)
 
@@ -190,6 +196,27 @@ the Next Action card while the session is `validated`, the
 calls `invalidate_session(reason="operator_revert")`. The
 `ready → draft` branch calls `revert_session_to_draft` instead
 (per 2.5).
+
+### 2.7 `ready → expired` — `expire_session(...)`
+
+The "Close session" path. Called by `POST
+/operator/sessions/{id}/workflow/close` — Row 2's **Close
+session** button on the Workflow card. Flips `ready → expired`
+and sets `accepting_responses=false` on every instrument in the
+same transaction. **Existing `Response` rows are preserved
+untouched** (drafts + submitted), so reviewers with
+`responses_visible_when_closed=True` instruments can still read
+what they submitted after the close.
+
+Pre-conditions:
+
+- Session is `ready`. (Raises `not_ready`.)
+
+From `expired` the operator reopens the session for editing via
+Revert to draft (§2.5), which accepts `expired` alongside `ready`.
+
+Audit event: `session.expired` with
+`counts={"closed_instruments": N}`.
 
 ## 3. Route-layer gates
 
@@ -254,13 +281,13 @@ open/close state plus a visibility-when-closed display flag.
 
 - `open_instrument(...)` / `close_instrument(...)` — operator
   flips on the Instruments page. Requires session `ready` and
-  pre-deadline. A group-scoped instrument (`group_kind` set) with
-  no pinned `rule_set_id` cannot be opened — `open_instrument`
-  raises `LifecycleError(code="group_instrument_no_rule")` (the
-  route surfaces a 409); the same instruments are skipped (left
-  closed) by `activate_session`'s bulk open. Emit
-  `instrument.opened` / `instrument.closed reason=operator` audit
-  events.
+  pre-deadline. (The legacy group-scoped "no pinned `rule_set_id`"
+  gate retired in Wave 5 PR 5.3 — group-scoped instruments now
+  default to the synthetic Full Matrix on untouched Band 1 just
+  like individual ones, so `activate_session`'s bulk open opens
+  every instrument and `open_instrument` no longer raises
+  `group_instrument_no_rule`.) Emit `instrument.opened` /
+  `instrument.closed reason=operator` audit events.
 - `set_responses_visible_when_closed(...)` — operator flips the
   display flag. No lifecycle gating beyond `_require_editable` /
   `_require_status_ready` on its route; **does not invalidate**
@@ -342,6 +369,11 @@ are read-mostly so they work in any state.
 | `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` (`setup_mutation`, `operator_revert`, etc.) |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
+| `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |
+| `session.archived` | `archive_session` | `changes={"status": [<from_status>, "archived"]}` |
+| `session.unarchived` | `unarchive_session` | `changes={"status": ["archived", "draft"]}` |
+| `session.responses_released` | `release_responses_now` (Workflow-card **Release responses**) | `snapshot={"responses_release_at": …, "cleared_until": bool}` |
+| `session.responses_release_stopped` | `stop_responses_release` (Workflow-card **Stop releasing**) | `snapshot={"responses_release_until": …}` |
 | `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` (18F Part 1) — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
 | `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "activate" \| "precondition", "error_message": …}` |
 | `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
@@ -373,11 +405,12 @@ canonical envelope contract these events follow.
    `DateTime(timezone=True)`). The `_aware` helper in the
    lifecycle module wraps every comparison.
 
-5. **Reserved enum values are real values.** `expired` is in the
-   canonical enum even though no route writes it today — the
-   column is constrained at the application layer, not via a DB
-   CHECK. (`archived` is also enum-constrained, but is now an
-   actively written state — see §1.)
+5. **Enum values are constrained at the application layer, not
+   via a DB CHECK.** Every state — including `expired` and
+   `archived` — is enum-constrained in Python. Both `expired`
+   (Workflow-card Close session, §2.7) and `archived` (§1) are
+   now actively written states; no `SessionStatus` value is
+   purely reserved today.
 
 ## 8. Scheduled lifecycle automation (Segment 18G — forthcoming)
 

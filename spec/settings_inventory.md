@@ -48,7 +48,7 @@ operator to wherever they came from (`?return_to=<path>`).
 | `smtp_username` | `String(320)` | SMTP login. |
 | `smtp_password_encrypted` | `LargeBinary` | Fernet ciphertext keyed off the deployer's `SMTP_ENCRYPTION_KEY` env var. **Plaintext is never persisted.** |
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
-| `smtp_encryption` | `String(16)` | `none` / `starttls` / `tls`. |
+| `smtp_encryption` | `String(16)` | `starttls` / `ssl` (validated against `operator_settings.SMTP_ENCRYPTION_MODES`); unset / empty = no encryption. |
 | `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
 | `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings` (18B PR 2). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
@@ -96,7 +96,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `name` | `String(255)` | Display name. |
 | `code` | `String(64)` (unique) | Stable short code; appears in `<code>` on lobby + Session Details. |
 | `description` | `String(2000)` | Free-text. |
-| `status` | `String(32)` | `draft` / `validated` / `ready` / `archived` (plus `expired`, reserved). **Not directly editable** — driven by the lifecycle-transition actions (Validate / Activate / Pause / Archive). Listed here because it's the ground truth that gates every other operator action. |
+| `status` | `String(32)` | `draft` / `validated` / `ready` / `expired` / `archived`. **Not directly editable** — driven by the lifecycle-transition actions (Validate / Activate / Pause / Close session / Archive). Listed here because it's the ground truth that gates every other operator action. |
 | `deadline` | `DateTime(timezone=True)` | Optional. Rendered on operator + reviewer surfaces via the `format_datetime` Jinja filter as bare `YYYY-MM-DD HH:MM` in the session's resolved display timezone (Segment 18B); CSV extracts and audit-detail JSON keep ISO 8601. The Create / Edit `datetime-local` input is wall-clock in the form's Timezone field (Segment 18B PR 4 / PR 5) — `parse_local_datetime` converts it to a stored UTC instant, `format_datetime_local` renders it back; changing the zone re-renders the picker, the instant is fixed. Cross-field ordering rule **Start ≤ End** (and **End ≤ Release-from**) enforced by `scheduled_events.validate_schedule_ordering` after parse. |
 | `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `self_reviews_active` | `Boolean` | Whether self-review pairs (reviewer reviewing themselves) are included when assignments are generated. Defaults to `True`. Edited on the Assignments page; round-trips through the Settings CSV (force-applied on import, see §10). |
@@ -109,7 +109,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `archive_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `deadline` (Segment 18G Part 0b / Part 4, pre-positioned inert). Resolves to `deadline + archive_offset` for the auto-archive trigger. Editor default `P30D`. Not yet wired — Part 4 outstanding. |
 | `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor — the moment reviewees / observers can start viewing collated results. Editor sits in the Schedule sub-grid of Create / Edit Session (wired end-to-end in W14 / PR #1716). Save-time validator `parse_and_validate_responses_release_at` converts a `datetime-local` value to UTC; **no minimum lead-time floor** (the operator can backdate to "immediately viewable"). Cross-field ordering rule **End ≤ Release-from** enforced by `scheduled_events.validate_schedule_ordering` after parse. |
 | `responses_release_until` | `DateTime(timezone=True)` | Operator-set absolute close datetime for the responses-release window. Editor in the Schedule sub-grid alongside Release-from — a `datetime-local` input matching the Release-from shape. Save-time validator `parse_and_validate_responses_release_until` in `app/services/scheduled_events.py` enforces ordering (must close *after* `responses_release_at` when both are set) and a 365-day magnitude check (must be within 365 days of `responses_release_at`). Accepts an until without an anchor (the resolver treats the window as inert per the §8.2.2 anchor-null rule). S12 retired the W14 `release_until_offset` (ISO 8601 duration) so the form input and the operator's forthcoming **Stop release** button can write to the same column. |
-| `relationships_enabled` | `Boolean` | Per-session toggle enabling the Relationships Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `False`, the Relationships Setup page is not yet gated (the Relationships tab is always shown); the toggle currently controls the Observers tab gate and is pre-positioned for a future Setup-nav conditional. |
+| `relationships_enabled` | `Boolean` | Per-session toggle enabling the Relationships Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Relationships tab appears in the Setup chrome and the `/operator/sessions/{id}/relationships` routes resolve; when `False` those routes return 404 (gated by `require_relationships_enabled_session` in `app/web/routes_operator/_shared.py`). |
 | `observers_enabled` | `Boolean` | Per-session toggle enabling the Observers Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Observers tab appears in the Setup chrome and `GET /operator/sessions/{id}/observers` resolves; when `False` that route returns 404 (gated by `require_observers_enabled_session` in `app/web/routes_operator/_shared.py`). |
 | `retention_exception` | `Boolean \| None` | Per-session opt-out of the deployment retention policy (Segment 18G Part 0c, pre-positioned inert; consumer Part 5 outstanding). |
 | `retention_overrides` | `JSON \| None` | Per-session retention-policy overrides (Segment 18G Part 0c, pre-positioned inert). Recognised keys: `response_days`, `audit_days`, `archived_days`, `delete_after_archive` (ISO 8601 duration anchored on the system-stamped archive timestamp). |
@@ -619,16 +619,15 @@ for the Settings importer contract.
 
 - `app/config.py` — env-config source of truth.
 - `app/db/models/` — SQLAlchemy declarations for every persisted
-  setting named here. The §9 inert tables live in
-  `session_field_label.py`, `session_rule_set.py`, and
-  `operator_response_type_definition.py`; their docstrings link
-  back to the segment plans that will wire them.
+  setting named here. The §2.5 / §9 backing tables live in
+  `session_field_label.py` and `session_rule_set.py`; their
+  docstrings link back to the segment plans that wired them. (The
+  `operator_response_type_definition.py` model retired with the
+  RTD table — see §4.5.)
 - `app/services/operator_settings.py` — Operator Settings save /
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
   `RESPONSES_RECEIVED_ENABLED_KEY`.
-- `app/services/instruments/_rtds.py` — per-session RTD CRUD +
-  `SEEDED_RESPONSE_TYPE_DEFINITIONS` seed catalogue.
 - `app/main.py` — Quick Setup unlock-cookie navigation
   middleware (mirrors the `qsu_` prefix in
   `app/web/routes_operator/_shared.py`).

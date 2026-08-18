@@ -6,13 +6,18 @@ A Home-body element on the per-session Control Panel page that lets an operator 
 
 Renders in the body of the Session Home / Control Panel page (`session_detail.html`, `GET /operator/sessions/{id}`). Not a separate page; not a sub-page; no dedicated URL.
 
-Position in the Home body, top to bottom:
+Position in the Home body, top to bottom (post-18R Item 4):
 
-1. Session identity (name, code, lifecycle state).
-2. Contextual lifecycle-transition action (Validate / Activate / Close / Reopen).
-3. **Quick Setup card.**
-4. Setup-readiness summary and pointers into Operations.
-5. Sub-page links (Edit Session, Validate detail).
+1. **Workflow card** — the contextual lifecycle-transition action
+   (Prepare / Activate / Close / Pause), full-width.
+2. **Session details card** — the consolidated config
+   display ↔ edit surface (`?editing=1`), full-width.
+3. **Quick Setup card** — bottom-left of the `.bottom-grid`,
+   paired with the Danger Zone card on the right.
+
+(The standalone Edit Session sub-page was retired in 18R Item 4;
+its config editing folded into the Session details card above —
+see `spec/session_home.md` §4.)
 
 ### Visibility
 
@@ -92,7 +97,7 @@ The card validates each file individually for parse correctness and per-file int
 
 ### Interaction with per-entity Setup pages
 
-The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to the card's slots — they share the same parsing, validation, and replacement semantics. Settings has no dedicated Setup page; the Quick Setup Slot 4 + the Settings extract download on the Extract Data card are the round-trip pair.
+The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to the card's slots — they share the same parsing, validation, and replacement semantics. Settings has no dedicated Setup page; the Quick Setup Slot 4 + the Settings extract download on the Extract Setup card (on the Extract data Operations tab, post-18R Item 4) are the round-trip pair.
 
 ### Out of scope
 
