@@ -1963,6 +1963,46 @@ rationalization on the Instruments page.
   per-concern routes are kept server-side (test callers); full server-side
   retirement is logged as an optional Future item in the plan doc.
 
+### Segment 18S — Security refinements — Item 1 shipped 2026-08-17 (#1925 → #1927 + docs); Item 2 shipped 2026-08-17 (#1930); Item 3 planned (detailed plan: `guide/segment_18S_security.md`)
+
+Holding segment for small, self-contained in-app authorization / account-safety
+hardening. Stays open for further security items.
+
+- **Item 1 (shipped; PRs #1925 → #1927 + docs)** — three-tier role model:
+  **operator** (managed by admins) ⊂ **admin** (`is_sys_admin`, managed by
+  super-admins only) ⊂ **super-admin** (derived from a deployer-set
+  `SUPER_ADMIN_EMAILS`, managed **only** via Azure App Settings), strict
+  capability nesting. Super-admins can't be added/revoked in-app; admin
+  promote/demote tightened to super-admins only. Config + `app/auth/roles.py`
+  resolver + every-sign-in self-heal + actor/target guards + Sys Admin tier
+  badges/conditional controls + `(super admin)` chrome + `fake_auth_super_admin`
+  localhost toggle; **no migration**. Rewrote
+  `spec/audience_and_identity_model.md` §4.
+- **Item 2 (shipped #1930)** — no-super-tier fallback: when `SUPER_ADMIN_EMAILS`
+  is empty, admin promote/demote falls back to any-admin (no lockout); the
+  strict rule engages once a super-admin exists.
+- **Item 3 (planned; not started)** — tighten sys-admin cross-session writes to
+  explicit ownership. A non-owner sys-admin may **only** self-add-as-owner
+  (tighten `owners/add` to self-only) + clone; `edit` / `lobby-edit` /
+  `owners-remove` require real `session_operators` membership; Diagnostics
+  "Details" routes through audited self-add. **18R Part 2 Item 4 depends on
+  this.**
+
+### Segment 18R Part 2 — UX refinement (Items 3–4) (detailed plan: `guide/segment_18R_ux_refine.md`)
+
+Continues the 18R holding segment beyond the Items 1–2 work above.
+
+- **Item 3 (open; first tweaks shipped #1923)** — instrument-card UX tweaks:
+  taller preview-band description edit box + Link 2 operator-cycle reorder
+  (IS THE SAME AS → IS DIFFERENT FROM → IS → IS NOT). Open-ended home for
+  further small per-card polish.
+- **Item 4 (planned; not started, UI-iteration-first)** — consolidate the
+  session's config **display + edit onto Session Home** (a plain display↔edit
+  swap — *not* the instrument-card lock harness, no collapse) and **retire the
+  separate Edit page**. Quick Setup + Danger Zone become the two half-width
+  bottom cards; Extract Setup folds into the Extract data tab. **Depends on 18S
+  Item 3** (sys-admin cross-session ownership posture) — land that first.
+
 ---
 
 ## Upcoming
@@ -2025,20 +2065,6 @@ dep chains called out at the bottom of this file.
   written for it. Workplan §18 items 1–10 (Start Here
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
-
-- **18S — Security refinements** *(created 2026-08-16; Item 1 shipped
-  2026-08-17)*. Holding segment for small, self-contained in-app
-  authorization / account-safety hardening. **Item 1 (shipped; PRs #1925 →
-  #1927 + docs):** three-tier role model — **operator** (managed by admins) ⊂
-  **admin** (`is_sys_admin`, managed by super-admins only) ⊂ **super-admin**
-  (derived from a deployer-set `SUPER_ADMIN_EMAILS`, managed **only** via
-  Azure App Settings), with strict capability nesting. Super-admins can't be
-  added/revoked in-app; admin promote/demote tightened to super-admins only.
-  Config + `app/auth/roles.py` resolver + every-sign-in self-heal +
-  actor/target guards + Sys Admin tier badges/conditional controls + `(super
-  admin)` chrome + `fake_auth_super_admin` localhost toggle; **no migration**.
-  Rewrote `spec/audience_and_identity_model.md` §4. The segment **stays open**
-  for further security items. **Plan:** `guide/segment_18S_security.md`.
 
 ### Sequencing notes
 
