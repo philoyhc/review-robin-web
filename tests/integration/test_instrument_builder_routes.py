@@ -176,11 +176,13 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # Header card now folds the deadline + accepting + visibility status
-    # into the same card as the setup nav (per the rebuild spec at
-    # spec/instruments.md). Verify the status content rendered.
+    # Header card folds the deadline + accepting status into the same
+    # card as the setup nav (per the rebuild spec at
+    # spec/instruments.md). The visibility-when-closed row + bulk
+    # toggle retired in 18R Item 3. Verify the status content rendered.
     assert "Session deadline (auto-close):" in body
-    assert "Visibility when closed:" in body
+    assert "Visibility when closed:" not in body
+    assert "Show all when closed" not in body
     instrument = _instrument(db, review_session.id)  # noqa: F841
     assert "Instrument #1" in body
 
@@ -372,39 +374,6 @@ def test_move_field_repacks_orders(client: TestClient, db: Session) -> None:
     assert [f.order for f in fields] == [0, 1]
 
 
-def test_bulk_accepting_all_off_writes_single_audit_no_invalidate(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="bulk-r")
-    _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, db, review_session.id)
-    _activate(client, db, review_session.id)
-    db.refresh(review_session)
-    assert review_session.status == "ready"
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/accepting/all-off",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-
-    instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().all()
-    assert all(not i.accepting_responses for i in instruments)
-
-    bulk_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instruments.bulk_accepting_responses",
-            AuditEvent.session_id == review_session.id,
-        )
-    ).scalars().all()
-    assert len(bulk_events) == 1
-
-    db.refresh(review_session)
-    assert review_session.status == "ready"  # bulk does not invalidate
-
-
 def test_locked_when_ready_returns_409_for_mutations(
     client: TestClient, db: Session
 ) -> None:
@@ -430,12 +399,6 @@ def test_locked_when_ready_returns_409_for_mutations(
         follow_redirects=False,
     )
     assert add.status_code == 409
-
-    bulk = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/accepting/all-off",
-        follow_redirects=False,
-    )
-    assert bulk.status_code == 303  # bulk-accepting allowed in ready
 
 
 def test_reviewer_surface_shows_help_block_only_for_visible_help_text(

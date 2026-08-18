@@ -16,43 +16,46 @@ Ran as 8 parallel audit passes over the 34 files in `spec/`. Two outcomes:
 
 ## A. Unfinished work — code falls short of spec
 
-Each is a place where the spec describes a behaviour that isn't fully wired.
-Small, self-contained; each could be its own tweak.
+Each was a place where the spec described a behaviour that wasn't fully wired.
+**All three resolved in 18R Item 3 (2026-08-18)** — see resolution notes.
 
-1. **`.btn.primary-outline` style is documented but not implemented.**
-   `spec/operator_button_audit.md` (entry #56) documents the **+Instrument**
-   button as **"Primary Outline"** via class `btn primary-outline`, and
-   `instruments_index.html` (~line 457) does use that class — but `base.html`
-   defines **no `.btn.primary-outline` rule** (only `.btn`, `.secondary`,
-   `.danger`, `.destructive`, `.alert`, `.alert-solid` exist). So `+Instrument`
-   *and* its sibling **+Page break** (same class, not even listed in the audit)
-   fall back to solid Primary blue instead of an outline. Fix belongs in
-   `base.html` (add the rule) — or reconcile the audit + `ui_elements.md` §6 if
-   solid-blue is actually intended.
+1. **`.btn.primary-outline` style documented but not implemented.**
+   ✅ **RESOLVED (18R Item 3).** `spec/operator_button_audit.md` (entry #56)
+   documented **+Instrument** as **"Primary Outline"** via `btn primary-outline`,
+   and `instruments_index.html` used that class — but `base.html` defined **no
+   `.btn.primary-outline` rule**, so `+Instrument` *and* its sibling **+Page
+   break** fell back to solid Primary blue. Fixed by reclassifying both buttons
+   to plain **`btn secondary`** in the template, and updating the button audit
+   (entry #56 → Secondary; added #56b for +Page break). No new CSS rule needed.
 
-2. **Instruments "Open / close all" bulk button is unwired.**
-   `spec/instruments.md` (Status + bulk-actions card) documents an
-   **"Open / close all"** bulk control that flips `accepting_responses` across
-   instruments (greyed before activation). The service routes
-   `/instruments/accepting/all-on` + `/all-off` exist, but **no template control
-   drives them** — the bulk-actions card renders only Expand/Collapse-all and
-   Show/hide-all-when-closed. Either wire the button or drop it from the spec.
+2. **Instruments "Open / close all" bulk button unwired.**
+   ✅ **RESOLVED (18R Item 3) — deprecated.** `spec/instruments.md` documented an
+   **"Open / close all"** bulk control (flip `accepting_responses` across
+   instruments) whose routes `/instruments/accepting/all-{on,off}` +
+   `bulk_set_accepting` service existed, but **no template control drove them**.
+   Dropped from the spec and removed: the two routes, the `bulk_set_accepting`
+   service + export, the `instruments.bulk_accepting_responses` audit schema, and
+   the dead `bulk_accepting_state` view field. Per-instrument Open/Close remains
+   the accepting control. *(The sibling session-level "Show / hide all when
+   closed" bulk visibility toggle was removed in the same slice — visibility when
+   closed is now governed by the per-instrument visibility policy; the
+   `bulk_set_visibility` route/service/audit-schema and the `bulk_visibility_state`
+   view field went with it, and the `responses_visible_when_closed` column
+   persists only for config round-trip.)*
 
-3. **Reviewer-surface progressive-enhancement JS was never wired.**
-   `spec/reviewer-surface.md` describes three client-side behaviours: (a)
-   per-page **dirty-tracking** that disables Save on load and re-enables on
-   input; (b) an **in-place JS Discard** that resets inputs with "no HTTP
-   request, no database write"; (c) **JS page navigation** — one `type="button"`
-   per instrument that swaps groups via CSS toggle + `history.pushState`, "no
-   server round-trip". The templates carry the `data-rs-save` /
-   `data-rs-discard` / `data-rs-saved-value` hooks, **but there is no JS handler
-   for any of them.** The shipped surface uses plain server round-trips: Prev /
-   "Page N of M" / Next `<a href>` links, a Discard `<a href>` GET reload, and an
-   always-enabled Save submit. Decide: finish the progressive-enhancement JS, or
-   update the spec to the server-navigation reality (the "How the surface works"
-   and button-nav sections already match the server model — only §5 / the button
-   table describe the un-built JS). *(`beforeunload` is already correctly listed
-   as out of scope.)*
+3. **Reviewer-surface progressive-enhancement JS never wired.**
+   ✅ **RESOLVED (18R Item 3) — spec updated to reality.** `spec/reviewer-surface.md`
+   described three unbuilt client-side behaviours: (a) per-page **dirty-tracking**
+   disabling Save until input; (b) an **in-place JS Discard**; (c) **JS page
+   navigation** via `type="button"` + `history.pushState`. The templates carry the
+   `data-rs-save` / `data-rs-discard` / `data-rs-saved-value` hooks but **no JS
+   handler for any of them**. Updated the spec (§5, the button table, "How the
+   surface works", "Save button state", and the beforeunload extensibility note)
+   to the shipped **server-navigation** reality: Prev / "Page N of M" / Next
+   `<a href>` links, a Discard `<a href>` GET reload, and an always-enabled Save
+   submit — with the `data-rs-*` attributes documented as hooks reserved for a
+   future dirty-tracking enhancement. *(`beforeunload` remains correctly out of
+   scope.)*
 
 ---
 

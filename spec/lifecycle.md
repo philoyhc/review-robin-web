@@ -132,15 +132,15 @@ Call sites (every setup-mutating service in the codebase):
 The invariant lives at the **mutation site** — a route that
 forgets to wrap its service call no longer silently breaks it.
 
-**Visibility-when-closed exemption.** Two services deliberately
-do **not** invalidate: `bulk_set_visibility` and
-`set_responses_visible_when_closed`. The
-`responses_visible_when_closed` flag is a display setting that
-doesn't affect the validation snapshot (an operator can flip it
-without re-running validation). Same logic exempts the bulk
-accepting toggle (operators flipping `accepting_responses` on a
-`ready` session don't invalidate anything because the session
-isn't in `validated` to begin with).
+**Visibility-when-closed exemption.** The
+`set_responses_visible_when_closed` service deliberately does
+**not** invalidate. The `responses_visible_when_closed` flag is a
+display setting that doesn't affect the validation snapshot (an
+operator can flip it without re-running validation). *(The bulk
+`bulk_set_visibility` and `bulk_set_accepting` services carried the
+same exemption but retired in 18R Item 3; per-instrument
+open/close on a `ready` session likewise never invalidates, since
+the session isn't in `validated` to begin with.)*
 
 ### 2.4 `validated → ready` — `activate_session(...)`
 
@@ -378,8 +378,7 @@ are read-mostly so they work in any state.
 | `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "activate" \| "precondition", "error_message": …}` |
 | `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
 | `instrument.closed` | `close_instrument` or `observe_deadline` | `refs={"instrument_id": id}` + `reason=<"operator" \| "deadline">` (+ `context={"deadline": "..."} ` on the deadline path) |
-| `instruments.bulk_accepting_responses` | bulk open/close on the All Instrument Status card | `set_changes={...}` + `context={"target": "open" \| "close"}` |
-| `instruments.bulk_visibility_when_closed` | bulk visibility toggle | `set_changes={...}` + `context={"target": "show" \| "hide"}` |
+| ~~`instruments.bulk_accepting_responses`~~ / ~~`instruments.bulk_visibility_when_closed`~~ | *Retired 18R Item 3* — the bulk accepting + bulk visibility-when-closed toggles and their emitters were removed. | — |
 
 See `spec/architecture.md` "Audit-event detail schema" for the
 canonical envelope contract these events follow.

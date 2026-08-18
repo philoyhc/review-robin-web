@@ -495,12 +495,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.short_label_updated": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),
-    "instruments.bulk_accepting_responses": EventSchema(
-        _IDENTITY | {"set_changes", "context"}
-    ),
-    "instruments.bulk_visibility_when_closed": EventSchema(
-        _IDENTITY | {"set_changes", "context"}
-    ),
+    # ``instruments.bulk_accepting_responses`` +
+    # ``instruments.bulk_visibility_when_closed`` retired in 18R Item 3
+    # with their emitters (bulk_set_accepting / bulk_set_visibility).
     # Segment 18M PR 1 — instrument reorder + per-instrument page break.
     "instruments.reordered": EventSchema(_IDENTITY | {"changes"}),
     "instrument.page_break_set": EventSchema(_IDENTITY | {"changes", "refs"}),

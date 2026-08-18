@@ -81,8 +81,6 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         "instrument.response_fields_saved",
         "instrument.described",
         "instrument.short_label_updated",
-        "instruments.bulk_accepting_responses",
-        "instruments.bulk_visibility_when_closed",
         # PR 3 — invitations
         "invitations.generated",
         "invitation.regenerated",
@@ -231,15 +229,6 @@ def test_canonical_emit_passes_strict(db: Session) -> None:
         session=review_session,
         payload=audit.changes({"order": [["a"], ["b"]]}),
         refs={"instrument_id": 1},
-    )
-    audit.write_event(
-        db,
-        event_type="instruments.bulk_accepting_responses",
-        summary="ok",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.set_changes(updated=[{"instrument_id": 1}]),
-        context={"target": True},
     )
     audit.write_event(
         db,

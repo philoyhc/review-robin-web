@@ -1083,62 +1083,13 @@ def instruments_delete(
     )
 
 
-@router.post("/sessions/{session_id}/instruments/accepting/all-on")
-def instruments_bulk_accept_on(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    if not lifecycle.is_ready(review_session):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Bulk accepting toggle requires session to be ready",
-        )
-    instruments_service.bulk_set_accepting(
-        db, review_session=review_session, target=True, actor=user
-    )
-    return _instruments_redirect(review_session.id)
-
-
-@router.post("/sessions/{session_id}/instruments/accepting/all-off")
-def instruments_bulk_accept_off(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    if not lifecycle.is_ready(review_session):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Bulk accepting toggle requires session to be ready",
-        )
-    instruments_service.bulk_set_accepting(
-        db, review_session=review_session, target=False, actor=user
-    )
-    return _instruments_redirect(review_session.id)
-
-
-@router.post("/sessions/{session_id}/instruments/visibility/all-on")
-def instruments_bulk_visibility_on(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    instruments_service.bulk_set_visibility(
-        db, review_session=review_session, target=True, actor=user
-    )
-    return _instruments_redirect(review_session.id)
-
-
-@router.post("/sessions/{session_id}/instruments/visibility/all-off")
-def instruments_bulk_visibility_off(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    instruments_service.bulk_set_visibility(
-        db, review_session=review_session, target=False, actor=user
-    )
-    return _instruments_redirect(review_session.id)
+# Bulk accepting toggle (``/instruments/accepting/all-{on,off}``) and
+# bulk visibility-when-closed toggle (``/instruments/visibility/all-
+# {on,off}``) retired in 18R Item 3. The "Open / close all" bulk
+# control was never wired into the UI and dropped from the spec;
+# per-instrument Open/Close (below) remains the accepting control, and
+# visibility when closed is now governed by the per-instrument
+# visibility policy.
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/open")

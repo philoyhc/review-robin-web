@@ -19,7 +19,6 @@ from app.services.instruments import (
     FieldKeyError,
     ResponsesPresentError,
     add_response_field,
-    bulk_set_accepting,
     delete_response_field,
     ensure_default_instrument,
     move_response_field,
@@ -337,32 +336,6 @@ def test_update_instrument_description_normalises_blank_to_none(db: Session) -> 
         select(AuditEvent).where(AuditEvent.event_type == "instrument.described")
     ).scalar_one()
     assert audit.detail["changes"]["description"] == ["Old", None]
-
-
-def test_bulk_set_accepting_writes_one_event_for_changed_only(db: Session) -> None:
-    user = _user(db)
-    session = _session(db, user, code="bulk-1")
-    instrument = ensure_default_instrument(db, session)
-    instrument.accepting_responses = True
-    db.flush()
-
-    changed = bulk_set_accepting(
-        db, review_session=session, target=False, actor=user
-    )
-    assert changed == [instrument.id]
-
-    bulk_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instruments.bulk_accepting_responses"
-        )
-    ).scalars().all()
-    assert len(bulk_events) == 1
-    per_instrument = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type.in_(["instrument.opened", "instrument.closed"])
-        )
-    ).scalars().all()
-    assert per_instrument == []
 
 
 def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> None:
