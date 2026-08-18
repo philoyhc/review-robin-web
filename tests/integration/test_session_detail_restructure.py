@@ -886,5 +886,11 @@ def test_session_config_card_has_owners_subcard(
     # Edit-mode mock add-owner control lives inside the card.
     assert 'id="mock-add-owner"' in card
 
+    # User interface settings card sits to the right of Owners.
+    assert 'id="config-ui-settings-card"' in card
+    assert ">User interface settings</h3>" in card
+    assert "Relationships tab and page" in card
+    assert "Observers tab and page" in card
+
     # Schedule timeline card retired from Session Home.
     assert "<h2>Schedule timeline</h2>" not in body
