@@ -5,10 +5,9 @@ shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
 closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
 shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
 2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
-Home + retire the Edit page — Option 2; Slices 1–5b done 2026-08-18 (config
-save + owners wired, Edit page fully retired — routes + template deleted, /edit
-301-redirects to Home); remaining: Slice 6 Archive card, sessions/new
-follow-up)**. A holding segment for **operator-UX refinement** on
+Home + retire the Edit page — Option 2; Slices 1–5b + the sessions/new
+alignment done 2026-08-18 (config save + owners wired, Edit page fully retired,
+create page mirrors Home's bottom row); only Slice 6 Archive card remains)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -592,8 +591,9 @@ shipping PR; land them individually or batched as convenient.
 Owners Add/Remove wired (Slice 4), Edit page retired from the UI + Danger Zone
 on Home (Slice 5), the old metadata card retired with Quick Setup moved up, and
 the `/edit` routes + template deleted (Slice 5b — ~55 test sites migrated to
-`/config` + Home; `/edit` now 301-redirects). Remaining: **Slice 6** (Archive
-card) and the **`sessions/new` alignment** follow-up.
+`/config` + Home; `/edit` now 301-redirects), and the **`sessions/new`
+alignment** (create page mirrors Home's Quick-Setup-left / UI-settings-right
+bottom row). Remaining: **Slice 6** (Archive card).
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit
@@ -775,27 +775,21 @@ new mechanism), then the config-consolidation work.
    the Extract data page bottom-right (the slot reserved in Slice 1). Its own
    follow-up slice.
 
-### Follow-up — align `operator/sessions/new` with the finalized Home layout
+### Follow-up — align `operator/sessions/new` with the finalized Home layout. ✅ done 2026-08-18
 
-Once the Session details card's shape is frozen (Slice 2, done), the **New
-session** page (`session_new.html`) should echo the same conventions so create
-and view/edit feel like one surface. **Logged as a follow-up to the main
-wiring business — sequence after Slice 3 (or alongside, since it's a pure
-template move on a separate page).** Scope:
+The **New session** page (`session_new.html`) now echoes Session Home's frozen
+bottom row so create and view/edit feel like one surface:
 
-- **Move the User interface settings block to the right** — match Home's
-  Owners-left / UI-settings-right two-column bottom row (New has no Owners yet,
-  so the left column is the Details/Schedule block).
-- **Move Quick Setup (optional) up** — currently low on the New page; raise it
-  so the optional quick-start path is visible without scrolling past the full
-  form.
-- **Make the User interface settings card consistent with Home's** — same
-  heading, same normal-size labels, same inline checkbox-after-label row layout
-  (the `.ui-settings-row` / `.ui-setting` primitives from Slice 2), instead of
-  the New page's current one-off styling.
+- **Quick Setup (left) + User interface settings (right)** now sit side by side
+  in **one** `.bottom-grid` (previously two stacked grids with UI-settings on
+  top-left and Quick Setup below). This moved Quick Setup **up** next to the
+  details form and UI settings **to the right**.
+- The UI-settings card was re-styled onto Home's **`.ui-settings-row` /
+  `.ui-setting`** primitives (inline checkbox-after-label, normal font),
+  replacing the page's one-off flex layout.
 
-Pure presentation on the create page; no route/persistence change. Land as its
-own small slice.
+Pure presentation on the create page; no route/persistence change (the two
+toggles still submit via `form="create-session-form"`).
 
 ### Edit-mode persistence assumptions (survey, 2026-08-18)
 

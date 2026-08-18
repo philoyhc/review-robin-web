@@ -48,6 +48,30 @@ def test_new_session_page_renders_quick_setup_card(
     assert 'id="quick-setup-assignments"' not in body
 
 
+def test_new_session_bottom_row_quick_setup_left_ui_settings_right(
+    client: TestClient,
+) -> None:
+    """18R Item 4 follow-up — the create page mirrors Session Home's bottom
+    row: Quick Setup (left) and User interface settings (right) sit side by
+    side, and the UI-settings card uses Home's ``.ui-settings-row`` /
+    ``.ui-setting`` primitives (not the old one-off flex layout)."""
+    body = client.get("/operator/sessions/new").text
+
+    quick_pos = body.find('id="quick-setup"')
+    ui_pos = body.find('id="user-interface-settings"')
+    assert -1 not in (quick_pos, ui_pos)
+    # Quick Setup comes first (bottom-left), UI settings second (right).
+    assert quick_pos < ui_pos
+
+    ui_card = body[ui_pos:]
+    assert 'class="ui-settings-row"' in ui_card
+    assert 'class="ui-setting"' in ui_card
+    assert 'name="relationships_enabled"' in ui_card
+    assert 'name="observers_enabled"' in ui_card
+    # Both toggles still submit with the create form.
+    assert 'form="create-session-form"' in ui_card
+
+
 def test_new_session_quick_setup_has_no_lock_toggle(
     client: TestClient,
 ) -> None:
