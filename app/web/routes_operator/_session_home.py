@@ -98,6 +98,7 @@ def session_detail(
     super_error: str | None = Query(default=None),
     prepare_confirm: str | None = Query(default=None),
     editing: bool = Query(default=False),
+    owners_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -194,6 +195,9 @@ def session_detail(
             "config_owner_candidates": (
                 session_owners.workspace_operator_candidates(db, review_session)
             ),
+            # 18R Item 4 Slice 4 — owner add/remove errors surface inline on
+            # the config Owners sub-card (redirected here from the routes).
+            "owners_error": owners_error,
             # 18R Item 4 Slice 3 — edit-mode wiring for the Session details
             # card. ``config_editing`` is the canonical server state (from
             # ``?editing=1``), gated on the session actually being editable so a
@@ -685,14 +689,18 @@ def session_revert_to_draft(
 
 
 def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
-    base = f"/operator/sessions/{session_id}/edit#owners"
+    # 18R Item 4 Slice 4 — owner add/remove now land back on Session Home's
+    # config card in edit mode (``?editing=1``), scrolled to the Owners
+    # sub-card, instead of the (soon-retired) Edit page.
+    base = f"/operator/sessions/{session_id}?editing=1#config-owners-card"
     if error_code:
-        # Anchor stays at the end; the query param sits before the #.
+        # Anchor stays at the end; the query params sit before the #.
         from urllib.parse import quote
 
         return (
-            f"/operator/sessions/{session_id}/edit"
-            f"?owners_error={quote(error_code, safe='')}#owners"
+            f"/operator/sessions/{session_id}"
+            f"?editing=1&owners_error={quote(error_code, safe='')}"
+            "#config-owners-card"
         )
     return base
 

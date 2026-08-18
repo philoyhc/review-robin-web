@@ -176,10 +176,10 @@
        below the unified details block: Owners (left) + User interface
        settings (right), both mirroring their Edit-page cards. Owners is an
        Email / Name / Role / Added table in display mode, gaining an Action
-       (Remove) column + an Add-owner form in edit mode. Add / Remove and the
-       UI-settings checkboxes are mock (inert) until the edit-mode
-       persistence slice; both participate in the card-wide data-config-mode
-       swap. #}
+       (Remove) column + an Add-owner form in edit mode. Owner Add / Remove
+       (Slice 4) and the UI-settings checkboxes (Slice 3) are wired to the
+       real routes; both participate in the card-wide data-config-mode swap.
+       Owner add/remove redirect back here in edit mode (?editing=1). #}
     <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2);">
       <div class="bottom-left">
         <div class="card" id="config-owners-card">
@@ -188,6 +188,30 @@
             Workspace operators with full edit access on this session. The
             session always retains at least one owner.
           </p>
+
+          {# Owner add/remove errors (redirected back here from the routes).
+             Shown in either mode so a redirect that lands in display mode
+             still surfaces the message. Mirrors the Edit page's banner. #}
+          {% if owners_error %}
+            <div class="card banner-scroll-target" role="alert">
+              <p>
+                {% if owners_error == "already_owner" %}
+                  That user is already an owner of this session.
+                {% elif owners_error == "not_in_workspace" %}
+                  That user isn't on the workspace operator allowlist.
+                  Admit them via <code>Admin → Accounts Management</code> first.
+                {% elif owners_error == "not_owner" %}
+                  That user isn't an owner of this session anymore.
+                {% elif owners_error == "self_only" %}
+                  As a sys-admin who isn't an owner of this session, you can
+                  only add <em>yourself</em> as an owner. Add yourself first,
+                  then add others.
+                {% else %}
+                  Couldn't apply that change ({{ owners_error }}).
+                {% endif %}
+              </p>
+            </div>
+          {% endif %}
 
           {# Display mode — read-only owners table. #}
           <table data-display-only>
@@ -225,28 +249,44 @@
                   <td>{{ owner.role }}</td>
                   <td>{{ owner.joined_at | format_date }}</td>
                   <td class="col-shrink">
-                    <button type="button" class="chrome-link" disabled
-                            title="Mock — not wired yet">Remove</button>
+                    <form method="post" style="display:inline"
+                          action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
+                      <button class="chrome-link" type="submit">Remove</button>
+                    </form>
                   </td>
                 </tr>
               {% endfor %}
             </table>
 
-            <label style="display: block; margin-top: var(--space-3);">
-              Pick or search for a workspace operator:
-              <input type="email" id="mock-add-owner" list="mock-owner-candidates"
-                     autocomplete="off" placeholder="email" disabled
-                     style="width: 100%; box-sizing: border-box;">
-            </label>
-            <datalist id="mock-owner-candidates">
-              {% for candidate in config_owner_candidates %}
-                <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
-              {% endfor %}
-            </datalist>
-            <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
-              <button type="button" class="btn" disabled aria-disabled="true"
-                      title="Mock — not wired yet">Add owner</button>
-            </div>
+            {% if config_owner_candidates %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/owners/add"
+                    id="config-add-owner-form">
+                <label style="display: block; margin-top: var(--space-3);">
+                  Pick or search for a workspace operator:
+                  <input type="email" id="config-add-owner-email"
+                         name="target_email" list="config-owner-candidates"
+                         autocomplete="off" required placeholder="email"
+                         style="width: 100%; box-sizing: border-box;">
+                </label>
+                <datalist id="config-owner-candidates">
+                  {% for candidate in config_owner_candidates %}
+                    <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
+                  {% endfor %}
+                </datalist>
+                {# Submit stays enabled (no JS gate) — the ``required`` email
+                   input already blocks an empty submission, so this works
+                   without JavaScript. #}
+                <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
+                  <button class="btn" type="submit"
+                          id="config-add-owner-submit">Add owner</button>
+                </div>
+              </form>
+            {% else %}
+              <p class="muted" style="margin-top: var(--space-3);">
+                No other workspace operators are available to add.
+              </p>
+            {% endif %}
           </div>
         </div>
       </div>

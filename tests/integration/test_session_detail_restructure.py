@@ -967,8 +967,8 @@ def test_session_config_card_has_owners_subcard(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 — the Session details card carries an Owners sub-card
-    (half-width, inside the card) showing the current owners; edit mode
-    has a mock, inert add/remove UI. The Schedule timeline card is gone."""
+    (half-width, inside the card) showing the current owners; edit mode has
+    the wired add/remove UI (Slice 4). The Schedule timeline card is gone."""
     review_session = _make_session(client, db, code="cfg-owners")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
@@ -981,10 +981,12 @@ def test_session_config_card_has_owners_subcard(
     for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Added</th>"):
         assert col in card
     assert 'class="col-shrink">Action</th>' in card  # edit-mode Action column
-    # The creator is an owner — their email shows in the table.
+    # The creator is an owner — their email shows in the table, with a wired
+    # Remove form (Slice 4). (Add-owner form coverage — which needs a second
+    # workspace operator to have candidates — lives in test_session_owners.)
     assert "alice@example.edu" in card
-    # Edit-mode mock add-owner control lives inside the card.
-    assert 'id="mock-add-owner"' in card
+    assert 'type="submit">Remove</button>' in card
+    assert "/remove\"" in card
 
     # User interface settings card sits to the right of Owners.
     assert 'id="config-ui-settings-card"' in card
@@ -994,6 +996,22 @@ def test_session_config_card_has_owners_subcard(
 
     # Schedule timeline card retired from Session Home.
     assert "<h2>Schedule timeline</h2>" not in body
+
+
+def test_config_owners_error_surfaces_on_home(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 Slice 4 — owner add/remove redirect back to Home with an
+    ``owners_error`` param; the config Owners sub-card renders the banner."""
+    review_session = _make_session(client, db, code="cfg-ownerr")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "?editing=1&owners_error=not_in_workspace"
+    ).text
+    config_pos = body.find('id="session-config"')
+    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    assert 'role="alert"' in card
+    assert "workspace operator allowlist" in card
 
 
 def test_session_home_has_danger_zone_mock(
