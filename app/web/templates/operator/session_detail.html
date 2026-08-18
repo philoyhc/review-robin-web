@@ -473,19 +473,12 @@
         </div>
 
         {# Lifecycle state shown in the chrome status strip — no
-           duplicate Status pill here per spec/session_home.md. #}
-        <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
-          {# Editing session details is lifecycle-gated to the
-             editable states (draft / validated) by the route's
-             ``_require_editable``; the button mirrors that gate so it
-             isn't live on an activated session. #}
-          {% if is_draft or is_validated %}
-            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
-          {% else %}
-            <a class="btn secondary" aria-disabled="true"
-               title="Revert the session to draft to edit its details.">Edit</a>
-          {% endif %}
-        </div>
+           duplicate Status pill here per spec/session_home.md.
+           18R Item 4 Slice 5 — the Edit button is retired: session config
+           is now edited in place on the Session details card (#session-config)
+           above via its Unlock affordance, and the separate Edit page is no
+           longer linked from the UI. This card is read-only session metadata
+           (Created by / Created / Modified). #}
       </div>
 
       {# Schedule timeline card retired (18R Item 4) — the resolved
@@ -499,13 +492,14 @@
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>
 
-    {# Bottom-right — Danger Zone mock. Mirrors the Edit page's Danger
-       Zone card (Delete Data + Delete session) as a static, inert
-       placeholder; a later 18R Item 4 slice wires the real forms here
-       and retires the Edit page copy. Controls stay disabled for now
-       (Mock — not wired yet). #}
+    {# Bottom-right — Danger Zone (18R Item 4 Slice 5 — wired; relocated
+       from the retired Edit page). Delete Data wipes reviewer responses;
+       Delete session removes the whole session and is locked while
+       Activated (button disabled + the route's ``_require_editable`` gate).
+       Each confirm checkbox is ``required`` so the destructive submit is
+       blocked without JavaScript unless the operator ticks it. #}
     <div class="bottom-left">
-      <div class="card danger-zone" id="danger-zone-mock">
+      <div class="card danger-zone" id="danger-zone">
         <h2 style="margin-top: 0;">Danger Zone</h2>
         <p class="form-help">
           Delete Data wipes every reviewer response while leaving
@@ -513,40 +507,42 @@
           session and is locked while session is Activated.
         </p>
 
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" disabled>
-            Yes, delete every reviewer response on
-            <strong>{{ session.name }}</strong>. Setup data is
-            preserved.
-          </label>
-        </p>
-        <p>
-          <button type="button" class="btn destructive" disabled
-                  aria-disabled="true"
-                  title="Mock — not wired yet">Delete Data</button>
-        </p>
+        <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete every reviewer response on
+              <strong>{{ session.name }}</strong>. Setup data is
+              preserved.
+            </label>
+          </p>
+          <p>
+            <button class="btn destructive" type="submit">Delete Data</button>
+          </p>
+        </form>
 
         <hr>
 
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" disabled>
-            Yes, delete <strong>{{ session.name }}</strong> and all
-            its data.
-          </label>
-        </p>
-        <p>
-          <button type="button" class="btn destructive" disabled
-                  aria-disabled="true"
-                  title="Mock — not wired yet">Delete session</button>
-        </p>
-        {% if is_ready %}
-          <p class="form-help" style="margin-bottom: 0;">
-            Session deletion is locked while status is Activated.
-            Pause the session first to enable deletion.
+        <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required
+                     {% if is_ready %}disabled{% endif %}>
+              Yes, delete <strong>{{ session.name }}</strong> and all
+              its data.
+            </label>
           </p>
-        {% endif %}
+          <p>
+            <button class="btn destructive" type="submit"
+                    {% if is_ready %}disabled aria-disabled="true"{% endif %}>Delete session</button>
+          </p>
+          {% if is_ready %}
+            <p class="form-help" style="margin-bottom: 0;">
+              Session deletion is locked while status is Activated.
+              Pause the session first to enable deletion.
+            </p>
+          {% endif %}
+        </form>
       </div>
     </div>
   </div>

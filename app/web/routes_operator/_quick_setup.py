@@ -215,7 +215,10 @@ async def create_session(
     # Home with the slot's error flag (the Quick Setup card and its
     # error markers live on Home, not the Edit page).
     home_url = f"/operator/sessions/{review_session.id}"
-    edit_url = f"/operator/sessions/{review_session.id}/edit"
+    # 18R Item 4 Slice 5 — the Edit page is retired; a bare create lands on
+    # Session Home with the Session details card open in edit mode so the
+    # operator can continue filling in details in place.
+    edit_url = f"{home_url}?editing=1#session-config"
 
     def quick_setup_error_redirect(
         kind: str, reason: str
@@ -300,9 +303,8 @@ async def create_session(
         last_fragment = "#quick-setup-settings"
 
     # Quick Setup uploads anchor at their fragment on Session Home;
-    # a bare create (no uploads) lands on the Edit page so the
-    # operator continues setting up details (the back-link there
-    # leads back to Session Home).
+    # a bare create (no uploads) opens the Session details card in edit
+    # mode (``edit_url``) so the operator continues setting up details.
     target_url = f"{home_url}{last_fragment}" if last_fragment else edit_url
     return RedirectResponse(
         url=target_url,

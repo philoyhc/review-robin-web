@@ -100,7 +100,10 @@ def test_registry_rules_have_non_empty_metadata() -> None:
         assert rule.why
         assert rule.fix_page_label
         url = rule.fix_url(fake_session)
-        assert url and url.startswith("/operator/sessions/1/")
+        # Some fix links target a sub-path (…/1/reviewers), others the
+        # Session Home config card (…/1?editing=1#session-config) after the
+        # Edit page was retired (18R Item 4 Slice 5).
+        assert url and url.startswith("/operator/sessions/1")
 
 
 def test_validate_stamps_rule_key_and_fix_url(db: Session) -> None:

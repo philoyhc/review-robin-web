@@ -329,9 +329,9 @@ def test_quick_setup_card_lives_at_bottom_left(
     quick_setup_pos = body.find('id="quick-setup"')
 
     assert -1 not in (workflow_pos, session_details_pos, quick_setup_pos)
-    # Danger Zone still on Edit (not Home); Extract Setup moved to the
-    # Extract data page (no longer on Home).
-    assert body.find('id="danger-zone"') == -1
+    # 18R Item 4 Slice 5 — Danger Zone is now wired on Home (bottom-right).
+    # Extract Setup moved to the Extract data page (no longer on Home).
+    assert body.find('id="danger-zone"') != -1
     assert body.find('id="extract-data"') == -1
 
     # Source order = mobile DOM collapse order: Quick Setup sits below
