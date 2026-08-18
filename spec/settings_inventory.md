@@ -83,9 +83,13 @@ Owners section on the Edit page, Segment 16B PR 2).
   timezone card), placed before the deadline it scopes; lifecycle-
   gated like the rest of the form. Also hosts the **Owners** card
   (Segment 16B PR 2) — current co-owners + Add-owner typeahead
-  picker over the workspace operator allowlist. Gated by
-  `require_sys_admin_or_session_operator` so a sys-admin can
-  reach a session they don't own + self-add as owner.
+  picker over the workspace operator allowlist. Since **Segment 18S
+  Item 3** the Edit page is gated by `require_session_operator`
+  (real ownership), so a sys-admin must own the session to manage
+  owners — they self-add first via the Sessions Diagnostics
+  **"Manage"** (adopt) action. The `owners/add` route keeps a
+  relaxed entry but is **self-only** for a non-owner sys-admin;
+  `owners/remove` requires ownership.
 
 | Field | Type | Notes |
 |---|---|---|

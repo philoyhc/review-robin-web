@@ -310,7 +310,7 @@ All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus 
 - Outbox per-session route retired entirely (PR 3) rather than relaxed; old bookmark URLs 404. Documented in-flight reshape.
 - `sys_admin.outbox_viewed` audit event not emitted — plan called it optional ("lean skip").
 - PR 6 adds an "Invite by email" form + `users.invite` service — bonus over the strict plan, sensible companion to admit/revoke.
-- **Undocumented:** the actor-owner check in `session_owners.add_owner` / `remove_owner` (16B PR 2) lives at the route layer (`require_sys_admin_or_session_operator`), not in the service. Defensible (the relaxed gate intentionally lets sys-admins act without owning the session), but worth recording — file under "16B PR 2 scope deltas" if pilot feedback wants service-level enforcement instead.
+- **Owner-management gating** (16B PR 2, **updated by 18S Item 3 #1935**): the per-session gate lives at the route layer. Originally the relaxed `require_sys_admin_or_session_operator` let sys-admins act without owning the session; 18S Item 3 tightened this — `owners/remove` (and edit / lobby-edit) now require `require_session_operator`, and `owners/add` is self-only for a non-owner sys-admin. The relaxed gate remains only on `owners/add` (self-add bootstrap) + `clone`; cross-session elevation goes through the audited Diagnostics "Manage"/adopt door.
 
 ---
 
