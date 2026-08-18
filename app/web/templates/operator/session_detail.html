@@ -17,6 +17,28 @@
      303 back here after firing. per spec/workflow_card.md. #}
   {% include "operator/partials/next_action_card.html" %}
 
+  {# 18R Item 4 Slice 2 (scaffold) — placeholder for the consolidated
+     Session config card that will hold the session's details / schedule
+     / owners / UI settings in a display ↔ edit swap. Full-width, directly
+     below Workflow. Placeholder body + an inert Edit button for now; the
+     display content + edit-mode wiring land in follow-up sub-slices, at
+     which point the existing Session Details card (in the left column
+     below) folds into this one. #}
+  <div class="card" id="session-config">
+    <h2>Session details</h2>
+    <p class="muted" style="margin: 0;">
+      Placeholder — the session's configuration (details, schedule,
+      owners, interface settings) will render here in display mode, with
+      Edit flipping the card into edit mode. Wiring lands in a follow-up
+      slice.
+    </p>
+    {# Edit button on its own row, flushed right, inert for now. #}
+    <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
+      <a class="btn secondary" aria-disabled="true"
+         title="Coming in a follow-up slice">Edit</a>
+    </div>
+  </div>
+
   {# Two-column layout. Left column: Session Details → Schedule →
      Quick Setup. 18R Item 4 Slice 1 relocated Quick Setup to the
      bottom of the left column ("bottom left") and moved Extract
