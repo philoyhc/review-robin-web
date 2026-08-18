@@ -578,13 +578,16 @@ individually or batched as convenient.
   `observers_enabled` (each with its leading `&middot;` inside the conditional so
   no dangling separator). Added `observer_count` to `SessionStatusPills`.
 
-**Open** — log further tweaks here as they come up.
+- **Chrome status strip: wire the Responses pill** (2026-08-18). Was a hardcoded
+  `awaiting` placeholder. Now: **"Awaiting"** before activation (draft /
+  validated), then **`<submitted reviews> / <reviewees>`** once activated (and
+  while closed / expired / archived) — reviewee-centric, following the Responses
+  page. "Submitted reviews" = `include` assignments with ≥1 response bearing a
+  `submitted_at`; denominator is the reviewee count. Added `responses_reportable`
+  + `responses_submitted` to `SessionStatusPills` (the submitted-count aggregate
+  runs only once activated, since the strip renders on every session page).
 
-**Noted (not wired):** the strip's **Responses** pill is a hardcoded
-placeholder — always `awaiting`. The intended states are
-`awaiting / receiving / all received` (per the template comment), but the real
-wiring (off assignment / response completion) hasn't landed. A candidate future
-tweak if the operator wants a live Responses report.
+**Open** — log further tweaks here as they come up.
 
 ---
 

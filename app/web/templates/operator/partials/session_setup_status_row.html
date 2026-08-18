@@ -72,8 +72,13 @@
     {% endif %}
     &middot;
     Responses:
-    {# Placeholder — real wiring lands later.
-       States: awaiting / receiving / all received. #}
-    <span class="pill pill-empty">awaiting</span>
+    {# Before activation: Awaiting. Once activated (and while closed /
+       expired / archived): submitted reviews over reviewee count, following
+       the reviewee-centric Responses page. #}
+    {% if status_pills.responses_reportable %}
+      <span class="pill pill-info">{{ status_pills.responses_submitted }} / {{ status_pills.reviewee_count }}</span>
+    {% else %}
+      <span class="pill pill-empty">Awaiting</span>
+    {% endif %}
   </p>
 </div>
