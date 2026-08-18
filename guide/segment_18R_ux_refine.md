@@ -714,11 +714,21 @@ new mechanism), then the config-consolidation work.
      the instruments `dfsave-` textareas) so the details/schedule inputs and the
      two UI-settings checkboxes submit as one form without physically nesting
      inside the Owners sub-card.
-4. **Wire Owners Add / Remove.** Turn the inert Owners controls into live POST
-   forms (reuse `session_owners`); its own form, separate from the config form.
-   **Re-point the owner-route redirects from `/edit` to Home.** Emit the
-   existing audit events unchanged. *(UI-settings moved up into Slice 3 — see
-   above — so this slice is Owners only.)*
+4. **Wire Owners Add / Remove. ✅ done 2026-08-18.** The inert Owners controls
+   are live POST forms (reuse `session_owners`); Add is its own `<form>`,
+   separate from the config form; each Remove is an inline form. Owner-route
+   redirects now land on Home's config card in edit mode
+   (`?editing=1#config-owners-card`), and errors surface via an inline banner
+   on the Owners sub-card (`owners_error` param, mirroring the Edit page).
+   *(UI-settings moved up into Slice 3, so this slice is Owners only.)*
+   - **Known gap for Slice 5:** the Owners forms live inside the card's
+     `data-edit-only` region, so they only show when the card is in edit mode —
+     which is gated on the session being draft/validated. Owner management on an
+     **activated** session therefore still relies on the (not-yet-retired) Edit
+     page. Slice 5 must give owners an always-available affordance (owners are a
+     permission concern, not lifecycle-gated content) before deleting Edit —
+     e.g. an independent edit toggle on the Owners sub-card, or allowing the
+     card into edit mode for owners-only on activated sessions.
 5. **Retire Edit + auth fix.** Redirect `/edit` → Home; delete
    `session_edit.html` + the `/edit` GET/POST routes; retire the looser
    `require_sys_admin_or_session_operator` gate; re-point Diagnostics "Details"

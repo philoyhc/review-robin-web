@@ -146,8 +146,10 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
         follow_redirects=False,
     )
     assert response.status_code == 303
+    # 18R Item 4 Slice 4 — owner add/remove now land on Session Home's config
+    # card in edit mode (was the Edit page's #owners anchor).
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/edit#owners"
+        f"/operator/sessions/{review_session.id}?editing=1#config-owners-card"
     )
 
     bob_row = db.execute(
@@ -169,6 +171,31 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
     assert event.detail["refs"]["target_user_id"] == bob_row.id
     assert event.detail["snapshot"]["email"] == "bob@example.edu"
     assert event.detail["session_id"] == review_session.id
+
+
+def test_config_owners_card_renders_add_form_when_candidates_exist(
+    db: Session,
+    client: TestClient,
+    bob,
+) -> None:
+    """18R Item 4 Slice 4 — with a second workspace operator available, the
+    Session Home config Owners sub-card renders the wired Add-owner form."""
+    review_session = _make_session(client, db, code="own-addform")
+    _seed_user(db, email="bob@example.edu")
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?editing=1"
+    ).text
+    config_pos = body.find('id="session-config"')
+    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+
+    assert 'id="config-add-owner-email"' in card
+    assert 'name="target_email"' in card
+    assert (
+        f'action="/operator/sessions/{review_session.id}/owners/add"' in card
+    )
+    # Bob is offered as a candidate in the datalist.
+    assert "bob@example.edu" in card
 
 
 def test_add_owner_target_not_in_workspace_303s_with_error(
