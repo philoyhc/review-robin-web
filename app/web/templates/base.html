@@ -423,6 +423,11 @@
       .config-offset-row { display: flex; align-items: center; gap: var(--space-2); }
       .config-offset-row + .config-offset-row { margin-top: var(--space-1); }
       .config-value-resolved { background: #f0f9ff; }
+      /* User interface settings — both toggles on one line in display and
+         edit modes; label text at normal weight/size with the On/Off pill
+         (display) or checkbox (edit) inline after it, in the same slot. */
+      .ui-settings-row { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: center; }
+      .ui-setting { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 400; margin: 0; }
       .pill {
         display: inline-block;
         padding: 1px 8px;
