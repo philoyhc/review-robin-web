@@ -105,6 +105,7 @@ class SessionStatusPills:
     reviewer_count: int
     reviewee_count: int
     relationship_count: int
+    observer_count: int
     assignment_count: int
     instrument_count: int
     email_invites_set_up: bool
@@ -168,6 +169,7 @@ def session_status_pills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
         relationship_count=relationships_service.existing_count(db, sid),
+        observer_count=csv_imports.existing_observer_count(db, sid),
         assignment_count=assignments.existing_count(db, sid),
         instrument_count=len(
             list(

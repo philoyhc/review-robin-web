@@ -571,8 +571,20 @@ individually or batched as convenient.
   purge checkboxes + button already render disabled + greyed, so the extra
   caption was redundant. ("This session is already archived." stays for the
   archived state.)
+- **Chrome status strip: gate Relationships / add Observers on their UI-settings
+  toggles** (2026-08-18). The `session_setup_status_row` reported **Relationships
+  always** and had **no Observers**. Now Relationships reports only when
+  `relationships_enabled` and a new **Observers** pill reports only when
+  `observers_enabled` (each with its leading `&middot;` inside the conditional so
+  no dangling separator). Added `observer_count` to `SessionStatusPills`.
 
 **Open** — log further tweaks here as they come up.
+
+**Noted (not wired):** the strip's **Responses** pill is a hardcoded
+placeholder — always `awaiting`. The intended states are
+`awaiting / receiving / all received` (per the template comment), but the real
+wiring (off assignment / response completion) hasn't landed. A candidate future
+tweak if the operator wants a live Responses report.
 
 ---
 

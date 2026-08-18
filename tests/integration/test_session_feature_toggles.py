@@ -251,6 +251,37 @@ def test_relationships_nav_tab_visible_when_flag_on(
     )
 
 
+# ── Chrome status-row pills (18R Item 3) ──────────────────────────────
+
+
+def test_status_row_hides_relationships_and_observers_when_flags_off(
+    client: TestClient, db: Session
+) -> None:
+    """The chrome status strip only reports Relationships / Observers when
+    the operator has enabled their optional Setup tab (UI settings)."""
+    review_session = _make_session(client, db, code="ft-status-off")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    strip = body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
+    assert "Relationships:" not in strip
+    assert "Observers:" not in strip
+    # Always-on reports are unaffected.
+    assert "Reviewers:" in strip
+    assert "Instruments:" in strip
+
+
+def test_status_row_shows_relationships_and_observers_when_flags_on(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ft-status-on")
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.commit()
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    strip = body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
+    assert "Relationships:" in strip
+    assert "Observers:" in strip
+
+
 # ── Route guard ───────────────────────────────────────────────────────
 
 
