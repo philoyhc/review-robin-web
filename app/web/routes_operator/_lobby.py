@@ -25,6 +25,7 @@ from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
+    require_session_operator,
     require_sys_admin_or_session_operator,
 )
 from app.web.routes_operator._shared import _templates
@@ -265,9 +266,7 @@ def lobby_edit_submit(
     code: str = Form(...),
     deadline: str | None = Form(default=None),
     tags: str = Form(default=""),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

@@ -31,6 +31,7 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     date_formatting,
     operator_settings,
+    permissions,
     responses,
     scheduled_events,
     session_owners,
@@ -157,9 +158,7 @@ def session_detail(
 def session_edit_form(
     request: Request,
     owners_error: str | None = Query(default=None),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -252,9 +251,7 @@ def session_edit_submit(
     observers_enabled: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -562,6 +559,18 @@ def session_owners_add(
             url=_owners_redirect_url(review_session.id, "not_in_workspace"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    # Segment 18S Item 3 — self-only for the relaxed (non-owner sys-admin)
+    # path. A sys-admin who isn't a session operator reaches this route via
+    # the ``require_sys_admin_or_session_operator`` bypass; they may add
+    # **only themselves** (the audited self-add bootstrap). Adding anyone
+    # else requires being an owner first. A real session operator (owner)
+    # is unaffected and may add anyone.
+    if not permissions.user_can_view_session(db, actor, review_session.id):
+        if target.id != actor.id:
+            return RedirectResponse(
+                url=_owners_redirect_url(review_session.id, "self_only"),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
     try:
         session_owners.add_owner(
             db,
@@ -584,9 +593,7 @@ def session_owners_add(
 @router.post("/sessions/{session_id}/owners/{user_id}/remove")
 def session_owners_remove(
     user_id: int,
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    review_session: ReviewSession = Depends(require_session_operator),
     actor: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

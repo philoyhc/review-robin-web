@@ -115,12 +115,14 @@ def test_sessions_diagnostics_renders_for_sys_admin(
         f'href="/operator/sys-admin/sessions/{review_session.id}/audit-log">Audit log</a>'
         in response.text
     )
-    # Details action — replaced the earlier "Operators" placeholder
-    # when 16B's session owner-management surface landed.
+    # Manage action (Segment 18S Item 3) — a POST to the adopt route
+    # (self-add as owner → open), replacing the old back-door link to
+    # /edit now that editing a non-owned session requires ownership.
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Details</a>'
+        f'action="/operator/sys-admin/sessions/{review_session.id}/adopt"'
         in response.text
     )
+    assert ">Manage</button>" in response.text
     # Status renders as a lifecycle-coloured pill matching the
     # session_setup_status_row partial used on session-home pages.
     assert (

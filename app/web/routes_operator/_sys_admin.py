@@ -41,9 +41,16 @@ from sqlalchemy.orm import Session
 from app.auth.roles import effective_super_admin_emails
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import audit, invitations, sessions, users as users_service
+from app.services import (
+    audit,
+    invitations,
+    permissions,
+    session_owners,
+    sessions,
+    users as users_service,
+)
 from app.web import views
-from app.web.deps import require_sys_admin
+from app.web.deps import request_correlation_id, require_sys_admin
 from app.web.return_to import resolve_return_to
 from app.web.routes_operator._shared import _templates
 
@@ -233,6 +240,48 @@ def sys_admin_users(
             "toggle_error": toggle_error,
             "selected_user_id": selected,
         },
+    )
+
+
+@router.post("/sys-admin/sessions/{session_id}/adopt")
+def sys_admin_adopt_session(
+    session_id: int,
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Segment 18S Item 3 — the sys-admin cross-session elevation door.
+
+    A sys-admin reaches a session they don't own from the Sessions
+    Diagnostics list. Editing that session requires *ownership* (the
+    per-session gate is no longer relaxed for sys-admins), so this
+    action **self-adds the sys-admin as an owner** (audited
+    ``session.owner_added``) and drops them on the session's Home,
+    which they can now open through the normal operator path. Idempotent
+    — a no-op when they already own it. This is the explicit, recorded
+    elevation that replaces the old back-door edit access.
+    """
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if not permissions.user_can_view_session(db, actor, session_id):
+        try:
+            session_owners.add_owner(
+                db,
+                review_session=review_session,
+                actor=actor,
+                target=actor,
+                correlation_id=request_correlation_id(),
+            )
+        except session_owners.OwnerOperationError:
+            # already_owner race / not_in_workspace (a sys-admin is on the
+            # allowlist, so the latter shouldn't fire) — fall through to the
+            # redirect either way; the goal state is "actor owns it".
+            pass
+    return RedirectResponse(
+        url=f"/operator/sessions/{session_id}",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

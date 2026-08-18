@@ -11,9 +11,11 @@ Exercises the new Owners section on
   ``owners_error=not_in_workspace``.
 - Add target already an owner → 303 with
   ``owners_error=already_owner``.
-- Sys-admin who isn't on session_operators can hit GET /edit (the
-  relaxed gate) and self-add as owner — then has full operator
-  access via the normal session-operator path.
+- Segment 18S Item 3: a sys-admin who isn't a session_operator is
+  DENIED /edit (and lobby-edit / owners-remove); they self-add as
+  owner via the Diagnostics "Manage"/adopt action, then have full
+  operator access via the normal session-operator path. owners/add is
+  self-only for a non-owner sys-admin; clone stays allowed.
 - Audit events emitted with correct envelope.
 - Plain non-owner operator still 403s on /edit.
 """
@@ -90,22 +92,35 @@ def test_edit_page_403s_for_plain_non_member_operator(
     assert response.status_code == 403
 
 
-def test_edit_page_renders_for_sys_admin_non_member(
+def test_sys_admin_non_member_denied_edit_until_adopt(
     db: Session,
     client: TestClient,
     make_client,
     bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sys-admin Bob isn't a session_operator on alice's session
-    but reaches /edit via the relaxed gate."""
+    """Segment 18S Item 3 — editing a non-owned session now requires
+    ownership. Sys-admin Bob (not a session_operator on alice's
+    session) is **denied** /edit until he self-adds as owner via the
+    Diagnostics adopt action, after which /edit renders."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="own-sa")
 
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/edit"
+    # Denied before adopting.
+    denied = bob_client.get(f"/operator/sessions/{review_session.id}/edit")
+    assert denied.status_code == 403
+
+    # The audited elevation door: self-add as owner, land on Home.
+    adopt = bob_client.post(
+        f"/operator/sys-admin/sessions/{review_session.id}/adopt",
+        follow_redirects=False,
     )
+    assert adopt.status_code == 303
+    assert adopt.headers["location"] == f"/operator/sessions/{review_session.id}"
+
+    # Now an owner → /edit renders.
+    response = bob_client.get(f"/operator/sessions/{review_session.id}/edit")
     assert response.status_code == 200
     assert 'id="owners"' in response.text
 
@@ -334,19 +349,134 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
 # --- Diagnostics: Details link replaces Operators placeholder --------------
 
 
-def test_diagnostics_row_renders_details_link(
+def test_diagnostics_row_renders_manage_adopt_action(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Segment 18S Item 3 — the Diagnostics row's edit entry is a
+    "Manage" POST to the adopt route (self-add as owner → open), not a
+    back-door GET link to /edit."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="diag-details")
 
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Details</a>'
+        f'action="/operator/sys-admin/sessions/{review_session.id}/adopt"'
         in response.text
     )
-    # The old placeholder copy is gone.
-    assert "Coming in 16B" not in response.text
+    assert ">Manage</button>" in response.text
+    # The old back-door edit link is gone.
+    assert f'/operator/sessions/{review_session.id}/edit">Details' not in response.text
+
+
+# --------------------------------------------------------------------------- #
+# Segment 18S Item 3 — sys-admin cross-session writes require ownership
+# --------------------------------------------------------------------------- #
+
+
+def test_non_owner_sys_admin_denied_edit_submit(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="deny-edit")
+    resp = make_client(bob).post(
+        f"/operator/sessions/{review_session.id}/edit",
+        data={"name": "x", "code": "deny-edit", "description": ""},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
+
+
+def test_non_owner_sys_admin_denied_lobby_edit(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="deny-lobby")
+    resp = make_client(bob).post(
+        f"/operator/sessions/{review_session.id}/lobby-edit",
+        data={"name": "x", "code": "deny-lobby", "tags": ""},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
+
+
+def test_non_owner_sys_admin_denied_owners_remove(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="deny-remove")
+    # The per-session gate denies before the target user_id matters.
+    resp = make_client(bob).post(
+        f"/operator/sessions/{review_session.id}/owners/1/remove",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
+
+
+def test_owners_add_self_only_blocks_adding_other(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-owner sys-admin may add only themselves; adding someone
+    else is refused with the self_only owners-error."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="self-only")
+    carol = _seed_user(db, email="carol@example.edu")
+
+    resp = make_client(bob).post(
+        f"/operator/sessions/{review_session.id}/owners/add",
+        data={"target_email": "carol@example.edu"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert "owners_error=self_only" in resp.headers["location"]
+    # Carol was not added.
+    added = db.execute(
+        select(SessionOperator).where(
+            SessionOperator.session_id == review_session.id,
+            SessionOperator.user_id == carol.id,
+        )
+    ).scalar_one_or_none()
+    assert added is None
+
+
+def test_non_owner_sys_admin_can_still_clone(
+    db: Session, client: TestClient, make_client, bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="clone-ok")
+    before = db.execute(select(SessionOperator.id)).all()
+    resp = make_client(bob).post(
+        f"/operator/sessions/{review_session.id}/clone",
+        data={"mode": "config"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    after = db.execute(select(SessionOperator.id)).all()
+    assert len(after) > len(before)  # a new owned clone was created
+
+
+def test_adopt_idempotent_when_already_owner(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Adopting a session you already own is a no-op 303 (no duplicate
+    owner, no error)."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    review_session = _make_session(client, db, code="adopt-idem")
+    resp = client.post(
+        f"/operator/sys-admin/sessions/{review_session.id}/adopt",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    owners = db.execute(
+        select(SessionOperator).where(
+            SessionOperator.session_id == review_session.id
+        )
+    ).scalars().all()
+    assert len(owners) == 1  # still just alice
