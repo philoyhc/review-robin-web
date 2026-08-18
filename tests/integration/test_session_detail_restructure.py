@@ -156,6 +156,41 @@ def test_session_detail_renders_session_layout(
     assert "Validate & activate" not in body
 
 
+def _status_strip(body: str) -> str:
+    return body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
+
+
+def test_status_row_responses_awaiting_before_activation(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 3 — the chrome Responses pill reads "Awaiting" before the
+    session is activated (draft / validated)."""
+    review_session = _make_session(client, db, code="resp-await")
+    strip = _status_strip(
+        client.get(f"/operator/sessions/{review_session.id}").text
+    )
+    assert "Responses:" in strip
+    assert "Awaiting" in strip.split("Responses:", 1)[1]
+
+
+def test_status_row_responses_reports_submitted_over_reviewees_when_active(
+    client: TestClient, db: Session
+) -> None:
+    """Once activated, the Responses pill reports <submitted reviews> /
+    <reviewees> (reviewee-centric). With no submissions yet it reads
+    "0 / <reviewees>"."""
+    review_session = _seed_pair(
+        client, db, code="resp-active", reviewer_email="r@example.edu"
+    )
+    _activate(client, db, review_session)
+    strip = _status_strip(
+        client.get(f"/operator/sessions/{review_session.id}").text
+    )
+    after = strip.split("Responses:", 1)[1]
+    assert "Awaiting" not in after
+    assert "0 / 1" in after  # one reviewee (carol), nothing submitted yet
+
+
 def test_session_detail_description_preserves_line_breaks(
     client: TestClient, db: Session
 ) -> None:

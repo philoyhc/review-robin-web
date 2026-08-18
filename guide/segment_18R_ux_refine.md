@@ -571,6 +571,21 @@ individually or batched as convenient.
   purge checkboxes + button already render disabled + greyed, so the extra
   caption was redundant. ("This session is already archived." stays for the
   archived state.)
+- **Chrome status strip: gate Relationships / add Observers on their UI-settings
+  toggles** (2026-08-18). The `session_setup_status_row` reported **Relationships
+  always** and had **no Observers**. Now Relationships reports only when
+  `relationships_enabled` and a new **Observers** pill reports only when
+  `observers_enabled` (each with its leading `&middot;` inside the conditional so
+  no dangling separator). Added `observer_count` to `SessionStatusPills`.
+
+- **Chrome status strip: wire the Responses pill** (2026-08-18). Was a hardcoded
+  `awaiting` placeholder. Now: **"Awaiting"** before activation (draft /
+  validated), then **`<submitted reviews> / <reviewees>`** once activated (and
+  while closed / expired / archived) — reviewee-centric, following the Responses
+  page. "Submitted reviews" = `include` assignments with ≥1 response bearing a
+  `submitted_at`; denominator is the reviewee count. Added `responses_reportable`
+  + `responses_submitted` to `SessionStatusPills` (the submitted-count aggregate
+  runs only once activated, since the strip renders on every session page).
 
 **Open** — log further tweaks here as they come up.
 

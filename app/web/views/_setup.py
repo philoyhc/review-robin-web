@@ -19,13 +19,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import EmailOutbox, Instrument, Invitation, ReviewSession
+from app.db.models import (
+    Assignment,
+    EmailOutbox,
+    Instrument,
+    Invitation,
+    Response,
+    ReviewSession,
+)
 from app.services import assignments, csv_imports, field_labels
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
+from app.services import session_lifecycle as lifecycle
 
 
 @dataclass
@@ -105,6 +113,7 @@ class SessionStatusPills:
     reviewer_count: int
     reviewee_count: int
     relationship_count: int
+    observer_count: int
     assignment_count: int
     instrument_count: int
     email_invites_set_up: bool
@@ -113,6 +122,15 @@ class SessionStatusPills:
     ``"all_sent"``. Distinguishes the two flavours of pre-send (no
     ``Invitation`` rows at all vs. rows generated but no outbox email
     delivered yet) so the chrome status strip can read them apart."""
+    responses_reportable: bool
+    """``False`` before activation (draft / validated) — the Responses pill
+    reads ``Awaiting``. ``True`` once the session has been activated (ready /
+    expired / archived) — the pill reports ``<submitted> / <reviewees>``."""
+    responses_submitted: int
+    """Number of **submitted reviews** — ``include`` assignments in the
+    session with at least one response bearing a ``submitted_at`` — reported
+    over ``reviewee_count`` (reviewee-centric, matching the Responses page).
+    Computed only when ``responses_reportable``; ``0`` otherwise."""
 
 
 _INVITATION_STATES: tuple[str, ...] = (
@@ -164,10 +182,30 @@ def session_status_pills(
     db: Session, review_session: ReviewSession
 ) -> SessionStatusPills:
     sid = review_session.id
+    # Responses pill: "Awaiting" before activation, then
+    # "<submitted reviews> / <reviewees>". Only run the submitted-count
+    # aggregate once activated (the strip renders on every session page).
+    responses_reportable = not (
+        lifecycle.is_draft(review_session)
+        or lifecycle.is_validated(review_session)
+    )
+    responses_submitted = 0
+    if responses_reportable:
+        responses_submitted = db.execute(
+            select(func.count(distinct(Response.assignment_id)))
+            .select_from(Response)
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(
+                Assignment.session_id == sid,
+                Assignment.include.is_(True),
+                Response.submitted_at.is_not(None),
+            )
+        ).scalar_one()
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
         relationship_count=relationships_service.existing_count(db, sid),
+        observer_count=csv_imports.existing_observer_count(db, sid),
         assignment_count=assignments.existing_count(db, sid),
         instrument_count=len(
             list(
@@ -181,6 +219,8 @@ def session_status_pills(
         # for a real check (e.g. a non-empty email template row).
         email_invites_set_up=False,
         invitations_state=_invitations_state(db, sid),
+        responses_reportable=responses_reportable,
+        responses_submitted=responses_submitted,
     )
 
 
