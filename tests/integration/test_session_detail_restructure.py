@@ -785,3 +785,24 @@ def test_session_card_buttons_when_ready(
         f'action="/operator/sessions/{review_session.id}/delete"'
         not in body
     )
+
+
+def test_session_config_placeholder_card_renders_below_workflow(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 Slice 2 scaffold — a placeholder "Session details"
+    config card sits directly below the Workflow card, with an inert
+    Edit button flushed right (wiring lands in a follow-up slice)."""
+    review_session = _make_session(client, db, code="cfg-placeholder")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    workflow_pos = body.find('id="next-action"')
+    config_pos = body.find('id="session-config"')
+    assert -1 not in (workflow_pos, config_pos)
+    # Below Workflow.
+    assert workflow_pos < config_pos
+    assert "<h2>Session details</h2>" in body
+    # Edit button present but inert for now.
+    card = body[config_pos : config_pos + 800]
+    assert 'aria-disabled="true"' in card
+    assert ">Edit</a>" in card
