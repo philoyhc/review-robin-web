@@ -224,6 +224,20 @@ def session_detail(
     )
 
 
+# --- DEPRECATED: the standalone Edit page (18R Item 4 Slice 5) --------------
+#
+# The Edit page is **retired from the UI** — no operator surface links to
+# ``/edit`` any more; session config is edited in place on Session Home's
+# Session details card (#session-config), owners on its Owners sub-card, and
+# destructive ops in Home's Danger Zone. The GET render + POST submit routes
+# below (and ``operator/session_edit.html``) are kept **solely because ~55
+# integration-test call sites across ~18 files still drive them as the config /
+# schedule / timezone / offsets persistence + render harness**. A follow-up
+# slice migrates those tests onto ``POST /config`` + Home ``?editing=1`` and
+# then deletes these two routes and the template (see
+# ``guide/segment_18R_ux_refine.md`` Item 4 Slice 5b). Do not add new links to
+# these routes. This mirrors the "dead-from-the-card, kept-for-tests" pattern
+# already used for the per-concern instrument routes.
 @router.get("/sessions/{session_id}/edit", response_class=HTMLResponse)
 def session_edit_form(
     request: Request,

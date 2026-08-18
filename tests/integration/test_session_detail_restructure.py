@@ -141,12 +141,9 @@ def test_session_detail_renders_session_layout(
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
     assert "<h2>Run Session</h2>" not in body
-    # Danger Zone moved to the Edit Session page; Session Home no
-    # longer carries the card directly. (The literal "Danger Zone"
-    # string still appears in a CSS comment in base.html that ships
-    # inlined, so we anchor on the more-specific `id="danger-zone"`
-    # marker.)
-    assert 'id="danger-zone"' not in body
+    # 18R Item 4 Slice 5 — Danger Zone is wired on Session Home (bottom
+    # right), relocated from the retired Edit page.
+    assert 'id="danger-zone"' in body
     # The standalone "Session Setup" card was retired — its five Manage
     # links live in the chrome top-nav now (see chrome partial), so the
     # body no longer needs an in-page card duplicating them.
@@ -468,36 +465,24 @@ def test_session_card_buttons_when_draft(
     review_session = _make_session(client, db, code="draft-buttons")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Edit button shown
+    # 18R Item 4 Slice 5 — the standalone Edit page is retired from the UI:
+    # no /edit link on Home. Editing happens in place on #session-config.
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
-        in body
+        f'href="/operator/sessions/{review_session.id}/edit"' not in body
     )
     # Revert to draft form NOT present
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"' not in body
     )
-    # Delete Data / Delete Session forms moved off Home with the
-    # Danger Zone card; they live on the Edit Session page now.
+    # Danger Zone now lives on Home — Delete Data / Delete session forms
+    # are wired here (draft session → not locked).
     assert (
         f'action="/operator/sessions/{review_session.id}/delete-data"'
-        not in body
+        in body
     )
     assert (
         f'action="/operator/sessions/{review_session.id}/delete"'
-        not in body
-    )
-    # And confirm they DO appear on Edit.
-    edit_body = client.get(
-        f"/operator/sessions/{review_session.id}/edit"
-    ).text
-    assert (
-        f'action="/operator/sessions/{review_session.id}/delete-data"'
-        in edit_body
-    )
-    assert (
-        f'action="/operator/sessions/{review_session.id}/delete"'
-        in edit_body
+        in body
     )
 
 
@@ -761,13 +746,13 @@ def test_session_card_buttons_when_ready(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Edit button is rendered inert on an activated session — editing
-    # session details is lifecycle-gated to draft / validated, so the
-    # button drops its href and carries aria-disabled.
+    # 18R Item 4 Slice 5 — no /edit link (Edit page retired). Editing is
+    # lifecycle-gated: on an activated session the config card's Unlock
+    # control is rendered inert (aria-disabled), not a live edit affordance.
     assert (
         f'href="/operator/sessions/{review_session.id}/edit"' not in body
     )
-    assert '<a class="btn secondary" aria-disabled="true"' in body
+    assert 'data-config-lock-toggle aria-disabled="true"' in body
     # Workflow card is back on Session Home (PR 6 of
     # spec/workflow_card.md) — its ready-state pause form
     # posts to /revert.
@@ -775,16 +760,17 @@ def test_session_card_buttons_when_ready(
         f'action="/operator/sessions/{review_session.id}/revert"'
         in body
     )
-    # Danger Zone moved off Home — the Delete Data / Delete Session
-    # forms now live on the Edit Session page.
+    # Danger Zone lives on Home now. Delete Data has no lifecycle gate;
+    # Delete session is present but locked (disabled) while Activated.
     assert (
         f'action="/operator/sessions/{review_session.id}/delete-data"'
-        not in body
+        in body
     )
     assert (
         f'action="/operator/sessions/{review_session.id}/delete"'
-        not in body
+        in body
     )
+    assert "Session deletion is locked while status is Activated" in body
 
 
 def test_session_config_card_display_edit_swap(
@@ -1014,29 +1000,32 @@ def test_config_owners_error_surfaces_on_home(
     assert "workspace operator allowlist" in card
 
 
-def test_session_home_has_danger_zone_mock(
+def test_session_home_danger_zone_wired(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 — a Danger Zone mock card sits in the bottom-right
-    column (below the Session details card, right of the current working
-    session-details card). It mirrors the Edit page's copy but its
-    controls are inert placeholders until a later slice wires them."""
+    """18R Item 4 Slice 5 — the Danger Zone card in the bottom-right column
+    is wired (relocated from the retired Edit page): real Delete Data /
+    Delete session forms posting to the delete routes, each gated by a
+    ``required`` confirm checkbox."""
     review_session = _make_session(client, db, code="cfg-danger")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    danger_pos = body.find('id="danger-zone-mock"')
+    danger_pos = body.find('id="danger-zone"')
     assert danger_pos != -1
-    # It lives after (below/right of) the current working session-details
-    # card and the Quick Setup card in the bottom grid.
+    # It lives after (below/right of) the working session-details card and
+    # the Quick Setup card in the bottom grid.
     assert danger_pos > body.find('id="quick-setup"')
 
     card = body[danger_pos:]
-    assert "danger-zone" in body[body.rfind("<div", 0, danger_pos):danger_pos]
     assert ">Danger Zone</h2>" in card
-    # Both destructive actions are present as inert mocks.
+    # Both destructive actions post to their real routes.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/delete-data"' in card
+    )
+    assert f'action="/operator/sessions/{review_session.id}/delete"' in card
     assert ">Delete Data</button>" in card
     assert ">Delete session</button>" in card
-    assert 'title="Mock — not wired yet"' in card
-    # No live POST form is wired on the mock yet (it's the last card
-    # on the page, so nothing after it either).
-    assert "<form" not in card
+    # Confirm checkboxes are required (no-JS-safe destructive gate).
+    assert 'name="confirm" value="true" required' in card
+    # No lingering mock markers.
+    assert "Mock — not wired yet" not in card

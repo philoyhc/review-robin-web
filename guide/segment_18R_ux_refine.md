@@ -5,8 +5,10 @@ shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
 closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
 shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
 2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
-Home + retire the Edit page — Option 2; Slices 1–2 + the display/edit UX frozen
-2026-08-18, wiring next)**. A holding segment for **operator-UX refinement** on
+Home + retire the Edit page — Option 2; Slices 1–5 done 2026-08-18 (config
+save + owners wired, Edit page retired from the UI + Danger Zone on Home);
+remaining: Slice 5b route deletion, Slice 6 Archive card, sessions/new
+follow-up)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -586,9 +588,11 @@ shipping PR; land them individually or batched as convenient.
   (Save / Cancel / Add / Remove / the UI-settings checkboxes do not yet
   persist).
 
-Remaining (all wiring / teardown — see Sequence): edit-mode persistence →
-owners + UI-settings actions → retire Edit + auth fix → wire the Archive card,
-plus the **`sessions/new` alignment** follow-up (below).
+**Slices 3–5 ✅ done 2026-08-18** — config-card Save persistence (Slice 3),
+Owners Add/Remove wired (Slice 4), and the Edit page retired from the UI with
+Danger Zone wired on Home (Slice 5). Remaining: **Slice 5b** (delete the
+kept-for-tests `/edit` routes + template after migrating ~55 test sites),
+**Slice 6** (Archive card), and the **`sessions/new` alignment** follow-up.
 
 **The decision (Option 2, as scoped down).** Consolidate the session's
 config **display + edit onto Session Home** and **retire the separate Edit
@@ -729,12 +733,41 @@ new mechanism), then the config-consolidation work.
      permission concern, not lifecycle-gated content) before deleting Edit —
      e.g. an independent edit toggle on the Owners sub-card, or allowing the
      card into edit mode for owners-only on activated sessions.
-5. **Retire Edit + auth fix.** Redirect `/edit` → Home; delete
-   `session_edit.html` + the `/edit` GET/POST routes; retire the looser
-   `require_sys_admin_or_session_operator` gate; re-point Diagnostics "Details"
-   to the self-add-as-owner flow (**depends on 18S Item 3, already landed**);
-   update `spec/audience_and_identity_model.md`. (Danger Zone already mocked on
-   Home in Slice 2 — this slice wires its Delete data / Delete session forms.)
+5. **Retire the Edit page from the UI. ✅ done 2026-08-18.** No operator
+   surface links to `/edit` any more; Session Home is the sole config surface.
+   - Removed the last UI paths to `/edit`: the working-card **Edit button**
+     (that card is now read-only session metadata); the validation **"fix"
+     links** (`_session_edit_url` → `…?editing=1#session-config`); the **clone**
+     landing redirect; the bare-**create** / **quick-setup** fallback redirect.
+     All now open Home's Session details card in edit mode.
+   - **Danger Zone wired on Home** (bottom-right) — real Delete Data / Delete
+     session forms posting to the existing `/delete-data` + `/delete` routes,
+     each gated by a `required` confirm checkbox (no-JS-safe); Delete session
+     stays disabled + `_require_editable`-gated while Activated.
+   - **Auth:** no gate change needed — the Edit routes already use
+     `require_session_operator` (18S Item 3 narrowed them), and Diagnostics
+     "Details" is already the self-add-as-owner **adopt** flow (18S Item 3).
+     The looser `require_sys_admin_or_session_operator` stays for clone +
+     owners-add self-add, as 18S Item 3 set it.
+   - **Kept, deprecated:** the `/edit` GET/POST routes + `session_edit.html`
+     survive **only** as the config/schedule/timezone/offsets persistence +
+     render **test harness** (~55 call sites, ~18 files). Annotated as
+     deprecated; no UI links to them. Mirrors the "dead-from-the-card,
+     kept-for-tests" pattern used for the per-concern instrument routes.
+
+5b. **(Follow-up) Delete the `/edit` routes + template.** Migrate the ~55 test
+   call sites off `GET/POST /edit` onto `POST /config` + Home `?editing=1`
+   (pure test refactor — the two share `_apply_session_config_form`, so
+   behaviour is identical), then delete `session_edit_form` /
+   `session_edit_submit` / `session_edit.html` and add a `GET /edit` → Home
+   redirect for stale bookmarks. Its own slice; no user-facing change.
+   - **Also fold / de-dupe the working "Session Details" metadata card.** With
+     the Edit button gone it is a read-only card that still duplicates most of
+     `#session-config` (name / code / description / help contact / timezone);
+     its only unique fields are **Created by / Created / Modified**. Decide with
+     the operator: fold those three into `#session-config`'s display mode, or
+     slim the card to just those three. (Left as-is in Slice 5 to avoid touching
+     the frozen `#session-config` UX unilaterally.)
 6. **(Later) Archive session card** — add the half-width Archive session card to
    the Extract data page bottom-right (the slot reserved in Slice 1). Its own
    follow-up slice.

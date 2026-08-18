@@ -243,11 +243,14 @@ def test_clone_route_redirects_to_the_clone(
 
     assert response.status_code == 303
     location = response.headers["location"]
-    # Clone redirects to the Edit page so the operator can rename
-    # the clone immediately; ends in ``/edit``.
+    # 18R Item 4 Slice 5 — clone redirects to Session Home with the Session
+    # details card open in edit mode so the operator can rename the clone
+    # immediately (the Edit page is retired).
     assert location.startswith("/operator/sessions/")
-    assert location.endswith("/edit")
-    clone_id = int(location.rsplit("/", 2)[1])
+    assert location.endswith("?editing=1#session-config")
+    clone_id = int(
+        location.split("/operator/sessions/")[1].split("?")[0]
+    )
     assert clone_id != session_id
     clone = db.get(ReviewSession, clone_id)
     assert clone.name == "Copy of Routed"

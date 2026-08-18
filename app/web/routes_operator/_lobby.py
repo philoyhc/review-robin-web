@@ -349,11 +349,12 @@ def clone_session_submit(
         mode=mode,
         correlation_id=request_correlation_id(),
     )
-    # Land on the Edit page — the operator's first task on a clone
-    # is to rename it. The back-link from Edit goes to Session Home
-    # so they can review the cloned setup right after renaming.
+    # 18R Item 4 Slice 5 — land on Session Home with the Session details
+    # card open in edit mode (the Edit page is retired). The operator's
+    # first task on a clone is to rename it, then review the cloned setup
+    # on the same page.
     return RedirectResponse(
-        url=f"/operator/sessions/{clone.id}/edit",
+        url=f"/operator/sessions/{clone.id}?editing=1#session-config",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

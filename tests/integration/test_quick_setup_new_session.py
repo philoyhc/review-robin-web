@@ -181,11 +181,12 @@ def test_create_session_with_no_quick_setup_files_still_works(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "qs-newsess-bare")
     ).scalar_one()
-    # No Quick Setup uploads → redirect to the Edit page so the
-    # operator continues filling in session details.
+    # 18R Item 4 Slice 5 — no Quick Setup uploads → redirect to Session
+    # Home with the Session details card open in edit mode (the Edit page
+    # is retired) so the operator continues filling in session details.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}/edit"
+        == f"/operator/sessions/{review_session.id}?editing=1#session-config"
     )
 
 
