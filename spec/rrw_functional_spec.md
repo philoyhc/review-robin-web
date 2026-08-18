@@ -209,7 +209,11 @@ operator can:
 
 Operators do **not** see other operators' sessions in their lobby
 unless they have been added as a co-owner. Sys-admins reach
-non-owned sessions through the Sessions Diagnostics surface.
+non-owned sessions through the Sessions Diagnostics surface: they can
+*read* diagnostics (Outbox, Audit log), but **editing requires
+ownership** (Segment 18S Item 3) — the Diagnostics **"Manage"** action
+self-adds them as an owner (audited) and opens the session, after which
+they act through the normal operator path.
 
 ### 4.3 Reviewer
 
@@ -1102,9 +1106,14 @@ the chrome's user menu. It carries:
 - **Accounts Management** — workspace allowlist with per-row
   promote / demote / delete actions and a bulk toolbar.
 - **Sessions Diagnostics** — cross-workspace listing of every
-  session with summary state.
+  session with summary state. Its **"Manage"** row action self-adds
+  the sys-admin as an owner (audited) and opens the session — the
+  explicit elevation door, since editing a non-owned session requires
+  ownership (Segment 18S Item 3).
 - **Per-session Owner Management** — add / remove operator
-  co-owners on any session.
+  co-owners on sessions the sys-admin owns. A non-owner sys-admin may
+  only self-add (the adopt bootstrap) or clone; removing owners and
+  editing config require ownership.
 - **Per-session Audit Log viewer** — filter strip + pretty-
   printed detail expander over the session's audit-events
   history.
