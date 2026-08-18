@@ -898,3 +898,31 @@ def test_session_config_card_has_owners_subcard(
 
     # Schedule timeline card retired from Session Home.
     assert "<h2>Schedule timeline</h2>" not in body
+
+
+def test_session_home_has_danger_zone_mock(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 — a Danger Zone mock card sits in the bottom-right
+    column (below the Session details card, right of the current working
+    session-details card). It mirrors the Edit page's copy but its
+    controls are inert placeholders until a later slice wires them."""
+    review_session = _make_session(client, db, code="cfg-danger")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    danger_pos = body.find('id="danger-zone-mock"')
+    assert danger_pos != -1
+    # It lives after (below/right of) the current working session-details
+    # card and the Quick Setup card in the bottom grid.
+    assert danger_pos > body.find('id="quick-setup"')
+
+    card = body[danger_pos:]
+    assert "danger-zone" in body[body.rfind("<div", 0, danger_pos):danger_pos]
+    assert ">Danger Zone</h2>" in card
+    # Both destructive actions are present as inert mocks.
+    assert ">Delete Data</button>" in card
+    assert ">Delete session</button>" in card
+    assert 'title="Mock — not wired yet"' in card
+    # No live POST form is wired on the mock yet (it's the last card
+    # on the page, so nothing after it either).
+    assert "<form" not in card
