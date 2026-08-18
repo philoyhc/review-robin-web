@@ -369,6 +369,25 @@
           sync();
         }
 
+        // Archive is available for non-activated sessions only (18R
+        // harmonization). When a selected session can't be archived, grey
+        // off the "Purge and archive" button *and* the purge checkboxes so
+        // the whole affordance reads as inactive.
+        function statusArchivable(status) {
+          return status !== "ready" && status !== "archived";
+        }
+        function gateArchiveControls(node, canArchive) {
+          if (canArchive) return;  // leave wirePurgeOpts in charge
+          var archiveBtn = node.querySelector("[data-expander-archive]");
+          if (archiveBtn) {
+            archiveBtn.disabled = true;
+            archiveBtn.setAttribute("aria-disabled", "true");
+          }
+          node.querySelectorAll("input[name='purge']").forEach(
+            function (cb) { cb.checked = false; cb.disabled = true; }
+          );
+        }
+
         function fillSingle(row) {
           var node = singleTpl.content.firstElementChild.cloneNode(true);
           node.querySelector("td").colSpan = colCount;
@@ -393,9 +412,6 @@
               if (key !== "tags" && !isDraft) input.disabled = true;
             }
           );
-          // Archiving is draft-only — grey the button off-draft.
-          var archiveBtn = node.querySelector("[data-expander-archive]");
-          if (archiveBtn && !isDraft) archiveBtn.disabled = true;
           function fieldValue(key) {
             var el = node.querySelector(
               "[data-expander-field='" + key + "']"
@@ -434,6 +450,9 @@
           cloneAction("[data-expander-duplicate-config]", "config");
           wireDeleteGate(node);
           wirePurgeOpts(node);
+          gateArchiveControls(
+            node, statusArchivable(row.getAttribute("data-status"))
+          );
           return node;
         }
 
@@ -488,6 +507,14 @@
           });
           wireDeleteGate(node);
           wirePurgeOpts(node);
+          // Bulk archive skips non-archivable rows server-side; grey the
+          // affordance only when none of the selection can be archived.
+          var anyArchivable = selected.some(function (cb) {
+            return statusArchivable(
+              cb.closest("tr").getAttribute("data-status")
+            );
+          });
+          gateArchiveControls(node, anyArchivable);
           return node;
         }
 

@@ -388,14 +388,17 @@ def test_archive_card_purge_and_archive_active_for_non_activated(
     assert ">Archive after purging</span>" in card
     for value in ("responses", "rosters", "audit_log"):
         assert f'name="purge" value="{value}"' in card
-    assert ">Purge and archive</button>" in card
+    assert "Purge and archive" in card
+    # Active on a non-activated session — no disabled controls.
+    assert "disabled" not in card
 
 
-def test_archive_card_disabled_when_activated(
+def test_archive_card_controls_disabled_when_activated(
     client: TestClient, db: Session
 ) -> None:
-    """An activated (ready) session must be paused first — the card shows an
-    inert "Purge and archive" affordance and posts no form."""
+    """18R — an activated (ready) session can't be archived, so the purge
+    checkboxes and the "Purge and archive" button render disabled (the form
+    is present but inert), with a "pause first" note."""
     review_session = _make_session(client, db, code="ed-arch-ready")
     review_session.status = "ready"
     db.commit()
@@ -405,15 +408,18 @@ def test_archive_card_disabled_when_activated(
             f"/operator/sessions/{review_session.id}/extract-data"
         ).text
     )
-    assert 'aria-disabled="true"' in card
     assert "Pause the session before archiving" in card
-    assert 'action="/operator/sessions/archive-selected"' not in card
+    # All three purge checkboxes are disabled.
+    assert card.count('name="purge"') == 3
+    assert card.count("disabled") >= 4  # 3 checkboxes + the button
+    assert 'aria-disabled="true"' in card  # the button
 
 
 def test_archive_card_shows_already_archived(
     client: TestClient, db: Session
 ) -> None:
-    """An archived session's card reads 'Already archived' (inert)."""
+    """An archived session's card reads 'Already archived' with the controls
+    disabled."""
     review_session = _make_session(client, db, code="ed-arch-done")
     review_session.status = "archived"
     db.commit()
@@ -423,8 +429,9 @@ def test_archive_card_shows_already_archived(
             f"/operator/sessions/{review_session.id}/extract-data"
         ).text
     )
-    assert ">Already archived</a>" in card
-    assert 'action="/operator/sessions/archive-selected"' not in card
+    assert "Already archived" in card
+    assert "This session is already archived." in card
+    assert card.count("disabled") >= 4  # 3 checkboxes + the button
 
 
 def test_archive_card_post_archives_and_redirects_to_archived_index(
