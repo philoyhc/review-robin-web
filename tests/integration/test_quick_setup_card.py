@@ -101,8 +101,8 @@ def test_unlock_sets_cookie_and_drops_locked_class(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
     assert 'class="quick-setup-body"' in body
-    assert ">Lock</button>" in body
-    assert ">Unlock</button>" not in body
+    assert 'id="quick-setup-lock-toggle">Lock</button>' in body
+    assert 'id="quick-setup-lock-toggle">Unlock</button>' not in body
 
 
 def test_lock_clears_cookie_and_restores_locked_class(
@@ -122,7 +122,7 @@ def test_lock_clears_cookie_and_restores_locked_class(
     assert response.status_code == 303
     body = client.get(f"/operator/sessions/{review_session.id}").text
     assert 'class="quick-setup-body locked"' in body
-    assert ">Unlock</button>" in body
+    assert 'id="quick-setup-lock-toggle">Unlock</button>' in body
 
 
 def test_lock_cookie_scoped_per_session(
