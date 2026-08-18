@@ -140,41 +140,79 @@
       </div>
     </div>
 
-    {# 18R Item 4 — Owners sub-card, below the unified details block,
-       half-width on the left. Display mode shows the current owners as
-       pills; edit mode shows a (mock, inert) add / remove management UI.
-       Participates in the same card-wide data-config-mode swap. #}
+    {# 18R Item 4 — Owners sub-card inside the Session details card, below
+       the unified details block, half-width on the left. Mirrors the Edit
+       page's Owners card: an Email / Name / Role / Joined table in display
+       mode, gaining an Action (Remove) column + an Add-owner form in edit
+       mode. Add / Remove are mock (inert) until the edit-mode persistence
+       slice; participates in the card-wide data-config-mode swap. #}
     <div class="bottom-grid" style="margin-top: var(--space-3);">
       <div class="bottom-left">
-        <div class="card">
+        <div class="card" id="config-owners-card">
           <h3 style="margin-top: 0;">Owners</h3>
-          <div data-display-only>
-            {% for o in config_owners %}
-              <span class="config-value">{{ o.display_name or o.email }}</span>
-            {% else %}
-              <span class="config-value">—</span>
+          <p class="muted">
+            Workspace operators with full edit access on this session. The
+            session always retains at least one owner.
+          </p>
+
+          {# Display mode — read-only owners table. #}
+          <table data-display-only>
+            <tr>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Joined</th>
+            </tr>
+            {% for owner in config_owners %}
+              <tr>
+                <td><code>{{ owner.email }}</code></td>
+                <td>{{ owner.display_name or "—" }}</td>
+                <td>{{ owner.role }}</td>
+                <td>{{ owner.joined_at | format_date }}</td>
+              </tr>
             {% endfor %}
-          </div>
+          </table>
+
+          {# Edit mode — the same table plus an Action (Remove) column, then
+             an Add-owner form. Mock / inert for now. #}
           <div data-edit-only>
-            {# Mock, inert — real add / remove wiring lands with the
-               edit-mode persistence slice. #}
-            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-3) 0;">
-              {% for o in config_owners %}
-                <li style="display: flex; align-items: center;
-                           justify-content: space-between; gap: var(--space-2);
-                           padding: 4px 0;">
-                  <span>{{ o.display_name or o.email }}</span>
-                  <button type="button" class="btn secondary" disabled
-                          title="Mock — not wired yet">Remove</button>
-                </li>
+            <table>
+              <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Joined</th>
+                <th class="col-shrink">Action</th>
+              </tr>
+              {% for owner in config_owners %}
+                <tr>
+                  <td><code>{{ owner.email }}</code></td>
+                  <td>{{ owner.display_name or "—" }}</td>
+                  <td>{{ owner.role }}</td>
+                  <td>{{ owner.joined_at | format_date }}</td>
+                  <td class="col-shrink">
+                    <button type="button" class="chrome-link" disabled
+                            title="Mock — not wired yet">Remove</button>
+                  </td>
+                </tr>
               {% endfor %}
-            </ul>
-            <label for="mock-add-owner">Add owner</label>
-            <div style="display: flex; gap: var(--space-2); align-items: flex-start;">
-              <input type="text" id="mock-add-owner" placeholder="operator email"
-                     disabled>
-              <button type="button" class="btn secondary" disabled
-                      title="Mock — not wired yet">Add</button>
+            </table>
+
+            <h4 style="margin: var(--space-3) 0 var(--space-1) 0;">Add owner</h4>
+            <label style="display: block;">
+              Pick or search a workspace operator:
+              <input type="email" id="mock-add-owner" list="mock-owner-candidates"
+                     autocomplete="off" placeholder="email" disabled
+                     style="width: 100%; box-sizing: border-box;">
+            </label>
+            <datalist id="mock-owner-candidates">
+              {% for candidate in config_owner_candidates %}
+                <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
+              {% endfor %}
+            </datalist>
+            <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
+              <button type="button" class="btn" disabled aria-disabled="true"
+                      title="Mock — not wired yet">Add owner</button>
             </div>
           </div>
         </div>

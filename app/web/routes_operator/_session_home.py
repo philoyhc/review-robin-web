@@ -186,10 +186,13 @@ def session_detail(
                 review_session.reminder_offsets,
                 session_tz,
             ),
-            # 18R Item 4 — current owners for the Session config card's
-            # Owners sub-card. (The Schedule timeline card retired; its
-            # resolved datetimes now show inline beside the offsets.)
+            # 18R Item 4 — current owners + add-candidates for the Session
+            # config card's Owners sub-card (mirrors the Edit page's Owners
+            # card: Email / Name / Role / Joined / Action + Add owner).
             "config_owners": session_owners.list_owners(db, review_session),
+            "config_owner_candidates": (
+                session_owners.workspace_operator_candidates(db, review_session)
+            ),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },
