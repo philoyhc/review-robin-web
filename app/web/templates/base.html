@@ -397,6 +397,16 @@
         font-family: inherit;
       }
       textarea { min-height: 80px; }
+      /* 18R Item 4 — Session config card in-place display <-> edit swap.
+         The card carries data-config-mode; each field renders a
+         data-display-only value and a data-edit-only input in the same
+         slot, and exactly one shows per mode. .config-value gives the
+         read value ~the same vertical footprint as an input so the
+         switch doesn't shift the layout. */
+      [data-config-mode="display"] [data-edit-only] { display: none; }
+      [data-config-mode="edit"] [data-display-only] { display: none; }
+      .config-value { padding: 8px 0; min-height: 1.25em; }
+      .config-value-multiline { white-space: pre-wrap; }
       .pill {
         display: inline-block;
         padding: 1px 8px;
