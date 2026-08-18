@@ -7,9 +7,9 @@ shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
 2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
 Home + retire the Edit page — Option 2; Slices 1–5b + the sessions/new
 alignment done 2026-08-18 (config save + owners wired, Edit page fully retired,
-create page mirrors Home's bottom row))**; **Item 5 planned (Archive session
-card on the Extract data page — promoted from Item 4 Slice 6; audit done
-2026-08-18)**. A holding segment for **operator-UX refinement** on
+create page mirrors Home's bottom row))**; **Item 5 done 2026-08-18 (Archive
+session card wired on the Extract data page — reuses the Workflow archive
+route, gated on `is_expired`; promoted from Item 4 Slice 6)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -884,25 +884,26 @@ Workflow-card path** (archive a finished session whose data was just extracted �
 keep the data, don't purge, stay reversible), so it should reuse
 `POST /workflow/archive` rather than the draft-only lobby route.
 
-### Plan
+### Plan — ✅ built 2026-08-18
 
-- **Reuse `POST /operator/sessions/{id}/workflow/archive`** — no new route. The
+- **Reused `POST /operator/sessions/{id}/workflow/archive`** — no new route. The
   Extract-data route already spreads `**workflow_ctx`, so `is_archived` /
-  `archive_visible` are in the template.
-- **Wire the placeholder card** (`#extract-data-archive-session`): replace the
-  inert `aria-disabled` button with a real form posting to that route. Copy
-  should say archiving files the session out of the active lobby, **keeps the
-  data**, and is **reversible** from the archived page.
-- **Gating — one decision to confirm.** Mirror the Workflow card
-  (active only when `archive_visible` = `is_expired`, disabled + explanatory note
-  otherwise), **or** allow any non-archived state (matches the service's
-  permissiveness and the "you're here to wrap up" framing of the Extract page).
-  Default recommendation: **mirror the Workflow card** for one consistent
-  archive-availability rule across surfaces; confirm before building.
+  `archive_visible` were already in the template.
+- **Wired the placeholder card** (`#extract-data-archive-session`): the inert
+  `aria-disabled` button is now a real `btn destructive` submit (matching the
+  Workflow card's archive button). Copy says archiving files the session out of
+  the active lobby, **keeps every response + setup row**, and is **reversible**
+  from the archived page.
+- **Gating — resolved: mirror the Workflow card.** The button is active only when
+  `archive_visible` (= `is_expired`) **and** not `is_archived`; otherwise it's an
+  inert `aria-disabled` affordance with an "available once the session has ended"
+  title. One consistent archive-availability rule across the Workflow card and
+  the Extract data page.
 - **No confirm gate** (parity with the Workflow card; archiving is reversible).
-  Show an "already archived" state when `is_archived`.
-- Tests: the card renders the real form when archivable; posting archives +
-  redirects to the archived index; disabled/explanatory state otherwise.
+  Shows an "Already archived" state when `is_archived`.
+- Tests (`test_extract_data_scaffold.py`): active form when expired; inert +
+  no-form when draft; "Already archived" when archived. (The archive route +
+  redirect + audit are already pinned by `test_workflow_row3_buttons.py`.)
 
 ---
 

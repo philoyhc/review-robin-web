@@ -827,15 +827,29 @@
         <div>
           <h2 style="margin-top: 0;">Archive session</h2>
           <p class="form-help" style="margin-bottom: 0;">
-            Placeholder — archiving from here lands in a follow-up
-            slice. Archiving closes the session for good once the
-            data has been extracted; until then, use the Workflow
-            card's Archive action.
+            Archiving files the session out of the active lobby once you've
+            extracted the data you need. It keeps every response and setup
+            row, and is reversible from the archived-sessions page.
           </p>
         </div>
+        {# 18R Item 5 — reuses the Workflow card's archive route + gate:
+           active only once the session has ended (``archive_visible`` =
+           ``is_expired``) and isn't already archived. No purge, no confirm —
+           archiving is reversible and destroys no data. #}
         <div class="extract-data-card-actions">
-          <a class="btn secondary" role="button" aria-disabled="true"
-             title="Coming in a follow-up slice">Archive session</a>
+          {% if is_archived %}
+            <a class="btn secondary" role="button" aria-disabled="true"
+               title="This session is already archived.">Already archived</a>
+          {% elif archive_visible %}
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/workflow/archive"
+                  style="margin: 0;">
+              <button class="btn destructive" type="submit">Archive session</button>
+            </form>
+          {% else %}
+            <a class="btn secondary" role="button" aria-disabled="true"
+               title="Archiving becomes available once the session has ended.">Archive session</a>
+          {% endif %}
         </div>
       </div>
     </div>
