@@ -157,54 +157,40 @@
     })();
   </script>
 
-  {# User interface settings — per-session feature toggles
-     gating which optional Setup tabs render. Mirrors the card on
-     Session Home's Session details card (#session-config, 18R Item 4).
-     Sits above the Quick Setup card on the new-session page. There's no session
-     row yet, so neither checkbox is ever locked-on-data. Inputs
-     associate with ``create-session-form`` above via ``form=`` so
-     the values submit alongside the session details and feed
-     ``POST /operator/sessions``. #}
-  <div class="bottom-grid">
-    <div>
-      <div class="card" id="user-interface-settings">
-        <h3 style="margin-top: 0;">User interface settings</h3>
-        <p class="muted">
-          Per-session toggles for the optional Setup tabs.
-        </p>
-        <div style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
-          <label>
-            <input type="checkbox"
-                   name="relationships_enabled"
-                   form="create-session-form">
-            Relationships tab and page
-          </label>
-          <label>
-            <input type="checkbox"
-                   name="observers_enabled"
-                   form="create-session-form">
-            Observers tab and page
-          </label>
-        </div>
-      </div>
-    </div>
-    <div></div>
-  </div>
+  {# Bottom row — mirrors Session Home's frozen layout: Quick Setup
+     (left) + User interface settings (right), side by side.
+     (18R Item 4 follow-up — Quick Setup moved up next to the details
+     form; UI settings moved to the right and re-styled to match Home's
+     ``.ui-settings-row`` / ``.ui-setting`` primitives.)
 
-  {# Quick setup (optional) — half-width card on the bottom-left.
-     Always unlocked (no Lock / Unlock button) and counts are
-     always 0 because there's no session row yet. The slot inputs
-     associate with the create-session form above via the HTML
-     ``form="create-session-form"`` attribute, so any uploads /
-     rule-set selection is submitted alongside the session details
-     and processed by ``POST /operator/sessions`` after the session
-     row is created. The right column of the .bottom-grid stays
-     empty. #}
+     Both cards' inputs associate with ``create-session-form`` above via
+     the HTML ``form=`` attribute, so any uploads / rule-set selection and
+     the two toggles submit alongside the session details and feed
+     ``POST /operator/sessions`` after the session row is created. There's
+     no session row yet, so Quick Setup is always unlocked (counts 0) and
+     neither toggle is ever locked-on-data. #}
   <div class="bottom-grid">
     <div>
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>
-    <div></div>
+    <div>
+      <div class="card" id="user-interface-settings">
+        <h3 style="margin-top: 0;">User interface settings</h3>
+        <p class="muted">Per-session toggles for the optional Setup tabs.</p>
+        <div class="ui-settings-row">
+          <label class="ui-setting">
+            Relationships tab and page
+            <input type="checkbox" name="relationships_enabled"
+                   form="create-session-form">
+          </label>
+          <label class="ui-setting">
+            Observers tab and page
+            <input type="checkbox" name="observers_enabled"
+                   form="create-session-form">
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
 
   {% include "operator/partials/_schedule_ordering_js.html" %}
