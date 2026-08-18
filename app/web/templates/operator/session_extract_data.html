@@ -782,15 +782,13 @@
   </div>
 
   {# Extract data page "wrap-up" cards (18R — layout tidy 2026-08-18):
-     - Token keys (left) is half-width and only renders when
-       ``observers_enabled`` (the tokens deanonymize the observer-side
-       Anonymized output; no other consumer today).
-     - Extract Setup (porting / archival CSV downloads, relocated here from
-       Session Home) sits to the **right of Token keys**.
-     - Archive session (18R Item 5) drops to the row **below Token keys**.
-     When observers are off there's no Token keys card, so Extract Setup and
-     Archive fall back to a single side-by-side row. The Archive card markup
-     is captured once and placed per-branch to avoid duplication. #}
+     Left column stacks Token keys (only when ``observers_enabled``) then
+     Archive session directly beneath it; the right column holds Extract Setup.
+     ``align-items: start`` overrides the grid's default ``end`` alignment so
+     the left-column cards sit at the top — Archive lands **just below Token
+     keys** (or just below the full-width Data shaper when observers are off),
+     rather than being pushed down to Extract Setup's bottom edge.
+     The Archive card markup is captured once and placed via the left column. #}
   {% set archive_card %}
       <div class="card extract-data-card-stack" id="extract-data-archive-session">
         <div>
@@ -823,9 +821,9 @@
       </div>
   {% endset %}
 
-  {% if session.observers_enabled %}
-  <div class="extract-data-grid">
+  <div class="extract-data-grid" style="align-items: start;">
     <div class="extract-data-column">
+      {% if session.observers_enabled %}
       <div class="card extract-data-card-stack" id="extract-data-token-keys">
         <div>
           <h2 style="margin-top: 0;">Token keys</h2>
@@ -844,23 +842,13 @@
           </a>
         </div>
       </div>
+      {% endif %}
+      {{ archive_card }}
     </div>
     <div class="extract-data-column">
       {% include "operator/partials/_extract_data_card.html" %}
     </div>
   </div>
-  <div class="extract-data-grid">
-    <div class="extract-data-column">{{ archive_card }}</div>
-    <div class="extract-data-column"></div>
-  </div>
-  {% else %}
-  <div class="extract-data-grid">
-    <div class="extract-data-column">
-      {% include "operator/partials/_extract_data_card.html" %}
-    </div>
-    <div class="extract-data-column">{{ archive_card }}</div>
-  </div>
-  {% endif %}
 
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors

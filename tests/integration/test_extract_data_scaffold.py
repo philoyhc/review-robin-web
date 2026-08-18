@@ -426,10 +426,10 @@ def test_archive_card_shows_already_archived(
 def test_extract_data_wrapup_layout_with_token_keys(
     client: TestClient, db: Session
 ) -> None:
-    """18R layout tidy — when observers are enabled, Token keys (left) and
-    Extract Setup (right) share a row, and the Archive session card drops to
-    the row below Token keys. Source order: token-keys → Extract Setup →
-    Archive session."""
+    """18R layout tidy — when observers are enabled, the left column stacks
+    Token keys then Archive session directly beneath it; Extract Setup is the
+    right column. DOM order (left column before right): token-keys →
+    Archive session → Extract Setup."""
     review_session = _make_session(client, db, code="ed-wrapup-obs")
     review_session.observers_enabled = True
     db.commit()
@@ -438,28 +438,29 @@ def test_extract_data_wrapup_layout_with_token_keys(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
     token_pos = body.find('id="extract-data-token-keys"')
+    archive_pos = body.find('id="extract-data-archive-session"')
     # Extract Setup card id is ``extract-data``; find it after the token-keys
     # card so we get the wrap-up card, not the top intro card.
     setup_pos = body.find('id="extract-data"', token_pos)
-    archive_pos = body.find('id="extract-data-archive-session"')
 
-    assert -1 not in (token_pos, setup_pos, archive_pos)
-    # Extract Setup sits to the right of Token keys (same row, later in source);
-    # Archive session drops below (last).
-    assert token_pos < setup_pos < archive_pos
+    assert -1 not in (token_pos, archive_pos, setup_pos)
+    # Archive sits directly below Token keys (same left column); Extract Setup
+    # is the right column (later in source).
+    assert token_pos < archive_pos < setup_pos
 
 
 def test_extract_data_wrapup_layout_without_token_keys(
     client: TestClient, db: Session
 ) -> None:
-    """When observers are off there's no Token keys card — Extract Setup
-    (left) + Archive session (right) fall back to a single side-by-side row."""
+    """When observers are off there's no Token keys card — the left column is
+    just Archive session (below the full-width Data shaper), with Extract Setup
+    as the right column. DOM order: Archive session → Extract Setup."""
     review_session = _make_session(client, db, code="ed-wrapup-noobs")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
     ).text
     assert 'id="extract-data-token-keys"' not in body
-    setup_pos = body.find('id="extract-data"', body.find("Data shaper"))
     archive_pos = body.find('id="extract-data-archive-session"')
+    setup_pos = body.find('id="extract-data"', body.find("Data shaper"))
     assert -1 not in (setup_pos, archive_pos)
-    assert setup_pos < archive_pos
+    assert archive_pos < setup_pos
