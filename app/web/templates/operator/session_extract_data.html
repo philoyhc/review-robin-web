@@ -802,35 +802,40 @@
         </div>
         {# 18R archive harmonization — same route + purge options as the
            lobby's "Purge and archive" (POST /sessions/archive-selected).
-           Available for any non-activated, non-archived session; an activated
-           session must be paused first. ``return_to=archived`` lands on the
-           archived-sessions index. #}
-        {% if is_archived %}
-          <div class="extract-data-card-actions">
-            <a class="btn secondary" role="button" aria-disabled="true"
-               title="This session is already archived.">Already archived</a>
+           Available for any non-activated, non-archived session; otherwise
+           the purge checkboxes + button render **disabled** (mirroring the
+           lobby expander's inactive state). ``return_to=archived`` lands on
+           the archived-sessions index. #}
+        {% set archivable = (not is_ready) and (not is_archived) %}
+        <form method="post" action="/operator/sessions/archive-selected"
+              style="margin: 0;">
+          <input type="hidden" name="session_ids" value="{{ session.id }}">
+          <input type="hidden" name="return_to" value="archived">
+          <div class="exp-purge-opts" style="margin-bottom: var(--space-3);">
+            <span class="exp-purge-title">Archive after purging</span>
+            <label><input type="checkbox" name="purge" value="responses"
+                   {% if not archivable %}disabled{% endif %}> Responses</label>
+            <label><input type="checkbox" name="purge" value="rosters"
+                   {% if not archivable %}disabled{% endif %}> Rosters</label>
+            <label><input type="checkbox" name="purge" value="audit_log"
+                   {% if not archivable %}disabled{% endif %}> Audit log</label>
           </div>
-        {% elif is_ready %}
+          {% if is_archived %}
+            <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
+              This session is already archived.
+            </p>
+          {% elif is_ready %}
+            <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
+              Pause the session before archiving.
+            </p>
+          {% endif %}
           <div class="extract-data-card-actions">
-            <a class="btn secondary" role="button" aria-disabled="true"
-               title="Pause the session before archiving.">Purge and archive</a>
+            <button class="btn alert" type="submit"
+                    {% if not archivable %}disabled aria-disabled="true"{% endif %}>
+              {% if is_archived %}Already archived{% else %}Purge and archive{% endif %}
+            </button>
           </div>
-        {% else %}
-          <form method="post" action="/operator/sessions/archive-selected"
-                style="margin: 0;">
-            <input type="hidden" name="session_ids" value="{{ session.id }}">
-            <input type="hidden" name="return_to" value="archived">
-            <div class="exp-purge-opts" style="margin-bottom: var(--space-3);">
-              <span class="exp-purge-title">Archive after purging</span>
-              <label><input type="checkbox" name="purge" value="responses"> Responses</label>
-              <label><input type="checkbox" name="purge" value="rosters"> Rosters</label>
-              <label><input type="checkbox" name="purge" value="audit_log"> Audit log</label>
-            </div>
-            <div class="extract-data-card-actions">
-              <button class="btn alert" type="submit">Purge and archive</button>
-            </div>
-          </form>
-        {% endif %}
+        </form>
       </div>
   {% endset %}
 

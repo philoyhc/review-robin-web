@@ -902,8 +902,15 @@ and archive"** — one gate, one route, the same purge options:
 - **Card UI** — button renamed **"Purge and archive"** (`btn alert`, matching
   the lobby); the same **"Archive after purging" + Responses / Rosters / Audit
   log** checkboxes render above it (reusing the `.exp-purge-opts` /
-  `.exp-purge-title` primitives). Inert "Pause the session before archiving"
-  when activated; "Already archived" when archived.
+  `.exp-purge-title` primitives).
+- **Inactive when not archivable (both locations).** When a session can't be
+  archived (activated / already archived), the **purge checkboxes and the
+  button render disabled** rather than hidden — the card shows them greyed with
+  a "pause first" / "already archived" note; the lobby expander's JS
+  (`gateArchiveControls`) greys the "Purge and archive" button + purge
+  checkboxes off the selected row's `data-status` (single = that row's
+  archivability; bulk = disabled only when none of the selection is
+  archivable).
 - **Lobby cosmetics** — a `|` separator (`.exp-sep`) between "Allow delete" and
   "Archive after purging"; the caption wrapped in `.exp-purge-title`
   (inline-flex) so it aligns with the checkbox labels instead of sitting high.
