@@ -270,6 +270,12 @@ def test_sessions_list_renders_inline_expander_fragments(
     body = client.get("/operator/sessions").text
     assert 'id="single-session-expander"' in body
     assert 'id="bulk-expander"' in body
+    # Both expander headers use the same "<N> session(s) selected" wording;
+    # the single variant reads "1 session selected" (the old
+    # "Session: <name>" header + its data hook are gone).
+    assert "session selected" in body
+    assert "data-expander-session-name" not in body
+    assert "Session: <strong" not in body
     # Single-session expander hosts the per-session action placeholders
     # plus the Name / Code / Deadline / Tags edit boxes.
     assert 'data-expander-field="name"' in body

@@ -398,7 +398,7 @@ def test_archive_card_controls_disabled_when_activated(
 ) -> None:
     """18R — an activated (ready) session can't be archived, so the purge
     checkboxes and the "Purge and archive" button render disabled (the form
-    is present but inert), with a "pause first" note."""
+    is present but inert, greyed)."""
     review_session = _make_session(client, db, code="ed-arch-ready")
     review_session.status = "ready"
     db.commit()
@@ -408,7 +408,8 @@ def test_archive_card_controls_disabled_when_activated(
             f"/operator/sessions/{review_session.id}/extract-data"
         ).text
     )
-    assert "Pause the session before archiving" in card
+    # No explanatory note (removed 2026-08-18 as unnecessary).
+    assert "Pause the session before archiving" not in card
     # All three purge checkboxes are disabled + the whole block greyed.
     assert card.count('name="purge"') == 3
     assert card.count("disabled") >= 4  # 3 checkboxes + the button
