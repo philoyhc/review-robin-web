@@ -152,8 +152,11 @@
       <tr class="session-expander session-expander-single">
         <td colspan="9">
           <div class="session-expander-body">
+            {# Harmonized with the bulk expander's "<N> sessions selected"
+               header — the session name already shows in the Name box below,
+               so the single-select header just reads "1 session selected". #}
             <p class="session-expander-title">
-              Session: <strong data-expander-session-name></strong>
+              <strong>1</strong> session selected
             </p>
             <div class="session-expander-fields">
               <label class="exp-field-name">Name
@@ -405,8 +408,6 @@
               .map(function (p) { return p.textContent.trim(); })
               .join(", "),
           };
-          var nameEl = node.querySelector("[data-expander-session-name]");
-          if (nameEl) nameEl.textContent = fields.name;
           node.querySelectorAll("[data-expander-field]").forEach(
             function (input) {
               var key = input.getAttribute("data-expander-field");

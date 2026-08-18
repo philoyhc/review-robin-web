@@ -527,10 +527,12 @@ test migration it requires is an optional Future item.
 
 ## Item 3 — Instrument-card UX tweaks (open-ended)
 
-A running home for **small, self-contained polish on the per-instrument
-card** — layout, control ordering, affordance sizing — that doesn't warrant
-its own item. Each tweak is a bullet with a one-line problem → fix and its
-shipping PR; land them individually or batched as convenient.
+A running home for **small, self-contained operator-UX polish** — layout,
+control ordering, affordance sizing, wording — that doesn't warrant its own
+item. Started on the per-instrument card; now also collects small cross-page
+tweaks (textarea resize, lobby / Extract-data touch-ups). Each tweak is a
+bullet with a one-line problem → fix and its shipping PR; land them
+individually or batched as convenient.
 
 **Shipped:**
 
@@ -559,8 +561,18 @@ shipping PR; land them individually or batched as convenient.
   message fields, and the new / edit session description boxes. The earlier
   per-page rule and the inline `resize: vertical` on the Session details
   mock were removed in favour of the one base.html rule.
+- **Sessions-lobby single-select header harmonized** (2026-08-18). The
+  single-session row expander read `Session: <name>`, while the bulk expander
+  read `<N> sessions selected`. Harmonized the single case to
+  **"1 session selected"** (the name already shows in the Name edit box), and
+  removed the now-dead `data-expander-session-name` hook + its JS setter.
+- **Removed the "Pause the session before archiving." note** (2026-08-18) from
+  the Extract data page's Archive card. When a session can't be archived the
+  purge checkboxes + button already render disabled + greyed, so the extra
+  caption was redundant. ("This session is already archived." stays for the
+  archived state.)
 
-**Open** — log further card tweaks here as they come up.
+**Open** — log further tweaks here as they come up.
 
 ---
 
