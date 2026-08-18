@@ -24,56 +24,53 @@
      display content + edit-mode wiring land in follow-up sub-slices, at
      which point the existing Session Details card (in the left column
      below) folds into this one. #}
-  <div class="card" id="session-config">
+  <div class="card" id="session-config" data-config-mode="display">
     <h2>Session details</h2>
     <p class="muted" style="margin: 0 0 var(--space-3) 0;">
-      Preview (non-editable mock-up) of the session's details + timing —
-      the fields below are inert filled edit boxes. Edit is inert too;
-      wiring lands in a follow-up slice.
+      The session's details + timing. Click <strong>Edit</strong> to switch the
+      fields into editable boxes, and again to switch back. (Mock-up — edits
+      aren't saved yet; the persistence wiring lands in a follow-up slice.)
     </p>
-    {# 18R Item 4 Slice 2 mock-up — Name / Code / Description (left) +
-       Help contact / Timezone / the date/timing fields (right),
-       replicated from the Edit page as inert (``disabled``),
-       value-filled edit boxes. The read-only Schedule timeline card is
-       not part of this mock-up. #}
+    {# 18R Item 4 Slice 2 — in-place display <-> edit swap. Each field keeps
+       one slot in the same position: a read-only value in display mode
+       (``data-display-only``) and its input in edit mode (``data-edit-only``),
+       toggled by the card's ``data-config-mode`` and the Edit button (inline
+       script below). Same positions both ways so the switch isn't jarring. #}
     <div class="page-grid" style="margin-bottom: 0;">
       <div style="display: flex; flex-direction: column; min-width: 0;">
-        {# margin-bottom intentionally 0: the following field's label
-           already carries margin-top var(--space-3), so a bottom margin
-           here would double the gap above Description / Start / Send
-           invites relative to the grid-internal rows (End, etc.). #}
         <div class="page-grid" style="margin: 0;">
           <div>
             <label for="mock-name">Name</label>
-            <input type="text" id="mock-name" maxlength="255" disabled
+            <div class="config-value" data-display-only>{{ session.name }}</div>
+            <input type="text" id="mock-name" maxlength="255" data-edit-only
                    value="{{ session.name }}">
           </div>
           <div>
             <label for="mock-code">Code</label>
-            <input type="text" id="mock-code" maxlength="64" disabled
+            <div class="config-value" data-display-only>{{ session.code }}</div>
+            <input type="text" id="mock-code" maxlength="64" data-edit-only
                    value="{{ session.code }}">
           </div>
         </div>
         <label for="mock-description">Description</label>
-        <textarea id="mock-description" maxlength="2000" disabled
+        <div class="config-value config-value-multiline" data-display-only>{{ session.description or "—" }}</div>
+        <textarea id="mock-description" maxlength="2000" data-edit-only
                   style="flex: 1 1 auto; min-height: 8em;">{{ session.description or "" }}</textarea>
       </div>
 
       <div class="fill-col" style="min-width: 0;">
-        {# margin-bottom intentionally 0: the following field's label
-           already carries margin-top var(--space-3), so a bottom margin
-           here would double the gap above Description / Start / Send
-           invites relative to the grid-internal rows (End, etc.). #}
         <div class="page-grid" style="margin: 0;">
           <div>
             <label for="mock-help-contact">Help contact (optional)</label>
-            <input type="text" id="mock-help-contact" maxlength="320" disabled
+            <div class="config-value" data-display-only>{{ session.help_contact or "—" }}</div>
+            <input type="text" id="mock-help-contact" maxlength="320" data-edit-only
                    value="{{ session.help_contact or '' }}"
                    placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
           </div>
           <div>
             <label for="mock-timezone">Timezone</label>
-            <input type="text" id="mock-timezone" disabled
+            <div class="config-value" data-display-only>{{ session_timezone_label }}</div>
+            <input type="text" id="mock-timezone" data-edit-only
                    value="{{ session_timezone_label }}">
           </div>
         </div>
@@ -85,43 +82,60 @@
                     margin: 0;">
           <div>
             <label for="mock-start">Start (optional)</label>
-            <input type="datetime-local" id="mock-start" disabled
+            <div class="config-value" data-display-only>{{ (session.scheduled_activate_at | format_datetime) if session.scheduled_activate_at else "—" }}</div>
+            <input type="datetime-local" id="mock-start" data-edit-only
                    value="{{ scheduled_activate_at_input_value }}">
           </div>
           <div>
             <label for="mock-end">End (optional)</label>
-            <input type="datetime-local" id="mock-end" disabled
+            <div class="config-value" data-display-only>{{ (session.deadline | format_datetime) if session.deadline else "—" }}</div>
+            <input type="datetime-local" id="mock-end" data-edit-only
                    value="{{ deadline_input_value }}">
           </div>
           <div>
             <label for="mock-release-from">Release responses from (optional)</label>
-            <input type="datetime-local" id="mock-release-from" disabled
+            <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
+            <input type="datetime-local" id="mock-release-from" data-edit-only
                    value="{{ responses_release_at_input_value }}">
           </div>
           <div>
             <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
-            <input type="text" id="mock-invite-offsets" disabled
+            <div class="config-value" data-display-only>{{ invite_offsets_input_value or "—" }}</div>
+            <input type="text" id="mock-invite-offsets" data-edit-only
                    value="{{ invite_offsets_input_value }}">
           </div>
           <div>
             <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
-            <input type="text" id="mock-reminder-offsets" disabled
+            <div class="config-value" data-display-only>{{ reminder_offsets_input_value or "—" }}</div>
+            <input type="text" id="mock-reminder-offsets" data-edit-only
                    value="{{ reminder_offsets_input_value }}">
           </div>
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>
-            <input type="datetime-local" id="mock-release-until" disabled
+            <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
+            <input type="datetime-local" id="mock-release-until" data-edit-only
                    value="{{ responses_release_until_input_value }}">
           </div>
         </div>
       </div>
     </div>
-    {# Edit button on its own row, flushed right, inert for now. #}
+    {# Edit / Done toggle on its own row, flushed right. Flips the card's
+       ``data-config-mode`` between display and edit (both ways). #}
     <div style="display: flex; justify-content: flex-end; margin-top: var(--space-3);">
-      <a class="btn secondary" aria-disabled="true"
-         title="Coming in a follow-up slice">Edit</a>
+      <button type="button" class="btn secondary" data-config-toggle
+              onclick="toggleSessionConfigMode(this)">Edit</button>
     </div>
   </div>
+
+  <script>
+    window.toggleSessionConfigMode = window.toggleSessionConfigMode || function (btn) {
+      var card = btn.closest('[data-config-mode]');
+      if (!card) return;
+      var editing = card.getAttribute('data-config-mode') === 'edit';
+      card.setAttribute('data-config-mode', editing ? 'display' : 'edit');
+      btn.textContent = editing ? 'Edit' : 'Done';
+    };
+  </script>
 
   {# Two-column layout. Left column: Session Details → Schedule →
      Quick Setup. 18R Item 4 Slice 1 relocated Quick Setup to the

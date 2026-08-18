@@ -787,14 +787,14 @@ def test_session_card_buttons_when_ready(
     )
 
 
-def test_session_config_card_mockup_renders_below_workflow(
+def test_session_config_card_display_edit_swap(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 Slice 2 mock-up — the "Session details" config card
-    sits directly below Workflow and shows Name / Code / Description +
-    the date/timing fields as inert (disabled), value-filled edit boxes,
-    with an inert Edit button (wiring lands in a follow-up slice)."""
-    review_session = _make_session(client, db, code="cfg-mockup")
+    """18R Item 4 Slice 2 — the "Session details" config card sits below
+    Workflow and renders each field as a display value + an edit input in
+    one slot, toggled by the card's data-config-mode and the Edit button
+    (both ways). Defaults to display mode."""
+    review_session = _make_session(client, db, code="cfg-swap")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     workflow_pos = body.find('id="next-action"')
@@ -803,28 +803,34 @@ def test_session_config_card_mockup_renders_below_workflow(
     assert workflow_pos < config_pos  # below Workflow
     assert "<h2>Session details</h2>" in body
 
-    # Card region (the config card ends before the bottom-grid layout).
     grid_pos = body.find('class="bottom-grid"', config_pos)
     card = body[config_pos:grid_pos]
 
-    # Details fields — inert (disabled) + filled (Name = the code we set).
-    assert 'id="mock-name"' in card
-    assert "disabled" in card
-    assert f'value="{review_session.name}"' in card
-    assert 'id="mock-code"' in card
-    assert 'id="mock-description"' in card
-    # Date/timing fields present.
+    # Card defaults to display mode; both view + edit slots exist.
+    assert 'data-config-mode="display"' in card
+    assert "data-display-only" in card  # read values
+    assert "data-edit-only" in card  # inputs
+    # Display value is filled (Name shows the session name).
+    assert f">{review_session.name}</div>" in card
+
+    # All fields present (each has both slots keyed on the same id).
     for fid in (
+        "mock-name",
+        "mock-code",
+        "mock-description",
+        "mock-help-contact",
+        "mock-timezone",
         "mock-start",
         "mock-end",
         "mock-release-from",
         "mock-invite-offsets",
         "mock-reminder-offsets",
         "mock-release-until",
-        "mock-timezone",
-        "mock-help-contact",
     ):
         assert f'id="{fid}"' in card
-    # Edit button still inert.
-    assert 'aria-disabled="true"' in card
-    assert ">Edit</a>" in card
+
+    # Edit button is an active toggle wired to the swap (both ways).
+    assert "data-config-toggle" in card
+    assert 'onclick="toggleSessionConfigMode(this)"' in card
+    assert ">Edit</button>" in card
+    assert "window.toggleSessionConfigMode" in body
