@@ -7,7 +7,9 @@ shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
 2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
 Home + retire the Edit page — Option 2; Slices 1–5b + the sessions/new
 alignment done 2026-08-18 (config save + owners wired, Edit page fully retired,
-create page mirrors Home's bottom row); only Slice 6 Archive card remains)**. A holding segment for **operator-UX refinement** on
+create page mirrors Home's bottom row))**; **Item 5 planned (Archive session
+card on the Extract data page — promoted from Item 4 Slice 6; audit done
+2026-08-18)**. A holding segment for **operator-UX refinement** on
 already-shipped surfaces — clarifying what each card / control *is*,
 tightening labels, strengthening visual identity, and **rationalizing
 inconsistent interaction models**. Most items are small identity / label
@@ -771,9 +773,8 @@ new mechanism), then the config-consolidation work.
      column to take its place; the now-dead `.session-meta-row` /
      `.session-detail-code` / `.session-detail-description` CSS was removed.
      (Route + template deletion above is the remaining 5b work.)
-6. **(Later) Archive session card** — add the half-width Archive session card to
-   the Extract data page bottom-right (the slot reserved in Slice 1). Its own
-   follow-up slice.
+6. **Archive session card — promoted to its own Item 5** (see below). Wires the
+   placeholder card reserved on the Extract data page bottom-right (Slice 1).
 
 ### Follow-up — align `operator/sessions/new` with the finalized Home layout. ✅ done 2026-08-18
 
@@ -834,6 +835,74 @@ Real work: building read-only display renderings for every config aspect (Owners
 table, UI settings, schedule) that today only exist as forms; relocating Quick
 Setup's Home coupling stays put (it's already on Home); the auth-gate change
 (Decision 2) is the one item with cross-cutting security reach.
+
+---
+
+## Item 5 — Archive session card (Extract data page)
+
+Wire the placeholder **Archive session** card reserved on the Extract data page
+bottom-right (Slice 1 of Item 4), next to the relocated Extract Setup card, so
+the operator can archive a finished session right after extracting its data.
+(Promoted from "Item 4 Slice 6" to its own item 2026-08-18.)
+
+### Audit — the current archiving function (2026-08-18)
+
+Archiving already exists with **two distinct entry points** plus an archived
+index; the service is reversible and destroys no data.
+
+- **Service** (`app/services/session_lifecycle.py`):
+  - `archive_session(...)` — flips **any non-archived** state → `archived`;
+    reversible; deletes no data; emits `session.archived` with the from-state;
+    raises `LifecycleError("already_archived")` if already archived.
+  - `unarchive_session(...)` — `archived → draft` (**always back to draft**;
+    the original lifecycle state is not restored); emits `session.unarchived`;
+    raises `not_archived` otherwise.
+  - `is_archived(...)` reader; `_require_not_archived` route guard blocks
+    mutations on archived sessions.
+- **Entry point 1 — sessions lobby "Purge and archive"** (per-row expander →
+  `POST /operator/sessions/archive-selected`, `_lobby.py`): **draft-only**
+  (server-side `is_draft` filter; non-draft rows silently skipped), with
+  optional **purge** of `audit_log` / `responses` / `rosters` first (checkboxes,
+  run in audit→responses→rosters order) via `session_purge`. Intent: abandon /
+  clean up a draft you never ran. Redirects to the lobby.
+- **Entry point 2 — Workflow card "Archive session"**
+  (`POST /operator/sessions/{id}/workflow/archive`, `_workflow.py`): calls
+  `archive_session` for **any non-archived** state, **no purge, no confirm**, but
+  the button is only *surfaced* when `archive_visible = is_expired`
+  (`_workflow_card.py`). Intent: wrap up a finished / expired session. Redirects
+  to `/operator/sessions/archived`.
+- **Archived index** (`GET /operator/sessions/archived` + bulk expander):
+  lists archived sessions; bulk **Unarchive** (`unarchive-selected` → draft) and
+  **Delete** (`delete-archived-selected`, gated by an "Allow delete" confirm →
+  hard `delete_session`). Archived sessions are excluded from the main lobby and
+  counted in the lobby's `archived` pill.
+
+**Key finding — two gating rules for one service.** The lobby path is
+*draft-only + optional purge*; the Workflow-card path is *any-state, surfaced
+when expired, no purge*. The **Extract data page card's intent matches the
+Workflow-card path** (archive a finished session whose data was just extracted —
+keep the data, don't purge, stay reversible), so it should reuse
+`POST /workflow/archive` rather than the draft-only lobby route.
+
+### Plan
+
+- **Reuse `POST /operator/sessions/{id}/workflow/archive`** — no new route. The
+  Extract-data route already spreads `**workflow_ctx`, so `is_archived` /
+  `archive_visible` are in the template.
+- **Wire the placeholder card** (`#extract-data-archive-session`): replace the
+  inert `aria-disabled` button with a real form posting to that route. Copy
+  should say archiving files the session out of the active lobby, **keeps the
+  data**, and is **reversible** from the archived page.
+- **Gating — one decision to confirm.** Mirror the Workflow card
+  (active only when `archive_visible` = `is_expired`, disabled + explanatory note
+  otherwise), **or** allow any non-archived state (matches the service's
+  permissiveness and the "you're here to wrap up" framing of the Extract page).
+  Default recommendation: **mirror the Workflow card** for one consistent
+  archive-availability rule across surfaces; confirm before building.
+- **No confirm gate** (parity with the Workflow card; archiving is reversible).
+  Show an "already archived" state when `is_archived`.
+- Tests: the card renders the real form when archivable; posting archives +
+  redirects to the archived index; disabled/explanatory state otherwise.
 
 ---
 
