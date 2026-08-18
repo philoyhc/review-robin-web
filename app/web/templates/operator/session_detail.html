@@ -95,13 +95,38 @@
           </div>
           <div>
             <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
-            <div class="config-value" data-display-only>{{ invite_offsets_input_value or "—" }}</div>
+            {# Display mode: each offset as a pill + a small gap + its
+               resolved send datetime as a second pill. #}
+            <div data-display-only class="config-offset-rows">
+              {% if invite_offset_rows %}
+                {% for row in invite_offset_rows %}
+                  <div class="config-offset-row">
+                    <span class="config-value">{{ row.offset }}</span>
+                    {% if row.at %}<span class="config-value config-value-resolved">{{ row.at }}</span>{% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <span class="config-value">—</span>
+              {% endif %}
+            </div>
             <input type="text" id="mock-invite-offsets" data-edit-only
                    value="{{ invite_offsets_input_value }}">
           </div>
           <div>
             <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
-            <div class="config-value" data-display-only>{{ reminder_offsets_input_value or "—" }}</div>
+            {# Display mode: each offset pill + its resolved send datetime. #}
+            <div data-display-only class="config-offset-rows">
+              {% if reminder_offset_rows %}
+                {% for row in reminder_offset_rows %}
+                  <div class="config-offset-row">
+                    <span class="config-value">{{ row.offset }}</span>
+                    {% if row.at %}<span class="config-value config-value-resolved">{{ row.at }}</span>{% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <span class="config-value">—</span>
+              {% endif %}
+            </div>
             <input type="text" id="mock-reminder-offsets" data-edit-only
                    value="{{ reminder_offsets_input_value }}">
           </div>

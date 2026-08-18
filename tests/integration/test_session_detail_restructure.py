@@ -834,3 +834,30 @@ def test_session_config_card_display_edit_swap(
     assert 'onclick="toggleSessionConfigMode(this)"' in card
     assert ">Edit</button>" in card
     assert "window.toggleSessionConfigMode" in body
+
+
+def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
+    client: TestClient, db: Session
+) -> None:
+    """18R Item 4 — in display mode the Send-invites offset renders as two
+    pills: the ISO offset, then its resolved send datetime (Start + offset)."""
+    from datetime import datetime, timezone
+
+    review_session = _make_session(client, db, code="cfg-offset")
+    review_session.scheduled_activate_at = datetime(
+        2026, 8, 30, 0, 0, tzinfo=timezone.utc
+    )
+    review_session.invite_offsets = ["-P1D"]
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    config_pos = body.find('id="session-config"')
+    grid_pos = body.find('class="bottom-grid"', config_pos)
+    card = body[config_pos:grid_pos]
+
+    # The offset pill.
+    assert ">-P1D</span>" in card
+    # A resolved-datetime pill (Start − 1 day) — lighter chip variant.
+    assert "config-value-resolved" in card
+    # Both live inside an offset row.
+    assert "config-offset-row" in card
