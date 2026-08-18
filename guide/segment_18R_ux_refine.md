@@ -544,6 +544,17 @@ shipping PR; land them individually or batched as convenient.
   `newModelAddRule` now seeds a cloned cell's operand box from the cycle's
   default operator rather than a hardcoded `IS`, so a newly-added Link 2 row
   shows the tag dropdown.
+- **Vertical-only textarea resize (app-wide).** Textareas could be dragged
+  wider than their column via the browser's default two-axis resize grip,
+  breaking the page grid. Started as an instrument-card fix, then generalized:
+  a single global `body.ui-v2 textarea { resize: vertical }` rule in
+  `base.html` (beside the shared textarea styling) locks *every* textarea in
+  the app to up/down resizing only — the instrument cards (server-rendered +
+  JS-generated help / preview boxes), the Session details description
+  (18R Item 4), the reviewer long-text response surface, the setup-invite
+  message fields, and the new / edit session description boxes. The earlier
+  per-page rule and the inline `resize: vertical` on the Session details
+  mock were removed in favour of the one base.html rule.
 
 **Open** — log further card tweaks here as they come up.
 

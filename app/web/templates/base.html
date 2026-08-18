@@ -1908,6 +1908,13 @@
         background: var(--bg-page);
         color: var(--text-primary);
       }
+      /* Textareas resize vertically only, never horizontally — a long
+         entry should grow downward, not drag wider than its column and
+         break the page grid. App-wide default; individual textareas can
+         still set their own min-height. (18R Items 3 / 4.) */
+      body.ui-v2 textarea {
+        resize: vertical;
+      }
       /* Hide the browser-native up/down spinner buttons on
          ``type="number"`` inputs — the reviewer surface uses
          numeric inputs for HTML5 ``min`` / ``max`` enforcement,
