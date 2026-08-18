@@ -561,24 +561,24 @@ individually or batched as convenient.
   message fields, and the new / edit session description boxes. The earlier
   per-page rule and the inline `resize: vertical` on the Session details
   mock were removed in favour of the one base.html rule.
-- **Sessions-lobby single-select header harmonized** (2026-08-18). The
+- **Sessions-lobby single-select header harmonized** (PR #1968, 2026-08-18). The
   single-session row expander read `Session: <name>`, while the bulk expander
   read `<N> sessions selected`. Harmonized the single case to
   **"1 session selected"** (the name already shows in the Name edit box), and
   removed the now-dead `data-expander-session-name` hook + its JS setter.
-- **Removed the "Pause the session before archiving." note** (2026-08-18) from
+- **Removed the "Pause the session before archiving." note** (PR #1968, 2026-08-18) from
   the Extract data page's Archive card. When a session can't be archived the
   purge checkboxes + button already render disabled + greyed, so the extra
   caption was redundant. ("This session is already archived." stays for the
   archived state.)
 - **Chrome status strip: gate Relationships / add Observers on their UI-settings
-  toggles** (2026-08-18). The `session_setup_status_row` reported **Relationships
+  toggles** (PR #1969, 2026-08-18). The `session_setup_status_row` reported **Relationships
   always** and had **no Observers**. Now Relationships reports only when
   `relationships_enabled` and a new **Observers** pill reports only when
   `observers_enabled` (each with its leading `&middot;` inside the conditional so
   no dangling separator). Added `observer_count` to `SessionStatusPills`.
 
-- **Chrome status strip: wire the Responses pill** (2026-08-18). Was a hardcoded
+- **Chrome status strip: wire the Responses pill** (PR #1969, 2026-08-18). Was a hardcoded
   `awaiting` placeholder. Now: **"Awaiting"** before activation (draft /
   validated), then **`<submitted reviews> / <reviewees>`** once activated (and
   while closed / expired / archived) — reviewee-centric, following the Responses

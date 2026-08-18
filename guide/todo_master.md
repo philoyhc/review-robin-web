@@ -1991,10 +1991,15 @@ hardening. Stays open for further security items.
 
 Continues the 18R holding segment beyond the Items 1–2 work above.
 
-- **Item 3 (open; tweaks shipped #1923 + vertical-resize textareas app-wide
-  2026-08-18)** — instrument-card UX tweaks: taller preview-band description
-  edit box + Link 2 operator-cycle reorder + `resize: vertical` on all
-  textareas. Open-ended home for further small per-card polish.
+- **Item 3 (open; multiple tweaks shipped 2026-08-16 → 08-18)** — open-ended
+  home for small operator-UX polish (started on the instrument card, now also
+  cross-page). Shipped: taller preview-band description box + Link 2 cycle
+  reorder (#1923); app-wide `resize: vertical` textareas; sessions-lobby
+  single-select header harmonized to "1 session selected" (#1968); removed the
+  redundant "Pause the session before archiving." note (#1968); chrome status
+  strip — gate Relationships / add Observers on their UI toggles + wire the
+  Responses pill ("Awaiting" pre-activation, then `<submitted reviews> /
+  <reviewees>`) (#1969).
 - **Item 4 (done 2026-08-18)** — consolidated the session's config **display +
   edit onto Session Home** (a plain `?editing=1` display↔edit swap matching the
   instruments card) and **retired the Edit page** (routes + template deleted;
