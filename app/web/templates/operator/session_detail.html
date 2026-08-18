@@ -50,7 +50,7 @@
         <label for="mock-description">Description</label>
         <div class="config-value config-value-multiline" data-display-only>{{ session.description or "—" }}</div>
         <textarea id="mock-description" maxlength="2000" data-edit-only
-                  style="flex: 1 1 auto; min-height: 8em;">{{ session.description or "" }}</textarea>
+                  style="flex: 1 1 auto; min-height: 8em; resize: vertical;">{{ session.description or "" }}</textarea>
       </div>
 
       <div class="fill-col" style="min-width: 0;">
