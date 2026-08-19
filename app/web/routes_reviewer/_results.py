@@ -21,7 +21,7 @@ contract.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -97,5 +97,5 @@ def reviewee_results_acknowledge(
     )
     return RedirectResponse(
         url=f"/me/sessions/{review_session.id}/results",
-        status_code=303,
+        status_code=status.HTTP_303_SEE_OTHER,
     )

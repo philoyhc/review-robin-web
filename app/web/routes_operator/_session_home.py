@@ -237,7 +237,9 @@ def session_edit_redirect(
 ) -> RedirectResponse:
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}?editing=1#session-config",
-        status_code=status.HTTP_301_MOVED_PERMANENTLY,
+        # 308 (not 301) preserves the GET method and matches the other
+        # legacy-URL shim (``/preview`` → operations); audit R11.
+        status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 

@@ -112,15 +112,38 @@ behaviour change. Completes the whole service column (S1–S8).
   Verification: full suite green (2,680 passed, 17 skipped); ruff
   clean. No schema change; no behaviour change.
 
+### Item 3 — R1 / R10 / R11: route-sweep mechanical + doc batch — ✅ done 2026-08-19
+
+The first, no-URL-change batch of the route sweep. The two gating design
+decisions were settled by the maintainer: **R1 — keep the extract-data
+AJAX sub-API as a blessed exception** (document, don't convert); **R6 —
+adopt the `delete` = destroy-owned-row / `remove` = detach-membership
+rule** (lands in a later batch).
+
+- **R1** — `spec/architecture.md` gained a "Route conventions" section:
+  the POST + verb-in-path + `Form` + 303-redirect house style, plus the
+  extract-data REST/JSON/PATCH sub-API documented as the blessed
+  exception and the pattern new AJAX endpoints should converge on (R4).
+- **R10** — the two bare `status_code=303` literals (`_results.py`,
+  `_rehydrate.py`) now use `status.HTTP_303_SEE_OTHER`.
+- **R11** — the `/edit` legacy GET redirect moved from 301 to
+  `status.HTTP_308_PERMANENT_REDIRECT`, matching the `/preview` shim.
+- Also fixed the `_instruments_band2.py` docstring that claimed "204"
+  but returned `200`.
+
+Verification: full suite green; ruff clean. No behaviour change beyond
+the 301→308 status on one legacy redirect.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **Route-convention sweep (R1–R11).** Two design decisions to settle
-  **first**: (a) is the extract-data REST/JSON/PATCH style a blessed
-  AJAX exception or should it + the instrument AJAX endpoints converge
-  on one contract (R1 + R4)? (b) the `delete` vs `remove` verb rule
-  (R6). Then the mechanical nits and the two-URL consolidations.
+- **Route sweep — remaining (R2–R9).** Grouped for the next batches:
+  the **URL-verb renames** (R5 `bulk-<verb>`, R6 `delete`/`remove` rule,
+  R7 creation verb, R9 `setupinvite` → `setup-invite`) which ripple into
+  templates + tests; and the **structural** consolidations (R2 activate
+  two-URL, R3 operation-error redisplay, R4 AJAX Pydantic bodies, R8
+  two-route session-edit).
 - **UI-vocabulary sweep (U1–U8).** Spec-backed and largely mechanical:
   Save→Secondary, banner Cancel→`.btn alert`, one delete-confirm
   mechanism (U3 carries real safety weight — do it deliberately), drop

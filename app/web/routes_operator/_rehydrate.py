@@ -20,7 +20,7 @@ import io
 import os
 import zipfile
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
@@ -155,5 +155,5 @@ def rehydrate_commit(
     db.commit()
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}?rehydrated=1",
-        status_code=303,
+        status_code=status.HTTP_303_SEE_OTHER,
     )

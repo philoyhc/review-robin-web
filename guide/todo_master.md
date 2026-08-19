@@ -2101,10 +2101,18 @@ open-coded active predicate (S6); `_response_count_for_field` in
 queries (S7). Pure dedup, no behaviour change. This closes the entire
 **service column (S1–S8)**.
 
-**Still open:** the rest of the audit — the route-convention sweep
-(R1–R11, two design decisions to settle first), the UI-vocabulary sweep
-(U1–U8), the view-adapter dedup (V1–V6). See `guide/consistency_audit.md`
-for the batched remediation order.
+**Item 3 — R1 / R10 / R11 (route-sweep mechanical + doc) — done
+2026-08-19.** Design calls settled: R1 = keep the extract-data AJAX
+sub-API as a blessed exception (documented in `spec/architecture.md`
+"Route conventions"); R6 = `delete`=destroy / `remove`=detach rule
+(lands later). R10 (bare `303` → `status.HTTP_303_SEE_OTHER`), R11
+(`/edit` legacy redirect 301 → 308), + the band2 `204`/`200` docstring
+fix. No URL changes.
+
+**Still open:** route sweep R2–R9 (URL-verb renames R5/R6/R7/R9 +
+structural R2/R3/R4/R8), the UI-vocabulary sweep (U1–U8), the
+view-adapter dedup (V1–V6). See `guide/consistency_audit.md` for the
+batched remediation order.
 
 ---
 
