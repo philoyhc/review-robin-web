@@ -15,18 +15,8 @@ row W1).
 
 from __future__ import annotations
 
-import re
-
 from app.db.models import Reviewee
-
-
-# Same shape as the reviewer-side ``_EMAIL_RE`` in
-# ``app/services/reviewers.py``. Duplicated rather than imported
-# because the reviewer copy is a module-private (underscore-
-# prefixed) constant. If the two ever need to diverge, the
-# divergence is intentional; if not, this is a two-line drift
-# risk worth accepting for the boundary cleanliness.
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+from app.services.email_identity import looks_like_email
 
 
 def is_email_identified(reviewee: Reviewee) -> bool:
@@ -39,7 +29,7 @@ def is_email_identified(reviewee: Reviewee) -> bool:
     against an inbox, so the results surface stays unavailable
     by construction. This is the helper §3.2 describes — no
     schema change required; the existing ``email_or_identifier``
-    column already carries the value to test.
+    column already carries the value to test. Delegates to the
+    canonical :func:`app.services.email_identity.looks_like_email`.
     """
-    value = (reviewee.email_or_identifier or "").strip()
-    return bool(_EMAIL_RE.fullmatch(value))
+    return looks_like_email(reviewee.email_or_identifier)

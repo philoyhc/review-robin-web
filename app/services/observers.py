@@ -33,19 +33,19 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.email_identity import looks_like_email, normalize_email
+from app.services.roster_bulk import bulk_set_status
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _VALID_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
 
 
@@ -73,7 +73,7 @@ class ObserverOperationError(ValueError):
 
 def _normalised_email(email: str) -> str:
     value = (email or "").strip()
-    if not _EMAIL_RE.fullmatch(value):
+    if not looks_like_email(value):
         raise ObserverOperationError(
             "invalid_email", f"{value!r} is not a valid email address."
         )
@@ -104,13 +104,20 @@ def _email_taken(
     email: str,
     exclude_observer_id: int | None = None,
 ) -> bool:
-    stmt = select(Observer.id).where(
-        Observer.session_id == session_id,
-        func.lower(Observer.email) == email.lower(),
+    # Case-insensitive match via the canonical ``normalize_email``
+    # fold so a duplicate rejected here agrees with the access gate
+    # that admits the same address (audit S2).
+    key = normalize_email(email)
+    rows = db.execute(
+        select(Observer.id, Observer.email).where(
+            Observer.session_id == session_id
+        )
+    ).all()
+    return any(
+        normalize_email(existing) == key
+        for row_id, existing in rows
+        if row_id != exclude_observer_id
     )
-    if exclude_observer_id is not None:
-        stmt = stmt.where(Observer.id != exclude_observer_id)
-    return db.execute(stmt).first() is not None
 
 
 def create_observer(
@@ -252,73 +259,6 @@ def update_observer(
     return changes
 
 
-def _bulk_set_status(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    observer_ids: list[int],
-    target_status: str,
-    event_type: str,
-    user: User,
-    correlation_id: str | None,
-) -> list[int]:
-    """Shared implementation for bulk_inactivate / bulk_reactivate."""
-    clean_target = _normalised_status(target_status)
-    if not observer_ids:
-        return []
-
-    candidates = list(
-        db.execute(
-            select(Observer)
-            .where(
-                Observer.session_id == review_session.id,
-                Observer.id.in_(observer_ids),
-            )
-            .order_by(Observer.id)
-        ).scalars()
-    )
-    found_ids = {o.id for o in candidates}
-    missing = set(observer_ids) - found_ids
-    if missing:
-        raise ObserverOperationError(
-            "not_in_session",
-            f"Observer ids {sorted(missing)} do not belong to "
-            f"session {review_session.id}.",
-        )
-
-    flipped = [o for o in candidates if o.status != clean_target]
-    if not flipped:
-        return []
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="observer_bulk_status_change",
-        correlation_id=correlation_id,
-    )
-
-    flipped_ids = [o.id for o in flipped]
-    for o in flipped:
-        o.status = clean_target
-    db.flush()
-
-    audit.write_event(
-        db,
-        event_type=event_type,
-        summary=(
-            f"Flipped {len(flipped_ids)} observer"
-            f"{'' if len(flipped_ids) == 1 else 's'} → {clean_target}"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.snapshot({"observer_ids": flipped_ids}),
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return flipped_ids
-
-
 def bulk_inactivate(
     db: Session,
     *,
@@ -329,12 +269,16 @@ def bulk_inactivate(
 ) -> list[int]:
     """Flip ``status="inactive"`` on every observer in ``observer_ids``
     that isn't already inactive. Returns the ids actually flipped."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        observer_ids=observer_ids,
+        model=Observer,
+        ids=observer_ids,
         target_status="inactive",
+        normalise_status=_normalised_status,
+        error_cls=ObserverOperationError,
         event_type="observer.bulk_inactivated",
+        entity_noun="observer",
         user=user,
         correlation_id=correlation_id,
     )
@@ -452,12 +396,16 @@ def bulk_reactivate(
 ) -> list[int]:
     """Flip ``status="active"`` on every observer in ``observer_ids``
     that isn't already active. Returns the ids actually flipped."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        observer_ids=observer_ids,
+        model=Observer,
+        ids=observer_ids,
         target_status="active",
+        normalise_status=_normalised_status,
+        error_cls=ObserverOperationError,
         event_type="observer.bulk_reactivated",
+        entity_noun="observer",
         user=user,
         correlation_id=correlation_id,
     )

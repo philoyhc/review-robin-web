@@ -44,6 +44,8 @@ from app.services.csv_imports import (
     _read_dict_rows,
     decode_csv,
 )
+from app.services.email_identity import normalize_email
+from app.services.roster_bulk import bulk_set_status
 
 _VALID_STATUS = {"active", "inactive"}
 
@@ -93,9 +95,9 @@ def parse_relationship_csv(
     if issues:
         return ParseResult(rows=[], issues=issues)
 
-    reviewer_by_email = {r.email.casefold(): r for r in reviewers}
+    reviewer_by_email = {normalize_email(r.email): r for r in reviewers}
     reviewee_by_identifier = {
-        r.email_or_identifier.casefold(): r for r in reviewees
+        normalize_email(r.email_or_identifier): r for r in reviewees
     }
 
     parsed: list[RelationshipImportRow] = []
@@ -127,7 +129,7 @@ def parse_relationship_csv(
             )
             continue
 
-        reviewer = reviewer_by_email.get(reviewer_email.casefold())
+        reviewer = reviewer_by_email.get(normalize_email(reviewer_email))
         if reviewer is None:
             issues.append(
                 ValidationIssue(
@@ -142,7 +144,7 @@ def parse_relationship_csv(
                 )
             )
             continue
-        reviewee = reviewee_by_identifier.get(reviewee_email.casefold())
+        reviewee = reviewee_by_identifier.get(normalize_email(reviewee_email))
         if reviewee is None:
             issues.append(
                 ValidationIssue(
@@ -723,72 +725,6 @@ def update_relationship(
     return changes
 
 
-def _bulk_set_status(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    relationship_ids: list[int],
-    target_status: str,
-    event_type: str,
-    user: User,
-    correlation_id: str | None,
-) -> list[int]:
-    """Shared implementation for bulk_inactivate / bulk_reactivate."""
-    clean_target = _normalised_rel_status(target_status)
-    if not relationship_ids:
-        return []
-
-    candidates = list(
-        db.execute(
-            select(Relationship)
-            .where(
-                Relationship.session_id == review_session.id,
-                Relationship.id.in_(relationship_ids),
-            )
-            .order_by(Relationship.id)
-        ).scalars()
-    )
-    missing = set(relationship_ids) - {r.id for r in candidates}
-    if missing:
-        raise RelationshipOperationError(
-            "not_in_session",
-            f"Relationship ids {sorted(missing)} do not belong to "
-            f"session {review_session.id}.",
-        )
-
-    flipped = [r for r in candidates if r.status != clean_target]
-    if not flipped:
-        return []
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="relationship_bulk_status_change",
-        correlation_id=correlation_id,
-    )
-
-    flipped_ids = [r.id for r in flipped]
-    for r in flipped:
-        r.status = clean_target
-    db.flush()
-
-    audit.write_event(
-        db,
-        event_type=event_type,
-        summary=(
-            f"Flipped {len(flipped_ids)} relationship"
-            f"{'' if len(flipped_ids) == 1 else 's'} → {clean_target}"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.snapshot({"relationship_ids": flipped_ids}),
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return flipped_ids
-
-
 def bulk_inactivate(
     db: Session,
     *,
@@ -800,12 +736,16 @@ def bulk_inactivate(
     """Flip ``status="inactive"`` on every relationship in
     ``relationship_ids`` not already inactive. Returns the flipped
     ids."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        relationship_ids=relationship_ids,
+        model=Relationship,
+        ids=relationship_ids,
         target_status="inactive",
+        normalise_status=_normalised_rel_status,
+        error_cls=RelationshipOperationError,
         event_type="relationship.bulk_inactivated",
+        entity_noun="relationship",
         user=user,
         correlation_id=correlation_id,
     )
@@ -822,12 +762,16 @@ def bulk_reactivate(
     """Flip ``status="active"`` on every relationship in
     ``relationship_ids`` not already active. Returns the flipped
     ids."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        relationship_ids=relationship_ids,
+        model=Relationship,
+        ids=relationship_ids,
         target_status="active",
+        normalise_status=_normalised_rel_status,
+        error_cls=RelationshipOperationError,
         event_type="relationship.bulk_reactivated",
+        entity_noun="relationship",
         user=user,
         correlation_id=correlation_id,
     )

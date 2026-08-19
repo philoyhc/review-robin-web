@@ -2027,13 +2027,18 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   chrome for parity with the operator chrome. Audit + plan:
   `guide/archive/landing_pages.md`.
 
-### Segment 19 — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19_spec_documentation.md`)
+### Segment 19A — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19A_spec_documentation.md`)
+
+> **Renamed 19 → 19A on 2026-08-19** when the code-level consistency
+> remediation split off into its own sibling **Segment 19B** (below).
+> 19A keeps the documentation-hygiene charter; 19B carries the code
+> fixes.
 
 Rolls the recurring spec/ + docs/ currency work under one segment. Two audits
 drove it: `guide/archive/spec_sweep_18Aug.md` (whole-`spec/` drift — resolved
 in 18R Item 3 + the functional-spec/architecture revision) and
 `guide/archive/docs_sweep_19Aug.md` (whole-`docs/` audit — **fully executed
-+ retired to archive** 2026-08-19). Also carries the original Segment 19
++ retired to archive** 2026-08-19). Also carries the original Segment 19A
 charter: coverage-gap closure for the Tier-1 specs flagged in
 `guide/archive/spec_sweep_11may.md`.
 
@@ -2058,6 +2063,39 @@ charter: coverage-gap closure for the Tier-1 specs flagged in
 **Still open (the original charter):** Part 1 — Tier-1 **spec coverage-gap**
 closure (`spec/email_template_editor.md`, `spec/permissions.md`) + Parts 2–3
 (sweep cadence template + coverage gate). See the plan doc.
+
+### Segment 19B — Consistency remediation — in progress; started 2026-08-19 (detailed plan: `guide/segment_19B_consistency.md`)
+
+The code-level sibling of 19A: fixes the "same functionality, divergent
+call paths" drift catalogued in `guide/consistency_audit.md` (28 findings
+across service / route / template / view-adapter seams). Where 19A keeps
+docs and specs current, 19B keeps the *code* internally consistent.
+
+**Item 1 — S1–S5 (service-layer identity + dedup) — done 2026-08-19.**
+The first, highest-value slice from the audit:
+
+- **S1** — deleted the divergent `validation._instrument_label`
+  (fell back to `name`); it now imports the canonical
+  `instruments._instrument_label` (`Instrument_{id}` fallback), so an
+  instrument with no `short_label` reads the same in validation
+  messages, audit copy, and operator UI.
+- **S2 / S3 / S4** — new `app/services/email_identity.py`
+  (`EMAIL_RE` + `looks_like_email` + `normalize_email`) is the single
+  home for the email-shape regex (was duplicated 5×), the "is this an
+  email?" predicate (was split regex-vs-`"@" in value`), and the
+  case-folding convention. Every roster uniqueness gate, participant
+  access gate, and CSV/rehydrate/rules-engine identity match now folds
+  through `normalize_email` (casefold), so write-time and read-time
+  comparisons can't disagree.
+- **S5** — new `app/services/roster_bulk.py::bulk_set_status` replaces
+  the four byte-identical `_bulk_set_status` copies in
+  reviewers / reviewees / observers / relationships.
+
+Full suite green (2,680 passed); ruff clean. **Still open:** the rest of
+the audit — the route-convention sweep (R1–R11, two design decisions to
+settle first), the UI-vocabulary sweep (U1–U8), the view-adapter dedup
+(V1–V6). See `guide/consistency_audit.md` for the batched remediation
+order.
 
 ---
 
@@ -2103,13 +2141,19 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19 — Documentation hygiene** *(stub created 2026-05-11;
-  **started 2026-08-19** — see the in-progress entry at the end of
-  **Done**)*. Broadened from spec-only to spec/ **+** docs/ currency:
-  the periodic `spec/` hygiene sweeps + Tier-1 coverage-gap closure
-  (`guide/archive/spec_sweep_11may.md`) run alongside the
-  `docs/`-sweep follow-through (`guide/archive/docs_sweep_19Aug.md` —
-  fully executed 2026-08-19). **Plan:** `guide/segment_19_spec_documentation.md`.
+- **19A — Documentation hygiene** *(stub created 2026-05-11 as "19";
+  renamed 19 → 19A 2026-08-19; **started 2026-08-19** — see the
+  in-progress entry at the end of **Done**)*. Broadened from spec-only to
+  spec/ **+** docs/ currency: the periodic `spec/` hygiene sweeps + Tier-1
+  coverage-gap closure (`guide/archive/spec_sweep_11may.md`) run alongside
+  the `docs/`-sweep follow-through (`guide/archive/docs_sweep_19Aug.md` —
+  fully executed 2026-08-19). **Plan:** `guide/segment_19A_spec_documentation.md`.
+
+- **19B — Consistency remediation** *(started 2026-08-19; see the
+  in-progress entry at the end of **Done**)*. Code-level sibling of 19A:
+  works through `guide/consistency_audit.md` (same functionality, divergent
+  call paths). Item 1 (service-layer S1–S5) shipped; route / UI / view
+  sweeps remain. **Plan:** `guide/segment_19B_consistency.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The

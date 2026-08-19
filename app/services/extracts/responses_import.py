@@ -42,6 +42,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services.email_identity import normalize_email
 from app.services.extracts.responses_extract import HEADER, _group_export_index
 
 __all__ = [
@@ -169,13 +170,13 @@ def load_responses(
     result = ResponseLoadResult()
 
     reviewers = {
-        r.email.lower(): r
+        normalize_email(r.email): r
         for r in db.execute(
             select(Reviewer).where(Reviewer.session_id == review_session.id)
         ).scalars()
     }
     reviewees = {
-        r.email_or_identifier.lower(): r
+        normalize_email(r.email_or_identifier): r
         for r in db.execute(
             select(Reviewee).where(Reviewee.session_id == review_session.id)
         ).scalars()
@@ -257,7 +258,7 @@ def load_responses(
         )
 
     for row in rows:
-        reviewer = reviewers.get(row.reviewer_email.strip().lower())
+        reviewer = reviewers.get(normalize_email(row.reviewer_email))
         if reviewer is None:
             result.warnings.append(
                 f"unknown reviewer {row.reviewer_email!r}"
@@ -316,7 +317,7 @@ def load_responses(
             continue
 
         # Per-reviewee row.
-        reviewee = reviewees.get(row.reviewee_email.strip().lower())
+        reviewee = reviewees.get(normalize_email(row.reviewee_email))
         if reviewee is None:
             result.warnings.append(
                 f"unknown reviewee {row.reviewee_email!r}"
@@ -332,8 +333,8 @@ def load_responses(
                 instrument_id=instrument.id,
                 include=True,
                 is_self_review=(
-                    reviewer.email.lower()
-                    == reviewee.email_or_identifier.lower()
+                    normalize_email(reviewer.email)
+                    == normalize_email(reviewee.email_or_identifier)
                 ),
                 created_by_mode="manual",
             )

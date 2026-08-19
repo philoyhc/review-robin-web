@@ -25,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, Reviewer, ReviewSession, SessionOperator, User
+from app.services.email_identity import normalize_email
 from app.services.extracts.responses_import import (
     ResponsesFormatError,
     parse_responses_csv,
@@ -147,7 +148,7 @@ def _emails_from_csv(content: bytes, column: str) -> set[str] | None:
         return None
     emails: set[str] = set()
     for row in reader:
-        value = (row.get(column) or "").strip().lower()
+        value = normalize_email(row.get(column))
         if value:
             emails.add(value)
     return emails
@@ -280,11 +281,11 @@ def analyze_rehydrate_set(
     unknown_instruments: set[str] = set()
     unknown_fields: set[str] = set()
     for row in parsed:
-        rvr = row.reviewer_email.strip().lower()
+        rvr = normalize_email(row.reviewer_email)
         if rvr and rvr not in reviewer_emails:
             unknown_reviewers.add(rvr)
         if row.flavour != "group-scoped":
-            rve = row.reviewee_email.strip().lower()
+            rve = normalize_email(row.reviewee_email)
             if rve and rve not in reviewee_emails:
                 unknown_reviewees.add(rve)
         short = row.instrument_short_label.strip()

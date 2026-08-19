@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import io
 import json
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -22,13 +21,12 @@ from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_lifecycle as lifecycle
+from app.services.email_identity import EMAIL_RE, normalize_email
 
 log = get_logger(__name__)
 
 MAX_BYTES = 1 * 1024 * 1024
 MAX_ROWS = 5000
-
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 @dataclass
@@ -174,13 +172,13 @@ def _parse_email(
 ) -> str | ValidationIssue:
     """Validate ``value`` as an email address.
 
-    With ``strict=True`` the value must match ``_EMAIL_RE`` — the
+    With ``strict=True`` the value must match ``EMAIL_RE`` — the
     reviewer path, where every reviewer needs an institutional email
     for auth.
 
     With ``strict=False`` non-email identifiers are accepted (no
     ``@``); but if an ``@`` is present the value must still match
-    ``_EMAIL_RE`` so typos like ``foo@`` or ``@bar`` are caught
+    ``EMAIL_RE`` so typos like ``foo@`` or ``@bar`` are caught
     rather than imported and dying later on send. This is the
     reviewee path today, where reviewees aren't expected to use the
     app.
@@ -192,7 +190,7 @@ def _parse_email(
     """
     if not strict and "@" not in value:
         return value
-    if not _EMAIL_RE.fullmatch(value):
+    if not EMAIL_RE.fullmatch(value):
         return ValidationIssue(
             severity=Severity.error,
             source=source,
@@ -264,7 +262,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
         if isinstance(email_check, ValidationIssue):
             issues.append(email_check)
             continue
-        prior = seen_emails.get(email.lower())
+        prior = seen_emails.get(normalize_email(email))
         if prior is not None:
             prior_index, prior_name = prior
             if prior_name == name:
@@ -287,7 +285,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_emails[email.lower()] = (index, name)
+        seen_emails[normalize_email(email)] = (index, name)
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
             issues.append(status)
@@ -368,7 +366,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         if isinstance(identifier_check, ValidationIssue):
             issues.append(identifier_check)
             continue
-        prior = seen_identifiers.get(identifier.lower())
+        prior = seen_identifiers.get(normalize_email(identifier))
         if prior is not None:
             prior_index, prior_name = prior
             if prior_name == name:
@@ -391,7 +389,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_identifiers[identifier.lower()] = (index, name)
+        seen_identifiers[normalize_email(identifier)] = (index, name)
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
             issues.append(status)
@@ -475,7 +473,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
         if isinstance(email_check, ValidationIssue):
             issues.append(email_check)
             continue
-        prior = seen_emails.get(email.lower())
+        prior = seen_emails.get(normalize_email(email))
         if prior is not None:
             issues.append(
                 ValidationIssue(
@@ -490,7 +488,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_emails[email.lower()] = index
+        seen_emails[normalize_email(email)] = index
 
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
@@ -568,7 +566,7 @@ def check_cross_table_identity(
     issues: list[ValidationIssue] = []
     if kind == "reviewers":
         existing = {
-            r.email_or_identifier.lower(): r.name
+            normalize_email(r.email_or_identifier): r.name
             for r in db.execute(
                 select(Reviewee).where(Reviewee.session_id == session_id)
             )
@@ -578,7 +576,7 @@ def check_cross_table_identity(
         }
         for index, row in enumerate(rows, start=1):
             assert isinstance(row, ReviewerImportRow)
-            prior_name = existing.get(row.email.lower())
+            prior_name = existing.get(normalize_email(row.email))
             if prior_name is not None and prior_name != row.name:
                 issues.append(
                     ValidationIssue(
@@ -595,7 +593,7 @@ def check_cross_table_identity(
                 )
     elif kind == "reviewees":
         existing = {
-            r.email.lower(): r.name
+            normalize_email(r.email): r.name
             for r in db.execute(
                 select(Reviewer).where(Reviewer.session_id == session_id)
             )
@@ -606,7 +604,7 @@ def check_cross_table_identity(
             assert isinstance(row, RevieweeImportRow)
             if "@" not in row.email_or_identifier:
                 continue
-            prior_name = existing.get(row.email_or_identifier.lower())
+            prior_name = existing.get(normalize_email(row.email_or_identifier))
             if prior_name is not None and prior_name != row.name:
                 issues.append(
                     ValidationIssue(

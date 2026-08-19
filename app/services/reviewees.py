@@ -21,17 +21,17 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.email_identity import looks_like_email, normalize_email
+from app.services.roster_bulk import bulk_set_status
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _VALID_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
 
 
@@ -75,7 +75,7 @@ def _normalised_identifier(identifier: str) -> str:
         )
     # Non-strict: a handle without ``@`` is fine; anything with an
     # ``@`` must be a well-formed email.
-    if "@" in value and not _EMAIL_RE.fullmatch(value):
+    if "@" in value and not looks_like_email(value):
         raise RevieweeOperationError(
             "invalid_email", f"{value!r} is not a valid email address."
         )
@@ -106,13 +106,20 @@ def _identifier_taken(
     identifier: str,
     exclude_reviewee_id: int | None = None,
 ) -> bool:
-    stmt = select(Reviewee.id).where(
-        Reviewee.session_id == session_id,
-        func.lower(Reviewee.email_or_identifier) == identifier.lower(),
+    # Case-insensitive match via the canonical ``normalize_email``
+    # fold so a duplicate rejected here agrees with the access gate
+    # that admits the same identifier (audit S2).
+    key = normalize_email(identifier)
+    rows = db.execute(
+        select(Reviewee.id, Reviewee.email_or_identifier).where(
+            Reviewee.session_id == session_id
+        )
+    ).all()
+    return any(
+        normalize_email(existing) == key
+        for row_id, existing in rows
+        if row_id != exclude_reviewee_id
     )
-    if exclude_reviewee_id is not None:
-        stmt = stmt.where(Reviewee.id != exclude_reviewee_id)
-    return db.execute(stmt).first() is not None
 
 
 def create_reviewee(
@@ -323,73 +330,6 @@ def update_reviewee(
     return changes
 
 
-def _bulk_set_status(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    reviewee_ids: list[int],
-    target_status: str,
-    event_type: str,
-    user: User,
-    correlation_id: str | None,
-) -> list[int]:
-    """Shared implementation for bulk_inactivate / bulk_reactivate."""
-    clean_target = _normalised_status(target_status)
-    if not reviewee_ids:
-        return []
-
-    candidates = list(
-        db.execute(
-            select(Reviewee)
-            .where(
-                Reviewee.session_id == review_session.id,
-                Reviewee.id.in_(reviewee_ids),
-            )
-            .order_by(Reviewee.id)
-        ).scalars()
-    )
-    found_ids = {r.id for r in candidates}
-    missing = set(reviewee_ids) - found_ids
-    if missing:
-        raise RevieweeOperationError(
-            "not_in_session",
-            f"Reviewee ids {sorted(missing)} do not belong to "
-            f"session {review_session.id}.",
-        )
-
-    flipped = [r for r in candidates if r.status != clean_target]
-    if not flipped:
-        return []
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="reviewee_bulk_status_change",
-        correlation_id=correlation_id,
-    )
-
-    flipped_ids = [r.id for r in flipped]
-    for r in flipped:
-        r.status = clean_target
-    db.flush()
-
-    audit.write_event(
-        db,
-        event_type=event_type,
-        summary=(
-            f"Flipped {len(flipped_ids)} reviewee"
-            f"{'' if len(flipped_ids) == 1 else 's'} → {clean_target}"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.snapshot({"reviewee_ids": flipped_ids}),
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return flipped_ids
-
-
 def bulk_inactivate(
     db: Session,
     *,
@@ -401,12 +341,16 @@ def bulk_inactivate(
     """Flip ``status="inactive"`` on every reviewee in
     ``reviewee_ids`` that isn't already inactive. Returns the ids
     actually flipped."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        reviewee_ids=reviewee_ids,
+        model=Reviewee,
+        ids=reviewee_ids,
         target_status="inactive",
+        normalise_status=_normalised_status,
+        error_cls=RevieweeOperationError,
         event_type="reviewee.bulk_inactivated",
+        entity_noun="reviewee",
         user=user,
         correlation_id=correlation_id,
     )
@@ -423,12 +367,16 @@ def bulk_reactivate(
     """Flip ``status="active"`` on every reviewee in
     ``reviewee_ids`` that isn't already active. Returns the ids
     actually flipped."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        reviewee_ids=reviewee_ids,
+        model=Reviewee,
+        ids=reviewee_ids,
         target_status="active",
+        normalise_status=_normalised_status,
+        error_cls=RevieweeOperationError,
         event_type="reviewee.bulk_reactivated",
+        entity_noun="reviewee",
         user=user,
         correlation_id=correlation_id,
     )

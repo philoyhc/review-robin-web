@@ -1,14 +1,20 @@
-# Segment 19 — Spec documentation
+# Segment 19A — Spec documentation
 
 > **Stub created 2026-05-11** as part of the Stage 4 guide/
-> reorg.
+> reorg. **Renamed 19 → 19A on 2026-08-19** when the code-level
+> consistency remediation split off into its own sibling,
+> **Segment 19B** (`guide/segment_19B_consistency.md`). 19A keeps
+> the **documentation-hygiene** charter (spec/ + docs/ currency +
+> coverage-gap closure); 19B carries the code-level "same
+> functionality, divergent call paths" fixes from
+> `guide/consistency_audit.md`.
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
 get drafted when this segment is picked up.
 
 ## Status (started 2026-08-19)
 
-Segment 19 is **in progress** and **broadened from spec-only to spec/ +
+Segment 19A is **in progress** and **broadened from spec-only to spec/ +
 docs/ hygiene** — the two folders' currency sweeps run under one segment.
 Shipped so far:
 
@@ -36,7 +42,7 @@ the codebase, and free of drift against the implementation.
 
 Distinct from **Segment 20** (operator polish + documentation),
 which produces operator- + developer-facing **prose docs**
-(`docs/`, README, Start Here page, runbooks). 19 is about
+(`docs/`, README, Start Here page, runbooks). 19A is about
 the `spec/` folder itself — the design-intent contracts that
 the templates, services, and tests are supposed to match.
 
@@ -58,7 +64,7 @@ The 2026-05-09 → 2026-05-11 sprint did one such sweep
 spec touched across F1-F8 drift fixes, C1-C5 consolidation,
 S1-S5 style touch-ups, plus the three new Tier-1 specs:
 `lifecycle.md`, `csv_contracts.md`, `validate_page.md`).
-That sweep is the prototype for what 19 codifies as a
+That sweep is the prototype for what 19A codifies as a
 recurring concern.
 
 ## Scope (sketch)
@@ -78,7 +84,7 @@ Assignments dedicated section, Operator Settings spec).
 
 Per the sweep doc's tier framing, these are the items the
 2026-05-11 sweep didn't get to but identified as worth a
-dedicated spec. Part 1 of 19 picks them up.
+dedicated spec. Part 1 of 19A picks them up.
 
 ### Part 2 — Periodic drift audit cadence
 
@@ -152,7 +158,7 @@ maybe-future direction.
   (Stage-1 of every reorg PR touches them as needed) rather
   than under a dedicated segment.
 - **Code documentation** (docstrings, inline comments).
-  Maintained per-PR; not a 19 concern.
+  Maintained per-PR; not a 19A concern.
 
 ## Doc impact
 
@@ -178,7 +184,7 @@ When parts ship:
   tiering for future sweeps.
 - **Where to register new specs.** New `spec/<name>.md`
   files land via the segment that first locks the contract;
-  Segment 19 picks up the cross-cutting hygiene work, not
+  Segment 19A picks up the cross-cutting hygiene work, not
   the per-segment authoring.
 - **Naming conventions.** Sweep §C5 retired "assumptions" /
   generic filenames; future spec adds should pre-emptively

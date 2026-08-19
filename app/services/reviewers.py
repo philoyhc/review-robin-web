@@ -25,16 +25,15 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
-import re
-
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.email_identity import looks_like_email, normalize_email
+from app.services.roster_bulk import bulk_set_status
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _VALID_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
 
 
@@ -70,7 +69,7 @@ def _normalised_name(name: str) -> str:
 
 def _normalised_email(email: str) -> str:
     value = (email or "").strip()
-    if not _EMAIL_RE.fullmatch(value):
+    if not looks_like_email(value):
         raise ReviewerOperationError(
             "invalid_email", f"{value!r} is not a valid email address."
         )
@@ -101,13 +100,21 @@ def _email_taken(
     email: str,
     exclude_reviewer_id: int | None = None,
 ) -> bool:
-    stmt = select(Reviewer.id).where(
-        Reviewer.session_id == session_id,
-        func.lower(Reviewer.email) == email.lower(),
+    # Case-insensitive match via the canonical ``normalize_email``
+    # fold, so a duplicate rejected here agrees with the access
+    # gates that admit the same address (audit S2). Rosters are
+    # session-bounded, so the in-Python scan is cheap.
+    key = normalize_email(email)
+    rows = db.execute(
+        select(Reviewer.id, Reviewer.email).where(
+            Reviewer.session_id == session_id
+        )
+    ).all()
+    return any(
+        normalize_email(existing) == key
+        for row_id, existing in rows
+        if row_id != exclude_reviewer_id
     )
-    if exclude_reviewer_id is not None:
-        stmt = stmt.where(Reviewer.id != exclude_reviewer_id)
-    return db.execute(stmt).first() is not None
 
 
 def create_reviewer(
@@ -125,8 +132,8 @@ def create_reviewer(
     correlation_id: str | None = None,
 ) -> Reviewer:
     """Insert a new Reviewer row. Rejects duplicate emails within
-    the session (case-sensitive match on the stored value). Returns
-    the persisted row."""
+    the session (case-insensitive match). Returns the persisted
+    row."""
     clean_name = _normalised_name(name)
     clean_email = _normalised_email(email)
     clean_status = _normalised_status(status)
@@ -287,73 +294,6 @@ def update_reviewer(
     return changes
 
 
-def _bulk_set_status(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    reviewer_ids: list[int],
-    target_status: str,
-    event_type: str,
-    user: User,
-    correlation_id: str | None,
-) -> list[int]:
-    """Shared implementation for bulk_inactivate / bulk_reactivate."""
-    clean_target = _normalised_status(target_status)
-    if not reviewer_ids:
-        return []
-
-    candidates = list(
-        db.execute(
-            select(Reviewer)
-            .where(
-                Reviewer.session_id == review_session.id,
-                Reviewer.id.in_(reviewer_ids),
-            )
-            .order_by(Reviewer.id)
-        ).scalars()
-    )
-    found_ids = {r.id for r in candidates}
-    missing = set(reviewer_ids) - found_ids
-    if missing:
-        raise ReviewerOperationError(
-            "not_in_session",
-            f"Reviewer ids {sorted(missing)} do not belong to "
-            f"session {review_session.id}.",
-        )
-
-    flipped = [r for r in candidates if r.status != clean_target]
-    if not flipped:
-        return []
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="reviewer_bulk_status_change",
-        correlation_id=correlation_id,
-    )
-
-    flipped_ids = [r.id for r in flipped]
-    for r in flipped:
-        r.status = clean_target
-    db.flush()
-
-    audit.write_event(
-        db,
-        event_type=event_type,
-        summary=(
-            f"Flipped {len(flipped_ids)} reviewer"
-            f"{'' if len(flipped_ids) == 1 else 's'} → {clean_target}"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.snapshot({"reviewer_ids": flipped_ids}),
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return flipped_ids
-
-
 def bulk_inactivate(
     db: Session,
     *,
@@ -365,12 +305,16 @@ def bulk_inactivate(
     """Flip ``status="inactive"`` on every reviewer in ``reviewer_ids``
     that isn't already inactive. Returns the ids actually flipped.
     Rows already inactive are skipped silently."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        reviewer_ids=reviewer_ids,
+        model=Reviewer,
+        ids=reviewer_ids,
         target_status="inactive",
+        normalise_status=_normalised_status,
+        error_cls=ReviewerOperationError,
         event_type="reviewer.bulk_inactivated",
+        entity_noun="reviewer",
         user=user,
         correlation_id=correlation_id,
     )
@@ -387,12 +331,16 @@ def bulk_reactivate(
     """Flip ``status="active"`` on every reviewer in ``reviewer_ids``
     that isn't already active. Returns the ids actually flipped.
     Rows already active are skipped silently."""
-    return _bulk_set_status(
+    return bulk_set_status(
         db,
         review_session=review_session,
-        reviewer_ids=reviewer_ids,
+        model=Reviewer,
+        ids=reviewer_ids,
         target_status="active",
+        normalise_status=_normalised_status,
+        error_cls=ReviewerOperationError,
         event_type="reviewer.bulk_reactivated",
+        entity_noun="reviewer",
         user=user,
         correlation_id=correlation_id,
     )
