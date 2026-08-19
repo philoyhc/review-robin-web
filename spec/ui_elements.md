@@ -311,8 +311,11 @@ Cancel button links back to the page **without** the
 query-string flag, so the operator has a one-click way to
 dismiss the banner and return to the table state. For
 confirmation-style banners (e.g. cascade-preview before a
-destructive action), Cancel sits next to the confirm button
-(usually `.btn.danger-solid`). For pure error banners (no
+destructive action), Cancel sits next to the confirm button —
+`.btn.danger-solid` (filled amber) for a recoverable proceed
+(archive / regenerate-&-prepare / acknowledge-&-activate),
+`.btn.destructive` (outline red) for an irreversible delete. For
+pure error banners (no
 confirm path — the operator must fix the underlying issue),
 Cancel is the only button.
 
@@ -348,7 +351,8 @@ vocabulary as follows.
 | `.btn.secondary` | **Secondary** | White bg, `border-default`, `text-primary`. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
 | `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.alert-solid` | **Primary** | The orange solid collapses to Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
-| `.btn.danger-solid` | **Destructive** | White bg, `accent-red` border + text. Used as the **confirmation step** of destructive actions. Lives inside `.card.danger-zone` — the brown frames the surface, the red marks the action. |
+| `.btn.destructive` | **Destructive (outline red)** | White bg, `accent-red` border + text. Irreversible row / collection **deletes** — Delete session, delete-all rosters, delete-selected, and the delete confirm step inside `.card.danger-zone`. |
+| `.btn.danger-solid` | **Alert (filled amber)** | Filled `accent-amber-dark`, white text; lightens to `accent-amber` on hover. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution; distinct from `.btn.destructive` (red delete) and `.btn.alert` (outline-amber lock recovery). Consistency-audit U5 / U6 (2026-08-19). |
 | `.btn.danger` | **Destructive** (entry point) or **Secondary** | Where `.danger` is the entry into a confirmation, prefer Secondary; the destructive treatment lands on the confirm step. |
 | `.btn-cta` | **Primary (large / centered variant)** | Layout variant only. Keep, but normalize fill to Primary. |
 | `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, `pointer-events: none`. Same disabled rule as the regular Primary. |
@@ -358,8 +362,8 @@ vocabulary as follows.
 | `.nav-tab` (chrome class, reused for page-internal) | **Nav button** (page-internal view switcher) | Page-internal tab-like navigation between sibling views inside a single operator page — *not* the chrome. Reference examples: Email Template's `Invitation` / `Reminder` / `Responses received` row (`session_setupinvite.html`); Previews-page email-tab strip (`partials/_email_preview_region.html`). Reuses the chrome's `.nav-tab` styling so the visual vocabulary stays consistent: active view renders `<span class="nav-tab active" aria-current="page">` (non-anchor, current location), sibling views render `<a class="nav-tab">` anchors, "coming soon" reserved tabs render `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `<div class="tab-strip tab-strip-page">` — the `.tab-strip-page` modifier gives the row the chrome's grey tint, a thin border, and rounded corners so the active-tab white background reads against the row tint just like the chrome's Setup row. |
 
 **Hover** (per `visual_style_general.md` P6 — pilot-validated):
-- *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten).
-- *Outline buttons* (Secondary, Destructive, Outline-amber): subtle background tint in the role's family (`bg-muted`, `accent-red-bg`, `accent-amber-bg-mid`).
+- *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten). `.btn.danger-solid` (filled amber) lightens from `accent-amber-dark` to `accent-amber`.
+- *Outline buttons* (Secondary, `.btn.destructive`, Outline-amber): subtle background tint in the role's family (`bg-muted`, `accent-red-bg`, `accent-amber-bg-mid`).
 - Disabled buttons skip via `pointer-events: none`.
 
 > **Disabled anchor-as-button** — anchors used as buttons that

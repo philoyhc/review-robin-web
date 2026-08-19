@@ -2142,9 +2142,14 @@ Template/CSS-only: routine in-editor Save → Secondary (reviewer-surface
 Submit stays Primary); banner Cancels → `.btn alert`; dropped the no-op
 `.btn primary` token. Best eyeballed on the dev slot after deploy.
 
-**Still open:** UI sweep remaining — U3 (delete-confirm mechanism), U5+U6
-(amber `danger-solid` for archive), U7/U8 (label/verb) — and the
-view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
+**Item 9 — U5 + U6 (amber danger-solid) — done 2026-08-19.**
+`.btn.danger-solid` is now filled amber (distinct from outline-red
+`.destructive` deletes and outline-amber `.alert` recovery); archive/purge
+actions use it. `spec/ui_elements.md` refreshed. Template/CSS-only.
+
+**Still open:** UI sweep remaining — U3 (delete-confirm mechanism),
+U7/U8 (label/verb) — and the view-adapter dedup (V1–V6). See
+`guide/consistency_audit.md`.
 
 ---
 

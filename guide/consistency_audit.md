@@ -53,12 +53,15 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     logged in `guide/deferred_consolidated.md` (Part C). **This closes
     the whole route sweep, R1–R11.**
 - **🔶 UI-vocabulary sweep (U1–U8) in progress.**
-  - **Item 8** (this slice): U1 (routine in-editor Save → Secondary;
-    reviewer-surface Submit stays Primary), U2 (banner Cancels →
-    `.btn alert`), U4 (dropped the no-op `.btn primary` token).
-    Template/CSS-only — best eyeballed on the dev slot after deploy.
-    **Still open:** U3 (delete-confirm mechanism), U5–U8.
-- **Open** — U3 + U5–U8 (see above) and the view-adapter dedup (V1–V6).
+  - **Item 8**: U1 (routine in-editor Save → Secondary; reviewer-surface
+    Submit stays Primary), U2 (banner Cancels → `.btn alert`), U4
+    (dropped the no-op `.btn primary` token).
+  - **Item 9**: U5 + U6 — `.btn.danger-solid` became a **filled amber**
+    style (distinct from outline-red `.destructive` and outline-amber
+    `.alert`); archive/purge actions now use it. `spec/ui_elements.md`
+    refreshed. Template/CSS-only — best eyeballed on the dev slot.
+    **Still open:** U3 (delete-confirm mechanism), U7, U8.
+- **Open** — U3 + U7 + U8 (see above) and the view-adapter dedup (V1–V6).
 
 ---
 
@@ -86,8 +89,8 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **R6** | 🟡 Low | Route | Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` |
 | ✅ **R7** | 🟡 Low | Route | Creation verb: `owners/add` (sub-resource) vs `add-group` (verb-first) |
 | ✅ **U4** | 🟡 Low | UX | Dead/duplicate Primary token `class="btn primary"` vs `class="btn"` |
-| **U5** | 🟡 Low | UX | "Archive" styled Destructive one place, Outline-amber another |
-| **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
+| ✅ **U5** | 🟡 Low | UX | "Archive" styled Destructive one place, Outline-amber another |
+| ✅ **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
 | **U7** | 🟡 Low | UX | Filter-reset label: "Clear" / "Clear all" / "Clear filters" |
 | **U8** | 🟡 Low | UX | Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) |
 | ✅ **S6** | 🟡 Low | Service | Status normalization / active-predicate duplicated in five spots |
@@ -441,19 +444,24 @@ Download buttons (`reviewer/summary.html`, `reviewer/collation.html`)
 became bare `.btn` (visual no-op). No `btn primary` remains in the
 templates.
 
-### U5 🟡 "Archive" styled Destructive one place, Outline-amber another
+### U5 🟡 "Archive" styled Destructive one place, Outline-amber another — ✅ done (19B Item 9, harmonized to amber danger-solid)
 
-`next_action_card.html:354` (`Archive session`) = `.btn destructive`;
-`sessions_list.html:198,247` (`Purge and archive` / `… all`) =
-`.btn alert` (spec-reserved for lock-card recovery + banner Cancel).
-Pick one role for archive.
+`Archive session` was `.btn destructive` (outline red) in the Workflow
+card, `Purge and archive` was `.btn alert` (outline amber) in the lobby.
+**Fixed:** all archive/purge actions now use `.btn danger-solid` — the
+filled amber style (see U6).
 
-### U6 🟡 Two class names for one Destructive style
+### U6 🟡 Two class names for one Destructive style — ✅ done (19B Item 9, differentiated)
 
-`.btn.destructive` and `.btn.danger-solid` share one CSS rule
-(`base.html:1630-1631`) — visually identical. `danger-solid` appears only
-at `session_validate.html:43`, `next_action_card.html:101`. Collapse to
-one class.
+`.btn.destructive` and `.btn.danger-solid` were an identical outline-red
+rule. **Resolution (maintainer-chosen: differentiate, not collapse):**
+`.btn.danger-solid` is now a **filled amber** style for
+serious-but-recoverable actions (purge-and-archive, Archive session, and
+the Acknowledge-and-activate confirm — which already used
+`danger-solid`), while `.btn.destructive` stays outline-red for
+irreversible deletes. The two classes are now distinct, non-redundant
+roles. Recorded in `spec/ui_elements.md` (button-vocab table + hover +
+confirm-banner notes). Best eyeballed on the dev slot.
 
 ### U7 🟡 Filter-reset label: "Clear" / "Clear all" / "Clear filters"
 
