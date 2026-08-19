@@ -275,7 +275,7 @@ class EmailPreviewTab:
 
     template_setup_param: str
     """Value to thread into the deep-link to the Email Template Setup
-    page (`/setupinvite?template=...`). Same as `key` for now; kept
+    page (`/setup-invite?template=...`). Same as `key` for now; kept
     separate so the URL slug can diverge from the Setup-page slug
     without ripple."""
 

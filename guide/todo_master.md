@@ -2109,10 +2109,16 @@ sub-API as a blessed exception (documented in `spec/architecture.md`
 (`/edit` legacy redirect 301 → 308), + the band2 `204`/`200` docstring
 fix. No URL changes.
 
-**Still open:** route sweep R2–R9 (URL-verb renames R5/R6/R7/R9 +
-structural R2/R3/R4/R8), the UI-vocabulary sweep (U1–U8), the
-view-adapter dedup (V1–V6). See `guide/consistency_audit.md` for the
-batched remediation order.
+**Item 4 — R5 / R6 / R7 / R9 (URL-verb renames) — done 2026-08-19.**
+R5 (lobby `*-selected` → `bulk-<verb>`), R6 (`/sys-admin/users/{id}/remove`
+→ `/delete` per the destroy-vs-detach rule), R9 (`setupinvite` →
+`setup-invite`), R7 (documented as a justified divergence — instruments'
+two creation kinds vs single-kind owners). Naming rules recorded in
+`spec/architecture.md` "Route conventions". No redirect shims kept.
+
+**Still open:** route sweep structural R2/R3/R4/R8, the UI-vocabulary
+sweep (U1–U8), the view-adapter dedup (V1–V6). See
+`guide/consistency_audit.md` for the batched remediation order.
 
 ---
 

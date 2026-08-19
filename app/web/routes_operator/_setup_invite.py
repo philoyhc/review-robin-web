@@ -52,7 +52,7 @@ def _build_field_rows(
     return rows
 
 
-@router.get("/sessions/{session_id}/setupinvite", response_class=HTMLResponse)
+@router.get("/sessions/{session_id}/setup-invite", response_class=HTMLResponse)
 def setupinvite_form(
     request: Request,
     template: str = Query(default="invitation"),
@@ -86,7 +86,7 @@ def setupinvite_form(
     )
 
 
-@router.post("/sessions/{session_id}/setupinvite")
+@router.post("/sessions/{session_id}/setup-invite")
 async def setupinvite_save(
     request: Request,
     template: str = Form(default="invitation"),
@@ -131,12 +131,12 @@ async def setupinvite_save(
     )
     db.commit()
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}",
+        url=f"/operator/sessions/{review_session.id}/setup-invite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-@router.post("/sessions/{session_id}/setupinvite/reset")
+@router.post("/sessions/{session_id}/setup-invite/reset")
 def setupinvite_reset(
     template: str = Form(...),
     field: str = Form(...),
@@ -171,7 +171,7 @@ def setupinvite_reset(
     db.commit()
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/setupinvite"
+            f"/operator/sessions/{review_session.id}/setup-invite"
             f"?template={template}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,

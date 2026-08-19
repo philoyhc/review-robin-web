@@ -106,6 +106,21 @@ refresh re-GETs rather than re-POSTs. Legacy GET URLs that have moved
 redirect with **308** (`HTTP_308_PERMANENT_REDIRECT`, which preserves
 the method), not 301.
 
+**Verb naming.** Selection-driven bulk actions are `bulk-<verb>`
+(`bulk-inactivate`, `bulk-archive`, `bulk-delete`), never
+`<verb>-selected`. Row/collection destruction distinguishes intent:
+**`delete`** destroys a row you own (`instruments/{id}/delete`,
+`sessions/{id}/delete`, `sys-admin/users/{id}/delete`,
+`reviewers/delete-all`), while **`remove`** detaches a
+relationship/membership without destroying the far side
+(`owners/{uid}/remove`, `users/{id}/remove-from-all-sessions`).
+Creation is `{collection}/add` for a single-kind collection
+(`owners/add`); a collection with **multiple creation kinds** stays
+verb-first to name the kind (`instruments/add-group`,
+`instruments/add-new-model`) rather than inventing artificial
+sub-collections — this is a deliberate, documented divergence
+(consistency-audit R7).
+
 **Documented exception — the Extract-data "Data shaper" sub-API**
 (`routes_operator/_extract_data.py`). This one surface is a deliberate
 AJAX/JSON sub-API: it uses REST verbs (`POST` / `PATCH` / `DELETE` on

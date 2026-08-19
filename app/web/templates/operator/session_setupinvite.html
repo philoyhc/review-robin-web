@@ -25,7 +25,7 @@
         <span class="nav-tab active" aria-current="page">{{ label }}</span>
       {% else %}
         <a class="nav-tab"
-           href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ label }}</a>
+           href="/operator/sessions/{{ session.id }}/setup-invite?template={{ t }}">{{ label }}</a>
       {% endif %}
     {% endfor %}
   </div>
@@ -47,7 +47,7 @@
       <h2>{{ (active_template|replace("_", " "))|capitalize }} email</h2>
 
       <form method="post"
-            action="/operator/sessions/{{ session.id }}/setupinvite"
+            action="/operator/sessions/{{ session.id }}/setup-invite"
             id="setupinvite-form">
         <input type="hidden" name="template" value="{{ active_template }}">
 
@@ -115,7 +115,7 @@
       {% for row in rows %}
         {% if row.has_override %}
           <form method="post"
-                action="/operator/sessions/{{ session.id }}/setupinvite/reset"
+                action="/operator/sessions/{{ session.id }}/setup-invite/reset"
                 id="setupinvite-reset-{{ row.field }}-form"
                 style="display: none;">
             <input type="hidden" name="template" value="{{ active_template }}">

@@ -134,16 +134,43 @@ rule** (lands in a later batch).
 Verification: full suite green; ruff clean. No behaviour change beyond
 the 301→308 status on one legacy redirect.
 
+### Item 4 — R5 / R6 / R7 / R9: URL-verb renames — ✅ done 2026-08-19
+
+The route-naming batch. The naming rules are now recorded in
+`spec/architecture.md` § "Route conventions".
+
+- **R5** — the four lobby bulk routes `*-selected` →
+  `bulk-archive` / `bulk-unarchive` / `bulk-delete` /
+  `bulk-delete-archived` (joining `bulk-tags`), across `_lobby.py` + the
+  three templates + three test files.
+- **R6** — applied the `delete`=destroy / `remove`=detach rule: the only
+  offender, `/sys-admin/users/{id}/remove` (which deletes the user), is
+  renamed `/delete`. `owners/{uid}/remove` and
+  `users/{id}/remove-from-all-sessions` are genuine detaches, unchanged.
+- **R7** — documented as a **justified divergence** (not renamed):
+  instruments has two creation kinds so verb-first `add-group` /
+  `add-new-model` names the kind, while single-kind `owners/add` stays
+  sub-resource. Forcing one mould degrades the other; the convention is
+  documented instead.
+- **R9** — `setupinvite` → `setup-invite` on the three routes + every URL
+  reference (manage-url, two chrome partials, the page template, three
+  test files). Internal identifiers (handler names, template filename,
+  DOM ids) are unchanged — only the URL moved.
+
+Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
+The renamed URLs are operator-internal POST endpoints + one setup GET;
+no legacy redirect shims were kept (a shim would re-introduce the kind
+of thing R11 cleaned up).
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **Route sweep — remaining (R2–R9).** Grouped for the next batches:
-  the **URL-verb renames** (R5 `bulk-<verb>`, R6 `delete`/`remove` rule,
-  R7 creation verb, R9 `setupinvite` → `setup-invite`) which ripple into
-  templates + tests; and the **structural** consolidations (R2 activate
-  two-URL, R3 operation-error redisplay, R4 AJAX Pydantic bodies, R8
-  two-route session-edit).
+- **Route sweep — structural (R2–R4, R8).** The final route batch: R2
+  (activate exposed at two URLs with divergent failure UX), R3
+  (roster operation-error redisplayed three ways), R4 (instrument AJAX
+  bodies → Pydantic request models, converging on the R1 contract), R8
+  (the two session-edit write routes `/lobby-edit` + `/config`).
 - **UI-vocabulary sweep (U1–U8).** Spec-backed and largely mechanical:
   Save→Secondary, banner Cancel→`.btn alert`, one delete-confirm
   mechanism (U3 carries real safety weight — do it deliberately), drop

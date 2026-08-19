@@ -202,7 +202,7 @@ def sessions_bulk_tags(
     )
 
 
-@router.post("/sessions/unarchive-selected")
+@router.post("/sessions/bulk-unarchive")
 def sessions_unarchive_selected(
     session_ids: list[int] = Form(default=[]),
     user: User = Depends(get_or_create_user),
@@ -228,7 +228,7 @@ def sessions_unarchive_selected(
     )
 
 
-@router.post("/sessions/delete-archived-selected")
+@router.post("/sessions/bulk-delete-archived")
 def sessions_delete_archived_selected(
     session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
@@ -359,7 +359,7 @@ def clone_session_submit(
     )
 
 
-@router.post("/sessions/archive-selected")
+@router.post("/sessions/bulk-archive")
 def sessions_archive_selected(
     session_ids: list[int] = Form(default=[]),
     purge: list[str] = Form(default=[]),
@@ -402,7 +402,7 @@ def sessions_archive_selected(
     )
 
 
-@router.post("/sessions/delete-selected")
+@router.post("/sessions/bulk-delete")
 def sessions_delete_selected(
     session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),

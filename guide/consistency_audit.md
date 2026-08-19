@@ -35,11 +35,16 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     sub-API as a blessed exception in `spec/architecture.md`), R10
     (bare `303` → `status.HTTP_303_SEE_OTHER`), R11 (`/edit` legacy
     redirect 301 → 308), + the `_instruments_band2.py` `204`/`200`
-    docstring fix. **Still open:** R2–R9 (activate consolidation,
-    error-redisplay unification, AJAX Pydantic bodies, the URL-verb
-    renames, the two-route edit consolidation).
-- **Open** — the UI-vocabulary sweep (U1–U8) and the view-adapter dedup
-  (V1–V6). Order below unchanged.
+    docstring fix.
+  - **Item 4**: the URL-verb renames — R5 (`bulk-<verb>`), R6
+    (`delete`=destroy / `remove`=detach; the sys-admin user route
+    renamed `/remove` → `/delete`), R9 (`setupinvite` → `setup-invite`),
+    and R7 (documented as a justified divergence). The naming rules are
+    recorded in `spec/architecture.md` § "Route conventions".
+    **Still open:** the structural R2 / R3 / R4 / R8.
+- **Open** — the structural route items (R2 activate two-URL, R3
+  error-redisplay, R4 AJAX Pydantic bodies, R8 two-route session-edit),
+  the UI-vocabulary sweep (U1–U8), and the view-adapter dedup (V1–V6).
 
 ---
 
@@ -63,9 +68,9 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
 | ✅ **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
 | ✅ **S5** | 🟠 Med | Service | `_bulk_set_status` reimplemented four times (verbatim algorithm) |
-| **R5** | 🟡 Low | Route | Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` |
-| **R6** | 🟡 Low | Route | Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` |
-| **R7** | 🟡 Low | Route | Creation verb: `owners/add` (sub-resource) vs `add-group` (verb-first) |
+| ✅ **R5** | 🟡 Low | Route | Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` |
+| ✅ **R6** | 🟡 Low | Route | Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` |
+| ✅ **R7** | 🟡 Low | Route | Creation verb: `owners/add` (sub-resource) vs `add-group` (verb-first) |
 | **U4** | 🟡 Low | UX | Dead/duplicate Primary token `class="btn primary"` vs `class="btn"` |
 | **U5** | 🟡 Low | UX | "Archive" styled Destructive one place, Outline-amber another |
 | **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
@@ -287,44 +292,49 @@ at `_instruments_band2.py:66,109,219`, `_instruments.py:1155,1211`,
 validation contracts / two error shapes. **Fix:** define request models
 for the instrument AJAX bodies (converges with R1).
 
-### R5 🟡 Bulk-action naming: `bulk-<verb>` vs `<verb>-selected`
+### R5 🟡 Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` — ✅ done (19B Item 4)
 
-Roster pages use `bulk-inactivate` / `bulk-reactivate`
-(`_setup_reviewers.py:382,411`, `_setup_observers.py:338,369`,
-`_setup_relationships.py:361,390`); the lobby uses
+Roster pages used `bulk-inactivate` / `bulk-reactivate`; the lobby used
 `archive-selected` / `unarchive-selected` / `delete-selected` /
-`delete-archived-selected` (`_lobby.py:362,205,405,231`) — plus the
-odd-one-out `bulk-tags` (`_lobby.py:152`) reaching for the roster prefix
-in the lobby module. `bulk-<verb>` dominates 6:1. **Fix:** standardise on
-`bulk-<verb>`.
+`delete-archived-selected`. **Fixed:** the four lobby routes renamed to
+`bulk-archive` / `bulk-unarchive` / `bulk-delete` / `bulk-delete-archived`
+(joining `bulk-tags`), across `_lobby.py` + the three templates + the
+three test files. The `bulk-<verb>` convention is recorded in
+`spec/architecture.md` § "Route conventions".
 
-### R6 🟡 Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all`
+### R6 🟡 Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` — ✅ done (19B Item 4)
 
-`/instruments/{id}/delete`, `/sessions/{id}/delete` vs
-`/sessions/{id}/owners/{uid}/remove` (`_session_home.py:649`),
-`/sys-admin/users/{uid}/remove` (`_sys_admin.py:421`),
-`/users/{uid}/remove-from-all-sessions` (`_sys_admin.py:406`) vs
-wholesale `/reviewers/delete-all` etc. `delete` and `remove` used
-interchangeably. **Latent rule worth making explicit:** `delete` =
-destroy a row you own; `remove` = detach a relationship/membership.
-(Note `users/{id}/remove` actually deletes the user — breaks even the
-latent rule.)
+The rule (maintainer-approved): **`delete`** destroys a row you own;
+**`remove`** detaches a relationship/membership. Under it, the only
+offender was `/sys-admin/users/{uid}/remove`, which *deletes* the user —
+**renamed to `/sys-admin/users/{uid}/delete`** (the template's JS key was
+already "delete"). `owners/{uid}/remove` and
+`users/{uid}/remove-from-all-sessions` are genuine detaches and keep
+`remove`. Rule documented in `spec/architecture.md`.
 
-### R7 🟡 Creation verb: `owners/add` vs `add-group`
+### R7 🟡 Creation verb: `owners/add` vs `add-group` — ✅ done (19B Item 4, documented divergence)
 
-Sub-resource `/sessions/{id}/owners/add` (`_session_home.py:597`) vs
-verb-first `/instruments/add-group` / `add-new-model`
-(`_instruments.py:953,977`). **Fix:** one of `{collection}/add` or
-`{collection}/create`.
+Sub-resource `/sessions/{id}/owners/add` vs verb-first
+`/instruments/add-group` / `add-new-model`. **Resolution:** neither
+`{collection}/add` nor `{collection}/create` fits both — the instruments
+collection has **two** creation kinds (group vs new-model), so verb-first
+`add-<kind>` names the kind without an artificial `groups/` /
+`models/` sub-collection, while single-kind `owners/add` stays
+sub-resource. Documented as a deliberate convention in
+`spec/architecture.md` rather than churning URLs to make one side worse.
 
 ### R8–R11 🟡 Smaller route nits
 
 - **R8** Two "edit session metadata" routes — `/lobby-edit`
   (`_lobby.py:263`) and `/config` (`_session_home.py:413`) — each
   re-implements the draft-only gate; consolidate the write.
-- **R9** `setupinvite` is the only unhyphenated multi-word segment
-  (`_setup_invite.py:55,89,139`); norm is hyphenated (`extract-data`,
-  `delete-all`, `lobby-edit`). → `setup-invite`.
+- **R9 — ✅ done (19B Item 4).** `setupinvite` was the only unhyphenated
+  multi-word URL segment; the three routes are now `setup-invite` /
+  `setup-invite/reset`, with all URL references updated (routes, the
+  `_setup.py` manage-url, two chrome partials + the page template, and
+  three test files). Internal identifiers (the `setupinvite_*` handler
+  names, the `session_setupinvite.html` filename, the `setupinvite-*`
+  DOM ids) are unchanged — only the URL moved.
 - **R10 — ✅ done (19B Item 3).** The two bare `status_code=303` literals
   (`_results.py`, `_rehydrate.py`) now use `status.HTTP_303_SEE_OTHER`.
 - **R11 — ✅ done (19B Item 3).** The `/edit` legacy GET redirect moved

@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <form method="post" action="/operator/sessions/delete-selected"
+    <form method="post" action="/operator/sessions/bulk-delete"
           id="sessions-list-form">
       <div class="card">
         <table data-rrw-sortable="rrw-sort-lobby">
@@ -196,10 +196,10 @@
               <button type="button" class="btn secondary"
                       data-expander-duplicate-config>Duplicate settings only</button>
               <button type="submit" class="btn alert"
-                      formaction="/operator/sessions/archive-selected"
+                      formaction="/operator/sessions/bulk-archive"
                       data-expander-archive>Purge and archive</button>
               <button type="submit" class="btn destructive"
-                      formaction="/operator/sessions/delete-selected"
+                      formaction="/operator/sessions/bulk-delete"
                       data-expander-delete disabled>Delete</button>
             </div>
           </div>
@@ -245,9 +245,9 @@
               <button type="submit" class="btn secondary" name="op" value="remove"
                       formaction="/operator/sessions/bulk-tags">Remove from all</button>
               <button type="submit" class="btn alert"
-                      formaction="/operator/sessions/archive-selected">Purge and archive all</button>
+                      formaction="/operator/sessions/bulk-archive">Purge and archive all</button>
               <button type="submit" class="btn destructive"
-                      formaction="/operator/sessions/delete-selected"
+                      formaction="/operator/sessions/bulk-delete"
                       data-expander-delete disabled>Delete all</button>
             </div>
           </div>
