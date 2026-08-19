@@ -1,6 +1,7 @@
 {# Reviewer-facing top bar variant. Lighter than the operator chrome:
    "Review Robin" identity (no "Web App", no version), no breadcrumb,
-   user menu with "Signed in as …" + optional "My Reviews" + Sign out.
+   user menu with "Signed in as …" + optional "My Reviews" + About +
+   Sign out.
 
    Per spec/visual_style_rrw.md "Reviewer-facing pages → Top bar":
    "My Reviews" surfaces only when the reviewer has more than one
@@ -22,6 +23,9 @@
       <div>Signed in as {{ user.display_name or user.email }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
       {% if (reviewer_review_count|default(0)) > 1 and request.url.path != "/me" %}
         <a class="chrome-link" href="/me">My Reviews</a>
+      {% endif %}
+      {% if request.url.path not in ("/about", "/auth/me/debug") %}
+        <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
       {% endif %}
       <a class="signout" href="/.auth/logout">Sign out</a>
     </div>
