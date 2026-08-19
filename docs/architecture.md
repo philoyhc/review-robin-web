@@ -74,7 +74,7 @@ line-item calculator walk-through and the sizing rationale, see
   Auth. Easy Auth performs the OIDC flow and injects
   `X-MS-CLIENT-PRINCIPAL*` headers that `app/auth/identity.py` parses; the
   app implements no password store, no OAuth code, and makes no Microsoft
-  Graph calls. See [`authentication.md`](authentication.md).
+  Graph calls. See [`security_posture.md`](security_posture.md).
 - **Data.** One **PostgreSQL Flexible Server**. Every mutating action
   writes an append-only `audit_events` row, so the database doubles as a
   compliance / incident-review record. See [`database.md`](database.md).

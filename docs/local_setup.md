@@ -26,11 +26,14 @@ If you only want to run the tests once, jump to [§4 First-time setup](#4-first-
 | GitHub CLI (`gh`) | Easier branch and PR workflows.                       |
 | Azure CLI (`az`) | Needed only if you administer the dev App Service (e.g. tweaking Easy Auth settings via `az webapp auth`). Not needed for day-to-day app development. |
 
-### Not needed yet
+### Not needed for day-to-day work
 
-- **Docker** — only required from Segment 5 onward when local PostgreSQL
-  enters the picture. SQLite covers Segment 4.
-- **PostgreSQL client** — same reasoning. SQLite needs no client tools.
+- **Docker** — only for reproducing a Postgres-dialect issue locally
+  (the `ci-postgres` job already covers this on every PR). Day-to-day
+  dev and the full test suite run on SQLite with no client tools. See
+  [§9](#9-running-in-a-github-codespace) § Postgres parity for the
+  throwaway-container recipe.
+- **PostgreSQL client** — same reasoning; SQLite needs none.
 - **MSAL / Azure SDK** — authentication is handled by Azure App Service
   Easy Auth in deployed environments and a fake-auth fallback locally;
   the app never runs an OAuth/OIDC flow itself.
@@ -46,7 +49,7 @@ review-robin-web/
     config.py               Pydantic settings (env vars)
     auth/                   Easy Auth identity parser
     db/                     SQLAlchemy 2.x base, session, models
-      models/               12 domain models (User, ReviewSession, ...)
+      models/               the domain models (User, ReviewSession, ...)
     web/                    Routes and Jinja templates
 
   alembic/                  Database migrations
@@ -157,12 +160,23 @@ Open `http://127.0.0.1:8000/health` — expect `{"status": "ok"}`.
 ## 5. Running the test suite
 
 ```bash
-pytest
+pytest -n auto        # full suite, ~35s (pytest-xdist parallelism)
 ```
 
-Expected: **24 passed**, ~1 second. The `tests/db/` fixtures spin up an
-in-memory SQLite engine and run `alembic upgrade head` against it, so the
-real migration is exercised on every test session.
+The suite builds its schema straight from the ORM metadata
+(`Base.metadata.create_all`) into an **in-memory SQLite** engine
+(`tests/conftest.py`) — the fast path, so there's nothing to provision.
+The Alembic migration chain is still round-tripped on every PR by the
+`ci-postgres` job (and locally if you point the suite at Postgres — see
+[§9 Running in a GitHub Codespace](#9-running-in-a-github-codespace) §
+Postgres parity). Other useful runs:
+
+```bash
+pytest tests/integration/test_X.py            # one file
+pytest tests/integration/test_X.py::test_name # one test
+pytest -k "expression"                         # match by name
+ruff check .                                   # lint
+```
 
 ---
 
@@ -231,9 +245,72 @@ this stage.
 
 ---
 
-## 9. Where to look next
+## 9. Running in a GitHub Codespace
 
-- `docs/authentication.md` — how Easy Auth identity is parsed; what the
+RRW's test suite and dev server need **no external services** — the tests
+run against in-memory SQLite and the app runs against a local SQLite file
+with a fake-auth fallback — so a Codespace is a first-class place to run
+the suite and click through the app. The one thing a Codespace *can't* do
+is exercise **real Entra / Easy Auth sign-in** (those headers are injected
+by the Azure platform), which still needs the Azure dev slot.
+
+| Task | In a Codespace? |
+|---|---|
+| Full `pytest` suite (business logic, routes, services) | ✅ Yes — SQLite in-memory, no setup |
+| Alembic migration round-trip on SQLite | ✅ Yes |
+| Run the app + click through operator / reviewer surfaces | ✅ Yes — fake auth + forwarded port |
+| `ruff` lint | ✅ Yes |
+| Postgres-dialect parity (what `ci-postgres` catches) | ⚙️ Optional — add a Postgres service (below) |
+| Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs the Azure dev slot |
+
+**Start.** From the repo on GitHub: **Code ▸ Codespaces ▸ Create codespace
+on `main`** (or a feature branch). The default image ships **Python 3.12**,
+Git, and the GitHub CLI. There is **no `.devcontainer/` in the repo yet**,
+so the first-run setup is the same manual sequence as [§4](#4-first-time-setup)
+(skip the clone — the Codespace arrives with the repo). `.env.example`
+already ships `ALLOW_FAKE_AUTH=true` + a fake operator, so `cp .env.example
+.env` needs no editing.
+
+**Open the app.** `uvicorn app.main:app --reload` — Codespaces auto-forwards
+port **8000** (a private `*.app.github.dev` URL in the **Ports** tab). If it
+isn't auto-forwarded, bind explicitly: `uvicorn app.main:app --reload --host
+0.0.0.0 --port 8000` and add port 8000 in the **Ports** tab. You land signed
+in as the fake `operator@example.edu` (operator + sys-admin + super-admin,
+per §3); surface-check `/health`, `/`, `/auth/me`, `/auth/me/debug`, `/docs`
+as in [§6](#6-verifying-each-surface-area).
+
+**Postgres parity (optional).** Docker is available in the default image, so
+you can reproduce a dialect-only issue (the `BOOLEAN DEFAULT 1` /
+`WHERE bool_col = 1` / FK-drop-order / index-name traps in `CLAUDE.md`):
+
+```bash
+docker run -d --name rrw-pg -e POSTGRES_PASSWORD=pw -p 5432:5432 postgres:16
+export TEST_DATABASE_URL="postgresql+psycopg://postgres:pw@localhost:5432/postgres"
+pytest -n auto        # the engine fixture honours TEST_DATABASE_URL; unset to return to SQLite
+```
+
+**One-click boot (optional).** Dropping a `.devcontainer/devcontainer.json`
+makes a Codespace boot fully provisioned. A minimal one:
+
+```jsonc
+{
+  "name": "review-robin-web",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e .[dev] && cp -n .env.example .env && alembic upgrade head",
+  "forwardPorts": [8000],
+  "portsAttributes": { "8000": { "label": "RRW app", "onAutoForward": "notify" } },
+  "customizations": { "vscode": { "extensions": ["ms-python.python", "charliermarsh.ruff"] } }
+}
+```
+
+Adding it is a project decision — it's not in the repo, so both the manual
+path above and this snippet are offered.
+
+---
+
+## 10. Where to look next
+
+- `docs/security_posture.md` — how Easy Auth identity is parsed; what the
   `/auth/me` and `/auth/me/debug` routes do.
 - `docs/database.md` — model conventions, migration generation rules, the
   cross-dialect type policy, where Postgres lands.
@@ -243,25 +320,3 @@ this stage.
 - `CONTRIBUTING.md` — branch and PR workflow.
 - `AGENTS.md` / `CLAUDE.md` — conventions if you are pairing with an AI
   coding agent.
-
----
-
-## 10. What is intentionally not in this segment yet
-
-If you are looking for something below and can't find it, that's because
-it's deferred to a later segment:
-
-| Item                                | Lands in   |
-|-------------------------------------|------------|
-| Local Postgres (Docker Compose)     | Segment 5  |
-| Azure PostgreSQL Flexible Server    | Segment 5  |
-| Operator-facing UI / forms          | Segment 5  |
-| Reviewer / reviewee CSV import      | Segment 6  |
-| Assignment generation               | Segment 7  |
-| Reviewer tabular response surface   | Segment 8  |
-| Email invitations + reminders       | Segment 9  |
-| Multi-instrument sessions           | Shipped in Segment 10D Slice 5; remainder at `guide/archive/unfinished_business.md` #27 / #28 / #29 |
-| Cleaning up unfinished business     | Segment 11 |
-| CSV / Excel exports                 | Segment 12 |
-| Rule-based assignment builder       | Segment 13 |
-| Production hardening (structured logging, error handling, index review, permission audit, accessibility, runbooks) | Segment 14A |

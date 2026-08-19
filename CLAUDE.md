@@ -227,7 +227,7 @@ reject it.
 - **`guide/archive/observers.md`** — Originally `guide/observers.md`; standing notes for the observer participant role (storage shape, token design, where the wiring stood). Archived 2026-06-03 once the observer ladder closed.
 - **`guide/archive/observers_clean_up.md`** — Originally `guide/clean_up.md`; the code-review follow-up backlog on the observer cohort editor PRs. All sixteen items closed; archived 2026-06-03.
 - **`guide/codebase_assessment_*.md`** — Snapshot of code state vs spec. Only the latest stays here; older snapshots retire to `guide/archive/`. The 2026-08-17 snapshot covers the window since 18O closure (PRs #1827 → #1928): the June docs/identity-hardening sweep, Segment 18P (round-trip harmonize + session rehydrate), 18Q blob-storage deferral, Segment 18R (instrument-card save/lock harmonization), and Segment 18S Item 1 (three-tier operator role model). §9 is a watchlist (no queued split); the one candidate is `routes_operator/_instruments.py` at 1,317 LOC.
-- **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
+- **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 
 The three doc folders each have their own README (`spec/README.md`,

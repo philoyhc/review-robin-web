@@ -1,5 +1,15 @@
 # RRW — Azure + GitHub Setup: Step-by-Step & Checklist
 
+> **This is the forward-looking two-environment scale-up target, not the
+> current deployment plan.** The pilot ships as a **single sandboxed
+> environment** — see `docs/deployment_nus.md` (the active NUS-host
+> migration runbook) and `docs/azure_provision.md` (which states the pilot
+> is deliberately *not* a PRD/NPRD split). This doc (a `v0.1 draft`)
+> describes the larger PRD + NPRD topology to grow into once the pilot is
+> validated and IT sanctions the two-environment build; treat its GitHub
+> environments (`production` / `staging`), Functions, App Configuration,
+> and Communication Services as scale-up scope, not pilot requirements.
+
 **Version:** 0.1 (draft)
 **Scope:** Production (PRD) + Non-Production (NPRD) environments for Review Robin Web, per the corrected IT quote: App Service (P0v3 PRD / B2 NPRD), **PostgreSQL Flexible Server** (corrected from Azure SQL), Application Gateway WAF v2 (retained per policy), Storage, Key Vault, App Configuration, Functions (consumption), Communication Services (email).
 **Audience:** Handoff to Claude Code. Items marked `[MANUAL]` need portal/human action (typically IT-controlled or requiring browser auth); everything else is scriptable via `az` CLI / GitHub CLI.
@@ -73,7 +83,7 @@
 ## Phase 3 — Identity: Entra App Registration + Easy Auth
 
 - [ ] Create app registration for RRW `[MANUAL if IT-gated]`
-  - [ ] **Single-tenant** (accounts in the institutional directory only) — matches RRW's current design; `docs/authentication.md` and `docs/security_posture.md` both scope the pilot posture (including the CSRF decision) to single-tenant. If IT deliberately wants multi-tenant, revisit CSRF and add a `tid` claim filter before flipping.
+  - [ ] **Single-tenant** (accounts in the institutional directory only) — matches RRW's current design; `docs/security_posture.md` and `docs/security_posture.md` both scope the pilot posture (including the CSRF decision) to single-tenant. If IT deliberately wants multi-tenant, revisit CSRF and add a `tid` claim filter before flipping.
   - [ ] Redirect URI: `https://<app-hostname>/.auth/login/aad/callback` (add the custom/gateway domain later too)
   - [ ] Create client secret → Key Vault (`rrw-aad-client-secret`); set expiry reminder (max 24 mo)
 - [ ] Configure **Easy Auth** on the Web App:

@@ -73,7 +73,7 @@ Segment 11's sub-segments and their catalog items, in first-PR-number order. Eac
   - **#12 — Reviewer/Reviewee CSV cross-table identity check** (PR #315); built on #8.
   - **#10 — Thread `correlation_id` into deadline lazy-close** (PR #329).
   - **#6 — Decouple `invitations.py` from `Request`** (PR #330).
-  - **#7 — CSRF decision write-up** (PR #328). Decision: rely on Easy Auth + `SameSite=Lax` cookies; no CSRF tokens in app code. Recorded in `docs/authentication.md`.
+  - **#7 — CSRF decision write-up** (PR #328). Decision: rely on Easy Auth + `SameSite=Lax` cookies; no CSRF tokens in app code. Recorded in `docs/security_posture.md`.
 
   Plan: `guide/archive/segment_11A_cleaning_up_unfinished_business.md`.
 
@@ -2037,10 +2037,14 @@ Docs-sweep follow-through, by disposition (`guide/docs_sweep_19Aug.md`):
   route rows; the cross-cutting "no in-app revoke UI (16A PR 6)" stale claim in
   three docs (shipped in 18S); the conftest fixture / test-count inversion in
   two docs; plus the per-file factual fixes.
-- **Consolidate** — cli_setup_notes → cli_setup; authentication →
-  security_posture; local_setup + codespace_setup; azure_github_setup vs
-  deployment_nus.
-- **Retire** — imports.md; cli_setup_notes.md; section-level retirements.
+- **Consolidate** — ✅ done 2026-08-19. cli_setup_notes → cli_setup;
+  authentication → security_posture (identity subsystem + full CSRF write-up
+  absorbed); codespace_setup → local_setup §9; azure_github_setup reconciled
+  in place with a "future PRD/NPRD scale-up" banner (kept in docs/).
+- **Retire** — ✅ done 2026-08-19. Deleted imports.md + cli_setup_notes.md;
+  section-level retirements (local_setup §10, authentication "does not
+  implement", status.md /edit route rows).
+- **Update in place** (bucket 2) + **revise-into-spec** remainder — still open.
 
 ---
 

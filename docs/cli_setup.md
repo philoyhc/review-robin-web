@@ -159,6 +159,12 @@ That installs the WSL2 kernel + Ubuntu (default distribution)
 and enables the Virtual Machine Platform feature. **Reboot** when
 prompted.
 
+> **Not a real error.** If `wsl --install` reports *"The
+> distribution is already the requested version"* with
+> `Error code: Wsl/Service/WSL_E_VM_MODE_INVALID_STATE`, WSL is
+> already present — nothing failed. Run `wsl --update` first, then
+> plain `wsl` to open Ubuntu and create the account below.
+
 After the reboot, an Ubuntu terminal opens automatically the
 first time and asks you to create a Linux username + password.
 Keep the username simple (lowercase, no spaces); the password
@@ -256,14 +262,17 @@ The `@users.noreply.github.com` address is GitHub's privacy
 form — commit metadata stays associated with the account
 without exposing a real inbox in the repo history.
 
-### A.6 Verify the identity is set
+### A.6 Clone the repo, then verify the identity is set
 
-Empty-commit-then-reset — the commit uses the just-configured
+Clone the repo first (the verify step needs a working tree), then
+empty-commit-then-reset — the commit uses the just-configured
 name / email, and the reset rewinds immediately, so nothing
 lands in the branch history.
 
 ```bash
-cd ~/src/review-robin-web   # or any existing clone
+mkdir -p ~/src && cd ~/src
+gh repo clone philoyhc/review-robin-web
+cd review-robin-web
 git commit --allow-empty -m "identity test" && git reset --hard HEAD~1
 ```
 
@@ -370,6 +379,16 @@ integration" or `HTTP 403`, run `gh auth refresh -s workflow,admin:repo_hook`
 and retry.
 
 ### B.5 Azure — signed in to the right tenant + subscription
+
+Sign in first (a browser or device-code flow opens); if the
+default sign-in lands in the wrong directory, pass the tenant
+explicitly:
+
+```bash
+az login                                    # or: az login --tenant <institutional-tenant-id>
+```
+
+Then confirm the tenant + subscription:
 
 ```bash
 az account show \
@@ -529,6 +548,18 @@ before starting Phase 2.
 The dev slot uses public access with a firewall allow-list;
 your workstation's public IP needs to be on it for `psql` from
 your machine to succeed.
+
+First resolve the server name and your current public IP into the
+shell variables the commands below use:
+
+```bash
+PG_SERVER=$(az postgres flexible-server list -g rg-review-robin-web-dev --query "[0].name" -o tsv)
+echo "PG_SERVER='${PG_SERVER}'"
+
+MY_IP=$(curl -sS https://checkip.amazonaws.com || curl -sS https://ifconfig.me || curl -sS https://icanhazip.com)
+MY_IP=$(echo "$MY_IP" | tr -d '[:space:]')
+echo "MY_IP='${MY_IP}'"
+```
 
 ```bash
 az postgres flexible-server firewall-rule list \
