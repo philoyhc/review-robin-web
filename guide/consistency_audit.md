@@ -27,11 +27,19 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 1** (PR #1987): S1 (one instrument label), S2/S3/S4 (the
     `email_identity` module), S5 (shared `bulk_set_status`), S8
     (docstring fix).
-  - **Item 2** (this slice): S6 (shared `roster_status` —
-    `ROSTER_STATUSES` / `normalise_status` / `is_active`), S7 (shared
+  - **Item 2**: S6 (shared `roster_status` — `ROSTER_STATUSES` /
+    `normalise_status` / `is_active`), S7 (shared
     `_response_count_for_field`).
-- **Open** — the route sweep (R1–R11), the UI-vocabulary sweep
-  (U1–U8), and the view-adapter dedup (V1–V6). Order below unchanged.
+- **🔶 Route sweep (R1–R11) in progress.**
+  - **Item 3** (this slice): R1 (documented the extract-data AJAX
+    sub-API as a blessed exception in `spec/architecture.md`), R10
+    (bare `303` → `status.HTTP_303_SEE_OTHER`), R11 (`/edit` legacy
+    redirect 301 → 308), + the `_instruments_band2.py` `204`/`200`
+    docstring fix. **Still open:** R2–R9 (activate consolidation,
+    error-redisplay unification, AJAX Pydantic bodies, the URL-verb
+    renames, the two-route edit consolidation).
+- **Open** — the UI-vocabulary sweep (U1–U8) and the view-adapter dedup
+  (V1–V6). Order below unchanged.
 
 ---
 
@@ -47,7 +55,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
 | ✅ **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
 | ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
-| **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app |
+| ✅ **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app *(documented as a blessed exception)* |
 | **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
 | **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) |
 | **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
@@ -219,7 +227,13 @@ consistently (operator = router-level `require_operator` + per-handler
 `require_session_operator`; reviewer = per-handler `require_*_in_session`
 wrapper) — **no handler re-resolves identity inline.**
 
-### R1 🟠 Data-shaper endpoints are a REST island in a POST-only app
+### R1 🟠 Data-shaper endpoints are a REST island in a POST-only app — ✅ done (19B Item 3, documented as exception)
+
+**Resolution (chosen):** keep the AJAX/JSON sub-API as-is and **document
+it as a blessed exception** rather than converting it to the
+Form-and-redirect style. `spec/architecture.md` § "Route conventions"
+now records the house style + this exception, and names it the pattern
+new AJAX endpoints (R4) should converge onto.
 
 `app/web/routes_operator/_extract_data.py` is the **only** module using
 HTTP `PATCH`/`DELETE` app-wide (census: 118 POST, 54 GET, 1 PATCH, 1
@@ -311,17 +325,17 @@ verb-first `/instruments/add-group` / `add-new-model`
 - **R9** `setupinvite` is the only unhyphenated multi-word segment
   (`_setup_invite.py:55,89,139`); norm is hyphenated (`extract-data`,
   `delete-all`, `lobby-edit`). → `setup-invite`.
-- **R10** Two bare `status_code=303` literals (`_results.py:100`,
-  `_rehydrate.py:158`) vs the `status.HTTP_303_SEE_OTHER` house style.
-- **R11** Legacy-URL GET redirects split 301 (`_session_home.py:234`,
-  `/edit`) vs 308 (`_operations.py:239`, `/preview`); pick 308 (safer,
-  documented in-code).
+- **R10 — ✅ done (19B Item 3).** The two bare `status_code=303` literals
+  (`_results.py`, `_rehydrate.py`) now use `status.HTTP_303_SEE_OTHER`.
+- **R11 — ✅ done (19B Item 3).** The `/edit` legacy GET redirect moved
+  from 301 to `status.HTTP_308_PERMANENT_REDIRECT`, matching the
+  `/preview` shim.
 
 **Intentional exception (flagged, not a defect):**
 `/export/audit_log.csv` depends on `require_sys_admin` alone while its
 sibling exports use `require_session_operator` — a deliberate Segment 16C
-tightening, noted in-code. Also `_instruments_band2.py:50-87` docstring
-claims "204" but returns `JSONResponse({"ok": True}, 200)` — doc fix.
+tightening, noted in-code. The `_instruments_band2.py` docstring that
+claimed "204" but returned `200` is **✅ fixed (19B Item 3)**.
 
 ---
 

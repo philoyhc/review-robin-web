@@ -96,6 +96,30 @@ iterate over (`_setup.py`, `_instruments.py`, `_validate.py`,
 anything in between (e.g. computing a status label from instrument
 state) lives here.
 
+### Route conventions
+
+Operator + participant **mutations** follow one house style: a `POST`
+to a verb-in-path URL (`.../delete`, `.../activate`,
+`.../bulk-inactivate`), a `Form(...)` body, and a **303 See-Other
+redirect** back to the page (`status.HTTP_303_SEE_OTHER`) so a browser
+refresh re-GETs rather than re-POSTs. Legacy GET URLs that have moved
+redirect with **308** (`HTTP_308_PERMANENT_REDIRECT`, which preserves
+the method), not 301.
+
+**Documented exception — the Extract-data "Data shaper" sub-API**
+(`routes_operator/_extract_data.py`). This one surface is a deliberate
+AJAX/JSON sub-API: it uses REST verbs (`POST` / `PATCH` / `DELETE` on
+`.../extract-data/shapes/{id}`), a Pydantic request body, and JSON
+responses with REST status codes (`201` / `200` / `204`) instead of the
+Form-and-redirect house style. It is driven entirely by client-side
+`fetch`, so a redirect would be meaningless. This is the blessed
+pattern for AJAX endpoints — new client-scripted endpoints should
+**converge on it** (a Pydantic request model + a JSON response) rather
+than inventing a third contract (consistency-audit R1 / R4). The
+instrument-card AJAX endpoints (`_instruments_band2.py`,
+`_instruments_pagination.py`) predate this note and still hand-roll
+`request.json()` validation; R4 aligns them.
+
 ## Conceptual hierarchy
 
 The shape of the data model is deliberate. From the operator's

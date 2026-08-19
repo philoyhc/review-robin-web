@@ -58,7 +58,7 @@ async def instrument_column_widths(
     ``{"widths": {"identity": 200, "df_<id>": 150, ...}}`` and writes
     the sanitised payload onto ``instruments.column_widths`` via the
     :func:`instruments_service.set_column_widths` service. Returns
-    204 No Content on success.
+    ``200`` with ``{"ok": true}`` on success.
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)

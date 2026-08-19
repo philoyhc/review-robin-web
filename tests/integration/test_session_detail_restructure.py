@@ -613,14 +613,15 @@ def test_retired_edit_url_redirects_to_home_config(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 Slice 5b — the Edit page routes/template are deleted; a
-    stale ``/edit`` bookmark 301-redirects to Session Home's config card in
-    edit mode (the redirect keeps the operator gate)."""
+    stale ``/edit`` bookmark permanently redirects (308, preserving the
+    GET) to Session Home's config card in edit mode (the redirect keeps
+    the operator gate). Status moved 301 → 308 in consistency-audit R11."""
     review_session = _make_session(client, db, code="edit-redirect")
     resp = client.get(
         f"/operator/sessions/{review_session.id}/edit",
         follow_redirects=False,
     )
-    assert resp.status_code == 301
+    assert resp.status_code == 308
     assert resp.headers["location"] == (
         f"/operator/sessions/{review_session.id}?editing=1#session-config"
     )
