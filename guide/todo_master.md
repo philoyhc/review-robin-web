@@ -2064,10 +2064,10 @@ charter: coverage-gap closure for the Tier-1 specs flagged in
 closure (`spec/email_template_editor.md`, `spec/permissions.md`) + Parts 2–3
 (sweep cadence template + coverage gate). See the plan doc.
 
-### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/segment_19B_consistency.md`)
+### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
 The code-level sibling of 19A: fixes the "same functionality, divergent
-call paths" drift catalogued in `guide/consistency_audit.md` (28 findings
+call paths" drift catalogued in `guide/archive/consistency_audit.md` (28 findings
 across service / route / template / view-adapter seams). Where 19A keeps
 docs and specs current, 19B keeps the *code* internally consistent.
 
@@ -2189,7 +2189,7 @@ delegated by all four dataclasses. V6: `services.text.pluralize`.
 **✅ Consistency audit fully remediated** — Service S1–S8, Route R1–R11,
 Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
-`guide/consistency_audit.md`.
+`guide/archive/consistency_audit.md`.
 
 ---
 
@@ -2245,9 +2245,9 @@ dep chains called out at the bottom of this file.
 
 - **19B — Consistency remediation** *(started 2026-08-19; see the
   in-progress entry at the end of **Done**)*. Code-level sibling of 19A:
-  works through `guide/consistency_audit.md` (same functionality, divergent
+  works through `guide/archive/consistency_audit.md` (same functionality, divergent
   call paths). Items 1–2 (whole service column S1–S8) shipped; route / UI / view
-  sweeps remain. **Plan:** `guide/segment_19B_consistency.md`.
+  sweeps remain. **Plan:** `guide/archive/segment_19B_consistency.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
