@@ -88,3 +88,16 @@ def test_about_shows_contact_mailto_when_configured(
     )
     body = make_client(rae).get("/about").text
     assert "mailto:admin@example.edu" in body
+
+
+def test_me_chrome_carries_about_link(make_client) -> None:
+    # The participant (/me) chrome now includes the About link, same as
+    # the operator chrome's top-right menu.
+    rae = AuthenticatedUser(
+        principal_id="rae-oid",
+        email="rae@example.edu",
+        name="Rae Reviewer",
+        provider="aad",
+    )
+    body = make_client(rae).get("/me").text
+    assert 'href="/about?return_to' in body
