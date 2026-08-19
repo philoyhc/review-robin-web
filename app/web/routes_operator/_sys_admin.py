@@ -418,7 +418,7 @@ def remove_from_all_sessions(
     )
 
 
-@router.post("/sys-admin/users/{user_id}/remove")
+@router.post("/sys-admin/users/{user_id}/delete")
 def remove_user(
     user_id: int,
     actor: User = Depends(require_sys_admin),

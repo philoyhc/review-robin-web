@@ -225,7 +225,7 @@ def test_sessions_list_delete_lives_in_the_expander(
 ) -> None:
     """The standalone Danger Zone card is retired — delete now lives in
     the inline row expander: an Allow-delete confirm checkbox plus a
-    Delete button posting the ticked session_ids to delete-selected."""
+    Delete button posting the ticked session_ids to bulk-delete."""
 
     client.post(
         "/operator/sessions",
@@ -237,7 +237,7 @@ def test_sessions_list_delete_lives_in_the_expander(
     assert 'id="sessions-list-danger-zone"' not in body
     assert "data-expander-allow-delete" in body
     assert "data-expander-delete" in body
-    assert 'formaction="/operator/sessions/delete-selected"' in body
+    assert 'formaction="/operator/sessions/bulk-delete"' in body
 
 
 def test_sessions_list_renders_select_all_header_checkbox(
@@ -459,7 +459,7 @@ def test_archive_selected_archives_draft_and_excludes_from_lobby(
     ).scalar_one()
 
     response = client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
@@ -492,7 +492,7 @@ def test_archive_selected_skips_activated(
     db.commit()
 
     client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
@@ -518,7 +518,7 @@ def test_archive_selected_archives_non_activated_states(
         rs.status = state
         db.commit()
         client.post(
-            "/operator/sessions/archive-selected",
+            "/operator/sessions/bulk-archive",
             data={"session_ids": [rs.id]},
             follow_redirects=False,
         )
@@ -559,7 +559,7 @@ def test_archived_page_lists_archived_sessions(
         select(ReviewSession.id).where(ReviewSession.code == "arch-page")
     ).scalar_one()
     client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [archived_id]},
         follow_redirects=False,
     )
@@ -594,13 +594,13 @@ def test_unarchive_selected_restores_session_to_draft(
         select(ReviewSession.id).where(ReviewSession.code == "unarch-me")
     ).scalar_one()
     client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
 
     response = client.post(
-        "/operator/sessions/unarchive-selected",
+        "/operator/sessions/bulk-unarchive",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
@@ -624,21 +624,21 @@ def test_delete_archived_selected_removes_session(
         select(ReviewSession.id).where(ReviewSession.code == "del-arch")
     ).scalar_one()
     client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
 
     # Without the confirm gate the route rejects.
     no_confirm = client.post(
-        "/operator/sessions/delete-archived-selected",
+        "/operator/sessions/bulk-delete-archived",
         data={"session_ids": [session_id]},
         follow_redirects=False,
     )
     assert no_confirm.status_code == 400
 
     response = client.post(
-        "/operator/sessions/delete-archived-selected",
+        "/operator/sessions/bulk-delete-archived",
         data={"session_ids": [session_id], "confirm": "true"},
         follow_redirects=False,
     )
@@ -763,7 +763,7 @@ def test_delete_selected_removes_ticked_drafts(
     ).scalar_one()
 
     response = client.post(
-        "/operator/sessions/delete-selected",
+        "/operator/sessions/bulk-delete",
         data={"session_ids": [bin_.id], "confirm": "true"},
         follow_redirects=False,
     )
@@ -791,7 +791,7 @@ def test_delete_selected_without_confirm_returns_400(
     ).scalar_one()
 
     response = client.post(
-        "/operator/sessions/delete-selected",
+        "/operator/sessions/bulk-delete",
         data={"session_ids": [target.id]},  # no confirm flag
         follow_redirects=False,
     )
@@ -810,7 +810,7 @@ def test_delete_selected_with_no_ids_is_a_clean_redirect(
     back to the list. No 4xx — the operator just gets the page back."""
 
     response = client.post(
-        "/operator/sessions/delete-selected",
+        "/operator/sessions/bulk-delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -851,7 +851,7 @@ def test_delete_selected_skips_other_users_sessions(
     # Bob crafts a POST with both his own id + Alice's id. His own
     # gets deleted; Alice's stays.
     response = bob_client.post(
-        "/operator/sessions/delete-selected",
+        "/operator/sessions/bulk-delete",
         data={
             "session_ids": [bob_session.id, alice_session.id],
             "confirm": "true",

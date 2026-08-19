@@ -375,14 +375,14 @@ def test_archive_card_purge_and_archive_active_for_non_activated(
     """18R archive harmonization — on a non-activated session (draft here)
     the card offers the same "Purge and archive" affordance as the lobby:
     the three purge checkboxes + a button posting to the shared
-    archive-selected route, landing on the archived index."""
+    bulk-archive route, landing on the archived index."""
     review_session = _make_session(client, db, code="ed-arch-draft")
     card = _archive_card(
         client.get(
             f"/operator/sessions/{review_session.id}/extract-data"
         ).text
     )
-    assert 'action="/operator/sessions/archive-selected"' in card
+    assert 'action="/operator/sessions/bulk-archive"' in card
     assert f'name="session_ids" value="{review_session.id}"' in card
     assert 'name="return_to" value="archived"' in card
     assert ">Archive after purging</span>" in card
@@ -444,7 +444,7 @@ def test_archive_card_post_archives_and_redirects_to_archived_index(
     lands on the archived-sessions index (return_to=archived)."""
     review_session = _make_session(client, db, code="ed-arch-post")
     response = client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [review_session.id], "return_to": "archived"},
         follow_redirects=False,
     )

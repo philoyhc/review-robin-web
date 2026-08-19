@@ -97,7 +97,7 @@ def build_setup_rows(
         SetupRow(
             label="Email Invites",
             value="—",
-            manage_url=f"/operator/sessions/{sid}/setupinvite",
+            manage_url=f"/operator/sessions/{sid}/setup-invite",
         ),
     ]
 

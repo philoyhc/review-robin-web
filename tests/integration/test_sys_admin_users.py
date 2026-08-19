@@ -543,7 +543,7 @@ def test_remove_user_deletes_row_and_emits_audit(
     target_id = target.id
 
     response = client.post(
-        f"/operator/sys-admin/users/{target_id}/remove",
+        f"/operator/sys-admin/users/{target_id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -582,7 +582,7 @@ def test_remove_user_refuses_self(
         select(User).where(User.email == "alice@example.edu")
     ).scalar_one()
     response = client.post(
-        f"/operator/sys-admin/users/{alice.id}/remove",
+        f"/operator/sys-admin/users/{alice.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -612,13 +612,13 @@ def test_remove_user_refuses_last_sys_admin(
     )
     # Removing second (one of three) succeeds.
     response = client.post(
-        f"/operator/sys-admin/users/{second.id}/remove",
+        f"/operator/sys-admin/users/{second.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 303
     # Removing third leaves only alice — also fine.
     response = client.post(
-        f"/operator/sys-admin/users/{third.id}/remove",
+        f"/operator/sys-admin/users/{third.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -659,7 +659,7 @@ def test_remove_user_refuses_when_user_owns_sessions(
     db.commit()
 
     response = client.post(
-        f"/operator/sys-admin/users/{target.id}/remove",
+        f"/operator/sys-admin/users/{target.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 409
@@ -675,7 +675,7 @@ def test_remove_user_404s_on_missing_target(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     response = client.post(
-        "/operator/sys-admin/users/99999/remove", follow_redirects=False
+        "/operator/sys-admin/users/99999/delete", follow_redirects=False
     )
     assert response.status_code == 404
 
@@ -937,7 +937,7 @@ def test_remove_user_redirects_without_selection(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
     response = client.post(
-        f"/operator/sys-admin/users/{target.id}/remove",
+        f"/operator/sys-admin/users/{target.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -1098,7 +1098,7 @@ def test_super_admin_target_cannot_be_removed(
     )
 
     response = client.post(
-        f"/operator/sys-admin/users/{target.id}/remove",
+        f"/operator/sys-admin/users/{target.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 409

@@ -801,13 +801,13 @@
           </p>
         </div>
         {# 18R archive harmonization — same route + purge options as the
-           lobby's "Purge and archive" (POST /sessions/archive-selected).
+           lobby's "Purge and archive" (POST /sessions/bulk-archive).
            Available for any non-activated, non-archived session; otherwise
            the purge checkboxes + button render **disabled** (mirroring the
            lobby expander's inactive state). ``return_to=archived`` lands on
            the archived-sessions index. #}
         {% set archivable = (not is_ready) and (not is_archived) %}
-        <form method="post" action="/operator/sessions/archive-selected"
+        <form method="post" action="/operator/sessions/bulk-archive"
               style="margin: 0;">
           <input type="hidden" name="session_ids" value="{{ session.id }}">
           <input type="hidden" name="return_to" value="archived">

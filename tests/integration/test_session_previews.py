@@ -490,7 +490,7 @@ def test_email_footer_links_to_setup_pages(
     body = response.text
     # Setup-page deep link to the matching template tab.
     assert (
-        f'href="/operator/sessions/{session.id}/setupinvite?template=invitation"'
+        f'href="/operator/sessions/{session.id}/setup-invite?template=invitation"'
         in body
     )
     # Reviewers Setup link.

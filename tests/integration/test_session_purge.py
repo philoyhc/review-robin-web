@@ -1,5 +1,5 @@
 """Segment 18C — the operator-triggered "Purge and archive" action
-on the Sessions-lobby expander (`/operator/sessions/archive-selected`
+on the Sessions-lobby expander (`/operator/sessions/bulk-archive`
 with `purge` values)."""
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def test_purge_audit_log_and_archive(
     assert _count(db, AuditEvent, review_session.id) > 0
 
     response = client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [review_session.id], "purge": ["audit_log"]},
         follow_redirects=False,
     )
@@ -103,7 +103,7 @@ def test_purge_rosters_and_archive(
     instruments_before = _count(db, Instrument, review_session.id)
 
     response = client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [review_session.id], "purge": ["rosters"]},
         follow_redirects=False,
     )
@@ -135,7 +135,7 @@ def test_purge_responses_and_archive(
     assert _count(db, Invitation, review_session.id) == 1
 
     response = client.post(
-        "/operator/sessions/archive-selected",
+        "/operator/sessions/bulk-archive",
         data={"session_ids": [review_session.id], "purge": ["responses"]},
         follow_redirects=False,
     )

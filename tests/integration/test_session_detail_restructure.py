@@ -118,7 +118,7 @@ def test_build_setup_rows_returns_expected_shape(
     assert by_label["Instruments"].manage_disabled is False
     assert by_label["Instruments"].manage_url.endswith("/instruments")
     assert by_label["Email Invites"].manage_disabled is False
-    assert by_label["Email Invites"].manage_url.endswith("/setupinvite")
+    assert by_label["Email Invites"].manage_url.endswith("/setup-invite")
 
 
 def test_session_detail_renders_session_layout(
@@ -353,7 +353,7 @@ def test_setup_table_renders_manage_links(
         f'href="/operator/sessions/{review_session.id}/instruments"' in body
     )
     assert (
-        f'href="/operator/sessions/{review_session.id}/setupinvite"' in body
+        f'href="/operator/sessions/{review_session.id}/setup-invite"' in body
     )
 
 
