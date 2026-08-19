@@ -594,7 +594,9 @@ def test_invitations_data_cells_render_in_pills(
     ).text
     assert '<span class="pill pill-empty">not sent</span>' in body
     # Review Progress pill (not started state) carries the formatted count.
-    assert '<span class="pill pill-empty">not started (0/1)</span>' in body
+    # audit V2 — "not started" is now the canonical blue pill-info
+    # (blue = nothing yet), via the shared progress_pill helper.
+    assert '<span class="pill pill-info">not started (0/1)</span>' in body
     # Required Fields pill — "(0/{total})" or "—" depending on
     # whether the seeded instrument has required fields. Either way
     # the cell content is wrapped in a pill.

@@ -135,10 +135,9 @@
             <td>
               {% if row.review_progress_total == 0 %}
                 <span class="pill pill-empty">—</span>
-              {% elif row.review_progress_state == "submitted" %}
-                <span class="pill pill-count">submitted ({{ row.review_progress_done }}/{{ row.review_progress_total }})</span>
               {% else %}
-                <span class="pill pill-empty">{{ row.review_progress_state }} ({{ row.review_progress_done }}/{{ row.review_progress_total }})</span>
+                {% set p = progress_pill(row.review_progress_state) %}
+                <span class="pill {{ p.css }}">{{ p.label }} ({{ row.review_progress_done }}/{{ row.review_progress_total }})</span>
               {% endif %}
             </td>
             <td>

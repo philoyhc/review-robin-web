@@ -2176,9 +2176,14 @@ V4: the hand-rolled `short_label or name` display/error labels route
 through `instruments._instrument_label`; the CSV-safe positioned variants
 stay named helpers.
 
-**Still open:** view-adapter dedup remaining — V2 (progress-pill macro),
-V3 (`User.display_label`), V5 (predicate delegation), V6 (`pluralize`).
-See `guide/consistency_audit.md`.
+**Item 14 — V2 (progress-pill helper) — done 2026-08-19.** New
+`views.progress_pill(state) → (css, label)` (Jinja global on both
+template instances); the four hand-rolled progress pills now share one
+colour semantic (blue/amber/green) + one enum spelling.
+
+**Still open:** view-adapter dedup remaining — V3 (`User.display_label`),
+V5 (predicate delegation), V6 (`pluralize`). See
+`guide/consistency_audit.md`.
 
 ---
 

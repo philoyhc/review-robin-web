@@ -59,6 +59,8 @@ _templates.env.globals["numeric_column_ch_width"] = (
 # width, without waiting on the reviewer to drag-resize. Native
 # textarea resize stays available at runtime.
 _templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
+# Reviewer-progress pill: one state → (css, label) mapping (audit V2).
+_templates.env.globals["progress_pill"] = views.progress_pill
 # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
 # Context-aware: the filters resolve their display zone from the
 # ``display_timezone`` context key the processor above injects.

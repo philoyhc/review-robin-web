@@ -30,6 +30,7 @@ from this package; templates do not.
 from __future__ import annotations
 
 # Responses page rows (sliced in PR 1).
+from ._progress import ProgressPill, progress_pill
 from ._responses import ResponsesRow, build_responses_rows
 
 # Extract Data card on Session Home (sliced in PR 2).
@@ -194,6 +195,8 @@ from ._audit_log import (
 )
 
 __all__ = [
+    "ProgressPill",
+    "progress_pill",
     # Module-level constants.
     "EMAIL_PREVIEW_TABS",
     "INVITATIONS_STATUS_OPTIONS",

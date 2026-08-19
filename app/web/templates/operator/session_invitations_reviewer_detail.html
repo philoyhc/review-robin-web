@@ -61,13 +61,8 @@
       <h2 style="margin-top: 0;">Review Progress</h2>
       <p>
         Status:
-        {% if row.review_progress_state == "submitted" %}
-          <span class="pill pill-count">submitted</span>
-        {% elif row.review_progress_state == "in progress" %}
-          <span class="pill pill-empty">in progress</span>
-        {% else %}
-          <span class="pill pill-empty">not started</span>
-        {% endif %}
+        {% set p = progress_pill(row.review_progress_state) %}
+        <span class="pill {{ p.css }}">{{ p.label }}</span>
         &middot;
         Assignments completed: {{ row.review_progress_done }} / {{ row.review_progress_total }}
         &middot;
