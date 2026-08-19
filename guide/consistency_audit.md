@@ -70,10 +70,15 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 12**: U9 (extract-data shaper "Delete shape" buttons →
     `.btn destructive`) + U10 (dropped the redundant danger-zone `<h2>`
     inline margin — the `.card h2` rule already handled it).
-- **Open** — the **view-adapter dedup column (V1–V6)** only.
+- **🔶 View-adapter dedup (V1–V6) in progress** — the last column.
+  - **Item 13** (this slice): V1 (the two inline `instrument_heading`
+    reimpls → the canonical helper) + V4 (the hand-rolled instrument
+    friendly-label sites → the canonical `_instrument_label`; the
+    CSV-safe positioned variants kept as named helpers).
+    **Still open:** V2, V3, V5, V6.
 
 **Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI **U1–U10 ✅**
-(the whole template/UX seam) · remaining: **V1–V6**.
+· View **V1, V4 ✅** · remaining: **V2, V3, V5, V6**.
 
 ---
 
@@ -82,7 +87,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | # | Sev | Seam | One line |
 |---|-----|------|----------|
 | ✅ **S1** | 🔴 High | Service | `_instrument_label` has two implementations with **different fallbacks** — same instrument shows two different names |
-| **V1** | 🔴 High | View | `instrument_heading` reimplemented inline in two view modules; single-instrument fallback diverges (`name` vs `description`) |
+| ✅ **V1** | 🔴 High | View | `instrument_heading` reimplemented inline in two view modules; single-instrument fallback diverges (`name` vs `description`) |
 | **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
 | ✅ **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
 | ✅ **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
@@ -94,7 +99,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) *(accepted as-is; page-banner build deferred)* |
 | ✅ **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
 | **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
-| **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
+| ✅ **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
 | ✅ **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
 | ✅ **S5** | 🟠 Med | Service | `_bulk_set_status` reimplemented four times (verbatim algorithm) |
 | ✅ **R5** | 🟡 Low | Route | Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` |
@@ -530,7 +535,16 @@ draft") — doc refresh only.
 
 ## D. View-adapter / data-shaping layer
 
-### V1 🔴 `instrument_heading` reimplemented inline; fallback diverges — *verified*
+### V1 🔴 `instrument_heading` reimplemented inline; fallback diverges — *verified* — ✅ done (19B Item 13)
+
+**Fixed:** `_reviewee_results.py` and `_reviewer_summary.py` now call the
+canonical `instrument_heading(...).title` (the same one the reviewer
+surface + observer collation use) instead of the byte-identical inline
+copy, so the same instrument reads identically across every reader
+surface. When the reviewer-facing title is empty (single-instrument, no
+short_label, no description) they fall back to the canonical operator
+label `_instrument_label` (`Instrument_{id}`) — never the internal
+`name`. (Original finding below.)
 
 Canonical: `app/web/views/_instruments.py:97`
 `instrument_heading(instrument, position, total_count)`. For
@@ -587,7 +601,18 @@ this user" label resolves to email on some pages, a bare em-dash on
 others. **Fix:** a `User.display_label` property returning
 `display_name or email`, plus a deliberately-named dash variant.
 
-### V4 🟠 Instrument friendly-label fallback reimplemented ~8 places, four tails
+### V4 🟠 Instrument friendly-label fallback reimplemented ~8 places, four tails — ✅ done (19B Item 13)
+
+**Fixed:** the hand-rolled `short_label or name …` display/error labels
+now route through the canonical `instruments._instrument_label`
+(`short_label or Instrument_{id}`, the S1 home) — `_assignments.py`,
+`visibility_policies.py`, `_surface/_context.py` (the dropped-field
+label), `extracts/responses_import.py` (the two match-error messages);
+the two view files were handled by V1. The internal `name` no longer
+surfaces anywhere. The **CSV-safe positioned variants** stay as their own
+named helpers (`entity_metadata_extract._instrument_short_or_fallback`,
+`by_instrument_extract.fallback_instrument_label`) — the deliberately
+different `Instrument_{position}` form. (Original finding below.)
 
 Beyond the three existing helpers (`_state.py:62` `_instrument_label`,
 `validation.py:275`, `extracts/by_instrument_extract.py:65`), hand-rolled

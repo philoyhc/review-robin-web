@@ -286,13 +286,36 @@ Six tests updated for the new labels. Full suite green; ruff clean.
 Full suite green (2,680 passed, 17 skipped); ruff clean. **This closes
 the entire template/UX seam, U1–U10.**
 
+### Item 13 — V1 + V4: instrument label/heading dedup — ✅ done 2026-08-19
+
+The instrument-label family — folds together with S1 (the same
+`short_label`-fallback question).
+
+- **V1** — `_reviewee_results.py` and `_reviewer_summary.py` dropped
+  their byte-identical inline `instrument_heading` reimpl and now call
+  the canonical `instrument_heading(...).title` (the same one the
+  reviewer surface + observer collation use), so the same instrument
+  reads identically across every reader surface. The empty-title case
+  falls back to the canonical operator label `_instrument_label`
+  (`Instrument_{id}`) — never the internal `name`. One test rewritten
+  (it asserted the old `name`-fallback bug).
+- **V4** — the hand-rolled `short_label or name …` display/error labels
+  (`_assignments.py`, `visibility_policies.py`, `_surface/_context.py`,
+  `extracts/responses_import.py` ×2) now route through the canonical
+  `instruments._instrument_label`. The **CSV-safe positioned variants**
+  stay as their own named helpers
+  (`entity_metadata_extract._instrument_short_or_fallback`,
+  `by_instrument_extract.fallback_instrument_label`).
+
+Verification: full suite green (2,680 passed, 17 skipped); ruff clean;
+no import cycles.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
-- **View-adapter dedup (V1–V6).** `instrument_heading` reimplemented
-  inline (V1 — pairs naturally with the S1/V4 instrument-label work),
-  the progress-pill macro (V2), the user-display-label property (V3),
-  and the smaller predicate/pluralization dedup (V5, V6).
+- **View-adapter dedup — remaining (V2, V3, V5, V6).** The progress-pill
+  macro (V2), the `User.display_label` property (V3), and the smaller
+  predicate/pluralization dedup (V5, V6).
 
 ## Hard dependencies
 

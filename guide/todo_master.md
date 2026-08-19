@@ -2169,8 +2169,16 @@ template/UX seam, U1–U10.**
 **Scorecard:** Service **S1–S8 ✅**, Route **R1–R11 ✅**, Template/UX
 **U1–U10 ✅** (12 shipped items, PRs #1987–#1999+).
 
-**Still open:** the **view-adapter dedup column (V1–V6)** — the last
-audit column. See `guide/consistency_audit.md`.
+**Item 13 — V1 + V4 (instrument label/heading dedup) — done 2026-08-19.**
+V1: `_reviewee_results` / `_reviewer_summary` now call the canonical
+`instrument_heading` (empty-title → `_instrument_label`, never `name`).
+V4: the hand-rolled `short_label or name` display/error labels route
+through `instruments._instrument_label`; the CSV-safe positioned variants
+stay named helpers.
+
+**Still open:** view-adapter dedup remaining — V2 (progress-pill macro),
+V3 (`User.display_label`), V5 (predicate delegation), V6 (`pluralize`).
+See `guide/consistency_audit.md`.
 
 ---
 

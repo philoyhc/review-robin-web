@@ -34,6 +34,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.instruments import _instrument_label
 
 
 # Three audiences are operator-configurable; the operator audience
@@ -380,7 +381,7 @@ def upsert_policy(
         event_type="instrument.view_policy_set",
         summary=(
             f"Visibility for instrument "
-            f"{instrument.short_label or instrument.name or instrument.id} "
+            f"{_instrument_label(instrument)} "
             f"({audience}) updated"
         ),
         actor_user_id=user.id,

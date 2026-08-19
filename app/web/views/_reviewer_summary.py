@@ -32,6 +32,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
+from app.web.views._instruments import instrument_heading
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 
@@ -406,21 +407,22 @@ def build_reviewer_summary_context(
         if instrument.id not in row_order:
             continue
         is_group = instrument.group_kind is not None
-        # Mirror the response form's heading composition
-        # (``views._instruments.instrument_heading``): the
-        # multi-instrument case carries the ``#{N}`` prefix
-        # so the reviewer reads the same heading on the summary
-        # they read on the form. Single-instrument sessions drop
-        # the prefix; bare ``instrument.name`` is the fallback
-        # when no short label is set so the summary card always
-        # has *some* heading to render.
-        short_label = (instrument.short_label or "").strip()
-        if total_instrument_count == 1:
-            heading_title = short_label or instrument.name
-        elif short_label:
-            heading_title = f"#{position}: {short_label}"
-        else:
-            heading_title = f"#{position}"
+        # Canonical heading title (audit V1): call the same
+        # ``instrument_heading`` the response form + observer
+        # collation use rather than re-implementing it, so the
+        # reviewer reads the same heading on the summary they read
+        # on the form. Falls back to the operator label
+        # (``Instrument_{id}``) — never the internal ``name`` — when
+        # the reviewer-facing title is empty, so the card always has
+        # *some* heading.
+        heading_title = (
+            instrument_heading(
+                instrument=instrument,
+                position=position,
+                total_count=total_instrument_count,
+            ).title
+            or instruments_service._instrument_label(instrument)
+        )
         # Filter response fields by ``visible`` so the summary
         # table mirrors the reviewer surface form
         # (``routes_reviewer/_surface.py`` filters the same way).
