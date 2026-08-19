@@ -1,0 +1,3253 @@
+{
+  "name": "codebase_assessment_19aug",
+  "config": "auto-detected",
+  "loc_convention": "physical lines, git-tracked files only",
+  "git": {
+    "head": "72cf281",
+    "since": "75eea4e",
+    "merge_commits": 48,
+    "non_merge_commits": 60,
+    "pr_numbers": [
+      1931,
+      1932,
+      1933,
+      1934,
+      1935,
+      1936,
+      1937,
+      1938,
+      1939,
+      1940,
+      1941,
+      1942,
+      1943,
+      1944,
+      1945,
+      1946,
+      1947,
+      1948,
+      1949,
+      1950,
+      1951,
+      1952,
+      1953,
+      1954,
+      1955,
+      1956,
+      1957,
+      1958,
+      1959,
+      1960,
+      1961,
+      1962,
+      1963,
+      1964,
+      1965,
+      1966,
+      1967,
+      1968,
+      1969,
+      1970,
+      1971,
+      1972,
+      1973,
+      1974,
+      1975,
+      1976,
+      1977,
+      1978
+    ],
+    "pr_range": "#1931\u2013#1978",
+    "first_date": "2026-08-17",
+    "last_date": "2026-08-19"
+  },
+  "areas": {
+    "docs": {
+      "files": 200,
+      "loc": 91109
+    },
+    "production": {
+      "files": 192,
+      "loc": 55313
+    },
+    "migrations": {
+      "files": 77,
+      "loc": 6772
+    },
+    "templates": {
+      "files": 59,
+      "loc": 21825
+    },
+    "tests": {
+      "files": 250,
+      "loc": 87263
+    }
+  },
+  "biggest_production": [
+    {
+      "path": "app/web/routes_operator/_instruments.py",
+      "loc": 1268,
+      "area": "production"
+    },
+    {
+      "path": "app/services/session_lifecycle.py",
+      "loc": 1056,
+      "area": "production"
+    },
+    {
+      "path": "app/services/instruments/_instrument_crud.py",
+      "loc": 1025,
+      "area": "production"
+    },
+    {
+      "path": "app/web/routes_operator/_quick_setup.py",
+      "loc": 984,
+      "area": "production"
+    },
+    {
+      "path": "app/web/views/_instruments.py",
+      "loc": 981,
+      "area": "production"
+    },
+    {
+      "path": "app/services/responses/_core.py",
+      "loc": 976,
+      "area": "production"
+    },
+    {
+      "path": "app/services/audit.py",
+      "loc": 967,
+      "area": "production"
+    },
+    {
+      "path": "app/services/instruments/_response_fields.py",
+      "loc": 966,
+      "area": "production"
+    },
+    {
+      "path": "app/services/validation.py",
+      "loc": 958,
+      "area": "production"
+    },
+    {
+      "path": "app/services/csv_imports.py",
+      "loc": 942,
+      "area": "production"
+    }
+  ],
+  "files": {
+    ".claude/agents/spec-writer.md": [
+      35,
+      "docs"
+    ],
+    "AGENTS.md": [
+      263,
+      "docs"
+    ],
+    "CLAUDE.md": [
+      263,
+      "docs"
+    ],
+    "CONTRIBUTING.md": [
+      27,
+      "docs"
+    ],
+    "README.md": [
+      190,
+      "docs"
+    ],
+    "alembic/env.py": [
+      78,
+      "production"
+    ],
+    "alembic/versions/20f98ca93cb9_add_tag_columns_to_reviewer_and_reviewee.py": [
+      50,
+      "migrations"
+    ],
+    "alembic/versions/25932c749ff6_segment_13e_pr1_session_self_reviews_active.py": [
+      43,
+      "migrations"
+    ],
+    "alembic/versions/2fec0f646bd2_segment_13f_pr6_session_display_timezone.py": [
+      47,
+      "migrations"
+    ],
+    "alembic/versions/3213fb59371b_segment_13d_pr0_rename_rule_sets.py": [
+      36,
+      "migrations"
+    ],
+    "alembic/versions/324a449e7856_segment_15d_pr6b_drop_assignment_context.py": [
+      46,
+      "migrations"
+    ],
+    "alembic/versions/38b72f14662c_segment_13d_pr6_instrument_group_kind.py": [
+      42,
+      "migrations"
+    ],
+    "alembic/versions/3c1b9f2a4e51_session_lifecycle_9_1.py": [
+      54,
+      "migrations"
+    ],
+    "alembic/versions/499610263228_segment_13d_pr4_instrument_rule_set_id.py": [
+      71,
+      "migrations"
+    ],
+    "alembic/versions/4d1c2b3a5f6e_segment_17b_phase2_session_activated_at.py": [
+      81,
+      "migrations"
+    ],
+    "alembic/versions/4e8a2b9c3d11_segment_10a_help_text.py": [
+      38,
+      "migrations"
+    ],
+    "alembic/versions/4efcf31d61d2_segment_13d_pr5_instrument_sort_display_fields.py": [
+      42,
+      "migrations"
+    ],
+    "alembic/versions/543aa71cd452_seed_locked_display_fields.py": [
+      101,
+      "migrations"
+    ],
+    "alembic/versions/683e99cca6b7_data_shapes_table.py": [
+      85,
+      "migrations"
+    ],
+    "alembic/versions/779b90e4b397_segment_13f_pr4_users_is_sys_admin.py": [
+      52,
+      "migrations"
+    ],
+    "alembic/versions/7c2b94f1a5e3_segment_13a_2_uq_session_rule_set_session_name.py": [
+      51,
+      "migrations"
+    ],
+    "alembic/versions/7d4f5b3c1a92_email_outbox.py": [
+      66,
+      "migrations"
+    ],
+    "alembic/versions/8003c2be99d8_segment_13f_pr2_users_is_operator.py": [
+      54,
+      "migrations"
+    ],
+    "alembic/versions/8b3c1d4e5f7a_segment_10d_slice4a_response_type_definitions.py": [
+      223,
+      "migrations"
+    ],
+    "alembic/versions/8d57b772ffc4_segment_13a_pr1_rule_sets_rule_set_.py": [
+      109,
+      "migrations"
+    ],
+    "alembic/versions/9a7c2e1b4f60_segment_13a_pr3_install_seeded_rule_sets.py": [
+      167,
+      "migrations"
+    ],
+    "alembic/versions/a1b2c3d4e5f6_bump_long_short_text_max.py": [
+      116,
+      "migrations"
+    ],
+    "alembic/versions/a1b2c3d4e5f7_segment_11e_pr4_users_smtp_settings.py": [
+      87,
+      "migrations"
+    ],
+    "alembic/versions/a3f1c7e9b204_add_rehydrate_stashes.py": [
+      69,
+      "migrations"
+    ],
+    "alembic/versions/a3f7e2d1c9b5_band1_touched_links.py": [
+      46,
+      "migrations"
+    ],
+    "alembic/versions/a4c8e91b2d6f_session_rule_sets_is_seeded.py": [
+      73,
+      "migrations"
+    ],
+    "alembic/versions/a6ce41175175_add_assignment_mode_to_sessions.py": [
+      36,
+      "migrations"
+    ],
+    "alembic/versions/a7e3b1d92c64_participants_s14_per_window_visibility_.py": [
+      147,
+      "migrations"
+    ],
+    "alembic/versions/a7e3c5b1d9f8_segment_18g_pr1b_scheduled_activate_at_index.py": [
+      40,
+      "migrations"
+    ],
+    "alembic/versions/b1e8f3c47d92_segment_18j_pr_iii_a_rtd_fk_nullable.py": [
+      58,
+      "migrations"
+    ],
+    "alembic/versions/b2c3d4e5f6a7_force_long_short_text_max.py": [
+      79,
+      "migrations"
+    ],
+    "alembic/versions/b2f6c4a8e1d3_segment_18j_wave_3_pr_i_add_irf_visible.py": [
+      88,
+      "migrations"
+    ],
+    "alembic/versions/b3d5e7f9a1c4_segment_11c_pr2_outbox_cc_bcc.py": [
+      44,
+      "migrations"
+    ],
+    "alembic/versions/b3e7d2a4c8f1_participants_phase1_schema.py": [
+      203,
+      "migrations"
+    ],
+    "alembic/versions/b4e8c2a9d1f6_assignment_is_self_review.py": [
+      236,
+      "migrations"
+    ],
+    "alembic/versions/b8d4f1a92c50_segment_13a_pr4f_full_matrix_desc.py": [
+      70,
+      "migrations"
+    ],
+    "alembic/versions/b8f4c2a91d35_participants_s14_contract_drop_legacy_visibility_cols.py": [
+      136,
+      "migrations"
+    ],
+    "alembic/versions/b8f4e2a6c1d3_add_instrument_is_pilot.py": [
+      43,
+      "migrations"
+    ],
+    "alembic/versions/c2143bd329c7_segment_10b1_display_field_backfill.py": [
+      69,
+      "migrations"
+    ],
+    "alembic/versions/c3a7e9d8b154_segment_18j_wave_3_pr_iii_retire_band2_response_fields_json.py": [
+      309,
+      "migrations"
+    ],
+    "alembic/versions/c3a9f1d7b2e8_group_pair_count_cache_columns.py": [
+      56,
+      "migrations"
+    ],
+    "alembic/versions/c4e7d2a8f165_observer_cohort_rule_column.py": [
+      39,
+      "migrations"
+    ],
+    "alembic/versions/c4f6a8b0d2e5_segment_11c_pr_f_outbox_audit_log_scaffolding.py": [
+      68,
+      "migrations"
+    ],
+    "alembic/versions/c5a9b7e3d1f0_eligibility_cache_columns.py": [
+      50,
+      "migrations"
+    ],
+    "alembic/versions/c5d3f1a2b9e7_data_shape_self_review_handling.py": [
+      51,
+      "migrations"
+    ],
+    "alembic/versions/c5e2d7a3f81b_segment_18j_pr_iii_b2_retire_seeded_rtds.py": [
+      109,
+      "migrations"
+    ],
+    "alembic/versions/c5e9a8f3d4b1_segment_13a_drop_lead_led_seed.py": [
+      225,
+      "migrations"
+    ],
+    "alembic/versions/c7d1e9f3a4b2_segment_13f_pr3_session_tags.py": [
+      51,
+      "migrations"
+    ],
+    "alembic/versions/c7d9e1f3b5a8_drop_response_type_definitions.py": [
+      73,
+      "migrations"
+    ],
+    "alembic/versions/c8d4e9f1a2b3_friendly_label_retirement_reviewee.py": [
+      48,
+      "migrations"
+    ],
+    "alembic/versions/c9a5f3e7b240_rename_instruments_is_pilot_to_is_new_.py": [
+      31,
+      "migrations"
+    ],
+    "alembic/versions/cf257e38b575_initial_schema.py": [
+      291,
+      "migrations"
+    ],
+    "alembic/versions/d2e4f6a8c1b3_backfill_exclude_self_reviews_false.py": [
+      50,
+      "migrations"
+    ],
+    "alembic/versions/d3b8e9a5f721_add_instruments_column_widths.py": [
+      41,
+      "migrations"
+    ],
+    "alembic/versions/d3e4f5a6b7c8_flip_likert5_seed_order.py": [
+      107,
+      "migrations"
+    ],
+    "alembic/versions/d4e1c8b5f372_segment_18j_pr_iii_b3_retire_operator_rtd_library.py": [
+      110,
+      "migrations"
+    ],
+    "alembic/versions/d5a8f2c4b7e9_segment_18g_pr0c_session_retention.py": [
+      58,
+      "migrations"
+    ],
+    "alembic/versions/d81faacee836_segment_13d_pr1_session_field_labels.py": [
+      54,
+      "migrations"
+    ],
+    "alembic/versions/d8e4c3a1b5f6_data_shape_include_empty_rows.py": [
+      50,
+      "migrations"
+    ],
+    "alembic/versions/d8e4f1a2b3c4_segment_14a_pr3_audit_events_index.py": [
+      51,
+      "migrations"
+    ],
+    "alembic/versions/d8f4a92c1e6b_wave5_pr2_retire_rule_set_library.py": [
+      231,
+      "migrations"
+    ],
+    "alembic/versions/d92f4a710e88_seeds_disable_exclude_self_reviews.py": [
+      71,
+      "migrations"
+    ],
+    "alembic/versions/dfedd22a38da_drop_unpopulated_pair_context_display_.py": [
+      120,
+      "migrations"
+    ],
+    "alembic/versions/e1a7b3c9d2f8_wave5_pr3_drop_is_new_model.py": [
+      54,
+      "migrations"
+    ],
+    "alembic/versions/e1c8f4d57a92_segment_11l_add_instrument_short_label.py": [
+      38,
+      "migrations"
+    ],
+    "alembic/versions/e216f472ac47_segment_13d_pr2_session_rule_sets.py": [
+      70,
+      "migrations"
+    ],
+    "alembic/versions/e3ba5737e841_segment_13e_pr2_relationships.py": [
+      90,
+      "migrations"
+    ],
+    "alembic/versions/e43454fceb1c_segment_15d_pr5_backfill_relationships.py": [
+      220,
+      "migrations"
+    ],
+    "alembic/versions/e5a3b1f8d2c4_segment_18j_pr_iii_b4_drop_response_type_id_fk.py": [
+      71,
+      "migrations"
+    ],
+    "alembic/versions/e5c1a3b9d472_segment_18m_pr1_instrument_starts_new_page.py": [
+      64,
+      "migrations"
+    ],
+    "alembic/versions/e6d4a1c8b3f5_segment_18g_pr0a_session_anchor_datetimes.py": [
+      61,
+      "migrations"
+    ],
+    "alembic/versions/e7c2b4d9a3f1_add_instruments_band2_state.py": [
+      59,
+      "migrations"
+    ],
+    "alembic/versions/e9277c43b251_segment_13f_pr7_users_preferences.py": [
+      48,
+      "migrations"
+    ],
+    "alembic/versions/f2c7b9d3e8a4_segment_18g_pr0b_session_offset_configs.py": [
+      64,
+      "migrations"
+    ],
+    "alembic/versions/f4a92b3c6d18_participants_s12_visibility_window_and_.py": [
+      228,
+      "migrations"
+    ],
+    "alembic/versions/f6183d235e59_segment_13d_pr3_operator_rtds.py": [
+      105,
+      "migrations"
+    ],
+    "alembic/versions/f7a8b9c0d1e2_segment_11e_pr1_session_help_contact_and_email_overrides.py": [
+      48,
+      "migrations"
+    ],
+    "alembic/versions/f9c2d8a4b7e1_segment_18j_pr_i_inline_rf_bounds.py": [
+      110,
+      "migrations"
+    ],
+    "app/__init__.py": [
+      1,
+      "production"
+    ],
+    "app/auth/__init__.py": [
+      0,
+      "production"
+    ],
+    "app/auth/identity.py": [
+      153,
+      "production"
+    ],
+    "app/auth/roles.py": [
+      53,
+      "production"
+    ],
+    "app/config.py": [
+      144,
+      "production"
+    ],
+    "app/db/__init__.py": [
+      0,
+      "production"
+    ],
+    "app/db/base.py": [
+      22,
+      "production"
+    ],
+    "app/db/models/__init__.py": [
+      52,
+      "production"
+    ],
+    "app/db/models/assignment.py": [
+      69,
+      "production"
+    ],
+    "app/db/models/audit_event.py": [
+      41,
+      "production"
+    ],
+    "app/db/models/data_shape.py": [
+      115,
+      "production"
+    ],
+    "app/db/models/email_outbox.py": [
+      98,
+      "production"
+    ],
+    "app/db/models/instrument.py": [
+      194,
+      "production"
+    ],
+    "app/db/models/instrument_field.py": [
+      127,
+      "production"
+    ],
+    "app/db/models/instrument_view_policy.py": [
+      61,
+      "production"
+    ],
+    "app/db/models/invitation.py": [
+      36,
+      "production"
+    ],
+    "app/db/models/observer.py": [
+      56,
+      "production"
+    ],
+    "app/db/models/rehydrate_stash.py": [
+      43,
+      "production"
+    ],
+    "app/db/models/relationship.py": [
+      70,
+      "production"
+    ],
+    "app/db/models/response.py": [
+      39,
+      "production"
+    ],
+    "app/db/models/review_session.py": [
+      200,
+      "production"
+    ],
+    "app/db/models/reviewee.py": [
+      38,
+      "production"
+    ],
+    "app/db/models/reviewer.py": [
+      39,
+      "production"
+    ],
+    "app/db/models/session_field_label.py": [
+      62,
+      "production"
+    ],
+    "app/db/models/session_operator.py": [
+      44,
+      "production"
+    ],
+    "app/db/models/session_rule_set.py": [
+      75,
+      "production"
+    ],
+    "app/db/models/session_tag.py": [
+      35,
+      "production"
+    ],
+    "app/db/models/user.py": [
+      98,
+      "production"
+    ],
+    "app/db/session.py": [
+      48,
+      "production"
+    ],
+    "app/logging_config.py": [
+      111,
+      "production"
+    ],
+    "app/main.py": [
+      99,
+      "production"
+    ],
+    "app/schemas/__init__.py": [
+      0,
+      "production"
+    ],
+    "app/schemas/assignments.py": [
+      17,
+      "production"
+    ],
+    "app/schemas/imports.py": [
+      61,
+      "production"
+    ],
+    "app/schemas/observer_cohort_rule.py": [
+      143,
+      "production"
+    ],
+    "app/schemas/responses.py": [
+      11,
+      "production"
+    ],
+    "app/schemas/rules.py": [
+      379,
+      "production"
+    ],
+    "app/schemas/sessions.py": [
+      74,
+      "production"
+    ],
+    "app/schemas/validation.py": [
+      37,
+      "production"
+    ],
+    "app/services/__init__.py": [
+      0,
+      "production"
+    ],
+    "app/services/_queries.py": [
+      80,
+      "production"
+    ],
+    "app/services/_secrets.py": [
+      70,
+      "production"
+    ],
+    "app/services/assignments/__init__.py": [
+      112,
+      "production"
+    ],
+    "app/services/assignments/_coverage.py": [
+      376,
+      "production"
+    ],
+    "app/services/assignments/_generate.py": [
+      764,
+      "production"
+    ],
+    "app/services/assignments/_self_review.py": [
+      342,
+      "production"
+    ],
+    "app/services/assignments/_shared.py": [
+      24,
+      "production"
+    ],
+    "app/services/audit.py": [
+      967,
+      "production"
+    ],
+    "app/services/collation.py": [
+      164,
+      "production"
+    ],
+    "app/services/csv_imports.py": [
+      942,
+      "production"
+    ],
+    "app/services/data_shapes.py": [
+      404,
+      "production"
+    ],
+    "app/services/date_formatting.py": [
+      205,
+      "production"
+    ],
+    "app/services/email_send.py": [
+      233,
+      "production"
+    ],
+    "app/services/email_templates.py": [
+      480,
+      "production"
+    ],
+    "app/services/extracts/__init__.py": [
+      69,
+      "production"
+    ],
+    "app/services/extracts/audit_events_extract.py": [
+      126,
+      "production"
+    ],
+    "app/services/extracts/by_instrument_extract.py": [
+      629,
+      "production"
+    ],
+    "app/services/extracts/data_shape_extract.py": [
+      868,
+      "production"
+    ],
+    "app/services/extracts/entity_metadata_extract.py": [
+      750,
+      "production"
+    ],
+    "app/services/extracts/entity_stats_extract.py": [
+      278,
+      "production"
+    ],
+    "app/services/extracts/observers_extract.py": [
+      69,
+      "production"
+    ],
+    "app/services/extracts/participant_tokens_extract.py": [
+      97,
+      "production"
+    ],
+    "app/services/extracts/relationships_extract.py": [
+      68,
+      "production"
+    ],
+    "app/services/extracts/responses_extract.py": [
+      647,
+      "production"
+    ],
+    "app/services/extracts/responses_import.py": [
+      352,
+      "production"
+    ],
+    "app/services/extracts/reviewees_extract.py": [
+      77,
+      "production"
+    ],
+    "app/services/extracts/reviewers_extract.py": [
+      89,
+      "production"
+    ],
+    "app/services/extracts/zip_bundle.py": [
+      312,
+      "production"
+    ],
+    "app/services/field_labels.py": [
+      342,
+      "production"
+    ],
+    "app/services/instruments/__init__.py": [
+      210,
+      "production"
+    ],
+    "app/services/instruments/_band1.py": [
+      703,
+      "production"
+    ],
+    "app/services/instruments/_band2.py": [
+      669,
+      "production"
+    ],
+    "app/services/instruments/_display_fields.py": [
+      916,
+      "production"
+    ],
+    "app/services/instruments/_field_presets.py": [
+      49,
+      "production"
+    ],
+    "app/services/instruments/_instrument_crud.py": [
+      1025,
+      "production"
+    ],
+    "app/services/instruments/_pagination.py": [
+      272,
+      "production"
+    ],
+    "app/services/instruments/_response_fields.py": [
+      966,
+      "production"
+    ],
+    "app/services/instruments/_state.py": [
+      92,
+      "production"
+    ],
+    "app/services/invitations.py": [
+      659,
+      "production"
+    ],
+    "app/services/lifecycle_display.py": [
+      46,
+      "production"
+    ],
+    "app/services/monitoring.py": [
+      294,
+      "production"
+    ],
+    "app/services/observer_cohort.py": [
+      276,
+      "production"
+    ],
+    "app/services/observers.py": [
+      473,
+      "production"
+    ],
+    "app/services/operator_settings.py": [
+      313,
+      "production"
+    ],
+    "app/services/participant_tokens.py": [
+      85,
+      "production"
+    ],
+    "app/services/participants.py": [
+      45,
+      "production"
+    ],
+    "app/services/permissions.py": [
+      14,
+      "production"
+    ],
+    "app/services/rehydrate_stash.py": [
+      97,
+      "production"
+    ],
+    "app/services/relationships.py": [
+      849,
+      "production"
+    ],
+    "app/services/responses/__init__.py": [
+      83,
+      "production"
+    ],
+    "app/services/responses/_core.py": [
+      976,
+      "production"
+    ],
+    "app/services/responses/_group_reconciliation.py": [
+      522,
+      "production"
+    ],
+    "app/services/reviewees.py": [
+      480,
+      "production"
+    ],
+    "app/services/reviewers.py": [
+      407,
+      "production"
+    ],
+    "app/services/rules/__init__.py": [
+      0,
+      "production"
+    ],
+    "app/services/rules/engine.py": [
+      438,
+      "production"
+    ],
+    "app/services/rules/fields.py": [
+      147,
+      "production"
+    ],
+    "app/services/rules/predicates.py": [
+      216,
+      "production"
+    ],
+    "app/services/rules/preview.py": [
+      141,
+      "production"
+    ],
+    "app/services/rules/quotas.py": [
+      106,
+      "production"
+    ],
+    "app/services/scheduled_events/__init__.py": [
+      161,
+      "production"
+    ],
+    "app/services/scheduled_events/_activation.py": [
+      294,
+      "production"
+    ],
+    "app/services/scheduled_events/_duration.py": [
+      86,
+      "production"
+    ],
+    "app/services/scheduled_events/_invites.py": [
+      377,
+      "production"
+    ],
+    "app/services/scheduled_events/_release.py": [
+      153,
+      "production"
+    ],
+    "app/services/scheduled_events/_reminders.py": [
+      382,
+      "production"
+    ],
+    "app/services/scheduled_events/_shared.py": [
+      62,
+      "production"
+    ],
+    "app/services/session_clone.py": [
+      322,
+      "production"
+    ],
+    "app/services/session_config_io/__init__.py": [
+      66,
+      "production"
+    ],
+    "app/services/session_config_io/_apply.py": [
+      167,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_data_shape.py": [
+      155,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_email.py": [
+      54,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_field_label.py": [
+      86,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_instrument.py": [
+      419,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_parse.py": [
+      230,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_rule_set.py": [
+      104,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_session.py": [
+      140,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_session_tag.py": [
+      57,
+      "production"
+    ],
+    "app/services/session_config_io/_apply_shared.py": [
+      289,
+      "production"
+    ],
+    "app/services/session_config_io/_rows.py": [
+      69,
+      "production"
+    ],
+    "app/services/session_config_io/_serialize.py": [
+      776,
+      "production"
+    ],
+    "app/services/session_lifecycle.py": [
+      1056,
+      "production"
+    ],
+    "app/services/session_owners.py": [
+      201,
+      "production"
+    ],
+    "app/services/session_purge.py": [
+      250,
+      "production"
+    ],
+    "app/services/session_rehydrate.py": [
+      640,
+      "production"
+    ],
+    "app/services/session_tags.py": [
+      200,
+      "production"
+    ],
+    "app/services/sessions.py": [
+      420,
+      "production"
+    ],
+    "app/services/users.py": [
+      516,
+      "production"
+    ],
+    "app/services/validation.py": [
+      958,
+      "production"
+    ],
+    "app/services/visibility_policies.py": [
+      460,
+      "production"
+    ],
+    "app/web/__init__.py": [
+      1,
+      "production"
+    ],
+    "app/web/breadcrumbs.py": [
+      98,
+      "production"
+    ],
+    "app/web/date_filters.py": [
+      52,
+      "production"
+    ],
+    "app/web/deps.py": [
+      396,
+      "production"
+    ],
+    "app/web/error_handlers.py": [
+      149,
+      "production"
+    ],
+    "app/web/return_to.py": [
+      75,
+      "production"
+    ],
+    "app/web/routes_about.py": [
+      35,
+      "production"
+    ],
+    "app/web/routes_auth.py": [
+      70,
+      "production"
+    ],
+    "app/web/routes_health.py": [
+      8,
+      "production"
+    ],
+    "app/web/routes_operator/__init__.py": [
+      74,
+      "production"
+    ],
+    "app/web/routes_operator/_assignments.py": [
+      456,
+      "production"
+    ],
+    "app/web/routes_operator/_extract_data.py": [
+      466,
+      "production"
+    ],
+    "app/web/routes_operator/_extracts.py": [
+      706,
+      "production"
+    ],
+    "app/web/routes_operator/_instruments.py": [
+      1268,
+      "production"
+    ],
+    "app/web/routes_operator/_instruments_band2.py": [
+      321,
+      "production"
+    ],
+    "app/web/routes_operator/_instruments_pagination.py": [
+      181,
+      "production"
+    ],
+    "app/web/routes_operator/_lobby.py": [
+      446,
+      "production"
+    ],
+    "app/web/routes_operator/_operations.py": [
+      786,
+      "production"
+    ],
+    "app/web/routes_operator/_preview_surface.py": [
+      149,
+      "production"
+    ],
+    "app/web/routes_operator/_quick_setup.py": [
+      984,
+      "production"
+    ],
+    "app/web/routes_operator/_rehydrate.py": [
+      159,
+      "production"
+    ],
+    "app/web/routes_operator/_session_home.py": [
+      685,
+      "production"
+    ],
+    "app/web/routes_operator/_settings.py": [
+      192,
+      "production"
+    ],
+    "app/web/routes_operator/_setup_invite.py": [
+      178,
+      "production"
+    ],
+    "app/web/routes_operator/_setup_observers.py": [
+      589,
+      "production"
+    ],
+    "app/web/routes_operator/_setup_relationships.py": [
+      674,
+      "production"
+    ],
+    "app/web/routes_operator/_setup_reviewees.py": [
+      502,
+      "production"
+    ],
+    "app/web/routes_operator/_setup_reviewers.py": [
+      504,
+      "production"
+    ],
+    "app/web/routes_operator/_shared.py": [
+      542,
+      "production"
+    ],
+    "app/web/routes_operator/_sys_admin.py": [
+      455,
+      "production"
+    ],
+    "app/web/routes_operator/_workflow.py": [
+      560,
+      "production"
+    ],
+    "app/web/routes_reviewer/__init__.py": [
+      39,
+      "production"
+    ],
+    "app/web/routes_reviewer/_collation.py": [
+      205,
+      "production"
+    ],
+    "app/web/routes_reviewer/_dashboard.py": [
+      260,
+      "production"
+    ],
+    "app/web/routes_reviewer/_invite.py": [
+      72,
+      "production"
+    ],
+    "app/web/routes_reviewer/_results.py": [
+      101,
+      "production"
+    ],
+    "app/web/routes_reviewer/_shared.py": [
+      230,
+      "production"
+    ],
+    "app/web/routes_reviewer/_summary.py": [
+      151,
+      "production"
+    ],
+    "app/web/routes_reviewer/_surface/__init__.py": [
+      88,
+      "production"
+    ],
+    "app/web/routes_reviewer/_surface/_context.py": [
+      645,
+      "production"
+    ],
+    "app/web/routes_reviewer/_surface/_group_collapse.py": [
+      85,
+      "production"
+    ],
+    "app/web/routes_reviewer/_surface/_routes.py": [
+      483,
+      "production"
+    ],
+    "app/web/routes_reviewer/_surface/_status.py": [
+      127,
+      "production"
+    ],
+    "app/web/templates/_partials/breadcrumb.html": [
+      15,
+      "templates"
+    ],
+    "app/web/templates/about.html": [
+      21,
+      "templates"
+    ],
+    "app/web/templates/base.html": [
+      3297,
+      "templates"
+    ],
+    "app/web/templates/error.html": [
+      65,
+      "templates"
+    ],
+    "app/web/templates/me_debug.html": [
+      52,
+      "templates"
+    ],
+    "app/web/templates/operator/instruments_index.html": [
+      5472,
+      "templates"
+    ],
+    "app/web/templates/operator/operator_settings.html": [
+      224,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_email_preview_region.html": [
+      66,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_extract_data_card.html": [
+      63,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_field_label_header.html": [
+      34,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_field_labels_editor.html": [
+      103,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_next_action_issue_list.html": [
+      39,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_placeholder_card.html": [
+      38,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_preview_picker.html": [
+      121,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_quick_setup_card.html": [
+      251,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_rule_set_preview.html": [
+      78,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_schedule_ordering_js.html": [
+      66,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_schedule_timeline.html": [
+      33,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_sys_admin_outbox.html": [
+      39,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_timezone_preview.html": [
+      110,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/next_action_card.html": [
+      502,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/session_setup_status_row.html": [
+      86,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/session_top_nav.html": [
+      71,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/sys_admin_top_nav.html": [
+      20,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/validation_results.html": [
+      95,
+      "templates"
+    ],
+    "app/web/templates/operator/session_assignments.html": [
+      554,
+      "templates"
+    ],
+    "app/web/templates/operator/session_detail.html": [
+      503,
+      "templates"
+    ],
+    "app/web/templates/operator/session_extract_data.html": [
+      2661,
+      "templates"
+    ],
+    "app/web/templates/operator/session_invitations.html": [
+      205,
+      "templates"
+    ],
+    "app/web/templates/operator/session_invitations_reviewer_detail.html": [
+      83,
+      "templates"
+    ],
+    "app/web/templates/operator/session_new.html": [
+      198,
+      "templates"
+    ],
+    "app/web/templates/operator/session_observers.html": [
+      760,
+      "templates"
+    ],
+    "app/web/templates/operator/session_previews.html": [
+      40,
+      "templates"
+    ],
+    "app/web/templates/operator/session_rehydrate.html": [
+      128,
+      "templates"
+    ],
+    "app/web/templates/operator/session_relationships.html": [
+      629,
+      "templates"
+    ],
+    "app/web/templates/operator/session_responses.html": [
+      142,
+      "templates"
+    ],
+    "app/web/templates/operator/session_responses_reviewee_detail.html": [
+      59,
+      "templates"
+    ],
+    "app/web/templates/operator/session_reviewees.html": [
+      593,
+      "templates"
+    ],
+    "app/web/templates/operator/session_reviewers.html": [
+      588,
+      "templates"
+    ],
+    "app/web/templates/operator/session_setupinvite.html": [
+      171,
+      "templates"
+    ],
+    "app/web/templates/operator/session_validate.html": [
+      112,
+      "templates"
+    ],
+    "app/web/templates/operator/sessions_archived.html": [
+      400,
+      "templates"
+    ],
+    "app/web/templates/operator/sessions_list.html": [
+      730,
+      "templates"
+    ],
+    "app/web/templates/operator/sys_admin_session_audit_log.html": [
+      274,
+      "templates"
+    ],
+    "app/web/templates/operator/sys_admin_session_outbox.html": [
+      16,
+      "templates"
+    ],
+    "app/web/templates/operator/sys_admin_sessions.html": [
+      78,
+      "templates"
+    ],
+    "app/web/templates/operator/sys_admin_users.html": [
+      399,
+      "templates"
+    ],
+    "app/web/templates/request_access.html": [
+      53,
+      "templates"
+    ],
+    "app/web/templates/reviewer/_action_row.html": [
+      63,
+      "templates"
+    ],
+    "app/web/templates/reviewer/_collation_field_cell.html": [
+      27,
+      "templates"
+    ],
+    "app/web/templates/reviewer/_role_chips.html": [
+      32,
+      "templates"
+    ],
+    "app/web/templates/reviewer/_top_bar.html": [
+      29,
+      "templates"
+    ],
+    "app/web/templates/reviewer/collation.html": [
+      115,
+      "templates"
+    ],
+    "app/web/templates/reviewer/dashboard.html": [
+      161,
+      "templates"
+    ],
+    "app/web/templates/reviewer/invite_mismatch.html": [
+      26,
+      "templates"
+    ],
+    "app/web/templates/reviewer/pre_open.html": [
+      40,
+      "templates"
+    ],
+    "app/web/templates/reviewer/results.html": [
+      199,
+      "templates"
+    ],
+    "app/web/templates/reviewer/review_surface.html": [
+      656,
+      "templates"
+    ],
+    "app/web/templates/reviewer/summary.html": [
+      140,
+      "templates"
+    ],
+    "app/web/views/__init__.py": [
+      297,
+      "production"
+    ],
+    "app/web/views/_assignments.py": [
+      350,
+      "production"
+    ],
+    "app/web/views/_audit_log.py": [
+      467,
+      "production"
+    ],
+    "app/web/views/_extract_data.py": [
+      245,
+      "production"
+    ],
+    "app/web/views/_filters.py": [
+      441,
+      "production"
+    ],
+    "app/web/views/_instruments.py": [
+      981,
+      "production"
+    ],
+    "app/web/views/_invitations.py": [
+      133,
+      "production"
+    ],
+    "app/web/views/_observer_collation.py": [
+      179,
+      "production"
+    ],
+    "app/web/views/_observers.py": [
+      97,
+      "production"
+    ],
+    "app/web/views/_previews.py": [
+      460,
+      "production"
+    ],
+    "app/web/views/_quick_setup.py": [
+      457,
+      "production"
+    ],
+    "app/web/views/_responses.py": [
+      55,
+      "production"
+    ],
+    "app/web/views/_reviewee_results.py": [
+      766,
+      "production"
+    ],
+    "app/web/views/_reviewer_summary.py": [
+      579,
+      "production"
+    ],
+    "app/web/views/_setup.py": [
+      297,
+      "production"
+    ],
+    "app/web/views/_sort.py": [
+      367,
+      "production"
+    ],
+    "app/web/views/_validate.py": [
+      458,
+      "production"
+    ],
+    "app/web/views/_workflow_card.py": [
+      759,
+      "production"
+    ],
+    "azure_ask.md": [
+      244,
+      "docs"
+    ],
+    "docs/README.md": [
+      33,
+      "docs"
+    ],
+    "docs/architecture.md": [
+      124,
+      "docs"
+    ],
+    "docs/azure_github_setup.md": [
+      177,
+      "docs"
+    ],
+    "docs/azure_provision.md": [
+      254,
+      "docs"
+    ],
+    "docs/backup_restore.md": [
+      83,
+      "docs"
+    ],
+    "docs/cli_setup.md": [
+      641,
+      "docs"
+    ],
+    "docs/database.md": [
+      167,
+      "docs"
+    ],
+    "docs/deployment_dev.md": [
+      405,
+      "docs"
+    ],
+    "docs/deployment_nus.md": [
+      452,
+      "docs"
+    ],
+    "docs/known_limitations.md": [
+      64,
+      "docs"
+    ],
+    "docs/local_setup.md": [
+      322,
+      "docs"
+    ],
+    "docs/operations_runbook.md": [
+      84,
+      "docs"
+    ],
+    "docs/quickstart.md": [
+      324,
+      "docs"
+    ],
+    "docs/security_posture.md": [
+      278,
+      "docs"
+    ],
+    "docs/status.md": [
+      805,
+      "docs"
+    ],
+    "docs/troubleshooting.md": [
+      68,
+      "docs"
+    ],
+    "guide/README.md": [
+      25,
+      "docs"
+    ],
+    "guide/archive/18R_testing.md": [
+      164,
+      "docs"
+    ],
+    "guide/archive/README.md": [
+      160,
+      "docs"
+    ],
+    "guide/archive/assumptions_ui_legacy.md": [
+      119,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_01jun.md": [
+      478,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_03jun.md": [
+      534,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_09may.md": [
+      373,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_11may.md": [
+      420,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_16may.md": [
+      452,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_17may.md": [
+      235,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_18may.md": [
+      234,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_19may.md": [
+      269,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_28may.md": [
+      458,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_30may.md": [
+      375,
+      "docs"
+    ],
+    "guide/archive/deferred_infra.md": [
+      119,
+      "docs"
+    ],
+    "guide/archive/deferred_until_pilot_feedback.md": [
+      816,
+      "docs"
+    ],
+    "guide/archive/docs_sweep_19Aug.md": [
+      400,
+      "docs"
+    ],
+    "guide/archive/extract_data.md": [
+      1281,
+      "docs"
+    ],
+    "guide/archive/functional_spec.md": [
+      1174,
+      "docs"
+    ],
+    "guide/archive/future_possibilities.md": [
+      140,
+      "docs"
+    ],
+    "guide/archive/instrument_builder_project.md": [
+      992,
+      "docs"
+    ],
+    "guide/archive/instrument_card_ux_audit.md": [
+      194,
+      "docs"
+    ],
+    "guide/archive/low_intensity_workplan_review_robin_web.md": [
+      1127,
+      "docs"
+    ],
+    "guide/archive/major_refactor.md": [
+      1017,
+      "docs"
+    ],
+    "guide/archive/new_model_instruments_outstanding.md": [
+      714,
+      "docs"
+    ],
+    "guide/archive/observers.md": [
+      284,
+      "docs"
+    ],
+    "guide/archive/observers_clean_up.md": [
+      211,
+      "docs"
+    ],
+    "guide/archive/observers_mvp_planning.md": [
+      223,
+      "docs"
+    ],
+    "guide/archive/participant_model_remainder.md": [
+      29,
+      "docs"
+    ],
+    "guide/archive/participant_model_upgrade.md": [
+      1129,
+      "docs"
+    ],
+    "guide/archive/rules_table.md": [
+      91,
+      "docs"
+    ],
+    "guide/archive/segment_01_repository_setup_plan.md": [
+      967,
+      "docs"
+    ],
+    "guide/archive/segment_02_azure_hello_world_deployment_plan.md": [
+      408,
+      "docs"
+    ],
+    "guide/archive/segment_03_authentication_poc_plan.md": [
+      456,
+      "docs"
+    ],
+    "guide/archive/segment_04A.md": [
+      287,
+      "docs"
+    ],
+    "guide/archive/segment_04_core_data_model_migrations_plan.md": [
+      478,
+      "docs"
+    ],
+    "guide/archive/segment_05A.md": [
+      421,
+      "docs"
+    ],
+    "guide/archive/segment_05_operator_session_setup_mvp_plan.md": [
+      374,
+      "docs"
+    ],
+    "guide/archive/segment_06A.md": [
+      489,
+      "docs"
+    ],
+    "guide/archive/segment_06_import_validation_mvp_plan.md": [
+      322,
+      "docs"
+    ],
+    "guide/archive/segment_07A.md": [
+      478,
+      "docs"
+    ],
+    "guide/archive/segment_07_assignment_generation_mvp_plan.md": [
+      287,
+      "docs"
+    ],
+    "guide/archive/segment_08A.md": [
+      582,
+      "docs"
+    ],
+    "guide/archive/segment_08_reviewer_surface_mvp_plan.md": [
+      338,
+      "docs"
+    ],
+    "guide/archive/segment_09_1A.md": [
+      241,
+      "docs"
+    ],
+    "guide/archive/segment_09_1_session_readiness_activation_response_window_plan.md": [
+      44,
+      "docs"
+    ],
+    "guide/archive/segment_09_2A.md": [
+      188,
+      "docs"
+    ],
+    "guide/archive/segment_09_2_invitations_dev_outbox_plan.md": [
+      30,
+      "docs"
+    ],
+    "guide/archive/segment_09_3A.md": [
+      155,
+      "docs"
+    ],
+    "guide/archive/segment_09_3_monitoring_reminders_plan.md": [
+      26,
+      "docs"
+    ],
+    "guide/archive/segment_09_4A.md": [
+      260,
+      "docs"
+    ],
+    "guide/archive/segment_09_4B.md": [
+      128,
+      "docs"
+    ],
+    "guide/archive/segment_09_4C.md": [
+      74,
+      "docs"
+    ],
+    "guide/archive/segment_09_4_operator_ui_restructure_plan.md": [
+      323,
+      "docs"
+    ],
+    "guide/archive/segment_09_5A.md": [
+      57,
+      "docs"
+    ],
+    "guide/archive/segment_09_invitation_monitoring_reminder_split_plan.md": [
+      201,
+      "docs"
+    ],
+    "guide/archive/segment_09_superseded_single_plan.md": [
+      487,
+      "docs"
+    ],
+    "guide/archive/segment_1-10_unfinished.md": [
+      438,
+      "docs"
+    ],
+    "guide/archive/segment_10A.md": [
+      663,
+      "docs"
+    ],
+    "guide/archive/segment_10B.md": [
+      245,
+      "docs"
+    ],
+    "guide/archive/segment_10B_1.md": [
+      483,
+      "docs"
+    ],
+    "guide/archive/segment_10B_2.md": [
+      589,
+      "docs"
+    ],
+    "guide/archive/segment_10B_3.md": [
+      460,
+      "docs"
+    ],
+    "guide/archive/segment_10C.md": [
+      337,
+      "docs"
+    ],
+    "guide/archive/segment_10D.md": [
+      910,
+      "docs"
+    ],
+    "guide/archive/segment_10_instrument_builder_mvp_plan.md": [
+      542,
+      "docs"
+    ],
+    "guide/archive/segment_11A_cleaning_up_unfinished_business.md": [
+      74,
+      "docs"
+    ],
+    "guide/archive/segment_11B_session_home.md": [
+      297,
+      "docs"
+    ],
+    "guide/archive/segment_11C_operations_consolidation.md": [
+      428,
+      "docs"
+    ],
+    "guide/archive/segment_11D_v2_sweep_non_session.md": [
+      701,
+      "docs"
+    ],
+    "guide/archive/segment_11E_email_template_editor.md": [
+      919,
+      "docs"
+    ],
+    "guide/archive/segment_11F_previews_page.md": [
+      827,
+      "docs"
+    ],
+    "guide/archive/segment_11G_validate_page.md": [
+      621,
+      "docs"
+    ],
+    "guide/archive/segment_11H_placeholder_card_scaffolds.md": [
+      443,
+      "docs"
+    ],
+    "guide/archive/segment_11J_quick_setup_card.md": [
+      566,
+      "docs"
+    ],
+    "guide/archive/segment_11K_audit_event_detail_schema.md": [
+      594,
+      "docs"
+    ],
+    "guide/archive/segment_11L_instrument_short_label.md": [
+      410,
+      "docs"
+    ],
+    "guide/archive/segment_12A-1_export.md": [
+      1204,
+      "docs"
+    ],
+    "guide/archive/segment_12A-2_import.md": [
+      802,
+      "docs"
+    ],
+    "guide/archive/segment_12A-3_export_import_updates.md": [
+      443,
+      "docs"
+    ],
+    "guide/archive/segment_12B_audit_retention.md": [
+      309,
+      "docs"
+    ],
+    "guide/archive/segment_12C_self-review_revamp.md": [
+      891,
+      "docs"
+    ],
+    "guide/archive/segment_13A_1_rule_based_editor_revamp.md": [
+      428,
+      "docs"
+    ],
+    "guide/archive/segment_13A_rulebased_assignment_builder.md": [
+      1491,
+      "docs"
+    ],
+    "guide/archive/segment_13B_sort_tables.md": [
+      558,
+      "docs"
+    ],
+    "guide/archive/segment_13C_enhanced_instrument.md": [
+      647,
+      "docs"
+    ],
+    "guide/archive/segment_13D_db_prep.md": [
+      531,
+      "docs"
+    ],
+    "guide/archive/segment_13E_db_prep.md": [
+      209,
+      "docs"
+    ],
+    "guide/archive/segment_13F_more_db_prep.md": [
+      786,
+      "docs"
+    ],
+    "guide/archive/segment_13_multi_instrument_sessions_superseded.md": [
+      345,
+      "docs"
+    ],
+    "guide/archive/segment_14A_production_hardening.md": [
+      588,
+      "docs"
+    ],
+    "guide/archive/segment_15A_friendly_labels.md": [
+      670,
+      "docs"
+    ],
+    "guide/archive/segment_15B_per_instrument_assignments.md": [
+      783,
+      "docs"
+    ],
+    "guide/archive/segment_15C_operator_libraries.md": [
+      379,
+      "docs"
+    ],
+    "guide/archive/segment_15D_assignments_revamp.md": [
+      783,
+      "docs"
+    ],
+    "guide/archive/segment_15E_operations_workflow_card.md": [
+      632,
+      "docs"
+    ],
+    "guide/archive/segment_15F_enhanced_setup_pages.md": [
+      710,
+      "docs"
+    ],
+    "guide/archive/segment_15_operator_polish_and_documentation.md": [
+      138,
+      "docs"
+    ],
+    "guide/archive/segment_16A_sys_admin_page.md": [
+      848,
+      "docs"
+    ],
+    "guide/archive/segment_16B_role_delegation.md": [
+      331,
+      "docs"
+    ],
+    "guide/archive/segment_16C_richer_audit_views.md": [
+      376,
+      "docs"
+    ],
+    "guide/archive/segment_17A_housekeeping.md": [
+      184,
+      "docs"
+    ],
+    "guide/archive/segment_17B_reviewer_surface_refinements.md": [
+      468,
+      "docs"
+    ],
+    "guide/archive/segment_18A_sessions_lobby_enhancements.md": [
+      619,
+      "docs"
+    ],
+    "guide/archive/segment_18B_date_and_time_settings.md": [
+      452,
+      "docs"
+    ],
+    "guide/archive/segment_18C_retention_deletion.md": [
+      159,
+      "docs"
+    ],
+    "guide/archive/segment_18D_export_and_import_update.md": [
+      427,
+      "docs"
+    ],
+    "guide/archive/segment_18E_small_enhancements.md": [
+      157,
+      "docs"
+    ],
+    "guide/archive/segment_18F_workflow_optimization.md": [
+      519,
+      "docs"
+    ],
+    "guide/archive/segment_18G_scheduled_events.md": [
+      939,
+      "docs"
+    ],
+    "guide/archive/segment_18H_post_assessment_update.md": [
+      269,
+      "docs"
+    ],
+    "guide/archive/segment_18J_new_model_takeover.md": [
+      753,
+      "docs"
+    ],
+    "guide/archive/segment_18K_visibility.md": [
+      287,
+      "docs"
+    ],
+    "guide/archive/segment_18L_single_page_surface.md": [
+      587,
+      "docs"
+    ],
+    "guide/archive/segment_18M_instrument_layout.md": [
+      537,
+      "docs"
+    ],
+    "guide/archive/segment_18N_housekeeping.md": [
+      359,
+      "docs"
+    ],
+    "guide/archive/segment_18O_post_participants_model_file_splits.md": [
+      283,
+      "docs"
+    ],
+    "guide/archive/segment_18P_patching_roundtrip.md": [
+      534,
+      "docs"
+    ],
+    "guide/archive/self_review_consolidate.md": [
+      737,
+      "docs"
+    ],
+    "guide/archive/spec_sweep_11may.md": [
+      657,
+      "docs"
+    ],
+    "guide/archive/spec_sweep_18Aug.md": [
+      158,
+      "docs"
+    ],
+    "guide/archive/ui_checklist.md": [
+      197,
+      "docs"
+    ],
+    "guide/archive/ui_elements_parts_2_3_restyle_history.md": [
+      111,
+      "docs"
+    ],
+    "guide/archive/unfinished_business.md": [
+      1669,
+      "docs"
+    ],
+    "guide/archive/url_remodel.md": [
+      260,
+      "docs"
+    ],
+    "guide/archive/visibility_audit.md": [
+      240,
+      "docs"
+    ],
+    "guide/archive/weaknesses_and_bugs_found_by_codex.md": [
+      161,
+      "docs"
+    ],
+    "guide/codebase_assessment_17aug.md": [
+      389,
+      "docs"
+    ],
+    "guide/deferred_consolidated.md": [
+      1081,
+      "docs"
+    ],
+    "guide/segment_14B_email_infrastructure.md": [
+      401,
+      "docs"
+    ],
+    "guide/segment_18Q_blob.md": [
+      352,
+      "docs"
+    ],
+    "guide/segment_18R_ux_refine.md": [
+      1052,
+      "docs"
+    ],
+    "guide/segment_18S_security.md": [
+      467,
+      "docs"
+    ],
+    "guide/segment_19_spec_documentation.md": [
+      186,
+      "docs"
+    ],
+    "guide/segment_20_operator_polish_and_documentation.md": [
+      94,
+      "docs"
+    ],
+    "guide/todo_master.md": [
+      2125,
+      "docs"
+    ],
+    "requirements.txt": [
+      12,
+      "docs"
+    ],
+    "rrw_design_rationale.md": [
+      226,
+      "docs"
+    ],
+    "spec/README.md": [
+      91,
+      "docs"
+    ],
+    "spec/architecture.md": [
+      688,
+      "docs"
+    ],
+    "spec/archive/README.md": [
+      13,
+      "docs"
+    ],
+    "spec/archive/group_scoped_instruments.md": [
+      555,
+      "docs"
+    ],
+    "spec/archive/instrument_builder.md": [
+      326,
+      "docs"
+    ],
+    "spec/archive/instruments.md": [
+      601,
+      "docs"
+    ],
+    "spec/archive/rule_based_assignment.md": [
+      443,
+      "docs"
+    ],
+    "spec/assignments.md": [
+      742,
+      "docs"
+    ],
+    "spec/audience_and_identity_model.md": [
+      395,
+      "docs"
+    ],
+    "spec/blob_storage.md": [
+      224,
+      "docs"
+    ],
+    "spec/csv_contracts.md": [
+      529,
+      "docs"
+    ],
+    "spec/domain_assumptions.md": [
+      65,
+      "docs"
+    ],
+    "spec/email_infra_options.md": [
+      674,
+      "docs"
+    ],
+    "spec/extract_data.md": [
+      1073,
+      "docs"
+    ],
+    "spec/instruments.md": [
+      942,
+      "docs"
+    ],
+    "spec/lifecycle.md": [
+      642,
+      "docs"
+    ],
+    "spec/operations_pages.md": [
+      295,
+      "docs"
+    ],
+    "spec/operator_button_audit.md": [
+      665,
+      "docs"
+    ],
+    "spec/operator_ui_concept.md": [
+      384,
+      "docs"
+    ],
+    "spec/participant_model.md": [
+      187,
+      "docs"
+    ],
+    "spec/preview_hub.md": [
+      149,
+      "docs"
+    ],
+    "spec/quick_setup_card_spec.md": [
+      147,
+      "docs"
+    ],
+    "spec/reconciling_regeneration.md": [
+      194,
+      "docs"
+    ],
+    "spec/rehydrate.md": [
+      468,
+      "docs"
+    ],
+    "spec/reviewer-surface.md": [
+      1302,
+      "docs"
+    ],
+    "spec/role_navigator.md": [
+      128,
+      "docs"
+    ],
+    "spec/roundtrip_coverage.md": [
+      223,
+      "docs"
+    ],
+    "spec/rrw_functional_spec.md": [
+      2206,
+      "docs"
+    ],
+    "spec/session_home.md": [
+      590,
+      "docs"
+    ],
+    "spec/sessions_overview.md": [
+      259,
+      "docs"
+    ],
+    "spec/settings_inventory.md": [
+      645,
+      "docs"
+    ],
+    "spec/setup_pages.md": [
+      611,
+      "docs"
+    ],
+    "spec/sort_by_reviewee.md": [
+      317,
+      "docs"
+    ],
+    "spec/timezone_display.md": [
+      121,
+      "docs"
+    ],
+    "spec/ui_elements.md": [
+      627,
+      "docs"
+    ],
+    "spec/validate_page.md": [
+      396,
+      "docs"
+    ],
+    "spec/visibility_policy.md": [
+      184,
+      "docs"
+    ],
+    "spec/visual_style_general.md": [
+      208,
+      "docs"
+    ],
+    "spec/visual_style_rrw.md": [
+      820,
+      "docs"
+    ],
+    "spec/workflow_card.md": [
+      802,
+      "docs"
+    ],
+    "tests/_sqlite_schema.py": [
+      24,
+      "tests"
+    ],
+    "tests/conftest.py": [
+      110,
+      "tests"
+    ],
+    "tests/db/__init__.py": [
+      0,
+      "tests"
+    ],
+    "tests/db/test_drop_unpopulated_pair_context.py": [
+      261,
+      "tests"
+    ],
+    "tests/db/test_models.py": [
+      253,
+      "tests"
+    ],
+    "tests/db/test_segment_10b1_backfill.py": [
+      93,
+      "tests"
+    ],
+    "tests/db/test_segment_18j_pr_i_inline_rf_bounds.py": [
+      161,
+      "tests"
+    ],
+    "tests/db/test_segment_18j_pr_iii_a_fk_nullable.py": [
+      115,
+      "tests"
+    ],
+    "tests/db/test_self_review_consolidate_backfill.py": [
+      349,
+      "tests"
+    ],
+    "tests/integration/__init__.py": [
+      0,
+      "tests"
+    ],
+    "tests/integration/_display_field_helpers.py": [
+      134,
+      "tests"
+    ],
+    "tests/integration/_feature_toggles.py": [
+      38,
+      "tests"
+    ],
+    "tests/integration/_full_matrix.py": [
+      128,
+      "tests"
+    ],
+    "tests/integration/_full_preview.py": [
+      36,
+      "tests"
+    ],
+    "tests/integration/conftest.py": [
+      187,
+      "tests"
+    ],
+    "tests/integration/test_assignment_context_drop.py": [
+      155,
+      "tests"
+    ],
+    "tests/integration/test_assignment_routes.py": [
+      525,
+      "tests"
+    ],
+    "tests/integration/test_assignments_next_action_return_to.py": [
+      478,
+      "tests"
+    ],
+    "tests/integration/test_assignments_operations_page.py": [
+      410,
+      "tests"
+    ],
+    "tests/integration/test_assignments_page_generate.py": [
+      349,
+      "tests"
+    ],
+    "tests/integration/test_assignments_per_instrument_self_reviews.py": [
+      437,
+      "tests"
+    ],
+    "tests/integration/test_assignments_sort.py": [
+      199,
+      "tests"
+    ],
+    "tests/integration/test_band1_not_set_gate.py": [
+      472,
+      "tests"
+    ],
+    "tests/integration/test_by_instrument_bundle_route.py": [
+      377,
+      "tests"
+    ],
+    "tests/integration/test_by_instrument_group_scoped_self_review.py": [
+      209,
+      "tests"
+    ],
+    "tests/integration/test_chrome_breadcrumbs.py": [
+      214,
+      "tests"
+    ],
+    "tests/integration/test_chrome_invitations_state.py": [
+      152,
+      "tests"
+    ],
+    "tests/integration/test_data_shapes_routes.py": [
+      668,
+      "tests"
+    ],
+    "tests/integration/test_display_field_routes.py": [
+      288,
+      "tests"
+    ],
+    "tests/integration/test_display_timezone.py": [
+      451,
+      "tests"
+    ],
+    "tests/integration/test_email_outbox_schema.py": [
+      140,
+      "tests"
+    ],
+    "tests/integration/test_email_template_editor.py": [
+      473,
+      "tests"
+    ],
+    "tests/integration/test_entity_metadata_routes.py": [
+      262,
+      "tests"
+    ],
+    "tests/integration/test_error_handlers.py": [
+      135,
+      "tests"
+    ],
+    "tests/integration/test_extract_data_scaffold.py": [
+      497,
+      "tests"
+    ],
+    "tests/integration/test_extract_data_tab.py": [
+      775,
+      "tests"
+    ],
+    "tests/integration/test_extracts_audit_log_route.py": [
+      139,
+      "tests"
+    ],
+    "tests/integration/test_extracts_bundle_route.py": [
+      108,
+      "tests"
+    ],
+    "tests/integration/test_extracts_observers_route.py": [
+      206,
+      "tests"
+    ],
+    "tests/integration/test_extracts_participant_tokens_route.py": [
+      270,
+      "tests"
+    ],
+    "tests/integration/test_extracts_responses_bundle_route.py": [
+      174,
+      "tests"
+    ],
+    "tests/integration/test_extracts_responses_route.py": [
+      250,
+      "tests"
+    ],
+    "tests/integration/test_extracts_roster_routes.py": [
+      295,
+      "tests"
+    ],
+    "tests/integration/test_extracts_settings_route.py": [
+      183,
+      "tests"
+    ],
+    "tests/integration/test_field_label_rendering.py": [
+      426,
+      "tests"
+    ],
+    "tests/integration/test_field_labels_editor_routes.py": [
+      315,
+      "tests"
+    ],
+    "tests/integration/test_field_labels_resolver.py": [
+      445,
+      "tests"
+    ],
+    "tests/integration/test_import_config_route.py": [
+      165,
+      "tests"
+    ],
+    "tests/integration/test_import_routes.py": [
+      733,
+      "tests"
+    ],
+    "tests/integration/test_instrument_builder_routes.py": [
+      6912,
+      "tests"
+    ],
+    "tests/integration/test_instrument_group_kind_schema.py": [
+      69,
+      "tests"
+    ],
+    "tests/integration/test_instrument_page_break_routes.py": [
+      285,
+      "tests"
+    ],
+    "tests/integration/test_instrument_reorder_and_breaks.py": [
+      431,
+      "tests"
+    ],
+    "tests/integration/test_instrument_rule_set_id_schema.py": [
+      163,
+      "tests"
+    ],
+    "tests/integration/test_instrument_sort_display_fields_schema.py": [
+      97,
+      "tests"
+    ],
+    "tests/integration/test_instrument_view_policy_routes.py": [
+      631,
+      "tests"
+    ],
+    "tests/integration/test_instruments_index_collapsible.py": [
+      115,
+      "tests"
+    ],
+    "tests/integration/test_instruments_reorder_route.py": [
+      280,
+      "tests"
+    ],
+    "tests/integration/test_instruments_sort_column.py": [
+      502,
+      "tests"
+    ],
+    "tests/integration/test_invalidation_on_setup_mutation.py": [
+      291,
+      "tests"
+    ],
+    "tests/integration/test_invitations.py": [
+      1087,
+      "tests"
+    ],
+    "tests/integration/test_invite_offsets_editor.py": [
+      511,
+      "tests"
+    ],
+    "tests/integration/test_logging_observability.py": [
+      118,
+      "tests"
+    ],
+    "tests/integration/test_me_dashboard_cross_role.py": [
+      191,
+      "tests"
+    ],
+    "tests/integration/test_me_dashboard_links.py": [
+      279,
+      "tests"
+    ],
+    "tests/integration/test_me_results_collation_placeholders.py": [
+      197,
+      "tests"
+    ],
+    "tests/integration/test_me_surface_role_chips.py": [
+      238,
+      "tests"
+    ],
+    "tests/integration/test_next_action_generate_resolver.py": [
+      251,
+      "tests"
+    ],
+    "tests/integration/test_observer_collation_body.py": [
+      950,
+      "tests"
+    ],
+    "tests/integration/test_observers_crud_dedup.py": [
+      76,
+      "tests"
+    ],
+    "tests/integration/test_observers_page.py": [
+      824,
+      "tests"
+    ],
+    "tests/integration/test_operator_allowlist_gate.py": [
+      622,
+      "tests"
+    ],
+    "tests/integration/test_operator_lobby_access_gate.py": [
+      274,
+      "tests"
+    ],
+    "tests/integration/test_operator_preview_surface.py": [
+      385,
+      "tests"
+    ],
+    "tests/integration/test_operator_sessions.py": [
+      902,
+      "tests"
+    ],
+    "tests/integration/test_operator_settings.py": [
+      474,
+      "tests"
+    ],
+    "tests/integration/test_operator_smoke.py": [
+      50,
+      "tests"
+    ],
+    "tests/integration/test_outbox_sys_admin_relax.py": [
+      111,
+      "tests"
+    ],
+    "tests/integration/test_participant_deps.py": [
+      204,
+      "tests"
+    ],
+    "tests/integration/test_pr2c_coordination.py": [
+      369,
+      "tests"
+    ],
+    "tests/integration/test_preview_route.py": [
+      212,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_card.py": [
+      572,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_new_session.py": [
+      243,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_observers_slot.py": [
+      215,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_relationships_slot.py": [
+      316,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_scaffold.py": [
+      379,
+      "tests"
+    ],
+    "tests/integration/test_quick_setup_settings_slot.py": [
+      289,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_analyzer.py": [
+      190,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_commit_route.py": [
+      263,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_orchestrator.py": [
+      160,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_scaffold.py": [
+      46,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_stash.py": [
+      82,
+      "tests"
+    ],
+    "tests/integration/test_rehydrate_validate_route.py": [
+      165,
+      "tests"
+    ],
+    "tests/integration/test_relationships_page.py": [
+      341,
+      "tests"
+    ],
+    "tests/integration/test_relationships_page_filter.py": [
+      277,
+      "tests"
+    ],
+    "tests/integration/test_relationships_page_mutate.py": [
+      683,
+      "tests"
+    ],
+    "tests/integration/test_relationships_save.py": [
+      271,
+      "tests"
+    ],
+    "tests/integration/test_relationships_schema.py": [
+      213,
+      "tests"
+    ],
+    "tests/integration/test_reminder_offsets_editor.py": [
+      531,
+      "tests"
+    ],
+    "tests/integration/test_reminders.py": [
+      462,
+      "tests"
+    ],
+    "tests/integration/test_replace_assignments_per_instrument.py": [
+      613,
+      "tests"
+    ],
+    "tests/integration/test_responses_import.py": [
+      278,
+      "tests"
+    ],
+    "tests/integration/test_responses_service.py": [
+      461,
+      "tests"
+    ],
+    "tests/integration/test_return_to_origin.py": [
+      78,
+      "tests"
+    ],
+    "tests/integration/test_reviewee_results_body.py": [
+      1746,
+      "tests"
+    ],
+    "tests/integration/test_reviewees_crud.py": [
+      431,
+      "tests"
+    ],
+    "tests/integration/test_reviewees_page.py": [
+      370,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_dashboard_per_instrument.py": [
+      207,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_recall_submission.py": [
+      315,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_response_flow.py": [
+      2349,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_save_consolidated.py": [
+      297,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_summary.py": [
+      417,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_summary_column_widths.py": [
+      483,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_summary_visibility.py": [
+      740,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_closed_visibility.py": [
+      434,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_display_fields.py": [
+      246,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_page_validity.py": [
+      193,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_single_page.py": [
+      385,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_sort.py": [
+      345,
+      "tests"
+    ],
+    "tests/integration/test_reviewer_surface_sort_cookies.py": [
+      329,
+      "tests"
+    ],
+    "tests/integration/test_reviewers_crud.py": [
+      572,
+      "tests"
+    ],
+    "tests/integration/test_reviewers_page_filter.py": [
+      348,
+      "tests"
+    ],
+    "tests/integration/test_reviewers_page_mutate.py": [
+      491,
+      "tests"
+    ],
+    "tests/integration/test_reviewers_profile_link.py": [
+      223,
+      "tests"
+    ],
+    "tests/integration/test_route_persistence.py": [
+      451,
+      "tests"
+    ],
+    "tests/integration/test_schedule_ordering_routes.py": [
+      289,
+      "tests"
+    ],
+    "tests/integration/test_scheduled_activation.py": [
+      450,
+      "tests"
+    ],
+    "tests/integration/test_scheduled_activation_editor.py": [
+      333,
+      "tests"
+    ],
+    "tests/integration/test_scheduled_invites.py": [
+      439,
+      "tests"
+    ],
+    "tests/integration/test_scheduled_reminders.py": [
+      480,
+      "tests"
+    ],
+    "tests/integration/test_segment_11c_pr3_responses.py": [
+      405,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_followon_pr_alpha.py": [
+      255,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_followon_pr_beta.py": [
+      377,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_followon_pr_delta.py": [
+      273,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_followon_pr_epsilon.py": [
+      394,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_followon_pr_gamma.py": [
+      436,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_pr_b.py": [
+      215,
+      "tests"
+    ],
+    "tests/integration/test_segment_11d_pr_c.py": [
+      469,
+      "tests"
+    ],
+    "tests/integration/test_segment_9_5a.py": [
+      424,
+      "tests"
+    ],
+    "tests/integration/test_self_review_consolidate_pr2.py": [
+      653,
+      "tests"
+    ],
+    "tests/integration/test_self_review_consolidate_pr4.py": [
+      221,
+      "tests"
+    ],
+    "tests/integration/test_self_reviews_active_generation.py": [
+      152,
+      "tests"
+    ],
+    "tests/integration/test_session_anchor_datetimes_schema.py": [
+      87,
+      "tests"
+    ],
+    "tests/integration/test_session_archive.py": [
+      90,
+      "tests"
+    ],
+    "tests/integration/test_session_clone.py": [
+      256,
+      "tests"
+    ],
+    "tests/integration/test_session_detail_restructure.py": [
+      1196,
+      "tests"
+    ],
+    "tests/integration/test_session_display_timezone_schema.py": [
+      70,
+      "tests"
+    ],
+    "tests/integration/test_session_edit_delete.py": [
+      304,
+      "tests"
+    ],
+    "tests/integration/test_session_feature_toggles.py": [
+      331,
+      "tests"
+    ],
+    "tests/integration/test_session_field_label_schema.py": [
+      146,
+      "tests"
+    ],
+    "tests/integration/test_session_instrument_invariant.py": [
+      105,
+      "tests"
+    ],
+    "tests/integration/test_session_lifecycle.py": [
+      615,
+      "tests"
+    ],
+    "tests/integration/test_session_offset_configs_schema.py": [
+      143,
+      "tests"
+    ],
+    "tests/integration/test_session_owners.py": [
+      512,
+      "tests"
+    ],
+    "tests/integration/test_session_previews.py": [
+      555,
+      "tests"
+    ],
+    "tests/integration/test_session_purge.py": [
+      168,
+      "tests"
+    ],
+    "tests/integration/test_session_release_window_routes.py": [
+      281,
+      "tests"
+    ],
+    "tests/integration/test_session_retention_schema.py": [
+      96,
+      "tests"
+    ],
+    "tests/integration/test_session_self_reviews_active_schema.py": [
+      61,
+      "tests"
+    ],
+    "tests/integration/test_session_tags_schema.py": [
+      90,
+      "tests"
+    ],
+    "tests/integration/test_session_tags_service.py": [
+      127,
+      "tests"
+    ],
+    "tests/integration/test_session_validate_page.py": [
+      460,
+      "tests"
+    ],
+    "tests/integration/test_set_sort_display_fields.py": [
+      348,
+      "tests"
+    ],
+    "tests/integration/test_settings_csv_drops_df_label.py": [
+      198,
+      "tests"
+    ],
+    "tests/integration/test_setup_tables_sort.py": [
+      465,
+      "tests"
+    ],
+    "tests/integration/test_sys_admin_audit_log.py": [
+      825,
+      "tests"
+    ],
+    "tests/integration/test_sys_admin_chrome.py": [
+      340,
+      "tests"
+    ],
+    "tests/integration/test_sys_admin_outbox_child.py": [
+      177,
+      "tests"
+    ],
+    "tests/integration/test_sys_admin_users.py": [
+      1285,
+      "tests"
+    ],
+    "tests/integration/test_user_preferences_schema.py": [
+      60,
+      "tests"
+    ],
+    "tests/integration/test_users_is_operator_schema.py": [
+      91,
+      "tests"
+    ],
+    "tests/integration/test_users_is_sys_admin_schema.py": [
+      96,
+      "tests"
+    ],
+    "tests/integration/test_validate_gate_split.py": [
+      292,
+      "tests"
+    ],
+    "tests/integration/test_validation_routes.py": [
+      127,
+      "tests"
+    ],
+    "tests/integration/test_workflow_card_context_builder.py": [
+      443,
+      "tests"
+    ],
+    "tests/integration/test_workflow_row3_buttons.py": [
+      215,
+      "tests"
+    ],
+    "tests/integration/test_workflow_super_button.py": [
+      767,
+      "tests"
+    ],
+    "tests/test_auth_routes.py": [
+      142,
+      "tests"
+    ],
+    "tests/test_health.py": [
+      25,
+      "tests"
+    ],
+    "tests/test_identity.py": [
+      176,
+      "tests"
+    ],
+    "tests/unit/__init__.py": [
+      0,
+      "tests"
+    ],
+    "tests/unit/test_apply_session_config.py": [
+      1032,
+      "tests"
+    ],
+    "tests/unit/test_assignment_matches_cohort.py": [
+      351,
+      "tests"
+    ],
+    "tests/unit/test_assignments_full_matrix.py": [
+      139,
+      "tests"
+    ],
+    "tests/unit/test_audit_detail_schema.py": [
+      313,
+      "tests"
+    ],
+    "tests/unit/test_audit_events_extract.py": [
+      226,
+      "tests"
+    ],
+    "tests/unit/test_audit_helpers.py": [
+      250,
+      "tests"
+    ],
+    "tests/unit/test_by_instrument_cohort_filter.py": [
+      354,
+      "tests"
+    ],
+    "tests/unit/test_classify_self_review.py": [
+      524,
+      "tests"
+    ],
+    "tests/unit/test_cohort_rule_view_helpers.py": [
+      176,
+      "tests"
+    ],
+    "tests/unit/test_collation_cohort_stats.py": [
+      313,
+      "tests"
+    ],
+    "tests/unit/test_config_validation.py": [
+      47,
+      "tests"
+    ],
+    "tests/unit/test_csv_imports.py": [
+      211,
+      "tests"
+    ],
+    "tests/unit/test_data_shape_extract.py": [
+      1276,
+      "tests"
+    ],
+    "tests/unit/test_data_shape_model.py": [
+      159,
+      "tests"
+    ],
+    "tests/unit/test_data_shapes_service.py": [
+      565,
+      "tests"
+    ],
+    "tests/unit/test_data_shapes_settings_roundtrip.py": [
+      372,
+      "tests"
+    ],
+    "tests/unit/test_date_formatting.py": [
+      204,
+      "tests"
+    ],
+    "tests/unit/test_display_field_builder.py": [
+      400,
+      "tests"
+    ],
+    "tests/unit/test_display_fields.py": [
+      517,
+      "tests"
+    ],
+    "tests/unit/test_email_preview_tabs.py": [
+      268,
+      "tests"
+    ],
+    "tests/unit/test_email_send.py": [
+      214,
+      "tests"
+    ],
+    "tests/unit/test_email_templates.py": [
+      291,
+      "tests"
+    ],
+    "tests/unit/test_entity_metadata_extract.py": [
+      979,
+      "tests"
+    ],
+    "tests/unit/test_entity_stats_extract.py": [
+      447,
+      "tests"
+    ],
+    "tests/unit/test_extract_data_route_helpers.py": [
+      82,
+      "tests"
+    ],
+    "tests/unit/test_filter_typeahead.py": [
+      153,
+      "tests"
+    ],
+    "tests/unit/test_group_kind_codec.py": [
+      81,
+      "tests"
+    ],
+    "tests/unit/test_instrument_builder.py": [
+      404,
+      "tests"
+    ],
+    "tests/unit/test_instrument_view_policy_model.py": [
+      144,
+      "tests"
+    ],
+    "tests/unit/test_lifecycle_display.py": [
+      45,
+      "tests"
+    ],
+    "tests/unit/test_logging_config.py": [
+      68,
+      "tests"
+    ],
+    "tests/unit/test_observer_cohort_materializer.py": [
+      291,
+      "tests"
+    ],
+    "tests/unit/test_observer_cohort_rule_schema.py": [
+      150,
+      "tests"
+    ],
+    "tests/unit/test_observer_model.py": [
+      138,
+      "tests"
+    ],
+    "tests/unit/test_observers_cohort_rule_roundtrip.py": [
+      98,
+      "tests"
+    ],
+    "tests/unit/test_observers_service_cohort_rule.py": [
+      249,
+      "tests"
+    ],
+    "tests/unit/test_order_rows_by_sort_spec.py": [
+      220,
+      "tests"
+    ],
+    "tests/unit/test_participant_tokens.py": [
+      114,
+      "tests"
+    ],
+    "tests/unit/test_participants_phase1_columns.py": [
+      87,
+      "tests"
+    ],
+    "tests/unit/test_participants_service.py": [
+      94,
+      "tests"
+    ],
+    "tests/unit/test_preview_picker_context.py": [
+      290,
+      "tests"
+    ],
+    "tests/unit/test_relationships_extract.py": [
+      219,
+      "tests"
+    ],
+    "tests/unit/test_relationships_parse.py": [
+      211,
+      "tests"
+    ],
+    "tests/unit/test_replace_assignments_self_reviews_active.py": [
+      147,
+      "tests"
+    ],
+    "tests/unit/test_responses_extract.py": [
+      1034,
+      "tests"
+    ],
+    "tests/unit/test_return_to.py": [
+      88,
+      "tests"
+    ],
+    "tests/unit/test_reviewee_results_summarize_field.py": [
+      112,
+      "tests"
+    ],
+    "tests/unit/test_reviewees_extract.py": [
+      151,
+      "tests"
+    ],
+    "tests/unit/test_reviewer_surface_group_collapse.py": [
+      157,
+      "tests"
+    ],
+    "tests/unit/test_reviewer_view_helpers.py": [
+      262,
+      "tests"
+    ],
+    "tests/unit/test_reviewers_extract.py": [
+      167,
+      "tests"
+    ],
+    "tests/unit/test_roles_super_admin.py": [
+      69,
+      "tests"
+    ],
+    "tests/unit/test_roster_status_roundtrip.py": [
+      146,
+      "tests"
+    ],
+    "tests/unit/test_rule_preview_view.py": [
+      128,
+      "tests"
+    ],
+    "tests/unit/test_rules_engine.py": [
+      479,
+      "tests"
+    ],
+    "tests/unit/test_rules_fields.py": [
+      65,
+      "tests"
+    ],
+    "tests/unit/test_rules_pair_context_engine.py": [
+      348,
+      "tests"
+    ],
+    "tests/unit/test_rules_pair_context_grammar.py": [
+      180,
+      "tests"
+    ],
+    "tests/unit/test_rules_predicates.py": [
+      252,
+      "tests"
+    ],
+    "tests/unit/test_rules_quotas.py": [
+      155,
+      "tests"
+    ],
+    "tests/unit/test_rules_schemas.py": [
+      365,
+      "tests"
+    ],
+    "tests/unit/test_scheduled_events_scaffolding.py": [
+      247,
+      "tests"
+    ],
+    "tests/unit/test_session_config_io.py": [
+      607,
+      "tests"
+    ],
+    "tests/unit/test_session_lifecycle_release_window.py": [
+      117,
+      "tests"
+    ],
+    "tests/unit/test_validate_page_n.py": [
+      72,
+      "tests"
+    ],
+    "tests/unit/test_validation.py": [
+      322,
+      "tests"
+    ],
+    "tests/unit/test_validation_15E_rules.py": [
+      433,
+      "tests"
+    ],
+    "tests/unit/test_validation_per_instrument.py": [
+      310,
+      "tests"
+    ],
+    "tests/unit/test_visibility_policies_resolver.py": [
+      189,
+      "tests"
+    ]
+  },
+  "prior": "codebase_assessment_17aug"
+}
