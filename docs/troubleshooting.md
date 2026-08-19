@@ -25,15 +25,18 @@ the Application **Log stream** and look for the
 the full traceback. Reproduce locally with the same input if the
 log isn't enough.
 
-## Signed-in user bounced to `/request-access`
+## Signed-in user bounced to `/me` from an operator page
 
 The user is authenticated but not on the operator/sys-admin
-allowlist (`users.is_operator` / `is_sys_admin` both false). This
-is expected for non-operators. If it's wrong for this user, the
-usual cause is the **first-sign-in-only** bootstrap rule: editing
-`OPERATOR_EMAILS` does not re-promote an account that already has
-a `users` row. See `docs/deployment_dev.md` → "Operator /
-sys-admin allowlist bootstrap" for the backfill `UPDATE`.
+allowlist (`users.is_operator` / `is_sys_admin` both false), so an
+operator URL bounces them to `/me` (18R Item 6; was `/request-access`,
+retired). This is expected for non-operators — `/me` shows their reviews
+(or an empty dashboard), and `/about` carries the "how to get access"
+note. If the bounce is wrong for this user, the usual cause is the
+**first-sign-in-only** bootstrap rule: editing `OPERATOR_EMAILS` does
+not re-promote an account that already has a `users` row. See
+`docs/deployment_dev.md` → "Operator / sys-admin allowlist bootstrap"
+for the backfill `UPDATE`.
 
 ## App won't start after a config change
 

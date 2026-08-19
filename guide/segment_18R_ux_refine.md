@@ -1017,24 +1017,32 @@ and archive"** — one gate, one route, the same purge options:
 
 ---
 
-## Item 6 — Landing pages (audit landed; approach TBD)
+## Item 6 — Landing pages — ✅ shipped 2026-08-19 (PRs #1982, #1983)
 
-The app's entry routes need work: `/` serves a raw JSON status blob,
-`GET /operator` 404s, and there's no role-aware routing, so a
-freshly-signed-in user lands nowhere useful without knowing the deep URL
-(`/operator/sessions` or `/me`). `/me` (the cross-role participant
-dashboard) is a good landing; `/operator/sessions` (lobby) works but the
-operator chrome has no "home" affordance.
+The app's entry routes were dead ends: `/` served a raw JSON status blob,
+`GET /operator` 404'd, and there was no role-aware routing. Fixed as a
+**role-aware redirect** (the chosen approach over a home hub — a sys-admin
+is always also an operator, so the dual-role hub wasn't needed):
 
-**Audit + recommendations: `guide/landing_pages.md`** (the standing doc for
-this item). It covers the current entry routes, the four gaps, the URLs
-that want a landing page (`/`, `/operator`), and a redirect-vs-home-hub
-recommendation (lean: a home **hub** at `/` — the only clean answer to the
-dual-role operator-and-reviewer case — plus a `/operator` → lobby
-redirect), with a landing-by-role decision table and scaffold-first slices.
+- **`GET /`** — role-aware **302** (not 301; the target follows the user's
+  role): operator **or** sys-admin → `/operator/sessions`, everyone else
+  (participant or nobody) → `/me`. The JSON `/` retired; liveness / metadata
+  live only at `/health`.
+- **`GET /operator` (+ trailing slash)** → 302 `/operator/sessions`, defined
+  app-level and unguarded so the lobby's own `require_operator` is the single
+  gate.
+- **Non-operator wandering to an operator page** → bounced to `/me` (the
+  `OperatorAllowlistDenied` handler; was `/request-access`).
+- **`/request-access` retired** (route + template); its "signed in but no
+  access" role folded into **`/about`**, which now carries the signed-in
+  identity + operator contact + an "Access" card linking to `/me`.
+- **About link added to the participant (`/me`) chrome** (PR #1983), matching
+  the operator chrome's top-right user menu.
 
-Approach not yet chosen — settle the open questions in `landing_pages.md`
-§6 before building.
+Audit → decisions → slice log: `guide/landing_pages.md`. Spec updated:
+`spec/operator_ui_concept.md` (entry & landing routing),
+`spec/reviewer-surface.md` + `spec/visual_style_rrw.md` (the `/me` chrome
+About link).
 
 ## Future items (add as they come up)
 

@@ -295,7 +295,7 @@ start — restart after changes.
 | `SYS_ADMIN_EMAILS` | NUS sys-admin (admin) email(s), comma-separated |
 | `OPERATOR_EMAILS` | NUS operator email(s), comma-separated |
 | `SUPER_ADMIN_EMAILS` | NUS **super-admin** email(s), comma-separated — the protected top tier (Segment 18S). Derived, not stored; the only actor who can promote/demote admins, and can't be demoted/removed in-app. Optional but recommended (guarantees ≥1 protected admin). |
-| `OPERATOR_CONTACT_EMAIL` | contact shown on `/request-access` (optional) |
+| `OPERATOR_CONTACT_EMAIL` | contact shown on `/about`'s access card (optional) |
 | `ALLOW_FAKE_AUTH` | **`false`** (must never be true in a deployed env) |
 | `LOG_LEVEL` | `INFO` |
 | `SMTP_ENCRYPTION_KEY` | Fernet key (only once email infra is in use) |
@@ -328,7 +328,7 @@ operator**, so **one setting seeds a full-rights admin** — no DB surgery:
 3. That person **signs in once** with that email. On **first sign-in** the
    bootstrap stamps `is_sys_admin = true` on their new `users` row
    (`app/web/deps.py` → `get_or_create_user`). They land on the Sessions
-   lobby (not `/request-access`) with the Sys Admin link present.
+   lobby (not bounced to `/me`) with the Sys Admin link present.
 
 > **Order matters — set it *before* their first sign-in.** The bootstrap
 > fires **only** on first sign-in; once a `users` row exists the env var is
@@ -399,7 +399,7 @@ than start clean:
 - [ ] `GET /auth/me` → 302 to **NUS** Microsoft sign-in; after sign-in,
   returns your NUS `email` / `name` / `provider: "aad"`.
 - [ ] A **whitelisted** NUS email lands on the **Sessions lobby**; a
-  non-whitelisted one is bounced to `/request-access`.
+  non-whitelisted one is bounced to `/me`.
 - [ ] `migrate` (or manual migration) applied cleanly — `alembic_version` is
   at head on the NUS DB.
 - [ ] Full smoke test: create a session → CSV-import a couple of
