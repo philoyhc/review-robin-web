@@ -97,7 +97,7 @@ Pydantic, Jinja2 with no JS build step, Azure Easy Auth (fake-auth locally).
   invariant, and kept the per-concern routes (`/band2-state`, `/column-widths`,
   `/display-fields/order`, `/identity`, `/fields/save`) as test/fixture infra.
   Item 3 (open) added a taller description box + a Link 2 operator-cycle
-  reorder. Design decisions in `guide/segment_18R_ux_refine.md`.
+  reorder. Design decisions in `guide/archive/segment_18R_ux_refine.md`.
 - **Three-tier role model — 18S** (PRs #1925 → #1928, 2026-08-17). New
   `app/auth/roles.py` (53, `is_super_admin` / `effective_super_admin_emails`
   config-derived resolver), a `super_admin_emails` config field +

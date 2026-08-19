@@ -1,7 +1,7 @@
 # 18R Item 2 — testing checklist
 
 Manual / end-to-end things to verify for the Save·Lock harmonization
-ladder (`guide/segment_18R_ux_refine.md`). The `pytest` suite covers the
+ladder (`guide/archive/segment_18R_ux_refine.md`). The `pytest` suite covers the
 rendered markup and the persistence routes; **this file is for the
 behaviour the suite can't exercise** — real browser interaction (the
 client lock-state machine, `inert`, CSS swaps, fetch-Save, drag/resize)

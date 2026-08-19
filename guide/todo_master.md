@@ -1942,7 +1942,7 @@ Landing order: **G0** → F / G1 / G2 (independent) → G3 → H.
 
 ---
 
-### Segment 18R — UX refinement — Item 1 done 2026-08-16 (PR #1899); Item 2 done 2026-08-17 (PR ladder 1–7, cleanup #1921) (detailed plan: `guide/segment_18R_ux_refine.md`)
+### Segment 18R — UX refinement — ✅ complete / closed 2026-08-19 (Item 1 done 2026-08-16 PR #1899; Item 2 done 2026-08-17 PR ladder 1–7, cleanup #1921) (detailed plan archived: `guide/archive/segment_18R_ux_refine.md`)
 
 Holding segment for operator-UX identity / label polish + interaction-model
 rationalization on the Instruments page.
@@ -1987,13 +1987,13 @@ hardening. Stays open for further security items.
   require real `session_operators` membership; Diagnostics "Manage" routes
   through the audited self-add/adopt door. (18R Part 2 Item 4 built on this.)
 
-### Segment 18R Part 2 — UX refinement (Items 3–5) — Items 4 + 5 done 2026-08-18 (detailed plan: `guide/segment_18R_ux_refine.md`)
+### Segment 18R Part 2 — UX refinement (Items 3–6) — ✅ complete / closed 2026-08-19 (Items 4 + 5 done 2026-08-18; Item 3 closed + Item 6 done 2026-08-19) (detailed plan archived: `guide/archive/segment_18R_ux_refine.md`)
 
 Continues the 18R holding segment beyond the Items 1–2 work above.
 
-- **Item 3 (open; multiple tweaks shipped 2026-08-16 → 08-18)** — open-ended
-  home for small operator-UX polish (started on the instrument card, now also
-  cross-page). Shipped: taller preview-band description box + Link 2 cycle
+- **Item 3 (closed 2026-08-19; multiple tweaks shipped 2026-08-16 → 08-18)** —
+  was the open-ended home for small operator-UX polish (started on the
+  instrument card, later cross-page); closed with the segment. Shipped: taller preview-band description box + Link 2 cycle
   reorder (#1923); app-wide `resize: vertical` textareas; sessions-lobby
   single-select header harmonized to "1 session selected" (#1968); removed the
   redundant "Pause the session before archiving." note (#1968); chrome status
