@@ -38,7 +38,7 @@ timezone), not in the per-session chrome.
 | `/operator/sys-admin/sessions` | Admin Sessions Diagnostics — also hosts the per-session **Outbox** drill-in. |
 | `/operator/sys-admin/sessions/{id}/outbox` | Inline per-session email outbox (sys-admin-gated). |
 | `/operator/sys-admin/sessions/{id}/audit-log` | Per-session audit-log viewer with filter strip + per-row pretty-printer. |
-| `/operator/sys-admin/users` | Workspace user / role management — admit, revoke, promote, demote, invite. |
+| `/operator/sys-admin/users` | Workspace user / role management (three-tier operator ⊂ admin ⊂ super-admin, Segment 18S) — admit, revoke, promote, demote, remove, with super-admin-actor + protected-super-admin guards. |
 
 #### Per-session pages
 
@@ -48,25 +48,25 @@ session and pulling data out.
 
 | URL suffix | Row | Surface |
 |---|---|---|
-| (root) | — | **Session Home** — Workflow card, Quick Setup card, Extract Setup card, Next Action card. |
-| `edit` | — | **Session details** — name / code / deadline / timezone / per-session toggles (`relationships_enabled`, `observers_enabled`) + Owners section (add / remove with `last_owner` race guard via `SELECT ... FOR UPDATE`). |
+| (root) | — | **Session Home** — Workflow / Next Action card, the **Session details** config card (name / code / deadline / timezone / per-session toggles `relationships_enabled` / `observers_enabled` + Owners, with a `last_owner` race guard via `SELECT ... FOR UPDATE`), Quick Setup card, and Danger Zone. Session-details config displays and edits **inline** via a `?editing=1` display↔edit swap; the standalone Edit page retired in 18R Item 4 (`/edit` 301-redirects here). |
 | `reviewers` | Setup | **Reviewers** — per-row CRUD + bulk CSV import + bulk status flips. |
 | `reviewees` | Setup | **Reviewees** — same shape; identifier may be email or opaque token. |
 | `relationships` | Setup | **Relationships** — pair-context tags driving rule-engine cross-pair predicates. Tab gated by `relationships_enabled`. |
 | `observers` | Setup | **Observers** — opt-in fourth roster, gated by `observers_enabled`. Each Observer carries a **Cohort match rule** (multi-predicate, AND/OR; e.g. `reviewer.tag1 IS THE SAME AS observer.tag1`) authored on this page. |
-| `instruments` | Setup | **Instruments** — per-instrument card with Bands 1+2+3. Band 1 authors the assignment rule; Band 2 is the operator-side reviewer-surface preview; Band 3 hosts the Response Fields table with inline `data_type` + bounds. Group-scoped instruments (one reviewer answer per group of reviewees) are authorable via `Add group instrument`; a group instrument requires a pinned rule before it can open. The **Replicate** button clones a card's content into a new instrument after the source. |
+| `instruments` | Setup | **Instruments** — per-instrument card with Bands 1+2+3. Band 1 authors the assignment rule; Band 2 is the operator-side reviewer-surface preview; Band 3 hosts the Response Fields table with inline `data_type` + bounds. Group-scoped instruments (one reviewer answer per group of reviewees) are configured **on the card** — a group boundary + unit-of-review in Band 1; a group instrument requires a pinned rule before it can open. New instruments are added via **+Instrument** (the legacy `Add instrument` / `Add group instrument` buttons retired); **+Page break** inserts a reviewer-surface page break, and **Replicate** clones a card's content into a new instrument after the source. |
 | `setupinvite` | Setup | **Email Template** — per-template (Invitation / Reminder / Responses-received) override of subject + body + CC + BCC, with the canonical merge tags (`$reviewer_name`, `$session_name`, `$deadline`, `$help_contact`, plus `$invite_url` on Invitation / Reminder and `$submitted_at` on Responses-received). |
 | `assignments` | Operations | **Assignments** — per-instrument status table (rule selection + self-review inclusion per instrument) + Assignments preview table (12-column shape: Reviewer · R Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include). "Search by" dropdown, row-select checkboxes, bulk include / exclude buttons. |
 | `validate` | Operations | **Validate** — find-and-fix surface with severity filter chip strip + per-issue Fix-on-Setup deep links. |
-| `previews` | Operations | **Previews** — Reviewer Experience Preview hub: tabbed email previews + iframed reviewer-surface card for an operator-picked reviewer. |
+| `previews` | Operations | **Previews** — Reviewer Experience Preview hub: tabbed email previews + a full reviewer-surface preview (`/preview-surface`; the sandboxed-iframe card retired in Segment 18Q) for an operator-picked reviewer. |
 | `invitations` | Operations | **Manage Invitations** — reviewer-centric table covering both invitation status and per-reviewer review progress. |
 | `responses` | Operations | **Responses** — reviewee-centric coverage view classifying each reviewee per `monitoring.AT_RISK_THRESHOLDS`. |
 | `extract-data` | Operations | **Extract data** — response-data shaping pipeline (per-instrument lens cards + Data shaper) + Token keys deanonymization extract (`participant_tokens.csv`). |
 
-#### Session Home cards
-
+- **Session details card** displays the session's config (name / code / deadline / timezone / per-session toggles + Owners) and edits it **inline** via a `?editing=1` display↔edit swap — the standalone Edit page retired in 18R Item 4.
 - **Quick Setup card** wires Reviewers / Reviewees / Relationships / Session settings slots (plus an Observers slot when `observers_enabled` is on) over the existing per-entity import pipelines, behind a single Lock / Unlock toggle. Two-column layout — Reviewers + Reviewees on the left, the rest on the right. One bottom-right Submit button runs every slot whose file is attached. Unlock state resets when the operator navigates away. The Settings slot posts to `/operator/sessions/{id}/import-config`, applying the 3-column Settings CSV via `apply_session_config`.
-- **Extract Setup card** ships **five-or-six live CSV downloads** plus a Zip-all in a 2-column layout — left column for per-entity rosters (Reviewers / Reviewees / Relationships), right column for session-level outputs (Session settings / Responses, plus Observers when `observers_enabled` is on). The Zip-all row delivers `{code}_bundle.zip` over the whole porting set. Audit data sits behind the Sys Admin gate rather than appearing on either operator-side extracts surface.
+- **Danger Zone** — Delete data + Delete session, at the bottom-right of Home (moved off the retired Edit page).
+
+The **Extract Setup card** (five-or-six live CSV downloads — per-entity rosters + session-level Settings / Responses, plus Observers when `observers_enabled`, with a Zip-all `{code}_bundle.zip`) **relocated to the Extract data Operations page** in 18R Item 4; it is no longer a Session Home card. Audit data stays behind the Sys Admin gate rather than appearing on either operator-side extracts surface.
 
 #### Session lifecycle
 
@@ -168,8 +168,7 @@ README:
   `status.md`, `security_posture.md`, `database.md`,
   `local_setup.md`, `deployment_dev.md`, plus the operations
   set (`operations_runbook.md`, `troubleshooting.md`,
-  `backup_restore.md`, `known_limitations.md`,
-  `security_posture.md`).
+  `backup_restore.md`, `known_limitations.md`).
 - **[`guide/`](guide/)** — forward-looking plans, segment
   workplans, todos ([`guide/README.md`](guide/README.md)).
   Shipped segment plans live in
