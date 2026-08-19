@@ -201,15 +201,34 @@ four-template banner build is logged in `guide/deferred_consolidated.md`
 
 **This closes the entire route sweep, R1–R11.**
 
+### Item 8 — U1 / U2 / U4: UI-vocabulary batch (button styling) — ✅ done 2026-08-19
+
+The template/CSS-only "button vocabulary" batch. Best verified on the
+dev slot after deploy (the test suite doesn't exercise button classes).
+
+- **U1** — every routine in-editor **Save** is now Secondary: the four
+  operator row-edit Saves, the reviewer-surface `Save`, and the
+  sessions-lobby expander `Save`. The reviewer-surface **`Submit`**
+  stays Primary as the page's single main affirmative — a clean
+  Save/Discard-secondary → Submit-primary hierarchy.
+- **U2** — the two banner Cancels styled `.btn secondary`
+  (`next_action_card.html`, `instruments_index.html` ×2) → `.btn alert`,
+  matching `session_validate.html`.
+- **U4** — the no-op `.btn primary` token dropped everywhere: the U1
+  row-Saves became `.btn secondary`; the two reviewer Download buttons
+  became bare `.btn` (visual no-op). No `btn primary` remains.
+
+Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **UI-vocabulary sweep (U1–U8).** Spec-backed and largely mechanical:
-  Save→Secondary, banner Cancel→`.btn alert`, one delete-confirm
-  mechanism (U3 carries real safety weight — do it deliberately), drop
-  the no-op `.btn primary` token, one "Clear" label, one abandon-edits
-  verb. Refresh `spec/operator_button_audit.md` in the same slice.
+- **UI sweep — remaining (U3, U5–U8).** U3 (unify the delete-confirm
+  mechanism — carries real safety weight, done deliberately), U5+U6 (the
+  amber `danger-solid` for archive/purge), U7 (one filter-reset label),
+  U8 (one abandon-edits verb). Refresh `spec/operator_button_audit.md` /
+  `spec/domain_assumptions.md` with the button-vocab changes.
 - **View-adapter dedup (V1–V6).** `instrument_heading` reimplemented
   inline (V1 — pairs naturally with the S1/V4 instrument-label work),
   the progress-pill macro (V2), the user-display-label property (V3),

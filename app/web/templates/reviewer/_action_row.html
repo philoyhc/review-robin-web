@@ -29,11 +29,11 @@
 <div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
   <div class="rs-action-row-controls">
     {% if preview_mode %}
-      <button class="btn" type="button" disabled aria-disabled="true">Save</button>
+      <button class="btn secondary" type="button" disabled aria-disabled="true">Save</button>
       <button class="btn secondary" type="button" disabled aria-disabled="true">Discard</button>
       <button class="btn" type="button" disabled aria-disabled="true">Submit</button>
     {% else %}
-      <button class="btn" type="submit" data-rs-save>Save</button>
+      <button class="btn secondary" type="submit" data-rs-save>Save</button>
       <a class="btn secondary"
          href="/me/sessions/{{ session.id }}/{{ current_page_n }}"
          data-rs-discard>Discard</a>

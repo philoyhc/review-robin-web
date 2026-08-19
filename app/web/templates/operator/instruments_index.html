@@ -347,10 +347,10 @@
            lands the operator back at where they were before the
            banner appeared. Slice 4d / banner-scroll convention. #}
         {% if editing_instrument_id %}
-          <a class="btn secondary"
+          <a class="btn alert"
              href="/operator/sessions/{{ session.id }}/instruments?editing={{ editing_instrument_id }}#instrument-{{ editing_instrument_id }}">Cancel</a>
         {% else %}
-          <a class="btn secondary"
+          <a class="btn alert"
              href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
         {% endif %}
       </div>
