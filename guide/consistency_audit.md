@@ -75,10 +75,14 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     reimpls → the canonical helper) + V4 (the hand-rolled instrument
     friendly-label sites → the canonical `_instrument_label`; the
     CSV-safe positioned variants kept as named helpers).
-    **Still open:** V2, V3, V5, V6.
+  - **Item 14**: V2 — shared `views.progress_pill(state) → (css, label)`
+    helper (Jinja global on both template instances); the four
+    hand-rolled progress pills now render one canonical colour semantic
+    (blue/amber/green) + one enum spelling.
+    **Still open:** V3, V5, V6.
 
 **Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI **U1–U10 ✅**
-· View **V1, V4 ✅** · remaining: **V2, V3, V5, V6**.
+· View **V1, V2, V4 ✅** · remaining: **V3, V5, V6**.
 
 ---
 
@@ -88,7 +92,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 |---|-----|------|----------|
 | ✅ **S1** | 🔴 High | Service | `_instrument_label` has two implementations with **different fallbacks** — same instrument shows two different names |
 | ✅ **V1** | 🔴 High | View | `instrument_heading` reimplemented inline in two view modules; single-instrument fallback diverges (`name` vs `description`) |
-| **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
+| ✅ **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
 | ✅ **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
 | ✅ **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
 | ✅ **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
@@ -566,7 +570,20 @@ even names `instrument_heading` as the thing it mirrors, then
 re-implements it). **Fix:** both call `instrument_heading(...).title`, or
 extract a `heading_title_only(...)` in `_instruments.py`.
 
-### V2 🔴 Reviewer-progress pill rendered inconsistently in 4 templates
+### V2 🔴 Reviewer-progress pill rendered inconsistently in 4 templates — ✅ done (19B Item 14)
+
+**Fixed:** new shared `views.progress_pill(state) → (css, label)` helper
+(`_progress.py`), registered as a Jinja global on both the operator and
+reviewer template instances. All four templates (`reviewer/dashboard`,
+`operator/session_invitations`, `…_reviewer_detail`,
+`reviewer/review_surface`) now render `<span class="pill {{ p.css }}">`
+from it. One canonical colour semantic — **blue = not started, amber =
+in progress, green = submitted/complete** — closes the drift (was:
+"submitted" blue on operator invitations, "not started" amber on the
+surface). The helper normalises **both enum spellings** (underscore
+`in_progress` and space `in progress`), closing the vocabulary split.
+The page-level `complete` state keeps its own label (distinct from
+`submitted`). Best eyeballed on the dev slot. (Original finding below.)
 
 The *value* is well-sourced (`ReviewerSessionState.pill_state`,
 `responses/_core.py:735,833`, via `monitoring.ReviewerProgress.pill_state`).

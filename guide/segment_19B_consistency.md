@@ -310,12 +310,25 @@ The instrument-label family — folds together with S1 (the same
 Verification: full suite green (2,680 passed, 17 skipped); ruff clean;
 no import cycles.
 
+### Item 14 — V2: one progress-pill helper — ✅ done 2026-08-19
+
+New `app/web/views/_progress.py::progress_pill(state) → ProgressPill(css,
+label)`, registered as a Jinja global on both the operator and reviewer
+template instances. The four hand-rolled progress pills
+(`reviewer/dashboard`, `operator/session_invitations`,
+`…_reviewer_detail`, `reviewer/review_surface`) now render
+`<span class="pill {{ p.css }}">` from it. One canonical colour semantic
+(**blue = not started · amber = in progress · green = submitted /
+complete**) closes the drift; the helper normalises **both enum
+spellings** (`in_progress` and `in progress`), closing the vocabulary
+split. The page-level `complete` state keeps its own label. Two tests
+updated for the new canonical rendering. Full suite green; ruff clean.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
-- **View-adapter dedup — remaining (V2, V3, V5, V6).** The progress-pill
-  macro (V2), the `User.display_label` property (V3), and the smaller
-  predicate/pluralization dedup (V5, V6).
+- **View-adapter dedup — remaining (V3, V5, V6).** The `User.display_label`
+  property (V3), and the smaller predicate/pluralization dedup (V5, V6).
 
 ## Hard dependencies
 

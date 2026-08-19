@@ -95,8 +95,9 @@
           {% endif %}
           {% for ps in page_statuses %}
             <li>
-              <span class="pill {% if ps.state == 'submitted' or ps.state == 'complete' %}pill-success{% elif ps.state == 'in_progress' %}pill-warning{% else %}pill-empty{% endif %}">
-                {{ ps.label }}: {{ ps.state | replace('_', ' ') }}
+              {% set p = progress_pill(ps.state) %}
+              <span class="pill {{ p.css }}">
+                {{ ps.label }}: {{ p.label }}
               </span>
             </li>
           {% endfor %}
