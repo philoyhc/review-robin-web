@@ -3,90 +3,68 @@
   "config": "auto-detected",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "72cf281",
-    "since": "75eea4e",
-    "merge_commits": 48,
-    "non_merge_commits": 60,
+    "head": "88b93c8",
+    "since": "72cf281",
+    "merge_commits": 26,
+    "non_merge_commits": 28,
     "pr_numbers": [
-      1931,
-      1932,
-      1933,
-      1934,
-      1935,
-      1936,
-      1937,
-      1938,
-      1939,
-      1940,
-      1941,
-      1942,
-      1943,
-      1944,
-      1945,
-      1946,
-      1947,
-      1948,
-      1949,
-      1950,
-      1951,
-      1952,
-      1953,
-      1954,
-      1955,
-      1956,
-      1957,
-      1958,
-      1959,
-      1960,
-      1961,
-      1962,
-      1963,
-      1964,
-      1965,
-      1966,
-      1967,
-      1968,
-      1969,
-      1970,
-      1971,
-      1972,
-      1973,
-      1974,
-      1975,
-      1976,
-      1977,
-      1978
+      1979,
+      1980,
+      1981,
+      1982,
+      1983,
+      1984,
+      1985,
+      1986,
+      1987,
+      1988,
+      1989,
+      1990,
+      1991,
+      1992,
+      1993,
+      1994,
+      1995,
+      1996,
+      1997,
+      1998,
+      1999,
+      2000,
+      2001,
+      2002,
+      2003,
+      2004
     ],
-    "pr_range": "#1931\u2013#1978",
-    "first_date": "2026-08-17",
+    "pr_range": "#1979\u2013#2004",
+    "first_date": "2026-08-19",
     "last_date": "2026-08-19"
   },
   "areas": {
     "docs": {
-      "files": 200,
-      "loc": 91109
+      "files": 204,
+      "loc": 93247
     },
     "production": {
-      "files": 192,
-      "loc": 55313
+      "files": 197,
+      "loc": 55394
     },
     "migrations": {
       "files": 77,
       "loc": 6772
     },
     "templates": {
-      "files": 59,
-      "loc": 21825
+      "files": 58,
+      "loc": 21808
     },
     "tests": {
-      "files": 250,
-      "loc": 87263
+      "files": 251,
+      "loc": 87363
     }
   },
   "biggest_production": [
     {
       "path": "app/web/routes_operator/_instruments.py",
-      "loc": 1268,
+      "loc": 1247,
       "area": "production"
     },
     {
@@ -111,7 +89,7 @@
     },
     {
       "path": "app/services/responses/_core.py",
-      "loc": 976,
+      "loc": 974,
       "area": "production"
     },
     {
@@ -121,17 +99,17 @@
     },
     {
       "path": "app/services/instruments/_response_fields.py",
-      "loc": 966,
+      "loc": 964,
       "area": "production"
     },
     {
       "path": "app/services/validation.py",
-      "loc": 958,
+      "loc": 954,
       "area": "production"
     },
     {
       "path": "app/services/csv_imports.py",
-      "loc": 942,
+      "loc": 940,
       "area": "production"
     }
   ],
@@ -577,7 +555,7 @@
       "production"
     ],
     "app/db/models/user.py": [
-      98,
+      109,
       "production"
     ],
     "app/db/session.py": [
@@ -589,7 +567,7 @@
       "production"
     ],
     "app/main.py": [
-      99,
+      118,
       "production"
     ],
     "app/schemas/__init__.py": [
@@ -649,11 +627,11 @@
       "production"
     ],
     "app/services/assignments/_self_review.py": [
-      342,
+      343,
       "production"
     ],
     "app/services/assignments/_shared.py": [
-      24,
+      26,
       "production"
     ],
     "app/services/audit.py": [
@@ -665,7 +643,7 @@
       "production"
     ],
     "app/services/csv_imports.py": [
-      942,
+      940,
       "production"
     ],
     "app/services/data_shapes.py": [
@@ -674,6 +652,10 @@
     ],
     "app/services/date_formatting.py": [
       205,
+      "production"
+    ],
+    "app/services/email_identity.py": [
+      46,
       "production"
     ],
     "app/services/email_send.py": [
@@ -725,7 +707,7 @@
       "production"
     ],
     "app/services/extracts/responses_import.py": [
-      352,
+      354,
       "production"
     ],
     "app/services/extracts/reviewees_extract.py": [
@@ -753,7 +735,7 @@
       "production"
     ],
     "app/services/instruments/_band2.py": [
-      669,
+      662,
       "production"
     ],
     "app/services/instruments/_display_fields.py": [
@@ -773,11 +755,11 @@
       "production"
     ],
     "app/services/instruments/_response_fields.py": [
-      966,
+      964,
       "production"
     ],
     "app/services/instruments/_state.py": [
-      92,
+      108,
       "production"
     ],
     "app/services/invitations.py": [
@@ -789,7 +771,7 @@
       "production"
     ],
     "app/services/monitoring.py": [
-      294,
+      309,
       "production"
     ],
     "app/services/observer_cohort.py": [
@@ -797,7 +779,7 @@
       "production"
     ],
     "app/services/observers.py": [
-      473,
+      414,
       "production"
     ],
     "app/services/operator_settings.py": [
@@ -809,7 +791,7 @@
       "production"
     ],
     "app/services/participants.py": [
-      45,
+      35,
       "production"
     ],
     "app/services/permissions.py": [
@@ -821,7 +803,7 @@
       "production"
     ],
     "app/services/relationships.py": [
-      849,
+      786,
       "production"
     ],
     "app/services/responses/__init__.py": [
@@ -829,7 +811,7 @@
       "production"
     ],
     "app/services/responses/_core.py": [
-      976,
+      974,
       "production"
     ],
     "app/services/responses/_group_reconciliation.py": [
@@ -837,11 +819,19 @@
       "production"
     ],
     "app/services/reviewees.py": [
-      480,
+      421,
       "production"
     ],
     "app/services/reviewers.py": [
-      407,
+      348,
+      "production"
+    ],
+    "app/services/roster_bulk.py": [
+      97,
+      "production"
+    ],
+    "app/services/roster_status.py": [
+      46,
       "production"
     ],
     "app/services/rules/__init__.py": [
@@ -849,7 +839,7 @@
       "production"
     ],
     "app/services/rules/engine.py": [
-      438,
+      437,
       "production"
     ],
     "app/services/rules/fields.py": [
@@ -965,7 +955,7 @@
       "production"
     ],
     "app/services/session_rehydrate.py": [
-      640,
+      641,
       "production"
     ],
     "app/services/session_tags.py": [
@@ -976,16 +966,20 @@
       420,
       "production"
     ],
+    "app/services/text.py": [
+      17,
+      "production"
+    ],
     "app/services/users.py": [
       516,
       "production"
     ],
     "app/services/validation.py": [
-      958,
+      954,
       "production"
     ],
     "app/services/visibility_policies.py": [
-      460,
+      461,
       "production"
     ],
     "app/web/__init__.py": [
@@ -1001,7 +995,7 @@
       "production"
     ],
     "app/web/deps.py": [
-      396,
+      397,
       "production"
     ],
     "app/web/error_handlers.py": [
@@ -1013,11 +1007,11 @@
       "production"
     ],
     "app/web/routes_about.py": [
-      35,
+      43,
       "production"
     ],
     "app/web/routes_auth.py": [
-      70,
+      55,
       "production"
     ],
     "app/web/routes_health.py": [
@@ -1029,7 +1023,7 @@
       "production"
     ],
     "app/web/routes_operator/_assignments.py": [
-      456,
+      457,
       "production"
     ],
     "app/web/routes_operator/_extract_data.py": [
@@ -1041,19 +1035,19 @@
       "production"
     ],
     "app/web/routes_operator/_instruments.py": [
-      1268,
+      1247,
       "production"
     ],
     "app/web/routes_operator/_instruments_band2.py": [
-      321,
+      289,
       "production"
     ],
     "app/web/routes_operator/_instruments_pagination.py": [
-      181,
+      171,
       "production"
     ],
     "app/web/routes_operator/_lobby.py": [
-      446,
+      434,
       "production"
     ],
     "app/web/routes_operator/_operations.py": [
@@ -1073,7 +1067,7 @@
       "production"
     ],
     "app/web/routes_operator/_session_home.py": [
-      685,
+      694,
       "production"
     ],
     "app/web/routes_operator/_settings.py": [
@@ -1101,7 +1095,7 @@
       "production"
     ],
     "app/web/routes_operator/_shared.py": [
-      542,
+      639,
       "production"
     ],
     "app/web/routes_operator/_sys_admin.py": [
@@ -1109,7 +1103,7 @@
       "production"
     ],
     "app/web/routes_operator/_workflow.py": [
-      560,
+      525,
       "production"
     ],
     "app/web/routes_reviewer/__init__.py": [
@@ -1133,7 +1127,7 @@
       "production"
     ],
     "app/web/routes_reviewer/_shared.py": [
-      230,
+      250,
       "production"
     ],
     "app/web/routes_reviewer/_summary.py": [
@@ -1145,7 +1139,7 @@
       "production"
     ],
     "app/web/routes_reviewer/_surface/_context.py": [
-      645,
+      641,
       "production"
     ],
     "app/web/routes_reviewer/_surface/_group_collapse.py": [
@@ -1165,11 +1159,11 @@
       "templates"
     ],
     "app/web/templates/about.html": [
-      21,
+      39,
       "templates"
     ],
     "app/web/templates/base.html": [
-      3297,
+      3314,
       "templates"
     ],
     "app/web/templates/error.html": [
@@ -1265,7 +1259,7 @@
       "templates"
     ],
     "app/web/templates/operator/session_detail.html": [
-      503,
+      512,
       "templates"
     ],
     "app/web/templates/operator/session_extract_data.html": [
@@ -1273,11 +1267,11 @@
       "templates"
     ],
     "app/web/templates/operator/session_invitations.html": [
-      205,
+      204,
       "templates"
     ],
     "app/web/templates/operator/session_invitations_reviewer_detail.html": [
-      83,
+      78,
       "templates"
     ],
     "app/web/templates/operator/session_new.html": [
@@ -1348,10 +1342,6 @@
       399,
       "templates"
     ],
-    "app/web/templates/request_access.html": [
-      53,
-      "templates"
-    ],
     "app/web/templates/reviewer/_action_row.html": [
       63,
       "templates"
@@ -1365,7 +1355,7 @@
       "templates"
     ],
     "app/web/templates/reviewer/_top_bar.html": [
-      29,
+      33,
       "templates"
     ],
     "app/web/templates/reviewer/collation.html": [
@@ -1373,7 +1363,7 @@
       "templates"
     ],
     "app/web/templates/reviewer/dashboard.html": [
-      161,
+      154,
       "templates"
     ],
     "app/web/templates/reviewer/invite_mismatch.html": [
@@ -1389,7 +1379,7 @@
       "templates"
     ],
     "app/web/templates/reviewer/review_surface.html": [
-      656,
+      657,
       "templates"
     ],
     "app/web/templates/reviewer/summary.html": [
@@ -1397,7 +1387,7 @@
       "templates"
     ],
     "app/web/views/__init__.py": [
-      297,
+      300,
       "production"
     ],
     "app/web/views/_assignments.py": [
@@ -1421,7 +1411,7 @@
       "production"
     ],
     "app/web/views/_invitations.py": [
-      133,
+      134,
       "production"
     ],
     "app/web/views/_observer_collation.py": [
@@ -1436,24 +1426,28 @@
       460,
       "production"
     ],
+    "app/web/views/_progress.py": [
+      49,
+      "production"
+    ],
     "app/web/views/_quick_setup.py": [
       457,
       "production"
     ],
     "app/web/views/_responses.py": [
-      55,
+      56,
       "production"
     ],
     "app/web/views/_reviewee_results.py": [
-      766,
+      775,
       "production"
     ],
     "app/web/views/_reviewer_summary.py": [
-      579,
+      581,
       "production"
     ],
     "app/web/views/_setup.py": [
-      297,
+      300,
       "production"
     ],
     "app/web/views/_sort.py": [
@@ -1533,7 +1527,7 @@
       "docs"
     ],
     "docs/troubleshooting.md": [
-      68,
+      71,
       "docs"
     ],
     "guide/README.md": [
@@ -1545,7 +1539,7 @@
       "docs"
     ],
     "guide/archive/README.md": [
-      160,
+      165,
       "docs"
     ],
     "guide/archive/assumptions_ui_legacy.md": [
@@ -1572,6 +1566,10 @@
       452,
       "docs"
     ],
+    "guide/archive/codebase_assessment_17aug.md": [
+      389,
+      "docs"
+    ],
     "guide/archive/codebase_assessment_17may.md": [
       235,
       "docs"
@@ -1590,6 +1588,10 @@
     ],
     "guide/archive/codebase_assessment_30may.md": [
       375,
+      "docs"
+    ],
+    "guide/archive/consistency_audit.md": [
+      748,
       "docs"
     ],
     "guide/archive/deferred_infra.md": [
@@ -1622,6 +1624,10 @@
     ],
     "guide/archive/instrument_card_ux_audit.md": [
       194,
+      "docs"
+    ],
+    "guide/archive/landing_pages.md": [
+      204,
       "docs"
     ],
     "guide/archive/low_intensity_workplan_review_robin_web.md": [
@@ -2008,6 +2014,10 @@
       534,
       "docs"
     ],
+    "guide/archive/segment_19B_consistency.md": [
+      370,
+      "docs"
+    ],
     "guide/archive/self_review_consolidate.md": [
       737,
       "docs"
@@ -2044,12 +2054,12 @@
       161,
       "docs"
     ],
-    "guide/codebase_assessment_17aug.md": [
-      389,
+    "guide/codebase_assessment_19aug.md": [
+      452,
       "docs"
     ],
     "guide/deferred_consolidated.md": [
-      1081,
+      1177,
       "docs"
     ],
     "guide/segment_14B_email_infrastructure.md": [
@@ -2061,15 +2071,15 @@
       "docs"
     ],
     "guide/segment_18R_ux_refine.md": [
-      1052,
+      1079,
       "docs"
     ],
     "guide/segment_18S_security.md": [
       467,
       "docs"
     ],
-    "guide/segment_19_spec_documentation.md": [
-      186,
+    "guide/segment_19A_spec_documentation.md": [
+      192,
       "docs"
     ],
     "guide/segment_20_operator_polish_and_documentation.md": [
@@ -2077,7 +2087,7 @@
       "docs"
     ],
     "guide/todo_master.md": [
-      2125,
+      2272,
       "docs"
     ],
     "requirements.txt": [
@@ -2093,7 +2103,7 @@
       "docs"
     ],
     "spec/architecture.md": [
-      688,
+      738,
       "docs"
     ],
     "spec/archive/README.md": [
@@ -2161,7 +2171,7 @@
       "docs"
     ],
     "spec/operator_ui_concept.md": [
-      384,
+      392,
       "docs"
     ],
     "spec/participant_model.md": [
@@ -2185,7 +2195,7 @@
       "docs"
     ],
     "spec/reviewer-surface.md": [
-      1302,
+      1305,
       "docs"
     ],
     "spec/role_navigator.md": [
@@ -2225,7 +2235,7 @@
       "docs"
     ],
     "spec/ui_elements.md": [
-      627,
+      645,
       "docs"
     ],
     "spec/validate_page.md": [
@@ -2241,7 +2251,7 @@
       "docs"
     ],
     "spec/visual_style_rrw.md": [
-      820,
+      821,
       "docs"
     ],
     "spec/workflow_card.md": [
@@ -2349,7 +2359,7 @@
       "tests"
     ],
     "tests/integration/test_chrome_breadcrumbs.py": [
-      214,
+      215,
       "tests"
     ],
     "tests/integration/test_chrome_invitations_state.py": [
@@ -2445,7 +2455,7 @@
       "tests"
     ],
     "tests/integration/test_instrument_builder_routes.py": [
-      6912,
+      6915,
       "tests"
     ],
     "tests/integration/test_instrument_group_kind_schema.py": [
@@ -2489,11 +2499,15 @@
       "tests"
     ],
     "tests/integration/test_invitations.py": [
-      1087,
+      1089,
       "tests"
     ],
     "tests/integration/test_invite_offsets_editor.py": [
       511,
+      "tests"
+    ],
+    "tests/integration/test_landing_pages.py": [
+      103,
       "tests"
     ],
     "tests/integration/test_logging_observability.py": [
@@ -2533,7 +2547,7 @@
       "tests"
     ],
     "tests/integration/test_operator_allowlist_gate.py": [
-      622,
+      596,
       "tests"
     ],
     "tests/integration/test_operator_lobby_access_gate.py": [
@@ -2661,7 +2675,7 @@
       "tests"
     ],
     "tests/integration/test_return_to_origin.py": [
-      78,
+      80,
       "tests"
     ],
     "tests/integration/test_reviewee_results_body.py": [
@@ -2693,7 +2707,7 @@
       "tests"
     ],
     "tests/integration/test_reviewer_summary.py": [
-      417,
+      421,
       "tests"
     ],
     "tests/integration/test_reviewer_summary_column_widths.py": [
@@ -2801,7 +2815,7 @@
       "tests"
     ],
     "tests/integration/test_segment_9_5a.py": [
-      424,
+      427,
       "tests"
     ],
     "tests/integration/test_self_review_consolidate_pr2.py": [
@@ -2829,7 +2843,7 @@
       "tests"
     ],
     "tests/integration/test_session_detail_restructure.py": [
-      1196,
+      1197,
       "tests"
     ],
     "tests/integration/test_session_display_timezone_schema.py": [
@@ -2853,7 +2867,7 @@
       "tests"
     ],
     "tests/integration/test_session_lifecycle.py": [
-      615,
+      621,
       "tests"
     ],
     "tests/integration/test_session_offset_configs_schema.py": [
@@ -2961,7 +2975,7 @@
       "tests"
     ],
     "tests/test_health.py": [
-      25,
+      19,
       "tests"
     ],
     "tests/test_identity.py": [
@@ -3241,7 +3255,7 @@
       "tests"
     ],
     "tests/unit/test_validation_per_instrument.py": [
-      310,
+      317,
       "tests"
     ],
     "tests/unit/test_visibility_policies_resolver.py": [
@@ -3249,5 +3263,5 @@
       "tests"
     ]
   },
-  "prior": "codebase_assessment_17aug"
+  "prior": "codebase_assessment_19aug"
 }
