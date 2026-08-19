@@ -220,15 +220,26 @@ dev slot after deploy (the test suite doesn't exercise button classes).
 
 Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
 
+### Item 9 — U5 + U6: amber `danger-solid` for archive — ✅ done 2026-08-19
+
+Maintainer-chosen resolution (differentiate, not collapse):
+`.btn.danger-solid` became a **filled amber** style — distinct from the
+outline-red `.btn.destructive` (deletes) and the outline-amber
+`.btn.alert` (lock recovery). All archive/purge actions
+(`next_action_card` "Archive session", `sessions_list` "Purge and
+archive"/"…all") now use it; the Acknowledge-and-activate confirm
+buttons already used `danger-solid`, so they pick up the amber too — a
+"proceed with caution" reading. `spec/ui_elements.md` refreshed (button
+table + hover + confirm-banner notes). Template/CSS-only — best
+eyeballed on the dev slot; full suite green.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **UI sweep — remaining (U3, U5–U8).** U3 (unify the delete-confirm
-  mechanism — carries real safety weight, done deliberately), U5+U6 (the
-  amber `danger-solid` for archive/purge), U7 (one filter-reset label),
-  U8 (one abandon-edits verb). Refresh `spec/operator_button_audit.md` /
-  `spec/domain_assumptions.md` with the button-vocab changes.
+- **UI sweep — remaining (U3, U7, U8).** U3 (unify the delete-confirm
+  mechanism — carries real safety weight, done deliberately), U7 (one
+  filter-reset label), U8 (one abandon-edits verb).
 - **View-adapter dedup (V1–V6).** `instrument_heading` reimplemented
   inline (V1 — pairs naturally with the S1/V4 instrument-label work),
   the progress-pill macro (V2), the user-display-label property (V3),
