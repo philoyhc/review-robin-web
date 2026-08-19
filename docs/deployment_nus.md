@@ -15,7 +15,7 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > different subscription + tenant. Companion runbooks:
 > `docs/azure_github_setup.md` (full greenfield Azure+GitHub setup),
 > `docs/azure_provision.md` (SKU/pricing shopping list),
-> `docs/cli_setup.md` (workstation CLIs), `guide/deferred_infra.md`
+> `docs/cli_setup.md` (workstation CLIs), `guide/deferred_consolidated.md`
 > (hardening deferred until a real deployment forces it).
 
 ---
@@ -123,7 +123,7 @@ NUS subscription. Can run in parallel while personal Azure keeps serving.
   - **Key Vault** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY` here and wire
     the App Settings as **Key Vault references** through the Web App's
     managed identity, removing plaintext secrets from App Settings (the
-    direction `guide/deferred_infra.md` §1 anticipated). Optional for the
+    direction `guide/deferred_consolidated.md` §1 anticipated). Optional for the
     first deploy; recommended before go-live.
   - **Storage Account** (Block Blob, GPv2) — this is the **Segment 18Q blob
     store**; once NUS is confirmed, 18Q Phase 0 wires to it
@@ -131,7 +131,7 @@ NUS subscription. Can run in parallel while personal Azure keeps serving.
   - **Azure Monitor** (Log Analytics + Application Insights) — point App
     Service diagnostics + application logging here.
 - [ ] **(Optional, if NUS policy)** App Gateway + WAF, private endpoints —
-  see `guide/deferred_infra.md` §1. Add when NUS policy requires.
+  see `guide/deferred_consolidated.md` §1. Add when NUS policy requires.
 
 ---
 

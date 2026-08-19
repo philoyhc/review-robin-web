@@ -175,12 +175,12 @@ README:
   Shipped segment plans live in
   [`guide/archive/`](guide/archive/);
   [`guide/todo_master.md`](guide/todo_master.md) is the
-  roadmap;
-  [`guide/deferred_until_pilot_feedback.md`](guide/deferred_until_pilot_feedback.md)
-  is the parking lot for scoped-but-paused product work waiting
-  on pilot feedback, and
-  [`guide/deferred_infra.md`](guide/deferred_infra.md) is the
-  same for infrastructure / platform work.
+  roadmap; and
+  [`guide/deferred_consolidated.md`](guide/deferred_consolidated.md)
+  is the parking lot for all scoped-but-not-scheduled work —
+  product slices paused on pilot feedback (Part A), deferred
+  infrastructure / platform hardening (Part B), and off-roadmap
+  future possibilities (Part C).
 
 Top-level docs at the repo root: `CLAUDE.md` / `AGENTS.md` (kept
 as byte-identical twins; AI-agent guidance),

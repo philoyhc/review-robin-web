@@ -27,7 +27,7 @@ Public access is enabled with a firewall allow-list:
   / Cloud CLI instead — that's the verified working path today.
 
 VNet integration and private endpoints are deferred infrastructure —
-see `guide/deferred_infra.md` and `docs/security_posture.md`
+see `guide/deferred_consolidated.md` and `docs/security_posture.md`
 ("Deferred hardening").
 
 ## App startup
@@ -94,7 +94,7 @@ staging slot to swap from, a production Postgres server, a GitHub
 gate, and its own OIDC credentials / `DATABASE_URL`) needs the
 Azure portal and is tracked as deferred infrastructure — see
 `docs/security_posture.md` → "Deferred hardening" and
-`guide/deferred_infra.md`. The production deploy workflow is not
+`guide/deferred_consolidated.md`. The production deploy workflow is not
 in the repository yet.
 
 ## Environment variables
@@ -136,7 +136,7 @@ postgresql+psycopg://rrw_app:<password>@<server>.postgres.database.azure.com:543
 ```
 
 Key Vault references for App Settings are deferred infrastructure
-(see `guide/deferred_infra.md`). Until then, rotate by updating
+(see `guide/deferred_consolidated.md`). Until then, rotate by updating
 both secrets together.
 
 ## First-time database bootstrap

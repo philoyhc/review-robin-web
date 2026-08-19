@@ -326,7 +326,7 @@ Per-session owner management ships on the Session Edit page (`/operator/sessions
 
 ### Segment 16C — Richer audit views (MVP) — done 2026-05-11 (PRs #860, #861, #863)
 
-Moves the audit log from "CSV download only" to a sys-admin-gated in-app viewer with filter strip + per-row pretty-printer. Reachable from the Sessions Diagnostics row's Audit log link (now points at the child page rather than the CSV directly). Plan archived: `guide/archive/segment_16C_richer_audit_views.md`. All three post-MVP PRs (4 + 5 + 6 — entity drill-in, cross-session search, Session Home Recent activity card) carved out to `guide/deferred_until_pilot_feedback.md`.
+Moves the audit log from "CSV download only" to a sys-admin-gated in-app viewer with filter strip + per-row pretty-printer. Reachable from the Sessions Diagnostics row's Audit log link (now points at the child page rather than the CSV directly). Plan archived: `guide/archive/segment_16C_richer_audit_views.md`. All three post-MVP PRs (4 + 5 + 6 — entity drill-in, cross-session search, Session Home Recent activity card) carved out to `guide/deferred_consolidated.md`.
 
 - **#860** — PR 1 per-session audit log child page. New `audit.list_events_for_session` reader + `views.build_audit_log_rows` view adapter (8-column projection mirroring the CSV exporter, keyset pagination on `id DESC`, default page size 50). Route `GET /operator/sys-admin/sessions/{id}/audit-log` in `_sys_admin.py`, gated `require_sys_admin`. Template `sys_admin_session_audit_log.html` with the Admin top-nav + back-link chrome conventions + Download CSV button. Sessions Diagnostics row's Audit log link migrates from `/operator/sessions/{id}/export/audit_log.csv` (direct CSV download) to the new child page. CSV route gate tightens from `require_sys_admin_or_session_operator` to `require_sys_admin` since the operator-facing entry point retired with 12B PR 2 → 16A PR 4; existing relaxed-gate test in `test_outbox_sys_admin_relax.py` reshaped accordingly.
 - **#861** — PR 2 filter strip + filtered CSV download. New `AuditFilters` dataclass + shared `_apply_filters` helper composing event-type / severity / actor-email / date-range predicates onto both the viewer and the CSV serializer. URL-param state: `?event_type=` (multi), `?severity=` (multi), `?actor=`, `?from=`, `?to=`. `views.parse_audit_log_filters` + `build_audit_log_filter_form` + `filters_querystring` (stable encoding for pagination + CSV link carry-over). Filter-aware Download CSV button rewrites to embed the active filter query string. `session.audit_log_extracted` audit event grows a `context` slot recording the active filter set on filtered extracts (scalar-only values per the canonical envelope; multi-value slots flatten to comma-joined strings). Layout follow-on commit constrains the table layout (`table-layout: fixed`, per-column widths, `overflow-wrap: anywhere`) so the JSON detail column wraps rather than horizontally bloating; new `{% block extra_head %}` slot in `base.html` so per-page `<style>` rules don't have to ride inside the body.
@@ -652,7 +652,7 @@ column-width parity with `Instrument.column_widths`, and group-row
 identity composition that walks every visible `reviewee.tag_*`
 display field rather than only the boundary tags. Remaining items
 (cell autosave, filter-to-incomplete, return-to-place, chrome
-polish) carved out to `deferred_until_pilot_feedback.md`. Plan
+polish) carved out to `guide/deferred_consolidated.md`. Plan
 archived: `guide/archive/segment_17B_reviewer_surface_refinements.md`.
 
 ---
@@ -744,7 +744,7 @@ workflow-order reshuffle). Plan:
 
 ### Segment 14A — Production hardening (in-app ladder) — done 2026-05-18
 
-Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured JSON logging + observability; global error handling (friendly pages, tracebacks logged not leaked); database index review (composite `ix_audit_events_session_created`); permission + destructive-action audit (no gaps found — recorded in `docs/security_posture.md`); a basic reviewer-surface accessibility pass; a fail-fast config startup check (`validate_critical_settings`); the documentation set (`operations_runbook.md`, `troubleshooting.md`, `backup_restore.md`, `known_limitations.md`, completed `security_posture.md`); and dev-deploy-workflow hardening (a `concurrency` group serialising `build → migrate → deploy`). Azure infrastructure — Key Vault, VNet, staging slot, production environment, the App Insights resource, and the Postgres type migrations — stays deferred; see `guide/deferred_infra.md`. Plan: `guide/archive/segment_14A_production_hardening.md`.
+Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured JSON logging + observability; global error handling (friendly pages, tracebacks logged not leaked); database index review (composite `ix_audit_events_session_created`); permission + destructive-action audit (no gaps found — recorded in `docs/security_posture.md`); a basic reviewer-surface accessibility pass; a fail-fast config startup check (`validate_critical_settings`); the documentation set (`operations_runbook.md`, `troubleshooting.md`, `backup_restore.md`, `known_limitations.md`, completed `security_posture.md`); and dev-deploy-workflow hardening (a `concurrency` group serialising `build → migrate → deploy`). Azure infrastructure — Key Vault, VNet, staging slot, production environment, the App Insights resource, and the Postgres type migrations — stays deferred; see `guide/deferred_consolidated.md`. Plan: `guide/archive/segment_14A_production_hardening.md`.
 
 ---
 
@@ -840,7 +840,7 @@ reminders anchored on End — each with editor wiring on
 Create / Edit Session, a Manage-Invitations effectiveness caption,
 and the cross-cutting Schedule timeline preview. **Parts 4
 (auto-archive) and 5 (scheduled / policy-driven purge)** carved
-to `guide/deferred_until_pilot_feedback.md` on 2026-05-21 — manual
+to `guide/deferred_consolidated.md` on 2026-05-21 — manual
 archive (18A) + operator-triggered purge (18C) cover the per-session
 and bulk needs. Post-MVP Part 3c (targeted reminder cohorts) and
 Part 3d (reminders analytics card) deferred to the same ledger.
@@ -906,7 +906,7 @@ Gap catalog: `guide/archive/new_model_instruments_outstanding.md`
   rule sets retired; `instruments.is_new_model` column + every
   template branch on it collapsed. **Closes Gap 7 / 8 / 9** in
   one wave. Perf followers (Rec B / D2 / D3) carved to
-  `guide/deferred_until_pilot_feedback.md` because pilot rosters
+  `guide/deferred_consolidated.md` because pilot rosters
   haven't surfaced the latency that motivated them.
 - **Wave 6** (PRs **#1449 → #1475**, 2026-05-25 → 2026-05-26) —
   post-takeover polish in five clusters. (A) Wave 5 fallout +
@@ -1901,7 +1901,7 @@ eight sibling per-section modules (`_apply_shared` /
 
 ### Codex P0 — Identity case-normalization — done 2026-06-05 (PRs #1836 → #1839)
 
-Closed the P0 items from the Codex weaknesses assessment (addendum archived to `guide/archive/weaknesses_and_bugs_found_by_codex.md` 2026-06-28; Slice D + Slice E lifted into `guide/deferred_until_pilot_feedback.md`). Per-row roster CRUD and `get_or_create_user` were doing exact-case email comparisons while sibling lookups in `app/services/users.py` and `app/web/routes_operator/_session_home.py` already used `func.lower(...)` — so case-variant pre-seeded rows could produce parallel `User` records on sign-in, and per-row CRUD could admit `Alice@x.com` + `alice@x.com` as separate participant rows in the same session. All five lookups now aligned on case-insensitive comparison.
+Closed the P0 items from the Codex weaknesses assessment (addendum archived to `guide/archive/weaknesses_and_bugs_found_by_codex.md` 2026-06-28; Slice D + Slice E lifted into `guide/deferred_consolidated.md`). Per-row roster CRUD and `get_or_create_user` were doing exact-case email comparisons while sibling lookups in `app/services/users.py` and `app/web/routes_operator/_session_home.py` already used `func.lower(...)` — so case-variant pre-seeded rows could produce parallel `User` records on sign-in, and per-row CRUD could admit `Alice@x.com` + `alice@x.com` as separate participant rows in the same session. All five lookups now aligned on case-insensitive comparison.
 
 - **#1836** — Slices A + B + C in one PR. `app/web/deps.py`'s `get_or_create_user` lookup, `_email_taken` in `app/services/reviewers.py` + `observers.py`, and `_identifier_taken` in `app/services/reviewees.py` all switch to `func.lower(<col>) == value.lower()`. The reviewee path is unconditional, matching the existing CSV in-CSV dedup at `csv_imports.py:330,353`; the `"@"` branch at `csv_imports.py:483,513` is a cross-role collision check, not a within-reviewees policy (the policy was resolved in #1835 ahead of this PR). Side effect: anonymous reviewee identifiers like `Token-AB` and `token-ab` now collide everywhere, matching CSV. Also refreshed the `app/web/routes_reviewer/_results.py` module docstring to describe the live surface (all three modes + Acknowledge per `spec/participant_model.md`) instead of the original Raw-mode-only phase note.
 - **#1837** — Codex P1 follow-up that missed the #1836 merge. The case-insensitive lookup added in #1836 used `.scalar_one_or_none()`, which would crash sign-in with `MultipleResultsFound` if any historical case-variant duplicate `User` rows already existed on the dev slot. Added `.order_by(User.id).limit(1)` so the oldest matching row wins deterministically. (Originally committed as `b26cf82` on the #1836 branch but the PR was merged with only `ab04331`; re-applied here against `main`.)

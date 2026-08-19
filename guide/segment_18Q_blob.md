@@ -4,7 +4,7 @@
 confirmed.** Work does not start until the storage account is finalized and
 blob is confirmed available on the Azure host. Grounded in
 `spec/blob_storage.md` (candidate uses + prioritization) and
-`guide/deferred_infra.md` §1 (the portal-side storage prerequisite).
+`guide/deferred_consolidated.md` §1 (the portal-side storage prerequisite).
 
 > **The plan assumes blob storage is available on the Azure host** — that
 > is the deployment target. But it must be **implemented so every blob
@@ -222,7 +222,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
 - `docs/security_posture.md` / `docs/backup_restore.md` — update the
   "storage is a deferred item / no blob storage configured" notes once the
   seam exists (SAS TTLs, private container, MI-over-keys).
-- `guide/deferred_infra.md` §1 — mark the storage-account + role-assignment
+- `guide/deferred_consolidated.md` §1 — mark the storage-account + role-assignment
   as the active portal prerequisite for this segment.
 - `spec/blob_storage.md` — cross-link this segment; move its "If it lands —
   where it plugs in" from hypothetical to "implemented in 18Q Phase 0."
@@ -327,11 +327,11 @@ Concretely:
 ## Doc impact
 
 - **New:** this file; cross-linked from `spec/blob_storage.md` +
-  `guide/deferred_infra.md` §1 + `guide/todo_master.md` roadmap.
+  `guide/deferred_consolidated.md` §1 + `guide/todo_master.md` roadmap.
 - **Update on Phase 0:** `pyproject.toml`, `requirements.txt`,
   `app/config.py`, `.env.example`, `docs/azure_provision.md` §7,
   `docs/deployment_dev.md`, `docs/local_setup.md`,
-  `docs/security_posture.md`, `guide/deferred_infra.md` §1,
+  `docs/security_posture.md`, `guide/deferred_consolidated.md` §1,
   `.github/workflows/` (+`ci-azurite.yml`).
 - **Update per consumer:** `docs/rehydrate.md` §3.3 (C1),
   `docs/backup_restore.md` (C5), `docs/status.md` (each shipped slice),

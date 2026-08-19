@@ -80,7 +80,7 @@ on both:
 The Postgres-specific upgrades are **deferred** — they are
 destructive, Postgres-only migrations that break the cross-dialect
 contract, so they sit outside the in-app feature work. They are
-tracked in `guide/deferred_infra.md` (the Segment 14A index review
+tracked in `guide/deferred_consolidated.md` (the Segment 14A index review
 deliberately added plain cross-dialect B-tree indexes only).
 
 Do **not** import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
@@ -159,4 +159,4 @@ filter both use — so PR 3 added the composite
 
 Index work here stays **plain cross-dialect B-tree**. Postgres-only
 index types (e.g. `JSONB` GIN) wait on the deferred type
-migrations — see `guide/deferred_infra.md`.
+migrations — see `guide/deferred_consolidated.md`.

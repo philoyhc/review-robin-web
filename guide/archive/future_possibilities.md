@@ -1,5 +1,10 @@
 # Future possibilities
 
+> **Archived 2026-08-19 — superseded by
+> [`guide/deferred_consolidated.md`](../deferred_consolidated.md) Part C.**
+> This file's content was merged verbatim into the consolidated deferred-work
+> ledger. Kept for provenance; the consolidated file is the live reference.
+
 **Aspirational directions that are deliberately *not* on the
 roadmap.**
 

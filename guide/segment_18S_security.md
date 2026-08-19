@@ -9,7 +9,7 @@ segment for **small, self-contained security / authorization
 hardening** on shipped surfaces. Items land as independent slices; the segment
 stays open as a home for further security refinements as they're identified.
 
-> Distinct from `guide/deferred_infra.md` (Azure-portal / platform hardening
+> Distinct from `guide/deferred_consolidated.md` (Azure-portal / platform hardening
 > — Key Vault, VNet, private endpoints) and from `docs/security_posture.md`
 > (the standing description of the current posture). 18S is **in-app**
 > authorization / account-safety work the agent can implement and test.
