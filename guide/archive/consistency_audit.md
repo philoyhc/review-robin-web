@@ -1,5 +1,14 @@
 # Consistency audit — one functionality, many call paths
 
+> **Archived 2026-08-19 — fully remediated.** Every finding (Service
+> S1–S8, Route R1–R11, Template/UX U1–U10, View-adapter V1–V6) was
+> resolved under **Segment 19B**
+> (`guide/archive/segment_19B_consistency.md`), across 15 items / PRs
+> #1987–#2003. Kept as the per-finding record. Two findings closed by
+> decision rather than code: **R3** (deferred — see
+> `guide/deferred_consolidated.md` Part C) and **R1 / R7** (documented as
+> justified conventions in `spec/architecture.md`).
+
 **Audited 2026-08-19 against `main` at `fd4950b`.**
 
 The question this doc answers: *where does Review Robin Web do the same
@@ -21,7 +30,7 @@ below was read directly by an agent; the two highest-severity items
 
 ## Remediation status
 
-Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
+Tracked as **Segment 19B** (`guide/archive/segment_19B_consistency.md`).
 
 - **✅ Service column complete (S1–S8)** — shipped 2026-08-19.
   - **Item 1** (PR #1987): S1 (one instrument label), S2/S3/S4 (the

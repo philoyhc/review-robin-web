@@ -3,11 +3,11 @@
 > **Stub created 2026-05-11** as part of the Stage 4 guide/
 > reorg. **Renamed 19 → 19A on 2026-08-19** when the code-level
 > consistency remediation split off into its own sibling,
-> **Segment 19B** (`guide/segment_19B_consistency.md`). 19A keeps
+> **Segment 19B** (`guide/archive/segment_19B_consistency.md`). 19A keeps
 > the **documentation-hygiene** charter (spec/ + docs/ currency +
 > coverage-gap closure); 19B carries the code-level "same
 > functionality, divergent call paths" fixes from
-> `guide/consistency_audit.md`.
+> `guide/archive/consistency_audit.md`.
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
 get drafted when this segment is picked up.

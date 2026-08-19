@@ -1,15 +1,19 @@
 # Segment 19B — Consistency remediation
 
+> **Archived 2026-08-19 — shipped complete.** Retired to `guide/archive/`
+> once every finding landed. The per-finding catalogue is
+> `guide/archive/consistency_audit.md`.
+
 > **Started + completed 2026-08-19.** The code-level sibling of Segment
 > 19A (documentation hygiene). Where 19A keeps `spec/` and `docs/`
 > current, 19B keeps the **code** internally consistent — it worked
-> through the drift catalogued in `guide/consistency_audit.md`. **All
+> through the drift catalogued in `guide/archive/consistency_audit.md`. **All
 > 29 findings resolved across 15 items (PRs #1987–#2003)** — see the
 > "Segment complete" note at the end.
 
 ## Charter
 
-The 2026-08-19 consistency audit (`guide/consistency_audit.md`) swept
+The 2026-08-19 consistency audit (`guide/archive/consistency_audit.md`) swept
 four seams — service / route / template / view-adapter — for places
 where Review Robin Web does the **same conceptual thing in more than
 one way**: the same business operation invoked through divergent
@@ -350,7 +354,7 @@ cycles.
 Route **R1–R11**, Template/UX **U1–U10**, View-adapter **V1–V6**, across
 15 items / PRs #1987–#2003. Two findings closed by decision rather than
 code (R3 accepted + deferred; R1/R7 documented as justified
-conventions). See `guide/consistency_audit.md` for the per-finding
+conventions). See `guide/archive/consistency_audit.md` for the per-finding
 record.
 
 ## Hard dependencies
@@ -360,7 +364,7 @@ record.
 
 ## Doc impact
 
-- `guide/consistency_audit.md` is the finding index — cite finding ids
+- `guide/archive/consistency_audit.md` is the finding index — cite finding ids
   from each slice; leave the audit itself as the frozen catalogue.
 - `guide/todo_master.md` carries the at-a-glance 19B entry.
 - `docs/status.md` gets a timeline row per shipped slice.

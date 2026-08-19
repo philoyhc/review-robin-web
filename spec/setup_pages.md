@@ -10,7 +10,7 @@ surfaces reachable from the chrome's Setup row:
 | Relationships | `/operator/sessions/{id}/relationships` | `session_relationships.html` |
 | Observers | `/operator/sessions/{id}/observers` | `session_observers.html` |
 | Instruments | `/operator/sessions/{id}/instruments` | `instruments_index.html` |
-| Email Template | `/operator/sessions/{id}/setupinvite` | `session_setupinvite.html` |
+| Email Template | `/operator/sessions/{id}/setup-invite` | `session_setupinvite.html` |
 
 Each Setup Page follows the same shell (chrome + Setup row +
 status strip + a body of cards). The Reviewers, Reviewees,

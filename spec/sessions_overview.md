@@ -13,8 +13,8 @@ archived-sessions child page.
 > page: `GET /operator/sessions/archived` →
 > `sessions_archived.html`. The lobby's POST handlers live in
 > `app/web/routes_operator/_lobby.py`:
-> `delete-selected` / `archive-selected` / `bulk-tags` /
-> `unarchive-selected` / `delete-archived-selected` /
+> `bulk-delete` / `bulk-archive` / `bulk-tags` /
+> `bulk-unarchive` / `bulk-delete-archived` /
 > `{id}/lobby-edit` / `{id}/clone`.
 
 ## Page identity
@@ -117,8 +117,8 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   `<template>`) carrying editable Name / Code / Deadline / Tags
   fields plus action buttons: Save (POSTs `{id}/lobby-edit`),
   Cancel, Duplicate / Duplicate settings only (POST `{id}/clone`),
-  Purge and archive (POST `archive-selected`), and a Delete button
-  gated behind an "Allow delete" checkbox (POST `delete-selected`).
+  Purge and archive (POST `bulk-archive`), and a Delete button
+  gated behind a "Yes, delete" checkbox (POST `bulk-delete`).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
@@ -161,17 +161,17 @@ Post Segment 18A the lobby carries all three:
   live draft session from a complete set of extract CSV files — see
   `spec/rehydrate.md` (Segment 18P Group 2).
 
-## Bulk delete (`delete-selected`)
+## Bulk delete (`bulk-delete`)
 
 The destructive bulk-delete surface lives in the row-expander
 (single or bulk), not a standalone Danger Zone card. The Delete
-button is gated behind an "Allow delete" checkbox
+button is gated behind a "Yes, delete" checkbox
 (`name="confirm" value="true"`) and POSTs to
-`/operator/sessions/delete-selected`.
+`/operator/sessions/bulk-delete`.
 
 ### Submission
 
-`POST /operator/sessions/delete-selected` with form fields:
+`POST /operator/sessions/bulk-delete` with form fields:
 `session_ids: list[int]` (one per ticked checkbox) +
 `confirm: "true"`.
 
@@ -233,11 +233,11 @@ confused, layer a `?skipped=N` flash on top.)
 - **Route handlers** (`app/web/routes_operator/_lobby.py`):
   - `list_sessions` — GET `/operator/sessions`.
   - `archived_sessions` — GET `/operator/sessions/archived`.
-  - `sessions_delete_selected` — POST `/operator/sessions/delete-selected`.
-  - `sessions_archive_selected` — POST `/operator/sessions/archive-selected`.
+  - `sessions_delete_selected` — POST `/operator/sessions/bulk-delete`.
+  - `sessions_archive_selected` — POST `/operator/sessions/bulk-archive`.
   - `sessions_bulk_tags` — POST `/operator/sessions/bulk-tags`.
-  - `sessions_unarchive_selected` — POST `/operator/sessions/unarchive-selected`.
-  - `sessions_delete_archived_selected` — POST `/operator/sessions/delete-archived-selected`.
+  - `sessions_unarchive_selected` — POST `/operator/sessions/bulk-unarchive`.
+  - `sessions_delete_archived_selected` — POST `/operator/sessions/bulk-delete-archived`.
   - `lobby_edit_submit` — POST `/operator/sessions/{id}/lobby-edit`.
   - `clone_session_submit` — POST `/operator/sessions/{id}/clone`.
 - **Templates:** `app/web/templates/operator/sessions_list.html`,

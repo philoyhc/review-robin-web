@@ -79,7 +79,7 @@ The five surfaces where the operator does the work needed to make the session ru
 | Relationships | `session_relationships.html` | `/sessions/{id}/relationships` |
 | Observers | `session_observers.html` | `/sessions/{id}/observers` |
 | Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
-| Email Template | `session_setupinvite.html` | `/sessions/{id}/setupinvite` |
+| Email Template | `session_setupinvite.html` | `/sessions/{id}/setup-invite` |
 
 **Observers page gate.** The Observers tab is only visible in the
 Setup chrome and only routes to a page (rather than 404) when
@@ -87,7 +87,7 @@ Setup chrome and only routes to a page (rather than 404) when
 via the **User interface settings** card on the Create Session form
 or the Edit Session Details page.
 
-The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (shipped in Segment 11E): per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
+The URL slug `setup-invite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (shipped in Segment 11E): per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
 **Relationships** carries pair-level context — the `relationships` table seeded in Segment 13E PR 2 and lit up by the Setup page in Segment 15D PR 2. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names (15D PR 3 / PR 4) plus an `active` / `inactive` status. The page mirrors Reviewers / Reviewees — CSV upload, "Fields with data" pill row, preview table with per-row authoring, Danger Zone.
 
@@ -309,7 +309,7 @@ double-stack) are enforced server-side and surfaced to
 the operator via the rejection toast. Full surface
 contract in `spec/instruments.md`.
 
-### `/operator/sessions/{id}/setupinvite` — Email Template
+### `/operator/sessions/{id}/setup-invite` — Email Template
 
 Per-session email-template editor for the Invitation, Reminder, and Responses-received outbound emails. Reached from the Email Template tab in the chrome's Setup row.
 
