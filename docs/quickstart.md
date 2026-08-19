@@ -255,9 +255,9 @@ When responses are in:
 
 ### Export the data
 
-The **Extract Data** card on Session Home downloads CSVs of everything —
-reviewers, reviewees, relationships, settings, and the full responses table
-— for analysis or archiving.
+The **Extract data** page (in the session's Operations strip) downloads CSVs
+of everything — reviewers, reviewees, relationships, settings, and the full
+responses table — for analysis or archiving.
 
 > 📷 **Screenshot —** `16-extract-data.png` — *the Extract Data card with
 > its per-CSV download buttons.*

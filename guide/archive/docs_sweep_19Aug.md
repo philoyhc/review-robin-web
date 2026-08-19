@@ -1,5 +1,10 @@
 # Docs sweep — audit & recommendations (2026-08-19)
 
+> **Archived 2026-08-19 — fully executed.** All four buckets (revise-into-spec,
+> update-in-place, consolidate, retire) were carried out under Segment 19; see
+> the ✅ banners under each section. Kept for the record. The `docs/` folder
+> went 20 → 16 files.
+
 A whole-`docs/` audit comparing every file against the shipped code.
 Ran as four parallel code-verified passes over the 20 files in `docs/`;
 every finding below cites `file:line` and the contradicting reality (a
@@ -71,6 +76,20 @@ urgency — it misleads no one, it's just filed in the wrong folder.
 ---
 
 ## 2. Update in place
+
+> ✅ **Executed 2026-08-19 (Segment 19).** All items applied: `status.md`
+> header refreshed to 18S + 18Q row added + VNet reworded (the `/edit` rows
+> were retired in bucket 4); `database.md` table count 12→21 + the inverted
+> Tests section corrected (`create_all` fast path, migration round-trip in
+> `ci-postgres`); the cross-cutting **"no in-app revoke UI (16A PR 6)"** claim
+> fixed in `security_posture.md` / `operations_runbook.md` /
+> `known_limitations.md` (shipped in 18S); the conftest/test-count inversion
+> fixed in `database.md` + `local_setup.md`; participant gates
+> (`require_reviewee_in_session` / `require_observer_in_session`) added to
+> `security_posture.md`; `backup_restore.md` in-app user delete; the
+> `deployment_dev.md` dead `segment_05A` link; and the `quickstart.md`
+> Extract-data location. (`local_setup.md`'s stale bits were fixed during the
+> bucket-3 codespace merge.)
 
 Factual drift; each file stays in `docs/`.
 

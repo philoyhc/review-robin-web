@@ -45,17 +45,21 @@ Application logs are structured JSON (one object per line) — see
 
 ## Managing the operator / sys-admin allowlist
 
-Access is gated on `users.is_operator` / `users.is_sys_admin`.
-The `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` App Settings seed
-those columns **on a user's first sign-in only**. The full
-procedure — including the first-deploy backfill and how to
-promote an already-existing account — is in
-`docs/deployment_dev.md` → "Operator / sys-admin allowlist
-bootstrap".
+Access is a **three-tier hierarchy** (Segment 18S): operator
+(`users.is_operator`) ⊂ admin (`users.is_sys_admin`) ⊂ super-admin
+(derived from the `SUPER_ADMIN_EMAILS` App Setting, never a DB column —
+`app/auth/roles.py`). The `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` App
+Settings seed the two columns **on a user's first sign-in only**; a
+super-admin self-heals to full rights on every sign-in. The full
+first-deploy bootstrap is in `docs/deployment_dev.md` → "Operator /
+sys-admin allowlist bootstrap".
 
-In-app revoke UI is not yet shipped (Segment 16A PR 6); until
-then, revoking access is a manual `UPDATE users SET is_operator
-= false, is_sys_admin = false WHERE email = '…'`.
+**In-app management shipped (Segment 18S).** The Sys Admin → Accounts
+Management page (`/operator/sys-admin/users`) admits, revokes, promotes,
+demotes, and removes accounts (`app/services/users.py`), so revoking
+access is no longer a manual DB `UPDATE`. Guards: promote/demote require a
+super-admin actor; demote/revoke/remove refuse a super-admin *target*
+(`protected_super_admin`) and can't drop below the last-admin floor.
 
 ## Rotating secrets
 
