@@ -37,6 +37,7 @@ from app.schemas.rules import (
     QuotaRule,
     RuleSetSchema,
 )
+from app.services.email_identity import normalize_email
 from app.services.rules.fields import (
     reset_pair_context_lookup,
     set_pair_context_lookup,
@@ -293,8 +294,8 @@ def validate_rule_set(
 def _pair_sort_key(pair: tuple[object, object]) -> tuple[str, str]:
     reviewer, reviewee = pair
     return (
-        (getattr(reviewer, "email", "") or "").lower(),
-        (getattr(reviewee, "email_or_identifier", "") or "").lower(),
+        normalize_email(getattr(reviewer, "email", "")),
+        normalize_email(getattr(reviewee, "email_or_identifier", "")),
     )
 
 
@@ -315,10 +316,8 @@ def _pair_identity_key(pair: tuple[object, object]) -> tuple[int, int]:
 
 
 def _is_self_review(reviewer: object, reviewee: object) -> bool:
-    a = (getattr(reviewer, "email", "") or "").strip().lower()
-    b = (
-        getattr(reviewee, "email_or_identifier", "") or ""
-    ).strip().lower()
+    a = normalize_email(getattr(reviewer, "email", ""))
+    b = normalize_email(getattr(reviewee, "email_or_identifier", ""))
     if not a or not b:
         return False
     return a == b

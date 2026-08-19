@@ -78,8 +78,15 @@ def _seed(
 def _add_instrument(
     db: Session, review_session: ReviewSession, *, name: str
 ) -> Instrument:
+    # ``short_label`` is the operator-facing label the canonical
+    # ``_instrument_label`` reports (``name`` is an internal handle
+    # that no longer surfaces in messages — audit S1). Set both so
+    # the label under test is stable and human-readable.
     instrument = Instrument(
-        session_id=review_session.id, name=name, order=99
+        session_id=review_session.id,
+        name=name,
+        short_label=name,
+        order=99,
     )
     db.add(instrument)
     db.flush()

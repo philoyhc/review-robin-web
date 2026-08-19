@@ -13,6 +13,7 @@ from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.logging_config import get_logger
 from app.services import operator_settings, participants, permissions, sessions
+from app.services.email_identity import normalize_email
 
 log = get_logger(__name__)
 
@@ -32,8 +33,8 @@ class OperatorAllowlistDenied(Exception):
 def _email_in(allowlist: list[str], email: str | None) -> bool:
     if not email:
         return False
-    target = email.casefold()
-    return any(item.casefold() == target for item in allowlist)
+    target = normalize_email(email)
+    return any(normalize_email(item) == target for item in allowlist)
 
 
 def _reassert_super_admin(db: Session, user: User) -> None:
@@ -260,10 +261,10 @@ def require_reviewer_in_session(
             Reviewer.status == "active",
         )
     ).scalars()
-    user_email = (user.email or "").casefold()
+    user_email = normalize_email(user.email)
     matched: Reviewer | None = None
     for r in reviewer:
-        if r.email.casefold() == user_email:
+        if normalize_email(r.email) == user_email:
             matched = r
             break
     if matched is None:
@@ -309,7 +310,7 @@ def require_reviewee_in_session(
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    user_email = (user.email or "").casefold()
+    user_email = normalize_email(user.email)
     candidates = db.execute(
         select(Reviewee).where(
             Reviewee.session_id == session_id,
@@ -320,7 +321,7 @@ def require_reviewee_in_session(
     for r in candidates:
         if not participants.is_email_identified(r):
             continue
-        if r.email_or_identifier.casefold() == user_email:
+        if normalize_email(r.email_or_identifier) == user_email:
             matched = r
             break
     if matched is None:
@@ -363,7 +364,7 @@ def require_observer_in_session(
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    user_email = (user.email or "").casefold()
+    user_email = normalize_email(user.email)
     candidates = db.execute(
         select(Observer).where(
             Observer.session_id == session_id,
@@ -372,7 +373,7 @@ def require_observer_in_session(
     ).scalars()
     matched: Observer | None = None
     for o in candidates:
-        if o.email.casefold() == user_email:
+        if normalize_email(o.email) == user_email:
             matched = o
             break
     if matched is None:

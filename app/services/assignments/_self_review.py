@@ -21,13 +21,14 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services.email_identity import normalize_email
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     identifier = reviewee.email_or_identifier
     if "@" not in identifier:
         return False
-    return reviewer.email.casefold() == identifier.casefold()
+    return normalize_email(reviewer.email) == normalize_email(identifier)
 
 
 def count_self_review_candidates(

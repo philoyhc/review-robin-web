@@ -14,7 +14,7 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import and_, func, not_, select
+from sqlalchemy import and_, not_, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -29,6 +29,7 @@ from app.db.models import (
 )
 from app.services import participants
 from app.services import responses as responses_service
+from app.services.email_identity import normalize_email
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.date_filters import (
@@ -98,13 +99,13 @@ def reviewer_review_count_for_user(db: Session, user: User) -> int:
     (suppressed when the user has only a single review — the dashboard
     isn't useful as a navigation hub in that case).
     """
-    target = (user.email or "").casefold()
+    target = normalize_email(user.email)
     if not target:
         return 0
     rows = db.execute(
         select(Reviewer).where(Reviewer.status == "active")
     ).scalars()
-    return sum(1 for r in rows if r.email.casefold() == target)
+    return sum(1 for r in rows if normalize_email(r.email) == target)
 
 
 # Ordered priority for the role-navigator chips on every
@@ -143,17 +144,28 @@ def build_role_chips(
     Chips render in :data:`_ROLE_PRIORITY` order regardless of
     which role is active, so the lineup is consistent across
     surfaces."""
-    user_email = (user.email or "").casefold()
+    user_email = normalize_email(user.email)
     if not user_email:
         return []
 
-    reviewer = db.execute(
-        select(Reviewer).where(
-            Reviewer.session_id == review_session.id,
-            Reviewer.status == "active",
-            func.lower(Reviewer.email) == user_email,
-        )
-    ).scalar_one_or_none()
+    # All three role matches fold through ``normalize_email`` in
+    # Python so the reviewer / reviewee / observer branches use one
+    # convention (audit S2 — the reviewee branch always had to loop
+    # for the email-identified check, so the other two follow it
+    # rather than mixing a SQL ``lower`` fold into the same lookup).
+    reviewer = next(
+        (
+            r
+            for r in db.execute(
+                select(Reviewer).where(
+                    Reviewer.session_id == review_session.id,
+                    Reviewer.status == "active",
+                )
+            ).scalars()
+            if normalize_email(r.email) == user_email
+        ),
+        None,
+    )
 
     reviewee_match = None
     for r in db.execute(
@@ -164,17 +176,23 @@ def build_role_chips(
     ).scalars():
         if not participants.is_email_identified(r):
             continue
-        if r.email_or_identifier.casefold() == user_email:
+        if normalize_email(r.email_or_identifier) == user_email:
             reviewee_match = r
             break
 
-    observer = db.execute(
-        select(Observer).where(
-            Observer.session_id == review_session.id,
-            Observer.status == "active",
-            func.lower(Observer.email) == user_email,
-        )
-    ).scalar_one_or_none()
+    observer = next(
+        (
+            o
+            for o in db.execute(
+                select(Observer).where(
+                    Observer.session_id == review_session.id,
+                    Observer.status == "active",
+                )
+            ).scalars()
+            if normalize_email(o.email) == user_email
+        ),
+        None,
+    )
 
     role_targets: dict[str, dict[str, object]] = {}
     if reviewer is not None:

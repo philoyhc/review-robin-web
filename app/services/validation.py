@@ -28,6 +28,8 @@ from app.db.models import (
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
+from app.services.email_identity import normalize_email
+from app.services.instruments import _instrument_label
 from app.services.participants import is_email_identified
 
 
@@ -117,7 +119,7 @@ def _check_reviewers_duplicate_email(
     )
     by_email: dict[str, list[Reviewer]] = {}
     for r in reviewers:
-        by_email.setdefault(r.email.lower(), []).append(r)
+        by_email.setdefault(normalize_email(r.email), []).append(r)
     for email, dupes in by_email.items():
         if len(dupes) > 1:
             yield ValidationIssue(
@@ -156,7 +158,7 @@ def _check_reviewees_duplicate_id(
     )
     by_ident: dict[str, list[Reviewee]] = {}
     for r in reviewees:
-        by_ident.setdefault(r.email_or_identifier.lower(), []).append(r)
+        by_ident.setdefault(normalize_email(r.email_or_identifier), []).append(r)
     for ident, dupes in by_ident.items():
         if len(dupes) > 1:
             yield ValidationIssue(
@@ -267,12 +269,6 @@ def _check_assignments_no_included_pairs(
                 "reviewers will see an empty surface"
             ),
         )
-
-
-def _instrument_label(instrument: Instrument) -> str:
-    """Short reviewer-facing label for messages, with the long
-    name as a fallback when no short label is set."""
-    return instrument.short_label or instrument.name
 
 
 def _check_assignments_reviewer_missing(
