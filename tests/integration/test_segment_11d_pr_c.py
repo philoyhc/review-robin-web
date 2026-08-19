@@ -354,7 +354,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     # in PR γ ("Save draft" → "Save", "Cancel — discard unsaved
     # edits" → "Discard").
     assert body.count(">Save</button>") >= 2
-    assert body.count(">Discard</a>") >= 2
+    assert body.count(">Cancel</a>") >= 2
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
     assert (

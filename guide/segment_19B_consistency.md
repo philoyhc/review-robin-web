@@ -257,16 +257,24 @@ same behaviour + voice, justified implementation split. Documented in
 Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
 Template-only — best eyeballed on the dev slot.
 
+### Item 11 — U7 + U8: label/verb nits — ✅ done 2026-08-19
+
+- **U7** — the two "Clear all" filter-reset controls (`sessions_list`,
+  `sessions_archived`) and the "Clear filters" link
+  (`sys_admin_session_audit_log`) → **"Clear"**, matching the seven
+  setup/list pages. The destructive "Clear all settings" / "Clear all
+  responses" headings are separate actions, left alone.
+- **U8** — the reviewer-surface abandon-input control (`_action_row.html`)
+  relabelled `Discard` → **`Cancel`**, matching every operator inline
+  editor. The `data-rs-discard` JS hook is unchanged (internal).
+
+Six tests updated for the new labels. Full suite green; ruff clean.
+
+**This closes the entire UI-vocabulary sweep, U1–U8.**
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
-
-- **UI sweep — remaining (U7, U8).** U7 (one filter-reset label), U8
-  (one abandon-edits verb). *(U3 shipped as Item 10 — every destructive
-  submit is now disabled-until-checked via the app-wide
-  `data-delete-confirm` standard; the always-clickable Delete session /
-  Delete Data gap on Session Home is closed, and the confirm-label voice
-  is unified to "Yes, delete …".)*
 - **View-adapter dedup (V1–V6).** `instrument_heading` reimplemented
   inline (V1 — pairs naturally with the S1/V4 instrument-label work),
   the progress-pill macro (V2), the user-display-label property (V3),

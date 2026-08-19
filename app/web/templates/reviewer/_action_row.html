@@ -2,17 +2,17 @@
 
    Order, left-to-right:
 
-       Save / Discard / Submit | divider | Prev / counter / Next
+       Save / Cancel / Submit | divider | Prev / counter / Next
 
    The right-hand Prev / counter / Next cluster renders only on
    multi-page sessions (``page_count > 1``); the divider is
    suppressed otherwise so a single-page surface collapses to bare
-   Save / Discard / Submit. Prev / Next render as ``<a>`` when a
+   Save / Cancel / Submit. Prev / Next render as ``<a>`` when a
    target exists and as a disabled ``<button>`` otherwise so the
    layout stays stable across page boundaries.
 
    In ``preview_mode`` (operator-side full preview, Segment 18Q):
-   Save / Discard / Submit render as inert disabled ``<button>``
+   Save / Cancel / Submit render as inert disabled ``<button>``
    so the operator sees the action-row chrome exactly as the
    reviewer would, but cannot accidentally drive a write through
    the operator-side preview route. Prev / Next remain functional
@@ -30,13 +30,13 @@
   <div class="rs-action-row-controls">
     {% if preview_mode %}
       <button class="btn secondary" type="button" disabled aria-disabled="true">Save</button>
-      <button class="btn secondary" type="button" disabled aria-disabled="true">Discard</button>
+      <button class="btn secondary" type="button" disabled aria-disabled="true">Cancel</button>
       <button class="btn" type="button" disabled aria-disabled="true">Submit</button>
     {% else %}
       <button class="btn secondary" type="submit" data-rs-save>Save</button>
       <a class="btn secondary"
          href="/me/sessions/{{ session.id }}/{{ current_page_n }}"
-         data-rs-discard>Discard</a>
+         data-rs-discard>Cancel</a>
       <button class="btn"
               type="submit"
               formaction="/me/sessions/{{ session.id }}/submit">

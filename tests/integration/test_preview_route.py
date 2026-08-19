@@ -188,7 +188,7 @@ def test_reviewer_side_surface_still_renders_write_path(
 ) -> None:
     """Regression guard for Slice 3's ``{% if not preview_mode %}``
     wrappers — the reviewer's normal /me/sessions/{id} surface
-    must still render Save / Submit / Discard / Clear (and no preview
+    must still render Save / Submit / Cancel / Clear (and no preview
     banner)."""
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-regress")
@@ -206,7 +206,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     assert (
         f'formaction="/me/sessions/{review_session.id}/submit"' in body
     )
-    assert ">Discard</a>" in body
+    assert ">Cancel</a>" in body
     assert (
         f'action="/me/sessions/{review_session.id}/1/save"' in body
     )

@@ -223,7 +223,7 @@ def test_action_row_renders_save_discard_submit_disabled(
     assert 'class="rs-action-row' in body
     # Save / Discard / Submit appear as labels…
     assert ">Save</button>" in body
-    assert ">Discard</button>" in body
+    assert ">Cancel</button>" in body
     assert ">Submit</button>" in body
     # The boolean ``data-rs-save`` / ``data-rs-discard`` attributes
     # sit at the end of the attribute list on the live Save button
