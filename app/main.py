@@ -1,13 +1,14 @@
 import re
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
 from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
+from app.db.models import User
 from app.logging_config import configure_logging, get_logger
-from app.web.deps import OperatorAllowlistDenied
+from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.routes_about import router as about_router
 from app.web.routes_auth import router as auth_router
@@ -84,14 +85,27 @@ def create_app() -> FastAPI:
             response.delete_cookie(key=cookie_name, path="/")
         return response
 
-    @app.get("/")
-    def root() -> dict[str, str]:
-        return {
-            "name": "Review Robin Web",
-            "status": "ok",
-            "health": "/health",
-            "docs": "/docs",
-        }
+    @app.get("/", include_in_schema=False)
+    def root(user: User = Depends(get_or_create_user)) -> RedirectResponse:
+        # Role-aware landing (18R Item 6). Operators + sys-admins land on
+        # the session lobby; everyone else (participants, or a signed-in
+        # user with no roles yet) lands on the ``/me`` dashboard, which
+        # renders its own empty state. 302 (temporary), never 301 — the
+        # target follows the user's role, which can change (promotion,
+        # allowlist edit). Liveness / metadata now lives only at
+        # ``/health``; ``/`` no longer serves a JSON body.
+        if user.is_operator or user.is_sys_admin:
+            return RedirectResponse(url="/operator/sessions", status_code=302)
+        return RedirectResponse(url="/me", status_code=302)
+
+    @app.get("/operator", include_in_schema=False)
+    @app.get("/operator/", include_in_schema=False)
+    def operator_root() -> RedirectResponse:
+        # Bare ``/operator`` has no page of its own — send everyone to the
+        # lobby and let the operator router's ``require_operator`` gate
+        # bounce non-operators from there. Deliberately unguarded so one
+        # place (the lobby gate) decides operator access, not two.
+        return RedirectResponse(url="/operator/sessions", status_code=302)
 
     return app
 

@@ -148,3 +148,39 @@ If Option B is chosen:
 - **Dual-role default** — the hub shows both; is there a remembered
   last-used surface, or always the neutral hub? *Lean: neutral hub, no
   memory, keep it simple.*
+
+---
+
+## 7. Decision & build status (2026-08-19)
+
+**Chosen: Option A (role-aware redirect), simplified.** A sys-admin is
+always also an operator in practice, so there is no separate
+sys-admin landing — the split is two-way. `/` routes on
+`is_operator OR is_sys_admin` (safe even against the config-edge
+`SYS_ADMIN_EMAILS`-only user, whom `require_operator` admits anyway).
+
+**Decisions settled:**
+
+- **(a) The JSON `/` is dropped.** `/` is now a role-aware redirect;
+  liveness / metadata lives only at `/health`.
+- **(b) `/request-access` is retired**, and `/about` is repurposed to
+  carry its "signed in but no access / how to get in" role. The
+  operator-denied bounce points at `/me`.
+
+**Final contract:**
+
+| Route | Who | → |
+|---|---|---|
+| `/` | operator **or** sys-admin | `/operator/sessions` |
+| `/` | participant or nobody | `/me` |
+| `/operator`, `/operator/` | anyone (unguarded) | `/operator/sessions` (lobby gate then applies) |
+| any `/operator/*` | non-operator/non-sys-admin | `/me` *(was `/request-access`)* |
+
+**Build status:**
+
+- **Slice 1 — shipped.** The `/` role redirect (302; JSON dropped) and
+  the `/operator` + `/operator/` → lobby redirects, in `app/main.py`.
+  Tests: `tests/integration/test_landing_pages.py`.
+- **Slice 2 — pending.** Flip `OperatorAllowlistDenied` →  `/me`, retire
+  `/request-access` (route + template), and repurpose `/about` to serve
+  the no-access / info role.
