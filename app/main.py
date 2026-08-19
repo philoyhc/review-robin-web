@@ -62,7 +62,12 @@ def create_app() -> FastAPI:
     async def _operator_allowlist_denied(
         request: Request, exc: OperatorAllowlistDenied
     ) -> RedirectResponse:
-        return RedirectResponse(url="/request-access", status_code=303)
+        # A non-operator/non-sys-admin who wanders to an operator page is
+        # bounced to their own home (18R Item 6). ``/me`` renders an empty
+        # dashboard for a user with no participant roles; the "how do I get
+        # access" messaging lives on ``/about`` (which retired
+        # ``/request-access``).
+        return RedirectResponse(url="/me", status_code=303)
 
     @app.middleware("http")
     async def reset_quick_setup_unlock_on_navigation(

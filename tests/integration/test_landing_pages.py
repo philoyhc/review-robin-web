@@ -5,9 +5,11 @@ everyone else → the ``/me`` participant dashboard. ``/operator`` (and
 ``/operator/``) redirect to the lobby unconditionally.
 """
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.identity import AuthenticatedUser
+from app.config import settings
 
 
 def test_root_redirects_operator_to_lobby(client: TestClient) -> None:
@@ -51,3 +53,38 @@ def test_operator_bare_redirect_is_unguarded_for_non_operators(make_client) -> N
     resp = make_client(rae).get("/operator", follow_redirects=False)
     assert resp.status_code == 302
     assert resp.headers["location"] == "/operator/sessions"
+
+
+# --- /about absorbed the retired /request-access access-help role -----------
+
+
+def test_request_access_route_is_retired(client: TestClient) -> None:
+    resp = client.get("/request-access", follow_redirects=False)
+    assert resp.status_code == 404
+
+
+def test_about_shows_identity_and_my_reviews(make_client) -> None:
+    rae = AuthenticatedUser(
+        principal_id="rae-oid",
+        email="rae@example.edu",
+        name="Rae Reviewer",
+        provider="aad",
+    )
+    body = make_client(rae).get("/about").text
+    assert "rae@example.edu" in body          # signed-in identity
+    assert 'href="/me"' in body               # link to their reviews
+    assert "Access" in body                   # the access-help card
+
+
+def test_about_shows_contact_mailto_when_configured(
+    make_client, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "operator_contact_email", "admin@example.edu")
+    rae = AuthenticatedUser(
+        principal_id="rae-oid",
+        email="rae@example.edu",
+        name="Rae Reviewer",
+        provider="aad",
+    )
+    body = make_client(rae).get("/about").text
+    assert "mailto:admin@example.edu" in body

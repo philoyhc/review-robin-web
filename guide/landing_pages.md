@@ -181,6 +181,17 @@ sys-admin landing — the split is two-way. `/` routes on
 - **Slice 1 — shipped.** The `/` role redirect (302; JSON dropped) and
   the `/operator` + `/operator/` → lobby redirects, in `app/main.py`.
   Tests: `tests/integration/test_landing_pages.py`.
-- **Slice 2 — pending.** Flip `OperatorAllowlistDenied` →  `/me`, retire
-  `/request-access` (route + template), and repurpose `/about` to serve
-  the no-access / info role.
+- **Slice 2 — shipped.** Flipped `OperatorAllowlistDenied` → `/me`
+  (`app/main.py`); retired `/request-access` (route in `routes_auth.py` +
+  `request_access.html` template); repurposed `/about` to carry the
+  access-help role — it now passes the signed-in identity + operator
+  contact and renders an "Access" card (`routes_about.py`, `about.html`).
+  Comment/docstring refs across `deps.py` / `error_handlers.py` /
+  `routes_operator/__init__.py` / `sys_admin_users.html` repointed at `/me`.
+  Tests: the bounce-target assertions across
+  `test_operator_allowlist_gate.py` / `test_operator_lobby_access_gate.py`
+  / `test_preview_route.py` now expect `/me`; the retired page + the
+  `/about` access-help are covered in `test_landing_pages.py`; two chrome
+  tests updated for `/about` now carrying an identity.
+
+**Item 6 complete.** Both slices shipped; full suite green (2,679 passed).

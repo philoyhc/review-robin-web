@@ -40,9 +40,9 @@
     <h2 style="margin-top: 0;">Invite by email</h2>
     <p class="muted">
       Pre-seed a user row before the invitee first signs in. When
-      they sign in via Entra (matched by email), they bypass
-      <code>/request-access</code> and land on the operator lobby
-      directly.
+      they sign in via Entra (matched by email), they land on the
+      operator lobby directly — rather than being bounced to
+      <code>/me</code> the way a non-operator would.
     </p>
     <form method="post"
           action="/operator/sys-admin/users/invite"

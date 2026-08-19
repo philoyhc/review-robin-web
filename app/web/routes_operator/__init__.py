@@ -11,7 +11,7 @@ The parent ``APIRouter`` carries the Segment 16A PR 1 operator
 allowlist gate (``require_operator``) so every route mounted
 underneath gates uniformly on
 ``is_operator OR is_sys_admin``. Non-operators are bounced to
-``/request-access`` via the ``OperatorAllowlistDenied`` exception
+``/me`` via the ``OperatorAllowlistDenied`` exception
 handler in ``app/main.py``. Per-session permission checks
 (``require_session_operator``) continue to compose on top.
 """

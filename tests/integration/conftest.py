@@ -18,7 +18,7 @@ from app.main import app
 # The Segment 16A PR 1 operator-allowlist gate is mounted on the
 # parent operator router (``app/web/routes_operator/__init__.py``),
 # so every route under ``/operator/*`` redirects unallowlisted
-# identities to ``/request-access``. The fixtures below seed
+# identities to ``/me`` (18R Item 6). The fixtures below seed
 # ``alice`` / ``bob`` via the ``OPERATOR_EMAILS`` env-var bootstrap
 # so first-sign-in flips ``is_operator=True`` on user-row creation
 # — preserving the pre-16A test contract that ``client(alice)``

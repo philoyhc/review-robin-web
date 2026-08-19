@@ -205,10 +205,11 @@ def test_session_home_has_danger_zone_anchor(
     assert 'id="danger-zone"' in home_body
 
 
-def test_chrome_user_card_hidden_when_user_unset(client: TestClient) -> None:
-    # /about renders without a user — the user card should not appear.
+def test_chrome_user_card_shown_on_about(client: TestClient) -> None:
+    # 18R Item 6: /about absorbed the /request-access role, so it now
+    # renders WITH the signed-in identity (a stranger needs to see who
+    # they are + a Sign out affordance). The app-identity is still present.
     response = client.get("/about")
     body = response.text
-    assert "Signed in as" not in body
-    # But the app-identity link is still present.
+    assert "Signed in as" in body
     assert "Review Robin Web App (version dev)" in body

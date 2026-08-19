@@ -18,4 +18,22 @@
 
     <p class="muted">version {{ app_version }}</p>
   </div>
+
+  {# Access help — /about absorbed the retired /request-access role
+     (18R Item 6). Framed generically so it reads correctly whether the
+     viewer already has access (operator) or not (a signed-in stranger). #}
+  <div class="card">
+    <h2>Access</h2>
+    {% if user %}
+      <p>You're signed in as <strong>{{ user.email or "(no email on record)" }}</strong>.</p>
+    {% endif %}
+    <p>
+      Reviews assigned to you appear on <a href="/me">My reviews</a>. If you're
+      expecting a review and don't see it — or you should be able to run reviews
+      as an operator but can't — access is managed by whoever administers this
+      workspace{% if contact_email %}: contact
+      <a href="mailto:{{ contact_email }}?subject=Review%20Robin%20Web%20access%20request">{{ contact_email }}</a>
+      and ask to be admitted{% endif %}.
+    </p>
+  </div>
 {% endblock %}
