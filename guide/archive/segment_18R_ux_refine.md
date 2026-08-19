@@ -1,21 +1,34 @@
 # Segment 18R — UX refinement
 
-**Status:** In progress — **Item 1 shipped 2026-08-16 (PR #1899)**; **Item 2
-shipped 2026-08-17 (save/lock harmonization; PR ladder 1–7 incl. 5c, cleanup
-closed by PR #1921)**; **Item 3 open (instrument-card UX tweaks; first two
-shipped 2026-08-17, PR #1923; +vertical-only textarea resize app-wide
-2026-08-18)**; **Item 4 in progress (consolidate session config onto Session
-Home + retire the Edit page — Option 2; Slices 1–5b + the sessions/new
-alignment done 2026-08-18 (config save + owners wired, Edit page fully retired,
-create page mirrors Home's bottom row))**; **Item 5 done 2026-08-18 (Archive
-session card wired on the Extract data page — reuses the Workflow archive
-route, gated on `is_expired`; promoted from Item 4 Slice 6)**. A holding segment for **operator-UX refinement** on
-already-shipped surfaces — clarifying what each card / control *is*,
-tightening labels, strengthening visual identity, and **rationalizing
-inconsistent interaction models**. Most items are small identity / label
-polish (no behaviour change); some — like the save/lock harmonization
-(Item 2) — are larger structural rationalizations. Items land as independent
-slices; the segment stays open as a home for further UX refinements.
+> **Archived 2026-08-19.** Closed and moved to `guide/archive/` with all
+> six items shipped. This file is the design-decision + slice-log record;
+> the shipped behaviour lives in the specs cited under "Doc impact" below
+> (`spec/instruments.md`, `spec/assignments.md`, `spec/operator_ui_concept.md`,
+> `spec/session_home.md`, the reviewer-chrome specs) and in `docs/status.md`.
+> Item 6's landing-pages audit is at `guide/archive/landing_pages.md`. The one
+> optional follow-up left open (full server-side retirement of the per-concern
+> instrument routes) is carried forward under "Future items" below — pure
+> cleanup, no user-facing change; pick it up in a later housekeeping segment.
+
+**Status:** ✅ **Complete — closed 2026-08-19.** All six items shipped across
+2026-08-16 → 2026-08-19: **Item 1** (instrument-card identity — "Band 1" →
+"Instrument assignment rule"; PR #1899); **Item 2** (save/lock harmonization —
+PR ladder 1–7 incl. 5c, cleanup #1921); **Item 3** (instrument-card + cross-page
+UX tweaks — the running-tweaks item, closed with its shipped bullets below:
+textarea resize, Link-2 reorder, chrome status-strip pills incl. the data-driven
+Responses pill, bulk-toggle removal, spec-sweep touch-ups; PRs #1923 / #1968 /
+#1969 + the 18R spec sweep); **Item 4** (consolidate session config onto Session
+Home + retire the Edit page — Option 2; Slices 1–5b + the sessions/new alignment,
+config save + owners wired, Edit page + `/edit` routes fully retired; done
+2026-08-18); **Item 5** (Archive session card on the Extract data page, later
+harmonized with the lobby purge-and-archive; done 2026-08-18); **Item 6**
+(role-aware landing pages — `/`, `/operator`, `/about`; PRs #1982 / #1983).
+A holding segment for **operator-UX refinement** on already-shipped surfaces —
+clarifying what each card / control *is*, tightening labels, strengthening
+visual identity, and **rationalizing inconsistent interaction models**. Most
+items were small identity / label polish (no behaviour change); some — like the
+save/lock harmonization (Item 2) and the config-onto-Home consolidation
+(Item 4) — were larger structural rationalizations.
 
 > Consequential-UI note: per `CLAUDE.md` → "Working approach", anything that
 > adds a card / nav / affordance lands **scaffold-first**. The items here are
@@ -525,9 +538,9 @@ test migration it requires is an optional Future item.
 
 ---
 
-## Item 3 — Instrument-card UX tweaks (open-ended)
+## Item 3 — Instrument-card UX tweaks — ✅ closed 2026-08-19
 
-A running home for **small, self-contained operator-UX polish** — layout,
+Was a running home for **small, self-contained operator-UX polish** — layout,
 control ordering, affordance sizing, wording — that doesn't warrant its own
 item. Started on the per-instrument card; now also collects small cross-page
 tweaks (textarea resize, lobby / Extract-data touch-ups). Each tweak is a
@@ -627,7 +640,8 @@ individually or batched as convenient.
   `<a href>`s, always-enabled Save), documenting the `data-rs-*` attributes as
   reserved hooks. No code change — spec-only.
 
-**Open** — log further tweaks here as they come up.
+**Closed 2026-08-19** with the segment. Further cross-page UX tweaks go to a
+new housekeeping segment, not here.
 
 ---
 
@@ -1044,11 +1058,12 @@ Audit → decisions → slice log: `guide/archive/landing_pages.md`. Spec update
 `spec/reviewer-surface.md` + `spec/visual_style_rrw.md` (the `/me` chrome
 About link).
 
-## Future items (add as they come up)
+## Future items — carried forward (segment closed 2026-08-19)
 
-This segment is the landing place for further small operator-UX identity /
-label refinements. Log new ones here as `Item N` with the same
-problem / fix / scope / done-when shape, and keep each a self-contained slice.
+The segment is closed; it is **no longer the landing place** for new operator-UX
+refinements — open a fresh housekeeping segment for those. One optional
+follow-up identified here never shipped and is **carried forward** as a
+standalone cleanup (pure test/route housekeeping, no user-facing change):
 
 - **(Optional) Full server-side retirement of the per-concern instrument
   routes.** `/band2-state`, `/column-widths`, `/identity`,
