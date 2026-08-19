@@ -52,7 +52,8 @@ class InvitationsRow:
 
     @property
     def is_incomplete(self) -> bool:
-        return self.review_progress_state != "submitted"
+        # Delegate the "not submitted" rule to the single source (V5).
+        return monitoring.is_incomplete_state(self.review_progress_state)
 
     @property
     def summary_state(self) -> str:

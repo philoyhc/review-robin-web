@@ -18,6 +18,7 @@ from app.db.models import (
 )
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
+from app.services.text import pluralize
 from app.services.responses._group_reconciliation import (
     _expand_group_upserts,
     _group_instrument_ids,
@@ -414,7 +415,7 @@ def save_draft(
     audit.write_event(
         db,
         event_type="responses.saved",
-        summary=f"Saved {written} response{'' if written == 1 else 's'} (draft)",
+        summary=f"Saved {written} {pluralize(written, 'response')} (draft)",
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(
@@ -544,7 +545,7 @@ def submit(
         db,
         event_type="responses.submitted",
         summary=(
-            f"Submitted {submitted_count} response{'' if submitted_count == 1 else 's'}"
+            f"Submitted {submitted_count} {pluralize(submitted_count, 'response')}"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -602,10 +603,7 @@ def recall(
     audit.write_event(
         db,
         event_type="responses.recalled",
-        summary=(
-            f"Recalled {recalled_count} submission"
-            f"{'' if recalled_count == 1 else 's'}"
-        ),
+        summary=f"Recalled {recalled_count} {pluralize(recalled_count, 'submission')}",
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(recalled=recalled_count),
@@ -646,7 +644,7 @@ def clear_all(
     audit.write_event(
         db,
         event_type="responses.cleared",
-        summary=f"Cleared {deleted} response{'' if deleted == 1 else 's'}",
+        summary=f"Cleared {deleted} {pluralize(deleted, 'response')}",
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(deleted=deleted),
@@ -699,7 +697,7 @@ def delete_all_for_session(
     audit.write_event(
         db,
         event_type="responses.deleted_all",
-        summary=f"Deleted {deleted} response{'' if deleted == 1 else 's'} (operator)",
+        summary=f"Deleted {deleted} {pluralize(deleted, 'response')} (operator)",
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(deleted=deleted),

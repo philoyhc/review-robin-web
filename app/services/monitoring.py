@@ -42,6 +42,21 @@ AT_RISK_THRESHOLDS = {
 }
 
 
+# The bucket-set predicates over a coverage / progress state string.
+# One source, shared by the service dataclasses here and the view rows
+# (``views._responses`` / ``views._invitations``) that carry the same
+# state under a different field name (audit V5) — so if a bucket is
+# added or renamed, only these move.
+def is_at_risk_state(state: str) -> bool:
+    """True for the coverage buckets that need operator attention."""
+    return state in ("at risk", "no responses")
+
+
+def is_incomplete_state(state: str) -> bool:
+    """True while a reviewer-progress state is anything but submitted."""
+    return state != "submitted"
+
+
 @dataclass
 class ReviewerProgress:
     reviewer: Reviewer
@@ -55,7 +70,7 @@ class ReviewerProgress:
 
     @property
     def is_incomplete(self) -> bool:
-        return self.pill_state != "submitted"
+        return is_incomplete_state(self.pill_state)
 
     @property
     def required_done(self) -> int:
@@ -171,7 +186,7 @@ class RevieweeCoverage:
 
     @property
     def is_at_risk(self) -> bool:
-        return self.pill_state in ("at risk", "no responses")
+        return is_at_risk_state(self.pill_state)
 
 
 def _classify_coverage(completed: int, total: int) -> str:

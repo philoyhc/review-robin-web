@@ -2064,7 +2064,7 @@ charter: coverage-gap closure for the Tier-1 specs flagged in
 closure (`spec/email_template_editor.md`, `spec/permissions.md`) + Parts 2–3
 (sweep cadence template + coverage gate). See the plan doc.
 
-### Segment 19B — Consistency remediation — in progress; started 2026-08-19 (detailed plan: `guide/segment_19B_consistency.md`)
+### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/segment_19B_consistency.md`)
 
 The code-level sibling of 19A: fixes the "same functionality, divergent
 call paths" drift catalogued in `guide/consistency_audit.md` (28 findings
@@ -2181,8 +2181,14 @@ stay named helpers.
 template instances); the four hand-rolled progress pills now share one
 colour semantic (blue/amber/green) + one enum spelling.
 
-**Still open:** view-adapter dedup remaining — V3 (`User.display_label`),
-V5 (predicate delegation), V6 (`pluralize`). See
+**Item 15 — V3 + V5 + V6 (dedup tail) — done 2026-08-19.** V3:
+`User.display_label` property (7 email-fallback sites). V5: the
+`monitoring.is_at_risk_state` / `is_incomplete_state` predicates,
+delegated by all four dataclasses. V6: `services.text.pluralize`.
+
+**✅ Consistency audit fully remediated** — Service S1–S8, Route R1–R11,
+Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
+R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/consistency_audit.md`.
 
 ---

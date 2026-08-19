@@ -77,6 +77,17 @@ class User(Base, TimestampMixin):
     preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     @property
+    def display_label(self) -> str:
+        """The canonical "who is this user" label — the display name if
+        set, else the email (always present; it's the identity column).
+        One source for the ``display_name or email`` string that was
+        hand-rolled across ~7 templates + a route (audit V3). The
+        distinct ``display_name or "—"`` variant (name-only, email
+        shown in an adjacent column) stays inline where it's used
+        deliberately."""
+        return self.display_name or self.email
+
+    @property
     def is_super_admin(self) -> bool:
         """Segment 18S Item 1 — the protected top tier. Derived from
         config (``SUPER_ADMIN_EMAILS`` + the fake-auth fold-in), never a
