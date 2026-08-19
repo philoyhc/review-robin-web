@@ -842,6 +842,65 @@ include pattern (matches existing `_quick_setup_card.html` /
 Band partials each consume ~15 outer variables — macro arg
 lists at that size are worse than `with`-context.
 
+#### Runtime interaction tests for the template-JS surfaces (Playwright smoke layer)
+
+> Flagged by the 2026-08-19 codebase assessment (§5, "the instrument card's
+> behaviour still lives in inline template JS"). Recurring weakness, not tied
+> to a single segment.
+
+**The gap.** The instrument card's behaviour — the lock/unlock state machine,
+the Band 1 rule editor, the `?editing=1` display↔edit swap (shared with the
+Session Home config card), live preview render, +Page break / reorder — is
+hand-written inline JS in `instruments_index.html` with **no build step** (a
+deliberate `CLAUDE.md` constraint, not a defect). The problem is the *test*
+gap, not the inline-ness: the suite asserts the JS **exists and parses**
+(`node --check` + string-presence), never that it **does the right thing**, so
+the interaction-regression class is only catchable by hand on the dev slot.
+Two such bugs already slipped structural tests — the 18R space-key
+card-collapse (#1914 → #1915) and the lost-column-width-on-save (#1920).
+
+**Ships.**
+
+- A thin **Playwright** smoke layer (`tests/e2e/` or similar) driving the
+  highest-risk interaction paths in a real browser against `uvicorn` +
+  `ALLOW_FAKE_AUTH`: unlock → edit → save on the instrument card; the
+  `?editing=1` swap on Session Home; add/remove a Band 1 rule; +Page break;
+  the reviewer-surface Save / Prev / Next. **No new dependency and no build
+  step** — Chromium + Playwright are already provisioned in the agent env
+  (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`), driving the existing
+  server-rendered pages + inline JS.
+- A **separate, non-blocking CI track** (the repo already runs two — SQLite
+  `pytest` + `ci-postgres`); browser tests are slower/flakier and need the app
+  running, so they don't gate the fast suite.
+- *(Optional, secondary — not required for the above.)* Extract the card's
+  `<script>` bodies into a static `app/web/static/*.js` (still no build step;
+  it already reads inputs from `data-*` attributes) so the JS is lintable +
+  unit-testable in isolation with Node's built-in test runner. This is an
+  organisation win, not a correctness one — extracted-but-untested JS is no
+  safer — so it rides along only if the inline JS gets hard to navigate.
+
+**Why deferred.** Not blocking and not next: recommended-move #1 stays 14B
+email. The cost gap is real but bounded (two caught bugs over the window), and
+a browser-test track is its own maintenance surface (flake management, a third
+CI job) that shouldn't be stood up speculatively — scope it tight or it becomes
+the problem it was meant to catch. Catches *interaction logic*, not visual/CSS
+(dev-slot eyeballing still owns the pixels).
+
+**Lift trigger.** Any of: (a) a third interaction regression slips the
+structural-only tests; (b) someone is next doing substantial work in the
+instrument-card JS — land a couple of interaction tests alongside the change
+rather than as a standalone project; (c) a deliberate pre-pilot hardening pass
+once 14B email is in and the surface is stable.
+
+**Wire-up.** New `tests/e2e/` dir + a Playwright config pinned to the
+provisioned Chromium (`executablePath: '/opt/pw-browsers/chromium'` if a
+project ever pins a different `@playwright/test`; do **not** run
+`playwright install`). A fixture that boots `uvicorn app.main:app` with
+`ALLOW_FAKE_AUTH=true` on a throwaway SQLite db, seeds one session, and drives
+it. A new `.github/workflows/` job (browser track), allowed-to-fail-soft or on
+a nightly cadence at first. Start with the instrument card (bitten twice),
+grow outward.
+
 ---
 
 ## Part B — Deferred infrastructure & platform hardening
