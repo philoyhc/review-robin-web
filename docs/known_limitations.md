@@ -3,7 +3,7 @@
 The current shape of Review Robin Web, stated plainly so a pilot
 isn't surprised. Most entries are deliberate scope decisions, not
 bugs — they trace to the Segment 14A plan and
-`guide/deferred_infra.md`.
+`guide/deferred_consolidated.md`.
 
 ## Deployment / infrastructure
 

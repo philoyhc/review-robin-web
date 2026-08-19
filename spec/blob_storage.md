@@ -5,7 +5,7 @@
 > with Postgres `bytea`, on-the-fly streaming, or external URLs (see
 > "Current posture" below). Provisioning an Azure Blob container (or
 > S3-compatible bucket) is **deferred infrastructure**
-> (`guide/deferred_infra.md` §1 — needs the Azure portal + a managed
+> (`guide/deferred_consolidated.md` §1 — needs the Azure portal + a managed
 > identity + a storage account). This doc exists to **capture the
 > candidate uses** so that, if and when blob storage is provisioned, the
 > decision is made against a considered list rather than reached for
@@ -95,7 +95,7 @@ purge is partly deferred (18C scheduled purge). **Blob would let** old
 audit rows be archived to append-only JSONL objects (cheap, immutable,
 lifecycle-tiered) before trimming the hot table — keeping the compliance
 trail while bounding Postgres growth. Pairs with the deferred JSON→JSONB
-work in `guide/deferred_infra.md` §2.
+work in `guide/deferred_consolidated.md` §2.
 
 ### 7. Backup / restore artifacts
 `docs/backup_restore.md` notes storage is a deferred item. **Blob would**
@@ -148,7 +148,7 @@ first move. See "If it lands — where it plugs in."
 ### Tier 3 — deferred, gated on other work
 - **#6 Audit-log cold storage.** Gated on a retention / purge policy
   decision (18C scheduled purge is partly deferred) and pairs with the
-  JSON→JSONB migration (`guide/deferred_infra.md` §2). A scale /
+  JSON→JSONB migration (`guide/deferred_consolidated.md` §2). A scale /
   compliance concern that does not bite pre-pilot.
 - **#7 Backup / restore artifacts.** Largely overlaps the platform-level
   Azure Postgres backup that already exists at the server tier; the
@@ -198,7 +198,7 @@ the current stack lacks:
 - **Dependency + config.** Add `azure-storage-blob` (or an S3 SDK); one
   `blob_*` settings block in `app/config.py`; a managed-identity grant on
   the storage account (mirrors the Key Vault / VNet items in
-  `guide/deferred_infra.md` §1). Keep it **optional** — a `None` config
+  `guide/deferred_consolidated.md` §1). Keep it **optional** — a `None` config
   falls back to today's `bytea` / streaming paths so SQLite tests and
   no-blob deployments keep working.
 - **A thin `app/services/blob_store.py` seam.** `put(key, bytes) -> url`,
@@ -217,7 +217,7 @@ the current stack lacks:
 ## See also
 
 - `docs/backup_restore.md` — exports are stream-only; storage deferred.
-- `guide/deferred_infra.md` §1 — blob provisioning as Azure portal work.
+- `guide/deferred_consolidated.md` §1 — blob provisioning as Azure portal work.
 - `docs/rehydrate.md` §3.3 — the current `bytea` stash ("no blob storage
   required").
 - `spec/email_infra_options.md` — sibling "options" spec (email backend).

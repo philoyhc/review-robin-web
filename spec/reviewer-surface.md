@@ -1170,7 +1170,7 @@ re-architecting; see "Designed-for-extensibility" below.
   Segment 17B, as targeted progressive enhancement. A wholesale
   JS data-grid swap (AG Grid or equivalent) is *not* planned —
   judged overkill; recorded as an aspirational possibility in
-  `guide/future_possibilities.md`. See "Large-table ergonomics"
+  `guide/deferred_consolidated.md`. See "Large-table ergonomics"
   below.
 
 ---
@@ -1232,7 +1232,7 @@ investigated and dropped — see below.) A wholesale grid swap
 (AG Grid or equivalent)
 was considered and taken off the roadmap as overkill; it is
 recorded as an aspirational possibility in
-`guide/future_possibilities.md`. Notes on how the surface stays
+`guide/deferred_consolidated.md`. Notes on how the surface stays
 compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
@@ -1260,7 +1260,7 @@ compatible either way:
 - **What lands later (Segment 17B).** Return-to-place (preserve
   scroll position across save / reload) is the remaining 17B
   ergonomics item. Cell autosave and filter-to-incomplete were
-  deferred to `guide/deferred_until_pilot_feedback.md`
+  deferred to `guide/deferred_consolidated.md`
   (2026-05-16) — both are pure progressive enhancement built only
   if pilot feedback asks. None of this was ever an all-or-nothing
   bundle gated on a grid library; that bundling was the AG-Grid

@@ -1,5 +1,10 @@
 # Deferred infrastructure & platform hardening
 
+> **Archived 2026-08-19 — superseded by
+> [`guide/deferred_consolidated.md`](../deferred_consolidated.md) Part B.**
+> This file's content was merged verbatim into the consolidated deferred-work
+> ledger. Kept for provenance; the consolidated file is the live reference.
+
 Infrastructure- and database-platform hardening that has been
 **deferred** — items that need the Azure portal, or destructive
 Postgres-only migrations, and so sit outside the in-app feature

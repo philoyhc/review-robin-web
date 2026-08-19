@@ -1,5 +1,10 @@
 # Deferred until pilot feedback
 
+> **Archived 2026-08-19 — superseded by
+> [`guide/deferred_consolidated.md`](../deferred_consolidated.md) Part A.**
+> This file's content was merged verbatim into the consolidated deferred-work
+> ledger. Kept for provenance; the consolidated file is the live reference.
+
 A common ledger of features that were scoped, designed, and
 explicitly deferred — not because they're out of scope forever,
 but because **building them speculatively would cost more than

@@ -15,7 +15,7 @@ other AI coding agent working in this repository.
 - Use Pydantic for request/response schemas.
 - Use SQLAlchemy 2.x declarative style with `Mapped[]` and `mapped_column`.
   Do not import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
-  Postgres-specific column types are deferred infrastructure (`guide/deferred_infra.md`).
+  Postgres-specific column types are deferred infrastructure (`guide/deferred_consolidated.md`).
 - Keep route handlers thin.
 - Put business logic in service modules.
 - Add or update tests for every behavior change.
@@ -122,7 +122,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
 2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The two big service packages are `app/services/instruments/` (split by concern: `_state.py` cross-slice plumbing including `_instrument_label`, `_display_fields.py`, `_response_fields.py` incl. `bulk_save_fields` + `validation_block_from_inline`, `_band1.py` link-rule editor, `_band2.py` Band 2 state save + Band 3 dual-write [Segment 18N PR 2 carve], `_pagination.py` 18M reorder + page-break helpers [Segment 18N PR 2 carve], `_instrument_crud.py` lifecycle + group/unit-of-review + column-widths + bulk toggles, `_field_presets.py`) and `app/services/responses/` (`_core.py` save / submit / state-rollup, `_group_reconciliation.py` Segment 13C / 18H group fan-out + reconcile machinery [Segment 18N PR 4 carve]). Each package's `__init__.py` re-exports the public surface so callers write `from app.services import instruments` / `from app.services import responses` unchanged. The Response Type Definitions slice (`_rtds.py`) retired 2026-05-26 alongside the `response_type_definitions` table. See `guide/archive/major_refactor.md` §12.A.
-3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred infrastructure (`guide/deferred_infra.md`).
+3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred infrastructure (`guide/deferred_consolidated.md`).
 
 A small but important fourth seam:
 
@@ -197,7 +197,7 @@ reject it.
   `app/auth/identity.py`.
 - **Hosting.** Azure App Service (Linux, Python 3.12) + Azure
   Postgres Flexible Server. Public access with firewall
-  allow-list; VNet integration is deferred infrastructure (`guide/deferred_infra.md`).
+  allow-list; VNet integration is deferred infrastructure (`guide/deferred_consolidated.md`).
 - **Deploy.** GitHub Actions, OIDC-authenticated; three jobs
   (`build` → `migrate` → `deploy`). Migrations land via
   `alembic upgrade head` against Azure Postgres before the App

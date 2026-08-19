@@ -196,7 +196,7 @@ reasonable future tightening.
 
 The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
-Tracked in `guide/deferred_infra.md`.
+Tracked in `guide/deferred_consolidated.md`.
 
 | Item | Status |
 |---|---|
