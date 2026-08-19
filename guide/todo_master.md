@@ -2017,6 +2017,15 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   service, the shared `/sessions/archive-selected` route (with `return_to`), and
   the same Responses / Rosters / Audit-log purge options. Controls grey off in
   both locations when a session can't be archived.
+- **Item 6 (done 2026-08-19)** — **Landing pages**. `GET /` is now a role-aware
+  302 redirect (operator or sys-admin → `/operator/sessions`, else → `/me`)
+  instead of a JSON blob; liveness moved to `/health`. `GET /operator`(+slash)
+  → `/operator/sessions`. A non-operator/non-sys-admin who wanders to an
+  operator page is bounced to `/me` (was `/request-access`); `/request-access`
+  retired and its access-help role folded into `/about` (identity + operator
+  contact + "Access" card). The About link added to the participant (`/me`)
+  chrome for parity with the operator chrome. Audit + plan:
+  `guide/landing_pages.md`.
 
 ### Segment 19 — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19_spec_documentation.md`)
 

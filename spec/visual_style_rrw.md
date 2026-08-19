@@ -342,6 +342,7 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
 - **Right:** A small **user menu** containing:
   - "Signed in as [Reviewer Name]" — informational. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
   - "My Reviews" — link back to the reviewer's review list (only rendered when the reviewer has more than one review pending or completed; suppressed when there's just one).
+  - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link (added 18R Item 6).
   - "Sign out" — ends the reviewer's session.
 
 The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions.
@@ -469,7 +470,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts About / Settings / Sign out; reviewer's user menu hosts My Reviews / Sign out. Same shape, different contents.
+- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts About / Settings / Sign out; reviewer's user menu hosts My Reviews / About / Sign out. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 

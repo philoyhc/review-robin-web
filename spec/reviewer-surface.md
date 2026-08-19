@@ -91,7 +91,10 @@ Top-to-bottom, the page renders:
 1. **Top bar (reviewer chrome variant)** — per
    `spec/visual_style_rrw.md` "Reviewer-facing pages → Top bar". "Review
    Robin" identity (no version, no breadcrumb), user menu with "Signed
-   in as …" + optional "My Reviews" + "Sign out".
+   in as …" + optional "My Reviews" + **About** + "Sign out". The About
+   link (`/about?return_to=<path>`, skipped on `/about` itself) matches
+   the operator chrome's, added 18R Item 6 so `/me` reaches the About /
+   access-help page the same way `/operator/sessions` does.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
 3. **Page header** — `.rs-page-header` flex row carrying the session

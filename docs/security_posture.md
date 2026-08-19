@@ -14,7 +14,7 @@ Three layers, all in `app/web/deps.py`:
   router-level dependency on the whole `routes_operator` package
   (`routes_operator/__init__.py`), so *every* `/operator/*` route is
   behind it. A signed-in user not on the operator/sys-admin
-  allowlist is redirected to `/request-access`.
+  allowlist is redirected to `/me`.
 - **`require_session_operator`** — per-session membership gate.
   Resolves `{session_id}` and 403s unless the caller is an operator
   of *that* session. Applied per-route on session-scoped operator

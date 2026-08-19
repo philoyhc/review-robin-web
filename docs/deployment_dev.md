@@ -111,7 +111,7 @@ restart the app after a change.
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap). |
 | `SYS_ADMIN_EMAILS` | empty | Comma-separated sys-admin (admin) allowlist. In a non-local environment, at least one of these two must be non-empty or the app refuses to boot. |
 | `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier (Segment 18S). Derived, not stored; set **only** here. Optional (not part of the boot fail-fast). A super-admin can't be demoted/removed in-app and is the only actor who can promote/demote admins. |
-| `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/request-access` page. |
+| `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/about` access card. |
 | `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
 | `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` / `FAKE_AUTH_SUPER_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. `FAKE_AUTH_SUPER_ADMIN` (default on) makes the local fake operator a super-admin. |
 | `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. Needed once email infrastructure (Segment 14B) is in use. |
@@ -261,7 +261,7 @@ in App Service configuration. See `docs/security_posture.md` for details.
 Under the Option C strict-allowlist posture (16A PR 1), every
 operator route gates on `users.is_operator OR users.is_sys_admin`.
 A signed-in user with neither flag set is redirected to
-`/request-access`. The persisted flags are seeded from two App
+`/me`. The persisted flags are seeded from two App
 Service config env vars on first sign-in:
 
 ```
@@ -330,7 +330,7 @@ The 16A PR 1 columns shipped inert in 13F PRs 1 + 2 with
 `is_sys_admin=False`. The env-var bootstrap doesn't re-apply to
 existing rows (per the rule above), so a workspace owner who
 signed in to the dev slot before 16A will get bounced to
-`/request-access` on their first post-16A sign-in even though
+`/me` on their first post-16A sign-in even though
 their email is in `SYS_ADMIN_EMAILS`.
 
 One-time backfill for that pre-existing-account case, in this
@@ -387,7 +387,7 @@ The same gotcha applies to the local SQLite DB
 landing 16A's `FAKE_AUTH_OPERATOR=True` default
 (or before adding an email to `OPERATOR_EMAILS` in your `.env`),
 your row sits with `is_operator=False` and you'll keep getting
-bounced to `/request-access`. Easiest local fix is to delete the
+bounced to `/me`. Easiest local fix is to delete the
 SQLite file and re-run `alembic upgrade head`:
 
 ```powershell

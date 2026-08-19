@@ -215,6 +215,14 @@ Every operator page (session-scoped or not) renders the same outer chrome before
 
 Visual treatment (typography, spacing, link colors) is per `spec/visual_style_general.md` ("Breadcrumb", "Links") and `spec/visual_style_rrw.md` (non-session operator top bar).
 
+## Entry & landing (Segment 18R Item 6)
+
+The app has no page of its own at the root or the bare operator prefix — both are **role-aware redirects** so a freshly-signed-in user lands somewhere useful without knowing a deep URL.
+
+- **`GET /`** — a **302** redirect by role: an **operator or sys-admin** lands on `/operator/sessions` (the lobby); **everyone else** (a participant, or a signed-in user with no roles yet) lands on `/me`, which renders its own empty state. Routes on `is_operator OR is_sys_admin`. Temporary (302), never 301 — the target follows the user's role, which can change. The root serves no JSON; liveness / metadata live only at `/health`.
+- **`GET /operator`** (and `/operator/`) — 302 to `/operator/sessions`. Defined app-level and **unguarded** so the lobby's router-level `require_operator` is the single place that decides operator access.
+- **Non-operator/non-sys-admin who reaches any `/operator/*` page** — bounced to `/me` by the `OperatorAllowlistDenied` handler (was `/request-access`, retired 18R Item 6). The "signed in but no access / how to get in" messaging moved to **`/about`**, which carries the signed-in identity + the operator contact.
+
 ## Per-page contracts
 
 A short contract per page: URL + template + role + key affordances. For per-route detail with form schemas and audit events, see `docs/status.md` (operator URL table). For deep-dive layout / behaviour specs, see the linked per-page docs.
