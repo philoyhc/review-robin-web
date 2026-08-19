@@ -6,6 +6,27 @@
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
 get drafted when this segment is picked up.
 
+## Status (started 2026-08-19)
+
+Segment 19 is **in progress** and **broadened from spec-only to spec/ +
+docs/ hygiene** — the two folders' currency sweeps run under one segment.
+Shipped so far:
+
+- **spec/ drift sweep** (`guide/archive/spec_sweep_18Aug.md`, 2026-08-18) —
+  all §A unfinished-work + §B currency-debt items **resolved** (in 18R
+  Item 3 and the `rrw_functional_spec.md` + `architecture.md` revision).
+- **docs/ audit** (`guide/archive/docs_sweep_19Aug.md`, 2026-08-19) — all
+  four buckets **executed**: `docs/rehydrate.md` → `spec/rehydrate.md`
+  (revise-into-spec); `docs/` consolidate (cli_setup_notes → cli_setup;
+  authentication → security_posture; codespace_setup → local_setup;
+  azure_github_setup reconciled) + retire (imports.md, cli_setup_notes.md);
+  and the update-in-place batch (revoke-UI / conftest / status-header
+  fixes). `docs/` went 20 → 16 files.
+
+**Still open:** Part 1 below — the Tier-1 **spec coverage-gap** closure
+(`spec/email_template_editor.md`, `spec/permissions.md`) flagged by the
+2026-05-11 sweep — plus Parts 2–3 (sweep cadence + coverage gate).
+
 ## Goal
 
 A **spec-hygiene segment** dedicated to keeping `spec/` —

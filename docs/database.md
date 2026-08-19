@@ -30,7 +30,7 @@ pip install -e .[dev]
 alembic upgrade head
 ```
 
-That creates `review_robin_web.db` in the project root with all 12 tables.
+That creates `review_robin_web.db` in the project root with all 21 tables.
 
 ### Pointing at a different database
 
@@ -89,11 +89,16 @@ prematurely.
 
 ## Tests
 
-Tests live under `tests/db/`. The session-scoped `engine` fixture in
-`tests/db/conftest.py` creates an in-memory SQLite database and applies
-**`alembic upgrade head`** against it — exercising the real migration on
-every test session, not `Base.metadata.create_all()`. Any drift between
-models and migrations surfaces immediately.
+The session-scoped `engine` fixture in `tests/conftest.py` creates an
+in-memory SQLite database and builds the schema **directly from the ORM
+metadata** (`Base.metadata.create_all`) — the deliberate fast path, so a
+default `pytest` run does not replay the migration chain. The Alembic
+migration chain (`alembic upgrade head` **and** the full `downgrade base +
+upgrade head` round-trip) is instead exercised on every PR by the
+`ci-postgres` job against `postgres:16`, so model/migration drift surfaces
+in CI. The same fixture honours `TEST_DATABASE_URL` / `DATABASE_URL`, so the
+suite can be pointed at a real Postgres locally (see `docs/local_setup.md`
+§9 "Postgres parity").
 
 Each test gets a per-test transactional session that rolls back on
 teardown, so tests do not pollute each other.

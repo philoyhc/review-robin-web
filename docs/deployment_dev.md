@@ -11,8 +11,8 @@
 - Database: Azure Database for PostgreSQL Flexible Server, **Burstable
   B1ms**, region **Southeast Asia**, Postgres **16**, 32 GB storage, HA
   disabled, default 7-day backup retention. Application database name
-  `rrw`, application user `rrw_app`. See `guide/segment_05A.md` §3.1 for
-  the rationale.
+  `rrw`, application user `rrw_app`. See `guide/archive/segment_05A.md` §3.1
+  for the rationale.
 
 ### Database networking
 

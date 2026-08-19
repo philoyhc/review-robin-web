@@ -32,6 +32,15 @@ Three layers, all in `app/web/deps.py`:
 - **`require_reviewer_in_session`** — reviewer identity gate. 403s
   unless the caller has an *active* `Reviewer` row whose email
   matches the authenticated identity (case-insensitive).
+- **`require_reviewee_in_session`** — reviewee identity gate for the
+  reviewee results surface (`/me/sessions/{id}/results`). 403s unless
+  the caller matches an *active* `Reviewee` row by email
+  (case-insensitive); reviewees with a non-email identifier fail the
+  reachability check.
+- **`require_observer_in_session`** — observer identity gate for the
+  observer collation surface (`/me/sessions/{id}/collation`). 403s
+  unless the caller matches an *active* `Observer` row by email
+  (case-insensitive).
 
 ### Three-tier role hierarchy (Segment 18S)
 
@@ -81,6 +90,8 @@ the dependencies above; no route trusts a client-supplied actor id.
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
 | Reviewer surface + save/submit/clear | `require_reviewer_in_session` | |
+| Reviewee results (`/me/sessions/{id}/results` + acknowledge) | `require_reviewee_in_session` | Active-`Reviewee` email match; non-email identifiers fail reachability. |
+| Observer collation (`/me/sessions/{id}/collation` + CSV) | `require_observer_in_session` | Active-`Observer` email match. |
 | `/me/invite/{token}` | identity + token lookup | Email-mismatch → dedicated 403 page. |
 
 POST endpoints verified not to trust client-side identifiers:
@@ -264,5 +275,4 @@ Tracked in `guide/deferred_consolidated.md`.
 | VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list today |
 | Staging slot + manual-approval production deploy gate | Deferred — single dev slot today (see `docs/deployment_dev.md`) |
 | Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
-| Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred to the Segment 14 type migrations |
-| In-app operator/sys-admin revoke UI | Segment 16A PR 6 — not yet shipped; revoke is a manual DB update today |
+| Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred infrastructure (`guide/deferred_consolidated.md`) |

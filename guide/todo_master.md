@@ -2021,30 +2021,34 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
 ### Segment 19 — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19_spec_documentation.md`)
 
 Rolls the recurring spec/ + docs/ currency work under one segment. Two audits
-drive it: `guide/archive/spec_sweep_18Aug.md` (whole-`spec/` drift — resolved
+drove it: `guide/archive/spec_sweep_18Aug.md` (whole-`spec/` drift — resolved
 in 18R Item 3 + the functional-spec/architecture revision) and
-`guide/docs_sweep_19Aug.md` (whole-`docs/` audit — the active work list). Also
-carries the original Segment 19 charter: coverage-gap closure for the Tier-1
-specs flagged in `guide/archive/spec_sweep_11may.md`.
+`guide/archive/docs_sweep_19Aug.md` (whole-`docs/` audit — **fully executed
++ retired to archive** 2026-08-19). Also carries the original Segment 19
+charter: coverage-gap closure for the Tier-1 specs flagged in
+`guide/archive/spec_sweep_11may.md`.
 
-Docs-sweep follow-through, by disposition (`guide/docs_sweep_19Aug.md`):
+**Docs-sweep follow-through — ✅ all four buckets done 2026-08-19** (PRs
+#1977 + follow-on); `docs/` went 20 → 16 files:
 
-- **Revise into `spec/`** — `docs/rehydrate.md` → `spec/rehydrate.md`
-  (**in progress — first item**). Trim the build-scaffolding sections
-  (Resolved decisions / New machinery to build / Testing expectations) now the
-  feature has shipped; scrub the remaining "to build" framing.
-- **Update in place** — status.md's trailing header + the retired `/edit`
-  route rows; the cross-cutting "no in-app revoke UI (16A PR 6)" stale claim in
-  three docs (shipped in 18S); the conftest fixture / test-count inversion in
-  two docs; plus the per-file factual fixes.
-- **Consolidate** — ✅ done 2026-08-19. cli_setup_notes → cli_setup;
-  authentication → security_posture (identity subsystem + full CSRF write-up
-  absorbed); codespace_setup → local_setup §9; azure_github_setup reconciled
-  in place with a "future PRD/NPRD scale-up" banner (kept in docs/).
-- **Retire** — ✅ done 2026-08-19. Deleted imports.md + cli_setup_notes.md;
-  section-level retirements (local_setup §10, authentication "does not
-  implement", status.md /edit route rows).
-- **Update in place** (bucket 2) + **revise-into-spec** remainder — still open.
+- **Revise into `spec/`** — ✅ `docs/rehydrate.md` → `spec/rehydrate.md`,
+  trimming the build-scaffolding sections now the feature has shipped.
+- **Update in place** — ✅ status.md header refreshed to 18S + 18Q row + VNet
+  reword + retired `/edit` rows; the cross-cutting "no in-app revoke UI (16A
+  PR 6)" claim fixed in three docs (shipped 18S); the conftest / test-count
+  inversion fixed in two docs; participant gates added to security_posture;
+  + the per-file factual fixes.
+- **Consolidate** — ✅ cli_setup_notes → cli_setup; authentication →
+  security_posture (identity subsystem + full CSRF write-up absorbed);
+  codespace_setup → local_setup §9; azure_github_setup reconciled in place
+  with a "future PRD/NPRD scale-up" banner (kept in docs/).
+- **Retire** — ✅ deleted imports.md + cli_setup_notes.md; section-level
+  retirements (local_setup §10, authentication "does not implement",
+  status.md /edit route rows).
+
+**Still open (the original charter):** Part 1 — Tier-1 **spec coverage-gap**
+closure (`spec/email_template_editor.md`, `spec/permissions.md`) + Parts 2–3
+(sweep cadence template + coverage gate). See the plan doc.
 
 ---
 
@@ -2094,9 +2098,9 @@ dep chains called out at the bottom of this file.
   **started 2026-08-19** — see the in-progress entry at the end of
   **Done**)*. Broadened from spec-only to spec/ **+** docs/ currency:
   the periodic `spec/` hygiene sweeps + Tier-1 coverage-gap closure
-  (`guide/archive/spec_sweep_11may.md`) now run alongside the
-  `docs/`-sweep follow-through (`guide/docs_sweep_19Aug.md`).
-  **Plan:** `guide/segment_19_spec_documentation.md`.
+  (`guide/archive/spec_sweep_11may.md`) run alongside the
+  `docs/`-sweep follow-through (`guide/archive/docs_sweep_19Aug.md` —
+  fully executed 2026-08-19). **Plan:** `guide/segment_19_spec_documentation.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The

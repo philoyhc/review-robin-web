@@ -31,9 +31,9 @@ bugs — they trace to the Segment 14A plan and
 - **First-sign-in-only allowlist bootstrap.** `OPERATOR_EMAILS` /
   `SYS_ADMIN_EMAILS` seed access flags only on a user's first
   sign-in; editing them later does not re-promote an existing
-  account.
-- **No in-app revoke UI.** Revoking operator/sys-admin access is
-  a manual database `UPDATE` until Segment 16A PR 6 ships.
+  account. (Later changes are made in-app instead — the Sys Admin
+  Accounts Management page admits / revokes / promotes / demotes /
+  removes accounts since Segment 18S.)
 
 ## Functional scope
 
