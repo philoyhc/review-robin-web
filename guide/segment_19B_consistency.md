@@ -87,14 +87,35 @@ identity comparison) rather than pure maintenance drift.
   the more correct fold for the rare non-ASCII address) and the S1
   label fallback.
 
+### Item 2 — S6–S7: service-dedup tail — ✅ done 2026-08-19
+
+The remaining service-layer findings — pure maintenance dedup, zero
+behaviour change. Completes the whole service column (S1–S8).
+
+- **S6 — one roster-status home.** New `app/services/roster_status.py`
+  holds `ROSTER_STATUSES` (the shared `{"active", "inactive"}`
+  vocabulary), `normalise_status(value, *, error_cls)`, and
+  `is_active(row)`. Kept deliberately dependency-light (no `audit` /
+  `session_lifecycle` imports) so the assignments package can use it
+  without an import cycle — which is why it's a separate module from
+  the heavier `roster_bulk`. The four `_normalised_status` /
+  `_normalised_rel_status` collapse to one-line delegations passing
+  their own `*OperationError`; the relationships CSV-parse check
+  reuses `ROSTER_STATUSES`; `assignments/_shared._is_active` delegates
+  to `is_active`.
+- **S7 — one response-count query.** Extracted
+  `_response_count_for_field(db, field_id)` into
+  `instruments/_state.py` (the cross-slice plumbing home both slices
+  already import from); the three copies in `_band2.py` (×2) and
+  `_response_fields.py` now call it.
+
+  Verification: full suite green (2,680 passed, 17 skipped); ruff
+  clean. No schema change; no behaviour change.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **Service dedup tail (S6, S7)** — the status-normaliser /
-  active-predicate duplication and the "count responses for a field
-  id" query triplicate. Pure maintenance; fold in when next touching
-  those files.
 - **Route-convention sweep (R1–R11).** Two design decisions to settle
   **first**: (a) is the extract-data REST/JSON/PATCH style a blessed
   AJAX exception or should it + the instrument AJAX endpoints converge

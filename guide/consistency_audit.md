@@ -19,6 +19,22 @@ below was read directly by an agent; the two highest-severity items
 
 ---
 
+## Remediation status
+
+Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
+
+- **✅ Service column complete (S1–S8)** — shipped 2026-08-19.
+  - **Item 1** (PR #1987): S1 (one instrument label), S2/S3/S4 (the
+    `email_identity` module), S5 (shared `bulk_set_status`), S8
+    (docstring fix).
+  - **Item 2** (this slice): S6 (shared `roster_status` —
+    `ROSTER_STATUSES` / `normalise_status` / `is_active`), S7 (shared
+    `_response_count_for_field`).
+- **Open** — the route sweep (R1–R11), the UI-vocabulary sweep
+  (U1–U8), and the view-adapter dedup (V1–V6). Order below unchanged.
+
+---
+
 ## Severity-ranked master list
 
 | # | Sev | Seam | One line |
@@ -152,31 +168,39 @@ naming *is* consistent (`{entity}.bulk_inactivated` / `.bulk_reactivated`),
 so the hazard is maintenance, not behaviour. **Fix:** one generic
 `_bulk_set_status(db, *, model, rows_kwarg, error_cls, entity_noun, ...)`.
 
-### S6 🟡 Status normalisation / active-predicate duplicated in five spots
+### S6 🟡 Status normalisation / active-predicate duplicated in five spots — ✅ done (19B Item 2)
 
 `_normalised_status` (`reviewers.py:80`, `reviewees.py:85`,
 `observers.py:83`) and `_normalised_rel_status` (`relationships.py:444`)
-are the same `(status or "active").strip().lower()` + allowlist check
-with per-module error types; `assignments/_shared.py:24` open-codes the
-active test as `(row.status or "active") == "active"` instead of reusing
-any of them. Allowlist contents differ slightly per entity, so this is
-lower-value than S5.
+were the same `(status or "active").strip().lower()` + allowlist check
+with per-module error types; `assignments/_shared.py:24` open-coded the
+active test as `(row.status or "active") == "active"`. The allowlist was
+in fact identical across all four (`{"active", "inactive"}`).
 
-### S7 🟡 "Count responses for a field id" query duplicated three times
+**Fixed:** new `app/services/roster_status.py` holds `ROSTER_STATUSES` +
+`normalise_status(value, *, error_cls)` + `is_active(row)` (kept
+dependency-light so the assignments package can import it without a
+cycle). Each `_normalised_status` / `_normalised_rel_status` is now a
+one-line delegation passing its own `*OperationError`; the relationships
+CSV-parse check reuses `ROSTER_STATUSES`; `assignments/_shared._is_active`
+delegates to `is_active`.
+
+### S7 🟡 "Count responses for a field id" query duplicated three times — ✅ done (19B Item 2)
 
 Identical `select(func.count(Response.id)).where(Response.response_field_id == field.id)`
 at `instruments/_band2.py:521`, `_band2.py:577`,
-`_response_fields.py:874` — all gate a destructive field change on "has
-responses". A `_response_count_for_field(db, field_id)` helper
-consolidates. (`session_lifecycle.py:980 session_has_responses` correctly
-uses an existence `.limit(1)` probe — the field-level sites need the
-count for the error message, so that difference is justified.)
+`_response_fields.py:874` — all gating a destructive field change on "has
+responses". **Fixed:** extracted `_response_count_for_field(db, field_id)`
+into `instruments/_state.py` (the cross-slice plumbing home both slices
+already import from); the three sites call it. (`session_lifecycle
+.session_has_responses` correctly keeps its existence `.limit(1)` probe —
+the field-level sites need the count for the error message.)
 
-### S8 🟡 Stale docstring vs code
+### S8 🟡 Stale docstring vs code — ✅ done (19B Item 1)
 
-`app/services/reviewers.py:127-129` documents the duplicate check as a
-"case-sensitive match", but `_email_taken` (line 106) is
-case-*in*sensitive (`func.lower`). Doc-only; no second code path.
+`app/services/reviewers.py:127-129` documented the duplicate check as a
+"case-sensitive match", but `_email_taken` was case-*in*sensitive.
+Doc-only; no second code path. **Fixed** alongside the S2 rework.
 
 **Checked & clean:** roster single-update audit envelopes are consistent
 (`reviewers.py:278` / `reviewees.py:311` / `observers.py:243` all use
@@ -540,10 +564,9 @@ Grouped so each PR is a coherent, reviewable slice (per `CLAUDE.md`).
    should it/the instrument AJAX endpoints (R1+R4) converge on one
    contract? (b) `delete` vs `remove` verb rule (R6). Then the mechanical
    nits (R9/R10/R11) and the two-URL consolidations (R2/R8).
-6. **Service dedup (S5–S7) + view dedup (V5–V6).** Pure maintenance —
-   generic `_bulk_set_status`, `_response_count_for_field`, delegated
-   predicates, a `pluralize` helper. Lowest risk, do when touching those
-   files anyway.
+6. **Service dedup (S5–S7) — ✅ done (19B Items 1–2).** Plus the view
+   dedup tail (V5–V6: delegated predicates, a `pluralize` helper) still
+   open — lowest risk, do when touching those files anyway.
 
 **Two design decisions gate the route work and should be answered before
 PR 5:** the AJAX-contract question (R1) and the delete/remove verb rule

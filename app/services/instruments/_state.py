@@ -14,10 +14,10 @@ other way round — same import-graph invariant the
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument
+from app.db.models import AuditEvent, Instrument, Response
 
 # Audit-event types that signal "this instrument's field tables were
 # saved by the operator" — used by ``saved_state_for_session`` to
@@ -63,6 +63,22 @@ def _instrument_label(instrument: Instrument) -> str:
     if short:
         return short
     return f"Instrument_{instrument.id}"
+
+
+def _response_count_for_field(db: Session, field_id: int) -> int:
+    """Number of ``Response`` rows attached to a response field.
+
+    Shared by the Band 2 / response-field save paths that gate a
+    destructive field change (hide / delete) on "has responses" and
+    surface the count in the acknowledgement prompt (audit S7). Distinct
+    from ``session_lifecycle.session_has_responses``, which only needs
+    existence and so uses a cheaper ``LIMIT 1`` probe.
+    """
+    return db.execute(
+        select(func.count(Response.id)).where(
+            Response.response_field_id == field_id
+        )
+    ).scalar_one()
 
 
 def saved_state_for_session(

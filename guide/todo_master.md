@@ -2091,11 +2091,20 @@ The first, highest-value slice from the audit:
   the four byte-identical `_bulk_set_status` copies in
   reviewers / reviewees / observers / relationships.
 
-Full suite green (2,680 passed); ruff clean. **Still open:** the rest of
-the audit — the route-convention sweep (R1–R11, two design decisions to
-settle first), the UI-vocabulary sweep (U1–U8), the view-adapter dedup
-(V1–V6). See `guide/consistency_audit.md` for the batched remediation
-order.
+Full suite green (2,680 passed); ruff clean.
+
+**Item 2 — S6–S7 (service-dedup tail) — done 2026-08-19.** New
+`app/services/roster_status.py` (`ROSTER_STATUSES` + `normalise_status`
++ `is_active`) collapses the four `_normalised_status` copies + the
+open-coded active predicate (S6); `_response_count_for_field` in
+`instruments/_state.py` replaces the three duplicated response-count
+queries (S7). Pure dedup, no behaviour change. This closes the entire
+**service column (S1–S8)**.
+
+**Still open:** the rest of the audit — the route-convention sweep
+(R1–R11, two design decisions to settle first), the UI-vocabulary sweep
+(U1–U8), the view-adapter dedup (V1–V6). See `guide/consistency_audit.md`
+for the batched remediation order.
 
 ---
 
@@ -2152,7 +2161,7 @@ dep chains called out at the bottom of this file.
 - **19B — Consistency remediation** *(started 2026-08-19; see the
   in-progress entry at the end of **Done**)*. Code-level sibling of 19A:
   works through `guide/consistency_audit.md` (same functionality, divergent
-  call paths). Item 1 (service-layer S1–S5) shipped; route / UI / view
+  call paths). Items 1–2 (whole service column S1–S8) shipped; route / UI / view
   sweeps remain. **Plan:** `guide/segment_19B_consistency.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
