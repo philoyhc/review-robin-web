@@ -277,17 +277,16 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Page status info — split into a half-width info card on the
-     left (deadline + accepting counts on row 1; Visibility-when-
-     closed + showing/not-showing counts on row 2) and a
-     half-width companion card on the right that hosts the bulk
-     show-all toggle bottom-right. ``page-grid`` (1fr 1fr,
-     stretched alignment) keeps both cards the same height. #}
+  {# Page status info — a half-width info card on the left (deadline +
+     accepting counts) and a half-width companion card on the right
+     that hosts the Expand all / Collapse all bulk controls.
+     ``page-grid`` (1fr 1fr, stretched alignment) keeps both cards the
+     same height. The bulk visibility-when-closed toggle retired in
+     18R Item 3 — visibility when closed is now governed by the
+     per-instrument visibility policy. #}
   <div class="page-grid">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
-    {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
-    {% set not_showing_count = instruments | length - showing_count %}
     <div class="card">
       <p style="margin: 0;">
         Session deadline (auto-close):
@@ -301,12 +300,6 @@
         &middot;
         <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
       </p>
-      <p style="margin: 8px 0 0 0;">
-        Visibility when closed:
-        <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
-        &middot;
-        <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
-      </p>
     </div>
     <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 8px;">
       {# Segment 18M PR 0 — Expand all / Collapse all instruments
@@ -317,19 +310,6 @@
         <button class="btn secondary" type="button" data-instruments-expand-all>Expand all instruments</button>
         <button class="btn secondary" type="button" data-instruments-collapse-all>Collapse all instruments</button>
       </div>
-      {% if bulk_visibility_state != "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
-              style="margin: 0;">
-          <button class="btn secondary" type="submit">Show all when closed</button>
-        </form>
-      {% else %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
-              style="margin: 0;">
-          <button class="btn secondary" type="submit">Don't show any when closed</button>
-        </form>
-      {% endif %}
     </div>
   </div>
 
@@ -454,7 +434,7 @@
               action="/operator/sessions/{{ session.id }}/instruments/add-new-model"
               style="display: inline; margin: 0;">
           <input type="hidden" name="after" value="{{ instrument.id }}">
-          <button class="btn primary-outline" type="submit"
+          <button class="btn secondary" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>+Instrument</button>
         </form>
         {# Segment 18M PR 2a — +Page break. Adds a page break
@@ -466,7 +446,7 @@
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/page-break/create"
               style="display: inline; margin: 0;">
-          <button class="btn primary-outline" type="submit"
+          <button class="btn secondary" type="submit"
                   data-instrument-page-break-add="{{ instrument.id }}"
                   {% if add_delete_disabled or page_break_disabled %}disabled title="{{ page_break_title or add_delete_disabled_title }}"{% endif %}>+Page break</button>
         </form>
@@ -525,9 +505,11 @@
        pair + the immediate /identity POST).
      - Open / Close lifecycle buttons → inlined directly in the
        per-instrument loop body.
-     - Show / Don't show when closed → retired entirely; sole
-       surface is now the session-level bulk button in the
-       Status + bulk-actions card. #}
+     - Show / Don't show when closed → retired entirely. The
+       per-instrument visibility policy now governs what
+       participants see when an instrument is closed; there is no
+       visibility-when-closed toggle on this page (the session-level
+       bulk toggle retired in 18R Item 3). #}
 
 
   {# Display Fields Sort cell (Segment 13B tri-state control). Used by
@@ -903,9 +885,9 @@
               </form>
             {% endif %}
             {# Per-card Show / Don't show when closed retired
-               2026-05-27 — operators flip visibility-when-closed
-               only at the session level via the bulk-actions card
-               at the top of the page. #}
+               2026-05-27; the session-level bulk toggle retired in
+               18R Item 3. Visibility when closed is now governed by
+               the per-instrument visibility policy. #}
         </div>
 
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">

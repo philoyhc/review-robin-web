@@ -125,34 +125,35 @@ Top-to-bottom, the page renders:
    control strip: one row carrying every action — the review-level
    controls first, then the per-page navigation — in this
    left-to-right order:
-   - `Save` (Primary) — persists the current page's dirty inputs.
-     Greyed out (`disabled`) when the current page has no unsaved
-     edits (see "Save button enabled state" below).
-   - `Discard` (Secondary button, `type="button"`) — JS-resets the
-     current page's inputs back to their server-saved values.
-     Other pages' unsaved edits are untouched.
-   - `Submit` (Primary) — review-session-wide. Commits every saved
-     response across every instrument and stamps `submitted_at` on
-     every assignment. (See "Form scope" below.)
+   - `Save` (Primary, `type="submit"`, `data-rs-save`) — submits
+     the page `<form>` to persist the current page's inputs. Always
+     enabled; there is no dirty-tracking gate (see "Save button
+     state" below).
+   - `Discard` (Secondary, rendered as an `<a href>` back to the
+     current page URL, `data-rs-discard`) — a plain GET reload of
+     the current page. Because unsaved typing lives only in the DOM
+     of the current page, reloading throws it away and re-renders
+     from the last-saved server values. No JS, no separate write.
+   - `Submit` (Primary, `type="submit"` with
+     `formaction="…/submit"`) — review-session-wide. Persists the
+     current page's inputs and stamps `submitted_at` on every
+     assignment. (See "Form scope" below.)
    - **Vertical divider** — a `.rs-action-divider` element separating
      the review-level controls (Save / Discard / Submit) from the
-     per-page navigation (Page #N). 1px wide, full button-height,
-     `border-default` colored, with horizontal margin. Rendered
-     only when there are page buttons to its right; in
-     operator-preview mode Save / Discard / Submit and the divider
-     are all suppressed, leaving just the Page #N buttons.
-   - `Page #{N}: {Instrument.short_label}`, one button per
-     instrument, Primary style. The label combines the position
-     with the operator-set short label so the reviewer sees both
-     ordering and context (e.g. `Page #1: Skills` /
-     `Page #2: Cultural Fit`). When `short_label` isn't set
-     (nullable column; default empty), the button falls back to
-     bare `Page #{N}`. Each button is a JS-driven control
-     (`type="button"`) — clicking it swaps the visible instrument
-     group via CSS class toggle and updates the URL via
-     `history.pushState(...)` so the address bar stays truthful
-     and Back/Forward work; no server round-trip. The button for
-     the current page renders disabled (`aria-disabled="true"`).
+     per-page navigation cluster. 1px wide, full button-height,
+     `border-default` colored, with horizontal margin. Rendered only
+     on multi-page sessions (`page_count > 1`); in operator-preview
+     mode Save / Discard / Submit render as inert disabled buttons
+     and Prev / Next stay functional.
+   - **Prev / Page N of M / Next** — the page-navigation cluster,
+     rendered only on multi-page sessions. **Previous page** and
+     **Next page** are plain `<a href>` links that round-trip the
+     server to the adjacent page URL (`/me/sessions/{id}/{N}`); at a
+     boundary the link renders as a disabled `<button>` so the
+     layout stays stable. Between them a `Page {N} of {M}` text
+     counter (not a button). There is no per-instrument page button
+     and no client-side page swap — every page change is a server
+     GET.
 6. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
@@ -176,12 +177,12 @@ Top-to-bottom, the page renders:
 Mental model: instruments are **chapters of one review session**, not
 standalone editing surfaces. The reviewer fills each page (saving
 when they like), then **Submit commits the whole review** in one
-action. "Page actions" (Save / Discard / Page buttons) act on the
+action. "Page actions" (Save / Discard / Prev / Next) act on the
 current page; "Review-level actions" (Submit / Clear all) act on the
-entire session. Page navigation is a client-side concern that
-preserves in-progress edits across pages so the reviewer can move
-freely without losing work; persistence to the database happens only
-on explicit Save or Submit.
+entire session. Page navigation is a plain server round-trip: each
+page change re-fetches that page's HTML. Persistence to the database
+happens only on explicit Save or Submit, so unsaved typing on the
+current page is lost if the reviewer navigates away without saving.
 
 ### How the surface works
 
@@ -189,28 +190,27 @@ Post-Segment-18L replan: each page is its own server-rendered
 HTML response. The GET route at `/me/sessions/{id}/{page_n}`
 filters to **only the current page's instruments** (the run between
 the operator-defined `starts_new_page` boundaries) and renders just
-those. Cross-page navigation is plain HTTP — Prev / Next / `Page N`
-links are `<a href>`s that round-trip the server. The reviewer's
-typed-but-not-yet-saved values on the **other** pages live on the
-server (saved drafts) rather than in the DOM of the current page,
-so a navigation away from a page with dirty inputs surfaces the
-"unsaved changes" guard before letting the navigation complete.
+those. Cross-page navigation is plain HTTP — Prev / Next links are
+`<a href>`s that round-trip the server. Only the current page's
+inputs exist in the DOM; other pages' values live in the database
+(from prior Saves), not in the current page.
 
 Reviewer-typed values persist across page navigations only after a
-Save round-trip; the cross-page draft store is the database, not
-the DOM. The `beforeunload` warning fires when the reviewer tries
-to navigate (Prev / Next / Page button, address-bar change,
-close-tab) with dirty inputs on the current page, so an accidental
-loss of unsaved typing surfaces a confirm before the navigation
-completes.
+Save round-trip; the draft store is the database, not the DOM.
+There is **no `beforeunload` guard** in the shipped surface —
+navigating away (Prev / Next, address-bar change, close-tab) or
+clicking **Discard** silently drops any unsaved typing on the
+current page. A `beforeunload` warning that keys off the same dirty
+signal is a deferred progressive enhancement (see
+"Designed-for-extensibility").
 
 ### Save / Discard / Page navigation / Submit / Clear all
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{page_n}/save` | Persist the **current page's** dirty inputs to the database. Greys out when the current page has no dirty inputs. On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
-| **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' saved state is untouched. |
-| **Page N** | Page | GET `…/{N}` | `<a href>` link — plain HTTP navigation to the target page. Server-side render swaps the response body to that page's instruments. The link for the current page is disabled. Reviewer's typed-but-not-yet-saved values on the current page must be saved first or they are lost on navigation (the `beforeunload` guard fires per the inline JS in the surface). |
+| **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
+| **Discard** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
+| **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
 | **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
@@ -221,26 +221,21 @@ Per-page submit would require the reviewer to remember to submit
 each page individually, which invites missed submissions. The single
 review-session-wide Submit affordance — surfaced at the top *and*
 bottom of every page — makes "I'm done" a single click no matter
-which page the reviewer is on. Submit also implicit-saves every
-dirty input across every page first, so unsaved work is never lost
-to a Submit click.
+which page the reviewer is on. Submit posts the current page's
+`<form>`, so it implicit-saves the current page's inputs before
+stamping submission; other pages contribute the drafts they saved
+on their own Save round-trips.
 
-### Save button enabled state
+### Save button state
 
-The Save button reflects whether the current page has unsaved edits:
-
-- On initial page load: `disabled`. No inputs are dirty yet.
-- On the first input event in any input belonging to the current
-  page's instrument: enable.
-- On Save success (303 round-trip): the page is re-rendered, every
-  input matches its saved value, the button is `disabled` again.
-- When the reviewer switches to a different page (Page N click): the
-  Save button's enabled state recomputes for the new current page —
-  enabled iff any input in the new page's instrument is dirty.
-
-JS implementation: a per-page dirty flag, recomputed on `input`
-events and on Page button clicks. The same dirty-tracking feeds the
-deferred `beforeunload` warning (see "Designed-for-extensibility").
+The Save button is **always enabled** — it is a plain
+`type="submit"` control (`data-rs-save`) with no dirty-tracking
+gate. Saving with no edits is a harmless no-op 303 back to the same
+page. The `data-rs-save` / `data-rs-discard` / `data-rs-saved-value`
+attributes are rendered as hooks for a future dirty-tracking
+progressive enhancement (Save-disable-until-dirty, in-place Discard,
+`beforeunload` guard), but **no JS handler is wired for them today**
+— see "Designed-for-extensibility".
 
 ### Form HTML mechanics
 
@@ -277,8 +272,10 @@ group, since they're all in the DOM. The route distinguishes:
 - **Clear all** deletes every `Response` row for this reviewer in
   this session, across every instrument. No partial undo. Writes a
   `responses.cleared` audit event.
-- **Discard** is JS-only — no DB write, no audit. Resets the
-  current page's inputs to the server-rendered baseline.
+- **Discard** is a plain GET reload of the current page (an
+  `<a href>`) — no DB write, no audit. The reload re-renders the
+  current page's inputs from the server-saved baseline, dropping
+  any unsaved typing.
 
 **"Submitted" status on the dashboard.** Once Submit succeeds, every
 assignment in the session has `submitted_at` set. The dashboard's
@@ -683,9 +680,9 @@ GET requests behave differently depending on which gate fails:
 
   - Every input renders `disabled`.
   - In both action rows: Save / Discard / Submit hide, plus the
-    vertical divider that separated them. The Page N buttons stay
-    so the reviewer can walk through their other instruments
-    (which may or may not also be closed).
+    vertical divider that separated them. The Prev / Next page-nav
+    links stay so the reviewer can walk through their other
+    instruments (which may or may not also be closed).
   - The Danger Zone card hides (no Clear all).
   - A `.banner.banner-warning` lands inline in the overview card
     explaining the state, e.g. "This session is no longer
@@ -1186,26 +1183,24 @@ makes today + the small follow-on the deferred work needs.
 
 ### beforeunload warning
 
-- **Today.** Clicking `Page N` or `Discard` doesn't lose unsaved
-  edits — Page navigation is purely client-side and the dirty
-  buffer survives, and Discard is an explicit "drop my edits"
-  control. The remaining gap is **browser-close**, **tab-close**,
-  **typing a new URL into the address bar**, and **clicking the
-  chrome's `My Reviews` link** — any of these throw away the dirty
-  buffer with no prompt.
-- **Design call.** The editing form carries a stable id
-  (`id="rs-form"` or similar). The same dirty-tracking that drives
-  the Save button's enabled state (see "Save button enabled
-  state") also feeds a future `beforeunload` listener: when the
-  form is dirty, the listener prompts; when clean, it doesn't.
-  Intentional-discard controls (`Discard` button + chrome
-  `My Reviews` link) carry a `data-discards-edits` attribute the
-  listener reads to skip the prompt; Page N buttons don't need
-  the marker because they don't trigger a real navigation.
-- **What lands later.** A small addition to the existing inline
-  `<script>` block — adds a `beforeunload` handler to the dirty-
-  tracking machinery already in place. No template restructuring
-  needed.
+- **Today.** There is no dirty-tracking and no `beforeunload` guard.
+  Every navigation is a server round-trip that drops unsaved typing
+  on the current page: **Prev / Next**, **Discard** (a GET reload),
+  **browser-close**, **tab-close**, **address-bar change**, and
+  **the chrome's `My Reviews` link** all lose the current page's
+  unsaved edits with no prompt. The reviewer avoids loss by clicking
+  Save before navigating.
+- **Design call.** The template already renders the hooks a future
+  enhancement needs: `data-rs-save` on Save, `data-rs-discard` on
+  Discard, and a `data-rs-saved-value` baseline on every input. A
+  future inline `<script>` can read those to add per-page dirty
+  tracking (Save-disable-until-dirty + in-place Discard) and a
+  `beforeunload` listener that prompts only when the form is dirty,
+  skipping intentional-discard controls.
+- **What lands later.** A new inline `<script>` block wiring the
+  `data-rs-*` hooks — dirty tracking, in-place Discard, and the
+  `beforeunload` handler. No template restructuring needed; the
+  markup hooks are already in place.
 
 ### Standalone submission-confirmation page
 

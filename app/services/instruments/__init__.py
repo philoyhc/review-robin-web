@@ -98,13 +98,12 @@ from ._response_fields import (
 )
 
 # Instrument CRUD — the core lifecycle, default-instrument
-# seeding, Band 1 group / unit-of-review helpers, per-instrument
-# column-widths writer, and session-level bulk toggles.
+# seeding, Band 1 group / unit-of-review helpers, and the
+# per-instrument column-widths writer. (Session-level bulk toggles
+# retired in 18R Item 3.)
 from ._instrument_crud import (
     DEFAULT_INSTRUMENT_NAME,
     GROUP_KIND_SENTINEL,
-    bulk_set_accepting,
-    bulk_set_visibility,
     create_instrument,
     decode_group_kind,
     delete_instrument,
@@ -166,8 +165,6 @@ __all__ = [
     "add_display_field",
     "add_response_field",
     "bulk_save_fields",
-    "bulk_set_accepting",
-    "bulk_set_visibility",
     "clear_page_break",
     "create_instrument",
     "create_page_break_after",

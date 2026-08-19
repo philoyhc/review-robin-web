@@ -558,8 +558,8 @@ audit story but don't fit any payload envelope or other slot —
 `assignments.generated`'s `mode` (`"full_matrix"` /
 `"manual"`), `csv_imports`' `filename`,
 `email_template.updated`'s `template`,
-`session.activated`'s `prev_status` and `override_warnings`,
-`instruments.bulk_accepting_responses`'s `target`. Keys are
+`session.activated`'s `prev_status` and `override_warnings`.
+Keys are
 short identifiers; values are `str`, `int`, or `bool` (no
 nesting, no lists). `refs` stays int-PKs only and `counts`
 stays non-negative-int only — `context` is the slot for

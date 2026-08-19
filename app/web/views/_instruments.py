@@ -259,18 +259,6 @@ def textarea_rows_for(
     return max(_MIN_TEXTAREA_ROWS, min(_MAX_TEXTAREA_ROWS, raw))
 
 
-def _bulk_state(values: list[bool]) -> str:
-    """Three-state value for a bulk toggle: ``all-on`` / ``all-off`` / ``mixed``."""
-    if not values:
-        return "all-off"
-    on = sum(1 for v in values if v)
-    if on == 0:
-        return "all-off"
-    if on == len(values):
-        return "all-on"
-    return "mixed"
-
-
 # Wave 5 PR 5.1 — ``InstrumentRulePickerOption`` /
 # ``InstrumentRulePickerContext`` / ``_build_rule_picker_options`` /
 # ``build_instrument_rule_picker_contexts`` retired alongside the
@@ -758,12 +746,6 @@ def build_instruments_context(
         "instruments": instruments,
         "is_ready": is_ready,
         "can_edit": can_edit,
-        "bulk_accepting_state": _bulk_state(
-            [i.accepting_responses for i in instruments]
-        ),
-        "bulk_visibility_state": _bulk_state(
-            [i.responses_visible_when_closed for i in instruments]
-        ),
         "editing_instrument_id": editing_instrument_id,
         "instrument_saved_state": instrument_saved_state,
         "is_configured_by_instrument": is_configured_by_instrument,

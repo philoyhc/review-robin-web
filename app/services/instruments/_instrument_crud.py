@@ -1014,84 +1014,12 @@ def set_column_widths(
     )
     return instrument
 
-def bulk_set_accepting(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    target: bool,
-    actor: User,
-) -> list[int]:
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    changed: list[int] = []
-    for instrument in instruments:
-        if instrument.accepting_responses != target:
-            instrument.accepting_responses = target
-            changed.append(instrument.id)
-    if changed:
-        db.flush()
-        audit.write_event(
-            db,
-            event_type="instruments.bulk_accepting_responses",
-            summary=(
-                f"Set accepting_responses={target} on "
-                f"{len(changed)} instrument(s)"
-            ),
-            actor_user_id=actor.id if actor else None,
-            session=review_session,
-            payload=audit.set_changes(
-                updated=[{"instrument_id": i} for i in changed]
-            ),
-            context={"target": bool(target)},
-        )
-        db.commit()
-    return changed
 
-
-def bulk_set_visibility(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    target: bool,
-    actor: User,
-) -> list[int]:
-    # #16 — visibility-when-closed is a display flag, not part of the
-    # validation snapshot. Deliberately does NOT call
-    # ``lifecycle.invalidate_if_validated``. See ``docs/status.md`` and
-    # ``test_invalidation_on_setup_mutation.py`` for the regression test.
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    changed: list[int] = []
-    for instrument in instruments:
-        if instrument.responses_visible_when_closed != target:
-            instrument.responses_visible_when_closed = target
-            changed.append(instrument.id)
-    if changed:
-        db.flush()
-        audit.write_event(
-            db,
-            event_type="instruments.bulk_visibility_when_closed",
-            summary=(
-                f"Set responses_visible_when_closed={target} on "
-                f"{len(changed)} instrument(s)"
-            ),
-            actor_user_id=actor.id if actor else None,
-            session=review_session,
-            payload=audit.set_changes(
-                updated=[{"instrument_id": i} for i in changed]
-            ),
-            context={"target": bool(target)},
-        )
-        db.commit()
-    return changed
-
+# ``bulk_set_accepting`` and ``bulk_set_visibility`` retired in 18R
+# Item 3. The bulk accepting ("Open / close all") control was never
+# wired into the UI and dropped from the spec; per-instrument
+# open/close remains the accepting control. The bulk visibility-when-
+# closed toggle was removed from the Instruments page — visibility
+# when closed is now governed by the per-instrument visibility policy.
+# The per-instrument ``set_responses_visible_when_closed`` service
+# (session_lifecycle) still backs config round-trip.

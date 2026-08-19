@@ -116,30 +116,35 @@ right card.
 
 One-line status row, left-aligned:
 
-> *N instruments — M accepting responses · K showing when closed.*
+> *N instruments — M accepting responses.*
 
 Right-aligned bulk-action toggle stack (Segment 18M PR 0
-added the Expand/Collapse pair above the existing
-visibility row):
+added the Expand/Collapse pair):
 
 - **Expand all instruments / Collapse all instruments**:
   flip every per-instrument `<details>` open or closed.
   No state persistence across refresh — operators get a
   fresh all-collapsed default on each page load.
-- **Open / close all** (when `session.is_ready`): bulk-flip
-  `accepting_responses` on every instrument. Lifecycle-aware —
-  greyed out before activation.
-- **Show / hide all when closed**: bulk-flip
-  `responses_visible_when_closed`. Available in any lifecycle
-  state. The per-card mirror retired in Segment 18M
-  follow-up; this is the sole surface for the
-  visibility-when-closed toggle.
+
+**Retired in 18R Item 3:**
+
+- **Open / close all** (bulk-flip `accepting_responses` across
+  every instrument) — this control was never wired into the UI
+  and is dropped from the spec. Per-instrument Open/Close (in the
+  Identity row of each card) remains the accepting control.
+- **Show / hide all when closed** (bulk-flip
+  `responses_visible_when_closed`) — the session-level bulk toggle
+  was removed from this page. Visibility when closed is now
+  governed by the per-instrument **visibility policy**
+  (`spec/visibility_policy.md`); the `responses_visible_when_closed`
+  column persists only for config round-trip. The one-line status
+  row no longer reports a "showing when closed" count.
 
 Historic context: the Status + bulk-actions card was once a
 two-card row (one card per facet); the bulk toggle was small
 enough to absorb into Status without losing affordance, so the
 right-hand "Visibility-when-closed" card retired (Segment 13C
-harmonisation).
+harmonisation). The bulk toggle itself retired in 18R Item 3.
 
 ## Instrument data model
 
@@ -318,12 +323,13 @@ expanded):
 
 The per-card **Show when closed** /
 **Don't show when closed** flip form retired in the
-Segment 18M follow-up — visibility-when-closed is now an
-exclusively session-level toggle via the bulk
-"Show / hide all when closed" button in the Status +
-bulk-actions card. The route
-`POST /sessions/{sid}/instruments/{iid}/visibility` lives
-on for fixture / programmatic use.
+Segment 18M follow-up, and the session-level bulk
+"Show / hide all when closed" toggle retired in 18R Item 3.
+Visibility when closed is now governed by the per-instrument
+**visibility policy** (`spec/visibility_policy.md`); the
+`responses_visible_when_closed` column and its route
+`POST /sessions/{sid}/instruments/{iid}/visibility` live on
+for config round-trip / programmatic use, with no operator UI.
 
 `short_label` and `description` are **not** rendered in
 the Identity heading — `short_label` is edited from the

@@ -33,7 +33,6 @@ from app.db.models import (
 from app.services import assignments, csv_imports, field_labels
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
-from app.services import session_lifecycle as lifecycle
 
 
 @dataclass
@@ -123,14 +122,38 @@ class SessionStatusPills:
     ``Invitation`` rows at all vs. rows generated but no outbox email
     delivered yet) so the chrome status strip can read them apart."""
     responses_reportable: bool
-    """``False`` before activation (draft / validated) — the Responses pill
-    reads ``Awaiting``. ``True`` once the session has been activated (ready /
-    expired / archived) — the pill reports ``<submitted> / <reviewees>``."""
+    """``True`` iff the session has any response activity at all
+    (``responses_drafts > 0`` or ``responses_submitted > 0``) — the Responses
+    pill then reports its counts (see ``responses_label``). ``False`` (pill
+    reads ``Awaiting``) only while there are no responses yet. Data-driven, not
+    lifecycle-driven: a session reverted to draft after responses came in still
+    reports the numbers."""
+    responses_drafts: int
+    """Number of **in-progress reviews** — ``include`` assignments in the
+    session that have at least one saved response but **no** submitted one
+    (all ``submitted_at`` still null). Mutually exclusive per assignment with
+    ``responses_submitted``. Always computed."""
     responses_submitted: int
     """Number of **submitted reviews** — ``include`` assignments in the
     session with at least one response bearing a ``submitted_at`` — reported
     over ``reviewee_count`` (reviewee-centric, matching the Responses page).
-    Computed only when ``responses_reportable``; ``0`` otherwise."""
+    Always computed."""
+
+    @property
+    def responses_label(self) -> str:
+        """Composed Responses-pill text: ``<n> drafts / <m> submitted /
+        <reviewees>``, omitting whichever of drafts / submitted is zero, or
+        ``"Awaiting"`` when there is no response activity at all."""
+        if not self.responses_reportable:
+            return "Awaiting"
+        parts: list[str] = []
+        if self.responses_drafts:
+            noun = "draft" if self.responses_drafts == 1 else "drafts"
+            parts.append(f"{self.responses_drafts} {noun}")
+        if self.responses_submitted:
+            parts.append(f"{self.responses_submitted} submitted")
+        parts.append(str(self.reviewee_count))
+        return " / ".join(parts)
 
 
 _INVITATION_STATES: tuple[str, ...] = (
@@ -182,25 +205,34 @@ def session_status_pills(
     db: Session, review_session: ReviewSession
 ) -> SessionStatusPills:
     sid = review_session.id
-    # Responses pill: "Awaiting" before activation, then
-    # "<submitted reviews> / <reviewees>". Only run the submitted-count
-    # aggregate once activated (the strip renders on every session page).
-    responses_reportable = not (
-        lifecycle.is_draft(review_session)
-        or lifecycle.is_validated(review_session)
-    )
-    responses_submitted = 0
-    if responses_reportable:
-        responses_submitted = db.execute(
-            select(func.count(distinct(Response.assignment_id)))
-            .select_from(Response)
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(
-                Assignment.session_id == sid,
-                Assignment.include.is_(True),
-                Response.submitted_at.is_not(None),
-            )
-        ).scalar_one()
+    # Responses pill: "<n> drafts / <m> submitted / <reviewees>", omitting
+    # whichever of drafts / submitted is zero, or "Awaiting" while there is no
+    # response activity at all. Gate is data-driven, not lifecycle-driven — a
+    # session reverted to draft after responses came in keeps reporting the
+    # numbers. Both aggregates run on every session page (reviewee-centric,
+    # counting distinct include-assignments = "reviews").
+    responses_submitted = db.execute(
+        select(func.count(distinct(Response.assignment_id)))
+        .select_from(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(
+            Assignment.session_id == sid,
+            Assignment.include.is_(True),
+            Response.submitted_at.is_not(None),
+        )
+    ).scalar_one()
+    responses_with_any = db.execute(
+        select(func.count(distinct(Response.assignment_id)))
+        .select_from(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(
+            Assignment.session_id == sid,
+            Assignment.include.is_(True),
+        )
+    ).scalar_one()
+    # Drafts = assignments with saved responses but none submitted.
+    responses_drafts = responses_with_any - responses_submitted
+    responses_reportable = responses_with_any > 0
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
@@ -220,6 +252,7 @@ def session_status_pills(
         email_invites_set_up=False,
         invitations_state=_invitations_state(db, sid),
         responses_reportable=responses_reportable,
+        responses_drafts=responses_drafts,
         responses_submitted=responses_submitted,
     )
 

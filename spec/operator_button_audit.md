@@ -267,7 +267,7 @@ per instrument card.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 48 | Status + bulk-actions | Show all when closed / Don't show any when closed | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/instruments/visibility/all-on` or `/all-off` |
+| 48 | Status + bulk-actions | Show all when closed / Don't show any when closed | — | — | *Retired (18R Item 3)* | The session-level bulk visibility-when-closed toggle was removed; visibility when closed is governed by the per-instrument visibility policy. |
 | 49 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 
 ### 9b — Per-instrument card (one set per instrument)
@@ -275,12 +275,13 @@ per instrument card.
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 50 | Section A right card | Open this Instrument / Close this instrument | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `accepting_responses` (post-activation only) |
-| 51 | Section A right card | Show when closed / Don't show when closed | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `responses_visible_when_closed` |
+| 51 | Section A right card | Show when closed / Don't show when closed | — | — | *Retired (18R Item 3)* | The session-level bulk visibility-when-closed toggle was removed. Visibility when closed is now governed by the per-instrument visibility policy; the right card holds only Expand all / Collapse all. |
 | 52 | Bottom action row (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Bulk-save covers Band 1 form fields + Band 3 row state. Starts `disabled`; activates on first dirty event. Preserves `?editing=<id>` on redirect (Wave 4 PR 2). |
 | 53 | Bottom action row (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Confirms then reloads to discard unsaved client-side state. Mirrors Save's dirty-aware enabled state (Wave 4 PR 4c, PR #1443). |
 | 54 | Bottom action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it (Segment 13C PR 3); same edit-lock gating |
 | 55 | Bottom action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Ships `disabled`; a paired confirm checkbox flush-right below the row (`data-delete-confirm` / `data-delete-btn`) gates it. Disabled outright when it is the only instrument or an edit lock is active. |
-| 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn primary-outline` | Primary Outline | Renamed from `+New model` in PR #1443; posts `/instruments/add-new-model` with `after={iid}`. With the legacy `Add instrument` / `Add group instrument` buttons retired in the same PR, this is the sole "create new instrument" affordance on the row. |
+| 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn secondary` | Secondary | Renamed from `+New model` in PR #1443; posts `/instruments/add-new-model` with `after={iid}`. With the legacy `Add instrument` / `Add group instrument` buttons retired in the same PR, this is the sole "create new instrument" affordance on the row. Reclassified from Primary Outline to Secondary in 18R Item 3 (the `.btn.primary-outline` style was never defined in `base.html`). |
+| 56b | Bottom action row | +Page break | `<button type="submit">` | `btn secondary` | Secondary | Segment 18M PR 2a; posts `/instruments/{iid}/page-break/create` (sets `starts_new_page=true` on the successor). Same Secondary style as +Instrument (18R Item 3). Disabled on the last instrument, when the successor already carries a break, or past the editable window. |
 | 57 | Bottom action row | Lock / Unlock | `<a>` (or disabled `<button>`) | `btn secondary` | Secondary | The gating toggle. Unlocked = `?editing=<id>` in URL; locked = no editing param. Clicking Lock with a dirty Save prompts `confirm()` (Wave 4 PR 3). Renders as a disabled `<button>` (not `<a>`) when an RTD edit lock is active. Modelled on the Quick Setup card's footer. Replaces the pre-Wave-4 `Edit` button (Wave 4 PR 1, PR #1440). |
 
 ### 9c — RTD card — retired 2026-05-26

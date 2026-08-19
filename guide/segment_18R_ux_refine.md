@@ -578,14 +578,54 @@ individually or batched as convenient.
   `observers_enabled` (each with its leading `&middot;` inside the conditional so
   no dangling separator). Added `observer_count` to `SessionStatusPills`.
 
-- **Chrome status strip: wire the Responses pill** (PR #1969, 2026-08-18). Was a hardcoded
-  `awaiting` placeholder. Now: **"Awaiting"** before activation (draft /
-  validated), then **`<submitted reviews> / <reviewees>`** once activated (and
-  while closed / expired / archived) — reviewee-centric, following the Responses
-  page. "Submitted reviews" = `include` assignments with ≥1 response bearing a
-  `submitted_at`; denominator is the reviewee count. Added `responses_reportable`
-  + `responses_submitted` to `SessionStatusPills` (the submitted-count aggregate
-  runs only once activated, since the strip renders on every session page).
+- **Chrome status strip: wire the Responses pill** (PR #1969, 2026-08-18; refined
+  2026-08-18). Was a hardcoded `awaiting` placeholder. Reports
+  **`<submitted reviews> / <reviewees>`** — reviewee-centric, following the
+  Responses page. "Submitted reviews" = `include` assignments with ≥1 response
+  bearing a `submitted_at`; denominator is the reviewee count. Added
+  `responses_reportable` + `responses_submitted` to `SessionStatusPills`.
+  **Refinement 1 — data-driven gate.** The **"Awaiting"** vs numbers gate is
+  **data-driven, not lifecycle-driven**: once there is any response activity the
+  numbers show regardless of lifecycle state, so a session **reverted to draft
+  after responses came in keeps reporting the numbers** rather than snapping back
+  to "Awaiting".
+  **Refinement 2 — drafts + submitted breakdown.** The pill now reads
+  **`<n> drafts / <m> submitted / <reviewees>`**, *omitting whichever of drafts /
+  submitted is zero* (so drafts-only → `1 draft / 5`; submitted-only →
+  `2 submitted / 5`; both → `3 drafts / 2 submitted / 5`), and **"Awaiting"**
+  only when there is no response activity at all. "Drafts" = `include`
+  assignments with saved responses but none submitted; "submitted" = `include`
+  assignments with ≥1 `submitted_at`; the two are mutually exclusive per
+  assignment. Added `responses_drafts` + a `responses_label` property to
+  `SessionStatusPills`; both aggregates run on every session page (the earlier
+  activation-gated short-circuit is gone).
+- **Instruments page: remove the bulk visibility-when-closed toggle** (2026-08-18).
+  The top-right card's **"Show all when closed" / "Don't show any when closed"**
+  bulk toggle (and the left card's "Visibility when closed: N showing …" info
+  row) were removed. Visibility when closed is now governed exclusively by the
+  per-instrument **visibility policy** (`spec/visibility_policy.md`). Removed:
+  the `visibility/all-{on,off}` routes, `bulk_set_visibility` service + export,
+  the `instruments.bulk_visibility_when_closed` audit schema, the
+  `bulk_visibility_state` view field, and `test_bulk_visibility.py`. The
+  `responses_visible_when_closed` column + per-instrument
+  `set_responses_visible_when_closed` service persist for config round-trip.
+- **Deprecate the unwired "Open / close all" bulk-accepting control**
+  (2026-08-18; spec-sweep §A.2). The `accepting/all-{on,off}` routes +
+  `bulk_set_accepting` service existed but no UI drove them. Dropped from
+  `spec/instruments.md` and removed (routes, service + export,
+  `instruments.bulk_accepting_responses` audit schema, `bulk_accepting_state`
+  view field, and the two tests). Per-instrument Open/Close stays.
+- **+Instrument / +Page break → `btn secondary`** (2026-08-18; spec-sweep §A.1).
+  Both used `btn primary-outline`, a class `base.html` never defined (they
+  fell back to solid blue). Reclassified to plain Secondary; button audit
+  entry #56 updated + #56b added for +Page break.
+- **Reviewer-surface spec → server-navigation reality** (2026-08-18; spec-sweep
+  §A.3). `spec/reviewer-surface.md` still described unbuilt client-side
+  dirty-tracking, in-place JS Discard, and `history.pushState` page nav. Rewrote
+  §5, the button table, "How the surface works", "Save button state", and the
+  beforeunload note to the shipped server round-trip model (Prev/Next/Discard
+  `<a href>`s, always-enabled Save), documenting the `data-rs-*` attributes as
+  reserved hooks. No code change — spec-only.
 
 **Open** — log further tweaks here as they come up.
 
