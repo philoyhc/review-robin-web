@@ -233,13 +233,40 @@ buttons already used `danger-solid`, so they pick up the amber too — a
 table + hover + confirm-banner notes). Template/CSS-only — best
 eyeballed on the dev slot; full suite green.
 
+### Item 10 — U3: unify the delete-confirm mechanism — ✅ done 2026-08-19
+
+The safety-weighted one. Both `session_detail.html` danger-zone buttons
+(`Delete Data`, `Delete session`) were "required-checkbox-only" — the
+button was **never greyed**, so the app's highest-stakes action (Delete
+session on Session Home) was its *least*-gated. **Fixed:** both now use
+the app-wide `data-delete-confirm` / `data-delete-btn`
+**disabled-until-checked** standard (button ships
+`disabled aria-disabled="true"`; the checkbox enables it; `required`
+still belt-and-suspenders the JS-off case). The `Delete session`
+`is_ready` lock still holds — the checkbox is `disabled` when the session
+is activated, so the button stays disabled via the same JS. Every
+delete-confirm is now disabled-until-checked.
+
+Confirm-label voice unified to the affirmative **"Yes, delete …"**: the
+sessions-lobby / archived expanders' bare "Allow delete" → compact "Yes,
+delete". The expanders keep their **own per-node script** (a *list* of
+destructive rows can't use the app-wide single-`querySelector` pairing) —
+same behaviour + voice, justified implementation split. Documented in
+`spec/ui_elements.md` (danger-zone → "Delete-confirm standard").
+
+Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
+Template-only — best eyeballed on the dev slot.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **UI sweep — remaining (U3, U7, U8).** U3 (unify the delete-confirm
-  mechanism — carries real safety weight, done deliberately), U7 (one
-  filter-reset label), U8 (one abandon-edits verb).
+- **UI sweep — remaining (U7, U8).** U7 (one filter-reset label), U8
+  (one abandon-edits verb). *(U3 shipped as Item 10 — every destructive
+  submit is now disabled-until-checked via the app-wide
+  `data-delete-confirm` standard; the always-clickable Delete session /
+  Delete Data gap on Session Home is closed, and the confirm-label voice
+  is unified to "Yes, delete …".)*
 - **View-adapter dedup (V1–V6).** `instrument_heading` reimplemented
   inline (V1 — pairs naturally with the S1/V4 instrument-label work),
   the progress-pill macro (V2), the user-display-label property (V3),

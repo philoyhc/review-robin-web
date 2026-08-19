@@ -59,9 +59,15 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 9**: U5 + U6 — `.btn.danger-solid` became a **filled amber**
     style (distinct from outline-red `.destructive` and outline-amber
     `.alert`); archive/purge actions now use it. `spec/ui_elements.md`
-    refreshed. Template/CSS-only — best eyeballed on the dev slot.
-    **Still open:** U3 (delete-confirm mechanism), U7, U8.
-- **Open** — U3 + U7 + U8 (see above) and the view-adapter dedup (V1–V6).
+    refreshed.
+  - **Item 10**: U3 — every destructive submit is now
+    **disabled-until-checked** (the `session_detail` Delete Data / Delete
+    session buttons converted to the app-wide `data-delete-confirm`
+    standard; the always-clickable highest-stakes gap is closed), and the
+    confirm-label voice is unified to "Yes, delete …". Template-only —
+    best eyeballed on the dev slot.
+    **Still open:** U7, U8.
+- **Open** — U7 + U8 (label/verb nits) and the view-adapter dedup (V1–V6).
 
 ---
 
@@ -74,7 +80,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
 | ✅ **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
 | ✅ **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
-| **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
+| ✅ **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
 | ✅ **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
 | ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
 | ✅ **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app *(documented as a blessed exception)* |
@@ -429,11 +435,24 @@ matching `session_validate.html`.
   uses **both**.
 
 **Consequence:** the highest-stakes action in the app — `Delete session`
-on Session Home — is the *least* gated (always-clickable, no disabled
-state), while deleting a roster requires the checkbox to un-grey the
-button. Confirm copy also diverges ("Yes, delete …" vs bare "Allow
-delete"). **Fix:** one mechanism (disabled-until-checked is the more
-visibly safe) + one confirm-label voice.
+on Session Home — was the *least* gated (always-clickable, no disabled
+state), while deleting a roster required the checkbox to un-grey the
+button. Confirm copy also diverged ("Yes, delete …" vs bare "Allow
+delete").
+
+**✅ done (19B Item 10).** Both `session_detail.html` danger-zone buttons
+(`Delete Data`, `Delete session`) now use the app-wide
+`data-delete-confirm` / `data-delete-btn` **disabled-until-checked**
+standard — the button ships `disabled aria-disabled="true"` and the
+checkbox enables it (the `Delete session` `is_ready` lock still holds:
+the checkbox is `disabled` when activated, so the button stays disabled
+via the same JS). Every delete-confirm is now disabled-until-checked. The
+confirm-label voice is unified to the affirmative **"Yes, delete …"** —
+the sessions-lobby / archived expanders' bare "Allow delete" → compact
+"Yes, delete". *(The expanders keep their own per-node script — a **list**
+of destructive rows can't use the app-wide single-`querySelector`
+pairing; the disabled-until-checked behaviour + voice are identical.)*
+Documented in `spec/ui_elements.md`. Best eyeballed on the dev slot.
 
 ### U4 🟡 Dead/duplicate Primary token `class="btn primary"` — ✅ done (19B Item 8)
 
