@@ -6,8 +6,9 @@ the Archive-card harmonization, and the bulk-toggle retirement + chrome
 Responses pill) and **18S Item 3** (sys-admin cross-session writes now
 require real ownership), on top of a full **Segment 19 documentation-hygiene**
 arc — a whole-`spec/` drift sweep and a whole-`docs/` sweep, both executed
-and archived. This is a **two-day, doc-dominated sprint** (48 PRs), the
-opposite cadence to the prior snapshot's 2.5-month window.
+and archived, capped end-of-day by the **Segment 19B consistency
+remediation** (see below). This is a **two-day, doc-dominated sprint**
+(~74 PRs), the opposite cadence to the prior snapshot's 2.5-month window.
 
 Since the 2026-08-17 snapshot:
 
@@ -39,10 +40,29 @@ Since the 2026-08-17 snapshot:
   whole-`docs/` sweep executed across four buckets: `docs/rehydrate.md` →
   `spec/rehydrate.md`; four docs consolidated/retired; the update-in-place
   batch; and a full README refresh. Both sweep docs archived.
+- **Segment 19B — consistency remediation** (PRs #1987 → #2003, plus the
+  #1986 audit and the #2004 doc cleanup) — the code-level sweep that
+  resolved the whole four-seam **consistency audit**
+  (`guide/archive/consistency_audit.md`): **Service** (S1–S8 — the
+  `email_identity` / `roster_status` / `roster_bulk` helper modules +
+  `_response_count_for_field`), **Route** (R1–R11 — the
+  `spec/architecture.md` "Route conventions" note + URL-verb renames
+  [`setupinvite`→`setup-invite`, `*-selected`→`bulk-*`, sys-admin user
+  `/remove`→`/delete`] + the R2 activate-flash / R4 `require_json_object`
+  alignments; **R3** accepted + deferred, **R1 / R7** documented as
+  justified conventions), **Template/UX** (U1–U10 — `.btn.danger-solid`
+  → filled amber, disabled-until-checked delete-confirm, button-vocab +
+  label sweep), **View-adapter** (V1–V6 — the `progress_pill` /
+  `User.display_label` / `_instrument_label` / `services.text.pluralize`
+  dedups). 15 items, all merged; the audit + segment plan retired to
+  `guide/archive/`.
 
-All shipped 2026-08-17 → 2026-08-19 (48 merge commits, 60 non-merge, over
-~2 calendar days — a high-cadence burst, the inverse of the prior window).
-Numbers taken on `main` at `72cf281`. Development context unchanged:
+All shipped 2026-08-17 → 2026-08-19 (~74 merge commits, ~88 non-merge,
+over ~2 calendar days — a high-cadence burst, the inverse of the prior
+window). **Updated end-of-day 2026-08-19** to fold in Segment 19B — the
+afternoon's 26-PR consistency-remediation arc (window `72cf281..88b93c8`,
+PRs #1979–#2004); **every §2 table was re-taken at `88b93c8`** (the SHA
+moved from the morning's `72cf281`). Development context unchanged:
 single author + AI coding agents, pre-deployment, no production traffic.
 
 A standalone snapshot; `guide/codebase_assessment_17aug.md` (+ its JSON
@@ -123,61 +143,72 @@ rehydrate (moved doc, unchanged code), and the email infrastructure
 
 ## 2. Size (LOC)
 
-LOC = physical lines over git-tracked files. Deltas vs the `17aug`
-sidecar (`75eea4e`); area classification unchanged from that snapshot.
+LOC = physical lines over git-tracked files. Totals at `88b93c8`; deltas
+vs the `17aug` sidecar (`75eea4e`) — cumulative across the full two-day
+window *including* Segment 19B; area classification unchanged. The **19B
+increment** (intra-day, `72cf281..88b93c8`) is broken out per row.
 
-| Area | Files | LOC | Δ LOC from 17aug |
+| Area | Files | LOC | Δ from 17aug (of which 19B) |
 |---|---|---|---|
-| `production` (`app/**/*.py` + `alembic/env.py`) | 192 (192 prior) | **55,313** | +148 (+0.3%) |
-| `app/web/templates/` | 59 (60) | **21,825** | +53 (+0.2%) |
-| `tests/` | 250 (251) | **87,263** | +455 (+0.5%) |
-| `docs` (`docs/` + `spec/` + `guide/` + top-level `*.md`) | 200 (201) | **91,109** | +2,380 (+2.7%) |
+| `production` (`app/**/*.py` + `alembic/env.py`) | 197 (192) | **55,394** | +229 (+0.4%) — 19B **+81, +5 files** |
+| `app/web/templates/` | 58 (60) | **21,808** | +36 (+0.2%) — 19B **-17** |
+| `tests/` | 251 (251) | **87,363** | +555 (+0.6%) — 19B +100 |
+| `docs` (`docs/` + `spec/` + `guide/` + top-level `*.md`) | 204 (201) | **93,247** | +4,518 (+5.1%) — 19B **+2,138** |
 | Alembic migrations | 77 (77) | **6,772** | unchanged |
 
-**Test-to-production-Python ratio ~1.578×** (87,263 / 55,313), flat vs
-~1.57× on 17aug. **2,675 tests passing, 17 skipped** (was 2,650 + 17;
-+25 over the window). Suite green on the SQLite default; the `ci-postgres`
-job round-trips Alembic + runs the full suite on `postgres:16`. `ruff` clean.
+**Test-to-production-Python ratio ~1.577×** (87,363 / 55,394), flat vs
+~1.58× at the morning snapshot. **2,680 tests passing, 17 skipped** (was
+2,675 + 17; +5 over the 19B increment). Suite re-run green on the SQLite
+default at `88b93c8`; the `ci-postgres` job round-trips Alembic + runs the
+full suite on `postgres:16` (green on every merged 19B PR). `ruff` clean.
 
 **Biggest files** (top 10 production Python):
 
-| LOC | File | Δ |
+| LOC | File | Δ (19B intra-day) |
 |---|---|---|
-| 1,268 | `app/web/routes_operator/_instruments.py` | **-49** |
-| 1,056 | `app/services/session_lifecycle.py` | +10 |
-| 1,025 | `app/services/instruments/_instrument_crud.py` | **-72** |
-| 984 | `app/web/routes_operator/_quick_setup.py` | +2 |
-| 981 | `app/web/views/_instruments.py` | -18 |
-| 976 | `app/services/responses/_core.py` | unchanged |
-| 967 | `app/services/audit.py` | -3 |
-| 966 | `app/services/instruments/_response_fields.py` | unchanged |
-| 958 | `app/services/validation.py` | +3 |
-| 942 | `app/services/csv_imports.py` | unchanged |
+| 1,247 | `app/web/routes_operator/_instruments.py` | -21 |
+| 1,056 | `app/services/session_lifecycle.py` | unchanged |
+| 1,025 | `app/services/instruments/_instrument_crud.py` | unchanged |
+| 984 | `app/web/routes_operator/_quick_setup.py` | unchanged |
+| 981 | `app/web/views/_instruments.py` | unchanged |
+| 974 | `app/services/responses/_core.py` | -2 |
+| 967 | `app/services/audit.py` | unchanged |
+| 964 | `app/services/instruments/_response_fields.py` | -2 |
+| 954 | `app/services/validation.py` | -4 |
+| 940 | `app/services/csv_imports.py` | -2 |
 
-The plateau **eased slightly**: last window's breakout file,
-`routes_operator/_instruments.py`, fell **-49 to 1,268** because the
-bulk-toggle removal took code out of it, and `_instrument_crud.py` fell
-**-72** (the `bulk_set_*` services deleted). No file grew materially; the
-biggest single addition was `session_lifecycle.py` +10 (the `can_archive`
-helper). The watchlist item from 17aug thus **receded** rather than
-climbing to its ~1,400 tripwire (§9).
+The plateau **kept easing**: the breakout file
+`routes_operator/_instruments.py` fell further to **1,247** (−70 across
+the full two-day window from its 17aug high of 1,317; −21 in 19B alone, as
+the R4 AJAX-parse blocks folded into `require_json_object`). No file grew
+in 19B; several shed a couple of lines each as helpers were extracted
+(`validation.py` −4, `responses/_core.py` −2 from `pluralize`, etc.). The
+17aug watchlist file thus **receded further** below its ~1,400 tripwire
+(§9).
 
-**Where the window's growth landed.** Production moved only **+148 LOC**
-with **zero new production files** (192 → 192) — every code change this
-window was an *edit to an existing file*: the `/config` apply path + Owners
-routes on `_session_home.py`, `can_archive` + `purge_and_archive`
-(lifecycle + `session_purge.py`), the `SessionStatusPills` draft/submitted
-aggregates on `views/_setup.py`, and the bulk-toggle *deletions* that
-netted several files *down*. This is the single most diagnostic figure in
-§2: a 48-PR window that touched production by +0.3% because it was almost
-entirely **documentation** and **UI-consolidation** work, not new code.
+**Where the window's growth landed.** The morning arcs (18R/18S/19) moved
+production +148 LOC with *zero* new files (all edits/deletions). **Segment
+19B inverted that shape**: +81 production LOC but **+5 new files** — five
+small, single-purpose helper modules that each replaced a hand-rolled
+idiom scattered across the codebase: `roster_bulk.py` (97 — the shared
+`bulk_set_status`), `_progress.py` (49 — the `progress_pill` view helper),
+`email_identity.py` (46 — `EMAIL_RE` / `looks_like_email` /
+`normalize_email`), `roster_status.py` (46 — `ROSTER_STATUSES` /
+`normalise_status` / `is_active`), and `text.py` (17 — `pluralize`). The
+net +81 is small because the new modules are offset by the deletions of
+the copies they replaced (five `_bulk_set_status` bodies, six inline
+`request.json()` blocks, ~a dozen `short_label or name` labels, etc.).
+This is the single most diagnostic figure for 19B: a **dedup** arc adds
+*named seams* while netting near-zero LOC.
 
-**Docs still outgrew code, but modestly** (+2,380 doc LOC vs +148
-production). The number *understates* the doc churn: the window deleted 4
-`docs/` files, moved 1 to `spec/`, consolidated 3 deferral ledgers into 1,
-archived 2 sweep docs, and revised 18 spec files — a large *reshaping* of
-the doc corpus that nets to only +2,380 LOC because retirement offset the
-new sweep docs + revisions. `docs/` itself **shrank 20 → 16 files**.
+**Docs still outgrew code, at every scope** (full window +4,518 doc LOC vs
++229 production; morning arc +2,380 vs +148; 19B +2,138 vs +81). The number
+*understates* the doc churn: the window deleted 4 `docs/` files, moved 1 to
+`spec/`, consolidated 3 deferral ledgers into 1, archived 4 sweep/audit docs
+(the two Segment 19 sweeps plus the 19B consistency audit + segment plan),
+and revised 18 spec files — a large *reshaping* of the doc corpus that nets
+lower than the churn because retirement offset the new sweep docs +
+revisions. `docs/` itself **shrank 20 → 16 files**.
 
 **Package shape.** `app/services/` remains the centre of gravity
 (`instruments/`, `responses/`, `assignments/`, `rules/`,
@@ -217,8 +248,21 @@ sweep refreshed 18 specs and thoroughly revised `rrw_functional_spec.md`
 sweep executed all four buckets and both sweep records are archived
 (`guide/archive/spec_sweep_18Aug.md`, `.../docs_sweep_19Aug.md`). Remaining
 open documentation work is the Tier-1 **spec coverage gap**
-(`spec/permissions.md`, `spec/email_template_editor.md`) that Segment 19's
+(`spec/permissions.md`, `spec/email_template_editor.md`) that Segment 19A's
 original charter names — not drift, but missing spec homes.
+
+**The consistency audit closed this window (Segment 19B).** The
+four-seam audit (`guide/archive/consistency_audit.md`) is **fully
+remediated** — no functional-area row above changed *behaviour*, but the
+sweep tightened cross-cutting invariants (one case-fold for email
+identity, one `_instrument_label`, one delete-confirm mechanism, one
+progress-pill mapping) and added `spec/architecture.md` § "Route
+conventions" as the new home for the URL-verb / error-redisplay / AJAX
+conventions. The affected specs (`spec/ui_elements.md` button vocabulary,
+`spec/sessions_overview.md` + `spec/setup_pages.md` + `spec/lifecycle.md`
++ `spec/operator_ui_concept.md` URL slugs) were swept to match. One R3
+sub-item (a page-level bulk-error banner) is the only piece deliberately
+**deferred** (`guide/deferred_consolidated.md` Part C).
 
 _(Every row above was independently re-checked against the code this
 session — route registered / service called / test file named — and **no
@@ -235,7 +279,7 @@ correctness pass.)_
   window was almost entirely documentation + UI consolidation; the code
   that did change was mostly *deletion* (the bulk toggles) and
   *relocation* (config onto Home reusing existing writers). The suite
-  stayed green across all 48 PRs and `ruff` clean — a high-cadence burst
+  stayed green across all ~74 PRs and `ruff` clean — a high-cadence burst
   that added almost no new surface to maintain.
 - **The Edit-page retirement removed a whole page without a migration.**
   18R Item 4 folded session-details config into an inline `?editing=1` card
@@ -264,12 +308,13 @@ correctness pass.)_
 
 ## 5. Weaknesses
 
-- **`routes_operator/_instruments.py` is still the largest file (1,268).**
-  It receded -49 this window (bulk-toggle removal) but remains the
-  single biggest module and the busiest operator write path (the
-  consolidated `/save` handler). *Cost:* review load + blast radius on the
-  instrument card. *Plan:* watchlisted, no queued split; the tripwire from
-  17aug (~1,400) is further away now, so the pressure eased. (§9)
+- **`routes_operator/_instruments.py` is still the largest file (1,247).**
+  It receded again in 19B (-21, the R4 AJAX-parse extraction) and is -70
+  across the full two-day window, but remains the single biggest module
+  and the busiest operator write path (the consolidated `/save` handler).
+  *Cost:* review load + blast radius on the instrument card. *Plan:*
+  watchlisted, no queued split; the tripwire from 17aug (~1,400) is
+  further away now, so the pressure eased. (§9)
 - **The `guide/` corpus keeps accreting despite the sweep.** The window
   pruned `docs/`, consolidated the deferral ledgers, and this snapshot
   retires its predecessor (`codebase_assessment_17aug.md`) to
@@ -296,8 +341,22 @@ correctness pass.)_
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `72cf281`.** This is a checked claim, not a
-default. An adversarial pass traced the five surfaces this window changed —
+**No known open bugs at `88b93c8`.** This is a checked claim, not a
+default — re-verified after Segment 19B by re-running the full suite
+(**2,680 passed, 17 skipped**), `ruff`, and an `import app.main` check at
+HEAD, all green. 19B is a **behaviour-preserving dedup** arc: the only
+deliberate behaviour changes are the casefold-vs-`lower` distinction on
+email-identity comparison (identical for ASCII; casefold is the more
+correct fold — the one auth-adjacent change, adversarially checked so
+write-time uniqueness and read-time access can't disagree), the R11
+301→308 redirect status, the R2 activate-failure flash (was an error
+page), and the U/V cosmetic shifts (danger-solid amber, pill colours) —
+each covered by an updated test. The `users`-table email lookup keeps SQL
+`func.lower` by design (can't scan the whole table; not part of the
+per-session roster hazard). The paragraphs below trace the *morning*
+arcs' surfaces.
+
+An adversarial pass traced the five surfaces the morning window changed —
 the `/config` + Owners routes, the archive harmonization
 (`can_archive` / `purge_and_archive` / `archive-selected`), the
 Responses-pill aggregates, the bulk-toggle removal, and the 18S ownership
@@ -329,9 +388,10 @@ gating — and found no confirmed defect. Concretely verified:
   (`user_can_view_session` = SessionOperator membership) can't be bypassed
   by sys-admin status.
 
-Basis also: full suite green (**2,675 passed, 17 skipped** — skips flat,
-long-standing conditional/environment skips, not silenced this window);
-`ruff` clean; no outstanding review comments on the window's 48 merged PRs.
+Basis also: full suite green (**2,680 passed, 17 skipped** at `88b93c8` —
+skips flat, long-standing conditional/environment skips, not silenced this
+window); `ruff` clean; no outstanding review comments on the window's ~74
+merged PRs.
 
 **Two non-bugs worth recording** (neither a defect):
 
@@ -361,8 +421,8 @@ Caught / handled in-window, worth remembering:
 
 ## 7. Estimated size upon completion
 
-Today: **55,313 production Python + 21,825 templates + 87,263 tests**
-(+ 6,772 migrations). Remaining named MVP scope:
+Today: **55,394 production Python + 21,808 templates + 87,363 tests**
+(+ 6,772 migrations) at `88b93c8`. Remaining named MVP scope:
 
 - **Segment 14B email infrastructure** — Outbox dispatch + per-backend
   transports (SMTP live; Graph / ACS / generic stubbed) + the W20
@@ -381,11 +441,13 @@ Projected feature-complete v1: **~56.5–57.5k production + ~22–22.5k
 templates + ~88–89k tests.**
 
 **Reconcile vs 17aug.** That snapshot projected the same ~56.5–57.5k
-production v1 line, driven almost entirely by unstarted 14B email. This
-window added only +148 production LOC (no feature code — all
-consolidation + docs), so **the projection is unchanged**: the v1 gap is
-still ~1.2–2.2k production LOC, essentially all 14B email + W21. The
-projection excludes anything past v1 (multi-tenancy, blob storage,
+production v1 line, driven almost entirely by unstarted 14B email. The full
+two-day window added only +229 production LOC (of which Segment 19B is +81),
+and **none of it is feature code** — the morning arcs were consolidation +
+docs, and 19B is pure dedup (five helper modules netting near-zero after the
+copies they replaced were deleted). So **the projection is unchanged**: the
+v1 gap is still ~1.1–2.1k production LOC, essentially all 14B email + W21.
+The projection excludes anything past v1 (multi-tenancy, blob storage,
 VNet/Key Vault deferred infra).
 
 ---
@@ -393,16 +455,22 @@ VNet/Key Vault deferred infra).
 ## 8. Bottom line
 
 The codebase is a mature, single-author + AI-agent pre-deployment monolith
-that spent this window **cleaning house, not building**: 48 PRs in two days
-moved production LOC only +0.3% (zero new files) because the work was a
-documentation double-sweep (spec + docs, both executed and archived), the
-retirement of a whole operator page (Edit → inline config on Home), and
-the convergence of two archive paths into one. It ships green (2,675
-passed) with a flat ~1.58× test ratio and `ruff` clean. The 17aug live
-thread — `_instruments.py` climbing to 1,317 — **reversed**: it fell to
-1,268 as the bulk-toggle removal took code out, so there is no file under
-active split pressure. The one genuinely open thread is unchanged from
-17aug: **14B email is still stubbed**, and it is the last large scope
+that spent this window **cleaning house, not building**: ~74 PRs in two days
+moved production LOC only +0.4% because the work was a documentation
+double-sweep (spec + docs, both executed and archived), the retirement of a
+whole operator page (Edit → inline config on Home), the convergence of two
+archive paths into one, and — the end-of-day arc — the **Segment 19B
+consistency remediation**: an audit of the four layer seams (service, route,
+template/UX, view-adapter) that found ~35 places where one behaviour was
+expressed several divergent ways, then collapsed each onto a single named
+seam. 19B is the source of the window's only new production files (five
+small helper modules) and, characteristically for a dedup arc, added just
++81 LOC while deleting the copies those modules replaced. It ships green
+(2,680 passed) with a flat ~1.58× test ratio and `ruff` clean. The 17aug
+live thread — `_instruments.py` climbing to 1,317 — **reversed**: it fell to
+1,247 (bulk-toggle removal, then the 19B R4 AJAX-parse fold), so there is no
+file under active split pressure. The one genuinely open thread is unchanged
+from 17aug: **14B email is still stubbed**, and it is the last large scope
 between here and a pilot that can notify participants.
 
 **Recommended next moves** (≤3):
@@ -425,7 +493,7 @@ between here and a pilot that can notify participants.
 **did not ship** — carried forward as #1 again. Move #2 (finish the
 `guide/` archive sweep) **partially shipped** — the deferral ledgers +
 sweep docs archived, segment plans did not (now move #2). Move #3 (watch
-`_instruments.py`) **resolved itself** — the file receded to 1,268, below
+`_instruments.py`) **resolved itself** — the file receded to 1,247, below
 its tripwire. 17aug's §9 watchlist (`_instruments.py`, `session_lifecycle.py`)
 both held or receded; no split queued.
 
@@ -435,18 +503,21 @@ both held or receded; no split queued.
 
 No split is queued; the pressure **decreased** this window.
 
-- **`app/web/routes_operator/_instruments.py` (1,268 LOC, -49).** Fell
-  below the 17aug high (1,317) as the bulk-toggle routes were deleted. Same
-  seam holds if it grows again: carve the `/save` payload-parsing (the ~8
-  typed blocks) into a `_save.py` sibling, leaving the thin route in place —
-  mirrors the 18N/18O per-concern carves. Revisit only if it passes ~1,400.
+- **`app/web/routes_operator/_instruments.py` (1,247 LOC, -70).** Fell
+  further below the 17aug high (1,317): bulk-toggle routes deleted in the
+  morning arc, then 19B's R4 fold of the inline AJAX-parse blocks into the
+  shared `require_json_object` helper. Same seam holds if it grows again:
+  carve the `/save` payload-parsing (the ~8 typed blocks) into a `_save.py`
+  sibling, leaving the thin route in place — mirrors the 18N/18O per-concern
+  carves. Revisit only if it passes ~1,400.
 - **`app/services/session_lifecycle.py` (1,056 LOC, +10).** Grew slightly
   (the `can_archive` helper). Clean internally; carried from prior
   watchlists, still no queued split.
 
 The 900–1,000 cluster (`_instrument_crud.py` 1,025, `_quick_setup.py` 984,
-`views/_instruments.py` 981, `responses/_core.py` 976, `audit.py` 967,
-`_response_fields.py` 966, `validation.py` 958, `csv_imports.py` 942) is
+`views/_instruments.py` 981, `responses/_core.py` 974, `audit.py` 967,
+`_response_fields.py` 964, `validation.py` 954, `csv_imports.py` 940) is
 stable and internally coherent — none is a junk drawer, so none is
-proposed. Prior split plan archived at
+proposed; several shed a line or two in 19B as helpers were extracted. Prior
+split plan archived at
 `guide/archive/segment_18O_post_participants_model_file_splits.md`.
