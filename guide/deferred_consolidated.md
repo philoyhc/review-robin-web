@@ -1138,3 +1138,40 @@ operators want random grouping / pairing often enough that the manual
 spreadsheet route is real friction. The shape to build then is the
 **seeded, data-materializing** "shuffle into tags / random pairings"
 pre-step above — deliberately never a non-deterministic generate mode.
+
+### Page-level error banner for the setup pages' bulk / delete-all actions (consistency-audit R3)
+
+**The idea.** The four setup pages (Reviewers / Reviewees / Observers /
+Relationships) redisplay a failed **row create / edit** as an inline
+banner inside the add/edit form (`edit_error` → `_render_*_page`). Their
+**bulk status-flip** and **delete-all** handlers instead raise
+`HTTPException(400)`, which the global handler renders as a generic error
+page. Consistency-audit R3 flagged the split. "One redisplay contract"
+would give the bulk / delete-all handlers the same inline treatment —
+which requires a **new page-level error banner** in all four setup
+templates (the existing `edit_error` banner only renders inside
+`{% if edit_mode %}`, so a bulk error has nowhere to show) plus threading
+the value through each `_render_*_page` helper.
+
+**Why it is off the roadmap.** Every error path in scope is
+**unreachable through the UI**: the bulk `not_in_session` /
+`invalid_status` errors only fire for ids/statuses the checkbox UI never
+produces, and the delete-all `confirm` guard fires only when the
+confirm checkbox (which disables the button until ticked) is bypassed.
+All three require a **forged or buggy client**. So the work is a
+four-template UI build whose only visible effect is on responses a real
+operator cannot trigger. The service + audit + docs for the whole route
+sweep (R1–R11) were finished 2026-08-19; R3 was **accepted as-is** by
+the maintainer rather than built.
+
+**What is being done instead.** The convention is documented in
+`spec/architecture.md` § "Route conventions": inline re-render is the
+**form-error** contract (row create/edit); the forged-only bulk /
+delete-all guards intentionally surface the shared error page. No
+behaviour change.
+
+**What would move it back onto the roadmap.** Any change that makes one
+of these error paths **reachable through the UI** — e.g. a bulk action
+that can legitimately partially fail (some rows accepted, some rejected)
+and needs to report which — at which point the page-level banner becomes
+a real operator-facing surface worth building across the four pages.

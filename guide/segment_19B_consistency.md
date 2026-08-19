@@ -185,16 +185,26 @@ Two of the three structural route items (maintainer-chosen approaches):
 
 Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
 
+### Item 7 — R3: resolved by decision (accepted as-is) — 2026-08-19
+
+The last route item. Converting the bulk / delete-all handlers to inline
+re-render would need a **new page-level error banner** across the four
+setup templates (the `edit_error` banner renders only inside the add/edit
+form), and every error path in scope (`not_in_session` /
+`invalid_status` / missing-`confirm`) is **unreachable through the UI** —
+only a forged/buggy client hits them. Maintainer decision: **accept
+as-is + document + defer the build**. The convention (inline re-render =
+form-error contract; forged-only bulk guards keep the error page) is
+recorded in `spec/architecture.md` § "Route conventions"; the deferred
+four-template banner build is logged in `guide/deferred_consolidated.md`
+(Part C) with its lift trigger. No code change.
+
+**This closes the entire route sweep, R1–R11.**
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **R3 — roster operation-error redisplay.** The last route item.
-  Converting the bulk / delete-all handlers to inline re-render (the
-  chosen approach) needs a **new page-level error banner** across the 4
-  setup templates — the existing `edit_error` banner only renders inside
-  the add/edit form (`{% if edit_mode %}`), so a bulk error has nowhere
-  to show today. Ships as its own slice.
 - **UI-vocabulary sweep (U1–U8).** Spec-backed and largely mechanical:
   Save→Secondary, banner Cancel→`.btn alert`, one delete-confirm
   mechanism (U3 carries real safety weight — do it deliberately), drop
