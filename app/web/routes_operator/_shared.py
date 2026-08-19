@@ -13,6 +13,7 @@ evolves.
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -239,6 +240,33 @@ def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
         status_code=code_to_status.get(exc.code, status.HTTP_400_BAD_REQUEST),
         detail=str(exc),
     )
+
+
+def parse_session_deadline(
+    deadline: str | None, timezone_name: str
+) -> datetime | None:
+    """Parse an operator-entered wall-clock deadline in the session's
+    display timezone, or ``None`` when blank. Raises
+    ``HTTPException(422)`` on a malformed value.
+
+    Shared by the two surfaces that edit a session's deadline — the
+    Sessions-lobby expander Save (``_lobby.py``) and the Session Home
+    config-card write (``_session_home._apply_session_config_form``) —
+    so the parse + error contract lives in one place (audit R8). The
+    two routes' *gate* semantics deliberately differ (the lobby
+    expander silently ignores name/code/deadline off-draft; the config
+    card hard-requires an editable session), so only the parse is
+    shared, not the gate.
+    """
+    if not deadline:
+        return None
+    try:
+        return date_formatting.parse_local_datetime(deadline, timezone_name)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="deadline must be ISO-8601",
+        ) from exc
 
 
 def _can_edit_instrument(review_session: ReviewSession) -> bool:

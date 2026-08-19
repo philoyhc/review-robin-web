@@ -6,7 +6,6 @@ Source ranges in pre-refactor ``routes_operator.py``: 64-123.
 
 from __future__ import annotations
 
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -15,7 +14,6 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
-from app.services import date_formatting
 from app.services import session_clone
 from app.services import session_purge
 from app.services import sessions
@@ -28,7 +26,7 @@ from app.web.deps import (
     require_session_operator,
     require_sys_admin_or_session_operator,
 )
-from app.web.routes_operator._shared import _templates
+from app.web.routes_operator._shared import _templates, parse_session_deadline
 
 
 router = APIRouter()
@@ -290,17 +288,7 @@ def lobby_edit_submit(
 
     if lifecycle.is_draft(review_session):
         timezone_name = sessions.resolve_session_timezone(review_session)
-        parsed_deadline: datetime | None = None
-        if deadline:
-            try:
-                parsed_deadline = date_formatting.parse_local_datetime(
-                    deadline, timezone_name
-                )
-            except ValueError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="deadline must be ISO-8601",
-                ) from exc
+        parsed_deadline = parse_session_deadline(deadline, timezone_name)
         sessions.update_session(
             db,
             review_session=review_session,
