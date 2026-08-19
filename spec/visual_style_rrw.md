@@ -166,6 +166,23 @@ The strip is a setup + ops at-a-glance summary, not a running-session dashboard.
 
 The `Not created` vs `Not sent` split matters because the operator's next action differs: generate the invitation rows first vs. press Send. Collapsing both into a single "not sent" pill would hide that.
 
+**Responses state values.** The Responses pill is **reviewee-centric** and **data-driven**, computed by `app.web.views.session_status_pills` (composed in `SessionStatusPills.responses_label`) — *not* gated on lifecycle state:
+
+| Pill text | Pill class | Condition |
+|---|---|---|
+| `Awaiting` | `pill-empty` | No response activity yet — zero `include` assignments carry any saved response. |
+| `<n> drafts / <reviewees>` | `pill-info` | Some reviews are in progress but none submitted (drafts only; the submitted term is omitted). |
+| `<m> submitted / <reviewees>` | `pill-info` | Some reviews submitted but no bare drafts (the drafts term is omitted). |
+| `<n> drafts / <m> submitted / <reviewees>` | `pill-info` | Both in-progress and submitted reviews exist. |
+
+Definitions (both counted as **distinct `include` assignments = "reviews"**, mutually exclusive per assignment):
+
+- **Drafts** (`responses_drafts`) — assignments with at least one saved response but **no** submitted one (all `submitted_at` still null).
+- **Submitted** (`responses_submitted`) — assignments with at least one response bearing a `submitted_at`.
+- The trailing **`<reviewees>`** is the reviewee count (the reviewee-centric denominator, matching the Responses operations page).
+
+The gate is deliberately data-driven, not lifecycle-driven: the numbers appear as soon as any response is saved and **persist even if the session is reverted to draft** after responses came in, rather than snapping back to `Awaiting`. Whichever of drafts / submitted is zero is dropped from the label so the pill stays terse. Detailed per-reviewee / per-instrument coverage lives on the Responses operations page, not the strip.
+
 **Lifecycle pill — enum vs. label.** The lifecycle badge renders through the `lifecycle_label` Jinja filter (`app.services.lifecycle_display`). All values pass through capitalised except `ready → "Activated"`. CSS class names continue to use the raw enum (`pill-lifecycle-ready`, not `pill-lifecycle-activated`). See `spec/session_home.md` "Enum vs. display label" for the rationale.
 
 ### Page header conventions
