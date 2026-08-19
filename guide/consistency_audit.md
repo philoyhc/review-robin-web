@@ -39,22 +39,22 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 
 | # | Sev | Seam | One line |
 |---|-----|------|----------|
-| **S1** | 🔴 High | Service | `_instrument_label` has two implementations with **different fallbacks** — same instrument shows two different names |
+| ✅ **S1** | 🔴 High | Service | `_instrument_label` has two implementations with **different fallbacks** — same instrument shows two different names |
 | **V1** | 🔴 High | View | `instrument_heading` reimplemented inline in two view modules; single-instrument fallback diverges (`name` vs `description`) |
 | **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
 | **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
 | **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
 | **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
-| **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
-| **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
+| ✅ **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
+| ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
 | **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app |
 | **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
 | **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) |
 | **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
 | **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
 | **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
-| **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
-| **S5** | 🟠 Med | Service | `_bulk_set_status` reimplemented four times (verbatim algorithm) |
+| ✅ **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
+| ✅ **S5** | 🟠 Med | Service | `_bulk_set_status` reimplemented four times (verbatim algorithm) |
 | **R5** | 🟡 Low | Route | Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` |
 | **R6** | 🟡 Low | Route | Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` |
 | **R7** | 🟡 Low | Route | Creation verb: `owners/add` (sub-resource) vs `add-group` (verb-first) |
@@ -63,8 +63,8 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
 | **U7** | 🟡 Low | UX | Filter-reset label: "Clear" / "Clear all" / "Clear filters" |
 | **U8** | 🟡 Low | UX | Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) |
-| **S6** | 🟡 Low | Service | Status normalization / active-predicate duplicated in five spots |
-| **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
+| ✅ **S6** | 🟡 Low | Service | Status normalization / active-predicate duplicated in five spots |
+| ✅ **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
 | **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
 | **V6** | 🟡 Low | View | Ad-hoc pluralization inline in multiple modules; no `pluralize()` helper |
 | others | 🟡 Low | Route/UX/Service | R8–R11, U9–U10, S8 — naming/style nits, listed in-section |
@@ -73,7 +73,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 
 ## A. Service / business-logic layer
 
-### S1 🔴 Two `_instrument_label` implementations with different fallbacks — *verified*
+### S1 🔴 Two `_instrument_label` implementations with different fallbacks — *verified* — ✅ done (19B Item 1)
 
 Same functionality: the human-readable operator/reviewer label for an
 instrument.
@@ -98,7 +98,7 @@ different names in the operator's face.
 `_instrument_label` from `app.services.instruments` (the documented
 cross-slice home). Trivial, user-visible, highest value.
 
-### S2 🟠 Roster email matching uses three case-folding conventions
+### S2 🟠 Roster email matching uses three case-folding conventions — ✅ done (19B Item 1)
 
 Same functionality: "does this roster row's email match this identity",
 case-insensitively. Three mutually inconsistent normalisations are live:
@@ -130,7 +130,7 @@ reviewees with `.casefold()` (167).
 both when storing and when comparing; roster uniqueness compares against
 the stored normalised value.
 
-### S3 🟠 "Is this an email" classified two incompatible ways
+### S3 🟠 "Is this an email" classified two incompatible ways — ✅ done (19B Item 1)
 
 - Strict regex `_EMAIL_RE.fullmatch(...)` —
   `app/services/participants.py:32` (`is_email_identified`, the
@@ -147,7 +147,7 @@ value is treated as email-shaped by CSV import yet flagged
 **Fix:** route both through one predicate
 (`participants.is_email_identified` or a shared `looks_like_email`).
 
-### S4 🟠 `_EMAIL_RE` regex literal duplicated five times
+### S4 🟠 `_EMAIL_RE` regex literal duplicated five times — ✅ done (19B Item 1)
 
 Identical `re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")` at
 `participants.py:29`, `reviewers.py:37`, `observers.py:48`,
@@ -156,7 +156,7 @@ comment already flags this drift risk. **Fix:** one module-level
 constant (e.g. a small `app/services/_email.py`) imported everywhere —
 folds naturally into the S2/S3 fix.
 
-### S5 🟠 `_bulk_set_status` reimplemented four times
+### S5 🟠 `_bulk_set_status` reimplemented four times — ✅ done (19B Item 1)
 
 `reviewers.py:290`, `reviewees.py:326`, `observers.py:255`,
 `relationships.py:726` are the same algorithm verbatim (normalise target
