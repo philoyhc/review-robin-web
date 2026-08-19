@@ -279,9 +279,9 @@ land before the UI that surfaces them):
      guarantee in `docs/security_posture.md`; note the ship in `docs/status.md`.
    - Document the `fake_auth_super_admin` sandbox toggle in
      `spec/settings_inventory.md` (alongside the existing `FAKE_AUTH_*` rows)
-     and in the local-dev notes (`docs/local_setup.md` / `docs/codespace_setup.md`,
-     which already state the fake operator carries "operator + sys-admin" — update
-     to "operator + sys-admin + super-admin").
+     and in the local-dev notes (`docs/local_setup.md`, incl. its
+     Codespace section, which already state the fake operator carries
+     "operator + sys-admin" — update to "operator + sys-admin + super-admin").
 
 **Sequencing:** 1 → 2 → 3 (→ 3a → 3b) → 4. PR 1 must precede PR 2 (guards
 assume nesting); PR 3 must follow PR 2 (UI mirrors the server guards). PR 4 can

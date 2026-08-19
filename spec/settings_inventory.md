@@ -439,7 +439,7 @@ deployed environments. Source: `app/config.py`.
 
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
 `docs/deployment_dev.md` (deployment-side configuration),
-`docs/authentication.md` (Easy Auth + `ALLOW_FAKE_AUTH`).
+`docs/security_posture.md` (Easy Auth + `ALLOW_FAKE_AUTH`).
 
 ---
 

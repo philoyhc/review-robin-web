@@ -5,7 +5,7 @@ re-imported — and what silently doesn't.** This is the authoritative
 coverage matrix for the three round-trip mechanisms. It exists because
 "export the settings and re-import them" is load-bearing for backup /
 restore, porting a session between environments, cloning, and the proposed
-[rehydrate](../docs/rehydrate.md) feature — and several hand-set settings
+[rehydrate](../spec/rehydrate.md) feature — and several hand-set settings
 do **not** come back.
 
 Companion to `spec/settings_inventory.md` (the full index of every
@@ -35,7 +35,7 @@ observer cohort rules, `band1_touched_links`, reviewer `profile_link`).
 
 `rehydrate` (shipped, Segment 18P Group 2) composes the settings CSV +
 roster CSVs + the responses importer; its coverage is the union of the
-first two columns below plus responses. See `docs/rehydrate.md`.
+first two columns below plus responses. See `spec/rehydrate.md`.
 
 **Legend:** ✅ round-trips · ⚠️ partial / asymmetric (see notes) · ❌ lost ·
 — not applicable.
@@ -128,7 +128,7 @@ first two columns below plus responses. See `docs/rehydrate.md`.
 
 | Setting | Any path | Notes |
 |---|:--:|---|
-| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported (the coverage CSV emits column labels only, no row data, and has no importer; the manual-assignment CSV was retired 2026-05-11). Clone doesn't copy assignments, and **regenerating from the rule set resets `include=True`**, discarding the override. Confirms the `docs/rehydrate.md` caveat |
+| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported (the coverage CSV emits column labels only, no row data, and has no importer; the manual-assignment CSV was retired 2026-05-11). Clone doesn't copy assignments, and **regenerating from the rule set resets `include=True`**, discarding the override. Confirms the `spec/rehydrate.md` caveat |
 | `is_self_review`, `created_by_mode` | — | Engine-derived, not operator overrides |
 
 ### Permissions (`session_operators`)
@@ -220,4 +220,4 @@ Ordered by user-visible impact:
 - Assignments: `app/services/assignments/` (`_generate.py`,
   `_coverage.py`), `app/web/routes_operator/_assignments.py`.
 - Full setting index: `spec/settings_inventory.md`.
-- Consumer: `docs/rehydrate.md` (shipped, Segment 18P Group 2).
+- Consumer: `spec/rehydrate.md` (shipped, Segment 18P Group 2).

@@ -1,7 +1,7 @@
 """Segment 18P PR G2 — add rehydrate_stashes
 
 Server-side stash of an uploaded extract file set, held between the
-rehydrate Validate and Commit requests (``docs/rehydrate.md`` §3.3).
+rehydrate Validate and Commit requests (``spec/rehydrate.md`` §3.3).
 Postgres-backed so the two-request hand-off survives App Service
 scale-out. ``payload`` is a portable ``LargeBinary`` (SQLite BLOB /
 Postgres bytea) — no dialect-specific column type.

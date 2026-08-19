@@ -159,7 +159,7 @@ Post Segment 18A the lobby carries all three:
   **Rehydrate** (`/operator/sessions/rehydrate`), and **Go to
   Archive** (`/operator/sessions/archived`). **Rehydrate** rebuilds a
   live draft session from a complete set of extract CSV files — see
-  `docs/rehydrate.md` (Segment 18P Group 2).
+  `spec/rehydrate.md` (Segment 18P Group 2).
 
 ## Bulk delete (`delete-selected`)
 

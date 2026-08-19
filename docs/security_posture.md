@@ -2,8 +2,9 @@
 
 The security / compliance posture of Review Robin Web: who can do
 what, what the app trusts, and which hardening items are
-deliberately deferred. Pairs with `docs/authentication.md` (the
-identity subsystem) and `docs/known_limitations.md`.
+deliberately deferred. Absorbs the identity-subsystem write-up
+(formerly `docs/authentication.md`, retired 2026-08-19); pairs with
+`docs/known_limitations.md`.
 
 ## Authorization model
 
@@ -154,19 +155,77 @@ What this means for the trust boundary:
 - `/health` is the one route excluded from Easy Auth (so platform
   probes don't bounce through sign-in). It exposes no data.
 
-## CSRF posture
+### Identity-subsystem mechanics
 
-Review Robin relies on **Easy Auth + `SameSite=Lax` session
-cookies** for CSRF protection and does not implement anti-CSRF
-tokens in app code (segment-plan decision 2). A `SameSite=Lax`
-cookie is not sent on a cross-origin POST, so a forged
-state-changing request arrives with no auth cookie and fails the
-Easy Auth gate before reaching a handler; every state-changing
-route is a POST, never a GET. The full threat model, the
-verification, and the alternatives considered are written up in
-`docs/authentication.md` → "CSRF defense". This is a deliberate
-fit-for-purpose choice for a single-tenant pilot behind Easy
-Auth, not an oversight.
+*Easy Auth is App Service Authentication V2; the app never implements
+MSAL / OpenID Connect itself — it only reads the headers Easy Auth
+injects.*
+
+- **Dev Easy Auth config** (`app-review-robin-web-dev`): authentication
+  enabled, "Require authentication", unauthenticated → HTTP 302 to
+  Microsoft, token store enabled, `/health` set in
+  `globalValidation.excludedPaths` of the `authsettingsV2` resource.
+- **Headers consumed** by `app/auth/identity.py`:
+  `X-MS-CLIENT-PRINCIPAL-NAME` (UPN/email),
+  `X-MS-CLIENT-PRINCIPAL-ID` (Entra object id),
+  `X-MS-CLIENT-PRINCIPAL-IDP` (provider, e.g. `aad`), and
+  `X-MS-CLIENT-PRINCIPAL` (base64 JSON claim set, used when the simple
+  headers don't supply email / name / object id). The parser is
+  defensive: a malformed `X-MS-CLIENT-PRINCIPAL` falls back to the
+  simple headers rather than raising.
+- **Fake auth** (local only): with `ALLOW_FAKE_AUTH=true`,
+  `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` inject an identity carrying
+  `is_fake=True` / `provider="fake"`. Activates only when no Easy Auth
+  headers are present. See "`ALLOW_FAKE_AUTH` gating" below for the
+  deployed-environment guard.
+- **Diagnostic routes:** `GET /auth/me` (JSON — `principal_id`,
+  `email`, `name`, `provider`, `is_fake`) and `GET /auth/me/debug`
+  (HTML — the parsed `AuthenticatedUser`, the raw decoded claims list,
+  a fake-auth pill when the local fallback is in use, and a
+  `/.auth/logout` sign-out link).
+
+## CSRF posture (decided 2026-05-03)
+
+Review Robin relies on **Easy Auth + `SameSite=Lax` session cookies**
+for CSRF protection and does not implement anti-CSRF tokens in app code
+(segment-plan decision 2). A deliberate fit-for-purpose choice for a
+single-tenant pilot behind Easy Auth, not an oversight.
+
+**Threat model.** Authenticated session cookies are the only thing a
+forged cross-origin POST could replay. Easy Auth's session cookie
+(`AppServiceAuthSession`) is set by the App Service platform with
+`HttpOnly`, `Secure` (HTTPS-only), and `SameSite=Lax` (the modern
+browser default). A `SameSite=Lax` cookie is **not** sent on a
+cross-origin POST / PUT / DELETE / PATCH — so a forged form submit from
+another origin reaches the app with no auth cookie, fails Easy Auth's
+gate, and never hits a route handler. Top-level cross-origin GET
+navigation still sends the cookie (the `Lax` exception), but every
+state-changing route is a POST, never a GET, so the GET exception isn't
+exploitable.
+
+**Verification.** The `SameSite=Lax` default has been App Service's
+behaviour since 2020 (Chrome 80). Confirm on the dev slot when
+deploying by inspecting the `Set-Cookie` header on the auth response
+(`AppServiceAuthSession=`). If Microsoft ever changes the platform
+default, this section is the canonical place to revisit the decision.
+
+**Alternatives ruled out (and why that's fine).**
+
+- *CSRF tokens per form* — would need a token-mint-and-verify
+  middleware + per-form plumbing across ~20+ state-changing POSTs.
+  Defence in depth, but redundant with `SameSite=Lax` behind Easy Auth.
+- *Origin / Referer checks* — possible without tokens, but again
+  redundant with the cookie's `SameSite=Lax`.
+- *Custom request headers (`X-Requested-With`)* — useful for AJAX
+  endpoints; the app's POSTs are all `<form>`-based, so no benefit.
+
+If the deployment model ever shifts (multi-tenant, embedded iframe from
+a foreign origin), revisit this and likely add CSRF tokens.
+
+**Local dev / `ALLOW_FAKE_AUTH=true`.** The fake-auth path uses request
+headers, not cookies, so SameSite-on-the-cookie doesn't apply; local
+dev is single-origin (`127.0.0.1:8000`), so cross-origin CSRF isn't a
+realistic threat anyway.
 
 ## `ALLOW_FAKE_AUTH` gating
 
@@ -183,8 +242,9 @@ Defence against that footgun:
   flags are honoured only when `ALLOW_FAKE_AUTH` is also true and
   the resolved identity is `is_fake`, so they are inert in a
   deployed environment regardless.
-- `docs/deployment_dev.md` and `docs/authentication.md` both
-  state it must not be enabled in App Service config.
+- `docs/deployment_dev.md` states it must not be enabled in App
+  Service config, and the "Identity-subsystem mechanics" note above
+  flags the same.
 
 Note: the PR 6a startup check (`validate_critical_settings`) does
 **not** currently hard-fail on `ALLOW_FAKE_AUTH=true` in a

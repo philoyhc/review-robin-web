@@ -29,8 +29,6 @@ Cross-references:
   public surface.
 - **`spec/settings_inventory.md`** §10 — coverage table for the
   five extracts.
-- **`docs/imports.md`** — implementation-side notes on the
-  importer code paths.
 
 ---
 

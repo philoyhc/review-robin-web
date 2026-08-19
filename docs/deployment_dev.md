@@ -254,7 +254,7 @@ To verify after a deploy:
    `{"status": "ok"}`.
 
 Application code consumes Easy Auth headers; do not enable `ALLOW_FAKE_AUTH`
-in App Service configuration. See `docs/authentication.md` for details.
+in App Service configuration. See `docs/security_posture.md` for details.
 
 ## Operator / sys-admin allowlist bootstrap (Segment 16A)
 

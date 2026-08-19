@@ -206,6 +206,16 @@ Two errors repeat across files — fix once, apply everywhere:
 
 ## 3. Consolidate
 
+> ✅ **Executed 2026-08-19 (Segment 19).** `cli_setup_notes.md` → folded its
+> four fixes into `cli_setup.md` and deleted. `authentication.md` → its
+> identity-subsystem + full CSRF write-up absorbed into `security_posture.md`,
+> deleted. `codespace_setup.md` → folded into `local_setup.md` as a "Running
+> in a GitHub Codespace" section (§9), deleted; `local_setup.md`'s stale
+> test-count / fixture / model-count claims fixed in the same pass.
+> `azure_github_setup.md` → reconciled in place with a banner scoping it as
+> the forward-looking PRD/NPRD scale-up target (not moved). All live
+> references repointed; `CLAUDE.md`/`AGENTS.md` kept byte-identical.
+
 ### `cli_setup_notes.md` → fold into `cli_setup.md`, then retire
 
 `cli_setup_notes.md` is **not a document** — it's a raw four-item
@@ -277,6 +287,15 @@ naming) — its references should travel with whatever we decide.
 ---
 
 ## 4. Retire
+
+> ✅ **Executed 2026-08-19 (Segment 19).** Deleted (content merged / covered
+> elsewhere, recoverable via git): `imports.md` (dead ManualAssignment /
+> AssignmentContext core; live CSV content covered by `spec/csv_contracts.md`
+> + `quickstart.md`) and `cli_setup_notes.md` (folded into `cli_setup.md`).
+> Section-level retirements applied: `local_setup.md` §10 obsolete table, the
+> `authentication.md` "does not implement" section (dropped in the merge), and
+> the `status.md` retired `/edit`-page route rows (now the redirect stub +
+> `POST .../config`).
 
 ### `imports.md` — retire (dead core + live content covered elsewhere)
 

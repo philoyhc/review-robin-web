@@ -52,43 +52,27 @@ Grounded in what the extract actually captures and what importers exist:
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
 
 Rows one to three, plus the two rows closed by the
-[prerequisite](#prerequisite-extend-the-settings-round-trip), reuse
+[prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles), reuse
 existing (or prerequisite-extended) settings/roster seams. The **responses**
 row is the genuinely new work.
 
-## Prerequisite: extend the settings round-trip
+## Prerequisite: the settings round-trip covers visibility + toggles
 
-> **Status: shipped** — the two session feature toggles landed in **18P PR
-> A1** and `instrument_view_policies` in **18P PR A2**. Both now round-trip
-> through `settings.csv`, so rehydrate inherits them. Section kept as the
-> design record.
+The per-instrument `instrument_view_policies` grid (the 3×2 visibility grid)
+and the session-level `relationships_enabled` / `observers_enabled` toggles
+round-trip through `settings.csv` — serialized by
+`session_config_io._serialize` (as `instruments[n].view_policies[audience].*`
+rows plus `session.relationships_enabled` / `session.observers_enabled`) and
+restored by `_apply` within its instrument wipe-and-rebuild pass.
 
-**Separate work item, landed first — valuable on its own, and a hard
-dependency of rehydrate.**
-
-`instrument_view_policies` (the per-instrument 3×2 visibility grid) and the
-session-level `relationships_enabled` / `observers_enabled` toggles are
-currently serialized by neither `session_config_io` nor `session_clone`.
-So they don't survive a plain `export settings.csv → import settings.csv`
-today — a real gap in the **normal** settings round-trip, independent of
-rehydrate. Close it there, not inside rehydrate:
-
-- **Serialize** — extend `session_config_io._serialize` to emit
-  `instruments[n].view_policies[audience].*` rows (the while-ongoing and
-  after-release *granularity* + *identification* pairs and `observer_tag`,
-  per `spec/visibility_policy.md`) and two `session.relationships_enabled`
-  / `session.observers_enabled` rows.
-- **Apply** — extend `session_config_io._apply` to parse and restore them
-  within the existing instrument wipe-and-rebuild pass.
-- **Test** — a round-trip test (`serialize → apply → assert view policies +
-  toggles unchanged`), matching how the rest of the settings round-trip is
-  covered.
-
-Once this ships, `settings.csv` fully describes visibility policy and the
-feature toggles, so **rehydrate inherits them for free** — no
-rehydrate-specific view-policy code, and every session's export/import
-(clone-by-config, backup/restore) also stops losing them. This is why it's
-a prerequisite rather than a rehydrate sub-task.
+This was a real gap in the **normal** settings round-trip, independent of
+rehydrate: neither `session_config_io` nor `session_clone` used to carry
+them, so a plain `export settings.csv → import settings.csv` dropped them.
+It was closed **first** — the two feature toggles in 18P PR A1,
+`instrument_view_policies` in PR A2 — precisely so rehydrate inherits them
+for free: no rehydrate-specific view-policy code, and every session's
+export/import (clone-by-config, backup/restore) also stopped losing them.
+That is why it was a prerequisite rather than a rehydrate sub-task.
 
 ## 3. Entry point and page
 
@@ -148,9 +132,9 @@ rehydrate.** The Rehydrate button is inert until a Validate run on the
 current upload returns no blocking errors.
 
 **One shared analyzer.** Both buttons route through a single pure function,
-`analyze_rehydrate_set(files) -> RehydrateReport` ([§11](#11-new-machinery-to-build)),
-so a green preview cannot diverge from what the commit actually does. The
-report carries:
+`analyze_rehydrate_set(files) -> RehydrateReport`
+(`app/services/session_rehydrate.py`), so a green preview cannot diverge from
+what the commit actually does. The report carries:
 
 - **Completeness** — required files present, headers matching, and any
   extra/ignored files ([§4](#4-required-file-set)).
@@ -182,29 +166,20 @@ report carries:
    pipeline ([§6](#6-reconstruction-pipeline)) and redirects to the new
    Session Home.
 
-**Stash mechanism — no blob storage required.** The stash holds the
-uploaded set between the Validate and Commit requests, keyed by an opaque,
-operator-scoped, short-TTL token (cleaned up after commit or on expiry; a
-foreign or expired token is rejected and the page asks for a re-upload).
-Three no-blob options, in order of robustness:
-
-1. **Postgres-backed stash (recommended).** Persist the uploaded bytes as a
-   `bytea` row keyed by token, TTL-swept. Survives instance recycle **and**
-   scale-out — which matters, because this app is sized to autoscale to 2–3
-   App Service instances under load (`docs/architecture.md`,
-   `azure_provision.md`), and a Validate on one instance / Commit on another
-   must still find the stash. Uses infrastructure already provisioned (the
-   database); no Storage Account.
-2. **Local temp-file + App Service session affinity.** Simplest, and fine
-   for the single-instance pilot, but the local file only exists on the
-   instance that wrote it — it relies on session affinity routing the
-   operator back there, and is lost on instance recycle. Fragile exactly
-   when the app scales out.
-3. **Re-upload on commit (no stash).** Zero state; the Commit POST carries
-   the files again. Slightly worse UX; always available as the fallback.
-
-None require blob storage. Prefer **(1)** so the straight-to-run flow stays
-robust under scale-out; **(3)** is the safe minimum.
+**Stash mechanism — a Postgres `bytea` row, no blob storage.** The stash
+holds the uploaded set between the Validate and Commit requests, keyed by an
+opaque, operator-scoped, short-TTL token (cleaned up after commit or on
+expiry; a foreign or expired token is rejected and the page asks for a
+re-upload). It is backed by a `rehydrate_stashes` row — the zipped file set
+in a `bytea` (`LargeBinary`) `payload` column
+(`app/db/models/rehydrate_stash.py`, migration `a3f1c7e9b204`). This survives
+instance recycle **and** scale-out — which matters because the app is sized
+to autoscale to 2–3 App Service instances under load (`docs/architecture.md`,
+`docs/azure_provision.md`), so a Validate on one instance and Commit on
+another still find the stash — using infrastructure already provisioned (the
+database), with no Storage Account. (A local temp-file or a re-upload-on-commit
+design would have avoided the migration but not survived scale-out; the
+`bytea` stash was chosen for that reason.)
 
 **Button styles.** Validate = Primary Outline; Rehydrate = Primary (per
 `spec/domain_assumptions.md`). Rehydrate is additive — it creates a new
@@ -321,7 +296,7 @@ fields), session rule sets, field labels, email overrides, and data
 shapes, and restores per-instrument runtime flags including
 `accepting_responses` and `responses_visible_when_closed`.
 
-With the [prerequisite](#prerequisite-extend-the-settings-round-trip) in
+With the [prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles) in
 place, `relationships_enabled` / `observers_enabled` **and** the instrument
 visibility policies are carried in `settings.csv` and restored by `apply` —
 no rehydrate-specific handling. (Defensive fallback for a legacy extract
@@ -437,15 +412,15 @@ activation stays a deliberate, separate operator gesture.
 
 ## 9. Limitations and known gaps
 
-Stated plainly so the card copy and the PR description can be honest:
+Stated plainly so the card copy and the PR description stay honest:
 
 - **Visibility policies + feature toggles** (`instrument_view_policies`,
   `relationships_enabled`, `observers_enabled`) round-trip through
-  `settings.csv` once the
-  [prerequisite](#prerequisite-extend-the-settings-round-trip) lands —
-  which is a hard dependency of rehydrate, so by ship time these are not
-  gaps. (Only a legacy pre-prerequisite extract would fall back to default
-  view policies + presence-inferred toggles.)
+  `settings.csv` via the
+  [prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles),
+  a hard dependency of rehydrate — so these are not gaps. (Only a legacy
+  pre-prerequisite extract would fall back to default view policies +
+  presence-inferred toggles.)
 - **Manual per-pair assignment overrides don't round-trip** (confirmed —
   `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
   Assignments page's bulk Activate / Inactivate (the `Assignment.include`
@@ -469,87 +444,7 @@ Stated plainly so the card copy and the PR description can be honest:
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph; the responses backfill covers any residual pairs.
 
-## 10. Resolved decisions
-
-1. **Target lifecycle** — land as **`draft`** with all assignments
-   generated but **not activated** ([§8](#8-target-lifecycle-state)). The
-   operator activates deliberately.
-2. **Visibility-policy / config gap** — closed **outside** rehydrate, as a
-   separate [prerequisite](#prerequisite-extend-the-settings-round-trip)
-   that extends the normal settings round-trip to cover
-   `instrument_view_policies` and the feature toggles.
-3. **Name-collision scope** — match `_REHYD` names against the **operator's
-   own** sessions ([§5](#5-naming-and-description)).
-
-## 11. New machinery to build
-
-Grounded in the existing seams so the diff stays small:
-
-- **Page + lobby button.** A new `operator/session_rehydrate.html`
-  template (the two half-width cards + full-width output,
-  [§3.2](#32-the-rehydrate-page-get-operatorsessionsrehydrate)) served by
-  `GET /operator/sessions/rehydrate`, plus the `Rehydrate` `.btn` in the
-  lobby search-card row (`sessions_list.html`,
-  [§3.1](#31-getting-there--the-lobby-rehydrate-button)).
-- **Analyzer (shared, pure).** `app/services/session_rehydrate.py` (or a
-  sibling) — `analyze_rehydrate_set(files) -> RehydrateReport`: the
-  completeness + cross-file-integrity + preview checks
-  ([§3.3](#33-pre-flight-validation-mandatory)). Called by **both** the
-  validate route and (re-run) the commit route, so validate and commit
-  can't drift. Pure and unit-testable against a produced extract set.
-- **Two routes, not one.**
-  - `POST /operator/sessions/rehydrate/validate` — unpack ZIPs, resolve
-    files, run the analyzer, **stash** the set under a token, re-render the
-    page with the report.
-  - `POST /operator/sessions/rehydrate/commit` — take the token, load the
-    stash, **re-run the analyzer**, and on a clean verdict call the
-    orchestrator, then redirect to the new Session Home.
-- **Stash.** A short-TTL, operator-scoped store keyed by token, cleaned up
-  after commit or on expiry — **no blob storage**; a Postgres `bytea` row is
-  the recommended backing (survives scale-out), with local temp-file or
-  re-upload as fallbacks ([§3.3](#33-pre-flight-validation-mandatory)).
-- **Orchestrator service.** `session_rehydrate.rehydrate_session(db, *,
-  files, user, correlation_id) -> ReviewSession`, running the
-  [§6](#6-reconstruction-pipeline) pipeline and owning the all-or-nothing
-  rollback. Reuses `sessions.create_session`,
-  `session_config_io.apply_session_config`, `csv_imports.save_*`,
-  `relationships.save_relationships`, and `assignments.generate`. Assumes a
-  validated set (the commit route re-checks first).
-- **Responses importer.** `app/services/extracts/responses_import.py` (the
-  net-new piece) — a streaming parser for the sectioned 21-column
-  `responses.csv` and the identity→PK resolution + batched `Response`
-  insert in [§6.4](#64-load-responses). Its own size limits, independent
-  of `csv_imports`. Shared by the analyzer (dry-run: resolve + count, don't
-  insert) and the orchestrator (insert).
-- **Audit.** Register `session.rehydrated` in `EVENT_SCHEMAS`.
-
-## 12. Testing expectations
-
-- **Round-trip integration test.** Build a session with reviewers,
-  reviewees, relationships, multiple instruments, and submitted responses;
-  run the real Extract routes to produce the CSVs; feed them to
-  `rehydrate_session`; assert the new session has the `_REHYD` name, the
-  appended description note, matching populations, matching instruments +
-  fields, regenerated assignments covering every response, and byte-equal
-  response values / `SavedAt` / `SubmittedAt` / `Version`.
-- **Collision test** — rehydrating the same extract twice yields `_REHYD`
-  then `_REHYD_1`, with distinct unique codes.
-- **Analyzer tests** — the shared `analyze_rehydrate_set` returns the right
-  verdict for: a complete clean set; each missing required file; a
-  malformed header; a `responses.csv` referencing an email absent from the
-  rosters (cross-session mix); an instrument short-label/field-key absent
-  from `settings.csv`; `observers.csv` present/absent vs the settings. Each
-  blocking case blocks; warnings don't.
-- **Mandatory-gate test** — `POST …/rehydrate/commit` with no prior
-  validation (or a bad/expired token) is rejected and creates no session.
-- **Stash round-trip test** — Validate stashes the set and returns a token;
-  Commit with that token reconstructs from the stash without re-upload;
-  another operator's token is rejected.
-- **Rollback test** — a mid-pipeline failure leaves zero new rows.
-- **Scale test** — a `responses.csv` well beyond 5000 rows validates and
-  imports fully (guards the [§6.4](#64-load-responses) limit note).
-
-## 13. References
+## 10. References
 
 - Extract surfaces: `app/web/routes_operator/_extracts.py`,
   `app/services/extracts/` (`responses_extract.py`, `reviewers_extract.py`,

@@ -333,7 +333,7 @@ Concretely:
   `docs/deployment_dev.md`, `docs/local_setup.md`,
   `docs/security_posture.md`, `guide/deferred_consolidated.md` §1,
   `.github/workflows/` (+`ci-azurite.yml`).
-- **Update per consumer:** `docs/rehydrate.md` §3.3 (C1),
+- **Update per consumer:** `spec/rehydrate.md` §3.3 (C1),
   `docs/backup_restore.md` (C5), `docs/status.md` (each shipped slice),
   `spec/blob_storage.md` (flip uses from "candidate" to "shipped").
 

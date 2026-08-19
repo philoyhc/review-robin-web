@@ -116,7 +116,7 @@ Open `http://127.0.0.1:8000/health` and expect:
 To sign in locally, set `ALLOW_FAKE_AUTH=true` plus
 `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` in your `.env` (see
 `.env.example`). In Azure, Easy Auth supplies the identity
-headers instead — see [`docs/authentication.md`](docs/authentication.md).
+headers instead — see [`docs/security_posture.md`](docs/security_posture.md).
 
 To configure SMTP credentials from the operator Settings page,
 also set `SMTP_ENCRYPTION_KEY` (a Base64-urlsafe-encoded
@@ -165,7 +165,7 @@ README:
   display, the settings inventory, and more).
 - **[`docs/`](docs/)** — reference material about the running
   system ([`docs/README.md`](docs/README.md)). Includes
-  `status.md`, `authentication.md`, `database.md`, `imports.md`,
+  `status.md`, `security_posture.md`, `database.md`,
   `local_setup.md`, `deployment_dev.md`, plus the operations
   set (`operations_runbook.md`, `troubleshooting.md`,
   `backup_restore.md`, `known_limitations.md`,

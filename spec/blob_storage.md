@@ -25,7 +25,7 @@ should clear that bar on its own before it lands; several never will.
 
 | Need | Handled today by |
 |---|---|
-| Rehydrate Validate→Commit hand-off | `rehydrate_stashes.payload` — a zipped file set in a Postgres `bytea` (`LargeBinary`) column, TTL-swept (`spec`/`docs/rehydrate.md` §3.3). Survives scale-out; **no blob store required**. |
+| Rehydrate Validate→Commit hand-off | `rehydrate_stashes.payload` — a zipped file set in a Postgres `bytea` (`LargeBinary`) column, TTL-swept (`spec/rehydrate.md` §3.3). Survives scale-out; **no blob store required**. |
 | CSV / ZIP extracts (`export/*.csv`, `bundle.zip`) | Generated on demand and **streamed** to the operator's browser; never written server-side, never retained (`docs/backup_restore.md`). |
 | Uploaded roster / config / responses CSVs | Parsed **in memory** and discarded once the import completes; only the resulting rows persist. |
 | Reviewee / reviewer photos | `profile_link` is an **external URL** the operator supplies — the app hosts no image bytes. |
@@ -218,7 +218,7 @@ the current stack lacks:
 
 - `docs/backup_restore.md` — exports are stream-only; storage deferred.
 - `guide/deferred_consolidated.md` §1 — blob provisioning as Azure portal work.
-- `docs/rehydrate.md` §3.3 — the current `bytea` stash ("no blob storage
+- `spec/rehydrate.md` §3.3 — the current `bytea` stash ("no blob storage
   required").
 - `spec/email_infra_options.md` — sibling "options" spec (email backend).
 - `spec/visibility_policy.md` — the future published-report mechanism (use #4).
