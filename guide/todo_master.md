@@ -2129,10 +2129,16 @@ folded the six hand-rolled AJAX `request.json()` blocks into a shared
 `require_json_object` helper (kept 400 + messages, per the chosen
 approach — no Pydantic 422).
 
-**Still open:** R3 (roster op-error redisplay — the last route item;
-needs a page-level error banner across the 4 setup templates since the
-`edit_error` banner is form-scoped), the UI-vocabulary sweep (U1–U8),
-the view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
+**Item 7 — R3 resolved by decision — 2026-08-19.** Accepted as-is +
+documented: the forged-only bulk / delete-all error paths keep the error
+page (inline re-render is the form-error contract); the page-level-banner
+build across the 4 setup templates is deferred to
+`guide/deferred_consolidated.md` (Part C). Convention recorded in
+`spec/architecture.md` "Route conventions". **This closes the whole route
+sweep, R1–R11.**
+
+**Still open:** the UI-vocabulary sweep (U1–U8) and the view-adapter
+dedup (V1–V6). See `guide/consistency_audit.md`.
 
 ---
 

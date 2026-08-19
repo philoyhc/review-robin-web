@@ -121,6 +121,17 @@ verb-first to name the kind (`instruments/add-group`,
 sub-collections — this is a deliberate, documented divergence
 (consistency-audit R7).
 
+**Error redisplay.** A failed **row create / edit** re-renders its page
+inline with the validation message in the form banner (`edit_error` →
+`_render_*_page`). A failed **lifecycle action** (Prepare / Activate)
+bounces to the Session Home `super_*` flash (`_redirect_url`) — both the
+Workflow-card and Validate-page activate buttons use it (R2). The
+setup-page **bulk / delete-all** handlers keep a plain
+`HTTPException(400)` (the shared error page): their only failures
+(`not_in_session` / `invalid_status` / missing-`confirm`) are
+unreachable through the UI, so a page-level inline banner for them is
+deferred (consistency-audit R3; `guide/deferred_consolidated.md` Part C).
+
 **Documented exception — the Extract-data "Data shaper" sub-API**
 (`routes_operator/_extract_data.py`). This one surface is a deliberate
 AJAX/JSON sub-API: it uses REST verbs (`POST` / `PATCH` / `DELETE` on

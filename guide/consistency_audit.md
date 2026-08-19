@@ -30,7 +30,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 2**: S6 (shared `roster_status` — `ROSTER_STATUSES` /
     `normalise_status` / `is_active`), S7 (shared
     `_response_count_for_field`).
-- **🔶 Route sweep (R1–R11) in progress.**
+- **✅ Route sweep complete (R1–R11)** — shipped 2026-08-19.
   - **Item 3** (this slice): R1 (documented the extract-data AJAX
     sub-API as a blessed exception in `spec/architecture.md`), R10
     (bare `303` → `status.HTTP_303_SEE_OTHER`), R11 (`/edit` legacy
@@ -47,11 +47,13 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 6**: R2 (aligned `/activate` failure to the Workflow-card
     flash via a shared `_redirect_url`) + R4 (the six hand-rolled AJAX
     parse blocks → shared `require_json_object`, keeping 400).
-    **Still open:** R3 (roster op-error redisplay — needs a new
-    page-level error banner across the 4 setup templates, since the
-    existing `edit_error` banner is scoped to the add/edit form).
-- **Open** — R3 (see above), the UI-vocabulary sweep (U1–U8), and the
-  view-adapter dedup (V1–V6).
+  - **Item 7**: R3 **resolved by decision** — accepted as-is + documented
+    (the forged-only bulk-error redisplay keeps the error page; inline
+    re-render is the form-error contract). The page-level-banner build is
+    logged in `guide/deferred_consolidated.md` (Part C). **This closes
+    the whole route sweep, R1–R11.**
+- **Open** — the UI-vocabulary sweep (U1–U8) and the view-adapter dedup
+  (V1–V6).
 
 ---
 
@@ -69,7 +71,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
 | ✅ **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app *(documented as a blessed exception)* |
 | ✅ **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
-| **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) |
+| ✅ **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) *(accepted as-is; page-banner build deferred)* |
 | ✅ **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
 | **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
 | **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
@@ -284,18 +286,25 @@ instead of raising an error page, so an activation failure looks the
 same from either button. (`/revert` + the instrument edit-lock keep the
 error-page response — a separate concern from activate.)
 
-### R3 🟠 Same operation-error class redisplayed three ways
+### R3 🟠 Same operation-error class redisplayed three ways — ✅ resolved by decision (19B Item 7, accepted as-is)
 
-`ReviewerOperationError` (+ reviewee/observer siblings) handled
-inconsistently *within one file*: inline page re-render with
-`edit_error=` (HTML 400) at `_setup_reviewers.py:294-312`, but
-`raise HTTPException(400)` (generic error page) at
-`_setup_reviewers.py:400-403,431,451` (the bulk/delete-all handlers). A
-third style — 303 + `super_*` flash — exists in `_workflow.py:66` /
-`_session_home.py:580`. A roster op that fails validation can re-render
-inline, dump to a raw error page, or bounce with a flash depending only
-on which button was pressed. **Fix:** one redisplay contract per surface
-(inline re-render is richest and already used for create/update).
+`ReviewerOperationError` (+ siblings): inline page re-render with
+`edit_error=` for row create/edit, but `raise HTTPException(400)`
+(generic error page) for the bulk / delete-all handlers.
+
+**Resolution (chosen: accept + document + defer the build).** Converting
+the bulk / delete-all handlers to inline re-render would need a **new
+page-level error banner across all four setup templates** — the existing
+`edit_error` banner renders only inside `{% if edit_mode %}` (the
+add/edit form), so a bulk error has nowhere to display. And every error
+path in scope (`not_in_session` / `invalid_status` / missing-`confirm`)
+is **unreachable through the UI** — the checkbox UI never produces them;
+only a forged/buggy client can. So the four-template build is deferred:
+`spec/architecture.md` § "Route conventions" now records inline
+re-render as the **form-error** contract and the forged-only bulk guards
+as intentionally using the error page. The banner build is logged in
+`guide/deferred_consolidated.md` (Part C) with its lift trigger — a bulk
+action that can *legitimately* partially fail.
 
 ### R4 🟠 JSON AJAX bodies: hand-rolled validation vs Pydantic model — ✅ done (19B Item 6, shared helper)
 
