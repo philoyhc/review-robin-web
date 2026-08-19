@@ -16,7 +16,7 @@ class RehydrateStash(Base):
     Postgres-backed rather than a local temp file so the two-request
     hand-off survives App Service scale-out (a Validate on one instance
     and a Commit on another must find the same set) — see
-    ``docs/rehydrate.md`` §3.3. ``payload`` is the operator's file set
+    ``spec/rehydrate.md`` §3.3. ``payload`` is the operator's file set
     serialized to a single opaque blob (a re-zipped bundle; the shape is
     the caller's concern). Rows are swept past their TTL and deleted
     after a successful commit; the FK cascade drops them with the

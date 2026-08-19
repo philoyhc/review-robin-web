@@ -1,7 +1,7 @@
 """Rehydrate — pre-flight analyzer + shared naming helpers.
 
 Segment 18P PR G1. :func:`analyze_rehydrate_set` is the mandatory
-pre-flight (``docs/rehydrate.md`` §3.3): given the resolved extract file
+pre-flight (``spec/rehydrate.md`` §3.3): given the resolved extract file
 set (``{filename: bytes}``), it reports **completeness** (required files +
 headers), **cross-file integrity** (responses references resolve against
 the rosters + settings — catches a cross-session file mix), and a
@@ -376,7 +376,7 @@ def unpack_file_set(blob: bytes) -> dict[str, bytes]:
 class RehydrateError(Exception):
     """A step of the reconstruction pipeline failed. The orchestrator
     hard-deletes the partially-built session before re-raising, so no
-    half-rehydrated session survives (``docs/rehydrate.md`` §7)."""
+    half-rehydrated session survives (``spec/rehydrate.md`` §7)."""
 
 
 def _settings_rows(content: bytes) -> list[Any]:
@@ -406,7 +406,7 @@ def _rewrite_identity_rows(rows: list[Any], *, name: str, code: str) -> list[Any
     """Return the settings rows with the ``session.name`` / ``session.code``
     value cells replaced by the derived ``_REHYD`` name + unique code —
     otherwise ``apply`` would restore the original name and collide on the
-    unique ``code`` index (``docs/rehydrate.md`` §6.2)."""
+    unique ``code`` index (``spec/rehydrate.md`` §6.2)."""
     from app.services.session_config_io import Row
 
     rewritten: list[Any] = []
@@ -423,7 +423,7 @@ def _rewrite_identity_rows(rows: list[Any], *, name: str, code: str) -> list[Any
 def _compose_description(
     settings: _SettingsInfo, *, original_description: str, today: _dt.date
 ) -> str:
-    """Original description + the provenance note (``docs/rehydrate.md``
+    """Original description + the provenance note (``spec/rehydrate.md``
     §5). The date is stamped by this (non-pure) layer, injectable for
     deterministic tests."""
     note = (
@@ -456,7 +456,7 @@ def rehydrate_session(
 ) -> ReviewSession:
     """Rebuild a live session from a complete extract file set.
 
-    Runs the full reconstruction pipeline (``docs/rehydrate.md`` §6) as
+    Runs the full reconstruction pipeline (``spec/rehydrate.md`` §6) as
     one logical unit: create the draft shell → apply settings (with the
     ``_REHYD`` name + unique-code rewrite) → import reviewers / reviewees /
     observers / relationships → regenerate assignments → load responses
@@ -627,7 +627,7 @@ def rehydrate_session(
         db.commit()
     except Exception:
         # Hard-delete the partially-built session so no half-rehydrated
-        # session survives (all-or-nothing — docs/rehydrate.md §7).
+        # session survives (all-or-nothing — spec/rehydrate.md §7).
         db.rollback()
         fresh = db.get(ReviewSession, review_session.id)
         if fresh is not None:

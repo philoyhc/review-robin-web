@@ -2,7 +2,7 @@
 
 Covers the all-or-nothing rollback: a failure partway through the
 reconstruction pipeline hard-deletes the partially-built session so no
-half-rehydrated rows survive (``docs/rehydrate.md`` §7).
+half-rehydrated rows survive (``spec/rehydrate.md`` §7).
 """
 
 from __future__ import annotations

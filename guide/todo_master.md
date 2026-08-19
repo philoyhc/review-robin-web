@@ -2018,6 +2018,30 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   the same Responses / Rosters / Audit-log purge options. Controls grey off in
   both locations when a session can't be archived.
 
+### Segment 19 — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19_spec_documentation.md`)
+
+Rolls the recurring spec/ + docs/ currency work under one segment. Two audits
+drive it: `guide/archive/spec_sweep_18Aug.md` (whole-`spec/` drift — resolved
+in 18R Item 3 + the functional-spec/architecture revision) and
+`guide/docs_sweep_19Aug.md` (whole-`docs/` audit — the active work list). Also
+carries the original Segment 19 charter: coverage-gap closure for the Tier-1
+specs flagged in `guide/archive/spec_sweep_11may.md`.
+
+Docs-sweep follow-through, by disposition (`guide/docs_sweep_19Aug.md`):
+
+- **Revise into `spec/`** — `docs/rehydrate.md` → `spec/rehydrate.md`
+  (**in progress — first item**). Trim the build-scaffolding sections
+  (Resolved decisions / New machinery to build / Testing expectations) now the
+  feature has shipped; scrub the remaining "to build" framing.
+- **Update in place** — status.md's trailing header + the retired `/edit`
+  route rows; the cross-cutting "no in-app revoke UI (16A PR 6)" stale claim in
+  three docs (shipped in 18S); the conftest fixture / test-count inversion in
+  two docs; plus the per-file factual fixes.
+- **Consolidate** — cli_setup_notes → cli_setup; authentication →
+  security_posture; local_setup + codespace_setup; azure_github_setup vs
+  deployment_nus.
+- **Retire** — imports.md; cli_setup_notes.md; section-level retirements.
+
 ---
 
 ## Upcoming
@@ -2062,13 +2086,12 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19 — Spec documentation** *(stub created 2026-05-11)*.
-  Periodic spec-hygiene sweeps on `spec/` — initial
-  coverage-gap closure for Tier-1 specs flagged in
-  `guide/archive/spec_sweep_11may.md` (Email Template editor,
-  Permissions), plus a recurring cadence template.
-  Distinct from Segment 20 which produces operator- +
-  developer-facing prose in `docs/`.
+- **19 — Documentation hygiene** *(stub created 2026-05-11;
+  **started 2026-08-19** — see the in-progress entry at the end of
+  **Done**)*. Broadened from spec-only to spec/ **+** docs/ currency:
+  the periodic `spec/` hygiene sweeps + Tier-1 coverage-gap closure
+  (`guide/archive/spec_sweep_11may.md`) now run alongside the
+  `docs/`-sweep follow-through (`guide/docs_sweep_19Aug.md`).
   **Plan:** `guide/segment_19_spec_documentation.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
