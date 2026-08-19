@@ -186,6 +186,20 @@ Each element entry follows the same shape:
 > Destructive button inside stays outline-`accent-red` (the action
 > that actually deletes data) — the brown frames the surface, the
 > red marks the action.
+>
+> **Delete-confirm standard (audit U3).** Every destructive
+> submit is **disabled-until-checked**: the button ships
+> `disabled aria-disabled="true"`, a paired confirmation checkbox
+> enables it, and the checkbox is also `required` (belt-and-suspenders
+> against a JS-off submit). The app-wide `data-delete-confirm="{key}"`
+> ↔ `data-delete-btn="{key}"` pairing (base.html) drives single-form
+> pages; a **list** of destructive rows (the sessions-lobby /
+> archived expanders) uses its own per-node script for the same
+> disabled-until-checked behaviour, because the app-wide `querySelector`
+> can't address N buttons. The confirm-checkbox label uses the
+> affirmative **"Yes, delete …"** voice everywhere (full sentence in a
+> danger-zone card; compact "Yes, delete" in the expander toolbar) —
+> never a permissive "Allow delete".
 > *v1:* not a class — inline-styled `.card` with bespoke red
 > border (and inconsistent backgrounds) per page.
 > *v2 (pilot-validated):* `.card.danger-zone` rule under

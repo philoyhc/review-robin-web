@@ -2147,9 +2147,16 @@ Submit stays Primary); banner Cancels → `.btn alert`; dropped the no-op
 `.destructive` deletes and outline-amber `.alert` recovery); archive/purge
 actions use it. `spec/ui_elements.md` refreshed. Template/CSS-only.
 
-**Still open:** UI sweep remaining — U3 (delete-confirm mechanism),
-U7/U8 (label/verb) — and the view-adapter dedup (V1–V6). See
-`guide/consistency_audit.md`.
+**Item 10 — U3 (delete-confirm mechanism) — done 2026-08-19.** Every
+destructive submit is now disabled-until-checked: the `session_detail`
+Delete Data / Delete session buttons converted to the app-wide
+`data-delete-confirm` standard (closing the always-clickable Delete
+session gap on Session Home), and the confirm-label voice unified to
+"Yes, delete …" (expanders' "Allow delete" → "Yes, delete"). Documented
+in `spec/ui_elements.md`.
+
+**Still open:** UI sweep remaining — U7/U8 (label/verb) — and the
+view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
 
 ---
 

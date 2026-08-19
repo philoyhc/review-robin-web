@@ -175,7 +175,7 @@
             <div class="session-expander-actions exp-actions-right">
               <label class="exp-allow-delete">
                 <input type="checkbox" name="confirm" value="true"
-                       data-expander-allow-delete> Allow delete
+                       data-expander-allow-delete> Yes, delete
               </label>
               <span class="exp-sep" aria-hidden="true">|</span>
               <span class="exp-purge-opts">
@@ -222,7 +222,7 @@
             <div class="session-expander-actions exp-actions-right">
               <label class="exp-allow-delete">
                 <input type="checkbox" name="confirm" value="true"
-                       data-expander-allow-delete> Allow delete
+                       data-expander-allow-delete> Yes, delete
               </label>
               <span class="exp-sep" aria-hidden="true">|</span>
               <span class="exp-purge-opts">
@@ -340,7 +340,7 @@
         }
 
         // The expander Delete button stays disabled until its
-        // "Allow delete" checkbox is ticked — the confirm gate.
+        // "Yes, delete" checkbox is ticked — the confirm gate.
         function wireDeleteGate(node) {
           var allow = node.querySelector("[data-expander-allow-delete]");
           var del = node.querySelector("[data-expander-delete]");
