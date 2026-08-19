@@ -52,8 +52,13 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     re-render is the form-error contract). The page-level-banner build is
     logged in `guide/deferred_consolidated.md` (Part C). **This closes
     the whole route sweep, R1–R11.**
-- **Open** — the UI-vocabulary sweep (U1–U8) and the view-adapter dedup
-  (V1–V6).
+- **🔶 UI-vocabulary sweep (U1–U8) in progress.**
+  - **Item 8** (this slice): U1 (routine in-editor Save → Secondary;
+    reviewer-surface Submit stays Primary), U2 (banner Cancels →
+    `.btn alert`), U4 (dropped the no-op `.btn primary` token).
+    Template/CSS-only — best eyeballed on the dev slot after deploy.
+    **Still open:** U3 (delete-confirm mechanism), U5–U8.
+- **Open** — U3 + U5–U8 (see above) and the view-adapter dedup (V1–V6).
 
 ---
 
@@ -64,8 +69,8 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **S1** | 🔴 High | Service | `_instrument_label` has two implementations with **different fallbacks** — same instrument shows two different names |
 | **V1** | 🔴 High | View | `instrument_heading` reimplemented inline in two view modules; single-instrument fallback diverges (`name` vs `description`) |
 | **V2** | 🔴 High | View/UX | Reviewer-progress pill state → (label, colour) hand-rolled in 4 templates; same state coloured differently; two enum spellings |
-| **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
-| **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
+| ✅ **U1** | 🔴 High | UX | "Save" styled Primary on some surfaces, Secondary on others — split even within one page |
+| ✅ **U2** | 🔴 High | UX | Banner "Cancel" styled `.btn alert` (per spec) vs `.btn secondary` |
 | **U3** | 🔴 High | UX | Destructive-delete confirmation gated two incompatible ways; the highest-stakes action is the *least* gated |
 | ✅ **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
 | ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
@@ -80,7 +85,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **R5** | 🟡 Low | Route | Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` |
 | ✅ **R6** | 🟡 Low | Route | Single-entity removal verb: `/delete` vs `/remove` vs `/delete-all` |
 | ✅ **R7** | 🟡 Low | Route | Creation verb: `owners/add` (sub-resource) vs `add-group` (verb-first) |
-| **U4** | 🟡 Low | UX | Dead/duplicate Primary token `class="btn primary"` vs `class="btn"` |
+| ✅ **U4** | 🟡 Low | UX | Dead/duplicate Primary token `class="btn primary"` vs `class="btn"` |
 | **U5** | 🟡 Low | UX | "Archive" styled Destructive one place, Outline-amber another |
 | **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
 | **U7** | 🟡 Low | UX | Filter-reset label: "Clear" / "Clear all" / "Clear filters" |
@@ -389,28 +394,24 @@ Measured against the canonical vocabulary in `spec/ui_elements.md` §6
 `.btn.destructive`, Outline-amber = `.btn.alert`) and
 `spec/operator_button_audit.md`.
 
-### U1 🔴 "Save" styled Primary on some surfaces, Secondary on others
+### U1 🔴 "Save" styled Primary on some surfaces, Secondary on others — ✅ done (19B Item 8)
 
-Same "commit my edits" gesture, two stylings — and the split occurs
-*within a single page*. **Primary:** `reviewer/_action_row.html:36`;
-`session_reviewers.html:177`, `session_reviewees.html:182`,
-`session_relationships.html:190`, `session_observers.html:142,234`;
-`sessions_list.html:190`. **Secondary:** `instruments_index.html:397`;
-`session_extract_data.html:600`; `partials/_quick_setup_card.html:192`
-(`Submit`); `partials/_field_labels_editor.html:56` (`Save labels`).
-Sharpest: on `session_reviewers.html`, `Save labels` is Secondary while
-the row-edit `Save` on the same page is Primary. Spec says routine
-submits are Secondary; Primary is a page's single main affirmative.
-**Fix:** Secondary for all in-editor Save/Submit, applied uniformly.
+Same "commit my edits" gesture, two stylings — the split occurred even
+within a single page. **Fixed:** every routine in-editor Save is now
+Secondary — the operator row-edit Saves (`session_reviewers` /
+`session_reviewees` / `session_relationships` / `session_observers`), the
+reviewer-surface `Save`, and the sessions-lobby expander `Save`. The
+reviewer-surface **`Submit`** stays Primary as the page's single main
+affirmative (the whole point of the surface), giving a clear
+Save/Discard-secondary → Submit-primary hierarchy.
 
-### U2 🔴 Banner "Cancel" styled `.btn alert` vs `.btn secondary`
+### U2 🔴 Banner "Cancel" styled `.btn alert` vs `.btn secondary` — ✅ done (19B Item 8)
 
-`spec/ui_elements.md` §5a mandates every redirect-back banner carry a
-Cancel styled `.btn.alert`. Followed at `session_validate.html:36,63`;
-violated (`.btn secondary`) at `partials/next_action_card.html:105` and
-`instruments_index.html:350,353`. Two structurally identical
-confirm-or-cancel banners, different Cancel colours. **Fix:** `.btn.alert`
-for all banner Cancels.
+Every redirect-back banner should carry a Cancel styled `.btn.alert`.
+The two violators (`.btn secondary`) — `partials/next_action_card.html`
+(the Regenerate-&-prepare confirm banner) and `instruments_index.html`
+(both branches of the `rf-save-error` banner) — are now `.btn alert`,
+matching `session_validate.html`.
 
 ### U3 🔴 Destructive-delete confirmation gated two incompatible ways
 
@@ -431,14 +432,14 @@ button. Confirm copy also diverges ("Yes, delete …" vs bare "Allow
 delete"). **Fix:** one mechanism (disabled-until-checked is the more
 visibly safe) + one confirm-label voice.
 
-### U4 🟡 Dead/duplicate Primary token `class="btn primary"`
+### U4 🟡 Dead/duplicate Primary token `class="btn primary"` — ✅ done (19B Item 8)
 
-`.btn.primary` has **no CSS rule** — it renders identically to bare
-`.btn`. Both spellings are live (`btn primary`: `reviewer/summary.html:25`,
-`reviewer/collation.html:99`, `session_reviewees.html:182`, …; bare `btn`:
-`reviewer/results.html:195`, `sessions_list.html:190`, …). Harmless today
-but a live trap — adding a `.btn.primary` rule would silently restyle only
-the `btn primary` buttons. **Fix:** drop the no-op `primary` token.
+`.btn.primary` had **no CSS rule** — it rendered identically to bare
+`.btn`. **Fixed:** the no-op `primary` token is gone everywhere — the
+operator row-edit Saves became `.btn secondary` (U1) and the two reviewer
+Download buttons (`reviewer/summary.html`, `reviewer/collation.html`)
+became bare `.btn` (visual no-op). No `btn primary` remains in the
+templates.
 
 ### U5 🟡 "Archive" styled Destructive one place, Outline-amber another
 
