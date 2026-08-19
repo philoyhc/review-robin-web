@@ -82,7 +82,7 @@
               </td>
               <td><code>{{ s.code }}</code></td>
               <td>
-                <span class="pill pill-count">{{ s.created_by_user.display_name or s.created_by_user.email }}</span>
+                <span class="pill pill-count">{{ s.created_by_user.display_label }}</span>
               </td>
               <td>
                 <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>

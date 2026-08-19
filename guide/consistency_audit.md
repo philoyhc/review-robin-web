@@ -70,19 +70,27 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 12**: U9 (extract-data shaper "Delete shape" buttons →
     `.btn destructive`) + U10 (dropped the redundant danger-zone `<h2>`
     inline margin — the `.card h2` rule already handled it).
-- **🔶 View-adapter dedup (V1–V6) in progress** — the last column.
-  - **Item 13** (this slice): V1 (the two inline `instrument_heading`
-    reimpls → the canonical helper) + V4 (the hand-rolled instrument
-    friendly-label sites → the canonical `_instrument_label`; the
-    CSV-safe positioned variants kept as named helpers).
+- **✅ View-adapter dedup complete (V1–V6)** — shipped 2026-08-19.
+  - **Item 13**: V1 (the two inline `instrument_heading` reimpls → the
+    canonical helper) + V4 (the hand-rolled instrument friendly-label
+    sites → the canonical `_instrument_label`; the CSV-safe positioned
+    variants kept as named helpers).
   - **Item 14**: V2 — shared `views.progress_pill(state) → (css, label)`
     helper (Jinja global on both template instances); the four
     hand-rolled progress pills now render one canonical colour semantic
     (blue/amber/green) + one enum spelling.
-    **Still open:** V3, V5, V6.
+  - **Item 15**: V3 (`User.display_label` property), V5 (the
+    `monitoring.is_at_risk_state` / `is_incomplete_state` predicates,
+    delegated by all four dataclasses), V6 (`services.text.pluralize`).
+
+**✅ Audit fully remediated — every finding (S1–S8, R1–R11, U1–U10,
+V1–V6) is resolved.** Two findings by deliberate decision rather than
+code change: **R3** (accepted; page-banner build deferred to
+`deferred_consolidated.md`) and **R1 / R7** (documented as justified
+conventions in `spec/architecture.md`).
 
 **Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI **U1–U10 ✅**
-· View **V1, V2, V4 ✅** · remaining: **V3, V5, V6**.
+· View **V1–V6 ✅** — **complete**.
 
 ---
 
@@ -102,7 +110,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
 | ✅ **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) *(accepted as-is; page-banner build deferred)* |
 | ✅ **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
-| **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
+| ✅ **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
 | ✅ **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
 | ✅ **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
 | ✅ **S5** | 🟠 Med | Service | `_bulk_set_status` reimplemented four times (verbatim algorithm) |
@@ -116,8 +124,8 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **U8** | 🟡 Low | UX | Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) |
 | ✅ **S6** | 🟡 Low | Service | Status normalization / active-predicate duplicated in five spots |
 | ✅ **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
-| **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
-| **V6** | 🟡 Low | View | Ad-hoc pluralization inline in multiple modules; no `pluralize()` helper |
+| ✅ **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
+| ✅ **V6** | 🟡 Low | View | Ad-hoc pluralization inline in multiple modules; no `pluralize()` helper |
 | ✅ others | 🟡 Low | Route/UX/Service | R8–R11, S8, U9, U10 — all done; naming/style nits, listed in-section |
 
 ---
@@ -607,7 +615,17 @@ title-cases via `_filters.py:41-46` while the table cell prints raw
 macro `progress_pill(state)` (or a view helper returning `(css, label)`)
 + one canonical enum spelling (or an explicit normaliser).
 
-### V3 🟠 User display-label hand-rolled 7+ times, with a `"—"` variant
+### V3 🟠 User display-label hand-rolled 7+ times, with a `"—"` variant — ✅ done (19B Item 15)
+
+**Fixed:** new `User.display_label` property (`display_name or email`,
+the always-present identity column). The seven email-fallback User sites
+(`_lobby.py`, `sessions_list` / `sessions_archived` /
+`sys_admin_sessions` creator pills, `session_detail` owner-candidate
+option, the two "Signed in as" chrome bars) now use it. The
+`display_name or "—"` variant (name-only, email shown in an adjacent
+column) stays inline — the deliberately-named dash form. The observer
+sites are a separate model (`Observer`), left as-is. (Original finding
+below.)
 
 `display_name or email`: `_lobby.py:60`, `sessions_list.html:97`,
 `sessions_archived.html:85`, `sys_admin_sessions.html:42`,
@@ -650,18 +668,26 @@ views import; layer `instrument_heading` on top; keep the CSV-safe
 `Instrument_{position}` variant explicitly named. (Folds together with S1
 — the same underlying `short_label`-fallback question.)
 
-### V5 🟡 Derived-state predicates duplicated between service and view
+### V5 🟡 Derived-state predicates duplicated between service and view — ✅ done (19B Item 15)
+
+**Fixed:** the bucket-set logic moved to two module-level predicates in
+`monitoring.py` — `is_at_risk_state(state)` and `is_incomplete_state(state)`.
+All four properties (the two `monitoring` dataclasses + the
+`_responses` / `_invitations` view rows, which carry the same state
+under a different field name) now delegate to them, so a bucket change
+is a single edit. (Original finding below.)
 
 `is_at_risk`: `monitoring.py:174` and re-declared on the view row
 `_responses.py:38`. `is_incomplete`: `monitoring.py:57` and
 `_invitations.py:54`. If the bucket set changes, both must move in
 lockstep. **Fix:** view dataclass delegates to the service predicate.
 
-### V6 🟡 Ad-hoc pluralization inline
+### V6 🟡 Ad-hoc pluralization inline — ✅ done (19B Item 15)
 
-`_setup.py:151` (`draft`/`drafts` — but `submitted` never pluralised) and
-`responses/_core.py:547` (`response`/`responses`) each reinvent
-count-noun agreement. A shared `pluralize(n, singular, plural)` helper.
+**Fixed:** new `app/services/text.py::pluralize(count, singular,
+plural=None)`. `_setup.py`'s draft/drafts and the five
+`response{'' if n==1 else 's'}` / submission idioms in
+`responses/_core.py` now call it.
 
 **Checked & clean:** sorting (`_sort.py`) / filtering (`_filters.py`) are
 well-centralised (all through `_matches_search` +

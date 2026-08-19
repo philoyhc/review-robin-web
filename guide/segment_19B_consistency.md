@@ -1,9 +1,11 @@
 # Segment 19B — Consistency remediation
 
-> **Started 2026-08-19.** The code-level sibling of Segment 19A
-> (documentation hygiene). Where 19A keeps `spec/` and `docs/`
-> current, 19B keeps the **code** internally consistent — it works
-> through the drift catalogued in `guide/consistency_audit.md`.
+> **Started + completed 2026-08-19.** The code-level sibling of Segment
+> 19A (documentation hygiene). Where 19A keeps `spec/` and `docs/`
+> current, 19B keeps the **code** internally consistent — it worked
+> through the drift catalogued in `guide/consistency_audit.md`. **All
+> 29 findings resolved across 15 items (PRs #1987–#2003)** — see the
+> "Segment complete" note at the end.
 
 ## Charter
 
@@ -324,11 +326,32 @@ spellings** (`in_progress` and `in progress`), closing the vocabulary
 split. The page-level `complete` state keeps its own label. Two tests
 updated for the new canonical rendering. Full suite green; ruff clean.
 
-## Still open
+### Item 15 — V3 + V5 + V6: the dedup tail — ✅ done 2026-08-19
 
-The remaining audit findings, in the audit's batched order:
-- **View-adapter dedup — remaining (V3, V5, V6).** The `User.display_label`
-  property (V3), and the smaller predicate/pluralization dedup (V5, V6).
+- **V3** — new `User.display_label` property (`display_name or email`);
+  the seven email-fallback User sites (`_lobby`, three creator-pill
+  templates, the owner-candidate option, the two "Signed in as" chrome
+  bars) now use it. The `display_name or "—"` name-only variant (email
+  in an adjacent column) stays inline as the deliberate form; the
+  `Observer` sites are a separate model, left alone.
+- **V5** — the bucket-set logic moved to `monitoring.is_at_risk_state` /
+  `is_incomplete_state`; all four properties (two `monitoring`
+  dataclasses + the `_responses` / `_invitations` view rows) delegate.
+- **V6** — new `app/services/text.py::pluralize(count, singular,
+  plural=None)`; `_setup`'s draft/drafts and the five response/submission
+  idioms in `responses/_core.py` call it.
+
+Full suite green (2,680 passed, 17 skipped); ruff clean; no import
+cycles.
+
+## ✅ Segment complete
+
+**Every consistency-audit finding is resolved** — Service **S1–S8**,
+Route **R1–R11**, Template/UX **U1–U10**, View-adapter **V1–V6**, across
+15 items / PRs #1987–#2003. Two findings closed by decision rather than
+code (R3 accepted + deferred; R1/R7 documented as justified
+conventions). See `guide/consistency_audit.md` for the per-finding
+record.
 
 ## Hard dependencies
 

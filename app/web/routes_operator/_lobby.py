@@ -55,7 +55,7 @@ def _session_sort_value(review_session: ReviewSession, key: str):
         return review_session.code
     if key == "created_by":
         creator = review_session.created_by_user
-        return creator.display_name or creator.email or ""
+        return creator.display_label
     if key == "created":
         return review_session.created_at
     if key == "deadline":

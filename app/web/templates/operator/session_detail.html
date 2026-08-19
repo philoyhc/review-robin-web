@@ -271,7 +271,7 @@
                 </label>
                 <datalist id="config-owner-candidates">
                   {% for candidate in config_owner_candidates %}
-                    <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
+                    <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
                   {% endfor %}
                 </datalist>
                 {# Submit stays enabled (no JS gate) — the ``required`` email

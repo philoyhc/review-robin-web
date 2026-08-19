@@ -32,6 +32,7 @@ from app.db.models import (
 )
 from app.services import assignments, csv_imports, field_labels
 from app.services import invitations as invitations_service
+from app.services.text import pluralize
 from app.services import relationships as relationships_service
 
 
@@ -148,8 +149,10 @@ class SessionStatusPills:
             return "Awaiting"
         parts: list[str] = []
         if self.responses_drafts:
-            noun = "draft" if self.responses_drafts == 1 else "drafts"
-            parts.append(f"{self.responses_drafts} {noun}")
+            parts.append(
+                f"{self.responses_drafts} "
+                f"{pluralize(self.responses_drafts, 'draft')}"
+            )
         if self.responses_submitted:
             parts.append(f"{self.responses_submitted} submitted")
         parts.append(str(self.reviewee_count))

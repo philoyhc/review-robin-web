@@ -36,7 +36,8 @@ class ResponsesRow:
 
     @property
     def is_at_risk(self) -> bool:
-        return self.coverage_state in ("at risk", "no responses")
+        # Delegate the bucket set to the single source (audit V5).
+        return monitoring.is_at_risk_state(self.coverage_state)
 
 
 def build_responses_rows(
