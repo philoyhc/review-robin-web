@@ -584,14 +584,21 @@ individually or batched as convenient.
   Responses page. "Submitted reviews" = `include` assignments with ≥1 response
   bearing a `submitted_at`; denominator is the reviewee count. Added
   `responses_reportable` + `responses_submitted` to `SessionStatusPills`.
-  **Refinement:** the **"Awaiting"** vs numbers gate is now **data-driven, not
-  lifecycle-driven** — "Awaiting" shows *only* while no review has been submitted
-  yet (`responses_submitted == 0`); once at least one is in, the numbers show
-  regardless of lifecycle state, so a session **reverted to draft after
-  submissions keeps reporting the numbers** rather than snapping back to
-  "Awaiting". (A freshly-activated session with no submissions therefore still
-  reads "Awaiting".) The submitted-count aggregate runs on every session page;
-  the earlier activation-gated short-circuit is gone.
+  **Refinement 1 — data-driven gate.** The **"Awaiting"** vs numbers gate is
+  **data-driven, not lifecycle-driven**: once there is any response activity the
+  numbers show regardless of lifecycle state, so a session **reverted to draft
+  after responses came in keeps reporting the numbers** rather than snapping back
+  to "Awaiting".
+  **Refinement 2 — drafts + submitted breakdown.** The pill now reads
+  **`<n> drafts / <m> submitted / <reviewees>`**, *omitting whichever of drafts /
+  submitted is zero* (so drafts-only → `1 draft / 5`; submitted-only →
+  `2 submitted / 5`; both → `3 drafts / 2 submitted / 5`), and **"Awaiting"**
+  only when there is no response activity at all. "Drafts" = `include`
+  assignments with saved responses but none submitted; "submitted" = `include`
+  assignments with ≥1 `submitted_at`; the two are mutually exclusive per
+  assignment. Added `responses_drafts` + a `responses_label` property to
+  `SessionStatusPills`; both aggregates run on every session page (the earlier
+  activation-gated short-circuit is gone).
 - **Instruments page: remove the bulk visibility-when-closed toggle** (2026-08-18).
   The top-right card's **"Show all when closed" / "Don't show any when closed"**
   bulk toggle (and the left card's "Visibility when closed: N showing …" info

@@ -160,9 +160,12 @@ def _status_strip(body: str) -> str:
     return body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
 
 
-def _submit_one_review(db: Session, review_session: ReviewSession) -> None:
-    """Attach a submitted ``Response`` to one of the session's assignments
-    so the chrome Responses pill counts a submitted review."""
+def _attach_one_response(
+    db: Session, review_session: ReviewSession, *, submitted: bool
+) -> None:
+    """Attach one ``Response`` to one of the session's assignments so the
+    chrome Responses pill counts it. ``submitted`` stamps ``submitted_at``
+    (a submitted review) vs. leaving it null (an in-progress draft)."""
     from datetime import datetime, timezone
 
     from app.db.models import InstrumentResponseField
@@ -184,17 +187,17 @@ def _submit_one_review(db: Session, review_session: ReviewSession) -> None:
             assignment_id=assignment.id,
             response_field_id=field.id,
             value="4",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(timezone.utc) if submitted else None,
         )
     )
     db.commit()
 
 
-def test_status_row_responses_awaiting_when_no_submissions(
+def test_status_row_responses_awaiting_when_no_responses(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 3 — the chrome Responses pill reads "Awaiting" only while
-    no review has been submitted yet. A draft session with no responses
+    there is no response activity at all. A draft session with no responses
     qualifies. The gate is data-driven, not lifecycle-driven."""
     review_session = _make_session(client, db, code="resp-await")
     strip = _status_strip(
@@ -204,11 +207,11 @@ def test_status_row_responses_awaiting_when_no_submissions(
     assert "Awaiting" in strip.split("Responses:", 1)[1]
 
 
-def test_status_row_responses_awaiting_when_active_but_unsubmitted(
+def test_status_row_responses_awaiting_when_active_but_empty(
     client: TestClient, db: Session
 ) -> None:
-    """An activated session with zero submitted reviews still reads
-    "Awaiting" — the pill flips on submitted data, not on activation."""
+    """An activated session with zero responses still reads "Awaiting" —
+    the pill flips on response data, not on activation."""
     review_session = _seed_pair(
         client, db, code="resp-active", reviewer_email="r@example.edu"
     )
@@ -219,23 +222,44 @@ def test_status_row_responses_awaiting_when_active_but_unsubmitted(
     assert "Awaiting" in strip.split("Responses:", 1)[1]
 
 
-def test_status_row_responses_numbers_persist_through_revert_to_draft(
+def test_status_row_responses_reports_drafts_only(
     client: TestClient, db: Session
 ) -> None:
-    """Once at least one review is submitted, the pill reports
-    <submitted> / <reviewees> and keeps reporting it even after the
-    session is reverted to draft (18R Item 3 — data-driven gate)."""
+    """A saved-but-unsubmitted response reads "<n> drafts / <reviewees>"
+    (the submitted term is omitted when zero)."""
     review_session = _seed_pair(
-        client, db, code="resp-persist", reviewer_email="r@example.edu"
+        client, db, code="resp-draft", reviewer_email="r@example.edu"
     )
     _activate(client, db, review_session)
-    _submit_one_review(db, review_session)
+    _attach_one_response(db, review_session, submitted=False)
 
     after = _status_strip(
         client.get(f"/operator/sessions/{review_session.id}").text
     ).split("Responses:", 1)[1]
     assert "Awaiting" not in after
-    assert "1 / 1" in after  # one submitted review, one reviewee
+    assert "1 draft / 1" in after
+    assert "submitted" not in after
+
+
+def test_status_row_responses_submitted_persists_through_revert_to_draft(
+    client: TestClient, db: Session
+) -> None:
+    """Once a review is submitted the pill reads "<m> submitted /
+    <reviewees>" (the drafts term omitted when zero) and keeps reporting it
+    even after the session is reverted to draft (18R Item 3 — data-driven
+    gate)."""
+    review_session = _seed_pair(
+        client, db, code="resp-persist", reviewer_email="r@example.edu"
+    )
+    _activate(client, db, review_session)
+    _attach_one_response(db, review_session, submitted=True)
+
+    after = _status_strip(
+        client.get(f"/operator/sessions/{review_session.id}").text
+    ).split("Responses:", 1)[1]
+    assert "Awaiting" not in after
+    assert "1 submitted / 1" in after  # one submitted review, one reviewee
+    assert "draft" not in after
 
     # Revert ready → draft; the numbers must persist rather than snap
     # back to "Awaiting".
@@ -249,7 +273,33 @@ def test_status_row_responses_numbers_persist_through_revert_to_draft(
         client.get(f"/operator/sessions/{review_session.id}").text
     ).split("Responses:", 1)[1]
     assert "Awaiting" not in after_revert
-    assert "1 / 1" in after_revert
+    assert "1 submitted / 1" in after_revert
+
+
+def test_responses_label_composition() -> None:
+    """``SessionStatusPills.responses_label`` composes drafts / submitted /
+    reviewees, omitting each zero term, and reads "Awaiting" when empty."""
+
+    def _label(drafts: int, submitted: int, reviewees: int = 5) -> str:
+        return views.SessionStatusPills(
+            reviewer_count=0,
+            reviewee_count=reviewees,
+            relationship_count=0,
+            observer_count=0,
+            assignment_count=0,
+            instrument_count=0,
+            email_invites_set_up=False,
+            invitations_state="not_created",
+            responses_reportable=(drafts + submitted) > 0,
+            responses_drafts=drafts,
+            responses_submitted=submitted,
+        ).responses_label
+
+    assert _label(0, 0) == "Awaiting"
+    assert _label(3, 0) == "3 drafts / 5"
+    assert _label(1, 0) == "1 draft / 5"
+    assert _label(0, 2) == "2 submitted / 5"
+    assert _label(3, 2) == "3 drafts / 2 submitted / 5"
 
 
 def test_session_detail_description_preserves_line_breaks(

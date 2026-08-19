@@ -72,14 +72,15 @@
     {% endif %}
     &middot;
     Responses:
-    {# Awaiting only while no review has been submitted yet; once any
-       is in, submitted reviews over reviewee count — shown regardless of
-       lifecycle state (including a session reverted to draft), following
-       the reviewee-centric Responses page. #}
+    {# "<n> drafts / <m> submitted / <reviewees>" — omitting whichever of
+       drafts / submitted is zero — once there is any response activity;
+       "Awaiting" while there is none. Shown regardless of lifecycle state
+       (including a session reverted to draft), following the reviewee-centric
+       Responses page. Label composed in ``SessionStatusPills.responses_label``. #}
     {% if status_pills.responses_reportable %}
-      <span class="pill pill-info">{{ status_pills.responses_submitted }} / {{ status_pills.reviewee_count }}</span>
+      <span class="pill pill-info">{{ status_pills.responses_label }}</span>
     {% else %}
-      <span class="pill pill-empty">Awaiting</span>
+      <span class="pill pill-empty">{{ status_pills.responses_label }}</span>
     {% endif %}
   </p>
 </div>
