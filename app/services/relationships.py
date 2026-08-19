@@ -46,8 +46,7 @@ from app.services.csv_imports import (
 )
 from app.services.email_identity import normalize_email
 from app.services.roster_bulk import bulk_set_status
-
-_VALID_STATUS = {"active", "inactive"}
+from app.services.roster_status import ROSTER_STATUSES, normalise_status
 
 
 def parse_relationship_csv(
@@ -180,7 +179,7 @@ def parse_relationship_csv(
         status_raw = (_cell(raw, "Status") or "active").strip().lower()
         if status_raw == "":
             status_raw = "active"
-        if status_raw not in _VALID_STATUS:
+        if status_raw not in ROSTER_STATUSES:
             issues.append(
                 ValidationIssue(
                     severity=Severity.error,
@@ -444,13 +443,7 @@ _UNSET: object = object()
 
 
 def _normalised_rel_status(status: str) -> str:
-    value = (status or "active").strip().lower()
-    if value not in _VALID_STATUS:
-        raise RelationshipOperationError(
-            "invalid_status",
-            f"Status must be one of {sorted(_VALID_STATUS)}; got {status!r}.",
-        )
-    return value
+    return normalise_status(status, error_cls=RelationshipOperationError)
 
 
 def _normalised_rel_tag(value: str | None) -> str | None:

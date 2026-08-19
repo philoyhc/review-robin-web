@@ -31,8 +31,7 @@ from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_set_status
-
-_VALID_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
+from app.services.roster_status import normalise_status
 
 
 class RevieweeOperationError(ValueError):
@@ -83,13 +82,7 @@ def _normalised_identifier(identifier: str) -> str:
 
 
 def _normalised_status(status: str) -> str:
-    value = (status or "active").strip().lower()
-    if value not in _VALID_STATUSES:
-        raise RevieweeOperationError(
-            "invalid_status",
-            f"Status must be one of {sorted(_VALID_STATUSES)}; got {status!r}.",
-        )
-    return value
+    return normalise_status(status, error_cls=RevieweeOperationError)
 
 
 def _normalised_optional(value: str | None) -> str | None:

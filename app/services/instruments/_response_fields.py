@@ -44,7 +44,10 @@ from app.services.instruments._display_fields import (
     _repack_display_orders,
     is_locked_display_source,
 )
-from app.services.instruments._state import _instrument_label
+from app.services.instruments._state import (
+    _instrument_label,
+    _response_count_for_field,
+)
 
 
 # Segment 18J Wave 2 PR iii-b2 — default response fields now carry
@@ -870,12 +873,7 @@ def delete_response_field(
     actor: User,
 ) -> None:
     instrument = field.instrument
-    response_count = db.execute(
-        select(func.count(Response.id)).where(
-            Response.response_field_id == field.id
-        )
-    ).scalar_one()
-    response_count = int(response_count)
+    response_count = _response_count_for_field(db, field.id)
 
     if response_count > 0 and not confirm:
         raise ResponsesPresentError(response_count)

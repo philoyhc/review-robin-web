@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 from app.db.models import Reviewee, Reviewer
+from app.services.roster_status import is_active
 
 
 def _is_test_env() -> bool:
@@ -21,4 +22,5 @@ def _is_test_env() -> bool:
 
 
 def _is_active(row: Reviewer | Reviewee) -> bool:
-    return (row.status or "active") == "active"
+    # Thin typed alias over the canonical roster predicate (audit S6).
+    return is_active(row)

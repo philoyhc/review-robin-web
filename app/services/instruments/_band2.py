@@ -31,13 +31,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Instrument,
     InstrumentResponseField,
-    Response,
     User,
 )
 from app.services import audit
@@ -46,7 +44,10 @@ from app.services.instruments._instrument_crud import (
     _COLUMN_WIDTH_MIN_PX,
     set_column_widths,
 )
-from app.services.instruments._state import _instrument_label
+from app.services.instruments._state import (
+    _instrument_label,
+    _response_count_for_field,
+)
 
 
 _BAND2_ALLOWED_DISPLAY_KEYS: frozenset[str] = frozenset(
@@ -517,11 +518,7 @@ def _sync_response_fields_to_db(
             and not incoming_visible
             and not acknowledged_drop
         ):
-            drop_response_count = db.execute(
-                select(func.count(Response.id)).where(
-                    Response.response_field_id == field.id
-                )
-            ).scalar_one()
+            drop_response_count = _response_count_for_field(db, field.id)
             if drop_response_count:
                 raise ResponseFieldDropAcknowledgementRequired(
                     field_label=field.label,
@@ -573,11 +570,7 @@ def _sync_response_fields_to_db(
         if field._inline_list_csv != new_list_csv:
             shape_changed.append("list_options")
         if shape_changed:
-            response_count = db.execute(
-                select(func.count(Response.id)).where(
-                    Response.response_field_id == field.id
-                )
-            ).scalar_one()
+            response_count = _response_count_for_field(db, field.id)
             if response_count:
                 raise ResponseFieldShapeChangeError(
                     field_label=field.label,
