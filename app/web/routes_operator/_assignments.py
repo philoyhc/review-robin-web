@@ -32,6 +32,7 @@ from app.services import (
     csv_imports,
     relationships as relationships_service,
 )
+from app.services.instruments import _instrument_label
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -201,7 +202,7 @@ def _render_assignments_hub(
             inst = assignment.instrument
             if inst is None:
                 return None
-            return inst.short_label or inst.name
+            return _instrument_label(inst)
         return None
 
     sort_spec = views.decode_cookie_sort_spec(

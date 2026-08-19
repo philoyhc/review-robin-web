@@ -257,15 +257,18 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     assert "#1 Self-eval" not in body
 
 
-def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_label(
+def test_summary_single_instrument_heading_uses_operator_label_not_name(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Single-instrument session with no ``short_label``: the
-    heading falls back to ``instrument.name`` so the section
-    card always has *some* title."""
+    """Single-instrument session with no ``short_label`` and no
+    description: the heading uses the canonical operator label
+    (``Instrument_{id}``) — the same ``instrument_heading`` the
+    reviewer surface + observer collation use — and **never** the
+    internal ``instrument.name`` (audit V1 / the 2026-05-28
+    identifier policy that retired ``name`` as a display label)."""
     from app.db.models import Instrument
 
     operator = make_client(alice)
@@ -273,10 +276,12 @@ def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_labe
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    # Default seed leaves short_label NULL; the default name is
-    # "Instrument #1" — pin it explicitly so the assertion is
-    # robust to default-name churn.
+    # No short_label, no description; give the internal name a
+    # distinctive value so we can assert it does NOT leak into the
+    # heading.
     instrument.name = "Custom instrument name"
+    instrument.short_label = None
+    instrument.description = None
     db.commit()
 
     assignment = db.execute(
@@ -293,9 +298,8 @@ def test_summary_single_instrument_heading_falls_back_to_name_when_no_short_labe
     body = rae_client.get(
         f"/me/sessions/{review_session.id}/summary"
     ).text
-    assert (
-        "<h2 style=\"margin-top: 0;\">Custom instrument name</h2>" in body
-    )
+    assert f"Instrument_{instrument.id}</h2>" in body
+    assert "Custom instrument name" not in body
 
 
 def test_summary_multi_instrument_headings_use_page_prefix(

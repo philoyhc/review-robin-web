@@ -64,6 +64,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
+from app.web.views._instruments import instrument_heading
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
@@ -544,13 +545,21 @@ def build_reviewee_results_context(
             # so the reviewee doesn't see an empty table card.
             continue
         is_group = instrument.group_kind is not None
-        short_label = (instrument.short_label or "").strip()
-        if total_instrument_count == 1:
-            heading_title = short_label or instrument.name
-        elif short_label:
-            heading_title = f"#{position}: {short_label}"
-        else:
-            heading_title = f"#{position}"
+        # Canonical heading title (audit V1): the same
+        # ``instrument_heading`` the reviewer surface + observer
+        # collation use, so the same instrument reads identically
+        # across every reader surface. Falls back to the operator
+        # label (``Instrument_{id}``) — never the internal ``name`` —
+        # when the reviewer-facing title is empty (single-instrument,
+        # no short_label, no description).
+        heading_title = (
+            instrument_heading(
+                instrument=instrument,
+                position=position,
+                total_count=total_instrument_count,
+            ).title
+            or instruments_service._instrument_label(instrument)
+        )
 
         # Contract: for Raw + Anonymized modes, the table
         # columns must mirror the reviewer surface

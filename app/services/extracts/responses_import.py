@@ -44,6 +44,7 @@ from app.db.models import (
 )
 from app.services.email_identity import normalize_email
 from app.services.extracts.responses_extract import HEADER, _group_export_index
+from app.services.instruments import _instrument_label
 
 __all__ = [
     "ResponsesFormatError",
@@ -277,7 +278,7 @@ def load_responses(
         if field is None:
             result.warnings.append(
                 f"unknown response field {row.field_key!r} on "
-                f"instrument {instrument.short_label or instrument.name!r}"
+                f"instrument {_instrument_label(instrument)!r}"
             )
             continue
         saved_at = _parse_dt(row.saved_at)
@@ -298,7 +299,7 @@ def load_responses(
             if group_key is None:
                 result.warnings.append(
                     f"couldn't match group {row.reviewee_name!r} on "
-                    f"instrument {instrument.short_label or instrument.name!r}"
+                    f"instrument {_instrument_label(instrument)!r}"
                 )
                 continue
             member_assignments = members_by.get(

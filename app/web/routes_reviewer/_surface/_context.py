@@ -260,11 +260,7 @@ def _surface_context(
             .where(InstrumentResponseField.visible.is_(False))
         ).all()
         for field, instrument in hidden_rows:
-            inst_label = (
-                instrument.short_label
-                or instrument.name
-                or f"Instrument {instrument.id}"
-            )
+            inst_label = instruments_service._instrument_label(instrument)
             dropped_fields.append((inst_label, field.label))
         # De-dupe (multiple Response rows on the same hidden field
         # show up once) and stabilise order.
