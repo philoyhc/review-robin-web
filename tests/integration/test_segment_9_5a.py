@@ -145,8 +145,11 @@ def test_activate_rejects_from_draft(client: TestClient, db: Session) -> None:
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 400
-    assert "validated" in response.text.lower()
+    # audit R2 — an activation failure now bounces to the Session Home
+    # flash banner (super_status=failed), matching /workflow/activate,
+    # instead of an error page. The session stays in draft.
+    assert response.status_code == 303
+    assert "super_status=failed" in response.headers["location"]
     db.refresh(session)
     assert session.status == "draft"
 

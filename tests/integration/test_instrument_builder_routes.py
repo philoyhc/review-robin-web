@@ -521,7 +521,10 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
-    assert activate.status_code == 400
+    # audit R2 — activation failure bounces to the Session Home flash
+    # (super_status=failed) rather than an error page.
+    assert activate.status_code == 303
+    assert "super_status=failed" in activate.headers["location"]
 
 
 def test_replicate_instrument_clones_content(

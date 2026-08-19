@@ -44,10 +44,14 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
   - **Item 5**: R8 (the duplicated session-deadline parse block →
     shared `parse_session_deadline` helper; the two routes' differing
     draft-gates are intentional and kept).
-    **Still open:** the structural R2 / R3 / R4.
-- **Open** — the structural route items (R2 activate two-URL error-UX,
-  R3 roster op-error redisplay, R4 AJAX Pydantic bodies), the
-  UI-vocabulary sweep (U1–U8), and the view-adapter dedup (V1–V6).
+  - **Item 6**: R2 (aligned `/activate` failure to the Workflow-card
+    flash via a shared `_redirect_url`) + R4 (the six hand-rolled AJAX
+    parse blocks → shared `require_json_object`, keeping 400).
+    **Still open:** R3 (roster op-error redisplay — needs a new
+    page-level error banner across the 4 setup templates, since the
+    existing `edit_error` banner is scoped to the add/edit form).
+- **Open** — R3 (see above), the UI-vocabulary sweep (U1–U8), and the
+  view-adapter dedup (V1–V6).
 
 ---
 
@@ -64,9 +68,9 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **S2** | 🟠 Med | Service | Roster email matching uses three case-folding conventions (`casefold` / SQL `lower` / `lower`) — write-time vs gate-time can disagree |
 | ✅ **S3** | 🟠 Med | Service | "Is this an email" classified two incompatible ways (strict regex vs `"@" in value`) |
 | ✅ **R1** | 🟠 Med | Route | Data-shaper endpoints are a REST/PATCH/DELETE/JSON island in a POST-only app *(documented as a blessed exception)* |
-| **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
+| ✅ **R2** | 🟠 Med | Route | "Activate session" exposed at two URLs with divergent failure UX |
 | **R3** | 🟠 Med | Route | Same operation-error class redisplayed three ways (inline re-render / raw error page / flash redirect) |
-| **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
+| ✅ **R4** | 🟠 Med | Route | JSON AJAX bodies: hand-rolled `request.json()` validation vs Pydantic model |
 | **V3** | 🟠 Med | View | User display-label (`display_name or email`) hand-rolled 7+ times, with a `"—"`-fallback variant |
 | **V4** | 🟠 Med | View/Service | Instrument friendly-label fallback reimplemented ~8 places with **four different tails** |
 | ✅ **S4** | 🟠 Med | Service | `_EMAIL_RE` regex literal duplicated five times |
@@ -262,16 +266,23 @@ defensible — but it should be a *documented* exception (a spec note) so
 the other AJAX endpoints (R4) converge onto it rather than each inventing
 their own contract.
 
-### R2 🟠 "Activate session" exposed at two URLs with divergent failure UX
+### R2 🟠 "Activate session" exposed at two URLs with divergent failure UX — ✅ done (19B Item 6, aligned)
 
 Both flip `validated → ready` via `lifecycle.activate_session`:
-`POST /sessions/{id}/activate` (`_session_home.py:511-538`) **raises**
+`POST /sessions/{id}/activate` (Validate-page commit) **raised**
 `_lifecycle_error_response(exc)` (error page); the parallel
-`POST /sessions/{id}/workflow/activate` (`_workflow.py:274`) **303-
-redirects** back with `?super_status=failed&super_error=...` flash
-params. Same transition, two error-UX models. Likewise `/activate` vs the
-`/workflow/prepare|close|archive` family. **Fix:** route the Session-Home
-button at the `/workflow/*` handler, or align the error surface.
+`POST /sessions/{id}/workflow/activate` (Workflow-card button)
+**303-redirects** with a `super_*` flash. They can't merge — the
+Validate-page activate is the post-warnings-acknowledge commit; routing
+it at `/workflow/activate` would re-trigger the warnings detour.
+
+**Resolution (chosen: align the error surface):** `_redirect_url` moved
+from `_workflow.py` to `_shared.py`; `session_activate`'s
+`LifecycleError` handler now redirects to the Session Home flash
+(`super_status=failed&super_button=activate&super_step=activate`)
+instead of raising an error page, so an activation failure looks the
+same from either button. (`/revert` + the instrument edit-lock keep the
+error-page response — a separate concern from activate.)
 
 ### R3 🟠 Same operation-error class redisplayed three ways
 
@@ -286,14 +297,20 @@ inline, dump to a raw error page, or bounce with a flash depending only
 on which button was pressed. **Fix:** one redisplay contract per surface
 (inline re-render is richest and already used for create/update).
 
-### R4 🟠 JSON AJAX bodies: hand-rolled validation vs Pydantic model
+### R4 🟠 JSON AJAX bodies: hand-rolled validation vs Pydantic model — ✅ done (19B Item 6, shared helper)
 
 Raw `await request.json()` + manual `isinstance` → `HTTPException(400)`
-at `_instruments_band2.py:66,109,219`, `_instruments.py:1155,1211`,
-`_instruments_pagination.py:125`; vs Pydantic `payload: DataShapePayload`
-(auto 422) at `_extract_data.py:260,315`. Same endpoint class, two
-validation contracts / two error shapes. **Fix:** define request models
-for the instrument AJAX bodies (converges with R1).
+was copied six times across `_instruments_band2.py` (×3),
+`_instruments.py` (×2), and `_instruments_pagination.py` (×1); vs the
+Pydantic `DataShapePayload` in `_extract_data.py`.
+
+**Resolution (chosen: shared parse helper, not full Pydantic):** the six
+copies now call `require_json_object(request, label=...)` in `_shared.py`,
+which keeps the hand-rolled **400 + tailored message** the client JS
+expects (rather than a Pydantic 422 for these internal-JS-driven
+endpoints). The extract-data sub-API remains the blessed Pydantic
+pattern for *new* endpoints — recorded in the R1 note in
+`spec/architecture.md`.
 
 ### R5 🟡 Bulk-action naming: `bulk-<verb>` vs `<verb>-selected` — ✅ done (19B Item 4)
 

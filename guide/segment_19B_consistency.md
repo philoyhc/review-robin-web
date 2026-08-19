@@ -162,19 +162,39 @@ The renamed URLs are operator-internal POST endpoints + one setup GET;
 no legacy redirect shims were kept (a shim would re-introduce the kind
 of thing R11 cleaned up).
 
+### Item 6 — R2 / R4: route-sweep structural (activate UX + AJAX bodies) — ✅ done 2026-08-19
+
+Two of the three structural route items (maintainer-chosen approaches):
+
+- **R2 — align the activate error surface.** The Validate-page
+  `/activate` (post-warnings-acknowledge commit) and the Workflow-card
+  `/workflow/activate` can't merge, so `_redirect_url` moved from
+  `_workflow.py` to `_shared.py` and `session_activate`'s
+  `LifecycleError` handler now redirects to the Session Home flash
+  (`super_status=failed&super_button=activate`) instead of raising an
+  error page — both activate buttons now fail the same way. (`/revert`
+  and the instrument edit-lock keep the error-page response.) Four
+  lifecycle tests updated from `400` → `303`+flash.
+- **R4 — shared parse helper (not full Pydantic).** The six copied
+  `await request.json()` + dict-check blocks (`_instruments_band2.py`
+  ×3, `_instruments.py` ×2, `_instruments_pagination.py` ×1) now call
+  `require_json_object(request, label=...)` in `_shared.py`, keeping the
+  hand-rolled **400 + tailored message** the client JS expects. The
+  extract-data sub-API stays the blessed Pydantic pattern for new
+  endpoints (R1 note).
+
+Verification: full suite green (2,680 passed, 17 skipped); ruff clean.
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:
 
-- **Route sweep — structural (R2–R4).** *(R8 shipped as Item 5 — the
-  duplicated session-deadline parse block moved to a shared
-  `parse_session_deadline` helper in `_shared.py`; the two routes'
-  differing draft-gates are intentional and kept.)* The final route
-  batch: R2
-  (activate exposed at two URLs with divergent failure UX), R3
-  (roster operation-error redisplayed three ways), R4 (instrument AJAX
-  bodies → Pydantic request models, converging on the R1 contract), R8
-  (the two session-edit write routes `/lobby-edit` + `/config`).
+- **R3 — roster operation-error redisplay.** The last route item.
+  Converting the bulk / delete-all handlers to inline re-render (the
+  chosen approach) needs a **new page-level error banner** across the 4
+  setup templates — the existing `edit_error` banner only renders inside
+  the add/edit form (`{% if edit_mode %}`), so a bulk error has nowhere
+  to show today. Ships as its own slice.
 - **UI-vocabulary sweep (U1–U8).** Spec-backed and largely mechanical:
   Save→Secondary, banner Cancel→`.btn alert`, one delete-confirm
   mechanism (U3 carries real safety weight — do it deliberately), drop
