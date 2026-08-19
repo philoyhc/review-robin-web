@@ -41,10 +41,13 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     renamed `/remove` → `/delete`), R9 (`setupinvite` → `setup-invite`),
     and R7 (documented as a justified divergence). The naming rules are
     recorded in `spec/architecture.md` § "Route conventions".
-    **Still open:** the structural R2 / R3 / R4 / R8.
-- **Open** — the structural route items (R2 activate two-URL, R3
-  error-redisplay, R4 AJAX Pydantic bodies, R8 two-route session-edit),
-  the UI-vocabulary sweep (U1–U8), and the view-adapter dedup (V1–V6).
+  - **Item 5**: R8 (the duplicated session-deadline parse block →
+    shared `parse_session_deadline` helper; the two routes' differing
+    draft-gates are intentional and kept).
+    **Still open:** the structural R2 / R3 / R4.
+- **Open** — the structural route items (R2 activate two-URL error-UX,
+  R3 roster op-error redisplay, R4 AJAX Pydantic bodies), the
+  UI-vocabulary sweep (U1–U8), and the view-adapter dedup (V1–V6).
 
 ---
 
@@ -325,9 +328,13 @@ sub-resource. Documented as a deliberate convention in
 
 ### R8–R11 🟡 Smaller route nits
 
-- **R8** Two "edit session metadata" routes — `/lobby-edit`
-  (`_lobby.py:263`) and `/config` (`_session_home.py:413`) — each
-  re-implements the draft-only gate; consolidate the write.
+- **R8 — ✅ done (19B Item 5).** The two "edit session metadata" routes
+  (`/lobby-edit`, `/config`) duplicated the deadline parse-and-validate
+  block; it moved to a shared `parse_session_deadline` helper in
+  `_shared.py`. Their *gate* semantics deliberately differ (the lobby
+  expander silently ignores name/code/deadline off-draft; the config
+  card hard-requires an editable session) and their field scopes differ,
+  so only the parse is shared, not the gate — noted in the helper.
 - **R9 — ✅ done (19B Item 4).** `setupinvite` was the only unhyphenated
   multi-word URL segment; the three routes are now `setup-invite` /
   `setup-invite/reset`, with all URL references updated (routes, the

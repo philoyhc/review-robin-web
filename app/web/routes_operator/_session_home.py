@@ -52,6 +52,7 @@ from app.web.routes_operator._shared import (
     _quick_setup_unlocked,
     _require_editable,
     _templates,
+    parse_session_deadline,
 )
 
 
@@ -288,17 +289,7 @@ def _apply_session_config_form(
             detail=f"unknown timezone {timezone_name!r}",
         )
 
-    parsed_deadline: datetime | None = None
-    if deadline:
-        try:
-            parsed_deadline = date_formatting.parse_local_datetime(
-                deadline, timezone_name
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="deadline must be ISO-8601",
-            ) from exc
+    parsed_deadline = parse_session_deadline(deadline, timezone_name)
 
     # 18G Part 1: optional Start anchor for scheduled activation.
     try:

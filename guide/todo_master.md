@@ -2116,9 +2116,16 @@ R5 (lobby `*-selected` → `bulk-<verb>`), R6 (`/sys-admin/users/{id}/remove`
 two creation kinds vs single-kind owners). Naming rules recorded in
 `spec/architecture.md` "Route conventions". No redirect shims kept.
 
-**Still open:** route sweep structural R2/R3/R4/R8, the UI-vocabulary
-sweep (U1–U8), the view-adapter dedup (V1–V6). See
-`guide/consistency_audit.md` for the batched remediation order.
+**Item 5 — R8 (session-edit write consolidation) — done 2026-08-19.**
+The duplicated deadline parse-and-validate block in `/lobby-edit` +
+`/config` moved to a shared `parse_session_deadline` helper in
+`_shared.py`; the two routes' differing draft-gates are intentional and
+kept.
+
+**Still open:** route sweep structural R2/R3/R4 (each carries a real
+tradeoff — R2/R3 are user-facing error-UX contract changes, R4 changes
+AJAX error status 400→422), the UI-vocabulary sweep (U1–U8), the
+view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
 
 ---
 

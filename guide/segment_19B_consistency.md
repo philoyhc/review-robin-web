@@ -166,7 +166,11 @@ of thing R11 cleaned up).
 
 The remaining audit findings, in the audit's batched order:
 
-- **Route sweep — structural (R2–R4, R8).** The final route batch: R2
+- **Route sweep — structural (R2–R4).** *(R8 shipped as Item 5 — the
+  duplicated session-deadline parse block moved to a shared
+  `parse_session_deadline` helper in `_shared.py`; the two routes'
+  differing draft-gates are intentional and kept.)* The final route
+  batch: R2
   (activate exposed at two URLs with divergent failure UX), R3
   (roster operation-error redisplayed three ways), R4 (instrument AJAX
   bodies → Pydantic request models, converging on the R1 contract), R8
