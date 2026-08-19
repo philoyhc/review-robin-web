@@ -269,6 +269,73 @@ def parse_session_deadline(
         ) from exc
 
 
+def _redirect_url(
+    session_id: int,
+    return_to: str | None,
+    *,
+    super_status: str | None = None,
+    super_button: str | None = None,
+    super_step: str | None = None,
+    super_error: str | None = None,
+    prepare_confirm: bool = False,
+) -> str:
+    """Resolve the post-action redirect target for the workflow +
+    lifecycle actions. ``return_to`` honours the revert allowlist;
+    anything else falls through to Session Home. Failure diagnostics
+    ride along as ``super_*`` query params (rendered as the Session
+    Home flash banner), and the reconcile detour bounces with
+    ``prepare_confirm=responses``. ``super_button`` is ``"prepare"`` or
+    ``"activate"`` so the workflow card's failure banner can vary its
+    copy.
+
+    Lives here (not in ``_workflow.py``) so the Session-Home
+    ``/activate`` handler and the Workflow-card ``/workflow/activate``
+    handler build the **same** failure flash — audit R2.
+    """
+    if return_to in _REVERT_RETURN_TO:
+        base = f"/operator/sessions/{session_id}/{return_to}"
+    else:
+        base = f"/operator/sessions/{session_id}"
+    if prepare_confirm:
+        return f"{base}?{urlencode({'prepare_confirm': 'responses'})}"
+    if super_status is None:
+        return base
+    params = {"super_status": super_status}
+    if super_button:
+        params["super_button"] = super_button
+    if super_step:
+        params["super_step"] = super_step
+    if super_error:
+        params["super_error"] = super_error
+    return f"{base}?{urlencode(params)}"
+
+
+async def require_json_object(request: Request, *, label: str) -> dict:
+    """Parse an AJAX request body as a JSON object, else raise
+    ``HTTPException(400)`` with a ``"{label} body must be …"`` message.
+
+    Shared by the instrument-card AJAX endpoints (`_instruments*.py`),
+    which each hand-rolled this same parse-and-check (audit R4). It
+    deliberately keeps the hand-rolled 400 + tailored-message contract
+    the client JS expects, rather than a Pydantic 422 — the
+    extract-data sub-API remains the blessed Pydantic pattern for *new*
+    endpoints (see ``spec/architecture.md`` § "Route conventions").
+    """
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{label} body must be JSON",
+        ) from exc
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{label} body must be a JSON object",
+        )
+    return body
+
+
 def _can_edit_instrument(review_session: ReviewSession) -> bool:
     """Setup-side instrument / RTD mutations are blocked while the
     session is ready."""

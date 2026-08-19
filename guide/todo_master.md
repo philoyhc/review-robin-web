@@ -2122,10 +2122,17 @@ The duplicated deadline parse-and-validate block in `/lobby-edit` +
 `_shared.py`; the two routes' differing draft-gates are intentional and
 kept.
 
-**Still open:** route sweep structural R2/R3/R4 (each carries a real
-tradeoff — R2/R3 are user-facing error-UX contract changes, R4 changes
-AJAX error status 400→422), the UI-vocabulary sweep (U1–U8), the
-view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
+**Item 6 — R2 + R4 (route-sweep structural) — done 2026-08-19.** R2
+aligned the `/activate` failure to the Workflow-card flash (shared
+`_redirect_url` in `_shared.py`; 4 lifecycle tests updated 400→303). R4
+folded the six hand-rolled AJAX `request.json()` blocks into a shared
+`require_json_object` helper (kept 400 + messages, per the chosen
+approach — no Pydantic 422).
+
+**Still open:** R3 (roster op-error redisplay — the last route item;
+needs a page-level error banner across the 4 setup templates since the
+`edit_error` banner is form-scoped), the UI-vocabulary sweep (U1–U8),
+the view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
 
 ---
 

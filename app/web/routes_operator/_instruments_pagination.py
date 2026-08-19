@@ -34,6 +34,7 @@ from app.web.routes_operator._shared import (
     _instruments_redirect,
     _require_instrument_editable,
     _require_instrument_in_session,
+    require_json_object,
 )
 
 router = APIRouter()
@@ -121,18 +122,7 @@ async def instruments_order(
     / double-stack / unknown id / duplicate / missing).
     """
     _require_instrument_editable(review_session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="instruments/order body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="instruments/order body must be a JSON object",
-        )
+    body = await require_json_object(request, label="instruments/order")
     raw_items = body.get("items")
     if not isinstance(raw_items, list):
         raise HTTPException(

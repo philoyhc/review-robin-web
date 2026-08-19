@@ -39,6 +39,7 @@ from app.web.deps import get_or_create_user
 from app.web.routes_operator._shared import (
     _require_instrument_editable,
     _require_instrument_in_session,
+    require_json_object,
 )
 
 router = APIRouter()
@@ -62,18 +63,7 @@ async def instrument_column_widths(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="column-widths body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="column-widths body must be a JSON object",
-        )
+    body = await require_json_object(request, label="column-widths")
     widths = body.get("widths") or {}
     if not isinstance(widths, dict):
         raise HTTPException(
@@ -105,18 +95,7 @@ async def instrument_band2_state(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="band2-state body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="band2-state body must be a JSON object",
-        )
+    body = await require_json_object(request, label="band2-state")
     # Segment 18K PR 4 — Band 2 chip un-pin confirm guard. The
     # operator-side JS shows a ``confirm()`` naming the field +
     # response count before flipping a chip whose backing row has
@@ -215,18 +194,7 @@ async def instrument_preview_sample(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="preview-sample body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="preview-sample body must be a JSON object",
-        )
+    body = await require_json_object(request, label="preview-sample")
     def _str_list(v: Any) -> list[str]:
         return [str(x) for x in v] if isinstance(v, list) else []
     def _rule_list(v: Any) -> list[dict[str, str]]:

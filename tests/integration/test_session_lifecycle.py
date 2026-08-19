@@ -110,7 +110,10 @@ def test_activate_blocks_when_errors_exist(client: TestClient, db: Session) -> N
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 400
+    # audit R2 — activation failure bounces to the Session Home flash
+    # (super_status=failed) rather than an error page. Stays draft.
+    assert response.status_code == 303
+    assert "super_status=failed" in response.headers["location"]
     db.refresh(session)
     assert session.status == "draft"
 
@@ -129,7 +132,10 @@ def test_activate_requires_acknowledge_when_warnings_present(
         f"/operator/sessions/{session.id}/activate",
         follow_redirects=False,
     )
-    assert no_ack.status_code == 400
+    # audit R2 — unacknowledged warnings bounce to the flash, not an
+    # error page. The session stays validated.
+    assert no_ack.status_code == 303
+    assert "super_status=failed" in no_ack.headers["location"]
     db.refresh(session)
     assert session.status == "validated"
 

@@ -29,7 +29,6 @@ failure is caught, optionally rolled back, audited via
 
 from __future__ import annotations
 
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form
 from fastapi.responses import RedirectResponse
@@ -45,7 +44,7 @@ from app.web.deps import (
     request_correlation_id,
     require_session_operator,
 )
-from app.web.routes_operator._shared import _REVERT_RETURN_TO
+from app.web.routes_operator._shared import _REVERT_RETURN_TO, _redirect_url
 
 router = APIRouter()
 
@@ -61,40 +60,6 @@ class _StepFailed(Exception):
     """Internal sentinel for a pre-condition failure inside a workflow
     chain (e.g. session not editable). Carries the operator-facing
     message in ``args[0]``."""
-
-
-def _redirect_url(
-    session_id: int,
-    return_to: str | None,
-    *,
-    super_status: str | None = None,
-    super_button: str | None = None,
-    super_step: str | None = None,
-    super_error: str | None = None,
-    prepare_confirm: bool = False,
-) -> str:
-    """Resolve the post-action redirect target. ``return_to`` honours
-    the allowlist; anything else falls through to Session Home.
-    Failure diagnostics ride along as query params, and the reconcile
-    detour bounces with ``prepare_confirm=responses``. ``super_button``
-    is ``"prepare"`` or ``"activate"`` so the workflow card's failure
-    banner can vary its copy."""
-    if return_to in _REVERT_RETURN_TO:
-        base = f"/operator/sessions/{session_id}/{return_to}"
-    else:
-        base = f"/operator/sessions/{session_id}"
-    if prepare_confirm:
-        return f"{base}?{urlencode({'prepare_confirm': 'responses'})}"
-    if super_status is None:
-        return base
-    params = {"super_status": super_status}
-    if super_button:
-        params["super_button"] = super_button
-    if super_step:
-        params["super_step"] = super_step
-    if super_error:
-        params["super_error"] = super_error
-    return f"{base}?{urlencode(params)}"
 
 
 def _warnings_detour_url(session_id: int, return_to: str | None) -> str:

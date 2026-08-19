@@ -42,6 +42,7 @@ from app.web.routes_operator._shared import (
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
+    require_json_object,
 )
 
 router = APIRouter()
@@ -1151,18 +1152,7 @@ async def instrument_display_fields_order(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="display-fields/order body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="display-fields/order body must be a JSON object",
-        )
+    body = await require_json_object(request, label="display-fields/order")
     raw_ids = body.get("ordered_ids")
     if not isinstance(raw_ids, list):
         raise HTTPException(
@@ -1207,18 +1197,7 @@ async def instrument_set_identity(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
-    try:
-        body = await request.json()
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="identity body must be JSON",
-        ) from exc
-    if not isinstance(body, dict):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="identity body must be a JSON object",
-        )
+    body = await require_json_object(request, label="identity")
     if "short_label" in body:
         raw = body.get("short_label")
         try:

@@ -50,6 +50,7 @@ from app.web.routes_operator._shared import (
     _REVERT_RETURN_TO,
     _lifecycle_error_response,
     _quick_setup_unlocked,
+    _redirect_url,
     _require_editable,
     _templates,
     parse_session_deadline,
@@ -521,7 +522,22 @@ def session_activate(
             correlation_id=request_correlation_id(),
         )
     except lifecycle.LifecycleError as exc:
-        raise _lifecycle_error_response(exc) from exc
+        # Align with the Workflow-card ``/workflow/activate`` failure
+        # UX: bounce to the Session Home flash banner (via the shared
+        # ``_redirect_url``) rather than raising an error page, so an
+        # activation failure looks the same from either activate button
+        # (audit R2).
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="activate",
+                super_step="activate",
+                super_error=str(exc),
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     target = f"/operator/sessions/{review_session.id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
