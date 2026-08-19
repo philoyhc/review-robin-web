@@ -67,7 +67,14 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     confirm-label voice is unified to "Yes, delete …".
   - **Item 11**: U7 (filter-reset labels → "Clear") + U8 (reviewer
     abandon-edits verb "Discard" → "Cancel").
-- **Open** — the view-adapter dedup column (V1–V6).
+- **Open** — the **view-adapter dedup column (V1–V6)**, plus the two
+  minor style nits **U9** (`Delete` styled Secondary in the extract-data
+  shaper) and **U10** (danger-zone `<h2>` inline style) that fell
+  outside the U1–U8 vocabulary sweep. All three route/service
+  "others"-row items (R8–R11, S8) are done.
+
+**Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI vocabulary
+**U1–U8 ✅** · remaining: **V1–V6** + **U9, U10**.
 
 ---
 
@@ -103,7 +110,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
 | **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
 | **V6** | 🟡 Low | View | Ad-hoc pluralization inline in multiple modules; no `pluralize()` helper |
-| others | 🟡 Low | Route/UX/Service | R8–R11, U9–U10, S8 — naming/style nits, listed in-section |
+| others | 🟡 Low | Route/UX/Service | R8–R11 ✅, S8 ✅ (done); **U9, U10 open** — naming/style nits, listed in-section |
 
 ---
 

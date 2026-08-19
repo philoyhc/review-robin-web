@@ -2160,8 +2160,13 @@ in `spec/ui_elements.md`.
 reviewer abandon-edits control "Discard" → "Cancel". **This closes the
 whole UI-vocabulary sweep, U1–U8.**
 
-**Still open:** the view-adapter dedup column (V1–V6). See
-`guide/consistency_audit.md`.
+**Scorecard:** Service **S1–S8 ✅**, Route **R1–R11 ✅**, UI vocabulary
+**U1–U8 ✅** (11 shipped items, PRs #1987–#1998).
+
+**Still open:** the **view-adapter dedup column (V1–V6)** + the two minor
+UI style nits **U9** (Delete styled Secondary in the extract-data shaper)
+and **U10** (danger-zone `<h2>` inline style), which fell outside the
+U1–U8 vocabulary sweep. See `guide/consistency_audit.md`.
 
 ---
 
