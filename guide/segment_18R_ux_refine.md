@@ -1017,6 +1017,25 @@ and archive"** — one gate, one route, the same purge options:
 
 ---
 
+## Item 6 — Landing pages (audit landed; approach TBD)
+
+The app's entry routes need work: `/` serves a raw JSON status blob,
+`GET /operator` 404s, and there's no role-aware routing, so a
+freshly-signed-in user lands nowhere useful without knowing the deep URL
+(`/operator/sessions` or `/me`). `/me` (the cross-role participant
+dashboard) is a good landing; `/operator/sessions` (lobby) works but the
+operator chrome has no "home" affordance.
+
+**Audit + recommendations: `guide/landing_pages.md`** (the standing doc for
+this item). It covers the current entry routes, the four gaps, the URLs
+that want a landing page (`/`, `/operator`), and a redirect-vs-home-hub
+recommendation (lean: a home **hub** at `/` — the only clean answer to the
+dual-role operator-and-reviewer case — plus a `/operator` → lobby
+redirect), with a landing-by-role decision table and scaffold-first slices.
+
+Approach not yet chosen — settle the open questions in `landing_pages.md`
+§6 before building.
+
 ## Future items (add as they come up)
 
 This segment is the landing place for further small operator-UX identity /
