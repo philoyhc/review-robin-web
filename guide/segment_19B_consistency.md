@@ -272,6 +272,20 @@ Six tests updated for the new labels. Full suite green; ruff clean.
 
 **This closes the entire UI-vocabulary sweep, U1–U8.**
 
+### Item 12 — U9 + U10: style nits — ✅ done 2026-08-19
+
+- **U9** — the three `data-shape-delete` "Delete shape" buttons in the
+  extract-data shaper were `.btn secondary`; since they hit the persisted
+  `DELETE .../shapes/{id}` endpoint they're now `.btn destructive`,
+  matching the app-wide "Delete = red" convention.
+- **U10** — the two danger-zone `<h2 style="margin-top: 0;">` inline
+  styles were **redundant** (the ui-v2 `.card h2 { margin: 0 … }` rule
+  already zeroes the top margin); dropped both, so all five danger-zone
+  headings are bare `<h2>` and consistent — no visual change.
+
+Full suite green (2,680 passed, 17 skipped); ruff clean. **This closes
+the entire template/UX seam, U1–U10.**
+
 ## Still open
 
 The remaining audit findings, in the audit's batched order:

@@ -52,7 +52,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     re-render is the form-error contract). The page-level-banner build is
     logged in `guide/deferred_consolidated.md` (Part C). **This closes
     the whole route sweep, R1–R11.**
-- **✅ UI-vocabulary sweep complete (U1–U8)** — shipped 2026-08-19.
+- **✅ Template/UX sweep complete (U1–U10)** — shipped 2026-08-19.
   - **Item 8**: U1 (routine in-editor Save → Secondary; reviewer-surface
     Submit stays Primary), U2 (banner Cancels → `.btn alert`), U4
     (dropped the no-op `.btn primary` token).
@@ -67,14 +67,13 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     confirm-label voice is unified to "Yes, delete …".
   - **Item 11**: U7 (filter-reset labels → "Clear") + U8 (reviewer
     abandon-edits verb "Discard" → "Cancel").
-- **Open** — the **view-adapter dedup column (V1–V6)**, plus the two
-  minor style nits **U9** (`Delete` styled Secondary in the extract-data
-  shaper) and **U10** (danger-zone `<h2>` inline style) that fell
-  outside the U1–U8 vocabulary sweep. All three route/service
-  "others"-row items (R8–R11, S8) are done.
+  - **Item 12**: U9 (extract-data shaper "Delete shape" buttons →
+    `.btn destructive`) + U10 (dropped the redundant danger-zone `<h2>`
+    inline margin — the `.card h2` rule already handled it).
+- **Open** — the **view-adapter dedup column (V1–V6)** only.
 
-**Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI vocabulary
-**U1–U8 ✅** · remaining: **V1–V6** + **U9, U10**.
+**Scorecard:** Service **S1–S8 ✅** · Route **R1–R11 ✅** · UI **U1–U10 ✅**
+(the whole template/UX seam) · remaining: **V1–V6**.
 
 ---
 
@@ -110,7 +109,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
 | **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
 | **V6** | 🟡 Low | View | Ad-hoc pluralization inline in multiple modules; no `pluralize()` helper |
-| others | 🟡 Low | Route/UX/Service | R8–R11 ✅, S8 ✅ (done); **U9, U10 open** — naming/style nits, listed in-section |
+| ✅ others | 🟡 Low | Route/UX/Service | R8–R11, S8, U9, U10 — all done; naming/style nits, listed in-section |
 
 ---
 
@@ -503,15 +502,20 @@ are separate actions, not filter resets — left alone.)
 relabelled `Discard` → **`Cancel`**, matching every operator inline
 editor. The `data-rs-discard` JS hook attribute is unchanged (internal).
 
-### U9–U10 🟡 Style nits
+### U9–U10 🟡 Style nits — ✅ done (19B Item 12)
 
-- **U9** `Delete` styled `.btn secondary` in the extract-data shaper
-  (`session_extract_data.html:608,695,762`) where Delete is
-  `.btn destructive` everywhere else (client-side shape/lens deletes, but
-  the plain-Secondary makes a delete read as routine).
-- **U10** Danger-zone `<h2 style="margin-top:0">` inline-style drift
-  (`session_detail.html:457`, `session_observers.html:740`) vs bare `<h2>`
-  elsewhere — move to a `.card.danger-zone h2` rule.
+- **U9 — ✅ done.** The three `data-shape-delete` "Delete shape" buttons in
+  the extract-data shaper were `.btn secondary`, reading as routine. They
+  hit the persisted `DELETE .../shapes/{id}` endpoint, so they're now
+  `.btn destructive` (outline red), matching the app-wide "Delete = red"
+  convention — a single red control among the Secondary shape-editor
+  cluster (Save / Edit / Cancel / +Shape) that signals "this one
+  destroys".
+- **U10 — ✅ done.** The two danger-zone `<h2 style="margin-top: 0;">`
+  inline styles (`session_detail`, `session_observers`) were **redundant**
+  — the ui-v2 `.card h2 { margin: 0 … }` rule already zeroes the top
+  margin. Dropped both; all five danger-zone headings are now bare `<h2>`
+  and consistent (no visual change).
 
 **Checked & clean:** breadcrumbs (all through `_partials/breadcrumb.html`,
 no hand-rolled HTML); `.page-grid` / `.bottom-grid` usage; lock-card

@@ -2160,13 +2160,17 @@ in `spec/ui_elements.md`.
 reviewer abandon-edits control "Discard" → "Cancel". **This closes the
 whole UI-vocabulary sweep, U1–U8.**
 
-**Scorecard:** Service **S1–S8 ✅**, Route **R1–R11 ✅**, UI vocabulary
-**U1–U8 ✅** (11 shipped items, PRs #1987–#1998).
+**Item 12 — U9 + U10 (style nits) — done 2026-08-19.** U9: the extract-data
+shaper "Delete shape" buttons (which hit the persisted DELETE endpoint) →
+`.btn destructive`. U10: dropped the redundant danger-zone `<h2>` inline
+margin (the `.card h2` rule already zeroes it). **This closes the entire
+template/UX seam, U1–U10.**
 
-**Still open:** the **view-adapter dedup column (V1–V6)** + the two minor
-UI style nits **U9** (Delete styled Secondary in the extract-data shaper)
-and **U10** (danger-zone `<h2>` inline style), which fell outside the
-U1–U8 vocabulary sweep. See `guide/consistency_audit.md`.
+**Scorecard:** Service **S1–S8 ✅**, Route **R1–R11 ✅**, Template/UX
+**U1–U10 ✅** (12 shipped items, PRs #1987–#1999+).
+
+**Still open:** the **view-adapter dedup column (V1–V6)** — the last
+audit column. See `guide/consistency_audit.md`.
 
 ---
 
