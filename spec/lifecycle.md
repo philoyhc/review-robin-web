@@ -339,7 +339,7 @@ form.
 
 The lock card's "Revert to draft" form carries a `return_to`
 query param scoped to the page set (`reviewers`, `reviewees`,
-`relationships`, `instruments`, `setupinvite`) so the operator
+`relationships`, `instruments`, `setup-invite`) so the operator
 lands back on the page they were trying to edit after the
 revert.
 

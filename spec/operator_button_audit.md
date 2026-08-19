@@ -298,7 +298,7 @@ live on this section (entries #58 — #62) retired with the card.
 
 ---
 
-## Section 10 — Email Template (`/operator/sessions/{id}/setupinvite`)
+## Section 10 — Email Template (`/operator/sessions/{id}/setup-invite`)
 
 Source: `app/web/templates/operator/session_setupinvite.html`.
 
@@ -308,7 +308,7 @@ Source: `app/web/templates/operator/session_setupinvite.html`.
 | 64 | Template selector (top-of-body) | Invitation / Reminder / Responses received (inactive) | `<a>` | `nav-tab` | **Nav (page-internal)** — sibling views | One per template |
 | 65 | Email composer (per-field reset) | Reset {{ row.field }} to default | `<button type="submit">` | `btn-reset` | Inline text-button (`.btn-reset`) | Canonical link-styled inline button — reverts a single field without exiting the editor |
 | 66 | Email composer actions (bottom-left) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
-| 67 | Email composer actions (bottom-left) | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until a composer field is touched; posts `/setupinvite` |
+| 67 | Email composer actions (bottom-left) | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until a composer field is touched; posts `/setup-invite` |
 
 ---
 
@@ -319,7 +319,7 @@ Source: `app/web/templates/operator/session_validate.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 68 | Activate banner (warnings present) | Cancel | `<a>` | `btn alert` | Outline-amber | Returns to validate page without `?activate=1` |
-| 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn danger-solid` | Primary (filled) — recovery-as-confirm | Posts `/activate` with `acknowledge_warnings=true` |
+| 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn danger-solid` | Alert (filled amber) | Posts `/activate` with `acknowledge_warnings=true` |
 | 70 | Activate banner (errors present) | Cancel | `<a>` | `btn alert` | Outline-amber | Errors block activation; this just dismisses the banner |
 | 71 | Severity filter chip strip | All / Errors / Warnings / Info | `<a>` | `severity-chip` (with `.active` state) | Filter chip (custom — not in §6) | One per severity level; not part of the canonical button family |
 

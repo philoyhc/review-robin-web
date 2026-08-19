@@ -84,7 +84,7 @@ the dependencies above; no route trusts a client-supplied actor id.
 |---|---|---|
 | `/operator/*` (all) | `require_operator` | Router-level dependency — no operator route can skip it. |
 | Operator session-scoped routes | `require_session_operator` | Direct or via `_require_*_in_session` helpers. |
-| `/operator/sessions` bulk routes (tags / archive / delete-selected) | `require_operator` + per-id check | Each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped. |
+| `/operator/sessions` bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id check | Each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped. |
 | `/operator/settings/library/*` deletes | `require_operator` + owner check | Query filters `owner_user_id == user.id`; cross-operator id 404s. |
 | `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
@@ -112,7 +112,7 @@ service writes an `audit_events` row).
 | Action | Confirm | Permission | Audit |
 |---|---|---|---|
 | Delete response data (`/delete-data`) | `confirm=true` | `require_session_operator` | ✓ |
-| Delete session (`/delete`, `/delete-selected`, `/delete-archived-selected`) | `confirm=true` | `require_session_operator` / per-id check | ✓ |
+| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true` | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
