@@ -1,13 +1,23 @@
 # Segment 18S — Security refinements
 
-**Status:** In progress — **Item 1 shipped 2026-08-17** (three-tier role
-model; PR ladder 1–4: config + self-heal #1925, guards #1926, UI #1927, docs);
-**Item 2 shipped 2026-08-17** (no-super-tier fallback, #1930); **Item 3 planned
-2026-08-17** (tighten sys-admin cross-session writes to explicit ownership +
-self-add/clone bootstrap; not started; 18R Item 4 depends on it). A holding
-segment for **small, self-contained security / authorization
-hardening** on shipped surfaces. Items land as independent slices; the segment
-stays open as a home for further security refinements as they're identified.
+> **Archived 2026-08-19.** Closed and moved to `guide/archive/` with all
+> three items shipped. This file is the design-decision + PR-ladder record;
+> the shipped behaviour lives in the specs / docs cited under "Doc impact"
+> below (`spec/audience_and_identity_model.md` §4, `docs/security_posture.md`,
+> `docs/deployment_dev.md` / `docs/deployment_nus.md` §7) and in
+> `docs/status.md`. The "Future items" security-refinement holding list was
+> empty at close — further in-app security/authz work opens a fresh segment.
+
+**Status:** ✅ **Complete — closed 2026-08-19.** All three items shipped
+2026-08-17 → 2026-08-18: **Item 1** (three-tier role model + protected
+super-admin — config + self-heal #1925, guards #1926, UI #1927, docs);
+**Item 2** (no-super-tier fallback fixing the admin-management lockout, #1930);
+**Item 3** (tighten sys-admin cross-session writes to explicit ownership +
+self-add/clone bootstrap + the audited Diagnostics "Manage"/adopt door, #1935).
+A holding segment for **small, self-contained security / authorization
+hardening** on shipped surfaces — the three-tier role hierarchy with a
+config-anchored super-admin tier, and least-privilege sys-admin cross-session
+access.
 
 > Distinct from `guide/deferred_consolidated.md` (Azure-portal / platform hardening
 > — Key Vault, VNet, private endpoints) and from `docs/security_posture.md`
@@ -445,13 +455,13 @@ the Diagnostics "Details" link to `/edit`, so the new self-add entry must land
 
 ---
 
-## Future items (add as they come up)
+## Future items — closed 2026-08-19 (segment retired)
 
-Landing place for further small in-app security / authz refinements
-(e.g. audit-surface access tightening, rate-limit / abuse guards, session
-fixation / CSRF posture review, permission-check coverage sweeps). Log new
-ones here as `Item N` with the same problem / fix / scope / done-when shape.
-The user will populate this list as security refinements are identified.
+This list was the landing place for further small in-app security / authz
+refinements (e.g. audit-surface access tightening, rate-limit / abuse guards,
+session fixation / CSRF posture review, permission-check coverage sweeps). It
+was **empty at close** — no queued item. New in-app security/authz work opens
+a fresh segment rather than reopening this one.
 
 ---
 

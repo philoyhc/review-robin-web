@@ -1963,7 +1963,7 @@ rationalization on the Instruments page.
   per-concern routes are kept server-side (test callers); full server-side
   retirement is logged as an optional Future item in the plan doc.
 
-### Segment 18S — Security refinements — Item 1 shipped 2026-08-17 (#1925 → #1927 + docs); Item 2 shipped 2026-08-17 (#1930); Item 3 shipped 2026-08-18 (#1935) (detailed plan: `guide/segment_18S_security.md`)
+### Segment 18S — Security refinements — ✅ complete / closed 2026-08-19 (Item 1 shipped 2026-08-17 #1925 → #1927 + docs; Item 2 shipped 2026-08-17 #1930; Item 3 shipped 2026-08-18 #1935) (detailed plan archived: `guide/archive/segment_18S_security.md`)
 
 Holding segment for small, self-contained in-app authorization / account-safety
 hardening. Stays open for further security items.
