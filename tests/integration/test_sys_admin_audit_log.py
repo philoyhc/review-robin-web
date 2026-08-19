@@ -312,8 +312,8 @@ def test_audit_log_filter_strip_renders(
     assert 'name="actor"' in body
     assert 'name="from"' in body
     assert 'name="to"' in body
-    # No "Clear filters" link when no filter is active.
-    assert "Clear filters" not in body
+    # No filter-reset ("Clear") link when no filter is active.
+    assert ">Clear</a>" not in body
 
 
 def test_audit_log_filter_by_event_type_narrows_table(
@@ -341,8 +341,8 @@ def test_audit_log_filter_by_event_type_narrows_table(
     assert "<code>session.created</code>" not in body
     # Filter strip persists state — option marked selected.
     assert 'value="session.activated" selected' in body
-    # "Clear filters" link shows up when a filter is active.
-    assert "Clear filters" in body
+    # The filter-reset ("Clear") link shows up when a filter is active.
+    assert ">Clear</a>" in body
 
 
 def test_audit_log_filter_by_severity_narrows_table(
@@ -610,8 +610,8 @@ def test_audit_log_filter_unknown_event_type_silently_dropped(
         "?event_type=does.not.exist"
     )
     assert response.status_code == 200
-    # No "Clear filters" since the filter parsed empty.
-    assert "Clear filters" not in response.text
+    # No filter-reset ("Clear") link since the filter parsed empty.
+    assert ">Clear</a>" not in response.text
 
 
 def test_audit_log_pagination_carries_filter_state(

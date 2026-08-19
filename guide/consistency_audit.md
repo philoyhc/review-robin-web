@@ -52,7 +52,7 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     re-render is the form-error contract). The page-level-banner build is
     logged in `guide/deferred_consolidated.md` (Part C). **This closes
     the whole route sweep, R1–R11.**
-- **🔶 UI-vocabulary sweep (U1–U8) in progress.**
+- **✅ UI-vocabulary sweep complete (U1–U8)** — shipped 2026-08-19.
   - **Item 8**: U1 (routine in-editor Save → Secondary; reviewer-surface
     Submit stays Primary), U2 (banner Cancels → `.btn alert`), U4
     (dropped the no-op `.btn primary` token).
@@ -64,10 +64,10 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
     **disabled-until-checked** (the `session_detail` Delete Data / Delete
     session buttons converted to the app-wide `data-delete-confirm`
     standard; the always-clickable highest-stakes gap is closed), and the
-    confirm-label voice is unified to "Yes, delete …". Template-only —
-    best eyeballed on the dev slot.
-    **Still open:** U7, U8.
-- **Open** — U7 + U8 (label/verb nits) and the view-adapter dedup (V1–V6).
+    confirm-label voice is unified to "Yes, delete …".
+  - **Item 11**: U7 (filter-reset labels → "Clear") + U8 (reviewer
+    abandon-edits verb "Discard" → "Cancel").
+- **Open** — the view-adapter dedup column (V1–V6).
 
 ---
 
@@ -97,8 +97,8 @@ Tracked as **Segment 19B** (`guide/segment_19B_consistency.md`).
 | ✅ **U4** | 🟡 Low | UX | Dead/duplicate Primary token `class="btn primary"` vs `class="btn"` |
 | ✅ **U5** | 🟡 Low | UX | "Archive" styled Destructive one place, Outline-amber another |
 | ✅ **U6** | 🟡 Low | UX | Two class names for one identical Destructive style (`.destructive` / `.danger-solid`) |
-| **U7** | 🟡 Low | UX | Filter-reset label: "Clear" / "Clear all" / "Clear filters" |
-| **U8** | 🟡 Low | UX | Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) |
+| ✅ **U7** | 🟡 Low | UX | Filter-reset label: "Clear" / "Clear all" / "Clear filters" |
+| ✅ **U8** | 🟡 Low | UX | Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) |
 | ✅ **S6** | 🟡 Low | Service | Status normalization / active-predicate duplicated in five spots |
 | ✅ **S7** | 🟡 Low | Service | "Count responses for a field id" query duplicated three times |
 | **V5** | 🟡 Low | View | `is_at_risk` / `is_incomplete` predicates duplicated between service and view dataclasses |
@@ -482,17 +482,19 @@ irreversible deletes. The two classes are now distinct, non-redundant
 roles. Recorded in `spec/ui_elements.md` (button-vocab table + hover +
 confirm-banner notes). Best eyeballed on the dev slot.
 
-### U7 🟡 Filter-reset label: "Clear" / "Clear all" / "Clear filters"
+### U7 🟡 Filter-reset label: "Clear" / "Clear all" / "Clear filters" — ✅ done (19B Item 11)
 
-"Clear" on the seven setup/list pages (`session_reviewers.html:134`, …);
-"Clear all" on `sessions_list.html:29` / `sessions_archived.html:25`;
-"Clear filters" on `sys_admin_session_audit_log.html:166`. One verb
-phrase.
+The seven setup/list filter resets already said "Clear". **Fixed:** the
+two "Clear all" (`sessions_list`, `sessions_archived`) and the "Clear
+filters" (`sys_admin_session_audit_log`) filter-reset controls → **"Clear"**.
+(The destructive "Clear all settings" / "Clear all responses" headings
+are separate actions, not filter resets — left alone.)
 
-### U8 🟡 Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator)
+### U8 🟡 Abandon-edits verb: "Discard" (reviewer) vs "Cancel" (operator) — ✅ done (19B Item 11)
 
-`reviewer/_action_row.html:33,39` label the abandon-input control
-`Discard`; every operator inline editor labels the equivalent `Cancel`.
+**Fixed:** the reviewer-surface abandon-input control (`_action_row.html`)
+relabelled `Discard` → **`Cancel`**, matching every operator inline
+editor. The `data-rs-discard` JS hook attribute is unchanged (internal).
 
 ### U9–U10 🟡 Style nits
 

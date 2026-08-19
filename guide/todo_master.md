@@ -2155,8 +2155,13 @@ session gap on Session Home), and the confirm-label voice unified to
 "Yes, delete …" (expanders' "Allow delete" → "Yes, delete"). Documented
 in `spec/ui_elements.md`.
 
-**Still open:** UI sweep remaining — U7/U8 (label/verb) — and the
-view-adapter dedup (V1–V6). See `guide/consistency_audit.md`.
+**Item 11 — U7 + U8 (label/verb nits) — done 2026-08-19.** U7: the two
+"Clear all" filter resets + the "Clear filters" link → "Clear". U8: the
+reviewer abandon-edits control "Discard" → "Cancel". **This closes the
+whole UI-vocabulary sweep, U1–U8.**
+
+**Still open:** the view-adapter dedup column (V1–V6). See
+`guide/consistency_audit.md`.
 
 ---
 
