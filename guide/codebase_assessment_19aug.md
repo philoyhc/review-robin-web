@@ -318,11 +318,13 @@ correctness pass.)_
 - **The `guide/` corpus keeps accreting despite the sweep.** The window
   pruned `docs/`, consolidated the deferral ledgers, and this snapshot
   retires its predecessor (`codebase_assessment_17aug.md`) to
-  `guide/archive/` — but `guide/` still holds fully-shipped segment plans
-  (18P / 18R / 18S) that could archive too. *Cost:* the plan corpus is a
-  historical record readers must date-filter. *Plan:* partial — the
-  deferral + sweep docs + prior assessment archived; the segment plans did
-  not.
+  `guide/archive/` — but `guide/` still holds a fully-shipped segment plan
+  (18S) that could archive too. *Cost:* the plan corpus is a historical
+  record readers must date-filter. *Plan:* partial — the deferral + sweep
+  docs + prior assessment archived; 18S not yet. *(Corrected 2026-08-19 —
+  see the note on §8's move #2: an earlier draft also named 18P/18R here;
+  18P was already archived pre-snapshot and 18R archived same-day via
+  PR #2006, leaving 18S.)*
 - **The instrument card's behavior still lives in inline template JS.** The
   lock state machine + Band 1 rule editor + the new `?editing=1` config-card
   swap are hand-written JS inside templates with no build step; tests assert
@@ -481,9 +483,12 @@ between here and a pilot that can notify participants.
    so email is the last large MVP scope and the one feature a real pilot
    cannot run without.
 2. **Archive the shipped segment plans** — this snapshot already retired
-   the prior assessment to `guide/archive/`, but the fully-shipped 18P /
-   18R / 18S *segment plans* still sit in `guide/` root; moving them
-   finishes the "latest only" convention the sweep started.
+   the prior assessment to `guide/archive/`, but the fully-shipped **18S**
+   *segment plan* still sits in `guide/` root; moving it finishes the
+   "latest only" convention the sweep started. *(Correction 2026-08-19: an
+   earlier draft named 18P / 18R / 18S here. 18P was already archived
+   2026-08-16 before this snapshot — an error to list it; 18R was archived
+   later the same day, PR #2006. Only 18S remains.)*
 3. **Close the Segment 19 spec coverage gap** (`spec/permissions.md`,
    `spec/email_template_editor.md`) — the only remaining Segment 19 work;
    cheap, and `permissions.md` is the natural companion to the 18S
@@ -492,7 +497,9 @@ between here and a pilot that can notify participants.
 **Settling 17aug's proposals.** Its recommended move #1 (start 14B email)
 **did not ship** — carried forward as #1 again. Move #2 (finish the
 `guide/` archive sweep) **partially shipped** — the deferral ledgers +
-sweep docs archived, segment plans did not (now move #2). Move #3 (watch
+sweep docs archived, and of the segment plans 18P was already archived
+2026-08-16 + 18R archived 2026-08-19 (PR #2006), leaving 18S (now move #2).
+Move #3 (watch
 `_instruments.py`) **resolved itself** — the file receded to 1,247, below
 its tripwire. 17aug's §9 watchlist (`_instruments.py`, `session_lifecycle.py`)
 both held or receded; no split queued.
