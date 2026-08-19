@@ -6,16 +6,10 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_root_returns_service_metadata() -> None:
-    response = client.get("/")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "name": "Review Robin Web",
-        "status": "ok",
-        "health": "/health",
-        "docs": "/docs",
-    }
+# The root ``/`` is a role-aware redirect (18R Item 6), not a JSON
+# metadata endpoint — it needs an authenticated identity + DB, so its
+# behaviour is covered by ``tests/integration/test_landing_pages.py``
+# against the authed client. Liveness / metadata lives at ``/health``.
 
 
 def test_health_returns_ok() -> None:

@@ -23,7 +23,7 @@ class OperatorAllowlistDenied(Exception):
     strict-allowlist gate; 16A PR 1).
 
     The exception handler registered in ``app/main.py`` converts this
-    into a 303 redirect to ``/request-access`` — the deliberate UX
+    into a 303 redirect to ``/me`` (18R Item 6) — the deliberate UX
     choice over a raw 403 (gentler for the misrouted-but-legitimate
     arrival).
     """
@@ -134,7 +134,7 @@ def get_or_create_user(
 def require_operator(user: User = Depends(get_or_create_user)) -> User:
     """16A PR 1 access gate. Passes when the user is on the workspace
     operator allowlist, OR is a sys-admin (sys-admin implies operator
-    per F4). Anyone else is bounced to ``/request-access`` via the
+    per F4). Anyone else is bounced to ``/me`` via the
     ``OperatorAllowlistDenied`` exception handler in ``app/main.py``.
     """
     if user.is_operator or user.is_sys_admin:

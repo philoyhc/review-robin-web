@@ -118,7 +118,7 @@ def test_preview_route_returns_308_to_full_preview(
     )
 
 
-def test_preview_route_redirects_non_operator_to_request_access(
+def test_preview_route_redirects_non_operator_to_me(
     db: Session,
     alice: AuthenticatedUser,
     reviewer_user: AuthenticatedUser,
@@ -126,7 +126,7 @@ def test_preview_route_redirects_non_operator_to_request_access(
 ) -> None:
     """Under the Segment 16A PR 1 operator-allowlist gate, a
     signed-in user who isn't on the workspace allowlist gets bounced
-    to ``/request-access`` from the operator-router level — well
+    to ``/me`` from the operator-router level — well
     before the per-session ``require_session_operator`` check fires.
     Either way the non-operator never sees the redirect into the
     operator hub."""
@@ -141,7 +141,7 @@ def test_preview_route_redirects_non_operator_to_request_access(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
 
 def test_preview_does_not_observe_deadline_side_effect(

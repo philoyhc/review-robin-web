@@ -148,3 +148,50 @@ If Option B is chosen:
 - **Dual-role default** — the hub shows both; is there a remembered
   last-used surface, or always the neutral hub? *Lean: neutral hub, no
   memory, keep it simple.*
+
+---
+
+## 7. Decision & build status (2026-08-19)
+
+**Chosen: Option A (role-aware redirect), simplified.** A sys-admin is
+always also an operator in practice, so there is no separate
+sys-admin landing — the split is two-way. `/` routes on
+`is_operator OR is_sys_admin` (safe even against the config-edge
+`SYS_ADMIN_EMAILS`-only user, whom `require_operator` admits anyway).
+
+**Decisions settled:**
+
+- **(a) The JSON `/` is dropped.** `/` is now a role-aware redirect;
+  liveness / metadata lives only at `/health`.
+- **(b) `/request-access` is retired**, and `/about` is repurposed to
+  carry its "signed in but no access / how to get in" role. The
+  operator-denied bounce points at `/me`.
+
+**Final contract:**
+
+| Route | Who | → |
+|---|---|---|
+| `/` | operator **or** sys-admin | `/operator/sessions` |
+| `/` | participant or nobody | `/me` |
+| `/operator`, `/operator/` | anyone (unguarded) | `/operator/sessions` (lobby gate then applies) |
+| any `/operator/*` | non-operator/non-sys-admin | `/me` *(was `/request-access`)* |
+
+**Build status:**
+
+- **Slice 1 — shipped.** The `/` role redirect (302; JSON dropped) and
+  the `/operator` + `/operator/` → lobby redirects, in `app/main.py`.
+  Tests: `tests/integration/test_landing_pages.py`.
+- **Slice 2 — shipped.** Flipped `OperatorAllowlistDenied` → `/me`
+  (`app/main.py`); retired `/request-access` (route in `routes_auth.py` +
+  `request_access.html` template); repurposed `/about` to carry the
+  access-help role — it now passes the signed-in identity + operator
+  contact and renders an "Access" card (`routes_about.py`, `about.html`).
+  Comment/docstring refs across `deps.py` / `error_handlers.py` /
+  `routes_operator/__init__.py` / `sys_admin_users.html` repointed at `/me`.
+  Tests: the bounce-target assertions across
+  `test_operator_allowlist_gate.py` / `test_operator_lobby_access_gate.py`
+  / `test_preview_route.py` now expect `/me`; the retired page + the
+  `/about` access-help are covered in `test_landing_pages.py`; two chrome
+  tests updated for `/about` now carrying an identity.
+
+**Item 6 complete.** Both slices shipped; full suite green (2,679 passed).

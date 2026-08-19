@@ -5,9 +5,9 @@ Exercises:
   ``users.is_sys_admin`` from the ``OPERATOR_EMAILS`` /
   ``SYS_ADMIN_EMAILS`` env vars (F3).
 - ``require_operator`` redirects non-operators to
-  ``/request-access`` (F1).
+  ``/me`` (18R Item 6; F1).
 - Sys-admin implies operator at the predicate level (F4).
-- The ``/request-access`` landing page renders for the
+- The retired ``/request-access`` role now lives on ``/about``;
   signed-in-but-not-allowlisted case (F5).
 - ``FAKE_AUTH_OPERATOR`` / ``FAKE_AUTH_SYS_ADMIN`` shortcuts honour
   fake auth in dev / sandbox.
@@ -131,7 +131,7 @@ def test_first_sign_in_outside_allowlist_creates_user_with_both_flags_false(
 
     response = client.get("/__test/operator-gated")
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
     user = db.execute(
         select(User).where(User.email == "alice@example.edu")
@@ -313,7 +313,7 @@ def test_non_super_admin_demotion_is_not_re_asserted(
     client = _make_client(db, auth_alice)
 
     response = client.get("/__test/operator-gated")
-    # Not an operator, not a super-admin → bounced to /request-access.
+    # Not an operator, not a super-admin → bounced to /me.
     assert response.status_code == 303
 
 
@@ -336,7 +336,7 @@ def test_revoked_operator_is_redirected(
     client = _make_client(db, auth_bob)
     response = client.get("/__test/operator-gated")
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
 
 # --- Fake-auth toggle (F3, sandbox) ----------------------------------------
@@ -415,7 +415,7 @@ def test_operator_lobby_redirects_unallowlisted_user(
     is mounted on the parent operator ``APIRouter`` so every route
     under ``/operator/*`` gates uniformly. A signed-in but not-
     allowlisted user hitting the lobby (the lightest-weight operator
-    route) gets bounced to ``/request-access`` — not 200, not 403."""
+    route) gets bounced to ``/me`` — not 200, not 403."""
     intruder = AuthenticatedUser(
         principal_id="intruder-oid",
         email="intruder@example.edu",
@@ -425,7 +425,7 @@ def test_operator_lobby_redirects_unallowlisted_user(
     client = _make_client(db, intruder)
     response = client.get("/operator/sessions")
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
 
 def test_operator_lobby_reachable_for_allowlisted_user(
@@ -439,35 +439,9 @@ def test_operator_lobby_reachable_for_allowlisted_user(
     assert response.status_code == 200
 
 
-# --- /request-access landing page (F5) -------------------------------------
-
-
-def test_request_access_page_renders_for_signed_in_user(
-    db: Session,
-    auth_alice: AuthenticatedUser,
-) -> None:
-    client = _make_client(db, auth_alice)
-    response = client.get("/request-access")
-    assert response.status_code == 200
-    body = response.text
-    assert "Request access" in body
-    assert "alice@example.edu" in body
-    # No contact email configured by default; mailto link absent.
-    assert "mailto:" not in body
-
-
-def test_request_access_page_renders_contact_mailto_when_configured(
-    db: Session,
-    auth_alice: AuthenticatedUser,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        settings, "operator_contact_email", "admin@example.edu"
-    )
-    client = _make_client(db, auth_alice)
-    response = client.get("/request-access")
-    assert response.status_code == 200
-    assert "mailto:admin@example.edu" in response.text
+# The /request-access landing page (F5) retired in 18R Item 6 — its
+# access-help role moved to /about, and the operator-denied bounce now
+# targets /me. Those are covered by tests/integration/test_landing_pages.py.
 
 
 # --- Direct dependency-level smoke test ------------------------------------

@@ -20,7 +20,7 @@ context can't cascade into a second failure while rendering the
 error page itself.
 
 The ``OperatorAllowlistDenied`` handler stays in ``app/main.py``:
-that is a deliberate 303 redirect to ``/request-access``, not an
+that is a deliberate 303 redirect to ``/me`` (18R Item 6), not an
 error page.
 """
 from __future__ import annotations

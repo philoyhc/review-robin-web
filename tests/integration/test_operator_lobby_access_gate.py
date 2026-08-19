@@ -11,7 +11,7 @@ in ``test_operator_allowlist_gate.py``):
 
 1. Workspace gate (``require_operator``) — a user not on the
    operator / sys-admin allowlist is redirected to
-   ``/request-access`` even if they're a participant on
+   ``/me`` even if they're a participant on
    sessions.
 2. Per-session gate (``require_session_operator``) — a
    workspace-allowlisted operator who isn't a SessionOperator
@@ -99,7 +99,7 @@ def test_participant_only_user_redirected_from_operator_lobby(
     """Carol is added to all three rosters on Alice's session.
     She holds no SessionOperator row and isn't on the operator /
     sys-admin allowlist. Hitting ``/operator/sessions``
-    redirects her to ``/request-access`` — participant rosters
+    redirects her to ``/me`` — participant rosters
     don't open the operator surface."""
     review_session = _alice_session(client, db, "gate-1")
     db.add_all(
@@ -126,7 +126,7 @@ def test_participant_only_user_redirected_from_operator_lobby(
     carol_client = _make_client(db, auth_carol)
     response = carol_client.get("/operator/sessions")
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
 
 def test_participant_only_user_redirected_from_per_session_route(
@@ -134,7 +134,7 @@ def test_participant_only_user_redirected_from_per_session_route(
 ) -> None:
     """Workspace gate fires before the per-session check, so
     deep links to a specific session also bounce to
-    ``/request-access`` for a non-operator participant."""
+    ``/me`` for a non-operator participant."""
     review_session = _alice_session(client, db, "gate-2")
     db.add(
         Reviewer(
@@ -150,7 +150,7 @@ def test_participant_only_user_redirected_from_per_session_route(
         f"/operator/sessions/{review_session.id}"
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/request-access"
+    assert response.headers["location"] == "/me"
 
 
 # ── Per-session gate: workspace operator on someone else's session ───

@@ -74,5 +74,7 @@ def test_chrome_about_link_carries_current_path_as_return_to(
 
 def test_chrome_skips_about_link_on_about_page(client: TestClient) -> None:
     body = client.get("/about").text
-    # No self-referencing About link in chrome when already on /about.
-    assert 'class="chrome-link"' not in body
+    # No self-referencing About link in the chrome when already on /about.
+    # (Other chrome links like Settings still render — /about now carries the
+    # signed-in identity since 18R Item 6 — so check the About link itself.)
+    assert 'href="/about?return_to' not in body
