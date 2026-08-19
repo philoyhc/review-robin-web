@@ -65,7 +65,12 @@ Real "code moved ahead" drift, but woven across many interlocking sections;
 the sweep left these for a coordinated section-level refresh rather than risk
 piecemeal edits that leave the doc internally inconsistent.
 
-1. **`spec/rrw_functional_spec.md` needs a currency refresh** (its stated
+**Both resolved 2026-08-18** by a thorough section-level revision of the two
+docs (`rrw_functional_spec.md` currency → 2026-08-18; `architecture.md`
+conceptual hierarchy rewritten). See the "Thorough revision" work landed
+alongside this sweep.
+
+1. ✅ **RESOLVED.** **`spec/rrw_functional_spec.md` needs a currency refresh** (its stated
    currency is 2026-05-22, ~3 months stale). Concretely:
    - **Response Type Definitions (RTDs) retired 2026-05-26** but still
      documented as a live core concept (§§4.2, 5.6, 5.7, 8.7, 9.6, 9.13, 12.2,
@@ -83,7 +88,7 @@ piecemeal edits that leave the doc internally inconsistent.
      rules/`, per-instrument generation) but still framed as future.
    *(§§4.2 / 9.14 were freshly patched for 18S and read current.)*
 
-2. **`spec/architecture.md` — Conceptual-hierarchy section** still frames
+2. ✅ **RESOLVED.** **`spec/architecture.md` — Conceptual-hierarchy section** still frames
    per-instrument rules / RuleBased as "the last remaining multi-instrument item
    (Segment 15B)" and assignments as "FullMatrix today, RuleBased in Segment
    13A", though the rule engine + per-instrument assignment generation shipped.
@@ -116,6 +121,23 @@ non-load-bearing path strings that resolve via package re-exports.
   §4 documents.
 - **`domain_assumptions.md`** — "1–6 Instruments" implies a hard cap; there is
   no instrument-count cap in code (the functional spec says "any number").
+
+---
+
+## D. Post-sweep spec additions (18R Item 3, 2026-08-18)
+
+Drift found *after* the sweep while doing 18R Item 3 work, and resolved in the
+same slice — recorded here so the sweep stays a living record.
+
+1. **Chrome status-strip Responses pill was undocumented.** The pill's behaviour
+   lived only in the 18R plan log, not in any `spec/` file — the sweep's
+   status-strip coverage in `visual_style_rrw.md` had an **Invitations state
+   values** table but no **Responses** equivalent. The pill also gained new
+   behaviour in 18R Item 3: a **data-driven "Awaiting" gate** (numbers show on any
+   response activity, independent of lifecycle, and persist through a revert to
+   draft) and a **`<n> drafts / <m> submitted / <reviewees>` breakdown** (each
+   zero term omitted). Documented by adding a **"Responses state values"**
+   subsection to `spec/visual_style_rrw.md` (beside the Invitations table).
 
 ---
 
