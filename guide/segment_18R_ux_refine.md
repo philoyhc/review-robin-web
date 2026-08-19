@@ -1039,7 +1039,7 @@ is always also an operator, so the dual-role hub wasn't needed):
 - **About link added to the participant (`/me`) chrome** (PR #1983), matching
   the operator chrome's top-right user menu.
 
-Audit → decisions → slice log: `guide/landing_pages.md`. Spec updated:
+Audit → decisions → slice log: `guide/archive/landing_pages.md`. Spec updated:
 `spec/operator_ui_concept.md` (entry & landing routing),
 `spec/reviewer-surface.md` + `spec/visual_style_rrw.md` (the `/me` chrome
 About link).

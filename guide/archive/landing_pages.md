@@ -1,5 +1,12 @@
 # Landing pages — audit & plan (Segment 18R Item 6)
 
+> **Archived 2026-08-19 — the work shipped.** 18R Item 6 landed (PRs #1982,
+> #1983): the role-aware `/` + `/operator` redirects, the non-operator → `/me`
+> bounce, `/request-access` retired into `/about`, and the About link on the
+> `/me` chrome. Current behaviour lives in `spec/operator_ui_concept.md`
+> ("Entry & landing"), `spec/reviewer-surface.md`, and `spec/visual_style_rrw.md`;
+> ship-state in `docs/status.md`. Kept as the audit + decision record.
+
 Standing notes for the **landing-pages** work: the entry routes a
 signed-in user hits before they reach a working surface. Audited
 2026-08-19 against `main` at `ce4b176`.

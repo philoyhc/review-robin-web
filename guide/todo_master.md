@@ -2025,7 +2025,7 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   retired and its access-help role folded into `/about` (identity + operator
   contact + "Access" card). The About link added to the participant (`/me`)
   chrome for parity with the operator chrome. Audit + plan:
-  `guide/landing_pages.md`.
+  `guide/archive/landing_pages.md`.
 
 ### Segment 19 — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19_spec_documentation.md`)
 
