@@ -22,11 +22,13 @@ other AI coding agent working in this repository.
 - Prefer explicit types and clear names.
 - Do not introduce a full frontend framework unless explicitly requested.
 - When working on a page, migrate any inline-styled buttons on it
-  to the canonical `.btn` modifier classes defined in
-  `spec/domain_assumptions.md` (Primary / Primary Outline / Alert / Alert
-  Outline / Danger / Danger Outline). Ask first if a button
-  doesn't cleanly fit one of those six named styles — don't invent
-  a new one without confirmation.
+  to the canonical `.btn` roles defined in `spec/ui_elements.md` §6
+  (Primary / Secondary / Destructive [outline red] / Alert [filled
+  amber] / Outline-amber [lock-card recovery]). Ask first if a button
+  doesn't cleanly fit one of those roles — don't invent a new one
+  without confirmation. (The pre-19B six-name scheme — Primary Outline /
+  Alert Outline / Danger Outline — is superseded; `.alert-solid`
+  collapses to Primary and `.danger` is a context class.)
 - Do not implement Microsoft authentication in app code unless
   explicitly requested; assume Azure App Service Easy Auth will provide
   authenticated identity headers in deployed environments.
@@ -154,7 +156,7 @@ reject it.
 ### Templating conventions
 
 - Templates extend `app/web/templates/base.html`. The base owns inline CSS for the entire app (no separate stylesheet, no JS build step beyond targeted progressive-enhancement scripts inline in templates). When adding new visual primitives, add a class to `base.html` rather than inline styles on individual templates.
-- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/domain_assumptions.md` and `spec/operator_ui_concept.md` — refer to those names when editing UI.
+- The canonical `.btn` roles (Primary, Secondary, Destructive [outline red], Alert [filled amber], Outline-amber [lock-card recovery]) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/ui_elements.md` §6 (button vocabulary; layout in `spec/visual_style_rrw.md` §10) and `spec/operator_ui_concept.md` — refer to those roles when editing UI. The pre-19B six-name scheme (Primary Outline / Alert Outline / Danger Outline) is superseded.
 - Operator pages render breadcrumbs via `app/web/breadcrumbs.py` helpers (`operator_root`, `operator_session_child`). Don't hand-roll breadcrumb HTML — call these.
 
 ### Database
