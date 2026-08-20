@@ -126,7 +126,7 @@ White background, `border-default` 2px border, 8px corner radius, 16–24px padd
 
 **Lock card variant.** Same card shape, but with `accent-amber-bg` light background and `accent-amber-dark` border (the warning brown). Used for surfaces that are intentionally non-interactive in the current state. Explanatory text and (if applicable) recovery action inside; the recovery action follows **P7** and uses the outline-amber button.
 
-**Danger-zone card variant.** Same card shape, white background, `accent-amber-dark` border (same warning brown as the lock card — both warning-framed surfaces share one visual language), H2 in `accent-amber-dark`. The destructive button *inside* the card stays in its own role color (outline `accent-red`) — the brown frames the surface; the red marks the action that actually deletes data.
+**Danger-zone card variant.** Same card shape, `accent-amber-bg` tinted background, `accent-amber-dark` border (the same amber surface as the lock card — both warning-framed surfaces share one visual language, fill included), H2 in `accent-amber-dark`. The destructive button *inside* the card stays in its own role color (outline `accent-red`) — the amber frames the surface; the red marks the action that actually deletes data.
 
 **Tabs.**
 
