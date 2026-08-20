@@ -460,6 +460,7 @@ def session_delete_data(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
