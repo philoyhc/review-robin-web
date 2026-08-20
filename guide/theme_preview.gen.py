@@ -201,27 +201,22 @@ body = f"""
 
   <div class="ph-body">
     <section class="ph-section">
-      <h2 class="ph-h">Buttons — canonical vocabulary (streamlined; spec/ui_elements.md §6, 19B Items 8–9)</h2>
-      <p class="muted" style="margin: 0 0 6px;">Active — five role-based treatments. The earlier six-name scheme (Primary / Primary&nbsp;Outline / Alert / Alert&nbsp;Outline / Danger / Danger&nbsp;Outline) is superseded by these roles in spec/ui_elements.md §6.</p>
+      <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
+      <p class="muted" style="margin: 0 0 6px;">Active</p>
       <div class="ph-row" style="margin-bottom: 14px;">
-        <button class="btn">Primary <code>.btn</code></button>
-        <button class="btn secondary">Secondary <code>.secondary</code></button>
-        <button class="btn destructive">Destructive · outline red <code>.destructive</code></button>
-        <button class="btn danger-solid">Alert · filled amber <code>.danger-solid</code></button>
-        <button class="btn alert">Outline-amber · lock recovery <code>.alert</code></button>
+        <button class="btn">Primary</button>
+        <button class="btn secondary">Secondary</button>
+        <button class="btn destructive">Destructive</button>
+        <button class="btn danger-solid">Alert</button>
+        <button class="btn alert">Amber</button>
       </div>
-      <p class="muted" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (the unified rule doesn't override colour, so each role stays its own hue, faded)</p>
-      <div class="ph-row" style="margin-bottom: 14px;">
+      <p class="muted" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
+      <div class="ph-row">
         <button class="btn" disabled>Primary</button>
         <button class="btn secondary" disabled>Secondary</button>
         <button class="btn destructive" disabled>Destructive</button>
-        <button class="btn danger-solid" disabled>Alert · filled amber</button>
-        <button class="btn alert" disabled>Outline-amber</button>
-      </div>
-      <p class="muted" style="margin: 0 0 6px;">Collapsed / legacy classes still in base.html — <em>not</em> distinct styles: <code>.alert-solid</code> → Primary; <code>.danger</code> → Secondary / Destructive by context</p>
-      <div class="ph-row">
-        <button class="btn alert-solid"><code>.alert-solid</code> → Primary</button>
-        <button class="btn danger"><code>.danger</code> → context</button>
+        <button class="btn danger-solid" disabled>Alert</button>
+        <button class="btn alert" disabled>Amber</button>
       </div>
     </section>
 
