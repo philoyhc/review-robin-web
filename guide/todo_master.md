@@ -2191,6 +2191,22 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
+### Segment 19C — Refinements — planned; Item 1 not started (detailed plan: `guide/segment_19C_refinements.md`)
+
+Holding segment for small operator-facing behaviour / contract refinements —
+the sibling of 19A (docs hygiene) and 19B (code consistency).
+
+- **Item 1 (planned)** — **friendly tag labels via roster CSV headers.** Let
+  operators key reviewer / reviewee / relationships friendly labels in the
+  roster CSV header as a `<Slot>.<label>` suffix (e.g. `ReviewerTag1.Tutor`),
+  captured at upload time when the operator already knows them from upstream.
+  Makes the roster header the **sole round-trip carrier** — removes
+  `field_labels.*` from the Settings CSV (breaking settings-contract change;
+  stale keys silently ignored). Internal storage (`session_field_labels`) +
+  the per-page label editor unchanged; transport-only. Bare header = clear
+  (consistent with roster wipe-and-replace). PR ladder: reviewers proof slice
+  → reviewees + relationships → retire Settings carrier + rehydrate → docs.
+
 ---
 
 ## Upcoming
