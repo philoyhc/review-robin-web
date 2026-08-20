@@ -1,7 +1,8 @@
 # Segment 19C — Refinements
 
 **Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
-via roster CSV headers; sole round-trip carrier). A holding segment for **small,
+via roster CSV headers; sole round-trip carrier); **Item 2 in progress**
+(settings-page Display mode card — scaffold slice first). A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
 for behaviour / contract polish. Items land as independent slices; the
@@ -259,6 +260,121 @@ carrier.
 
 ---
 
+## Item 2 — Settings page: Display mode (light / dark) card
+
+**Status: in progress — scaffold slice landing first (this plan + the
+placeholder card).**
+
+### The opportunity
+
+`/operator/settings` today stacks full-width cards: Email send (SMTP),
+**Date & time** (per-operator default display timezone), and a Clear-all
+Danger Zone. The app is **light-only** — `base.html` defines a `:root`
+token palette (~28 colour tokens, ~389 `var()` uses) but has no dark theme
+and no user control. Add an operator-facing **Display mode** control
+(light / dark / follow-system) and, while there, tighten the settings-page
+layout so the two "personal preference" cards sit side by side.
+
+### The layout change (scaffold)
+
+- **Date & time** card → **half-width, flush left**, moved into a
+  `.bottom-grid` (the canonical `1fr 1fr` half-width pair from `base.html`).
+- **Display mode** card → **half-width, flush right**, the right cell of the
+  same grid.
+- The Email send (SMTP) card (above) and the Clear-all Danger Zone (below)
+  stay **full-width**; only the two preference cards pair up.
+- **Scaffold-first** (`CLAUDE.md` → "Consequential UI lands scaffold-first"):
+  the Display mode card lands as a **static placeholder** — real heading +
+  copy + the three inert options (System / Light / Dark) — before any
+  behaviour. This slice ships the layout + placeholder only.
+
+### The wiring (follow-up slices)
+
+The card offers **System (default) / Light / Dark**:
+
+- **System** follows the OS via `@media (prefers-color-scheme: dark)`.
+- **Light / Dark** stamp `data-theme="light"` / `"dark"` on `<html>`, which
+  wins over the media query.
+
+**Decision — browser-local, not a DB column.** The choice persists in
+`localStorage` and applies via `data-theme` on `<html>`; the card is pure
+progressive-enhancement JS (no POST form, no Save button — it applies
+instantly), matching how the app already stores UI state (column-visibility
+chips, sort prefs). *Rationale:* no migration, applies before auth resolves,
+no round-trip. *Tradeoff:* the preference is per-browser, not per-account
+(doesn't follow the operator across devices) — acceptable for a display
+preference; revisit only if operators ask for it to sync.
+
+**No-FOUC.** A tiny synchronous inline script at the top of `base.html`'s
+`<head>` reads `localStorage` and sets `data-theme` **before first paint**,
+so there's no light flash on a dark-mode load.
+
+**Dark palette is the real work — and why we scaffold first.** For the
+control to actually do anything, a dark theme must exist. `base.html` is
+*mostly* tokenised but still carries **~167 hardcoded hex colours** that
+would become light-coloured islands under a dark palette. So the wiring
+splits into:
+
+1. **Tokenise sweep** — replace the ~167 stray hexes in `base.html` with the
+   existing `:root` tokens. Mechanical, no visual change in light mode; pure
+   prep, independently reviewable.
+2. **Dark palette** — define dark values for the ~28 colour tokens under the
+   three guarded blocks (`:root` stays the light palette; redefine under
+   `@media (prefers-color-scheme: dark)` guarded as
+   `:root:not([data-theme="light"])`, and again under `:root[data-theme="dark"]`
+   so an explicit toggle wins both ways). System-follow works once this lands,
+   even before the toggle.
+3. **Wire the card** — the System/Light/Dark control writes `localStorage` +
+   sets `data-theme`; the no-FOUC head script; the card reflects the active
+   choice (and a "System" option reads `prefers-color-scheme` for its live
+   preview).
+
+### Scope / blast radius
+
+- `app/web/templates/operator/operator_settings.html` — wrap Date & time +
+  the new Display mode card in a `.bottom-grid`; add the placeholder card
+  (scaffold), then the control + inline JS (wiring).
+- `app/web/templates/base.html` — the no-FOUC head script (wiring), the
+  tokenise sweep, and the dark token blocks.
+- No route / service / model change for the browser-local design (the
+  existing `GET /operator/settings` render is untouched; no new POST).
+- **Tests:** the settings page still renders with the new card + grid
+  (extend the existing settings render test); `node --check` on the inline
+  JS (per the repo's inline-JS test convention); a dark-token presence check
+  on `base.html` if useful. No Python behaviour to unit-test for the
+  browser-local path.
+
+### PR ladder
+
+1. **Scaffold** *(this slice)* — layout (Date & time → half-width left) +
+   Display mode **placeholder** card (half-width right; System/Light/Dark
+   options rendered but inert). No behaviour.
+2. **Tokenise sweep** — `base.html` stray hexes → tokens (no visual change).
+3. **Dark palette** — dark token blocks + the no-FOUC head script;
+   System-follow live.
+4. **Wire the card** — the toggle writes `localStorage` + `data-theme`;
+   card reflects the choice.
+
+### Definition of done
+
+- Settings page shows Date & time (half-width left) + Display mode
+  (half-width right) as a `.bottom-grid` pair; SMTP + Danger Zone stay full
+  width.
+- Choosing Light / Dark / System re-themes the whole app instantly and
+  persists across reloads (browser-local); no light flash on a dark load.
+- No route/model/migration; full suite + `ruff` green.
+
+### Open question (for the wiring slices)
+
+- **Browser-local vs per-operator DB column** — this plan commits to
+  browser-local (above). Flag if you'd rather it sync per-account (that adds
+  a `users` column + migration + a POST, and makes the card a normal
+  Save-form).
+- **A chrome quick-toggle** (top-right user menu) in addition to the card —
+  out of scope for Item 2 unless requested; the card is the deliverable.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
@@ -279,3 +395,8 @@ refinements are identified.
 - `spec/settings_inventory.md` — remove `field_labels.*` from the Settings
   CSV inventory; note the carrier is now the roster headers (Item 1).
 - `docs/status.md` — note the ship when Item 1 lands.
+- `spec/operator_ui_concept.md` / `spec/visual_style_rrw.md` — the
+  settings-page layout (Date & time + Display mode half-width pair) and the
+  Display mode card + `data-theme` theming primitive (Item 2, on wiring).
+- `spec/settings_inventory.md` — the browser-local `data-theme` UI-state
+  primitive (Item 2, on wiring).

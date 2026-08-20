@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — in progress; Item 1 ✅ shipped 2026-08-20 (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — in progress; Item 1 ✅ shipped 2026-08-20; Item 2 in progress (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2207,6 +2207,14 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   roster's wipe-and-replace). New `app/services/field_label_csv.py` +
   `field_labels.apply_import`; parsers capture, extracts emit, saves reconcile
   (threaded through the routes **and** rehydrate). Full suite green.
+- **Item 2 (in progress)** — **settings-page Display mode card.** Make the
+  Date & time card half-width flush-left and add a half-width flush-right
+  **Display mode** card (System / Light / Dark) beside it on
+  `/operator/settings`. Scaffold-first: layout + placeholder card land first,
+  then wiring. Wiring is browser-local (`localStorage` + `data-theme` on
+  `<html>`, no DB), and depends on a dark palette — a `base.html` tokenise
+  sweep (~167 stray hexes → tokens) then dark token blocks + a no-FOUC head
+  script. PR ladder: scaffold → tokenise → dark palette → wire.
 
 ---
 
