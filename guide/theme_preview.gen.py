@@ -122,7 +122,17 @@ dark_block = f"""
 #    .save-error-banner, which lives in the instruments template not base.html).
 harness_css = """
     /* ---- harness-only (not part of the app) ---- */
-    body.ui-v2 { margin: 0; }
+    /* Paint the page canvas itself so the WHOLE page reflects the theme, not
+       just the elements that carry their own background. NB: base.html's real
+       `body` rule sets no background — W4 must add `background: var(--bg-page)`
+       there for the same reason. */
+    html { background: var(--bg-page); }
+    body.ui-v2 {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-page);
+      color: var(--text-primary);
+    }
     .ph-toolbar {
       position: sticky; top: 0; z-index: 50;
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
