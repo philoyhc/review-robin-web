@@ -201,8 +201,9 @@ body = f"""
 
   <div class="ph-body">
     <section class="ph-section">
-      <h2 class="ph-h">Buttons (canonical .btn set)</h2>
-      <div class="ph-row">
+      <h2 class="ph-h">Buttons (canonical .btn set) — active + disabled</h2>
+      <p class="muted" style="margin: 0 0 6px;">Active</p>
+      <div class="ph-row" style="margin-bottom: 14px;">
         <button class="btn">Primary</button>
         <button class="btn secondary">Primary Outline</button>
         <button class="btn alert-solid">Alert</button>
@@ -210,7 +211,16 @@ body = f"""
         <button class="btn danger-solid">Danger</button>
         <button class="btn danger">Danger Outline</button>
         <button class="btn destructive">Destructive</button>
-        <button class="btn disabled" disabled>Disabled</button>
+      </div>
+      <p class="muted" style="margin: 0 0 6px;">Disabled — the unified rule only adds opacity 0.5 + not-allowed, so each variant keeps its own colour, faded</p>
+      <div class="ph-row">
+        <button class="btn" disabled>Primary</button>
+        <button class="btn secondary" disabled>Primary Outline</button>
+        <button class="btn alert-solid" disabled>Alert</button>
+        <button class="btn alert" disabled>Alert Outline</button>
+        <button class="btn danger-solid" disabled>Danger</button>
+        <button class="btn danger" disabled>Danger Outline</button>
+        <button class="btn destructive" disabled>Destructive</button>
       </div>
     </section>
 
