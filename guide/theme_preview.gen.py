@@ -107,13 +107,12 @@ dark_block = f"""
     /* ================= DRAFT DARK PALETTE (W4 starter — TUNE ME) =================
        First-cut dark values. Not yet ported to base.html. Edit here, re-run
        guide/theme_preview.gen.py, refresh the browser. When happy, copy these
-       into base.html under the same three guarded blocks. */
-    @media (prefers-color-scheme: dark) {{
-      :root:not([data-theme="light"]) {{
-        color-scheme: dark;
-{dark_decls}
-      }}
-    }}
+       into base.html's `:root[data-theme="dark"]` block.
+       Two-state model (System dropped 2026-08-20): the default is Light
+       (`:root`), Dark is an explicit `data-theme="dark"` — no
+       `prefers-color-scheme` / OS-follow. `color-scheme` still tracks the
+       active theme so native surfaces (scrollbar, canvas) follow. */
+    :root {{ color-scheme: light; }}
     :root[data-theme="dark"] {{
       color-scheme: dark;
 {dark_decls}
@@ -128,12 +127,11 @@ harness_css = """
        just the elements that carry their own background. NB: base.html's real
        `body` rule sets no background — W4 must add `background: var(--bg-page)`
        there for the same reason.
-       `color-scheme: light` (default) + `dark` in the guarded blocks tells the
-       browser to paint its NATIVE surfaces — scrollbars, the canvas beyond the
-       content, overscroll, form controls — in the active theme. Without it the
-       html/body background is dark but the scrollbar gutter + canvas stay light,
-       so the page reads as only-partly-dark. W4 needs this on base.html too. */
-    :root { color-scheme: light; }
+       `color-scheme` (set in the palette blocks above) makes the browser paint
+       its NATIVE surfaces — scrollbars, the canvas beyond the content,
+       overscroll, form controls — in the active theme; without it the html/body
+       background is dark but the scrollbar gutter + canvas stay light, so the
+       page reads as only-partly-dark. W4 needs `color-scheme` on base.html too. */
     html { background: var(--bg-page); }
     body.ui-v2 {
       margin: 0;
@@ -195,8 +193,7 @@ body = f"""
   <div class="ph-toolbar">
     <strong>Dark-mode preview</strong>
     <span class="ph-seg" role="group" aria-label="Theme">
-      <button data-set="system" aria-pressed="true">System</button>
-      <button data-set="light" aria-pressed="false">Light</button>
+      <button data-set="light" aria-pressed="true">Light</button>
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Faithful snapshot of base.html @ {{SHA}} + a DRAFT dark palette. Design tool only — not wired into the app.</span>
@@ -279,6 +276,79 @@ body = f"""
     </section>
 
     <section class="ph-section">
+      <h2 class="ph-h">Form controls (the settings / setup pages are form-heavy)</h2>
+      <div class="card">
+        <label for="ph-in">Text input</label>
+        <input type="text" id="ph-in" placeholder="reviews@your-org.edu" value="Course Reviews">
+        <label for="ph-em">Email input</label>
+        <input type="email" id="ph-em" placeholder="you@example.com">
+        <label for="ph-num">Number input</label>
+        <input type="number" id="ph-num" value="587">
+        <label for="ph-sel">Select</label>
+        <select id="ph-sel"><option>STARTTLS</option><option>SSL/TLS</option><option>None</option></select>
+        <label for="ph-ta">Textarea</label>
+        <textarea id="ph-ta" placeholder="Type a note…">Multi-line help text sits here.</textarea>
+        <label for="ph-dis">Disabled input</label>
+        <input type="text" id="ph-dis" value="frozen value" disabled>
+        <p class="muted" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
+      </div>
+    </section>
+
+    <section class="ph-section">
+      <h2 class="ph-h">Chrome — top bar</h2>
+      <div class="chrome">
+        <div class="chrome-left">
+          <span class="chrome-app-identity">Review Robin Web App (version 1.2.3)</span>
+          <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Spring Review</span></nav>
+        </div>
+        <div class="chrome-user">
+          <div>Signed in as Alex Operator (sys admin)</div>
+          <a class="chrome-link" href="#">Settings</a>
+          <a class="chrome-link" href="#">Admin</a>
+          <a class="chrome-link" href="#">About</a>
+          <a class="signout" href="#">Sign out</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ph-section">
+      <h2 class="ph-h">Session navigation (tab strips + active states)</h2>
+      <div class="session-nav-grid">
+        <a class="session-home-anchor" href="#" title="Spring Review"><span class="home-anchor-text">Session Home</span></a>
+        <div class="row-label setup-row row-setup active-group">Setup</div>
+        <div class="tab-strip tab-strip-setup row-setup">
+          <a class="nav-tab active" href="#">Reviewers</a>
+          <a class="nav-tab" href="#">Reviewees</a>
+          <a class="nav-tab" href="#">Relationships</a>
+          <a class="nav-tab" href="#">Instruments</a>
+          <a class="nav-tab" href="#">Email Template</a>
+        </div>
+        <div class="row-label ops-row">Operations</div>
+        <div class="tab-strip tab-strip-ops">
+          <a class="nav-tab" href="#">Assignments</a>
+          <a class="nav-tab" href="#">Validate</a>
+          <a class="nav-tab" href="#">Previews</a>
+          <a class="nav-tab" href="#">Invitations</a>
+          <a class="nav-tab" href="#">Responses</a>
+          <a class="nav-tab" href="#">Extract data</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ph-section">
+      <h2 class="ph-h">Tag chips &amp; back-link / page header</h2>
+      <a class="back-link" href="#">&larr; Back to Sessions</a>
+      <div class="rs-page-header"><h1>Reviewers</h1></div>
+      <div class="ph-row" style="margin: 8px 0;">
+        <span class="tag-chip is-selected">Tutor</span>
+        <span class="tag-chip">Peer</span>
+        <span class="tag-chip is-selected">Mentor</span>
+        <span class="tag-chip">External</span>
+      </div>
+      <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
+    </section>
+
+    <section class="ph-section">
       <h2 class="ph-h">All colour tokens ({len(colour_tokens)}) — swatch = ACTIVE theme; label = light reference value</h2>
       <div class="ph-swatches">
 {swatches}
@@ -291,8 +361,8 @@ body = f"""
       var root = document.documentElement;
       var btns = document.querySelectorAll(".ph-seg button");
       function apply(mode) {{
-        if (mode === "system") root.removeAttribute("data-theme");
-        else root.setAttribute("data-theme", mode);
+        if (mode === "dark") root.setAttribute("data-theme", "dark");
+        else root.removeAttribute("data-theme");  // light is the default :root
         btns.forEach(function (b) {{
           b.setAttribute("aria-pressed", b.getAttribute("data-set") === mode ? "true" : "false");
         }});

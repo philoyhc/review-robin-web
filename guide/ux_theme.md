@@ -9,25 +9,32 @@ a spec — the shipped behaviour goes to `spec/visual_style_rrw.md` /
 ## Decision (settled)
 
 - **Purely browser-local.** The theme choice lives in `localStorage`
-  (`rrw-theme` ∈ `{system, light, dark}`) and is applied via a `data-theme`
+  (`rrw-theme` ∈ `{light, dark}`) and is applied via a `data-theme`
   attribute on `<html>`. **No backend** — no route, service, model,
   migration, or template-context change. Covers operators *and* participants
   uniformly, and (with a synchronous head script) is flash-free without any
   server involvement.
-- **`system`** = no `data-theme`; `@media (prefers-color-scheme: dark)`
-  decides. **`light` / `dark`** = stamp `data-theme` explicitly, which wins
-  over the media query.
+- **Two states only — Light (default) and Dark.** No `system` / OS-follow
+  option (dropped 2026-08-20). **Light** is the bare `:root`; **Dark** stamps
+  `data-theme="dark"`. There is **no `@media (prefers-color-scheme: dark)`
+  block** — first load is always Light until the user picks Dark. This
+  simplifies both the palette (one dark block, not two guarded ones) and the
+  toggle (a 2-way control).
+- **`color-scheme`** tracks the active theme (`light` on `:root`, `dark` on
+  `:root[data-theme="dark"]`) so the browser paints its *native* surfaces —
+  scrollbar gutter, canvas, overscroll, form controls — in the active theme.
+  Without it the page background is dark but those surfaces stay light.
 - **UX placement is deliberately open** (chrome vs. `/operator/settings`
   card) — see "Open — UX placement". The *code* work below is
-  placement-agnostic except for the toggle control itself (W7).
+  placement-agnostic except for the toggle control itself (W6).
 
 ## Mechanism (all client-side)
 
-1. **Dark palette** — dark values for the `base.html` colour tokens under
-   three guarded blocks: `:root` keeps the light palette; redefine under
-   `@media (prefers-color-scheme: dark)` guarded as
-   `:root:not([data-theme="light"])`, and again under
-   `:root[data-theme="dark"]` so an explicit toggle wins both directions.
+1. **Dark palette** — dark values for the `base.html` colour tokens under a
+   single guarded block: `:root` keeps the light palette + `color-scheme:
+   light`; `:root[data-theme="dark"]` redefines the tokens + `color-scheme:
+   dark`. base.html's `body` also needs `background: var(--bg-page)` (its real
+   rule sets none), or the page canvas stays white in dark.
 2. **No-FOUC head script** — a *synchronous* inline `<script>` at the very
    top of `base.html`'s `<head>` (before the `<style>`) reads `localStorage`
    and sets `data-theme` before first paint. Eliminates the flash with no
@@ -94,9 +101,9 @@ those already consume tokens). Priorities:
 | **W1** | Tokenise the remaining **118 raw-hex usages** → canonical tokens; add new tokens for the one-off slates / grays / violets (or consolidate imperceptible near-dupes). | `base.html` | Value-preserving (light unchanged). **Delicate:** must not corrupt the 28 token *definitions* → per-site pass, not a bare global replace. |
 | **W2** | Reconcile the **shadow token vocab** to canonical tokens so the instruments page themes; tokenise its remaining raw hexes. | `operator/instruments_index.html` | Define aliases in `:root` **or** rewrite usages. Biggest single island. |
 | **W3** | Tokenise the minor templates' few raw hexes. | `reviewer/results.html`, `sys_admin_session_audit_log.html`, `session_observers.html`, `session_extract_data.html` | Small. |
-| **W4** | **Dark palette** — dark values for the full token set under the three guarded blocks. | `base.html` | **Needs dev-slot visual QA** — colour correctness across cards / pills / banners / tables / danger zones can't be verified by the test suite. Any raw-hex site left after W1–W3 shows as a light island. |
+| **W4** | **Dark palette** — dark values for the full token set under `:root[data-theme="dark"]` (single block), plus `color-scheme` on both states and `body { background: var(--bg-page) }`. Tune in the preview harness first. | `base.html` | **Needs dev-slot visual QA** — colour correctness across cards / pills / banners / tables / forms / nav / danger zones can't be verified by the test suite. Any raw-hex site left after W1–W3 shows as a light island. |
 | **W5** | **No-FOUC head script** — synchronous `<script>` at the top of `<head>`. | `base.html` | Small; `node --check` in tests. |
-| **W6** | **Toggle control + JS** — enable the placeholder buttons (or the chrome control), wire `localStorage` + `data-theme` + `aria-pressed`; `system` reads `prefers-color-scheme` for its live state. | placement TBD (see below) + inline JS | Small; the only placement-dependent piece. |
+| **W6** | **Toggle control + JS** — a 2-way Light / Dark control (placeholder buttons or chrome), wiring `localStorage` + `data-theme` + `aria-pressed`. Light = remove `data-theme`; Dark = set it. | placement TBD (see below) + inline JS | Small; the only placement-dependent piece. |
 | **W7** | **error.html** dark handling (own `prefers-color-scheme` block) or leave light. | `error.html` | Standalone doc; lowest priority. |
 | **W8** | Verify: `node --check` on the new inline JS; dev-slot visual QA on representative pages (a dark card, a pill row, a banner, a table, the Danger Zone, the instruments page). | tests + dev slot | The test suite can't see colour. |
 
@@ -105,25 +112,36 @@ those already consume tokens). Priorities:
 `guide/theme_preview.html` is a standalone dark-mode design harness —
 **open it in a browser**, no server or seed data. It lifts the *real*
 `<style>` block from `base.html` (so the component CSS is faithful, not a
-hand-copy), applies a **draft dark palette** under the three guarded blocks,
-and renders a component gallery (buttons, cards, pills, banners, a table, the
-Danger Zone, instrument tints) plus a **swatch grid of all 47 tokens** whose
-chips show the *active* theme. A toolbar flips System / Light / Dark live.
+hand-copy), applies a **draft dark palette**, and renders a component gallery
+plus a **swatch grid of all 47 tokens** whose chips show the *active* theme. A
+toolbar flips Light / Dark live (2-state, default Light).
+
+**Gallery coverage** — the shared `base.html` vocabulary: the canonical `.btn`
+set; text / links / breadcrumb; cards (plain / help / Danger Zone); pills;
+warning / danger / soft-error banners; a table with config-value cells;
+instrument tints; **form controls** (input / email / number / select /
+textarea / disabled + focus ring); the **chrome top bar**; the **session
+navigation** (tab strips + active states); and **tag-chips** + back-link /
+page-header / help-preview. *Out of scope:* components whose CSS lives in an
+individual template's own `<style>` (not `base.html`) — the Instruments
+Band-1 rule-editor bars, sort buttons / badges, the reorder toast, Band-2
+preview tables. Those are page-specific islands, not the shared palette this
+harness (and a default-scheme rethink) turns on.
 
 This is the W4 tuning loop: edit the `DARK = {…}` map in
 `guide/theme_preview.gen.py`, re-run `python3 guide/theme_preview.gen.py`,
 refresh the browser. The draft values are a first cut (tokens named
 `*-dark` / `*-strong` / `*-text` invert to light-on-dark; `*-bg` tints become
 dark solids). When the palette reads well across the gallery, **port the final
-values into `base.html`'s `:root` guarded blocks** — that is W4 proper. The
-harness is a design tool only; it is not wired into the app, and it retires
-with this doc when dark mode ships.
+values into `base.html`'s `:root[data-theme="dark"]` block** — that is W4
+proper. The harness is a design tool only; it is not wired into the app, and
+it retires with this doc when dark mode ships.
 
 ## Sequencing (the Item 2 ladder)
 
 1. **Tokenise** — W1 + W2 + W3 (value-preserving; light mode unchanged;
    independently reviewable and safe).
-2. **Dark palette + no-FOUC** — W4 + W5 (System-follow works after this,
+2. **Dark palette + no-FOUC** — W4 + W5 (dark works after this,
    before any toggle; **dev-slot QA**).
 3. **Wire the toggle** — W6 (+ W7 mop-up).
 
