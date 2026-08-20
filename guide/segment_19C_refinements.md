@@ -290,6 +290,12 @@ layout so the two "personal preference" cards sit side by side.
 
 ### The wiring (follow-up slices)
 
+> **Sweep + punch-list: `guide/ux_theme.md`.** That doc records the full
+> theming sweep (base.html's 28 tokens + 118 remaining raw-hex usages, the
+> non-base light-islands, and the undefined shadow-token vocab on the
+> instruments page) and the W1–W8 code punch-list. **Purely browser-local
+> confirmed — no backend work** (no route/service/model/migration).
+
 The card offers **System (default) / Light / Dark**:
 
 - **System** follows the OS via `@media (prefers-color-scheme: dark)`.
