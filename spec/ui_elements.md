@@ -362,7 +362,7 @@ vocabulary as follows.
 | v1 (`.btn` modifier) | v2 canonical | Notes |
 |---|---|---|
 | `.btn` (no modifier) | **Primary** | Solid `accent-blue`, white text. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
-| `.btn.secondary` | **Secondary** | White bg, `border-default`, `text-primary`. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
+| `.btn.secondary` | **Secondary** | White bg; border **and** text `text-primary` (the outline matches the label colour). The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
 | `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.alert-solid` | **Primary** | The orange solid collapses to Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
 | `.btn.destructive` | **Destructive (outline red)** | White bg, `accent-red` border + text. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. |
