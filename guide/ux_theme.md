@@ -100,6 +100,25 @@ those already consume tokens). Priorities:
 | **W7** | **error.html** dark handling (own `prefers-color-scheme` block) or leave light. | `error.html` | Standalone doc; lowest priority. |
 | **W8** | Verify: `node --check` on the new inline JS; dev-slot visual QA on representative pages (a dark card, a pill row, a banner, a table, the Danger Zone, the instruments page). | tests + dev slot | The test suite can't see colour. |
 
+## Preview harness (in-repo mockup)
+
+`guide/theme_preview.html` is a standalone dark-mode design harness —
+**open it in a browser**, no server or seed data. It lifts the *real*
+`<style>` block from `base.html` (so the component CSS is faithful, not a
+hand-copy), applies a **draft dark palette** under the three guarded blocks,
+and renders a component gallery (buttons, cards, pills, banners, a table, the
+Danger Zone, instrument tints) plus a **swatch grid of all 47 tokens** whose
+chips show the *active* theme. A toolbar flips System / Light / Dark live.
+
+This is the W4 tuning loop: edit the `DARK = {…}` map in
+`guide/theme_preview.gen.py`, re-run `python3 guide/theme_preview.gen.py`,
+refresh the browser. The draft values are a first cut (tokens named
+`*-dark` / `*-strong` / `*-text` invert to light-on-dark; `*-bg` tints become
+dark solids). When the palette reads well across the gallery, **port the final
+values into `base.html`'s `:root` guarded blocks** — that is W4 proper. The
+harness is a design tool only; it is not wired into the app, and it retires
+with this doc when dark mode ships.
+
 ## Sequencing (the Item 2 ladder)
 
 1. **Tokenise** — W1 + W2 + W3 (value-preserving; light mode unchanged;
