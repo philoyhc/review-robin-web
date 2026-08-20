@@ -43,6 +43,29 @@
         --accent-red: #dc2626;
         --accent-red-bg: #fee2e2;
         --accent-red-soft: #ef4444;
+        --accent-red-strong: #b91c1c;   /* danger emphasis (banner border, danger-outline btn) */
+        --accent-red-text: #991b1b;      /* danger text on a red-bg pill / banner */
+        --accent-amber-border: #f59e0b;  /* warning-banner border / box-shadow rule */
+        --accent-green-text: #166534;    /* success text on a green-bg pill */
+        --accent-green-bg-faint: #f0fdf4;/* palest green surface (Operations tab strip) */
+        --accent-blue-strong: #1e40af;   /* strong/navy blue text (info pill, nav) */
+        --accent-violet-bg: #ede9fe;     /* "super" pill background */
+        --accent-violet-text: #5b21b6;   /* "super" pill text */
+        --accent-sky-bg: #e0f2fe;        /* config-value (unresolved) surface */
+        --accent-sky-text: #075985;      /* config-value text */
+        /* Soft inline-error treatment (Instruments save-error banner) —
+           a gentler danger than the hard .danger-banner red set above. */
+        --danger-bg: #fdecea;
+        --danger-border: #f2b8b5;
+        --danger-text: #8a1c14;
+        /* Instruments page — cycling per-instrument card tint (Tailwind *-50
+           tones) for at-a-glance identification. Indexed 1..6 in template. */
+        --instrument-tint-1: #f0f9ff;
+        --instrument-tint-2: #ecfdf5;
+        --instrument-tint-3: #f5f3ff;
+        --instrument-tint-4: #fff7ed;
+        --instrument-tint-5: #fff1f2;
+        --instrument-tint-6: #fffbeb;
         /* Type scale */
         --fs-tiny: 0.75rem;
         --fs-small: 0.875rem;
@@ -68,7 +91,7 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         margin: 40px;
         max-width: 1400px;
-        color: #222;
+        color: var(--text-primary);
         line-height: 1.35;
       }
       body.narrow { max-width: 800px; }
@@ -79,15 +102,15 @@
       .table-scroll { overflow-x: auto; }
       .pill.pill-handle {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f3f4f6;
-        color: #374151;
+        background: var(--bg-muted);
+        color: var(--text-primary);
         text-transform: none;
         font-weight: 500;
       }
       .help-preview {
         white-space: pre-wrap;
         font-size: 0.9em;
-        color: #444;
+        color: var(--text-primary);
         margin: 0;
       }
       /*
@@ -107,21 +130,21 @@
         background: var(--border-default);
         padding: 10px 14px;
         border-radius: 6px;
-        color: #444;
+        color: var(--text-primary);
       }
-      body.ui-v2 .card.rs-help-card strong { color: #111827; }
+      body.ui-v2 .card.rs-help-card strong { color: var(--text-primary); }
       .warning-banner {
-        border: 1px solid #f59e0b;
-        background: #fef3c7;
-        color: #92400e;
+        border: 1px solid var(--accent-amber-border);
+        background: var(--accent-amber-bg);
+        color: var(--accent-amber-dark);
         padding: 12px 16px;
         border-radius: 8px;
         margin-bottom: 16px;
       }
       .danger-banner {
-        border: 1px solid #b91c1c;
-        background: #fee2e2;
-        color: #991b1b;
+        border: 1px solid var(--accent-red-strong);
+        background: var(--accent-red-bg);
+        color: var(--accent-red-text);
         padding: 12px 16px;
         border-radius: 8px;
         margin-bottom: 16px;
@@ -129,15 +152,15 @@
       h1 { margin-top: 0; margin-bottom: 16px; }
       .page-subtitle {
         margin: -12px 0 16px 0;
-        color: #555;
+        color: var(--text-secondary);
         font-size: 0.95em;
       }
-      a { color: #2563eb; }
+      a { color: var(--accent-blue); }
       .chrome {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-subtle);
         padding-bottom: 12px;
         margin-bottom: 24px;
         gap: 16px;
@@ -145,18 +168,18 @@
       .chrome-left { display: flex; flex-direction: column; gap: 4px; }
       .chrome-app-identity {
         font-size: 0.85em;
-        color: #555;
+        color: var(--text-secondary);
         text-decoration: none;
       }
       .chrome-app-identity:hover { text-decoration: underline; }
       .breadcrumb { font-size: 0.95em; }
-      .breadcrumb a { color: #2563eb; text-decoration: none; }
+      .breadcrumb a { color: var(--accent-blue); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
-      .breadcrumb span[aria-current="page"] { color: #222; font-weight: 600; }
-      .breadcrumb-sep { color: #999; margin: 0 6px; }
+      .breadcrumb span[aria-current="page"] { color: var(--text-primary); font-weight: 600; }
+      .breadcrumb-sep { color: var(--text-muted); margin: 0 6px; }
       .chrome-user {
         font-size: 0.85em;
-        color: #555;
+        color: var(--text-secondary);
         text-align: right;
         line-height: 1.4;
       }
@@ -164,15 +187,15 @@
         display: inline-block;
         margin-top: 4px;
         padding: 4px 10px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-default);
         border-radius: 6px;
         text-decoration: none;
-        color: #222;
+        color: var(--text-primary);
         font-size: 0.9em;
       }
-      .chrome-user .signout:hover { background: #f4f4f4; }
+      .chrome-user .signout:hover { background: var(--bg-muted); }
       .card {
-        border: 2px solid #bbb;
+        border: 2px solid var(--border-default);
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
@@ -180,12 +203,12 @@
       .card h2 { margin-top: 0; font-size: 1.15rem; }
       table { border-collapse: collapse; width: 100%; }
       th, td {
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-default);
         padding: 4px 8px;
         text-align: left;
         vertical-align: middle;
       }
-      th { background: #f4f4f4; }
+      th { background: var(--bg-muted); }
       th.col-shrink, td.col-shrink { width: 1%; white-space: nowrap; }
       /*
        * Reviewer-surface column-width hints. With table-layout: auto the
@@ -254,8 +277,8 @@
           to right,
           transparent 0,
           transparent 2px,
-          var(--border-strong, #94a3b8) 2px,
-          var(--border-strong, #94a3b8) 4px,
+          var(--text-muted) 2px,
+          var(--text-muted) 4px,
           transparent 4px,
           transparent 6px
         );
@@ -266,8 +289,8 @@
           to right,
           transparent 0,
           transparent 1px,
-          var(--text-secondary, #475569) 1px,
-          var(--text-secondary, #475569) 5px,
+          var(--text-secondary) 1px,
+          var(--text-secondary) 5px,
           transparent 5px,
           transparent 6px
         );
@@ -289,7 +312,7 @@
         opacity: 0.4;
       }
       .new-model-band2-pill-drop-before {
-        box-shadow: -3px 0 0 0 var(--text-secondary, #475569);
+        box-shadow: -3px 0 0 0 var(--text-secondary);
       }
       /*
        * Wave 4 PR 3 — pending visual for Band 3 response-field
@@ -299,7 +322,7 @@
        * clears when ✓ is clicked.
        */
       [data-new-model-rf-row][data-row-pending="true"] {
-        box-shadow: inset 3px 0 0 0 #f59e0b;
+        box-shadow: inset 3px 0 0 0 var(--accent-amber-border);
         background: rgba(254, 243, 199, 0.5);
       }
       /*
@@ -312,14 +335,14 @@
       .new-model-band2-pill-grip {
         display: inline-block;
         margin-right: 6px;
-        color: var(--text-muted, #94a3b8);
+        color: var(--text-muted);
         font-size: 0.9em;
         letter-spacing: -1px;
         transition: color 0.1s ease-in-out;
       }
       [data-new-model-band2-pill][data-reorderable="true"]:hover
         .new-model-band2-pill-grip {
-        color: var(--text-primary, #1f2937);
+        color: var(--text-primary);
       }
       /*
        * `||` divider that sits between display pills and response
@@ -328,13 +351,13 @@
        * shape stays unchanged for instruments without responses.
        */
       .new-model-band2-pills-divider {
-        color: var(--text-muted, #94a3b8);
+        color: var(--text-muted);
         font-weight: bold;
         font-size: 1.1em;
         padding: 0 4px;
         user-select: none;
       }
-      .muted { color: #777; }
+      .muted { color: var(--text-secondary); }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
        * .danger / .danger-solid / .alert / .alert-solid) are the
@@ -348,9 +371,9 @@
       .btn, button.btn, a.btn {
         display: inline-block;
         padding: 8px 14px;
-        border: 1px solid #2563eb;
+        border: 1px solid var(--accent-blue);
         border-radius: 8px;
-        background: #2563eb;
+        background: var(--accent-blue);
         color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;
@@ -366,27 +389,27 @@
       }
       .btn.secondary {
         background: var(--bg-card);
-        color: #2563eb;
+        color: var(--accent-blue);
       }
       .btn.danger {
         background: var(--bg-card);
-        color: #b91c1c;
-        border-color: #b91c1c;
+        color: var(--accent-red-strong);
+        border-color: var(--accent-red-strong);
       }
       .btn.danger-solid {
-        background: #b91c1c;
+        background: var(--accent-red-strong);
         color: var(--text-on-accent);
-        border-color: #b91c1c;
+        border-color: var(--accent-red-strong);
       }
       .btn.alert {
         background: var(--bg-card);
-        color: #d97706;
-        border-color: #d97706;
+        color: var(--accent-amber);
+        border-color: var(--accent-amber);
       }
       .btn.alert-solid {
-        background: #d97706;
+        background: var(--accent-amber);
         color: var(--text-on-accent);
-        border-color: #d97706;
+        border-color: var(--accent-amber);
       }
       label { display: block; margin-top: 12px; font-weight: 600; }
       input[type="text"], textarea, input[type="datetime-local"] {
@@ -394,7 +417,7 @@
         padding: 8px;
         font-size: 1em;
         box-sizing: border-box;
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-default);
         border-radius: 6px;
         font-family: inherit;
       }
@@ -414,8 +437,8 @@
         display: inline-block;
         padding: 6px 10px;
         min-height: 1.25em;
-        background: #e0f2fe;
-        color: #075985;
+        background: var(--accent-sky-bg);
+        color: var(--accent-sky-text);
         border-radius: 6px;
       }
       .config-value-multiline { white-space: pre-wrap; }
@@ -424,7 +447,7 @@
          one row per offset. */
       .config-offset-row { display: flex; align-items: center; gap: var(--space-2); }
       .config-offset-row + .config-offset-row { margin-top: var(--space-1); }
-      .config-value-resolved { background: #f0f9ff; }
+      .config-value-resolved { background: var(--accent-blue-bg-soft); }
       /* User interface settings — both toggles on one line in display and
          edit modes; label text at normal weight/size with the On/Off pill
          (display) or checkbox (edit) inline after it, in the same slot. */
@@ -449,13 +472,13 @@
         text-transform: uppercase;
         margin-right: 6px;
       }
-      .pill-error { background: #fee2e2; color: #991b1b; }
-      .pill-warning { background: #fef3c7; color: #92400e; }
-      .pill-info { background: #dbeafe; color: #1e40af; }
-      .pill-success { background: #dcfce7; color: #166534; }
+      .pill-error { background: var(--accent-red-bg); color: var(--accent-red-text); }
+      .pill-warning { background: var(--accent-amber-bg); color: var(--accent-amber-dark); }
+      .pill-info { background: var(--accent-blue-bg); color: var(--accent-blue-strong); }
+      .pill-success { background: var(--accent-green-bg); color: var(--accent-green-text); }
       /* Super-admin tier badge (18S) — violet, distinct from the
          blue admin/info pill so the protected top tier stands out. */
-      .pill-super { background: #ede9fe; color: #5b21b6; }
+      .pill-super { background: var(--accent-violet-bg); color: var(--accent-violet-text); }
       /* .session-meta-row / .session-detail-code retired with the old
          read-only Session Details card (18R Item 4 Slice 5b). */
       .session-status-row {
@@ -469,9 +492,9 @@
         align-items: center;
         justify-content: center;
         padding: 8px 14px;
-        border: 1px solid #2563eb;
+        border: 1px solid var(--accent-blue);
         border-radius: 8px;
-        background: #2563eb;
+        background: var(--accent-blue);
         color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;
@@ -480,8 +503,8 @@
         cursor: pointer;
       }
       .btn-cta.disabled {
-        background: #9ca3af;
-        border-color: #9ca3af;
+        background: var(--text-muted);
+        border-color: var(--text-muted);
         cursor: not-allowed;
       }
       .btn-row {
@@ -497,7 +520,7 @@
         padding: 0 2px;
         font-size: 0.8em;
         line-height: 1;
-        color: #374151;
+        color: var(--text-primary);
       }
       .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
       /* Inline text-style "reset to default" button. Reads like a
@@ -511,7 +534,7 @@
         border: 0;
         padding: 0;
         cursor: pointer;
-        color: #2563eb;
+        color: var(--accent-blue);
         font: inherit;
         text-decoration: none;
       }
@@ -547,7 +570,7 @@
          bolder text + a short inset underline in a single unified
          colour (`--tab-marker-color`, blue by default). */
       .session-nav-card {
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--border-default);
         border-radius: 8px;
         overflow: hidden;
         margin-bottom: 20px;
@@ -567,24 +590,24 @@
       .session-home-anchor {
         grid-column: 1;
         grid-row: 1 / span 2;
-        background: #eff6ff;
-        border-right: 1px solid #d1d5db;
+        background: var(--accent-blue-bg-soft);
+        border-right: 1px solid var(--border-default);
         padding: 12px 16px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
         text-decoration: none;
-        color: #4b5563;
+        color: var(--text-secondary);
         position: relative;
       }
       .session-home-anchor:hover {
-        background: #fafcff;
-        color: #1f2937;
+        background: var(--accent-blue-bg-faint);
+        color: var(--text-primary);
       }
       .session-home-anchor.active {
         background: var(--bg-card);
-        color: #111827;
+        color: var(--text-primary);
       }
       .session-home-anchor.active::after {
         content: "";
@@ -612,12 +635,12 @@
         padding: 12px 16px;
         font-size: 0.78rem;
         font-weight: 700;
-        color: #9ca3af;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.06em;
         white-space: nowrap;
         background: var(--bg-card);
-        border-right: 1px solid #e5e7eb;
+        border-right: 1px solid var(--border-subtle);
       }
       /* Understated right-arrow after each row label, pointing
          from the label toward the tabs it labels. CSS-drawn
@@ -632,7 +655,7 @@
         height: 0;
         border-top: 0.5em solid transparent;
         border-bottom: 0.5em solid transparent;
-        border-left: 0.55em solid #cbd5e1;
+        border-left: 0.55em solid var(--border-default);
         vertical-align: middle;
       }
       /* Emphasised state for the row-label of the active group:
@@ -643,12 +666,12 @@
       .row-label.active-group,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
       .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
-        color: #111827;
+        color: var(--text-primary);
       }
       .row-label.active-group::after,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
       .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
-        border-left-color: #111827;
+        border-left-color: var(--text-primary);
       }
       /* Tab strip rows — group tint sits on the strip itself.
          Setup row sits in grid row 1; Operations row in row 2. */
@@ -656,8 +679,8 @@
         display: flex;
         align-items: stretch;
       }
-      .tab-strip-setup { background: #f3f4f6; grid-column: 3; grid-row: 1; }
-      .tab-strip-ops   { background: #f0fdf4; grid-column: 3; grid-row: 2; }
+      .tab-strip-setup { background: var(--bg-muted); grid-column: 3; grid-row: 1; }
+      .tab-strip-ops   { background: var(--accent-green-bg-faint); grid-column: 3; grid-row: 2; }
       /* Page-internal nav-tab strip — same `.nav-tab` children as the
          chrome but framed for page body usage: light grey row tint
          (matches the Setup-row tint from `.tab-strip-setup`), thin
@@ -665,13 +688,13 @@
          hover lightens to white. Used by the Email Template selector
          and the Previews-page email-tab strip. */
       .tab-strip-page {
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
+        background: var(--bg-muted);
+        border: 1px solid var(--border-default);
         border-radius: 6px;
         overflow: hidden;
       }
       .tab-strip-page .nav-tab.active::after {
-        background: var(--neutral-marker, #9ca3af);
+        background: var(--neutral-marker);
       }
       /* 16A PR 3: Sys Admin chrome (one-row tab strip across the
          Admin surfaces). Inherits ``tab-strip tab-strip-page``
@@ -681,13 +704,13 @@
       .row-label.setup-row { grid-column: 2; grid-row: 1; }
       .row-label.ops-row   { grid-column: 2; grid-row: 2; }
       /* Setup row gets a bottom border to separate from Ops row. */
-      .session-nav-grid > .row-setup { border-bottom: 1px solid #d1d5db; }
+      .session-nav-grid > .row-setup { border-bottom: 1px solid var(--border-default); }
       /* Phase tabs — same shape across both rows. */
       .nav-tab {
         flex: 1 1 0;
         padding: 12px 14px;
         text-align: center;
-        color: #4b5563;
+        color: var(--text-secondary);
         text-decoration: none;
         font-size: 0.92rem;
         background: transparent;
@@ -695,22 +718,22 @@
       }
       .nav-tab:hover {
         background: rgba(255, 255, 255, 0.7);
-        color: #1f2937;
+        color: var(--text-primary);
       }
       .nav-tab.active {
         background: var(--bg-card);
-        color: #1e40af;
+        color: var(--accent-blue-strong);
         font-weight: 500;
       }
       .nav-tab.disabled,
       .nav-tab[aria-disabled="true"]:not(.active) {
-        color: #9ca3af;
+        color: var(--text-muted);
         cursor: not-allowed;
       }
       .nav-tab.disabled:hover,
       .nav-tab[aria-disabled="true"]:not(.active):hover {
         background: transparent;
-        color: #9ca3af;
+        color: var(--text-muted);
       }
       .nav-tab.active::after {
         content: "";
@@ -738,7 +761,7 @@
         padding: 12px 16px;
         font-size: 0.9rem;
         background: var(--bg-card);
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid var(--border-subtle);
       }
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
@@ -936,7 +959,7 @@
       }
       .email-preview-card .email-preview-divider {
         border: 0;
-        border-top: 1px solid #ddd;
+        border-top: 1px solid var(--border-default);
         margin: 8px 0;
       }
       .email-preview-card .email-preview-body {
@@ -1409,7 +1432,7 @@
          muted and italic; matches the rest of the page's
          ``form-help`` muted-text palette. */
       body.ui-v2 .shaper-preview-placeholder {
-        color: var(--text-secondary, #94a3b8);
+        color: var(--text-secondary);
         font-style: italic;
         font-weight: normal;
         background: transparent;
@@ -1420,7 +1443,7 @@
       body.ui-v2 .shaper-axis-pipe {
         display: inline-block;
         padding: 0 var(--space-2);
-        color: var(--color-muted, #94a3b8);
+        color: var(--text-muted);
         font-weight: 600;
         opacity: 0.5;
       }
@@ -1431,7 +1454,7 @@
          band-3 response-field builder's row tile shape so the
          two builders read the same way. */
       body.ui-v2 .data-shape-card {
-        border: 1px solid var(--color-border, #e2e8f0);
+        border: 1px solid var(--border-subtle);
         border-radius: 6px;
         padding: var(--space-2);
         margin-top: var(--space-2);
@@ -1505,7 +1528,7 @@
       body.ui-v2 .data-shape-card[data-shape-selected="true"] {
         border-color: var(--accent-blue);
         box-shadow: 0 0 0 1px var(--accent-blue);
-        background: var(--accent-blue-bg-faint, #fafcff);
+        background: var(--accent-blue-bg-faint);
       }
       /* Unlocked (= currently-being-edited) instrument card
          on the Instruments page picks up the same accent-blue
@@ -1991,7 +2014,7 @@
         top: -48px;
         z-index: 1000;
         padding: var(--space-2) var(--space-4);
-        background: var(--accent-blue, #2563eb);
+        background: var(--accent-blue);
         color: var(--text-on-accent);
         border-radius: var(--radius-button, 6px);
         text-decoration: none;
@@ -2105,15 +2128,15 @@
         line-height: 1.2;
       }
       body.ui-v2 .card.next-action .next-action-signal--green
-        .next-action-signal-icon { color: var(--color-success, #16a34a); }
+        .next-action-signal-icon { color: var(--accent-green); }
       body.ui-v2 .card.next-action .next-action-signal--amber-warning
-        .next-action-signal-icon { color: var(--color-warning, #d97706); }
+        .next-action-signal-icon { color: var(--accent-amber); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey
-        .next-action-signal-icon { color: var(--text-muted, #6b7280); }
+        .next-action-signal-icon { color: var(--text-muted); }
       body.ui-v2 .card.next-action .next-action-signal--error
-        .next-action-signal-icon { color: var(--color-error, #dc2626); }
+        .next-action-signal-icon { color: var(--accent-red); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey {
-        color: var(--text-muted, #6b7280);
+        color: var(--text-muted);
       }
       body.ui-v2 .card.next-action .next-action-buttons {
         display: flex;
@@ -2273,8 +2296,8 @@
         color: var(--accent-green);
       }
       body.ui-v2 .pill.pill-super {
-        background: #ede9fe;
-        color: #5b21b6;
+        background: var(--accent-violet-bg);
+        color: var(--accent-violet-text);
       }
       /* draft = "not ready for action" — same warning treatment as
          .pill-empty so the status badge reads as "needs work". */
@@ -2297,8 +2320,8 @@
          Operator-facing label is "Closed" (see
          ``app/services/lifecycle_display.py``). */
       body.ui-v2 .pill-lifecycle-expired {
-        background: var(--accent-red-bg, #fee2e2);
-        color: var(--accent-red, #991b1b);
+        background: var(--accent-red-bg);
+        color: var(--accent-red);
       }
       /* Role pills for the /me/ lobby cross-role column. The
          dashboard query is reviewer-only today; the three
@@ -2329,7 +2352,7 @@
         margin: 0 0 var(--space-4) 0;
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-muted {
-        background: var(--surface-2, #f3f4f6);
+        background: var(--bg-muted);
         color: var(--text-muted);
         text-decoration: none;
       }
@@ -2592,7 +2615,7 @@
         margin: 0 var(--space-2);
       }
       body.ui-v2 .rs-page-nav-counter {
-        color: var(--text-secondary, #6b7280);
+        color: var(--text-secondary);
         font-size: 0.9rem;
       }
       /* Denser reviewer-table rows (Segment 17B). The reviewer
@@ -2758,7 +2781,7 @@
         box-sizing: border-box;
         border-color: var(--accent-blue);
         box-shadow: 0 0 0 1px var(--accent-blue);
-        background: var(--accent-blue-bg-faint, #fafcff);
+        background: var(--accent-blue-bg-faint);
       }
       body.ui-v2 .rs-acknowledge-card h2 { margin: 0; }
       body.ui-v2 .rs-acknowledge-form-row {
@@ -2802,7 +2825,7 @@
         bottom: 6px;
         left: 0;
         width: 6px;
-        background-color: var(--rule-bar-color, #ddd);
+        background-color: var(--rule-bar-color, var(--border-default));
         border-radius: 1px;
       }
 
@@ -2826,16 +2849,16 @@
         border: 1px solid transparent;
         border-radius: 4px;
         cursor: pointer;
-        color: var(--color-muted, #94a3b8);
+        color: var(--text-muted);
         font: inherit;
         font-size: 0.85em;
       }
       body.ui-v2 .rrw-sort-btn:hover {
-        border-color: var(--border-muted, #cbd5e1);
-        background: var(--bg-muted, #f1f5f9);
+        border-color: var(--border-default);
+        background: var(--bg-muted);
       }
       body.ui-v2 .rrw-sort-btn:focus-visible {
-        outline: 2px solid var(--color-link, #1d4ed8);
+        outline: 2px solid var(--accent-blue-dark);
         outline-offset: 1px;
       }
       body.ui-v2 .rrw-sort-badge {
@@ -2843,7 +2866,7 @@
         font-variant-numeric: tabular-nums;
       }
       body.ui-v2 .rrw-sort-badge-active {
-        color: var(--color-text, #0f172a);
+        color: var(--text-primary);
         font-weight: 600;
       }
       /* Segment 15A Slice 2 — two-line `Friendly / canonical`
@@ -2855,7 +2878,7 @@
         display: block;
         font-size: 0.75em;
         font-weight: 400;
-        color: var(--text-muted, #64748b);
+        color: var(--text-muted);
         margin-top: 1px;
       }
       /* Segment 15A Slice 3 — per-page inline editor for the
