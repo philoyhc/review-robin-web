@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import ValidationError
@@ -20,7 +20,8 @@ from app.schemas.imports import (
 from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, session_lifecycle as lifecycle
+from app.services import audit, field_labels, field_label_csv
+from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import EMAIL_RE, normalize_email
 
 log = get_logger(__name__)
@@ -38,6 +39,11 @@ class ParseResult:
         | list[RelationshipImportRow]
     )
     issues: list[ValidationIssue]
+    # Segment 19C Item 1 — friendly-label overrides captured from the
+    # roster header's ``<Column>.<label>`` suffixes, keyed by
+    # ``(source_type, source_field)``. Empty for a header with no
+    # suffixes; the save step reconciles (upsert present, clear absent).
+    field_labels: dict[tuple[str, str], str] = field(default_factory=dict)
 
     @property
     def is_blocked(self) -> bool:
@@ -84,22 +90,51 @@ def decode_csv(
 def _read_dict_rows(
     text: str,
     source: str,
-) -> tuple[list[dict[str, str]] | None, ValidationIssue | None]:
+) -> tuple[
+    list[dict[str, str]] | None,
+    list[str],
+    dict[tuple[str, str], str],
+    ValidationIssue | None,
+]:
+    """Read the CSV into row dicts keyed by **canonical** column names.
+
+    Returns ``(rows, canonical_fieldnames, field_labels, issue)``. The
+    header row is normalised (Segment 19C Item 1): any labelable tag
+    column's ``.label`` suffix is stripped to the bare canonical name —
+    so row access and the missing-column checks are unchanged — and the
+    captured ``(source_type, source_field) -> label`` overrides are
+    returned alongside. ``DictReader.fieldnames`` is reassigned to the
+    canonical names *after* the header row is consumed, so every data
+    row maps by the bare column name.
+    """
     reader = csv.DictReader(io.StringIO(text))
-    if reader.fieldnames is None:
-        return None, ValidationIssue(
-            severity=Severity.error,
-            source=source,
-            message="CSV has no header row",
+    raw_fieldnames = reader.fieldnames
+    if raw_fieldnames is None:
+        return (
+            None,
+            [],
+            {},
+            ValidationIssue(
+                severity=Severity.error,
+                source=source,
+                message="CSV has no header row",
+            ),
         )
+    canonical, captured = field_label_csv.normalize_headers(list(raw_fieldnames))
+    reader.fieldnames = canonical
     rows = list(reader)
     if len(rows) > MAX_ROWS:
-        return None, ValidationIssue(
-            severity=Severity.error,
-            source=source,
-            message=f"Too many rows (max {MAX_ROWS})",
+        return (
+            None,
+            canonical,
+            captured,
+            ValidationIssue(
+                severity=Severity.error,
+                source=source,
+                message=f"Too many rows (max {MAX_ROWS})",
+            ),
         )
-    return rows, None
+    return rows, canonical, captured, None
 
 
 def _missing_columns_issues(
@@ -210,13 +245,12 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, count_issue = _read_dict_rows(text, source)
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
+        text, source
+    )
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
-
-    reader = csv.DictReader(io.StringIO(text))
-    fieldnames = list(reader.fieldnames or [])
 
     issues.extend(
         _missing_columns_issues(fieldnames, ["ReviewerName", "ReviewerEmail"], source)
@@ -302,7 +336,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             )
         )
 
-    return ParseResult(rows=parsed, issues=issues)
+    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 
 
 def parse_reviewee_csv(content: bytes) -> ParseResult:
@@ -314,13 +348,12 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, count_issue = _read_dict_rows(text, source)
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
+        text, source
+    )
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
-
-    reader = csv.DictReader(io.StringIO(text))
-    fieldnames = list(reader.fieldnames or [])
 
     issues.extend(
         _missing_columns_issues(fieldnames, ["RevieweeName", "RevieweeEmail"], source)
@@ -406,7 +439,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
             )
         )
 
-    return ParseResult(rows=parsed, issues=issues)
+    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 
 
 def parse_observer_csv(content: bytes) -> ParseResult:
@@ -433,13 +466,14 @@ def parse_observer_csv(content: bytes) -> ParseResult:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, count_issue = _read_dict_rows(text, source)
+    # Observers carry no renamable friendly-label slots, so the
+    # captured-label map is always empty here (Segment 19C Item 1).
+    raw_rows, fieldnames, _captured_labels, count_issue = _read_dict_rows(
+        text, source
+    )
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
-
-    reader = csv.DictReader(io.StringIO(text))
-    fieldnames = list(reader.fieldnames or [])
 
     issues.extend(
         _missing_columns_issues(fieldnames, ["ObserverEmail"], source)
@@ -651,8 +685,9 @@ def save_reviewers(
     rows: list[ReviewerImportRow],
     filename: str,
     correlation_id: str,
+    field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
-    return _save(
+    result = _save(
         db,
         session=session,
         user=user,
@@ -664,6 +699,19 @@ def save_reviewers(
         correlation_id=correlation_id,
         to_kwargs=_reviewer_to_kwargs,
     )
+    # Segment 19C Item 1 — reconcile reviewer friendly labels from the
+    # roster header (upsert present, clear absent). ``None`` = a caller
+    # that isn't an import; skip untouched.
+    if field_labels_captured is not None:
+        field_labels.apply_import(
+            db,
+            session,
+            source_type="reviewer",
+            captured=field_labels_captured,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    return result
 
 
 def save_reviewees(
@@ -674,6 +722,7 @@ def save_reviewees(
     rows: list[RevieweeImportRow],
     filename: str,
     correlation_id: str,
+    field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
     result = _save(
         db,
@@ -693,6 +742,17 @@ def save_reviewees(
 
     if seed_display_fields_from_reviewees(db, session):
         db.commit()
+    # Segment 19C Item 1 — reconcile reviewee friendly labels from the
+    # roster header (upsert present, clear absent).
+    if field_labels_captured is not None:
+        field_labels.apply_import(
+            db,
+            session,
+            source_type="reviewee",
+            captured=field_labels_captured,
+            user=user,
+            correlation_id=correlation_id,
+        )
     return result
 
 

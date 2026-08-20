@@ -449,7 +449,10 @@ def test_instrument_rule_set_name_resolves_through_session_rule_sets(
 # --------------------------------------------------------------------------- #
 
 
-def test_field_labels_emit_when_present(db: Session) -> None:
+def test_field_labels_never_emit_to_settings(db: Session) -> None:
+    """Segment 19C Item 1 — friendly labels no longer serialize to the
+    Settings CSV even when overrides exist; the roster CSV headers are
+    the sole carrier."""
     review_session = _bare_session(db, code="labels")
     db.add(
         SessionFieldLabel(
@@ -461,14 +464,12 @@ def test_field_labels_emit_when_present(db: Session) -> None:
     )
     db.flush()
 
-    by_field = _row_dict(serialize_session_config(db, review_session))
-    assert by_field["field_labels.reviewer.tag_1"] == Row(
-        "field_labels.reviewer.tag_1", "Cohort", "string"
-    )
+    rows = serialize_session_config(db, review_session)
+    assert all(not r.field.startswith("field_labels.") for r in rows)
 
 
 def test_empty_session_field_labels_emit_no_rows(db: Session) -> None:
-    """The default — table is inert today (Segment 15A target)."""
+    """The default — no ``field_labels.*`` rows in the Settings CSV."""
 
     review_session = _bare_session(db, code="nofield")
     rows = serialize_session_config(db, review_session)

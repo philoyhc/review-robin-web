@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession
+from app.services import field_label_csv
 
 __all__ = ["HEADER", "serialize_reviewees"]
 
@@ -46,12 +47,15 @@ def serialize_reviewees(
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s reviewees.
 
-    First yield is ``HEADER``; subsequent yields are one tuple per
+    First yield is the header; subsequent yields are one tuple per
     reviewee in ``(status="active" first, then name, then
     email_or_identifier)`` order.
+
+    The header carries each renamed tag column's friendly label as a
+    ``RevieweeTagN.<label>`` suffix (Segment 19C Item 1).
     """
 
-    yield HEADER
+    yield field_label_csv.labeled_header(review_session, HEADER)
     rows = (
         db.execute(
             select(Reviewee)

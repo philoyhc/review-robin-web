@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from ._apply_data_shape import _apply_data_shape_kv
 from ._apply_email import _apply_email_kv
-from ._apply_field_label import _apply_field_label_kv
 from ._apply_instrument import _apply_instrument_kv
 from ._apply_rule_set import _apply_rule_set_kv
 from ._apply_session import _apply_session_kv
@@ -104,9 +103,10 @@ def _route_row(
     if field_path.startswith("session_rule_sets["):
         _apply_rule_set_kv(plan, field_path, value, data_type)
         return
-    if field_path.startswith("field_labels."):
-        _apply_field_label_kv(plan, field_path, value)
-        return
+    # Segment 19C Item 1 — ``field_labels.*`` retired from the Settings
+    # CSV (roster headers carry labels now). Old bundles may still carry
+    # these rows; let them fall through to the unknown-key silent-ignore
+    # below, exactly like the retired ``rtds[`` keys.
     if field_path.startswith("data_shapes["):
         _apply_data_shape_kv(plan, field_path, value, data_type)
         return

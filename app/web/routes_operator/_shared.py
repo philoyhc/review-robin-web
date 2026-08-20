@@ -585,6 +585,7 @@ async def _handle_import(
         rows=result.rows,
         filename=file.filename or "",
         correlation_id=request_correlation_id(),
+        field_labels_captured=result.field_labels,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/{kind}",

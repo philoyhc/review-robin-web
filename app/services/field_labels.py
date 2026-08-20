@@ -67,8 +67,8 @@ _DEFAULT_LABELS: dict[tuple[str, str], str] = {
 
 # Per-source allowlist. The DB column is ``VARCHAR(64)`` with no
 # enum gate, so this map is the only validation layer for what a
-# session may rename. Mirrored by ``_VALID_FL_SOURCE_FIELDS`` in
-# ``app/services/session_config_io/`` for Settings-CSV import.
+# session may rename. Mirrored by ``field_label_csv._LABELABLE_COLUMNS``
+# for the roster-CSV header carrier (Segment 19C Item 1).
 #
 # Friendly-label affordance retired for the reviewee fixed columns
 # (Name / Email_Identifier / Profile) on 2026-05-31 per
@@ -272,6 +272,56 @@ def upsert(
     )
     db.commit()
     return row
+
+
+def apply_import(
+    db: Session,
+    session: ReviewSession,
+    *,
+    source_type: str,
+    captured: dict[tuple[str, str], str],
+    user: User,
+    correlation_id: str | None = None,
+) -> None:
+    """Reconcile one roster's friendly labels from a CSV import.
+
+    Roster imports are **wipe-and-replace**, so the uploaded file is
+    the complete truth for its slots: upsert every in-scope slot the
+    header named (present in ``captured``), and **clear** every other
+    in-scope slot for ``source_type`` — a bare header or an absent tag
+    column clears that slot's label, mirroring how its tag *value*
+    re-imports as NULL. Clearing a slot with no override is an
+    idempotent no-op. ``captured`` is keyed by
+    ``(source_type, source_field)`` (as produced by
+    ``field_label_csv.normalize_headers``); only the matching
+    ``source_type`` entries are consulted.
+
+    Segment 19C Item 1 — the fourth write path into
+    ``session_field_labels`` alongside the per-page editor. Storage is
+    unchanged; this only routes roster-header labels into the same
+    ``upsert`` / ``clear`` the UI uses.
+    """
+    for source_field in sorted(_VALID_SOURCE_FIELDS[source_type]):
+        label = captured.get((source_type, source_field))
+        if label:
+            upsert(
+                db,
+                session,
+                source_type=source_type,
+                source_field=source_field,
+                label=label,
+                user=user,
+                correlation_id=correlation_id,
+            )
+        else:
+            clear(
+                db,
+                session,
+                source_type=source_type,
+                source_field=source_field,
+                user=user,
+                correlation_id=correlation_id,
+            )
 
 
 def clear(

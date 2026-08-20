@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
+from app.services import field_label_csv
 
 __all__ = ["HEADER", "serialize_relationships"]
 
@@ -37,12 +38,17 @@ def serialize_relationships(
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s relationships.
 
-    First yield is ``HEADER``; subsequent yields are one tuple per
+    First yield is the header; subsequent yields are one tuple per
     relationship row in ``(status="active" first, then reviewer
     email, then reviewee email_or_identifier)`` order.
+
+    The header carries each renamed pair-context tag column's friendly
+    label as a ``PairContextTagN.<label>`` suffix (Segment 19C Item 1);
+    it is emitted unconditionally, so a zero-pair relationships.csv
+    still carries the labels.
     """
 
-    yield HEADER
+    yield field_label_csv.labeled_header(review_session, HEADER)
     rows = (
         db.execute(
             select(Relationship, Reviewer, Reviewee)

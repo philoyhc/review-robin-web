@@ -17,7 +17,6 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     ReviewSession,
-    SessionFieldLabel,
     SessionRuleSet,
     SessionTag,
 )
@@ -29,8 +28,6 @@ from app.services.email_templates import (
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``_SEEDED_RULE_SETS``
 # import retired.
 from app.services.sessions import resolve_session_timezone
-
-from ._apply_shared import _VALID_FL_SOURCE_FIELDS
 
 from app.services.session_config_io._rows import (
     Row,
@@ -81,7 +78,8 @@ def serialize_session_config(
     rows.extend(_email_override_rows(review_session))
     rows.extend(_instrument_blocks(db, review_session))
     rows.extend(_session_rule_set_rows(db, review_session))
-    rows.extend(_field_label_rows(db, review_session))
+    # Segment 19C Item 1 — friendly labels no longer round-trip via the
+    # Settings CSV; the roster CSV headers are the sole carrier.
     rows.extend(_data_shape_rows(db, review_session))
     rows.extend(_session_tag_rows(db, review_session))
     return rows
@@ -608,40 +606,12 @@ def _rule_set_name_lookup(
 
 
 # --------------------------------------------------------------------------- #
-# Section 6 — field-label overrides (Segment 15A target)
+# Section 6 — field-label overrides — retired (Segment 19C Item 1)
 # --------------------------------------------------------------------------- #
-
-
-def _field_label_rows(
-    db: Session, review_session: ReviewSession
-) -> list[Row]:
-    labels = (
-        db.execute(
-            select(SessionFieldLabel)
-            .where(SessionFieldLabel.session_id == review_session.id)
-            .order_by(
-                SessionFieldLabel.source_type, SessionFieldLabel.source_field
-            )
-        )
-        .scalars()
-        .all()
-    )
-    # Segment 18P PR E — only emit rows the importer would accept. The
-    # apply side rejects any `field_labels.*` outside the tag allowlist
-    # (`_VALID_FL_SOURCE_FIELDS`); exporting one anyway made the file
-    # non-round-trippable (a legacy reviewee-identity label would fail
-    # its own re-import). Filtering export to the allowlist removes that
-    # export-without-import asymmetry.
-    return [
-        Row(
-            f"field_labels.{lbl.source_type}.{lbl.source_field}",
-            _str(lbl.label),
-            "string",
-        )
-        for lbl in labels
-        if lbl.source_field
-        in _VALID_FL_SOURCE_FIELDS.get(lbl.source_type, frozenset())
-    ]
+# Friendly labels for the reviewer / reviewee / pair-context tag slots
+# no longer serialize to the Settings CSV. They round-trip through the
+# roster CSV headers (``ReviewerTag1.<label>`` etc.) — the sole carrier.
+# See ``guide/segment_19C_refinements.md`` Item 1.
 
 
 # --------------------------------------------------------------------------- #

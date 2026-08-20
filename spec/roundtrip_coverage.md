@@ -94,10 +94,16 @@ first two columns below plus responses. See `spec/rehydrate.md`.
 
 ### Field labels (`session_field_labels`)
 
-| Setting | Settings CSV | Clone | Notes |
-|---|:--:|:--:|---|
-| `reviewer/reviewee.tag_1..3`, `pair_context.1..3` | ✅ | ✅ | The tag-label allowlist |
-| labels outside that allowlist | ✅ | ✅ | As of **18P PR E** export **filters to the allowlist**, so it never emits a row import would reject (was export-without-import). Clone copies all |
+Carrier moved **Settings CSV → roster CSV headers** in **Segment 19C
+Item 1** (see `spec/csv_contracts.md` §1a). The roster header is now the
+sole round-trip carrier; a tag friendly label rides on its column as a
+`ReviewerTag1.<label>` suffix, import ↔ export **symmetric**. The
+Settings CSV no longer carries `field_labels.*` (a stale row in an old
+bundle is silently ignored on apply).
+
+| Setting | Roster CSV | Settings CSV | Clone | Notes |
+|---|:--:|:--:|:--:|---|
+| `reviewer/reviewee.tag_1..3`, `pair_context.1..3` | ✅ | ❌ | ✅ | Roster header suffix (import upserts, bare header / absent column clears — mirrors the roster's wipe-and-replace). Clone copies all |
 
 ### Data shapes (`data_shapes`)
 
