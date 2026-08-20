@@ -62,6 +62,25 @@ def test_settings_get_renders_empty_state_when_unconfigured(
     assert "not set" in body
 
 
+def test_settings_get_renders_display_mode_scaffold(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 19C Item 2 scaffold — the Display mode card renders beside
+    Date & time as a half-width ``.bottom-grid`` pair, with the three
+    options present but inert (disabled) pending the wiring slice."""
+    body = client.get("/operator/settings").text
+    # The two preference cards pair up in a bottom-grid.
+    assert 'class="bottom-grid"' in body
+    assert 'id="timezone-settings"' in body
+    assert 'id="display-mode-settings"' in body
+    assert "<h2>Display mode</h2>" in body
+    # Placeholder controls: System / Light / Dark, all disabled for now.
+    for choice in ("system", "light", "dark"):
+        assert f'data-theme-choice="{choice}"' in body
+    assert body.count('data-theme-choice="') == 3
+    assert "Coming soon" in body
+
+
 def test_settings_get_renders_populated_form_when_configured(
     client: TestClient, db: Session, fernet_key: str
 ) -> None:

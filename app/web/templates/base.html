@@ -16,6 +16,8 @@
       :root {
         /* Neutrals */
         --bg-page: #ffffff;
+        --bg-card: #ffffff;      /* raised surface (cards, panels) — darkens in dark mode */
+        --text-on-accent: #ffffff; /* text on a filled accent control — stays light in dark mode */
         --bg-muted: #f5f5f7;
         --border-subtle: #e5e7eb;
         --border-default: #d1d5db;
@@ -349,7 +351,7 @@
         border: 1px solid #2563eb;
         border-radius: 8px;
         background: #2563eb;
-        color: #fff;
+        color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;
         font-family: inherit;
@@ -363,27 +365,27 @@
         cursor: not-allowed;
       }
       .btn.secondary {
-        background: #fff;
+        background: var(--bg-card);
         color: #2563eb;
       }
       .btn.danger {
-        background: #fff;
+        background: var(--bg-card);
         color: #b91c1c;
         border-color: #b91c1c;
       }
       .btn.danger-solid {
         background: #b91c1c;
-        color: #fff;
+        color: var(--text-on-accent);
         border-color: #b91c1c;
       }
       .btn.alert {
-        background: #fff;
+        background: var(--bg-card);
         color: #d97706;
         border-color: #d97706;
       }
       .btn.alert-solid {
         background: #d97706;
-        color: #fff;
+        color: var(--text-on-accent);
         border-color: #d97706;
       }
       label { display: block; margin-top: 12px; font-weight: 600; }
@@ -470,7 +472,7 @@
         border: 1px solid #2563eb;
         border-radius: 8px;
         background: #2563eb;
-        color: #fff;
+        color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;
         font-size: 0.95em;
@@ -549,7 +551,7 @@
         border-radius: 8px;
         overflow: hidden;
         margin-bottom: 20px;
-        background: #fff;
+        background: var(--bg-card);
       }
       .session-nav-grid {
         display: grid;
@@ -581,7 +583,7 @@
         color: #1f2937;
       }
       .session-home-anchor.active {
-        background: #fff;
+        background: var(--bg-card);
         color: #111827;
       }
       .session-home-anchor.active::after {
@@ -614,7 +616,7 @@
         text-transform: uppercase;
         letter-spacing: 0.06em;
         white-space: nowrap;
-        background: #fff;
+        background: var(--bg-card);
         border-right: 1px solid #e5e7eb;
       }
       /* Understated right-arrow after each row label, pointing
@@ -696,7 +698,7 @@
         color: #1f2937;
       }
       .nav-tab.active {
-        background: #fff;
+        background: var(--bg-card);
         color: #1e40af;
         font-weight: 500;
       }
@@ -735,7 +737,7 @@
       .status-row {
         padding: 12px 16px;
         font-size: 0.9rem;
-        background: #fff;
+        background: var(--bg-card);
         border-top: 1px solid #e5e7eb;
       }
       .status-row p { margin: 0; }
@@ -1433,7 +1435,7 @@
         border-radius: 6px;
         padding: var(--space-2);
         margin-top: var(--space-2);
-        background: var(--bg-card, #fff);
+        background: var(--bg-card);
       }
       /* When no Data shape sub-card is in edit mode, the Data
          shaper's selector chips (scope row + content row) lock:
@@ -1613,7 +1615,7 @@
         border: 1px solid var(--accent-blue);
         border-radius: var(--radius-button);
         background: var(--accent-blue);
-        color: #fff;
+        color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;
         font-family: inherit;
@@ -1642,14 +1644,14 @@
          recovery). Consistency-audit U5 / U6. */
       body.ui-v2 .btn.danger-solid {
         background: var(--accent-amber-dark);
-        color: #fff;
+        color: var(--text-on-accent);
         border-color: var(--accent-amber-dark);
       }
       /* Spec collapses .alert-solid into Primary. */
       body.ui-v2 .btn.alert-solid {
         background: var(--accent-blue);
         border-color: var(--accent-blue);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       /* Alert (outline brown) — for the recovery action inside a
          lock card. Uses the same brown that frames the lock card
@@ -1670,7 +1672,7 @@
       body.ui-v2 a.btn:hover {
         background: var(--accent-blue-light);
         border-color: var(--accent-blue-light);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       body.ui-v2 .btn.secondary:hover {
         background: var(--bg-muted);
@@ -1685,13 +1687,13 @@
       /* Filled amber lightens on hover (filled-button convention). */
       body.ui-v2 .btn.danger-solid:hover {
         background: var(--accent-amber);
-        color: #fff;
+        color: var(--text-on-accent);
         border-color: var(--accent-amber);
       }
       body.ui-v2 .btn.alert-solid:hover {
         background: var(--accent-blue-light);
         border-color: var(--accent-blue-light);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       body.ui-v2 .btn.alert:hover {
         background: var(--accent-amber-bg-mid);
@@ -1706,12 +1708,12 @@
       body.ui-v2 .btn-cta {
         background: var(--accent-blue);
         border-color: var(--accent-blue);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       body.ui-v2 .btn-cta:hover {
         background: var(--accent-blue-light);
         border-color: var(--accent-blue-light);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       body.ui-v2 .btn-cta.disabled,
       body.ui-v2 .btn-cta[aria-disabled="true"] {
@@ -1794,7 +1796,7 @@
       body.ui-v2 .tag-chip { cursor: pointer; }
       body.ui-v2 .tag-chip.is-selected {
         background: var(--accent-blue);
-        color: #fff;
+        color: var(--text-on-accent);
       }
       body.ui-v2 .pill.tag-mode-chip {
         background: var(--bg-muted);
@@ -1990,7 +1992,7 @@
         z-index: 1000;
         padding: var(--space-2) var(--space-4);
         background: var(--accent-blue, #2563eb);
-        color: #ffffff;
+        color: var(--text-on-accent);
         border-radius: var(--radius-button, 6px);
         text-decoration: none;
         transition: top 0.15s ease;
