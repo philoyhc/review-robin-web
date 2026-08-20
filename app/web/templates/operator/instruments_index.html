@@ -33,11 +33,11 @@
     .save-error-banner {
       margin: 0 0 12px 0;
       padding: 10px 14px;
-      border: 1px solid var(--danger-border, #f2b8b5);
+      border: 1px solid var(--danger-border);
       border-left-width: 4px;
       border-radius: 6px;
-      background: var(--danger-bg, #fdecea);
-      color: var(--danger-text, #8a1c14);
+      background: var(--danger-bg);
+      color: var(--danger-text);
       font-size: 0.9rem;
     }
     .save-error-banner ul { margin: 6px 0 0 0; padding-left: 20px; }
@@ -51,8 +51,8 @@
        "Clear responses first" title stays as the explanation. */
     [data-new-model-rf-data-type]:disabled,
     [data-new-model-rf-bound]:disabled {
-      background: var(--surface-muted, #f1f5f9);
-      color: var(--text-muted, #94a3b8);
+      background: var(--bg-muted);
+      color: var(--text-muted);
       cursor: not-allowed;
       opacity: 0.7;
     }
@@ -78,20 +78,20 @@
       border: 1px solid transparent;
       border-radius: 4px;
       cursor: pointer;
-      color: var(--color-muted, #94a3b8);
+      color: var(--text-muted);
       font: inherit;
       font-size: 0.85em;
     }
     body.ui-v2 .sort-btn:hover {
-      border-color: var(--border-muted, #cbd5e1);
-      background: var(--bg-muted, #f1f5f9);
+      border-color: var(--border-default);
+      background: var(--bg-muted);
     }
     body.ui-v2 .sort-badge {
       display: inline;
       font-variant-numeric: tabular-nums;
     }
     body.ui-v2 .sort-badge.sort-badge-empty {
-      color: var(--color-muted, #94a3b8);
+      color: var(--text-muted);
     }
     /* Band 2 preview table — keep cell + input padding compact so
        the operator-side preview row matches the reviewer surface's
@@ -124,7 +124,7 @@
     body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
     body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
       background: var(--accent-blue);
-      color: #ffffff;
+      color: var(--text-on-accent);
       opacity: 0.4;
     }
     /* Segment 18M PR 0 — collapsible instrument cards. The
@@ -145,7 +145,7 @@
       font-size: 1.5rem;
       padding: 4px 10px;
       line-height: 1;
-      color: var(--text-primary, #111827);
+      color: var(--text-primary);
       transition: transform 0.15s ease-out;
     }
     body.ui-v2 .instrument-card-drag-handle {
@@ -155,7 +155,7 @@
       margin-right: 6px;
       line-height: 1;
       letter-spacing: -2px;
-      color: var(--text-primary, #111827);
+      color: var(--text-primary);
       cursor: grab;
       user-select: none;
     }
@@ -165,14 +165,14 @@
     body.ui-v2 .instrument-card-short-label {
       margin-left: 6px;
       font-weight: 500;
-      color: var(--text-secondary, #6b7280);
+      color: var(--text-secondary);
     }
     /* Operator-only ``Instrument_{id}`` fallback on the card
        title — rendered when no short_label is set. Styled muted
        + italic so it reads as a placeholder nudging the operator
        to set a proper short label rather than as a chosen name. */
     body.ui-v2 .card-title-fallback {
-      color: var(--text-secondary, #6b7280);
+      color: var(--text-secondary);
       font-style: italic;
       font-weight: 500;
     }
@@ -203,35 +203,35 @@
       right: 0;
       top: 50%;
       height: 1px;
-      background: var(--border-muted, #cbd5e1);
+      background: var(--border-default);
       z-index: 0;
     }
     body.ui-v2 .page-break-card > * {
       position: relative;
       z-index: 1;
-      background: var(--bg, #f8fafc);
+      background: var(--bg-page);
       padding: 4px 8px;
     }
     body.ui-v2 .page-break-card-label {
       font-size: 0.875rem;
-      color: var(--text-secondary, #6b7280);
+      color: var(--text-secondary);
       letter-spacing: 0.02em;
       text-transform: uppercase;
     }
     body.ui-v2 .page-break-card-delete {
       cursor: pointer;
-      border: 1px solid var(--border-muted, #cbd5e1);
+      border: 1px solid var(--border-default);
       border-radius: 4px;
-      background: var(--bg, #f8fafc);
-      color: var(--text-secondary, #6b7280);
+      background: var(--bg-page);
+      color: var(--text-secondary);
       font-size: 1.1rem;
       line-height: 1;
       padding: 2px 8px;
       transition: color 0.15s, border-color 0.15s;
     }
     body.ui-v2 .page-break-card-delete:hover:not(:disabled) {
-      color: var(--text-primary, #111827);
-      border-color: var(--text-secondary, #6b7280);
+      color: var(--text-primary);
+      border-color: var(--text-secondary);
     }
     body.ui-v2 .page-break-card-delete:disabled {
       cursor: not-allowed;
@@ -251,8 +251,8 @@
       left: 50%;
       transform: translateX(-50%);
       max-width: 480px;
-      background: #b91c1c;
-      color: #ffffff;
+      background: var(--accent-red-strong);
+      color: var(--text-on-accent);
       padding: 14px 22px;
       border-radius: 8px;
       font-size: 1rem;
@@ -360,7 +360,7 @@
   {# Lightened cycling palette (Tailwind *-50 tones) — hints of color
      for instrument identification while keeping table grid lines
      legible on the tinted background. #}
-  {% set instrument_palette = ['#f0f9ff', '#ecfdf5', '#f5f3ff', '#fff7ed', '#fff1f2', '#fffbeb'] %}
+  {% set instrument_palette = ['var(--instrument-tint-1)', 'var(--instrument-tint-2)', 'var(--instrument-tint-3)', 'var(--instrument-tint-4)', 'var(--instrument-tint-5)', 'var(--instrument-tint-6)'] %}
 
   {# Per-instrument action row. Shared by the ordinary instrument card
      and the Segment 13C group-scoped placeholder card so both carry
@@ -890,7 +890,7 @@
                the per-instrument visibility policy. #}
         </div>
 
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-default);">
       {# Band 1 — Links 1 + 2 + 3 (Assignment rule + Unit of
          review). Three columns of equal width with vertical
          rules between. Persisted via the per-instrument
@@ -980,7 +980,7 @@
                       onclick="newModelToggleCombinator(this)"
                       title="Toggle combinator">{{ _stored_combinator }}</button>
             </div>
-            <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+            <div style="width: 3px; background: var(--text-muted); flex-shrink: 0;"></div>
             <div data-new-model-rule-cells
                  style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
               {% for _rule in _cells %}
@@ -1002,7 +1002,7 @@
                       <span data-new-model-rule-field-helper
                             style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary, #111827);
+                                   color: var(--text-primary);
                                    padding-left: 2px;">{{ field_helper }}</span>
                     </div>
                   {% endif %}
@@ -1037,7 +1037,7 @@
                                 {% if not _use_tag_operand %}display: none;{% endif %}">
                       <span style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary, #111827);
+                                   color: var(--text-primary);
                                    padding-left: 2px;">{{ operand_tag_helper }}</span>
                     </div>
                   {% endif %}
@@ -1118,7 +1118,7 @@
              same ``padding: 4px 10px``. Gated on ``is_editing``
              (used to be gated by Band 1's ``inert`` wrapper). #}
         </div>
-        <div style="padding: 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
+        <div style="padding: 0 16px; border-left: 1px solid var(--border-default);">
           {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
               "Who is being reviewed", _link2_tags,
               operator_cycle=["IS THE SAME AS", "IS DIFFERENT FROM", "IS", "IS NOT"],
@@ -1127,7 +1127,7 @@
               field_helper="Reviewee tag",
               operand_tag_helper="Reviewer tag") }}
         </div>
-        <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
+        <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-default);">
           <div data-new-model-link-wrapper>
             {% set _link3_active = _link3_tags | length > 0 %}
             {% set _link3_grouped = _link3_state.mode == "grouped" %}
@@ -1180,7 +1180,7 @@
                         disabled aria-disabled="true"
                         title="Group identity marker">THE SAME</button>
               </div>
-              <div style="width: 3px; background: var(--border-muted, #94a3b8); flex-shrink: 0;"></div>
+              <div style="width: 3px; background: var(--text-muted); flex-shrink: 0;"></div>
               <div data-new-model-unit-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}
@@ -1197,7 +1197,7 @@
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <span style="flex: 0 0 66.66%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary, #111827);
+                                   color: var(--text-primary);
                                    padding-left: 2px;">Reviewee tag</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
@@ -1555,7 +1555,7 @@
         // wires onto something. (No-op duplicate.)
       </script>
 
-      <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-muted, #cbd5e1);">
+      <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
       {# Band 2 — "Review Instrument": a selectable chip row that
          drives a client-side preview of the reviewer-surface row
          the reviewer would see for this instrument. Each populated
@@ -3734,7 +3734,7 @@
         })();
       </script>
 
-      <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-muted, #cbd5e1);">
+      <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
       {# Band 3 — Visibility audience policy (W15 follow-on
          redesign). Card splits into two columns. Left: a
          ``Visibility`` table with one row per audience
@@ -3889,7 +3889,7 @@
               </tbody>
             </table>
         </div>
-        <div style="padding-left: 16px; border-left: 1px solid var(--border-muted, #cbd5e1);">
+        <div style="padding-left: 16px; border-left: 1px solid var(--border-default);">
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>
           {# One inline editor row per response field. Each row is
              independently editable + commitable: the ✓ button
@@ -4589,7 +4589,7 @@
         };
       </script>
 
-      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-muted, #cbd5e1);">
+      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-default);">
 
       {# Section E — action row + delete-confirm checkbox. #}
       {% set add_delete_disabled = is_ready or is_some_instrument_editing %}

@@ -118,4 +118,31 @@ element. To settle later.
 ## Status
 
 - ✅ `#fff` split (`--bg-card` / `--text-on-accent`) — PR #2012.
-- ☐ W1–W8 — not started.
+- ✅ **W1 — base.html tokenised.** All 113 raw-hex usages in the `<style>`
+  block resolved: value-identical hexes → existing tokens; near-dupe legacy
+  grays / slates / surfaces consolidated onto the neutral ramp (imperceptible
+  in light); genuinely-distinct accents given **10 new exact-value tokens**
+  (`--accent-red-strong` / `-text`, `--accent-amber-border`,
+  `--accent-green-text` / `-bg-faint`, `--accent-blue-strong`,
+  `--accent-violet-bg` / `-text`, `--accent-sky-bg` / `-text`). Dead
+  `var(--defined, #hex)` fallbacks dropped. Light mode unchanged; only the
+  `:root` palette definitions carry raw hex now (that is the source of truth).
+- ✅ **W2 — instruments_index.html reconciled.** The shadow-token vocabulary is
+  retired: `--danger-bg` / `-border` / `-text` **promoted to real `:root`
+  tokens** (exact values — a soft inline-error treatment distinct from the hard
+  `.danger-banner`); `--surface-muted` / `--color-muted` / `--border-muted` /
+  `--bg` / `--bg-muted`/`--text-*` fallbacks rewritten to canonical tokens; the
+  Jinja cycling palette moved to **6 new `--instrument-tint-1..6` tokens** so
+  the inline `style="background: …"` themes. Zero raw color-hex left.
+- ✅ **W3 — minor templates.** `sys_admin_session_audit_log.html` (2 shadow
+  fallbacks → `--accent-blue-dark` / `--text-secondary`) and
+  `session_observers.html` (2 → `--text-muted`) reconciled.
+  `reviewer/results.html` and `session_extract_data.html` were **already
+  clean** — their apparent hexes in the sweep were HTML numeric entities
+  (`&#…;`), not colours.
+- **Tokenise phase complete.** Palette now = **47 `:root` tokens** (28 original
+  + 19 new). The only remaining raw-hex light-island is **`error.html`**
+  (7 hexes, standalone doc) — that is W7. Every base-extending template themes
+  off tokens.
+- ☐ W4 (dark palette) / W5 (no-FOUC script) / W6 (toggle) / W7 (error.html) /
+  W8 (verify) — not started.
