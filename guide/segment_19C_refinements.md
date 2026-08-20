@@ -346,14 +346,24 @@ splits into:
 
 ### PR ladder
 
-1. **Scaffold** *(this slice)* — layout (Date & time → half-width left) +
-   Display mode **placeholder** card (half-width right; System/Light/Dark
-   options rendered but inert). No behaviour.
-2. **Tokenise sweep** — `base.html` stray hexes → tokens (no visual change).
-3. **Dark palette** — dark token blocks + the no-FOUC head script;
-   System-follow live.
+1. **Scaffold + the `#fff` split** *(this slice)* — layout (Date & time →
+   half-width left) + Display mode **placeholder** card (half-width right;
+   System/Light/Dark options rendered but inert); plus the dark-critical
+   tokenise step: split every raw `#fff` in `base.html` into `--bg-card`
+   (`background:` — card surfaces, darken in dark mode) vs `--text-on-accent`
+   (`color:` — white text on accent controls, stays light). Value-preserving
+   (light mode byte-identical); no behaviour.
+2. **Tokenise sweep (remainder)** — the accent / border / one-off hex colours
+   → tokens (value-preserving; some slate / violet one-offs get new tokens).
+   Light mode unchanged. **Delicate:** must not corrupt the ~24 token
+   *definitions*, so it's a per-site pass, not a bare global replace.
+3. **Dark palette** — dark values for the token set under the guarded blocks
+   + the no-FOUC head script; System-follow live. **Needs dev-slot visual
+   QA** (colour correctness across cards / pills / banners / tables can't be
+   verified in the test suite); any raw-hex sites left after step 2 show as
+   light islands and get mopped up here.
 4. **Wire the card** — the toggle writes `localStorage` + `data-theme`;
-   card reflects the choice.
+   card reflects the choice (System reads `prefers-color-scheme`).
 
 ### Definition of done
 
