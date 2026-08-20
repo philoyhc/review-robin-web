@@ -110,10 +110,12 @@ dark_block = f"""
        into base.html under the same three guarded blocks. */
     @media (prefers-color-scheme: dark) {{
       :root:not([data-theme="light"]) {{
+        color-scheme: dark;
 {dark_decls}
       }}
     }}
     :root[data-theme="dark"] {{
+      color-scheme: dark;
 {dark_decls}
     }}
 """
@@ -125,7 +127,13 @@ harness_css = """
     /* Paint the page canvas itself so the WHOLE page reflects the theme, not
        just the elements that carry their own background. NB: base.html's real
        `body` rule sets no background — W4 must add `background: var(--bg-page)`
-       there for the same reason. */
+       there for the same reason.
+       `color-scheme: light` (default) + `dark` in the guarded blocks tells the
+       browser to paint its NATIVE surfaces — scrollbars, the canvas beyond the
+       content, overscroll, form controls — in the active theme. Without it the
+       html/body background is dark but the scrollbar gutter + canvas stay light,
+       so the page reads as only-partly-dark. W4 needs this on base.html too. */
+    :root { color-scheme: light; }
     html { background: var(--bg-page); }
     body.ui-v2 {
       margin: 0;
