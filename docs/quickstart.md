@@ -87,7 +87,7 @@ you are strongly advised to import a spreadsheet over typing rows one at a time.
 > to be confused with invitation emails, which the app doesn't send yet;
 > see Section 6.)
 >
-> ⚠️ **The tags are essential so long as you intend to use rule based assignment of reviewers to reviewees**. Use exactly these headers in the reviewer CSV file: ReviewerName, ReviewerEmail, ReviewerTag1, ReviewerTag2, ReviewerTag3; and these for the reviewee CSV file: RevieweeName, RevieweeEmail, RevieweeTag1, RevieweeTag2, RevieweeTag3. You will be able to provide friendly labels for the tags later.
+> ⚠️ **The tags are essential so long as you intend to use rule based assignment of reviewers to reviewees**. Use exactly these headers in the reviewer CSV file: ReviewerName, ReviewerEmail, ReviewerTag1, ReviewerTag2, ReviewerTag3; and these for the reviewee CSV file: RevieweeName, RevieweeEmail, RevieweeTag1, RevieweeTag2, RevieweeTag3. You can provide **friendly labels** for the tags later via the inline editor on the Reviewers / Reviewees pages — or, if you already know them, key them straight into the CSV header as a suffix after a period, e.g. `ReviewerTag1.Tutor` (the tag values still go in the column as usual). Leaving a tag header bare on a later re-upload clears any label you'd set.
 
 The quickest path, once you have the two CSVs ready, is the **Quick Setup**
 card on Session Home — it takes your **Reviewers** and **Reviewees** CSVs
