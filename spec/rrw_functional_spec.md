@@ -856,15 +856,16 @@ auto-send-on-submit responses-received email fires.
 ### 8.5 Friendly labels
 
 The session also carries operator-editable display labels for
-the 12 in-scope slots that flow through every reviewer- and
-operator-facing surface:
+the **nine in-scope tag slots** that flow through every reviewer-
+and operator-facing surface:
 
 - Reviewer tag 1 / 2 / 3
 - Reviewee tag 1 / 2 / 3
-- Reviewee photo / profile link slot
 - Pair-context tag 1 / 2 / 3
-- Reviewer identity slot
-- Reviewee identity slot
+
+(The reviewee identity / photo slots were renamable in the
+original 15A scope but were **retired 2026-05-31** — identity, not
+labels; their built-in defaults still render.)
 
 Friendly labels rename the *display text* shown for these slots;
 the underlying machine field name does not change. Changing a
@@ -2135,8 +2136,8 @@ A full security-posture catalogue lives in
   displays as "Validated"; etc. The label vocabulary
   diverges from the enum vocabulary intentionally.
 - **Friendly label** — The operator-editable display string
-  for one of 12 in-scope slots (tag positions, identity
-  positions).
+  for one of the nine in-scope tag slots (reviewer / reviewee
+  tag 1-3, pair-context 1-3).
 - **Group-scoped instrument** — An instrument that presents
   one row per group rather than one row per reviewee.
 - **Instrument** — A review form. A session has one or more

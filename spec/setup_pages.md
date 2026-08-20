@@ -59,8 +59,8 @@ Every Setup Page renders, top-to-bottom:
    `app/services/relationships.py`). Drives operator awareness of
    which optional fields the latest import populated. The raw CSV
    column names are mapped through `views.friendly_fields_with_data`
-   so that a column corresponding to one of the 12 renamable
-   field-label slots shows its **friendly label** (operator
+   so that a column corresponding to one of the nine renamable
+   tag field-label slots shows its **friendly label** (operator
    override → builtin default — the same label the preview-table
    header and the `Show columns:` chip render); columns with no
    renamable slot (`ReviewerName`, `ReviewerEmail`,
