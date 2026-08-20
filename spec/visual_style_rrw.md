@@ -94,7 +94,7 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 **Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `accent-amber-bg` background, `accent-amber-dark` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
 
-**Danger zone card** — groups destructive actions. White background, `accent-amber-dark` border, H2 in `accent-amber-dark`. Destructive buttons inside use the outline-red Destructive role. See "Warning surfaces — shared brown framing" below.
+**Danger zone card** — groups destructive actions. `accent-amber-bg` tinted background, `accent-amber-dark` border, H2 in `accent-amber-dark` — the same amber surface as the lock card (see "Warning surfaces — shared brown framing" below). Destructive buttons inside use the outline-red Destructive role.
 
 Status / info and Action cards share the same default visual treatment; the kinds are about *role*, not visual differentiation. The two warning kinds (Lock card, Danger zone) carry their own visual treatment because the warning framing is doing semantic work.
 
@@ -199,7 +199,7 @@ For all other session-scoped pages (the five Setup pages, the Operations pages),
 
 ### Warning surfaces — shared brown framing
 
-Two card variants in the app's vocabulary frame "this region needs care": the **lock card** (intentionally non-interactive due to lifecycle) and the **danger-zone card** (groups destructive actions). Both border in `accent-amber-dark` (the warning brown), so the operator's eye recognises the same visual category whether reading "you can't change this right now" or "here's where you delete data". The interior treatments differ — the lock card has the `accent-amber-bg` tinted surface; the danger zone has white — but the framing is one.
+Two card variants in the app's vocabulary frame "this region needs care": the **lock card** (intentionally non-interactive due to lifecycle) and the **danger-zone card** (groups destructive actions). Both share the same amber surface — `accent-amber-dark` border (the warning brown) over an `accent-amber-bg` tinted infill — so the operator's eye recognises the same visual category whether reading "you can't change this right now" or "here's where you delete data". The framing *and* the fill are one; the action inside differentiates them (the lock card's outline-amber recovery vs. the danger zone's outline-red Destructive).
 
 Per **P7**, recovery / primary actions inside these cards adopt the card's color family:
 
