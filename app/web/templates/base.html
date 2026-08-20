@@ -18,6 +18,7 @@
         --bg-page: #ffffff;
         --bg-card: #ffffff;      /* raised surface (cards, panels) — darkens in dark mode */
         --text-on-accent: #ffffff; /* text on a filled accent control — stays light in dark mode */
+        --text-on-amber: #ffffff;  /* text on the filled-amber Alert (.danger-solid) — white in light; goes dark in dark mode, where the amber fill is light */
         --bg-muted: #f5f5f7;
         --border-subtle: #e5e7eb;
         --border-default: #d1d5db;
@@ -1667,7 +1668,7 @@
          recovery). Consistency-audit U5 / U6. */
       body.ui-v2 .btn.danger-solid {
         background: var(--accent-amber-dark);
-        color: var(--text-on-accent);
+        color: var(--text-on-amber);
         border-color: var(--accent-amber-dark);
       }
       /* Spec collapses .alert-solid into Primary. */
@@ -1710,7 +1711,7 @@
       /* Filled amber lightens on hover (filled-button convention). */
       body.ui-v2 .btn.danger-solid:hover {
         background: var(--accent-amber);
-        color: var(--text-on-accent);
+        color: var(--text-on-amber);
         border-color: var(--accent-amber);
       }
       body.ui-v2 .btn.alert-solid:hover {

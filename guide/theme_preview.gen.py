@@ -45,6 +45,8 @@ DARK = {
     "--bg-page": "#0f141b",
     "--bg-card": "#1a212e",
     "--text-on-accent": "#ffffff",
+    "--text-on-amber": "#111827",  # black label on the light-amber Alert fill in dark
+
     "--bg-muted": "#232c3b",
     "--border-subtle": "#2b3547",
     "--border-default": "#3a465c",

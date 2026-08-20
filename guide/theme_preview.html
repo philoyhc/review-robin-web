@@ -19,6 +19,7 @@
         --bg-page: #ffffff;
         --bg-card: #ffffff;      /* raised surface (cards, panels) — darkens in dark mode */
         --text-on-accent: #ffffff; /* text on a filled accent control — stays light in dark mode */
+        --text-on-amber: #ffffff;  /* text on the filled-amber Alert (.danger-solid) — white in light; goes dark in dark mode, where the amber fill is light */
         --bg-muted: #f5f5f7;
         --border-subtle: #e5e7eb;
         --border-default: #d1d5db;
@@ -1668,7 +1669,7 @@
          recovery). Consistency-audit U5 / U6. */
       body.ui-v2 .btn.danger-solid {
         background: var(--accent-amber-dark);
-        color: var(--text-on-accent);
+        color: var(--text-on-amber);
         border-color: var(--accent-amber-dark);
       }
       /* Spec collapses .alert-solid into Primary. */
@@ -1711,7 +1712,7 @@
       /* Filled amber lightens on hover (filled-button convention). */
       body.ui-v2 .btn.danger-solid:hover {
         background: var(--accent-amber);
-        color: var(--text-on-accent);
+        color: var(--text-on-amber);
         border-color: var(--accent-amber);
       }
       body.ui-v2 .btn.alert-solid:hover {
@@ -2933,6 +2934,7 @@
       --bg-page: #0f141b;
       --bg-card: #1a212e;
       --text-on-accent: #ffffff;
+      --text-on-amber: #111827;
       --bg-muted: #232c3b;
       --border-subtle: #2b3547;
       --border-default: #3a465c;
@@ -3209,11 +3211,12 @@
     </section>
 
     <section class="ph-section">
-      <h2 class="ph-h">All colour tokens (47) — swatch = ACTIVE theme; label = light reference value</h2>
+      <h2 class="ph-h">All colour tokens (48) — swatch = ACTIVE theme; label = light reference value</h2>
       <div class="ph-swatches">
         <div class="ph-chip"><div class="sw" style="background: var(--bg-page);"></div><div class="lbl">--bg-page<br>light #ffffff</div></div>
         <div class="ph-chip"><div class="sw" style="background: var(--bg-card);"></div><div class="lbl">--bg-card<br>light #ffffff</div></div>
         <div class="ph-chip"><div class="sw" style="background: var(--text-on-accent);"></div><div class="lbl">--text-on-accent<br>light #ffffff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-on-amber);"></div><div class="lbl">--text-on-amber<br>light #ffffff</div></div>
         <div class="ph-chip"><div class="sw" style="background: var(--bg-muted);"></div><div class="lbl">--bg-muted<br>light #f5f5f7</div></div>
         <div class="ph-chip"><div class="sw" style="background: var(--border-subtle);"></div><div class="lbl">--border-subtle<br>light #e5e7eb</div></div>
         <div class="ph-chip"><div class="sw" style="background: var(--border-default);"></div><div class="lbl">--border-default<br>light #d1d5db</div></div>
