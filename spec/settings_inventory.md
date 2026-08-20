@@ -123,24 +123,29 @@ Owners section on the Edit page, Segment 16B PR 2).
 
 ## 2.5. Per-session friendly labels (Segment 15A)
 
-Operator-renamable display labels for the 12 in-scope slots
-identified across the three Setup pages. Stored as one row per
-`(session_id, source_type, source_field)` override on the
-`session_field_labels` table (landed inert in Segment 13D PR 1;
-wired by 15A Slices 1-3, shipped 2026-05-12).
+Operator-renamable display labels for the **nine in-scope tag
+slots** across the three Setup pages (reviewer / reviewee tag 1-3
++ pair-context 1-3). The reviewee identity slots (Name / Email /
+Profile) were **retired as renamable 2026-05-31** — they're
+identity, not labels (participant-model §3.7) — so they no longer
+appear in the editor or the allowlist, though the built-in
+defaults ("Name" / "Email" / "Profile") still render. Stored as
+one row per `(session_id, source_type, source_field)` override on
+the `session_field_labels` table (landed inert in Segment 13D
+PR 1; wired by 15A Slices 1-3, shipped 2026-05-12).
 
 **Surface:**
 
 - **Edit:** Inline editor card above the data table on
   `/operator/sessions/{id}/reviewers` (3 reviewer-tag slots),
-  `/operator/sessions/{id}/reviewees` (6 reviewee slots —
-  identity + tags), and
+  `/operator/sessions/{id}/reviewees` (3 reviewee-tag slots), and
   `/operator/sessions/{id}/relationships` (3 pair-context
   slots). Save / Cancel pair (both Secondary, both
   disabled-until-dirty). Gated by `is_ready`: inputs render
   disabled when the session is active/closed; the page's
   existing `.card.lock` already messages "revert to draft to
-  modify".
+  modify". The same nine slots can also be set via the roster
+  CSV header suffix (Segment 19C Item 1; see §2.5 round-trip).
 - **Read:** Friendly label flows through every operator
   preview surface (Reviewers / Reviewees / Relationships /
   Assignments column headers + the Assignments
@@ -152,7 +157,7 @@ wired by 15A Slices 1-3, shipped 2026-05-12).
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
 | `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. |
-| `source_field` | `String(64)` | `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources; `name` / `email_or_identifier` / `profile_link` for the reviewee identity sources; `1` / `2` / `3` for `pair_context`. Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `field_label_csv._LABELABLE_COLUMNS` on roster-CSV import. |
+| `source_field` | `String(64)` | The nine renamable slots: `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources, and `1` / `2` / `3` for `pair_context`. (The reviewee identity sources `name` / `email_or_identifier` / `profile_link` are **no longer renamable** — retired 2026-05-31; a legacy row for one is tolerated but never re-created.) Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `field_label_csv._LABELABLE_COLUMNS` on roster-CSV import. |
 | `label` | `String(255)` | The override label (stripped on upsert; empty input clears the row). |
 
 Unique on `(session_id, source_type, source_field)`. Resolver
@@ -585,7 +590,7 @@ The five CSVs split the work three ways:
 | §6 | Per-user RuleSets (retired) | — | Section retired alongside the operator-library tier in Wave 5 PR 5.2. The remaining per-session rule rows export through §9 below. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
-| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ All | All listed columns → Settings CSV. 12-slot allowlist enforced by `_VALID_FL_SOURCE_FIELDS` on import. Per-entity CSVs intentionally stay canonical-only on their header rows. |
+| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ Roster headers | Round-trip via the **roster CSV headers** as the sole carrier (Segment 19C Item 1): the tag friendly label rides on its column as a `ReviewerTag1.<label>` suffix. **Not** in the Settings CSV (a stale `field_labels.*` row in an old bundle is silently ignored on apply). Allowlist: the nine tag slots, via `field_label_csv._LABELABLE_COLUMNS`. |
 | §9 | `session_rule_sets` | Partial | All rows → Settings CSV (the seeded-vs-authored distinction retired alongside the 5-seeded-RuleSets default-seed in Wave 5 PR 5.2). The `library_name` provenance column also retired in the same wave; the importer recognises-and-skips legacy CSVs that still carry it. |
 | §9.5 | `data_shapes` | ✅ All | Each saved Data shape ships 7 `data_shapes[N].*` rows in the Settings CSV — `name`, `axis`, `instrument_short_label` (portable ref), `response_field_key` (portable ref), `column_chip_slots` (JSON list), `self_review_handling` (Self-review handling chip state), and `include_empty_rows` (Empty-row drop chip state). Shapes round-trip cleanly across sessions whose instruments + response fields match by `short_label` / `field_key`; unresolved refs at import drop the shape's FK columns to NULL (CASCADE-on-instrument-delete handles the same case post-import). The `self_review_handling` row was added by PR #1643 (Phase 2); the `include_empty_rows` row by PR #1654 (chip-controlled-drop slice). Pre-PR-B CSVs without the `self_review_handling` row import to `include_self`; pre-PR-6 CSVs without `include_empty_rows` import to `True`. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |

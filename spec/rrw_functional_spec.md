@@ -856,21 +856,26 @@ auto-send-on-submit responses-received email fires.
 ### 8.5 Friendly labels
 
 The session also carries operator-editable display labels for
-the 12 in-scope slots that flow through every reviewer- and
-operator-facing surface:
+the **nine in-scope tag slots** that flow through every reviewer-
+and operator-facing surface:
 
 - Reviewer tag 1 / 2 / 3
 - Reviewee tag 1 / 2 / 3
-- Reviewee photo / profile link slot
 - Pair-context tag 1 / 2 / 3
-- Reviewer identity slot
-- Reviewee identity slot
+
+(The reviewee identity / photo slots were renamable in the
+original 15A scope but were **retired 2026-05-31** — identity, not
+labels; their built-in defaults still render.)
 
 Friendly labels rename the *display text* shown for these slots;
 the underlying machine field name does not change. Changing a
 label flows through the reviewer surface, the operator preview,
 every CSV import preview and download, and the schedule-timeline
-caption.
+caption. The nine renamable **tag** labels are set in one of two
+places: the inline editor on the Reviewers / Reviewees /
+Relationships pages, or the **roster CSV header** as a
+`ReviewerTag1.<label>` suffix (Segment 19C Item 1) — the sole
+CSV round-trip carrier for those labels.
 
 ### 8.6 Self-review behaviour
 
@@ -1772,11 +1777,14 @@ exception, called out on the file's surface).
 - **Observers.csv** — `ObserverEmail, ObserverName, ObserverTag1,
   Status, CohortRule`. Conditional on `observers_enabled`.
 - **Settings.csv** — three-column `field, value, data_type`
-  format spanning five sections (session-level fields, email
-  templates, instruments, session RuleSets, friendly labels).
+  format spanning session-level fields, email templates,
+  instruments, session RuleSets, data shapes, and session tags.
   Round-trips perfectly back through the Settings import path.
   (The former RTDs section retired 2026-05-26 with the RTD
-  table; legacy `rtds[...]` rows are silently ignored on import.)
+  table, and the friendly-labels section retired 2026-08-20 with
+  Segment 19C Item 1 — tag friendly labels now ride the roster
+  CSV headers; legacy `rtds[...]` / `field_labels.*` rows are
+  silently ignored on import.)
 
 ### 12.3 Responses extract
 
@@ -2128,8 +2136,8 @@ A full security-posture catalogue lives in
   displays as "Validated"; etc. The label vocabulary
   diverges from the enum vocabulary intentionally.
 - **Friendly label** — The operator-editable display string
-  for one of 12 in-scope slots (tag positions, identity
-  positions).
+  for one of the nine in-scope tag slots (reviewer / reviewee
+  tag 1-3, pair-context 1-3).
 - **Group-scoped instrument** — An instrument that presents
   one row per group rather than one row per reviewee.
 - **Instrument** — A review form. A session has one or more

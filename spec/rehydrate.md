@@ -42,9 +42,9 @@ Grounded in what the extract actually captures and what importers exist:
 
 | Session facet | Extract source | Import path today | Rehydrate approach |
 |---|---|---|---|
-| Session metadata, instruments (+ display/response fields), rule sets, field labels, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is |
-| Reviewers / Reviewees / Observers | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is |
-| Relationships (reviewer↔reviewee pairs + status + pair tags) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is |
+| Session metadata, instruments (+ display/response fields), rule sets, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is |
+| Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header (Segment 19C Item 1) |
+| Relationships (reviewer↔reviewee pairs + status + pair tags + pair-context friendly labels) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is; pair-context friendly labels ride the header |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets, then backfill any pair present in `responses.csv` |
 | **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | **Net-new importer** ([§6.4](#64-load-responses)) |
 | Instrument visibility policies (`instrument_view_policies`) | `settings.csv` (18P PR A2) | ✅ | Apply as-is |
@@ -195,9 +195,9 @@ the handler resolves files by name.
 
 | File | Header (must match) | Provides |
 |---|---|---|
-| `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, field labels, email overrides, data shapes |
-| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,PhotoLink` | Reviewer population |
-| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,PhotoLink` | Reviewee population |
+| `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
+| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,PhotoLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix — Segment 19C Item 1) |
+| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,PhotoLink` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
 
 **Required conditionally** (presence also *sets the feature toggle* — see
@@ -292,9 +292,11 @@ the parsed `settings.csv` rows, **after rewriting two rows**: replace the
 `session.name` value with the `_REHYD` name and the `session.code` value
 with the derived code (otherwise apply would restore the original name and
 collide on code). `apply` rebuilds instruments (+ display/response
-fields), session rule sets, field labels, email overrides, and data
+fields), session rule sets, email overrides, and data
 shapes, and restores per-instrument runtime flags including
-`accepting_responses` and `responses_visible_when_closed`.
+`accepting_responses` and `responses_visible_when_closed`. Tag friendly
+labels are rebuilt separately from the roster CSV headers when those files
+import (Segment 19C Item 1), not from `settings.csv`.
 
 With the [prerequisite](#prerequisite-the-settings-round-trip-covers-visibility--toggles) in
 place, `relationships_enabled` / `observers_enabled` **and** the instrument
