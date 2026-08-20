@@ -52,6 +52,43 @@ header name (case-sensitive), not by position. An extra column
 the operator added in Excel is ignored; a missing required
 column is a parse error.
 
+### 1a. Friendly-label header suffix (Segment 19C Item 1)
+
+The operator-definable friendly labels for the nine renamable tag
+slots — `ReviewerTag1..3`, `RevieweeTag1..3`, `PairContextTag1..3`
+— round-trip through the **roster CSV header** as the **sole
+carrier**. A tag column may carry its label as a suffix after the
+**first** period:
+
+```
+ReviewerTag1.Tutor        → reviewer.tag_1, friendly label "Tutor"
+PairContextTag1.Mentor of  → pair_context.1, friendly label "Mentor of"
+ReviewerTag1               → reviewer.tag_1, no suffix (see below)
+```
+
+- **First-period split, labelable columns only.** Only those nine
+  tag columns are split, and only on the first period — so a label
+  may itself contain periods (`RevieweeTag2.Dept. Head`). Every
+  other column (identity, `Status`, unknown) passes through
+  unchanged, even if it contains a period.
+- **Import writes `session_field_labels`** (via `field_labels`), the
+  same store the per-page label editor uses — the header is a fourth
+  write path, not a new store.
+- **Bare header, or an absent tag column, CLEARS that slot's label.**
+  A roster import is **wipe-and-replace** (`save_reviewers` &c.
+  delete-and-reload the whole roster), so the uploaded file is the
+  complete truth: a tag column with no suffix is the label analogue
+  of a NULL tag value, and clears any existing override (resolving
+  back to the built-in `Tag N` default). Clearing an already-unset
+  slot is a no-op.
+- **Export emits the suffix** when an override exists, bare
+  otherwise (a slot on its default is never given a fabricated
+  `Tag N` suffix) — so download → edit → re-import is symmetric.
+- **Observer tags are out of scope** (single `tag_1`, no
+  friendly-label affordance).
+- Handled by `app.services.field_label_csv` (`split_header` /
+  `normalize_headers` on import, `labeled_header` on export).
+
 ---
 
 ## 2. Five extracts (export contracts)
@@ -291,20 +328,26 @@ banner-error.
 `PhotoLink` may be absent. An absent column is `None` for every
 row; an empty cell is `None` for that row. `Status` (18P PR C) is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
-else a per-row error.
+else a per-row error. The `*Tag1..3` columns may also carry a
+`.<label>` friendly-label suffix (§1a).
 
 **Save:** `save_reviewers(db, session, rows)` /
 `save_reviewees(...)` wipe-and-replace within the session's
 roster, then call `seed_display_fields_from_reviewees` for the
 Reviewees side (idempotent display-field seeding off populated
-`profile_link` / `tag_*` columns).
+`profile_link` / `tag_*` columns). The `field_labels_captured`
+argument reconciles the tag friendly labels from the header (§1a):
+upsert present, clear absent.
 
 ### 3.2 Relationships — `relationships.py`
 
 `parse_relationship_csv(content, *, reviewer_emails,
 reviewee_identifiers)` resolves the two FK columns against the
 already-loaded session rosters. Required: `ReviewerEmail`,
-`RevieweeEmail`. Optional: `PairContextTag1..3`, `Status`.
+`RevieweeEmail`. Optional: `PairContextTag1..3`, `Status`. The
+`PairContextTag1..3` columns may carry a `.<label>` friendly-label
+suffix (§1a); `save_relationships(..., field_labels_captured=…)`
+reconciles them.
 
 **Per-row validation:**
 
@@ -365,14 +408,15 @@ rtd.Long_text.data_type,Long_text,String
 instruments[1].name,Default,String
 instruments[1].display_fields[1].source_type,reviewee,String
 session_rule_sets[Personal: Custom rule].description,…,String
-field_labels.reviewer.tag_1,Cohort,String
+data_shapes[1].name,By reviewer,String
 ```
 
 The dotted / bracketed `field` paths route each row to a parser
-that knows its target. See `serialize_session_config` for the six
+that knows its target. See `serialize_session_config` for the
 sections (session-level → email templates → RTDs → instruments
-→ session RuleSets → field labels) and their canonical
-ordering.
+→ session RuleSets → data shapes → session tags) and their
+canonical ordering. **Friendly labels are no longer a Settings
+section** — see the round-trip notes below.
 
 **Two-phase apply contract:**
 
@@ -390,12 +434,15 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 
-**Round-trip notes (Segment 18P PR E):**
+**Round-trip notes:**
 
-- **`field_labels.*` are export-filtered to the import allowlist**
-  (`reviewer`/`reviewee` → `tag_1..3`, `pair_context` → `1..3`). A
-  legacy label outside that set is *not* exported, so the file always
-  re-imports cleanly (no export-without-import row).
+- **`field_labels.*` retired from the Settings CSV (Segment 19C
+  Item 1).** Friendly labels now round-trip through the roster CSV
+  headers (§1a) as the sole carrier. Settings no longer serializes
+  them; a legacy `field_labels.*` row in an old bundle falls through
+  to the unknown-key **silent-ignore** on apply (like the retired
+  `rtds[` keys) — no error, label dropped, re-export to recover it in
+  the roster header.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **1-based CSV row position is authoritative**. To reorder
   instruments, reorder their row blocks in the file.

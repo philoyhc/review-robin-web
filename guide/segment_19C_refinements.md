@@ -1,7 +1,7 @@
 # Segment 19C — Refinements
 
-**Status:** Planned — **Item 1 not started** (friendly labels via roster
-CSV headers; sole round-trip carrier). A holding segment for **small,
+**Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
+via roster CSV headers; sole round-trip carrier). A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
 for behaviour / contract polish. Items land as independent slices; the
@@ -17,7 +17,19 @@ segment stays open as a home for further refinements as they're identified.
 
 ## Item 1 — Friendly tag labels via roster CSV headers (sole round-trip carrier)
 
-**Status: planned — not started.**
+**Status: ✅ shipped 2026-08-20 (single PR).** Landed as one cohesive
+transport change (the PR ladder below collapsed to one PR — intermediate
+slices would have left a dual-carrier state, which is exactly what this item
+removes). New `app/services/field_label_csv.py` (`split_header` /
+`normalize_headers` / `labeled_header`) + `field_labels.apply_import`; the
+three roster parsers capture header suffixes, the three roster extracts emit
+them, `save_reviewers` / `save_reviewees` / `save_relationships` reconcile
+(via a `field_labels_captured` arg, threaded from both the interactive routes
+and rehydrate); the Settings CSV `field_labels.*` carrier removed (serialize
++ apply + `_apply_field_label.py` deleted; stale keys silently ignored). Full
+suite green (2,695 passed); `ruff` clean. **Decisions confirmed at build:**
+bare header / absent tag column = **clear** (roster is wipe-and-replace);
+stale settings keys silent-dropped; clean settings-contract cutover.
 
 ### The opportunity
 

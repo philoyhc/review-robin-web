@@ -29,7 +29,6 @@ from app.services import session_lifecycle as lifecycle
 
 from ._apply_data_shape import _apply_data_shapes
 from ._apply_email import _apply_email_overrides
-from ._apply_field_label import _apply_field_labels
 from ._apply_instrument import (
     _apply_instruments,
     _wipe_instruments_and_dependents,
@@ -111,7 +110,6 @@ def _apply_plan(
         "display_fields": 0,
         "response_fields": 0,
         "session_rule_sets": 0,
-        "field_labels": 0,
         "data_shapes": 0,
         "session_tags": 0,
     }
@@ -132,7 +130,10 @@ def _apply_plan(
     db.flush()
     inst_counts = _apply_instruments(db, review_session, plan)
     counts.update(inst_counts)
-    counts["field_labels"] = _apply_field_labels(db, review_session, plan)
+    # Segment 19C Item 1 — friendly labels no longer import from the
+    # Settings CSV; the roster CSV headers carry them. Stale
+    # ``field_labels.*`` rows in old bundles fall through to the
+    # silent-ignore in ``_apply_parse`` (like the retired ``rtds[``).
     counts["data_shapes"] = _apply_data_shapes(db, review_session, plan)
     counts["session_tags"] = _apply_session_tags(db, review_session, plan)
     db.flush()

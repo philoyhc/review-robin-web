@@ -77,14 +77,9 @@ def test_reviewers_page_renders_two_line_when_override_set(
 ) -> None:
     review_session = _make_session(client, db, "fl-rev-override")
     actor = _actor(db)
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="reviewer",
-        source_field="tag_1",
-        label="Cohort",
-        user=actor,
-    )
+    # Import the roster first — a roster import reconciles labels from
+    # its header (Segment 19C Item 1), so setting the override via the
+    # editor path afterwards is what this test pins.
     csv = (
         "ReviewerName,ReviewerEmail,ReviewerTag1\n"
         "Alice,alice@example.edu,senior\n"
@@ -93,6 +88,14 @@ def test_reviewers_page_renders_two_line_when_override_set(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={"file": ("r.csv", csv.encode(), "text/csv")},
         follow_redirects=False,
+    )
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Cohort",
+        user=actor,
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
@@ -198,16 +201,10 @@ def test_relationships_page_renders_pair_context_friendly_label(
 ) -> None:
     review_session = _make_session(client, db, "fl-rel-pc")
     actor = _actor(db)
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="pair_context",
-        source_field="1",
-        label="Module reference",
-        user=actor,
-    )
     # Seed at least one relationship so the table renders. (Need
-    # reviewers + reviewees first.)
+    # reviewers + reviewees first.) The override is set via the editor
+    # path AFTER the imports, since a roster import reconciles labels
+    # from its header (Segment 19C Item 1).
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -242,6 +239,14 @@ def test_relationships_page_renders_pair_context_friendly_label(
         },
         follow_redirects=False,
     )
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="pair_context",
+        source_field="1",
+        label="Module reference",
+        user=actor,
+    )
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
@@ -257,16 +262,6 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
 ) -> None:
     review_session = _make_session(client, db, "fl-assign")
     actor = _actor(db)
-    # One override on each side so we can pin both the table
-    # header and the toggle-widget label.
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="reviewee",
-        source_field="tag_2",
-        label="Lab section",
-        user=actor,
-    )
 
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
@@ -291,6 +286,17 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
         },
         follow_redirects=False,
     )
+    # One override so we can pin both the table header and the
+    # toggle-widget label. Set after the imports — a roster import
+    # reconciles labels from its header (Segment 19C Item 1).
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewee",
+        source_field="tag_2",
+        label="Lab section",
+        user=actor,
+    )
     # Generate Full Matrix assignments so the table renders.
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
@@ -314,14 +320,6 @@ def test_reviewers_fields_with_data_pill_uses_friendly_override(
 ) -> None:
     review_session = _make_session(client, db, "fl-rev-pill")
     actor = _actor(db)
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="reviewer",
-        source_field="tag_1",
-        label="Cohort",
-        user=actor,
-    )
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -333,6 +331,14 @@ def test_reviewers_fields_with_data_pill_uses_friendly_override(
             )
         },
         follow_redirects=False,
+    )
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Cohort",
+        user=actor,
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
@@ -375,14 +381,6 @@ def test_relationships_fields_with_data_pill_uses_friendly_override(
 ) -> None:
     review_session = _make_session(client, db, "fl-rel-pill")
     actor = _actor(db)
-    field_labels.upsert(
-        db,
-        review_session,
-        source_type="pair_context",
-        source_field="1",
-        label="Mentorship",
-        user=actor,
-    )
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -416,6 +414,14 @@ def test_relationships_fields_with_data_pill_uses_friendly_override(
             )
         },
         follow_redirects=False,
+    )
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="pair_context",
+        source_field="1",
+        label="Mentorship",
+        user=actor,
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"

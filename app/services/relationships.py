@@ -20,9 +20,6 @@ land. Audit event ``relationships.imported`` (registered in
 
 from __future__ import annotations
 
-import csv
-import io
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -35,7 +32,7 @@ from app.db.models import (
 )
 from app.schemas.imports import RelationshipImportRow
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, session_lifecycle as lifecycle
+from app.services import audit, field_labels, session_lifecycle as lifecycle
 from app.services.csv_imports import (
     ParseResult,
     _cell,
@@ -79,13 +76,13 @@ def parse_relationship_csv(
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, count_issue = _read_dict_rows(text, source)
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
+        text, source
+    )
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
 
-    reader = csv.DictReader(io.StringIO(text))
-    fieldnames = list(reader.fieldnames or [])
     issues.extend(
         _missing_columns_issues(
             fieldnames, ["ReviewerEmail", "RevieweeEmail"], source
@@ -205,7 +202,7 @@ def parse_relationship_csv(
             )
         )
 
-    return ParseResult(rows=parsed, issues=issues)
+    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 
 
 def existing_count(db: Session, session_id: int) -> int:
@@ -293,6 +290,7 @@ def save_relationships(
     rows: list[RelationshipImportRow],
     filename: str,
     correlation_id: str,
+    field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
     """Wipe-and-replace the session's relationships table from the
     parsed rows. Returns ``(replaced, new)``.
@@ -347,6 +345,17 @@ def save_relationships(
 
     if seed_display_fields_from_assignments(db, session):
         db.commit()
+    # Segment 19C Item 1 — reconcile pair-context friendly labels from
+    # the relationships header (upsert present, clear absent).
+    if field_labels_captured is not None:
+        field_labels.apply_import(
+            db,
+            session,
+            source_type="pair_context",
+            captured=field_labels_captured,
+            user=user,
+            correlation_id=correlation_id,
+        )
     return replaced, len(rows)
 
 

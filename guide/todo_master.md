@@ -2191,21 +2191,22 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — planned; Item 1 not started (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — in progress; Item 1 ✅ shipped 2026-08-20 (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
 
-- **Item 1 (planned)** — **friendly tag labels via roster CSV headers.** Let
-  operators key reviewer / reviewee / relationships friendly labels in the
-  roster CSV header as a `<Slot>.<label>` suffix (e.g. `ReviewerTag1.Tutor`),
-  captured at upload time when the operator already knows them from upstream.
-  Makes the roster header the **sole round-trip carrier** — removes
-  `field_labels.*` from the Settings CSV (breaking settings-contract change;
-  stale keys silently ignored). Internal storage (`session_field_labels`) +
-  the per-page label editor unchanged; transport-only. Bare header = clear
-  (consistent with roster wipe-and-replace). PR ladder: reviewers proof slice
-  → reviewees + relationships → retire Settings carrier + rehydrate → docs.
+- **Item 1 (✅ shipped 2026-08-20)** — **friendly tag labels via roster CSV
+  headers.** Operators key reviewer / reviewee / relationships friendly labels
+  in the roster CSV header as a `<Slot>.<label>` suffix (e.g.
+  `ReviewerTag1.Tutor`), captured at upload time. The roster header is now the
+  **sole round-trip carrier** — `field_labels.*` removed from the Settings CSV
+  (stale keys silently ignored, per the retired-`rtds[` precedent). Internal
+  storage (`session_field_labels`) + the per-page label editor unchanged;
+  transport-only. Bare header / absent tag column = clear (consistent with the
+  roster's wipe-and-replace). New `app/services/field_label_csv.py` +
+  `field_labels.apply_import`; parsers capture, extracts emit, saves reconcile
+  (threaded through the routes **and** rehydrate). Full suite green.
 
 ---
 

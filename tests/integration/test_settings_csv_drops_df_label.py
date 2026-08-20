@@ -140,59 +140,27 @@ def test_apply_tolerates_legacy_display_field_label_row(
     assert refreshed.label == ""
 
 
-def test_apply_rejects_unknown_field_labels_source_field(
+def test_apply_silently_ignores_field_labels_rows(
     db: Session,
 ) -> None:
-    """The new ``_VALID_FL_SOURCE_FIELDS`` map gates the
-    per-source allowlist on import: ``reviewer.name`` is not in
-    scope (reviewer has only tag_1/2/3) and parsing surfaces a
-    named error."""
-    review_session, _ = _make_session(db, "csv-fl-bad-src")
+    """Segment 19C Item 1 — ``field_labels.*`` retired from the Settings
+    CSV (roster headers carry labels now). Any such row in an old bundle
+    — even a valid tag slot or a retired identity slot — falls through to
+    the unknown-key silent-ignore: apply succeeds and writes no
+    ``session_field_labels`` rows."""
+    from app.db.models import SessionFieldLabel
+
+    review_session, _ = _make_session(db, "csv-fl-ignored")
     rows = [
-        Row(
-            "field_labels.reviewer.name",
-            "Should fail",
-            "string",
-        ),
+        Row("field_labels.reviewer.tag_1", "Team", "string"),
+        Row("field_labels.reviewer.name", "legacy", "string"),
+        Row("field_labels.reviewee.email_or_identifier", "ID", "string"),
     ]
     result = apply_session_config(db, review_session, rows)
-    assert result.errors
-    assert any(
-        "source_field" in err.message and "reviewer" in err.message
-        for err in result.errors
+    assert result.errors == []
+    stored = (
+        db.query(SessionFieldLabel)
+        .filter(SessionFieldLabel.session_id == review_session.id)
+        .all()
     )
-
-
-def test_apply_rejects_retired_reviewee_identity_slots(
-    db: Session,
-) -> None:
-    """The reviewee identity slots
-    (``name`` / ``email_or_identifier`` / ``profile_link``) retired
-    2026-05-31 per upgrade-doc §3.7 — Settings-CSV imports for those
-    slots now error rather than persist a no-longer-rendered
-    override."""
-    review_session, _ = _make_session(db, "csv-fl-identity")
-    rows = [
-        Row(
-            "field_labels.reviewee.name",
-            "Student name",
-            "string",
-        ),
-        Row(
-            "field_labels.reviewee.email_or_identifier",
-            "Student ID",
-            "string",
-        ),
-        Row(
-            "field_labels.reviewee.profile_link",
-            "Photo",
-            "string",
-        ),
-    ]
-    result = apply_session_config(db, review_session, rows)
-    assert len(result.errors) == 3
-    assert all(
-        "source_field" in err.message and "reviewee" in err.message
-        for err in result.errors
-    )
-    assert result.counts.get("field_labels", 0) == 0
+    assert stored == []

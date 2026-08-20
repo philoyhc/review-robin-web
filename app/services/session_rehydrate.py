@@ -532,6 +532,7 @@ def rehydrate_session(
             rows=reviewers_parse.rows,
             filename="reviewers.csv",
             correlation_id=correlation_id or "",
+            field_labels_captured=reviewers_parse.field_labels,
         )
 
         reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
@@ -544,6 +545,7 @@ def rehydrate_session(
             rows=reviewees_parse.rows,
             filename="reviewees.csv",
             correlation_id=correlation_id or "",
+            field_labels_captured=reviewees_parse.field_labels,
         )
 
         if "observers" in resolved:
@@ -589,6 +591,7 @@ def rehydrate_session(
                 rows=rel_parse.rows,
                 filename="relationships.csv",
                 correlation_id=correlation_id or "",
+                field_labels_captured=rel_parse.field_labels,
             )
 
         # 4. Assignments — regenerate from the restored rule sets.

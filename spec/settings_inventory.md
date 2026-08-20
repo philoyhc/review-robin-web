@@ -152,7 +152,7 @@ wired by 15A Slices 1-3, shipped 2026-05-12).
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
 | `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. |
-| `source_field` | `String(64)` | `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources; `name` / `email_or_identifier` / `profile_link` for the reviewee identity sources; `1` / `2` / `3` for `pair_context`. Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `_VALID_FL_SOURCE_FIELDS` on Settings-CSV import. |
+| `source_field` | `String(64)` | `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources; `name` / `email_or_identifier` / `profile_link` for the reviewee identity sources; `1` / `2` / `3` for `pair_context`. Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `field_label_csv._LABELABLE_COLUMNS` on roster-CSV import. |
 | `label` | `String(255)` | The override label (stripped on upsert; empty input clears the row). |
 
 Unique on `(session_id, source_type, source_field)`. Resolver
@@ -162,11 +162,14 @@ The per-instrument `InstrumentDisplayField.label` override is
 **not** in the chain (retired in 15A Slice 2; column stays in
 the schema as dead data pending a follow-on cleanup segment).
 
-**Round-trip:** Settings CSV only — `session_config_io/`
-serialises / parses `field_labels.{source_type}.{source_field}`
-rows; per-entity CSVs (Reviewers / Reviewees / Relationships)
-stay canonical-only on their header rows so importers that key
-on `RevieweeTag1` etc. continue to work.
+**Round-trip:** **roster CSV headers only** (Segment 19C Item 1).
+A tag friendly label rides on its column as a `ReviewerTag1.<label>`
+suffix — import upserts, bare header / absent column clears
+(mirrors the roster's wipe-and-replace). Export re-emits the suffix
+when an override exists. The Settings CSV **no longer** carries
+`field_labels.*` (a stale row in an old bundle is silently ignored
+on apply). See `spec/csv_contracts.md` §1a; handled by
+`app.services.field_label_csv`.
 
 **Logic vs display layer:** friendly labels are a
 display-layer concern only. The underlying logic (Band 1

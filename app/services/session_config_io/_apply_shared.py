@@ -107,13 +107,6 @@ class _RuleSetSpec:
 
 
 @dataclass
-class _FieldLabelSpec:
-    source_type: str
-    source_field: str
-    label: str
-
-
-@dataclass
 class _DataShapeSpec:
     """One ``data_shapes[N].*`` row group accumulated during
     parse. Resolves the portable ``instrument_short_label`` /
@@ -141,7 +134,6 @@ class _ParsedConfig:
     email_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
     instruments: dict[int, _InstrumentSpec] = _dataclass_field(default_factory=dict)
     session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(default_factory=dict)
-    field_labels: list[_FieldLabelSpec] = _dataclass_field(default_factory=list)
     data_shapes: dict[int, _DataShapeSpec] = _dataclass_field(default_factory=dict)
     # Segment 18P PR D2 — session tags (the `session_tags[i].tag`
     # rows), collected as an ordered list of tag strings.
@@ -160,7 +152,6 @@ _VALID_DATA_TYPES = {
 }
 _VALID_COMBINATORS = frozenset({"ALL_OF", "ANY_OF", "PIPELINE"})
 _VALID_DF_SOURCE_TYPES = frozenset({"reviewee", "pair_context"})
-_VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 
 # Segment 18P PR A2 — ``instruments[N].view_policies[<audience>].*``
 # validation. Mirrors ``visibility_policies.AUDIENCES`` +
@@ -172,20 +163,6 @@ _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 _VALID_VP_AUDIENCES = frozenset({"peer_reviewer", "reviewee", "observer"})
 _VALID_VP_GRANULARITY = frozenset({"row", "aggregated"})
 _VALID_VP_IDENTIFICATION = frozenset({"identified", "deidentified"})
-
-# Per-source allowlist for ``field_labels.*`` rows, mirroring
-# ``app.services.field_labels._VALID_SOURCE_FIELDS``. The DB column
-# is permissive (VARCHAR(64) with no enum gate); this map is the
-# only validation layer that keeps the table aligned with the
-# friendly-label intent on import. Reviewee identity fields
-# (Name / Email_Identifier / Profile) dropped 2026-05-31 alongside
-# the editor retirement (``guide/archive/participant_model_upgrade.md``
-# §3.7); Settings-CSV imports for those slots are now rejected.
-_VALID_FL_SOURCE_FIELDS: dict[str, frozenset[str]] = {
-    "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),
-    "reviewee": frozenset({"tag_1", "tag_2", "tag_3"}),
-    "pair_context": frozenset({"1", "2", "3"}),
-}
 
 # Bracketed-key parsers. Each pattern captures the index / name and
 # an optional sub-key tail; the apply step routes by tail.
@@ -201,7 +178,6 @@ _RX_INSTRUMENT_VP = re.compile(
 _RX_INSTRUMENT = re.compile(r"^instruments\[(\d+)\]\.(\w+)$")
 _RX_RULE_SET = re.compile(r"^session_rule_sets\[(\d+)\]\.(\w+)$")
 _RX_EMAIL = re.compile(r"^email_overrides\.(\w+)\.(\w+)$")
-_RX_FIELD_LABEL = re.compile(r"^field_labels\.(\w+)\.([^.]+)$")
 _RX_DATA_SHAPE = re.compile(r"^data_shapes\[(\d+)\]\.(\w+)$")
 _RX_SESSION_TAG = re.compile(r"^session_tags\[(\d+)\]\.(\w+)$")
 

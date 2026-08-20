@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession
+from app.services import field_label_csv
 
 __all__ = ["HEADER", "serialize_reviewers"]
 
@@ -57,9 +58,13 @@ def serialize_reviewers(
     order — deterministic so re-export of the same session is
     byte-stable, and active rows lead so the file reads top-to-
     bottom as the operator expects.
+
+    The header carries each renamed tag column's friendly label as a
+    ``ReviewerTagN.<label>`` suffix (Segment 19C Item 1) — the roster
+    header is the sole round-trip carrier for those labels.
     """
 
-    yield HEADER
+    yield field_label_csv.labeled_header(review_session, HEADER)
     rows = (
         db.execute(
             select(Reviewer)

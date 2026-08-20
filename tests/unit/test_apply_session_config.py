@@ -591,14 +591,13 @@ def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
     assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
 
 
-def test_serialize_drops_non_allowlist_field_labels(db: Session) -> None:
-    """18P PR E — export emits only `field_labels.*` rows the importer
-    accepts. A legacy non-allowlist label (a retired reviewee-identity
-    field) is filtered out, so the exported file round-trips instead of
-    failing its own re-import."""
+def test_serialize_omits_field_labels(db: Session) -> None:
+    """Segment 19C Item 1 — friendly labels no longer serialize to the
+    Settings CSV; the roster CSV headers are the sole carrier. Even with
+    overrides present, the export emits no ``field_labels.*`` rows."""
     from app.db.models import SessionFieldLabel
 
-    src = _session(db, code="fl-allow")
+    src = _session(db, code="fl-omit")
     db.add_all(
         [
             SessionFieldLabel(
@@ -609,9 +608,9 @@ def test_serialize_drops_non_allowlist_field_labels(db: Session) -> None:
             ),
             SessionFieldLabel(
                 session_id=src.id,
-                source_type="reviewee",
-                source_field="email_or_identifier",
-                label="ID",
+                source_type="pair_context",
+                source_field="1",
+                label="Cohort",
             ),
         ]
     )
@@ -622,18 +621,7 @@ def test_serialize_drops_non_allowlist_field_labels(db: Session) -> None:
         for row in serialize_session_config(db, src)
         if row.field.startswith("field_labels.")
     }
-    assert "field_labels.reviewer.tag_1" in keys
-    assert "field_labels.reviewee.email_or_identifier" not in keys
-
-    # And what is emitted re-imports cleanly (no export-without-import).
-    dst = _bare_session(db, code="fl-allow-dst")
-    result = apply_session_config(
-        db,
-        review_session=dst,
-        rows=serialize_session_config(db, src),
-        user=_user(db, email="fl@e.edu"),
-    )
-    assert result.errors == []
+    assert keys == set()
 
 
 def test_round_trip_carries_session_tags(db: Session) -> None:
@@ -944,26 +932,29 @@ def test_unknown_field_paths_are_silently_ignored(db: Session) -> None:
     assert result.ok, result.errors
 
 
-def test_field_labels_round_trip(db: Session) -> None:
-    review_session = _bare_session(db, code="fl")
+def test_stale_field_label_rows_silently_ignored(db: Session) -> None:
+    """Segment 19C Item 1 — a bundle carrying legacy ``field_labels.*``
+    rows (pre-19C exports) applies without error and writes no
+    ``session_field_labels`` rows: the key falls through to the
+    unknown-key silent-ignore, like the retired ``rtds[`` keys."""
+    from app.db.models import SessionFieldLabel
+
+    review_session = _bare_session(db, code="fl-stale")
     rows = [
-        Row(
-            "field_labels.reviewer.tag_1",
-            "Mentor",
-            "string",
-        ),
-        Row(
-            "field_labels.pair_context.1",
-            "Cohort",
-            "string",
-        ),
+        Row("field_labels.reviewer.tag_1", "Mentor", "string"),
+        Row("field_labels.pair_context.1", "Cohort", "string"),
     ]
     result = apply_session_config(db, review_session, rows)
     assert result.ok, result.errors
     db.expire_all()
+    stored = (
+        db.query(SessionFieldLabel)
+        .filter(SessionFieldLabel.session_id == review_session.id)
+        .all()
+    )
+    assert stored == []
     after = serialize_session_config(db, review_session)
-    label_rows = [r for r in after if r.field.startswith("field_labels.")]
-    assert len(label_rows) == 2
+    assert [r for r in after if r.field.startswith("field_labels.")] == []
 
 
 def test_json_rules_apply_writes_through(db: Session) -> None:
