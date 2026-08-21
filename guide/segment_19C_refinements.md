@@ -391,6 +391,58 @@ splits into:
 
 ---
 
+## Item 3 — Danger Zone hardening (visual + gating + coupling) — ✅ shipped
+
+Three refinements to the Session Home Danger Zone card, found while reviewing
+its behaviour.
+
+**The problems.**
+- **Delete Data was ungated.** Unlike Delete session, Delete Data had no
+  lifecycle gate on either the confirm checkbox or the `/delete-data` route, so
+  wiping every live reviewer response on an Activated session was one tick +
+  click away (frontend and backend agreed — it was intentional but unsafe).
+- **The card's surface didn't read as "needs care."** The danger-zone card
+  bordered amber but had a white interior, diverging from the lock card (which
+  is the sibling "needs care" surface).
+- **The two confirms were independent.** Deleting the whole session inherently
+  deletes its data, but ticking Delete session didn't reflect that.
+
+**The decisions (shipped).**
+- **Gate Delete Data like Delete session** — confirm checkbox `disabled` while
+  `is_ready` + a lock note + `_require_editable()` on `/delete-data`. Responses
+  only exist once Activated, so deletion is a pause-first workflow (revert
+  preserves the `Response` rows). (PR #2026.)
+- **Unify the card surface** — the danger-zone card adopts the lock-card
+  treatment: `accent-amber-dark` border + `accent-amber-bg` infill + amber H2.
+  Both "needs care" cards now share one surface; the outline-red Destructive
+  button inside still marks the action. (PR #2025.)
+- **Couple the confirms, one-directional** — ticking Delete session marks
+  Delete data selected + inactive (checkbox checked + disabled, button
+  disabled); unticking restores it. Ticking Delete data leaves Delete session
+  available. Progressive-enhancement JS; degrades safely. (PR #2027.)
+
+**Done.** Specs updated (`session_home.md`, `operator_button_audit.md`,
+`visual_style_rrw.md`/`visual_style_general.md` for the card surface); full
+suite green. JS toggle needs a dev-slot click post-deploy.
+
+## Item 4 — Button treatment refinements — ✅ shipped
+
+Two button-treatment fixes surfaced by the dark-mode preview harness (Item 2).
+
+- **Secondary outline → `text-secondary`.** The default button's outline was the
+  very light `border-default`, which read weak. Now a medium grey — one shade
+  lighter than the `text-primary` label — stronger without going near-black.
+  (PR #2023, walking back the too-dark `text-primary` outline from #2022.)
+- **Alert label readable in dark.** The filled-amber Alert button
+  (`.btn.danger-solid`) used `text-on-accent` (white), unreadable on the
+  light-amber fill the amber tokens take in dark mode. New `--text-on-amber`
+  token — white in light (unchanged), dark in dark. (PR #2024.)
+
+**Done.** `base.html` + `spec/ui_elements.md` §6 updated; full suite green.
+Colour correctness needs a dev-slot eyeball.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
@@ -416,3 +468,10 @@ refinements are identified.
   Display mode card + `data-theme` theming primitive (Item 2, on wiring).
 - `spec/settings_inventory.md` — the browser-local `data-theme` UI-state
   primitive (Item 2, on wiring).
+- `spec/session_home.md` — Delete Data locked-while-Activated (pause-first) +
+  the Delete-session⊇Delete-data confirm coupling; `spec/operator_button_audit.md`
+  — the Delete Data lifecycle gate; `spec/visual_style_rrw.md` /
+  `spec/visual_style_general.md` — the danger-zone card adopts the lock-card
+  amber surface (done — Item 3).
+- `spec/ui_elements.md` §6 — Secondary outline (`text-secondary`) + the Alert
+  button's `--text-on-amber` label token (done — Item 4).
