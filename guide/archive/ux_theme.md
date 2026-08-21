@@ -225,11 +225,13 @@ block yet; the palette lives only in the preview harness).
   / `:root[data-theme="dark"]` + `color-scheme`. Two-state, localStorage-driven
   (no `prefers-color-scheme`) — consistent with the rest of the app. Verified in
   a browser: `rrw-theme=dark` → body `#0f141b`.
-- ☐ **W8 — dev-slot QA.** The only remaining item: a colour pass across
-  representative real pages once deployed (a dark card, pill row, banner, table,
-  form, nav, the Danger Zone, the instruments page). The suite can't see colour.
-  **Known follow-up from QA-so-far:** form inputs use `var(--bg-page)`, so in
-  dark they sit at the same near-black as the canvas and rely on their border —
-  a dedicated input-background token would lift them.
+- ✅ **W8 — dev-slot QA.** Colour pass across the real pages — signed off
+  2026-08-21 ("everything looks fine"). **Open follow-up (not blocking):** dark
+  form inputs use `var(--bg-page)`, so they sit at the same near-black as the
+  canvas and rely on their border — a dedicated input-background token would
+  lift them. Logged as a future refinement in `guide/segment_19C_refinements.md`.
 
-**Dark mode is shipped (W1–W7).** Only the dev-slot colour QA (W8) remains.
+**Dark mode is complete (W1–W8), shipped Segment 19C Item 2.** This working
+doc is retired to `guide/archive/`; the shipped behaviour is specced in
+`spec/settings_inventory.md` §7 (`rrw-theme`) and `spec/visual_style_rrw.md`
+("Light / dark mode").

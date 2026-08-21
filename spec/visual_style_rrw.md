@@ -29,6 +29,18 @@ Setup and Operations are two parallel series of pages (see `spec/operator_ui_con
 
 ---
 
+## Light / dark mode
+
+Review Robin themes **light or dark**, chosen per-viewer and stored browser-local. The whole palette lives as `:root` colour tokens in `base.html`; `:root[data-theme="dark"]` redefines them (plus `color-scheme: dark`), so any surface built from tokens themes for free — the discipline is *use tokens, never raw hex* (the `guide/archive/ux_theme.md` sweep tokenised the app to make this hold).
+
+- **Two states, no OS-follow.** Light is the bare `:root`; Dark is an explicit `data-theme="dark"` on `<html>`. There is no `prefers-color-scheme` path — first paint is Light until the viewer picks Dark.
+- **The control** is a two-segment pill `[☀ Light | 🌙 Dark]` (`_partials/theme_toggle.html`) in the top-left chrome, inline after the app identity, in **both** the operator chrome and the reviewer top bar — so operators and participants share one control.
+- **Browser-local**, never synced to the server; the storage key + no-FOUC mechanism are specced in `spec/settings_inventory.md` §7 (`rrw-theme`).
+
+Shipped Segment 19C Item 2 (2026-08-21).
+
+---
+
 ## Lifecycle state colors
 
 Sessions move through three live states (and two reserved future states; see `app/services/session_lifecycle.py` for the canonical enum). Each renders as a badge in the status strip and (where relevant) inline elsewhere:
