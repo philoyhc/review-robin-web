@@ -2220,7 +2220,7 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   (W8 dev-slot QA signed off 2026-08-21). Live behaviour specced in
   `spec/settings_inventory.md` §7 (`rrw-theme`) + `spec/visual_style_rrw.md`;
   the working punch-list retired to `guide/archive/ux_theme.md`. The preview
-  harness (`guide/theme_preview.gen.py`) stays live as a design surface for
+  harness (`tools/theme_preview.gen.py`) stays live as a design surface for
   future theme work (e.g. a sepia theme / a theme customizer).
 - **Item 3 (✅ shipped 2026-08-20)** — **Danger Zone hardening.** Three
   Session-Home Danger-Zone refinements: the card adopts the lock-card amber

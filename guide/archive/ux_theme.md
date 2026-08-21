@@ -109,7 +109,7 @@ those already consume tokens). Priorities:
 
 ## Preview harness (in-repo mockup)
 
-`guide/theme_preview.html` is a standalone dark-mode design harness —
+`tools/theme_preview.html` is a standalone dark-mode design harness —
 **open it in a browser**, no server or seed data. It lifts the *real*
 `<style>` block from `base.html` (so the component CSS is faithful, not a
 hand-copy), applies a **draft dark palette**, and renders a component gallery
@@ -129,7 +129,7 @@ preview tables. Those are page-specific islands, not the shared palette this
 harness (and a default-scheme rethink) turns on.
 
 This is the W4 tuning loop: edit the `DARK = {…}` map in
-`guide/theme_preview.gen.py`, re-run `python3 guide/theme_preview.gen.py`,
+`tools/theme_preview.gen.py`, re-run `python3 tools/theme_preview.gen.py`,
 refresh the browser. The draft values are a first cut (tokens named
 `*-dark` / `*-strong` / `*-text` invert to light-on-dark; `*-bg` tints become
 dark solids). When the palette reads well across the gallery, **port the final
