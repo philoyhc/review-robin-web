@@ -96,10 +96,9 @@
      it as their per-session default. Times render bare
      (YYYY-MM-DD HH:MM, no zone token) — the worked sample below
      the label is where the chosen zone is made explicit. #}
-  {# Segment 19C Item 2 — the two personal-preference cards (Date & time,
-     Display mode) sit side by side as a half-width ``.bottom-grid`` pair.
-     The SMTP card above and the Danger Zone below stay full width. #}
-  <div class="bottom-grid">
+  {# Segment 19C Item 2 — the Display mode (light / dark) control moved to a
+     chrome toggle (top-right, reaches participants too — see guide/ux_theme.md),
+     so the settings card was retired and Date & time returns to full width. #}
   <div class="card" id="timezone-settings">
     <h2>Date &amp; time</h2>
     <p class="muted">
@@ -132,32 +131,6 @@
       </div>
     </form>
   </div>
-
-  {# Segment 19C Item 2 — Display mode card. SCAFFOLD (placeholder): real
-     copy + the three options, but the controls are inert (disabled) until
-     the wiring slice lands the dark palette + the localStorage/data-theme
-     toggle. See guide/segment_19C_refinements.md Item 2. #}
-  <div class="card" id="display-mode-settings">
-    <h2>Display mode</h2>
-    <p class="muted">
-      Choose how Review Robin looks. <strong>System</strong> follows your
-      device's light / dark setting; <strong>Light</strong> and
-      <strong>Dark</strong> pin the appearance regardless of the device.
-    </p>
-    <div class="display-mode-options" role="group" aria-label="Display mode"
-         style="display: flex; gap: 8px; margin-top: 12px;">
-      <button type="button" class="btn secondary" disabled
-              data-theme-choice="system" aria-pressed="true">System</button>
-      <button type="button" class="btn secondary" disabled
-              data-theme-choice="light" aria-pressed="false">Light</button>
-      <button type="button" class="btn secondary" disabled
-              data-theme-choice="dark" aria-pressed="false">Dark</button>
-    </div>
-    <p class="muted" style="margin-top: 12px; font-size: var(--fs-small);">
-      Coming soon — dark mode is being wired up.
-    </p>
-  </div>
-  </div>{# /.bottom-grid #}
 
   {# Live timezone-sample preview — progressive enhancement. The
      server renders the sample for the saved zone; this updates it
