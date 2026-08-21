@@ -390,6 +390,7 @@ preference stored?" finds the answer quickly.
 | `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Photo / Tag1 / Tag2 / Tag3). |
 | `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). The legacy assignment-context group retired in 15D. |
+| `rrw-theme` | Chrome light/dark toggle (every page) | Display mode. Values `"light"` / `"dark"` (absent = light). Applied as `data-theme` on `<html>` — Light removes the attribute (bare `:root`), Dark stamps `data-theme="dark"` (the `:root[data-theme="dark"]` palette + `color-scheme: dark`). A synchronous no-FOUC `<script>` at the top of `base.html`'s `<head>` reads the key and sets the attribute before first paint; the shared `_partials/theme_toggle.html` pill (in the operator chrome + reviewer top bar) writes it. **Two-state, no OS-follow** (no `prefers-color-scheme`). Browser-local only — never synced to the server. `error.html` (standalone) carries its own copy of the same read-script + palette. Segment 19C Item 2 (2026-08-21). |
 
 ### `sessionStorage` (per browser tab; cleared on tab close)
 

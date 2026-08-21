@@ -109,7 +109,7 @@ those already consume tokens). Priorities:
 
 ## Preview harness (in-repo mockup)
 
-`guide/theme_preview.html` is a standalone dark-mode design harness —
+`tools/theme_preview.html` is a standalone dark-mode design harness —
 **open it in a browser**, no server or seed data. It lifts the *real*
 `<style>` block from `base.html` (so the component CSS is faithful, not a
 hand-copy), applies a **draft dark palette**, and renders a component gallery
@@ -129,7 +129,7 @@ preview tables. Those are page-specific islands, not the shared palette this
 harness (and a default-scheme rethink) turns on.
 
 This is the W4 tuning loop: edit the `DARK = {…}` map in
-`guide/theme_preview.gen.py`, re-run `python3 guide/theme_preview.gen.py`,
+`tools/theme_preview.gen.py`, re-run `python3 tools/theme_preview.gen.py`,
 refresh the browser. The draft values are a first cut (tokens named
 `*-dark` / `*-strong` / `*-text` invert to light-on-dark; `*-bg` tints become
 dark solids). When the palette reads well across the gallery, **port the final
@@ -225,11 +225,13 @@ block yet; the palette lives only in the preview harness).
   / `:root[data-theme="dark"]` + `color-scheme`. Two-state, localStorage-driven
   (no `prefers-color-scheme`) — consistent with the rest of the app. Verified in
   a browser: `rrw-theme=dark` → body `#0f141b`.
-- ☐ **W8 — dev-slot QA.** The only remaining item: a colour pass across
-  representative real pages once deployed (a dark card, pill row, banner, table,
-  form, nav, the Danger Zone, the instruments page). The suite can't see colour.
-  **Known follow-up from QA-so-far:** form inputs use `var(--bg-page)`, so in
-  dark they sit at the same near-black as the canvas and rely on their border —
-  a dedicated input-background token would lift them.
+- ✅ **W8 — dev-slot QA.** Colour pass across the real pages — signed off
+  2026-08-21 ("everything looks fine"). **Open follow-up (not blocking):** dark
+  form inputs use `var(--bg-page)`, so they sit at the same near-black as the
+  canvas and rely on their border — a dedicated input-background token would
+  lift them. Logged as a future refinement in `guide/segment_19C_refinements.md`.
 
-**Dark mode is shipped (W1–W7).** Only the dev-slot colour QA (W8) remains.
+**Dark mode is complete (W1–W8), shipped Segment 19C Item 2.** This working
+doc is retired to `guide/archive/`; the shipped behaviour is specced in
+`spec/settings_inventory.md` §7 (`rrw-theme`) and `spec/visual_style_rrw.md`
+("Light / dark mode").

@@ -262,10 +262,12 @@ carrier.
 
 ## Item 2 — Light / dark Display mode (chrome toggle)
 
-**Status: ✅ shipped 2026-08-21 (W1–W7); W8 dev-slot colour QA pending.** The
+**Status: ✅ complete 2026-08-21 (W1–W8; dev-slot QA signed off).** The
 control landed as a *chrome toggle* (not the `/operator/settings` card, which
-was retired). Full detail + the W1–W8 ladder live in `guide/ux_theme.md`. Two
-decisions shaped it:
+was retired). Full detail + the W1–W8 ladder live in the retired working doc
+`guide/archive/ux_theme.md`; the shipped behaviour is specced in
+`spec/settings_inventory.md` §7 (`rrw-theme`) + `spec/visual_style_rrw.md`
+("Light / dark mode"). Two decisions shaped it:
 
 - **Chrome, not settings** — participants never see `/operator/settings`, so a
   settings-only control can't reach them. The toggle becomes a shared
@@ -278,7 +280,7 @@ decisions shaped it:
   `prefers-color-scheme` block.
 
 Everything else (browser-local mechanism, the W1–W8 ladder) stands. The full,
-current plan lives in **`guide/ux_theme.md`** ("UX placement — settled" + the
+full record lives in **`guide/archive/ux_theme.md`** ("UX placement — settled" + the
 punch-list). The scaffold history below is kept for reference but the settings
 card is no longer the deliverable.
 
@@ -310,7 +312,7 @@ layout so the two "personal preference" cards sit side by side.
 
 ### The wiring (follow-up slices)
 
-> **Sweep + punch-list: `guide/ux_theme.md`.** That doc records the full
+> **Sweep + punch-list: `guide/archive/ux_theme.md`.** That doc records the full
 > theming sweep (base.html's 28 tokens + 118 remaining raw-hex usages, the
 > non-base light-islands, and the undefined shadow-token vocab on the
 > instruments page) and the W1–W8 code punch-list. **Purely browser-local
@@ -469,6 +471,13 @@ Landing place for further small operator-facing refinements. Log new ones
 here as `Item N` with the same problem / decision / scope / done-when shape,
 and keep each a self-contained slice. The user will populate this list as
 refinements are identified.
+
+- **Dark-mode input background (from Item 2 QA).** In dark mode form controls
+  use `var(--bg-page)`, so `<input>` / `<select>` / `<textarea>` sit at the same
+  near-black as the page canvas and are delineated only by their border. A
+  dedicated input-background token (a step lighter than `--bg-page`, e.g. near
+  `--bg-card`) applied to `body.ui-v2 input/select/textarea` would lift them.
+  Light unaffected (input bg would resolve to white as today). Small, isolated.
 
 ---
 
