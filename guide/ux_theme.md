@@ -199,5 +199,16 @@ block yet; the palette lives only in the preview harness).
   + 19 new). The only remaining raw-hex light-island is **`error.html`**
   (7 hexes, standalone doc) — that is W7. Every base-extending template themes
   off tokens.
-- ☐ W4 (dark palette) / W5 (no-FOUC script) / W6 (toggle) / W7 (error.html) /
-  W8 (verify) — not started.
+- ✅ **W4 — dark palette in base.html.** The harness-tuned dark values (sign-off
+  2026-08-21) ported into `:root[data-theme="dark"]` (47 tokens), with
+  `color-scheme: light` / `dark` on the two states and `background:
+  var(--bg-page)` on `html` + `body`. `.session-nav-grid`'s local
+  `--tab-marker-color` now derives from `--accent-blue-marker` so the nav marker
+  themes (a component-scoped property the `:root` block couldn't reach). Light
+  unchanged.
+- ✅ **W5 — no-FOUC head script.** Synchronous `<script>` before `<style>` in
+  `<head>`; reads `localStorage["rrw-theme"]`, stamps `data-theme="dark"` before
+  first paint (try/catch for blocked storage). `node --check` passes.
+- ☐ W6 (chrome toggle + retire settings card) / W7 (error.html) / W8 (verify)
+  — pending. Dark now renders for anyone with `rrw-theme=dark` in storage; the
+  W6 pill is what makes it reachable. Real-page colour is dev-slot QA (W8).

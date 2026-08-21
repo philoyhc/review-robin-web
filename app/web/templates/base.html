@@ -6,6 +6,21 @@
     {# Favicon: inline SVG data URI. Edit the emoji or the SVG markup below to change it. #}
     <link rel="icon" type="image/svg+xml"
           href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+    {# No-FOUC theme script (W5) — synchronous, before <style>, so the
+       viewer's saved Dark choice is applied before first paint (no flash).
+       Browser-local only: reads localStorage["rrw-theme"]; only "dark"
+       stamps data-theme, everything else (incl. absent) stays the light
+       :root default. Wrapped in try/catch — private-mode / disabled storage
+       must not break the page. Chrome toggle (W6) writes the key. #}
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("rrw-theme") === "dark") {
+            document.documentElement.setAttribute("data-theme", "dark");
+          }
+        } catch (e) { /* storage blocked — stay on light */ }
+      })();
+    </script>
     <style>
       /* ──────────────────────────────────────────────────────────
          Design tokens — palette / type / spacing / radii.
@@ -14,6 +29,7 @@
          is the source of truth for these values.
          ────────────────────────────────────────────────────────── */
       :root {
+        color-scheme: light;
         /* Neutrals */
         --bg-page: #ffffff;
         --bg-card: #ffffff;      /* raised surface (cards, panels) — darkens in dark mode */
@@ -87,12 +103,68 @@
         --radius-card: 8px;
         --radius-pill: 9999px;
       }
-      html { font-size: 100%; }
+      /* Dark palette — overrides the light :root values above when the
+         viewer picks Dark (chrome toggle, W6) or the no-FOUC head script
+         stamps data-theme="dark". Two-state model: Light is the bare
+         :root; there is no prefers-color-scheme block. Tuned in
+         guide/theme_preview.html. */
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg-page: #0f141b;
+        --bg-card: #1a212e;
+        --text-on-accent: #ffffff;
+        --text-on-amber: #111827;
+        --bg-muted: #232c3b;
+        --border-subtle: #2b3547;
+        --border-default: #3a465c;
+        --neutral-marker: #3a465c;
+        --text-primary: #e6eaf2;
+        --text-secondary: #a9b4c6;
+        --text-muted: #6f7b8e;
+        --accent-blue: #4b8bf5;
+        --accent-blue-bg: #16324f;
+        --accent-blue-bg-soft: #12283f;
+        --accent-blue-bg-faint: #0e1c2c;
+        --accent-blue-light: #60a5fa;
+        --accent-blue-dark: #93c5fd;
+        --accent-blue-marker: #3b82f6;
+        --accent-blue-strong: #93c5fd;
+        --accent-green: #34d399;
+        --accent-green-bg: #0f3d2e;
+        --accent-green-marker: #065f46;
+        --accent-green-text: #6ee7b7;
+        --accent-green-bg-faint: #0c2419;
+        --accent-amber: #fbbf24;
+        --accent-amber-bg: #3a2c0a;
+        --accent-amber-bg-mid: #4a3a10;
+        --accent-amber-dark: #fcd34d;
+        --accent-amber-border: #b45309;
+        --accent-red: #f87171;
+        --accent-red-bg: #3d1a1a;
+        --accent-red-soft: #ef4444;
+        --accent-red-strong: #f87171;
+        --accent-red-text: #fca5a5;
+        --accent-violet-bg: #2e2250;
+        --accent-violet-text: #c4b5fd;
+        --accent-sky-bg: #0c2f42;
+        --accent-sky-text: #7dd3fc;
+        --danger-bg: #3d1a1a;
+        --danger-border: #7f2a2a;
+        --danger-text: #fca5a5;
+        --instrument-tint-1: #0e1a24;
+        --instrument-tint-2: #0e1f18;
+        --instrument-tint-3: #191527;
+        --instrument-tint-4: #241a10;
+        --instrument-tint-5: #241318;
+        --instrument-tint-6: #221d0e;
+      }
+      html { font-size: 100%; background: var(--bg-page); }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         margin: 40px;
         max-width: 1400px;
         color: var(--text-primary);
+        background: var(--bg-page);
         line-height: 1.35;
       }
       body.narrow { max-width: 800px; }
@@ -581,7 +653,9 @@
         display: grid;
         grid-template-columns: minmax(180px, 220px) auto 1fr;
         grid-template-rows: auto auto;
-        --tab-marker-color: #93c5fd;
+        /* Themeable: --accent-blue-marker is #93c5fd in light and darkens
+           under [data-theme="dark"], so the nav marker follows the theme. */
+        --tab-marker-color: var(--accent-blue-marker);
       }
       /* Home anchor: spans both rows on the left, blue tint,
          shows a single centered "Session Home" label. (Session
