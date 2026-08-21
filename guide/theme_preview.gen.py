@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""Generate guide/theme_preview.html — a standalone dark-mode design harness.
+"""Generate guide/theme_preview.html — a standalone theme-preview harness.
 
-Lifts the REAL `<style>` block from app/web/templates/base.html (so the
-component CSS is faithful, not a hand-copy), appends a DRAFT dark palette under
-the three guarded blocks from guide/ux_theme.md, and renders a component gallery
-plus a colour-token swatch grid. Open the output in a browser; the toolbar flips
-`data-theme` on <html> so you can compare System / Light / Dark live.
+Lifts the REAL `<style>` block from app/web/templates/base.html (so both the
+component CSS *and* the light/dark palette are faithful, not a hand-copy) and
+renders a component gallery + colour-token swatch grid. Open the output in a
+browser; the toolbar flips `data-theme` on <html> to compare Light / Dark live.
 
-This is a design tool for Segment 19C Item 2 (W4). It is NOT production code and
-NOT wired into the app. When the dark palette is finalised here, port the token
-values into base.html's `:root` guarded blocks (that is W4 proper). Regenerate
-after any base.html style change:  python3 guide/theme_preview.gen.py
+Dark mode shipped in Segment 19C Item 2, so base.html is the source of truth —
+this harness is a faithful *preview* of it (no separate palette that can drift).
+It stays around as a design surface for future theme work:
 
-The DRAFT dark values below are a first cut — tune them, then re-run.
+  * To prototype a new theme (e.g. sepia) BEFORE touching the app, drop a
+    `:root[data-theme="sepia"] { ... }` block into EXTRA_THEME_CSS below and add
+    a matching `<button data-set="sepia">` to the toolbar; the gallery + swatches
+    preview it immediately. Port the values into base.html once you're happy.
+
+Regenerate after any base.html style change:  python3 guide/theme_preview.gen.py
+Not production code; not wired into the app.
 """
 import re
 import pathlib
@@ -35,105 +39,30 @@ for line in base_css.splitlines():
     tm = re.match(r"\s*(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8});", line)
     if tm:
         tokens.append((tm.group(1), tm.group(2)))
-colour_tokens = [(n, v) for n, v in tokens]  # every token in :root is a colour here
+# base.html now defines each token twice (light :root + the dark
+# :root[data-theme="dark"] block); keep the first (light) value per name so the
+# swatch grid lists each token once with its light reference value.
+colour_tokens = []
+_seen = set()
+for _n, _v in tokens:
+    if _n not in _seen:
+        _seen.add(_n)
+        colour_tokens.append((_n, _v))
 
-# 3. DRAFT dark palette (W4 starter). Tune these. Tokens named *-dark / *-strong /
-#    *-text that are DARK text on a LIGHT surface invert to LIGHT text on a dark
-#    surface; *-bg tints become dark solids; core accents brighten for contrast.
-DARK = {
-    # Neutrals
-    "--bg-page": "#0f141b",
-    "--bg-card": "#1a212e",
-    "--text-on-accent": "#ffffff",
-    "--text-on-amber": "#111827",  # black label on the light-amber Alert fill in dark
-
-    "--bg-muted": "#232c3b",
-    "--border-subtle": "#2b3547",
-    "--border-default": "#3a465c",
-    "--neutral-marker": "#3a465c",
-    "--text-primary": "#e6eaf2",
-    "--text-secondary": "#a9b4c6",
-    "--text-muted": "#6f7b8e",
-    # Blue
-    "--accent-blue": "#4b8bf5",
-    "--accent-blue-bg": "#16324f",
-    "--accent-blue-bg-soft": "#12283f",
-    "--accent-blue-bg-faint": "#0e1c2c",
-    "--accent-blue-light": "#60a5fa",
-    "--accent-blue-dark": "#93c5fd",
-    "--accent-blue-marker": "#3b82f6",
-    "--accent-blue-strong": "#93c5fd",
-    # Green
-    "--accent-green": "#34d399",
-    "--accent-green-bg": "#0f3d2e",
-    "--accent-green-marker": "#065f46",
-    "--accent-green-text": "#6ee7b7",
-    "--accent-green-bg-faint": "#0c2419",
-    # Amber
-    "--accent-amber": "#fbbf24",
-    "--accent-amber-bg": "#3a2c0a",
-    "--accent-amber-bg-mid": "#4a3a10",
-    "--accent-amber-dark": "#fcd34d",
-    "--accent-amber-border": "#b45309",
-    # Red
-    "--accent-red": "#f87171",
-    "--accent-red-bg": "#3d1a1a",
-    "--accent-red-soft": "#ef4444",
-    "--accent-red-strong": "#f87171",
-    "--accent-red-text": "#fca5a5",
-    # Violet / sky
-    "--accent-violet-bg": "#2e2250",
-    "--accent-violet-text": "#c4b5fd",
-    "--accent-sky-bg": "#0c2f42",
-    "--accent-sky-text": "#7dd3fc",
-    # Soft inline-error
-    "--danger-bg": "#3d1a1a",
-    "--danger-border": "#7f2a2a",
-    "--danger-text": "#fca5a5",
-    # Instrument tints (dark, subtly hued)
-    "--instrument-tint-1": "#0e1a24",
-    "--instrument-tint-2": "#0e1f18",
-    "--instrument-tint-3": "#191527",
-    "--instrument-tint-4": "#241a10",
-    "--instrument-tint-5": "#241318",
-    "--instrument-tint-6": "#221d0e",
-    # Misc
-    "--tab-marker-color": "#3b82f6",
-}
-missing = [n for n, _ in colour_tokens if n not in DARK]
-if missing:
-    raise SystemExit(f"DRAFT dark palette missing tokens: {missing}")
-
-dark_decls = "\n".join(f"      {n}: {v};" for n, v in DARK.items())
-dark_block = f"""
-    /* ================= DRAFT DARK PALETTE (W4 starter — TUNE ME) =================
-       First-cut dark values. Not yet ported to base.html. Edit here, re-run
-       guide/theme_preview.gen.py, refresh the browser. When happy, copy these
-       into base.html's `:root[data-theme="dark"]` block.
-       Two-state model (System dropped 2026-08-20): the default is Light
-       (`:root`), Dark is an explicit `data-theme="dark"` — no
-       `prefers-color-scheme` / OS-follow. `color-scheme` still tracks the
-       active theme so native surfaces (scrollbar, canvas) follow. */
-    :root {{ color-scheme: light; }}
-    :root[data-theme="dark"] {{
-      color-scheme: dark;
-{dark_decls}
-    }}
-"""
+# 3. Optional extra theme blocks to PROTOTYPE here before porting to base.html.
+#    base.html already ships light (:root) + dark (:root[data-theme="dark"]),
+#    both lifted verbatim above, so nothing is needed for the live preview. To
+#    preview a new theme, add its block here and a matching toolbar button, e.g.:
+#      EXTRA_THEME_CSS = ':root[data-theme="sepia"] { color-scheme: light; --bg-page: #f4ecd8; ... }'
+EXTRA_THEME_CSS = ""
 
 # 4. Harness-only chrome CSS (toolbar + gallery layout + a stand-in for
 #    .save-error-banner, which lives in the instruments template not base.html).
 harness_css = """
     /* ---- harness-only (not part of the app) ---- */
-    /* Paint the page canvas itself so the WHOLE page reflects the theme, not
-       just the elements that carry their own background. NB: base.html's real
-       `body` rule sets no background — W4 must add `background: var(--bg-page)`
-       there for the same reason.
-       `color-scheme` (set in the palette blocks above) makes the browser paint
-       its NATIVE surfaces — scrollbars, the canvas beyond the content,
-       overscroll, form controls — in the active theme; without it the html/body
-       background is dark but the scrollbar gutter + canvas stay light, so the
-       page reads as only-partly-dark. W4 needs `color-scheme` on base.html too. */
+    /* Full-bleed page: override base.html's body margin so the sticky toolbar
+       spans the width. base.html's lifted style already themes html/body
+       (background + color-scheme), so nothing else is needed here. */
     html { background: var(--bg-page); }
     body.ui-v2 {
       margin: 0;
@@ -198,7 +127,7 @@ body = f"""
       <button data-set="light" aria-pressed="true">Light</button>
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
-    <span class="ph-note">Faithful snapshot of base.html @ {{SHA}} + a DRAFT dark palette. Design tool only — not wired into the app.</span>
+    <span class="ph-note">Faithful live preview of base.html's real light / dark palette. Design tool only — not wired into the app.</span>
   </div>
 
   <div class="ph-body">
@@ -382,9 +311,6 @@ body = f"""
   </script>
 """
 
-SHA = "f0b1f4f"  # base.html snapshot commit; bump when regenerating
-body = body.replace("{SHA}", SHA)
-
 html = f"""<!doctype html>
 <html lang="en">
   <head>
@@ -392,10 +318,10 @@ html = f"""<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Review Robin — dark-mode preview</title>
     <!-- GENERATED by guide/theme_preview.gen.py — do not edit by hand.
-         Faithful snapshot of base.html's <style> + a DRAFT dark palette.
-         Design tool for Segment 19C Item 2 (W4); not wired into the app. -->
+         Faithful live preview of base.html's <style> (light + dark). A
+         design tool for theme work; not wired into the app. -->
     <style>{base_css}
-{dark_block}
+{EXTRA_THEME_CSS}
 {harness_css}
     </style>
   </head>
