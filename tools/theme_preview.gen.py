@@ -27,8 +27,12 @@ OUT = ROOT / "tools/theme_preview.html"
 
 src = BASE.read_text(encoding="utf-8")
 
-# 1. Lift the <style>…</style> body verbatim (Jinja-free — verified).
-m = re.search(r"<style>(.*?)</style>", src, re.DOTALL)
+# 1. Lift the real <style>…</style> body verbatim (Jinja-free — verified).
+#    Anchor on the <style> TAG at line start, not the first literal "<style>":
+#    base.html's head comments mention "<style>" in prose (e.g. the no-FOUC
+#    note "before <style>, so ..."), and a bare `<style>` match grabs that,
+#    dragging a <script> block into the lifted CSS and corrupting the parse.
+m = re.search(r"(?m)^[ \t]*<style>[ \t]*\n(.*?)</style>", src, re.DOTALL)
 if not m:
     raise SystemExit("Could not find <style> block in base.html")
 base_css = m.group(1)
