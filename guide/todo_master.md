@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — in progress; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 in progress (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21, W8 dev-slot QA pending (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2207,18 +2207,18 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   roster's wipe-and-replace). New `app/services/field_label_csv.py` +
   `field_labels.apply_import`; parsers capture, extracts emit, saves reconcile
   (threaded through the routes **and** rehydrate). Full suite green.
-- **Item 2 (in progress)** — **light / dark Display mode.** Browser-local
-  (`localStorage` + `data-theme` on `<html>`, no DB). **Retargeted 2026-08-21:**
-  the control is a **chrome two-segment pill `[☀ Light | 🌙 Dark]`** (shared
-  `_partials/theme_toggle.html` in all three top bars — reaches participants,
-  who can't see `/operator/settings`), and the scaffolded settings Display-mode
-  card is to be **retired**; **System dropped** (2026-08-20) → two states,
-  default Light. Depends on a dark palette: a `base.html` tokenise sweep then a
-  `:root[data-theme="dark"]` block + `color-scheme` + `body{background}` + a
-  no-FOUC head script. PR ladder: scaffold ✅ → tokenise ✅ → dark palette →
-  wire (chrome pill + retire card). Tokenise (W1–W3) + the in-repo preview
-  harness shipped 2026-08-20 (PRs #2014–#2019); dark palette + toggle still
-  pending (`guide/ux_theme.md`).
+- **Item 2 (✅ shipped 2026-08-21; W8 dev-slot QA pending)** — **light / dark
+  Display mode.** Browser-local (`localStorage["rrw-theme"]` + `data-theme` on
+  `<html>`, no DB), two states (default Light; **System dropped** 2026-08-20).
+  A **chrome two-segment pill `[☀ Light | 🌙 Dark]`** (shared
+  `_partials/theme_toggle.html` in the operator chrome + reviewer top bar —
+  reaches participants, who can't see `/operator/settings`); the scaffolded
+  settings Display-mode card was retired. Under the hood: the `base.html`
+  tokenise sweep (W1–W3), a `:root[data-theme="dark"]` palette + `color-scheme`
+  + `html`/`body` canvas background (W4), a no-FOUC head script (W5), the chrome
+  pill (W6), and `error.html` self-theming (W7). Shipped across PRs #2014–#2019
+  (tokenise + harness), #2029 (W4+W5), #2030 (W6), + W7. Detail:
+  `guide/ux_theme.md`. Only W8 (dev-slot colour pass) remains.
 - **Item 3 (✅ shipped 2026-08-20)** — **Danger Zone hardening.** Three
   Session-Home Danger-Zone refinements: the card adopts the lock-card amber
   surface (border + `accent-amber-bg` infill + amber H2), unifying the two

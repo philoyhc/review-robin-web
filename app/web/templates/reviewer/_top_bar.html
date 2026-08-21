@@ -16,7 +16,10 @@
 #}
 <div class="chrome">
   <div class="chrome-left">
-    <span class="chrome-app-identity">Review Robin</span>
+    <div class="chrome-identity-row">
+      <span class="chrome-app-identity">Review Robin</span>
+      {% include "_partials/theme_toggle.html" %}
+    </div>
   </div>
   {% if user %}
     <div class="chrome-user">
@@ -27,7 +30,6 @@
       {% if request.url.path not in ("/about", "/auth/me/debug") %}
         <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
       {% endif %}
-      {% include "_partials/theme_toggle.html" %}
       <a class="signout" href="/.auth/logout">Sign out</a>
     </div>
   {% endif %}

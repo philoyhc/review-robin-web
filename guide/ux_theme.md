@@ -219,6 +219,17 @@ block yet; the palette lives only in the preview harness).
   returns to full-width. Verified on the real settings page in a browser: click
   → `data-theme="dark"`, canvas `#0f141b`, `aria-pressed` syncs. **Dark mode is
   now live end-to-end for operators and participants.**
-- ☐ W7 (error.html) / W8 (dev-slot QA) — pending. W7 is the standalone
-  `error.html` (own `prefers-color-scheme` block or leave light); W8 is a
-  dev-slot colour pass across representative real pages.
+- ✅ **W7 — error.html.** The standalone `error.html` (doesn't extend base.html)
+  now carries its own tiny copy of the theme machinery: the no-FOUC
+  `localStorage["rrw-theme"]` script + light/dark `--e-*` tokens under `:root`
+  / `:root[data-theme="dark"]` + `color-scheme`. Two-state, localStorage-driven
+  (no `prefers-color-scheme`) — consistent with the rest of the app. Verified in
+  a browser: `rrw-theme=dark` → body `#0f141b`.
+- ☐ **W8 — dev-slot QA.** The only remaining item: a colour pass across
+  representative real pages once deployed (a dark card, pill row, banner, table,
+  form, nav, the Danger Zone, the instruments page). The suite can't see colour.
+  **Known follow-up from QA-so-far:** form inputs use `var(--bg-page)`, so in
+  dark they sit at the same near-black as the canvas and rely on their border —
+  a dedicated input-background token would lift them.
+
+**Dark mode is shipped (W1–W7).** Only the dev-slot colour QA (W8) remains.

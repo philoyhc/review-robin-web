@@ -2628,10 +2628,16 @@
       body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
       /* Light/dark Display-mode toggle pill (chrome, W6). Two segments; the
          active side fills accent-blue. Compact; themes via tokens. */
+      /* Toggle sits inline after the app identity in the top-left chrome. */
+      .chrome-identity-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
       .theme-toggle {
         display: inline-flex;
         vertical-align: middle;
-        margin-top: var(--space-1);
         border: 1px solid var(--border-default);
         border-radius: var(--radius-pill);
         overflow: hidden;
@@ -3030,7 +3036,10 @@
     {% block top_bar %}
       <div class="chrome">
         <div class="chrome-left">
-          <span class="chrome-app-identity">Review Robin Web App (version {{ app_version }})</span>
+          <div class="chrome-identity-row">
+            <span class="chrome-app-identity">Review Robin Web App (version {{ app_version }})</span>
+            {% include "_partials/theme_toggle.html" %}
+          </div>
           {% include "_partials/breadcrumb.html" %}
         </div>
         {% if user %}
@@ -3045,7 +3054,6 @@
             {% if request.url.path not in ("/about", "/auth/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
             {% endif %}
-            {% include "_partials/theme_toggle.html" %}
             <a class="signout" href="/.auth/logout">Sign out</a>
           </div>
         {% endif %}
