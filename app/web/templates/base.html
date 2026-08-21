@@ -2626,6 +2626,34 @@
         text-decoration: none;
       }
       body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
+      /* Light/dark Display-mode toggle pill (chrome, W6). Two segments; the
+         active side fills accent-blue. Compact; themes via tokens. */
+      .theme-toggle {
+        display: inline-flex;
+        vertical-align: middle;
+        margin-top: var(--space-1);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-pill);
+        overflow: hidden;
+      }
+      .theme-toggle-opt {
+        font: inherit;
+        font-size: 0.8em;
+        line-height: 1.6;
+        cursor: pointer;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary);
+        padding: 0 10px;
+      }
+      .theme-toggle-opt + .theme-toggle-opt {
+        border-left: 1px solid var(--border-default);
+      }
+      .theme-toggle-opt[aria-pressed="true"] {
+        background: var(--accent-blue);
+        color: var(--text-on-accent);
+      }
+      .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-primary); }
       /* Reviewer top-bar variant — lighter chrome for reviewer-facing
          pages per spec/visual_style_rrw.md "Reviewer-facing pages →
          Top bar". Lighter "Review Robin" identity (no version), no
@@ -3017,6 +3045,7 @@
             {% if request.url.path not in ("/about", "/auth/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
             {% endif %}
+            {% include "_partials/theme_toggle.html" %}
             <a class="signout" href="/.auth/logout">Sign out</a>
           </div>
         {% endif %}
@@ -3408,6 +3437,41 @@
           cb.addEventListener("change", sync);
           sync();
         });
+      })();
+    </script>
+    {# Light/dark toggle (W6) — browser-local. The no-FOUC head script already
+       set data-theme before paint; here we (a) reflect the current theme in the
+       pill's aria-pressed on load, and (b) on click write localStorage +
+       flip data-theme live. Light = remove data-theme (bare :root). #}
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var opts = document.querySelectorAll(".theme-toggle-opt");
+        if (!opts.length) return;
+        function currentMode() {
+          return root.getAttribute("data-theme") === "dark" ? "dark" : "light";
+        }
+        function sync() {
+          var mode = currentMode();
+          Array.prototype.forEach.call(opts, function (b) {
+            b.setAttribute(
+              "aria-pressed",
+              b.getAttribute("data-theme-choice") === mode ? "true" : "false"
+            );
+          });
+        }
+        function apply(mode) {
+          if (mode === "dark") root.setAttribute("data-theme", "dark");
+          else root.removeAttribute("data-theme");
+          try { localStorage.setItem("rrw-theme", mode); } catch (e) { /* ignore */ }
+          sync();
+        }
+        Array.prototype.forEach.call(opts, function (b) {
+          b.addEventListener("click", function () {
+            apply(b.getAttribute("data-theme-choice"));
+          });
+        });
+        sync();
       })();
     </script>
   </body>

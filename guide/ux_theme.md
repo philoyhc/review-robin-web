@@ -209,6 +209,16 @@ block yet; the palette lives only in the preview harness).
 - ✅ **W5 — no-FOUC head script.** Synchronous `<script>` before `<style>` in
   `<head>`; reads `localStorage["rrw-theme"]`, stamps `data-theme="dark"` before
   first paint (try/catch for blocked storage). `node --check` passes.
-- ☐ W6 (chrome toggle + retire settings card) / W7 (error.html) / W8 (verify)
-  — pending. Dark now renders for anyone with `rrw-theme=dark` in storage; the
-  W6 pill is what makes it reachable. Real-page colour is dev-slot QA (W8).
+- ✅ **W6 — chrome toggle + settings card retired.** A shared
+  `_partials/theme_toggle.html` two-segment pill `[☀ Light | 🌙 Dark]` in the
+  `.chrome-user` of base.html's operator chrome + `reviewer/_top_bar.html`
+  (which also covers `review_surface.html` via its `super()` / include). Pill
+  JS reflects the current `data-theme` on load and, on click, writes
+  `localStorage["rrw-theme"]` + flips `data-theme` (Light = remove the attr).
+  The `/operator/settings` Display-mode card was removed and Date & time
+  returns to full-width. Verified on the real settings page in a browser: click
+  → `data-theme="dark"`, canvas `#0f141b`, `aria-pressed` syncs. **Dark mode is
+  now live end-to-end for operators and participants.**
+- ☐ W7 (error.html) / W8 (dev-slot QA) — pending. W7 is the standalone
+  `error.html` (own `prefers-color-scheme` block or leave light); W8 is a
+  dev-slot colour pass across representative real pages.
