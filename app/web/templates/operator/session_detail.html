@@ -518,4 +518,36 @@
       </div>
     </div>
   </div>
+
+  {# Danger-zone coupling (progressive enhancement) — deleting the whole
+     session subsumes deleting its data, so ticking "Delete session" marks the
+     "Delete data" confirm as selected + inactive (its button disabled too),
+     and unticking restores it. Ticking "Delete data" leaves "Delete session"
+     untouched — the relationship is one-directional. With no JS the two forms
+     stay independent and the server still wipes all data on session delete. #}
+  <script>
+    // danger-zone: session-delete subsumes data-delete (one-directional)
+    (function () {
+      var sessionCb = document.querySelector('[data-delete-confirm="delete-session"]');
+      var dataCb = document.querySelector('[data-delete-confirm="delete-data"]');
+      var dataBtn = document.querySelector('[data-delete-btn="delete-data"]');
+      if (!sessionCb || !dataCb || !dataBtn) return;
+      var dataDisabledInitially = dataCb.disabled;
+      sessionCb.addEventListener("change", function () {
+        if (sessionCb.checked) {
+          // Session delete includes the data — show it selected but inert.
+          dataCb.checked = true;
+          dataCb.disabled = true;
+          dataBtn.disabled = true;
+          dataBtn.setAttribute("aria-disabled", "true");
+        } else {
+          // Restore Delete data to its own (unchecked) state.
+          dataCb.checked = false;
+          dataCb.disabled = dataDisabledInitially;
+          dataBtn.disabled = true;
+          dataBtn.setAttribute("aria-disabled", "true");
+        }
+      });
+    })();
+  </script>
 {% endblock %}

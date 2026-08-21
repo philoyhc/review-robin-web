@@ -523,6 +523,25 @@ def test_delete_data_wipes_responses_and_preserves_setup(
     assert audit.session_id == review_session.id
 
 
+def test_danger_zone_delete_coupling_script_present(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Progressive-enhancement coupling: ticking Delete session marks Delete
+    data selected + inactive (one-directional). The behaviour is inline JS the
+    suite can't execute, so assert both confirm checkboxes and the coupling
+    script render — a regression that drops the wiring is caught here."""
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="dz-couple", reviewer_email="r@example.edu"
+    )
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    assert 'data-delete-confirm="delete-session"' in body
+    assert 'data-delete-confirm="delete-data"' in body
+    assert "session-delete subsumes data-delete" in body
+
+
 def test_edit_session_details_succeeds_with_responses_present(
     db: Session,
     alice: AuthenticatedUser,
