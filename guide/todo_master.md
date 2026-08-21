@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — in progress; Item 1 ✅ shipped 2026-08-20; Item 2 in progress (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — in progress; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 in progress (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2214,7 +2214,31 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   then wiring. Wiring is browser-local (`localStorage` + `data-theme` on
   `<html>`, no DB), and depends on a dark palette — a `base.html` tokenise
   sweep (~167 stray hexes → tokens) then dark token blocks + a no-FOUC head
-  script. PR ladder: scaffold → tokenise → dark palette → wire.
+  script. PR ladder: scaffold → tokenise → dark palette → wire. Tokenise
+  (W1–W3) + the in-repo preview harness shipped 2026-08-20 (PRs #2014–#2019);
+  dark palette + wiring still pending (`guide/ux_theme.md`).
+- **Item 3 (✅ shipped 2026-08-20)** — **Danger Zone hardening.** Three
+  Session-Home Danger-Zone refinements: the card adopts the lock-card amber
+  surface (border + `accent-amber-bg` infill + amber H2), unifying the two
+  "needs care" cards (#2025); **Delete Data** is now lifecycle-gated like Delete
+  session (confirm checkbox disabled while Activated + `_require_editable` on
+  `/delete-data`) — a pause-first workflow, since responses only exist once
+  Activated and revert preserves them (#2026); and the two confirms are coupled
+  one-directionally — ticking **Delete session** marks **Delete data**
+  selected + inactive, while ticking Delete data leaves Delete session available
+  (progressive-enhancement JS, #2027). Session Home is the only multi-action
+  danger zone — every other (`reviewers`/`reviewees`/`relationships`/`observers`
+  delete-all, settings Clear-all, reviewer Clear-all) is single-button. Specs
+  updated (`session_home.md`, `operator_button_audit.md`, `visual_style_rrw.md`
+  / `visual_style_general.md`). Full suite green.
+- **Item 4 (✅ shipped 2026-08-20)** — **Button treatment refinements.** Two
+  fixes surfaced by the dark-mode preview harness: the **Secondary** button
+  outline moves from the very-light `border-default` to `text-secondary`
+  (a medium grey a shade lighter than the `text-primary` label) (#2023); and the
+  filled-amber **Alert** button (`.btn.danger-solid`) gets a new
+  `--text-on-amber` label token — white in light (unchanged), dark in dark mode
+  where the amber fill lightens (#2024). `base.html` + `spec/ui_elements.md` §6.
+  Full suite green.
 
 ---
 

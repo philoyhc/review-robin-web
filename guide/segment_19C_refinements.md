@@ -468,3 +468,10 @@ refinements are identified.
   Display mode card + `data-theme` theming primitive (Item 2, on wiring).
 - `spec/settings_inventory.md` — the browser-local `data-theme` UI-state
   primitive (Item 2, on wiring).
+- `spec/session_home.md` — Delete Data locked-while-Activated (pause-first) +
+  the Delete-session⊇Delete-data confirm coupling; `spec/operator_button_audit.md`
+  — the Delete Data lifecycle gate; `spec/visual_style_rrw.md` /
+  `spec/visual_style_general.md` — the danger-zone card adopts the lock-card
+  amber surface (done — Item 3).
+- `spec/ui_elements.md` §6 — Secondary outline (`text-secondary`) + the Alert
+  button's `--text-on-amber` label token (done — Item 4).

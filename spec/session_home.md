@@ -344,6 +344,18 @@ Activated — pause it first."
 Both confirm checkboxes are `required`, so the destructive submit
 is blocked without JavaScript unless the operator ticks the box.
 
+**Confirm coupling (progressive enhancement).** Deleting the whole
+session subsumes deleting its data, so ticking **Delete session**
+marks the **Delete data** confirm as selected + inactive — its
+checkbox goes checked + disabled and its button disabled; unticking
+restores it (to its own disabled-while-Activated state). The
+relationship is one-directional: ticking **Delete data** leaves
+**Delete session** untouched and still selectable. Inline JS on
+Session Home, acting at click-time so it cooperates with the
+app-wide disabled-until-checked handler; with no JS the two forms
+stay independent and the server still wipes all data on session
+delete.
+
 ### 4. Session details card (full-width, below Workflow)
 
 **Segment 18R Item 4 consolidated the session config display
