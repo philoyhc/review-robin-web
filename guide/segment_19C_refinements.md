@@ -262,9 +262,10 @@ carrier.
 
 ## Item 2 — Light / dark Display mode (chrome toggle)
 
-**Status: in progress. Retargeted 2026-08-21 — the control moves from a
-`/operator/settings` card to a *chrome toggle*, and the scaffolded settings
-card is to be retired.** Two decisions changed the shape below:
+**Status: ✅ shipped 2026-08-21 (W1–W7); W8 dev-slot colour QA pending.** The
+control landed as a *chrome toggle* (not the `/operator/settings` card, which
+was retired). Full detail + the W1–W8 ladder live in `guide/ux_theme.md`. Two
+decisions shaped it:
 
 - **Chrome, not settings** — participants never see `/operator/settings`, so a
   settings-only control can't reach them. The toggle becomes a shared
