@@ -2207,16 +2207,18 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   roster's wipe-and-replace). New `app/services/field_label_csv.py` +
   `field_labels.apply_import`; parsers capture, extracts emit, saves reconcile
   (threaded through the routes **and** rehydrate). Full suite green.
-- **Item 2 (in progress)** — **settings-page Display mode card.** Make the
-  Date & time card half-width flush-left and add a half-width flush-right
-  **Display mode** card (System / Light / Dark) beside it on
-  `/operator/settings`. Scaffold-first: layout + placeholder card land first,
-  then wiring. Wiring is browser-local (`localStorage` + `data-theme` on
-  `<html>`, no DB), and depends on a dark palette — a `base.html` tokenise
-  sweep (~167 stray hexes → tokens) then dark token blocks + a no-FOUC head
-  script. PR ladder: scaffold → tokenise → dark palette → wire. Tokenise
-  (W1–W3) + the in-repo preview harness shipped 2026-08-20 (PRs #2014–#2019);
-  dark palette + wiring still pending (`guide/ux_theme.md`).
+- **Item 2 (in progress)** — **light / dark Display mode.** Browser-local
+  (`localStorage` + `data-theme` on `<html>`, no DB). **Retargeted 2026-08-21:**
+  the control is a **chrome two-segment pill `[☀ Light | 🌙 Dark]`** (shared
+  `_partials/theme_toggle.html` in all three top bars — reaches participants,
+  who can't see `/operator/settings`), and the scaffolded settings Display-mode
+  card is to be **retired**; **System dropped** (2026-08-20) → two states,
+  default Light. Depends on a dark palette: a `base.html` tokenise sweep then a
+  `:root[data-theme="dark"]` block + `color-scheme` + `body{background}` + a
+  no-FOUC head script. PR ladder: scaffold ✅ → tokenise ✅ → dark palette →
+  wire (chrome pill + retire card). Tokenise (W1–W3) + the in-repo preview
+  harness shipped 2026-08-20 (PRs #2014–#2019); dark palette + toggle still
+  pending (`guide/ux_theme.md`).
 - **Item 3 (✅ shipped 2026-08-20)** — **Danger Zone hardening.** Three
   Session-Home Danger-Zone refinements: the card adopts the lock-card amber
   surface (border + `accent-amber-bg` infill + amber H2), unifying the two

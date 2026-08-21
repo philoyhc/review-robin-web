@@ -260,9 +260,28 @@ carrier.
 
 ---
 
-## Item 2 — Settings page: Display mode (light / dark) card
+## Item 2 — Light / dark Display mode (chrome toggle)
 
-**Status: in progress — scaffold slice landing first (this plan + the
+**Status: in progress. Retargeted 2026-08-21 — the control moves from a
+`/operator/settings` card to a *chrome toggle*, and the scaffolded settings
+card is to be retired.** Two decisions changed the shape below:
+
+- **Chrome, not settings** — participants never see `/operator/settings`, so a
+  settings-only control can't reach them. The toggle becomes a shared
+  `_partials/theme_toggle.html` **two-segment pill `[☀ Light | 🌙 Dark]`** in the
+  `.chrome-user` of all three top bars (operator chrome, `reviewer/_top_bar.html`,
+  `review_surface.html`). The scaffolded settings Display-mode card + its test
+  are removed as part of the wiring slice.
+- **Two states, not three** — the `System` / OS-follow option was dropped
+  (2026-08-20); default is Light, Dark is an explicit `data-theme="dark"`, no
+  `prefers-color-scheme` block.
+
+Everything else (browser-local mechanism, the W1–W8 ladder) stands. The full,
+current plan lives in **`guide/ux_theme.md`** ("UX placement — settled" + the
+punch-list). The scaffold history below is kept for reference but the settings
+card is no longer the deliverable.
+
+**Original status (historical): scaffold slice landing first (this plan + the
 placeholder card).**
 
 ### The opportunity

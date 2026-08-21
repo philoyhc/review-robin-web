@@ -103,7 +103,7 @@ those already consume tokens). Priorities:
 | **W3** | Tokenise the minor templates' few raw hexes. | `reviewer/results.html`, `sys_admin_session_audit_log.html`, `session_observers.html`, `session_extract_data.html` | Small. |
 | **W4** | **Dark palette** — dark values for the full token set under `:root[data-theme="dark"]` (single block), plus `color-scheme` on both states and `body { background: var(--bg-page) }`. Tune in the preview harness first. | `base.html` | **Needs dev-slot visual QA** — colour correctness across cards / pills / banners / tables / forms / nav / danger zones can't be verified by the test suite. Any raw-hex site left after W1–W3 shows as a light island. |
 | **W5** | **No-FOUC head script** — synchronous `<script>` at the top of `<head>`. | `base.html` | Small; `node --check` in tests. |
-| **W6** | **Toggle control + JS** — a 2-way Light / Dark control (placeholder buttons or chrome), wiring `localStorage` + `data-theme` + `aria-pressed`. Light = remove `data-theme`; Dark = set it. | placement TBD (see below) + inline JS | Small; the only placement-dependent piece. |
+| **W6** | **Chrome toggle + JS + retire settings card** — a shared `_partials/theme_toggle.html` two-segment pill `[☀ Light \| 🌙 Dark]` in the `.chrome-user` of all three top-bar variants; wire `localStorage` + `data-theme` + `aria-pressed` (Light = remove `data-theme`; Dark = set it). Remove the `/operator/settings` Display-mode card + its test. | `_partials/theme_toggle.html`, `base.html`, `reviewer/_top_bar.html`, `review_surface.html`, `operator_settings.html` | Placement settled (chrome, see below). |
 | **W7** | **error.html** dark handling (own `prefers-color-scheme` block) or leave light. | `error.html` | Standalone doc; lowest priority. |
 | **W8** | Verify: `node --check` on the new inline JS; dev-slot visual QA on representative pages (a dark card, a pill row, a banner, a table, the Danger Zone, the instruments page). | tests + dev slot | The test suite can't see colour. |
 
@@ -145,12 +145,30 @@ it retires with this doc when dark mode ships.
    before any toggle; **dev-slot QA**).
 3. **Wire the toggle** — W6 (+ W7 mop-up).
 
-## Open — UX placement (set aside for now)
+## UX placement — settled (2026-08-21): chrome pill
 
-Chrome (top-right, on every page — reaches operators *and* participants) vs.
-the `/operator/settings` Display mode card (operator-only, already
-scaffolded). The code work above is identical either way except W6's host
-element. To settle later.
+**Decision: a chrome light/dark toggle, not the settings card.** The clincher
+is reach — participants never see `/operator/settings`, so a settings-only
+control can't serve them; the chrome is the only surface common to operators
+*and* participants. So:
+
+- **Control** — a shared `_partials/theme_toggle.html` include, dropped into the
+  `.chrome-user` block of all three top-bar variants: base.html's operator
+  chrome (`{% block top_bar %}`), `reviewer/_top_bar.html`, and
+  `review_surface.html`'s custom bar. (Note: `.chrome-user` is gated on
+  `{% if user %}`, so logged-out pages like `pre_open` won't show it — move it
+  to `.chrome-left` if pre-auth toggling is wanted.)
+- **Shape** — a **two-segment pill** `[ ☀ Light | 🌙 Dark ]`, active side
+  highlighted via `aria-pressed`. Two states only (System was dropped
+  2026-08-20). CSS in base.html.
+- **The `/operator/settings` Display-mode card is retired** — the chrome pill is
+  the single canonical control. This retargets Segment 19C Item 2 from "settings
+  card" to "chrome toggle" (the scaffolded card + its test get removed in W6).
+
+W6 (below) is this pill + the card removal. It stays the last step: it only
+does something once the dark palette (W4) + no-FOUC script (W5) exist — a pill
+wired before then is a dead switch (base.html has no `[data-theme="dark"]`
+block yet; the palette lives only in the preview harness).
 
 ## Status
 
