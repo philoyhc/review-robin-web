@@ -473,6 +473,14 @@ def test_delete_data_wipes_responses_and_preserves_setup(
 
     # Re-arm the operator client after _seed_responses cleared overrides.
     operator = make_client(alice)
+    # Delete Data is locked while Activated — pause (revert) first. The revert
+    # preserves every Response row, so there is still data to wipe.
+    revert = operator.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert revert.status_code == 303
     response = operator.post(
         f"/operator/sessions/{review_session.id}/delete-data",
         data={"confirm": "true"},
@@ -580,28 +588,42 @@ def test_delete_data_requires_confirm(
     assert rows == []
 
 
-def test_delete_data_allowed_in_ready_status(
+def test_delete_data_rejected_when_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """Delete Data is gated like Delete session — locked while the session is
+    Activated. Session Home renders the confirm checkbox disabled with a lock
+    note, and a direct POST (bypassing the disabled attribute) is rejected by
+    the route's ``_require_editable`` gate; the responses are left intact.
+    Pause the session first to delete data."""
     operator = make_client(alice)
     review_session, count_before = _seed_responses(operator, db)
     db.refresh(review_session)
     assert review_session.status == "ready"
+    assert count_before > 0
 
     operator = make_client(alice)
+    # UI: the lock note is present on Session Home.
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    assert "Data deletion is locked while status is Activated" in body
+
+    # Server: a direct POST is rejected by the lifecycle gate.
     response = operator.post(
         f"/operator/sessions/{review_session.id}/delete-data",
         data={"confirm": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 303
+    assert response.status_code in (400, 403, 409)
 
-    audit = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "responses.deleted_all")
-    ).scalar_one()
-    assert audit.detail["counts"]["deleted"] == count_before
+    # Responses untouched.
+    remaining = db.execute(
+        select(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == review_session.id)
+    ).all()
+    assert len(remaining) == count_before
 
 
 # ---------------------------------------------------------------------------

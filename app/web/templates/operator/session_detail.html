@@ -448,24 +448,27 @@
 
     {# Bottom-right — Danger Zone (18R Item 4 Slice 5 — wired; relocated
        from the retired Edit page). Delete Data wipes reviewer responses;
-       Delete session removes the whole session and is locked while
-       Activated (button disabled + the route's ``_require_editable`` gate).
-       Each confirm checkbox is ``required`` so the destructive submit is
-       blocked without JavaScript unless the operator ticks it. #}
+       Delete session removes the whole session. Both are locked while
+       Activated (confirm checkbox disabled + each route's
+       ``_require_editable`` gate) — pause the session first. Each confirm
+       checkbox is ``required`` so the destructive submit is blocked without
+       JavaScript unless the operator ticks it. #}
     <div class="bottom-left">
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>
         <p class="form-help">
           Delete Data wipes every reviewer response while leaving
           session setup intact. Delete session removes the entire
-          session and is locked while session is Activated.
+          session. Both are locked while the session is Activated —
+          pause it first.
         </p>
 
         <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required
-                     data-delete-confirm="delete-data">
+                     data-delete-confirm="delete-data"
+                     {% if is_ready %}disabled{% endif %}>
               Yes, delete every reviewer response on
               <strong>{{ session.name }}</strong>. Setup data is
               preserved.
@@ -476,6 +479,12 @@
                     data-delete-btn="delete-data"
                     disabled aria-disabled="true">Delete Data</button>
           </p>
+          {% if is_ready %}
+            <p class="form-help" style="margin-bottom: 0;">
+              Data deletion is locked while status is Activated.
+              Pause the session first to enable deletion.
+            </p>
+          {% endif %}
         </form>
 
         <hr>

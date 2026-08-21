@@ -119,7 +119,7 @@ bottom-right.
 |---|---|---|---|---|---|---|
 | 16 | Form card | Save changes | `<button type="submit">` | `btn` | Primary | |
 | 17 | Form card | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
-| 17a | Danger Zone (bottom-right) | Delete Data | `<button type="submit">` | `btn destructive` | Destructive | Posts `/delete-data`. Moved from Session Home 2026-05-22 (commit b490825). |
+| 17a | Danger Zone (bottom-right) | Delete Data | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete-data`; disabled while session is `ready` (confirm checkbox `disabled` + the route's `_require_editable` gate — pause first). Moved from Session Home 2026-05-22 (commit b490825); lifecycle gate added 2026-08-20. |
 | 17b | Danger Zone (bottom-right) | Delete session | `<button type="submit">` | `btn destructive` | Destructive (Disabled when Activated) | Posts `/delete`; disabled while session is `ready`. Moved from Session Home 2026-05-22 (commit b490825). |
 
 ---

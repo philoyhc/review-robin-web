@@ -318,7 +318,14 @@ The card's contents and behaviour are unchanged:
 
 - **Delete Data** — wipes all reviewer responses while preserving
   setup. Confirmation checkbox (`required`) + Destructive button.
-  POSTs to `/operator/sessions/{id}/delete-data`.
+  POSTs to `/operator/sessions/{id}/delete-data`. **Locked while
+  Activated** on the same terms as Delete Session (below): confirm
+  checkbox `disabled`, a "Data deletion is locked while status is
+  Activated" note, and the `_require_editable` gate on
+  `/delete-data`. Reviewer responses only exist once the session is
+  Activated, so deleting them is a pause-first workflow — Pause via
+  the Workflow card, delete the data (the revert preserves the
+  `Response` rows), then re-activate.
 - **Delete Session** — removes the session entirely. Confirmation
   checkbox (`required`) + Destructive button. **Visible-but-disabled
   while Activated**: the button and confirm checkbox carry the
@@ -331,8 +338,8 @@ The card's contents and behaviour are unchanged:
 
 Description copy on the card: "Delete Data wipes every reviewer
 response while leaving session setup intact. Delete session
-removes the entire session and is locked while session is
-Activated."
+removes the entire session. Both are locked while the session is
+Activated — pause it first."
 
 Both confirm checkboxes are `required`, so the destructive submit
 is blocked without JavaScript unless the operator ticks the box.
@@ -515,9 +522,9 @@ per-state rendering is unchanged.
 
 The **Danger Zone** card (Delete Data + Delete Session) returned
 to Home's bottom-right in 18R Item 4 (see §3). Its per-state
-availability: Delete Data is active in every state; Delete
-Session is active in `draft` / `validated` and visible-but-
-disabled in `ready`.
+availability: both Delete Data and Delete Session are active in
+`draft` / `validated` and visible-but-disabled in `ready`
+(Activated) — pause first to enable either.
 
 **Disabled treatment on Home is plain greying-out, not yellow
 lock cards.** The Workflow card carries any explanatory
