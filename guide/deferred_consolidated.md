@@ -901,6 +901,42 @@ it. A new `.github/workflows/` job (browser track), allowed-to-fail-soft or on
 a nightly cadence at first. Start with the instrument card (bitten twice),
 grow outward.
 
+### Operator theming
+
+#### 19C — Operator theme tweaker (Stretch)
+
+> Carved from the theme-customizer design (`guide/theme_customizer.md`
+> "Plan B — Stretch") 2026-08-22. **First** — the developer designer — is
+> scheduled as 19C Item 5; **Stretch** was split off and deferred.
+
+**Ships.**
+
+- A **Display-mode section on `/operator/settings`** where an operator tweaks
+  the light + dark themes for **their own view** — **seed controls only** (the
+  full per-token grid stays developer-only), live preview, and a hard **AA
+  contrast save-gate**.
+- **Browser-local** persistence: Save → `localStorage["rrw-theme-custom"]`; a
+  synchronous head script (placed **after** `base.html`'s `<style>` so the
+  override wins the cascade) injects it before first paint;
+  Revert-to-last-saved + Reset-to-defaults.
+- Reuses **19C Item 5's editor core** verbatim — Stretch = that core + a thin
+  app shell (page + localStorage + runtime-apply). **No database, no
+  migration** — per-browser, exactly like the light/dark choice; participants
+  (other browsers) unaffected.
+
+**Why deferred.** No demonstrated need yet, and it depends on Item 5 (the shared
+editor core) landing first. Browser-local scope is a *personal preference*, not
+branding — limited value until operators actually ask to adjust colours.
+
+**Lift trigger.** A pilot operator wants to tweak the palette (readability, mild
+brand alignment) for their own view.
+
+**Wire-up.** `guide/theme_customizer.md` "Plan B — Stretch" (settings host,
+seeds-only depth, the `rrw-theme-custom` key, runtime-apply placement,
+scaffold-first slices, AA gate). A DB-backed **shared / persistent** theme
+(cross-user, pushed to participants) is a further future beyond Stretch — it's
+the only part that needs a migration (a `themes` table + scope + governance).
+
 ---
 
 ## Part B — Deferred infrastructure & platform hardening

@@ -1,10 +1,12 @@
 # Theme customizer — plan
 
-**Status: idea / not scheduled.** Records the design so it's ready to pick up.
-**Two plans that share one editor core**, sequenced so the second builds
-cleanly on the first. Both are **migration-free** (no database). A DB-backed
-"persistent / shared themes" version is noted as a further future that neither
-plan does.
+**Status:** **First** is scheduled as **Segment 19C Item 5**
+(`guide/segment_19C_refinements.md`); **Stretch** is deferred pending pilot
+feedback (`guide/deferred_consolidated.md` Part A → "Operator theming"). This
+doc is the full design for both. **Two plans that share one editor core**,
+sequenced so the second builds cleanly on the first. Both are **migration-free**
+(no database); a DB-backed "persistent / shared themes" version is a further
+future neither plan does.
 
 ## The two plans at a glance
 

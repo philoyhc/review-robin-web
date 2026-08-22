@@ -465,6 +465,35 @@ Colour correctness needs a dev-slot eyeball.
 
 ---
 
+## Item 5 — Theme customizer (developer designer) — scheduled
+
+The developer-facing half of the theme-customizer design — **full plan in
+`guide/theme_customizer.md` ("Plan A — First")**. Migration-free; lives in the
+`tools/` harness, touches nothing in `app/`. (The operator-facing **Stretch**
+half is deferred — `guide/deferred_consolidated.md` Part A "Operator theming";
+it reuses this item's editor core.)
+
+**What.** Grow the theme-preview harness into a visual **designer** for the
+light + dark palettes: seed-and-derive (OKLCH) editing with live repaint,
+contrast (AA) badges, load-from-app / a named-save library, and **export JSON**.
+The JSON's flat `tokens` map lands 1:1 on `base.html`'s `:root` /
+`:root[data-theme="dark"]` blocks, so a coding agent ports a finished design
+into the template mechanically — the dark-mode port, formalised.
+
+**Pre-step (derivation-fidelity decision).** Re-tune `base.html`'s current token
+values to be **formula-clean** — adjust the shipped light/dark palette so
+`derive(default_seed)` reproduces every token with no per-token overrides in the
+defaults. A deliberate, small visual change; author it in the harness and
+dev-slot-QA it. Land this first, then build seed-derive on a clean base.
+
+**Slices** (per `theme_customizer.md` Plan A): formula-clean pre-step →
+`tools/theme_customizer.gen.py` (+ shared `tools/_harness_common.py`) with the
+editable grid + the three controls (load-from-app / edit light+dark separately /
+save-JSON) + the named-save library → contrast badges → seeds + OKLCH
+derivation → polish.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
