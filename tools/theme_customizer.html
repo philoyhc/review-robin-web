@@ -3023,6 +3023,7 @@
     .tc-sep { width: 1px; height: 20px; background: var(--border-default); }
     .tc-status { color: var(--text-secondary); font-size: 0.8rem; }
     .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+    .tc-zone-tokens { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); }
     .tc-chip { display: flex; align-items: center; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default);
@@ -3132,6 +3133,25 @@
       </div>
     </section>
     <section class="ph-section">
+      <h2 class="ph-h">Text, links &amp; background — the tokens here colour body text, links, and the page / card / muted surfaces. Edit the ACTIVE theme.</h2>
+      <h1>Heading 1</h1>
+      <p class="page-subtitle">A page subtitle in secondary text.</p>
+      <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
+      <p class="muted">Muted helper text (.muted).</p>
+      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>
+      <div class="tc-zone-tokens">
+        <div class="tc-grid">
+        <div class="tc-chip" data-token="--bg-page"><input type="color" class="tc-color" value="#ffffff" aria-label="--bg-page colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--bg-page hex"><span class="tc-name">--bg-page</span></div>
+        <div class="tc-chip" data-token="--bg-card"><input type="color" class="tc-color" value="#ffffff" aria-label="--bg-card colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--bg-card hex"><span class="tc-name">--bg-card</span></div>
+        <div class="tc-chip" data-token="--bg-muted"><input type="color" class="tc-color" value="#f5f5f7" aria-label="--bg-muted colour"><input type="text" class="tc-hex" value="#f5f5f7" spellcheck="false" aria-label="--bg-muted hex"><span class="tc-name">--bg-muted</span></div>
+        <div class="tc-chip" data-token="--text-primary"><input type="color" class="tc-color" value="#111827" aria-label="--text-primary colour"><input type="text" class="tc-hex" value="#111827" spellcheck="false" aria-label="--text-primary hex"><span class="tc-name">--text-primary</span></div>
+        <div class="tc-chip" data-token="--text-secondary"><input type="color" class="tc-color" value="#6b7280" aria-label="--text-secondary colour"><input type="text" class="tc-hex" value="#6b7280" spellcheck="false" aria-label="--text-secondary hex"><span class="tc-name">--text-secondary</span></div>
+        <div class="tc-chip" data-token="--text-muted"><input type="color" class="tc-color" value="#9ca3af" aria-label="--text-muted colour"><input type="text" class="tc-hex" value="#9ca3af" spellcheck="false" aria-label="--text-muted hex"><span class="tc-name">--text-muted</span></div>
+        <div class="tc-chip" data-token="--accent-blue"><input type="color" class="tc-color" value="#2563eb" aria-label="--accent-blue colour"><input type="text" class="tc-hex" value="#2563eb" spellcheck="false" aria-label="--accent-blue hex"><span class="tc-name">--accent-blue</span></div>
+      </div>
+      </div>
+    </section>
+    <section class="ph-section">
       <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
       <p class="muted" style="margin: 0 0 6px;">Active</p>
       <div class="ph-row" style="margin-bottom: 14px;">
@@ -3149,15 +3169,6 @@
         <button class="btn danger-solid" disabled>Alert</button>
         <button class="btn alert" disabled>Amber</button>
       </div>
-    </section>
-
-    <section class="ph-section">
-      <h2 class="ph-h">Text &amp; links</h2>
-      <h1>Heading 1</h1>
-      <p class="page-subtitle">A page subtitle in secondary text.</p>
-      <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
-      <p class="muted">Muted helper text (.muted).</p>
-      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>
     </section>
 
     <section class="ph-section">
@@ -3289,7 +3300,6 @@
       </div>
       <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
     </section>
-
     <section class="ph-section">
       <h2 class="ph-h">Contrast (AA) — live WCAG ratio per bg/text pair, ACTIVE theme (target 4.5:1)</h2>
       <div class="tc-cx-grid">
@@ -3312,20 +3322,13 @@
       </div>
     </section>
     <section class="ph-section">
-      <h2 class="ph-h">Colour tokens (47) — edit the ACTIVE theme; the gallery repaints live. Switch Light/Dark to edit the other palette.</h2>
+      <h2 class="ph-h">Other colour tokens (40) — text / link / background tokens now live in the first zone; edit the rest here. Switch Light/Dark to edit the other palette.</h2>
       <div class="tc-grid">
-        <div class="tc-chip" data-token="--bg-page"><input type="color" class="tc-color" value="#ffffff" aria-label="--bg-page colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--bg-page hex"><span class="tc-name">--bg-page</span></div>
-        <div class="tc-chip" data-token="--bg-card"><input type="color" class="tc-color" value="#ffffff" aria-label="--bg-card colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--bg-card hex"><span class="tc-name">--bg-card</span></div>
         <div class="tc-chip" data-token="--text-on-accent"><input type="color" class="tc-color" value="#ffffff" aria-label="--text-on-accent colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--text-on-accent hex"><span class="tc-name">--text-on-accent</span></div>
         <div class="tc-chip" data-token="--text-on-amber"><input type="color" class="tc-color" value="#ffffff" aria-label="--text-on-amber colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--text-on-amber hex"><span class="tc-name">--text-on-amber</span></div>
-        <div class="tc-chip" data-token="--bg-muted"><input type="color" class="tc-color" value="#f5f5f7" aria-label="--bg-muted colour"><input type="text" class="tc-hex" value="#f5f5f7" spellcheck="false" aria-label="--bg-muted hex"><span class="tc-name">--bg-muted</span></div>
         <div class="tc-chip" data-token="--border-subtle"><input type="color" class="tc-color" value="#e5e7eb" aria-label="--border-subtle colour"><input type="text" class="tc-hex" value="#e5e7eb" spellcheck="false" aria-label="--border-subtle hex"><span class="tc-name">--border-subtle</span></div>
         <div class="tc-chip" data-token="--border-default"><input type="color" class="tc-color" value="#d1d5db" aria-label="--border-default colour"><input type="text" class="tc-hex" value="#d1d5db" spellcheck="false" aria-label="--border-default hex"><span class="tc-name">--border-default</span></div>
         <div class="tc-chip" data-token="--neutral-marker"><input type="color" class="tc-color" value="#d1d5db" aria-label="--neutral-marker colour"><input type="text" class="tc-hex" value="#d1d5db" spellcheck="false" aria-label="--neutral-marker hex"><span class="tc-name">--neutral-marker</span></div>
-        <div class="tc-chip" data-token="--text-primary"><input type="color" class="tc-color" value="#111827" aria-label="--text-primary colour"><input type="text" class="tc-hex" value="#111827" spellcheck="false" aria-label="--text-primary hex"><span class="tc-name">--text-primary</span></div>
-        <div class="tc-chip" data-token="--text-secondary"><input type="color" class="tc-color" value="#6b7280" aria-label="--text-secondary colour"><input type="text" class="tc-hex" value="#6b7280" spellcheck="false" aria-label="--text-secondary hex"><span class="tc-name">--text-secondary</span></div>
-        <div class="tc-chip" data-token="--text-muted"><input type="color" class="tc-color" value="#9ca3af" aria-label="--text-muted colour"><input type="text" class="tc-hex" value="#9ca3af" spellcheck="false" aria-label="--text-muted hex"><span class="tc-name">--text-muted</span></div>
-        <div class="tc-chip" data-token="--accent-blue"><input type="color" class="tc-color" value="#2563eb" aria-label="--accent-blue colour"><input type="text" class="tc-hex" value="#2563eb" spellcheck="false" aria-label="--accent-blue hex"><span class="tc-name">--accent-blue</span></div>
         <div class="tc-chip" data-token="--accent-blue-bg"><input type="color" class="tc-color" value="#dbeafe" aria-label="--accent-blue-bg colour"><input type="text" class="tc-hex" value="#dbeafe" spellcheck="false" aria-label="--accent-blue-bg hex"><span class="tc-name">--accent-blue-bg</span></div>
         <div class="tc-chip" data-token="--accent-blue-bg-soft"><input type="color" class="tc-color" value="#eff6ff" aria-label="--accent-blue-bg-soft colour"><input type="text" class="tc-hex" value="#eff6ff" spellcheck="false" aria-label="--accent-blue-bg-soft hex"><span class="tc-name">--accent-blue-bg-soft</span></div>
         <div class="tc-chip" data-token="--accent-blue-bg-faint"><input type="color" class="tc-color" value="#fafcff" aria-label="--accent-blue-bg-faint colour"><input type="text" class="tc-hex" value="#fafcff" spellcheck="false" aria-label="--accent-blue-bg-faint hex"><span class="tc-name">--accent-blue-bg-faint</span></div>
