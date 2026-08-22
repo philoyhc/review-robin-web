@@ -101,15 +101,32 @@ def chip_grid(names):
     return '<div class="tc-grid">\n' + "\n".join(chip(n) for n in names) + "\n      </div>"
 
 
-# Tokens that colour body text, links, and the page / card / muted surfaces —
-# hoisted into the first content zone (the "Text, links & background" section)
-# so they sit with the components they drive, instead of the flat grid below.
+# Tokens that colour body text, links, and the page background — hoisted into
+# the first content zone (the "Text, links & background" section) so they sit
+# with the components they drive, instead of the flat grid below.
 TEXT_ZONE_TOKENS = [
-    "--bg-page", "--bg-card", "--bg-muted",
+    "--bg-page",
     "--text-primary", "--text-secondary", "--text-muted",
     "--accent-blue",  # the link colour (a { color: var(--accent-blue) })
 ]
-rest_tokens = [n for n in order if n not in set(TEXT_ZONE_TOKENS)]
+
+# Buttons zone — the tokens specific to the button roles. The Primary fill is
+# the Blue/link token and the Secondary label / border reuse the text + page
+# tokens, both already in the Text zone above, so only the button-distinct
+# tokens live here: on-fill label colours, the Primary hover, and the
+# Destructive / Alert role colours.
+BUTTON_ZONE_TOKENS = [
+    "--text-on-accent",     # Primary button label
+    "--accent-blue-light",  # Primary button hover fill
+    "--accent-red",         # Destructive (outline red)
+    "--accent-red-bg",      # Destructive hover fill
+    "--accent-amber-dark",  # Alert fill + Amber outline
+    "--text-on-amber",      # Alert button label
+    "--accent-amber",       # Alert hover fill
+]
+
+ZONED = set(TEXT_ZONE_TOKENS) | set(BUTTON_ZONE_TOKENS)
+rest_tokens = [n for n in order if n not in ZONED]
 
 # Seeds — shift a whole colour family in OKLCH from one control (slice 3). Each
 # seed's "anchor" token displays the family's current colour; moving it applies
@@ -248,28 +265,40 @@ toolbar = """  <div class="ph-toolbar">
     <span class="tc-status" data-status>Editing <strong>light</strong> · no changes</span>
   </div>"""
 
+_sections = dict(hc.component_sections())
+
 # First content zone: text / links / background. The sample markup (shared with
 # the preview) sits with the very tokens that colour it, per the zone-by-zone
 # reorg — text / link / bg tokens live here, not in the flat grid below.
 text_zone = f"""    <section class="ph-section">
-      <h2 class="ph-h">Text, links &amp; background — the tokens here colour body text, links, and the page / card / muted surfaces. Edit the ACTIVE theme.</h2>
+      <h2 class="ph-h">Text, links &amp; background — the tokens here colour body text, links, and the page background. Edit the ACTIVE theme.</h2>
 {hc.TEXT_LINKS_SAMPLE}
       <div class="tc-zone-tokens">
         {chip_grid(TEXT_ZONE_TOKENS)}
       </div>
     </section>"""
 
+# Second content zone: buttons. Hoist the button previews and append the
+# button-specific tokens below them (built from the shared gallery section).
+_buttons_html = _sections["buttons"].rstrip()
+assert _buttons_html.endswith("</section>")
+buttons_zone = _buttons_html[: -len("</section>")].rstrip() + f"""
+      <div class="tc-zone-tokens">
+        {chip_grid(BUTTON_ZONE_TOKENS)}
+      </div>
+    </section>"""
+
 # Remaining tokens — everything not yet hoisted into a dedicated zone.
 editor_section = f"""    <section class="ph-section">
-      <h2 class="ph-h">Other colour tokens ({len(rest_tokens)}) — text / link / background tokens now live in the first zone; edit the rest here. Switch Light/Dark to edit the other palette.</h2>
+      <h2 class="ph-h">Other colour tokens ({len(rest_tokens)}) — text / link / background and button tokens now live in their zones above; edit the rest here. Switch Light/Dark to edit the other palette.</h2>
       <div class="tc-grid">
 {chr(10).join(chip(n) for n in rest_tokens)}
       </div>
     </section>"""
 
-# The gallery sections minus `text` (hoisted into text_zone above), in order.
+# The gallery sections minus the zones hoisted above (`text`, `buttons`).
 gallery_rest = "\n\n".join(
-    html for key, html in hc.component_sections() if key != "text"
+    html for key, html in hc.component_sections() if key not in ("text", "buttons")
 )
 
 defaults_script = (
@@ -565,6 +594,8 @@ body = (
     + seeds_section
     + "\n"
     + text_zone
+    + "\n"
+    + buttons_zone
     + "\n"
     + gallery_rest
     + "\n"
