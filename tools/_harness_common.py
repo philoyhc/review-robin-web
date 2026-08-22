@@ -104,15 +104,27 @@ HARNESS_CSS = """
 """
 
 
-def component_gallery():
-    """The component gallery sections (buttons … tag-chips), identical in both
-    tools. Does NOT include the toolbar, the token swatch / editor grid, or the
-    `<div class="ph-body">` wrapper — the callers add those."""
+# The text / links sample markup — shared so the customizer can host it in its
+# own "Text, links & background" zone (with the relevant token chips) while the
+# read-only preview keeps it as a plain gallery section.
+TEXT_LINKS_SAMPLE = """      <h1>Heading 1</h1>
+      <p class="page-subtitle">A page subtitle in secondary text.</p>
+      <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
+      <p class="muted">Muted helper text (.muted).</p>
+      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>"""
+
+
+def component_sections():
+    """The component gallery as an ordered `[(key, section_html)]` list, so
+    callers can reorder / relocate individual zones (the customizer hoists the
+    `text` zone to the front and embeds its tokens). Does NOT include the
+    toolbar, the token grid, or the `ph-body` wrapper — callers add those."""
     tints = "\n".join(
         f'        <div class="ph-tint" style="background: var(--instrument-tint-{i});">Instrument card tint {i}</div>'
         for i in range(1, 7)
     )
-    return f"""    <section class="ph-section">
+    return [
+        ("buttons", """    <section class="ph-section">
       <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
       <p class="muted" style="margin: 0 0 6px;">Active</p>
       <div class="ph-row" style="margin-bottom: 14px;">
@@ -130,18 +142,12 @@ def component_gallery():
         <button class="btn danger-solid" disabled>Alert</button>
         <button class="btn alert" disabled>Amber</button>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("text", f"""    <section class="ph-section">
       <h2 class="ph-h">Text &amp; links</h2>
-      <h1>Heading 1</h1>
-      <p class="page-subtitle">A page subtitle in secondary text.</p>
-      <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
-      <p class="muted">Muted helper text (.muted).</p>
-      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>
-    </section>
-
-    <section class="ph-section">
+{TEXT_LINKS_SAMPLE}
+    </section>"""),
+        ("cards", """    <section class="ph-section">
       <h2 class="ph-h">Cards</h2>
       <div class="card">
         <h2>Plain card</h2>
@@ -153,9 +159,8 @@ def component_gallery():
         <p>Destructive-action card. The button is fixed-width here.</p>
         <button class="btn destructive">Clear all settings</button>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("pills", """    <section class="ph-section">
       <h2 class="ph-h">Pills</h2>
       <div class="ph-row">
         <span class="pill pill-error">error</span>
@@ -165,16 +170,14 @@ def component_gallery():
         <span class="pill pill-super">super</span>
         <span class="pill pill-handle">HANDLE_ID</span>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("banners", """    <section class="ph-section">
       <h2 class="ph-h">Banners</h2>
       <div class="warning-banner">Warning banner — an amber advisory.</div>
       <div class="danger-banner">Danger banner — a hard red alert.</div>
       <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--danger-*</code> tokens).</p>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("table", """    <section class="ph-section">
       <h2 class="ph-h">Table &amp; config values</h2>
       <table>
         <thead><tr><th>Field</th><th>Value</th><th>Status</th></tr></thead>
@@ -184,16 +187,14 @@ def component_gallery():
           <tr><td>App password</td><td><span class="muted">not set</span></td><td><span class="pill pill-warning">pending</span></td></tr>
         </tbody>
       </table>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("tints", f"""    <section class="ph-section">
       <h2 class="ph-h">Instrument card tints</h2>
       <div class="ph-row">
 {tints}
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("forms", """    <section class="ph-section">
       <h2 class="ph-h">Form controls (the settings / setup pages are form-heavy)</h2>
       <div class="card">
         <label for="ph-in">Text input</label>
@@ -210,9 +211,8 @@ def component_gallery():
         <input type="text" id="ph-dis" value="frozen value" disabled>
         <p class="muted" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("chrome", """    <section class="ph-section">
       <h2 class="ph-h">Chrome — top bar</h2>
       <div class="chrome">
         <div class="chrome-left">
@@ -227,9 +227,8 @@ def component_gallery():
           <a class="signout" href="#">Sign out</a>
         </div>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("nav", """    <section class="ph-section">
       <h2 class="ph-h">Session navigation (tab strips + active states)</h2>
       <div class="session-nav-grid">
         <a class="session-home-anchor" href="#" title="Spring Review"><span class="home-anchor-text">Session Home</span></a>
@@ -251,9 +250,8 @@ def component_gallery():
           <a class="nav-tab" href="#">Extract data</a>
         </div>
       </div>
-    </section>
-
-    <section class="ph-section">
+    </section>"""),
+        ("chips", """    <section class="ph-section">
       <h2 class="ph-h">Tag chips &amp; back-link / page header</h2>
       <a class="back-link" href="#">&larr; Back to Sessions</a>
       <div class="rs-page-header"><h1>Reviewers</h1></div>
@@ -264,8 +262,15 @@ def component_gallery():
         <span class="tag-chip">External</span>
       </div>
       <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
-    </section>
-"""
+    </section>"""),
+    ]
+
+
+def component_gallery():
+    """The full component gallery as one string — every section in order.
+    Used by the read-only preview; the customizer composes from
+    `component_sections()` directly so it can relocate individual zones."""
+    return "\n\n".join(html for _, html in component_sections()) + "\n"
 
 
 def page(title, generated_by, base_css, extra_css, body):

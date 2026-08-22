@@ -29,15 +29,31 @@ base_css = hc.lift_base_style(BASE.read_text(encoding="utf-8"))
 order = [n for n, _ in hc.parse_light_tokens(base_css)]  # :root declaration order
 theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dark": {...}}
 
-# Editor grid — one chip per token, initialised to the light value (light is the
-# opening mode); the JS re-syncs inputs to the active theme's model on toggle.
-chips = "\n".join(
-    f'        <div class="tc-chip" data-token="{n}">'
-    f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{n} colour">'
-    f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{n} hex">'
-    f'<span class="tc-name">{n}</span></div>'
-    for n in order
-)
+
+def chip(n):
+    """One editable token chip (color-picker + hex + name), initialised to the
+    light value; the JS re-syncs inputs to the active theme's model on toggle."""
+    return (
+        f'        <div class="tc-chip" data-token="{n}">'
+        f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{n} colour">'
+        f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{n} hex">'
+        f'<span class="tc-name">{n}</span></div>'
+    )
+
+
+def chip_grid(names):
+    return '<div class="tc-grid">\n' + "\n".join(chip(n) for n in names) + "\n      </div>"
+
+
+# Tokens that colour body text, links, and the page / card / muted surfaces —
+# hoisted into the first content zone (the "Text, links & background" section)
+# so they sit with the components they drive, instead of the flat grid below.
+TEXT_ZONE_TOKENS = [
+    "--bg-page", "--bg-card", "--bg-muted",
+    "--text-primary", "--text-secondary", "--text-muted",
+    "--accent-blue",  # the link colour (a { color: var(--accent-blue) })
+]
+rest_tokens = [n for n in order if n not in set(TEXT_ZONE_TOKENS)]
 
 # Seeds — shift a whole colour family in OKLCH from one control (slice 3). Each
 # seed's "anchor" token displays the family's current colour; moving it applies
@@ -124,6 +140,7 @@ editor_css = r"""
     .tc-sep { width: 1px; height: 20px; background: var(--border-default); }
     .tc-status { color: var(--text-secondary); font-size: 0.8rem; }
     .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+    .tc-zone-tokens { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); }
     .tc-chip { display: flex; align-items: center; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default);
@@ -171,12 +188,29 @@ toolbar = """  <div class="ph-toolbar">
     <span class="tc-status" data-status>Editing <strong>light</strong> · no changes</span>
   </div>"""
 
-editor_section = f"""    <section class="ph-section">
-      <h2 class="ph-h">Colour tokens ({len(order)}) — edit the ACTIVE theme; the gallery repaints live. Switch Light/Dark to edit the other palette.</h2>
-      <div class="tc-grid">
-{chips}
+# First content zone: text / links / background. The sample markup (shared with
+# the preview) sits with the very tokens that colour it, per the zone-by-zone
+# reorg — text / link / bg tokens live here, not in the flat grid below.
+text_zone = f"""    <section class="ph-section">
+      <h2 class="ph-h">Text, links &amp; background — the tokens here colour body text, links, and the page / card / muted surfaces. Edit the ACTIVE theme.</h2>
+{hc.TEXT_LINKS_SAMPLE}
+      <div class="tc-zone-tokens">
+        {chip_grid(TEXT_ZONE_TOKENS)}
       </div>
     </section>"""
+
+# Remaining tokens — everything not yet hoisted into a dedicated zone.
+editor_section = f"""    <section class="ph-section">
+      <h2 class="ph-h">Other colour tokens ({len(rest_tokens)}) — text / link / background tokens now live in the first zone; edit the rest here. Switch Light/Dark to edit the other palette.</h2>
+      <div class="tc-grid">
+{chr(10).join(chip(n) for n in rest_tokens)}
+      </div>
+    </section>"""
+
+# The gallery sections minus `text` (hoisted into text_zone above), in order.
+gallery_rest = "\n\n".join(
+    html for key, html in hc.component_sections() if key != "text"
+)
 
 defaults_script = (
     "  <script>window.RRW_DEFAULTS = " + json.dumps(theme) + ";"
@@ -470,7 +504,9 @@ body = (
     + '\n\n  <div class="ph-body">\n'
     + seeds_section
     + "\n"
-    + hc.component_gallery()
+    + text_zone
+    + "\n"
+    + gallery_rest
     + "\n"
     + contrast_section
     + "\n"
