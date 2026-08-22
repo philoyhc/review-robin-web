@@ -465,7 +465,7 @@ Colour correctness needs a dev-slot eyeball.
 
 ---
 
-## Item 5 — Theme customizer (developer designer) — scheduled
+## Item 5 — Theme customizer (developer designer) — in progress
 
 The developer-facing half of the theme-customizer design — **full plan in
 `guide/theme_customizer.md` ("Plan A — First")**. Migration-free; lives in the
@@ -486,11 +486,14 @@ values to be **formula-clean** — adjust the shipped light/dark palette so
 defaults. A deliberate, small visual change; author it in the harness and
 dev-slot-QA it. Land this first, then build seed-derive on a clean base.
 
-**Slices** (per `theme_customizer.md` Plan A): formula-clean pre-step →
-`tools/theme_customizer.gen.py` (+ shared `tools/_harness_common.py`) with the
-editable grid + the three controls (load-from-app / edit light+dark separately /
-save-JSON) + the named-save library → contrast badges → seeds + OKLCH
-derivation → polish.
+**Slices** (per `theme_customizer.md` Plan A):
+- **✅ Slice 1 (shipped) — manual editor.** `tools/theme_customizer.gen.py`
+  (+ shared `tools/_harness_common.py`, which `theme_preview.gen.py` now also
+  uses) → `tools/theme_customizer.html`: every colour token editable with live
+  repaint, edit light + dark separately, load-defaults / Re-read-`base.html`
+  (file-picker) / named-save library / Export + Import JSON.
+- ☐ contrast (AA) badges → ☐ seeds + OKLCH derivation (with the formula-clean
+  `base.html` re-tune pre-step) → ☐ polish.
 
 ---
 
