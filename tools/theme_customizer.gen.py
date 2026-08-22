@@ -40,6 +40,40 @@ chips = "\n".join(
     for n in order
 )
 
+# Contrast (AA) — representative foreground/background pairs. WCAG AA for normal
+# text is 4.5:1; the tool shows the live ratio + pass/fail per pair, per the
+# ACTIVE theme, updating as tokens change. (Slice 2.)
+PAIRS = [
+    ("Body text", "--text-primary", "--bg-page"),
+    ("Card text", "--text-primary", "--bg-card"),
+    ("Secondary / page", "--text-secondary", "--bg-page"),
+    ("Secondary / card", "--text-secondary", "--bg-card"),
+    ("Muted / card", "--text-muted", "--bg-card"),
+    ("Link", "--accent-blue", "--bg-page"),
+    ("Primary button", "--text-on-accent", "--accent-blue"),
+    ("Alert button", "--text-on-amber", "--accent-amber-dark"),
+    ("Destructive (outline)", "--accent-red", "--bg-page"),
+    ("Pill · error", "--accent-red-text", "--accent-red-bg"),
+    ("Pill · warning", "--accent-amber-dark", "--accent-amber-bg"),
+    ("Pill · info", "--accent-blue-strong", "--accent-blue-bg"),
+    ("Pill · success", "--accent-green-text", "--accent-green-bg"),
+    ("Pill · super", "--accent-violet-text", "--accent-violet-bg"),
+    ("Config value (sky)", "--accent-sky-text", "--accent-sky-bg"),
+    ("Soft error", "--danger-text", "--danger-bg"),
+]
+contrast_rows = "\n".join(
+    f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}" data-min="4.5">'
+    f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
+    f'<span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>'
+    for label, fg, bg in PAIRS
+)
+contrast_section = f"""    <section class="ph-section">
+      <h2 class="ph-h">Contrast (AA) — live WCAG ratio per bg/text pair, ACTIVE theme (target 4.5:1)</h2>
+      <div class="tc-cx-grid">
+{contrast_rows}
+      </div>
+    </section>"""
+
 editor_css = r"""
     .tc-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .tc-controls button, .tc-controls label.tc-file {
@@ -64,6 +98,17 @@ editor_css = r"""
       padding: 2px 4px; }
     .tc-name { font-family: ui-monospace, monospace; font-size: 0.68rem;
       color: var(--text-secondary); word-break: break-all; }
+    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+    .tc-cx { display: flex; align-items: center; gap: 8px; }
+    .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border-subtle); font-size: 0.8rem; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem;
+      color: var(--text-secondary); min-width: 58px; text-align: right; }
+    .tc-cx-badge { font-size: 0.66rem; font-weight: 600; padding: 1px 8px;
+      border-radius: 9999px; min-width: 34px; text-align: center; }
+    .tc-cx-badge.pass { background: var(--accent-green-bg); color: var(--accent-green-text); }
+    .tc-cx-badge.fail { background: var(--accent-red-bg); color: var(--accent-red-text); }
 """
 
 toolbar = """  <div class="ph-toolbar">
@@ -110,6 +155,33 @@ editor_js = r"""  <script>
         return /^#[0-9a-fA-F]{3}$/.test(v)
           ? "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3] : v;
       }
+      function hexRgb(h) {
+        h = h.replace("#", "");
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      }
+      function relLum(h) {
+        var c = hexRgb(h).map(function (v) {
+          v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+        });
+        return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+      }
+      function contrast(fg, bg) {
+        var a = relLum(fg)+0.05, b = relLum(bg)+0.05;
+        return a > b ? a/b : b/a;
+      }
+      function updateContrast() {
+        document.querySelectorAll(".tc-cx").forEach(function (row) {
+          var fg = model[mode][row.getAttribute("data-fg")];
+          var bg = model[mode][row.getAttribute("data-bg")];
+          if (!fg || !bg) return;
+          var r = contrast(fg, bg), min = parseFloat(row.getAttribute("data-min"));
+          row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
+          var badge = row.querySelector(".tc-cx-badge"), pass = r >= min;
+          badge.textContent = pass ? "AA" : "AA ✗";
+          badge.className = "tc-cx-badge " + (pass ? "pass" : "fail");
+        });
+      }
       function status() {
         var el = document.querySelector("[data-status]");
         if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · "
@@ -128,9 +200,11 @@ editor_js = r"""  <script>
           if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
         });
         status();
+        updateContrast();
       }
       function setToken(t, v) {
-        model[mode][t] = v; root.style.setProperty(t, v); dirty = true; status();
+        model[mode][t] = v; root.style.setProperty(t, v); dirty = true;
+        status(); updateContrast();
       }
 
       // --- localStorage save library ---
@@ -271,6 +345,8 @@ body = (
     toolbar
     + '\n\n  <div class="ph-body">\n'
     + hc.component_gallery()
+    + "\n"
+    + contrast_section
     + "\n"
     + editor_section
     + "\n  </div>\n\n"

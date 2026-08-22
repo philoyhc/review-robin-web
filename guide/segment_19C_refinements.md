@@ -492,8 +492,12 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
   uses) → `tools/theme_customizer.html`: every colour token editable with live
   repaint, edit light + dark separately, load-defaults / Re-read-`base.html`
   (file-picker) / named-save library / Export + Import JSON.
-- ☐ contrast (AA) badges → ☐ seeds + OKLCH derivation (with the formula-clean
-  `base.html` re-tune pre-step) → ☐ polish.
+- **✅ Slice 2 (shipped) — contrast (AA) badges.** A live WCAG-ratio + AA
+  pass/fail badge per bg/text pair (16 pairs) for the active theme, updating as
+  tokens change. (Surfaces e.g. muted-on-card at 2.54:1 — intentionally-low
+  decorative text.)
+- ☐ seeds + OKLCH derivation (with the formula-clean `base.html` re-tune
+  pre-step) → ☐ polish.
 
 ---
 

@@ -3033,6 +3033,17 @@
       padding: 2px 4px; }
     .tc-name { font-family: ui-monospace, monospace; font-size: 0.68rem;
       color: var(--text-secondary); word-break: break-all; }
+    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+    .tc-cx { display: flex; align-items: center; gap: 8px; }
+    .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border-subtle); font-size: 0.8rem; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem;
+      color: var(--text-secondary); min-width: 58px; text-align: right; }
+    .tc-cx-badge { font-size: 0.66rem; font-weight: 600; padding: 1px 8px;
+      border-radius: 9999px; min-width: 34px; text-align: center; }
+    .tc-cx-badge.pass { background: var(--accent-green-bg); color: var(--accent-green-text); }
+    .tc-cx-badge.fail { background: var(--accent-red-bg); color: var(--accent-red-text); }
 
 
     /* ---- harness-only (not part of the app) ---- */
@@ -3265,6 +3276,27 @@
     </section>
 
     <section class="ph-section">
+      <h2 class="ph-h">Contrast (AA) — live WCAG ratio per bg/text pair, ACTIVE theme (target 4.5:1)</h2>
+      <div class="tc-cx-grid">
+        <div class="tc-cx" data-fg="--text-primary" data-bg="--bg-page" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-page); color: var(--text-primary)">Aa — Body text</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-primary" data-bg="--bg-card" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-card); color: var(--text-primary)">Aa — Card text</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-secondary" data-bg="--bg-page" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-page); color: var(--text-secondary)">Aa — Secondary / page</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-secondary" data-bg="--bg-card" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-card); color: var(--text-secondary)">Aa — Secondary / card</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-muted" data-bg="--bg-card" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-card); color: var(--text-muted)">Aa — Muted / card</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-blue" data-bg="--bg-page" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-page); color: var(--accent-blue)">Aa — Link</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-on-accent" data-bg="--accent-blue" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-blue); color: var(--text-on-accent)">Aa — Primary button</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--text-on-amber" data-bg="--accent-amber-dark" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-amber-dark); color: var(--text-on-amber)">Aa — Alert button</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-red" data-bg="--bg-page" data-min="4.5"><span class="tc-cx-sample" style="background: var(--bg-page); color: var(--accent-red)">Aa — Destructive (outline)</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-red-text" data-bg="--accent-red-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-red-bg); color: var(--accent-red-text)">Aa — Pill · error</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-amber-dark" data-bg="--accent-amber-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-amber-bg); color: var(--accent-amber-dark)">Aa — Pill · warning</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-blue-strong" data-bg="--accent-blue-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-blue-bg); color: var(--accent-blue-strong)">Aa — Pill · info</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-green-text" data-bg="--accent-green-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-green-bg); color: var(--accent-green-text)">Aa — Pill · success</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-violet-text" data-bg="--accent-violet-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-violet-bg); color: var(--accent-violet-text)">Aa — Pill · super</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--accent-sky-text" data-bg="--accent-sky-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--accent-sky-bg); color: var(--accent-sky-text)">Aa — Config value (sky)</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+        <div class="tc-cx" data-fg="--danger-text" data-bg="--danger-bg" data-min="4.5"><span class="tc-cx-sample" style="background: var(--danger-bg); color: var(--danger-text)">Aa — Soft error</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>
+      </div>
+    </section>
+    <section class="ph-section">
       <h2 class="ph-h">Colour tokens (47) — edit the ACTIVE theme; the gallery repaints live. Switch Light/Dark to edit the other palette.</h2>
       <div class="tc-grid">
         <div class="tc-chip" data-token="--bg-page"><span class="tc-sw" style="background: var(--bg-page)"></span><input type="color" class="tc-color" value="#ffffff" aria-label="--bg-page colour"><input type="text" class="tc-hex" value="#ffffff" spellcheck="false" aria-label="--bg-page hex"><span class="tc-name">--bg-page</span></div>
@@ -3334,6 +3366,33 @@
         return /^#[0-9a-fA-F]{3}$/.test(v)
           ? "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3] : v;
       }
+      function hexRgb(h) {
+        h = h.replace("#", "");
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      }
+      function relLum(h) {
+        var c = hexRgb(h).map(function (v) {
+          v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+        });
+        return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+      }
+      function contrast(fg, bg) {
+        var a = relLum(fg)+0.05, b = relLum(bg)+0.05;
+        return a > b ? a/b : b/a;
+      }
+      function updateContrast() {
+        document.querySelectorAll(".tc-cx").forEach(function (row) {
+          var fg = model[mode][row.getAttribute("data-fg")];
+          var bg = model[mode][row.getAttribute("data-bg")];
+          if (!fg || !bg) return;
+          var r = contrast(fg, bg), min = parseFloat(row.getAttribute("data-min"));
+          row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
+          var badge = row.querySelector(".tc-cx-badge"), pass = r >= min;
+          badge.textContent = pass ? "AA" : "AA ✗";
+          badge.className = "tc-cx-badge " + (pass ? "pass" : "fail");
+        });
+      }
       function status() {
         var el = document.querySelector("[data-status]");
         if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · "
@@ -3352,9 +3411,11 @@
           if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
         });
         status();
+        updateContrast();
       }
       function setToken(t, v) {
-        model[mode][t] = v; root.style.setProperty(t, v); dirty = true; status();
+        model[mode][t] = v; root.style.setProperty(t, v); dirty = true;
+        status(); updateContrast();
       }
 
       // --- localStorage save library ---
