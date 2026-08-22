@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8) (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 5 (theme customizer — dev designer) scheduled (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2244,8 +2244,14 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   `--text-on-amber` label token — white in light (unchanged), dark in dark mode
   where the amber fill lightens (#2024). `base.html` + `spec/ui_elements.md` §6.
   Full suite green.
-
----
+- **Item 5 (scheduled)** — **theme customizer (developer designer).** Grow the
+  `tools/` theme-preview harness into a visual designer for the light + dark
+  palettes: seed-and-derive (OKLCH) editing + live repaint + AA contrast badges
+  + load-from-app / named-save library + **export JSON** that a coding agent
+  ports 1:1 into `base.html`'s `:root` blocks. Migration-free; nothing in
+  `app/`. Pre-step: re-tune the current palette to be formula-clean. Full plan:
+  `guide/theme_customizer.md` "Plan A — First". The operator-facing **Stretch**
+  half is deferred (`guide/deferred_consolidated.md` Part A "Operator theming").
 
 ## Upcoming
 
