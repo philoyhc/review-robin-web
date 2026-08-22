@@ -1,147 +1,110 @@
-# Theme customizer — plan (ergonomic, seed-and-derive)
+# Theme customizer — plan
 
-**Status: idea / not scheduled.** No commitment to build; this records the
-design so it's ready to pick up. Phase 1 (below) is migration-free and
-touches nothing in `app/`. Phase 2 (app consumption) needs a migration and is
-deliberately out of scope here.
+**Status: idea / not scheduled.** Records the design so it's ready to pick up.
+**Two plans that share one editor core**, sequenced so the second builds
+cleanly on the first. Both are **migration-free** (no database). A DB-backed
+"persistent / shared themes" version is noted as a further future that neither
+plan does.
 
-## The idea
+## The two plans at a glance
 
-Grow the theme-preview harness (`tools/theme_preview.gen.py` →
-`tools/theme_preview.html`) into a **theme customizer**: pick colours / hues
-for the major elements, watch the whole component gallery repaint live, and
-**export the palette as JSON**. The *ergonomic* version isn't 47 colour
-pickers — it's a handful of **seed** hues that **derive** the rest, with
-per-token override for the stubborn cases.
+- **First — developer theme *designer*** (in the `tools/` harness). Design the
+  light + dark palettes visually; **export JSON**; a coding agent ports that
+  JSON into `base.html`'s token blocks. For someone with repo/file access.
+  Migration-free; touches nothing in `app/`.
+- **Stretch — operator theme *tweaker*** (in the app). An operator tweaks the
+  light + dark themes for **their own view** and **saves browser-local**
+  (localStorage), applied at runtime. **No database, no migration** — per
+  browser, exactly like the existing light/dark choice; participants
+  unaffected.
 
-## Why the harness is the right host
+**They compose on purpose.** Both use the same **editor core** — the token
+model, the live-preview controls, the seed-and-derive logic, and the JSON
+contract. *First* wraps that core in the static harness; *Stretch* drops the
+**same** core into an app page and adds localStorage persistence + a
+runtime-apply script. Build the core once; Stretch is core + a thin app shell.
 
-The app is already fully token-driven (`:root` custom properties in
-`base.html`; see `spec/visual_style_rrw.md` "Light / dark mode"), so **live
-editing is almost free**: setting `root.style.setProperty('--accent-blue', v)`
-repaints every surface instantly. The harness already renders the whole
-gallery + the 47-token swatch grid + a Light/Dark toggle — it just needs
-*inputs* and an *export*.
+## Why it's cheap either way
 
-## Generator & the three core controls (2026-08-22)
+The app is fully token-driven (`:root` custom properties in `base.html`; see
+`spec/visual_style_rrw.md` "Light / dark mode"), so **live editing is almost
+free**: `root.style.setProperty('--accent-blue', v)` repaints every surface
+instantly. The harness already renders the whole gallery + the 47-token swatch
+grid + a Light/Dark toggle — the editor is mostly *inputs* + *serialization* on
+top of what exists.
 
-**Generator — new file, shared helper.** Add `tools/theme_customizer.gen.py`
-(→ `tools/theme_customizer.html`) rather than overloading the read-only
-preview. Factor the pieces both need — the anchored `base.html` `<style>` lift,
-the `:root` token parse, and the component-gallery body — into a small
-`tools/_harness_common.py` that both `theme_preview.gen.py` and
-`theme_customizer.gen.py` import, so the preview stays a simple viewer and the
-customizer grows on its own. (Reusing `theme_preview.gen.py` in place is the
-lighter alternative if the shared-helper split feels heavy for two files.)
+---
 
-The customizer needs three controls specifically:
+## The shared editor core (build once, both reuse)
 
-1. **Load from app / "Refresh to actual".** The generator **bakes base.html's
-   real light *and* dark token values** into the page at generate time as the
-   editing baseline (it already lifts both `:root` and
-   `:root[data-theme="dark"]`). This button re-applies that baked baseline —
-   discarding edits and snapping both themes back to the app's actual palette.
-   *Note:* "actual" is frozen at generate time; to pick up a later `base.html`
-   change, **regenerate** (`python3 tools/theme_customizer.gen.py`) — the static
-   page can't read `base.html` at runtime.
-2. **Edit light and dark separately.** The Light/Dark toggle switches which
-   theme you're *editing* and *previewing*; the two palettes are independent
-   (model `{light:{…}, dark:{…}}`, per "Two themes at once" below).
-3. **Save as one JSON, locally.** One button serialises **both** themes into a
-   single JSON file and downloads it (a `download` link — works for a local
-   file; the harness isn't sandboxed). Shape + round-trip in "JSON export /
-   import" below.
+Keep it **framework-free vanilla JS + markup + one JSON schema**, so it embeds
+unchanged in a generated static file (First) *or* a Jinja template (Stretch).
+No build step, no runtime deps. The core is four things:
 
-These three are the MVP surface (Slice 1). The seed-and-derive layer (below) is
-the ergonomic upgrade on top.
+1. **Token model** — `{ light: {token→value}, dark: {token→value} }` over the
+   47 `:root` tokens. First seeds it from `base.html` (baked at generate time
+   or a file-picker, below); Stretch opens on the current applied values (its
+   last-saved, if any) and reads `base.html`'s declared `:root` via the CSSOM
+   for *defaults* (see State & retrieval). Same shape either way.
+2. **Controls + live preview** — per-token colour inputs and/or seed sliders;
+   on change → apply (`setProperty` for the harness; an injected `<style>` for
+   the app) → the gallery / page repaints.
+3. **Seed-and-derive + contrast** — the ergonomic layer (below).
+4. **JSON serialize / parse** — the identical contract (below). First *exports*
+   it for a coding agent; Stretch *stores* it in localStorage.
 
-## Scope boundary (important)
+### The model — seed-and-derive
 
-- **Phase 1 — customizer + JSON export (this plan).** Lives entirely in the
-  harness. **No backend, no migration, no `app/` change.** Output is a JSON
-  palette you hand-port into `base.html` (exactly the dark-mode flow). Safe to
-  build any time.
-- **Phase 2 — the app *consuming* a custom theme (future).** Persist named
-  themes, inject them at render, governance + defaults. **This** is where the
-  migration lives. Sketched at the end; not planned.
+The *ergonomic* version isn't 47 pickers — a handful of **seed** hues drive the
+families, with per-token override for the stubborn cases.
 
-The two are cleanly separable because both produce/consume the same artifact:
-a token set. Phase 1 authors it; Phase 2 (later) stores + applies it.
-
-## The model — seed-and-derive
-
-### Seeds (the "major elements")
-
-~8 controls the user actually touches. Each is one colour; its family derives.
+**Seeds (the "major elements")** — ~8 controls; each is one colour, its family
+derives:
 
 | Seed | Drives |
 |---|---|
-| **Neutral base** | `--bg-page`, `--bg-card`, `--bg-muted`, `--border-subtle/-default`, `--neutral-marker`, `--text-primary/-secondary/-muted` (the whole grey ramp) |
-| **Blue** (primary accent) | `--accent-blue` + `-bg` / `-bg-soft` / `-bg-faint` / `-light` / `-dark` / `-marker` / `-strong` |
+| **Neutral base** | `--bg-page`, `--bg-card`, `--bg-muted`, `--border-subtle/-default`, `--neutral-marker`, `--text-primary/-secondary/-muted` (the grey ramp) |
+| **Blue** (primary) | `--accent-blue` + `-bg` / `-bg-soft` / `-bg-faint` / `-light` / `-dark` / `-marker` / `-strong` |
 | **Green** (success) | `--accent-green` + `-bg` / `-marker` / `-text` / `-bg-faint` |
 | **Amber** (caution / Alert) | `--accent-amber` + `-bg` / `-bg-mid` / `-dark` / `-border` |
 | **Red** (destructive) | `--accent-red` + `-bg` / `-soft` / `-strong` / `-text`, and the soft-error `--danger-bg` / `-border` / `-text` |
 | **Violet** | `--accent-violet-bg` / `-text` |
 | **Sky** | `--accent-sky-bg` / `-text` |
-| **Instrument tints** | `--instrument-tint-1..6` — either 6 hue stops rotated off a single "tint chroma/lightness" control, or left as-is |
+| **Instrument tints** | `--instrument-tint-1..6` — six hue stops rotated off one "tint chroma/lightness" control, or left as-is |
 
-### Fixed / structural (not seed-driven)
+**Fixed / structural (not seed-driven):** `--text-on-accent` (≈white, both
+themes) and `--text-on-amber` (the dark-label-on-light-amber exception) — manual
+override, not derived.
 
-- `--text-on-accent` — text on filled accents; effectively white, both themes.
-- `--text-on-amber` — the known exception (dark label on the light-amber Alert
-  fill in dark mode). Per-token override, not derived.
+**Derivation (per family, per mode)** — work in **OKLCH**, not HSL
+(perceptually even lightness/chroma; HSL "lighten" skews hue + contrast). From a
+seed `oklch(L C H)`: **base** = seed; **-bg** = high-L/low-C (light) or
+low-L/low-C dark solid (dark); **-bg-soft/-faint** step toward the page bg;
+**-light** = +ΔL; **-dark/-strong/-text** = −ΔL in light, *inverted* to +ΔL in
+dark (light text on dark surface); **-marker** = light low-chroma tint. The
+neutral ramp is a lightness scale off the neutral seed, with a small tunable
+chroma so greys can lean warm/cool. Each family is one
+`derive(seed, mode) -> {token: value}`; the app's current values are the
+reference the defaults must reproduce (fixture: `derive(defaults) == base.html`).
 
-### Derivation rules (per family, per mode)
+**Per-token override** — any derived token can be pinned manually (the full grid
+stays editable — "advanced"); overrides win over derivation and survive
+re-deriving from a changed seed.
 
-Work in **OKLCH**, not HSL — perceptually even lightness/chroma steps and
-predictable contrast (HSL "lighten" skews hue + contrast). From a seed at
-`oklch(L C H)`:
+### Two themes at once
 
-- **base accent** = the seed.
-- **-bg** (tint surface): **light** → high L, low C, same H; **dark** → low L,
-  low-moderate C, same H (a dark solid, not a wash).
-- **-bg-soft / -bg-faint**: successively closer to the page background.
-- **-light**: +ΔL. **-dark / -strong / -text** (text on the tint): −ΔL in
-  light; in **dark** these *invert* to +ΔL (light text on dark surface).
-- **-marker**: a light, low-chroma tint for underlines / left-borders.
+Light and Dark are **separate palettes**; `derive()` takes a `mode`. Edit one at
+a time — the Light/Dark toggle switches which mode you edit *and* preview.
 
-The neutral ramp derives from the neutral seed as a lightness scale (page →
-card → muted → borders → muted-text → secondary → primary), with a small,
-tunable chroma so greys can lean warm or cool.
+### Contrast safety
 
-Each family is one function `derive(seed, mode) -> {token: value}`; the app's
-current light + dark values are the reference output to match at the defaults.
+Many tokens are **bg/text pairs** (pill bg + text, `--danger-bg`+`-text`,
+`--text-primary` on `--bg-page`, `--text-on-accent` on each filled accent).
+Compute WCAG contrast live and show an **AA badge** per pair, so a theme can't
+render itself unreadable. The single most valuable guardrail — build it early,
+and make it a **hard gate** in Stretch (an operator isn't a designer).
 
-### Per-token override
-
-Any derived token can be pinned to a manual value (the swatch grid stays fully
-editable — "advanced mode"). Overrides win over derivation and are recorded
-separately so re-deriving from a changed seed keeps them.
-
-## Two themes at once
-
-Light and Dark are **separate palettes**; `derive()` takes a `mode`. The editor
-edits one mode at a time (the Light/Dark toggle switches which mode you edit
-*and* preview). Model: `{ light: {...}, dark: {...} }` for both seeds and the
-derived tokens.
-
-## Contrast safety
-
-Many tokens are **bg/text pairs** — pill bg + text, `--danger-bg` + `-text`,
-`--text-primary` on `--bg-page`, `--text-on-accent` on each filled accent.
-Compute WCAG contrast live and show an **AA badge** (pass/fail) next to each
-pair, so a custom theme can't render itself unreadable. This is the single
-most valuable guardrail and worth building even in the MVP.
-
-## Live application
-
-On any change: recompute the affected family → `setProperty` each token on the
-right scope (`:root` for light, a `[data-theme="dark"]` style block or a
-second `setProperty` target for dark) → the gallery repaints. No rebuild.
-
-## JSON export / import
-
-Two payloads in one file:
+### JSON contract (identical for both plans)
 
 ```json
 {
@@ -153,76 +116,156 @@ Two payloads in one file:
 }
 ```
 
-- **`tokens`** is the portable artifact — a flat token map that maps **1:1 onto
-  `base.html`'s `:root` / `:root[data-theme="dark"]` blocks**, so porting a
-  theme into the app stays the mechanical copy we did for dark. Keep it dumb.
-- **`seeds`** lets the editor round-trip (re-load and keep tuning). Import reads
-  `seeds` if present (re-derive), else falls back to applying `tokens` directly.
-- Export via a copyable `<textarea>` and a `download` link (works for a
-  local file; the harness isn't sandboxed).
+- **`tokens`** is the portable artifact — a flat map that lands **1:1 onto
+  `base.html`'s `:root` / `:root[data-theme="dark"]` blocks** (First → base.html)
+  *and* onto a runtime override `<style>` (Stretch → localStorage). Keep it dumb.
+- **`seeds`** lets the editor round-trip (re-load + keep tuning). Import reads
+  `seeds` if present (re-derive), else applies `tokens` directly.
 
-## Harness UI
+### State & retrieval — defaults / saved / working
 
-- **Seed row** at the top of the toolbar: the ~8 seed swatches (colour input +
-  OKLCH sliders: L / C / H), + the Light/Dark toggle (already there).
-- **Advanced: the existing 47-token swatch grid** becomes editable — each chip
-  gains a colour input + a "pin" (override) + an AA badge where it's half of a
-  pair. Collapsible so the default view stays the seed row.
-- **Export / Import** buttons + the JSON textarea.
-- **Reset to app defaults** (re-lift base.html's current values).
+Three retrievable states. **Both plans must always be able to get back to the
+baked-in defaults**, plus a plan-specific "saved" slot:
 
-## Implementation notes
+- **Defaults (the app's actual palette).** Both plans expose a **"Load defaults
+  / Reset to actual"** control — the always-available escape hatch, so you never
+  lose the real palette.
+  - *First* reads them from `base.html` (baked at generate time, or re-read live
+    via the file-picker).
+  - *Stretch* reads them from **`base.html`'s own `:root` rule via the CSSOM**
+    (`document.styleSheets`), **not** `getComputedStyle` — because when a custom
+    theme is applied the computed value *is* the custom one, but the declared
+    base rule is still the true default.
+- **Saved.**
+  - *First* keeps a **library of named saves** in the harness's own
+    `localStorage` (e.g. `rrw-theme-designs`): **Save as…** (name it); a picker
+    **lists past saves to load**; delete / rename. (Plus Export / Import JSON for
+    the coding-agent handoff and moving between machines.)
+  - *Stretch* keeps a **single last-saved** in `localStorage["rrw-theme-custom"]`
+    (the applied theme). Save overwrites it; **"Revert to last saved"** discards
+    the in-progress edits and reloads it — the abandon-an-edit path.
+- **Working (the in-progress edit)** — in memory; Save promotes it to the
+  saved slot(s); Reset/Revert discards it.
 
-- The harness HTML is *generated* by `tools/theme_preview.gen.py`, which already
-  parses base.html's `:root` tokens (name → light value) and lifts the real
-  dark block. The customizer is **new inline JS + controls emitted by the
-  generator** — no app code, no new runtime deps.
-- **OKLCH ↔ sRGB** conversion: inline a tiny hand-rolled converter (or emit
-  `oklch()` directly and read back computed sRGB) — no external libraries in the
-  harness.
-- The default seeds are chosen so `derive()` reproduces the app's current
-  light + dark values (a fixture test: derived defaults == base.html tokens).
+Control set: **both** get *Load defaults*; **First** adds *Save as… / Load save
+/ Delete* (library) + Export/Import; **Stretch** adds *Save* + *Revert to last
+saved* (+ optional Export/Import).
 
-## Build slices (if it ever gets scheduled)
+---
 
-1. **Editable grid + the three controls (manual, no derivation).** New
-   `tools/theme_customizer.gen.py`; every token → colour input + live
-   `setProperty`; the three core controls above (**Load-from-app / refresh**,
-   **separate light/dark editing**, **Save both themes as one JSON** — plus
-   Import to round-trip). This alone is a useful palette authoring tool and
-   de-risks the plumbing.
-2. **Contrast badges** on the pairs (AA pass/fail). Cheap, high value.
-3. **Seeds + OKLCH derivation** — the ergonomic layer: seed row → `derive()` →
-   families; per-token override; `seeds` in the JSON. The real work.
-4. **Polish** — presets, instrument-tint rotation control, download UX.
+## Plan A — First: developer theme designer
 
-Slices 1–2 are the pragmatic MVP; slice 3 is the "ergonomic" ask.
+**Goal:** design light + dark visually; hand the result off as JSON that a
+coding agent turns into template code.
+
+- **Host:** a new `tools/theme_customizer.gen.py` → `tools/theme_customizer.html`
+  (keeps the read-only `theme_preview` simple); factor the shared `base.html`
+  lift + gallery into `tools/_harness_common.py` that both generators import.
+  Developer, file access.
+- **The three controls (Slice-1 surface):**
+  1. **Load from app / "Refresh to actual".** The generator bakes `base.html`'s
+     real light *and* dark token values as the baseline. In-page, a
+     **file-picker** ("Re-read from base.html…", via the File API) lets the dev
+     load the *current* on-disk `base.html` live — no server — so the baseline
+     never goes silently stale. (Regenerating the script is the other way to
+     re-read; a static page can't read the file on its own.)
+  2. **Edit light and dark separately** — the toggle switches which theme you
+     edit/preview; the two palettes are independent.
+  3. **Save (both themes).** Two flavours: **Save as…** to the harness's
+     named-save library (localStorage — retrieve past saves from the picker),
+     and **Export JSON** to a single downloaded file (both themes; the handoff
+     artifact). Plus **Load defaults** (above) always available.
+- **The handoff loop:** export `tokens` → hand a coding agent *"apply this theme
+  JSON to `base.html`"* → the agent rewrites the `:root` / `:root[data-theme=
+  "dark"]` blocks (token names map 1:1 — mechanical, exactly the dark-mode
+  port). This formalises the loop we already ran by hand for dark.
+- **Build slices:** (1) editable grid + the three controls + JSON;
+  (2) contrast badges; (3) seeds + OKLCH derivation; (4) polish (presets,
+  tint-rotation control).
+
+---
+
+## Plan B — Stretch: operator theme tweaker (browser-local)
+
+**Goal:** let an operator tweak the light + dark themes for **their own view**
+and keep the tweak in their browser. "Tweak," not "publish."
+
+- **Reuses** the shared editor core verbatim — leaning on the **seed** controls
+  (a few hues) for a light-touch "tweak" UX, with the full grid behind Advanced.
+- **Adds (a thin app shell over the core):**
+  1. **An in-app operator page** hosting the editor — e.g. a Display-mode
+     section under `/operator/settings`, or its own `/operator/settings/theme`.
+     Server-rendered; the editor JS is the shared core, unchanged.
+  2. **Browser-local persistence** — Save writes the JSON to
+     `localStorage["rrw-theme-custom"]` (sibling of the existing `rrw-theme`
+     light/dark key).
+  3. **Runtime-apply** — a small synchronous head script in `base.html` (next to
+     the no-FOUC one) reads `rrw-theme-custom` and, if present, injects
+     `<style id="rrw-custom-theme">:root{ …light overrides… }
+     :root[data-theme="dark"]{ …dark overrides… }</style>` **before first
+     paint**. It overrides only the tweaked tokens; the existing light/dark
+     toggle keeps working because the overrides live in both guarded blocks.
+  4. **Revert to last saved** — discard in-progress edits and reload
+     `rrw-theme-custom` (abandon an edit). **Reset to defaults** is separate —
+     it clears the key and returns to `base.html`'s palette.
+  5. **Optional export / import** — the same JSON, to carry a tweak between
+     browsers (there's no server copy).
+- **Deliberately NOT:** no database, no migration, no cross-user / session / org
+  scope, no governance. It's **per-browser**, precisely like the light/dark
+  `rrw-theme` choice — a personal display preference. Other people's browsers
+  (including participants') are untouched.
+- **Contrast is a hard gate here** — Save is blocked (or warns hard) on any AA
+  failure, since the editor is in non-designer hands.
+- **Build slices:** (1) extract the First core into a reusable module + host it
+  on an operator page (read live tokens, live preview, no persistence yet);
+  (2) localStorage Save + the runtime-apply head script + Reset;
+  (3) the AA save-gate; (4) export/import + seed-first polish.
+
+### How Stretch rides on First (the reuse contract)
+
+- **Same core module** — framework-free vanilla JS + markup; First emits it into
+  the generated harness, Stretch `{% include %}`s the same file in a template.
+  Keep it DOM-portable, no build step.
+- **Same token model** — First reads `base.html` (bake / file-picker); Stretch
+  reads live `getComputedStyle(:root)`. Both produce `{light, dark}`.
+- **Same JSON** — First's export is a design handoff; Stretch's is a localStorage
+  payload (+ optional export). One schema.
+- So **Stretch = First's core + { app page, localStorage save, runtime-apply,
+  reset, AA gate }** — no rework of the editor itself.
+
+---
 
 ## Open questions
 
-- **Instrument tints** — 6 independent pale hues, or one chroma/lightness knob
-  rotated across 6 stops? Rotation is more ergonomic but less exact.
-- **Neutral warmth** — expose a chroma/hue control on the grey ramp, or keep
-  greys neutral?
-- **How many seeds** — is 8 right, or fold violet/sky into "extra accents"
-  behind Advanced?
+- **Editor host in the app (Stretch)** — a Display-mode section on
+  `/operator/settings`, or a dedicated `/operator/settings/theme`?
+- **Tweak depth (Stretch)** — seeds only (simplest, safest), or seeds +
+  Advanced full grid?
+- **Instrument tints** — six independent hues, or one knob rotated across six
+  stops?
+- **Neutral warmth** — expose a chroma/hue control on the grey ramp or keep it
+  neutral?
 - **Derivation fidelity** — the current palette wasn't built by a formula, so
-  `derive(default_seed)` won't hit every token exactly; decide the tolerance
-  (treat mismatches as overrides, or re-tune the app values to be formula-clean).
+  `derive(default_seed)` won't hit every token exactly; treat mismatches as
+  seeded overrides, or re-tune the app values to be formula-clean?
+- **Flash-free apply (Stretch)** — confirm the runtime `<style>` injection runs
+  before paint (head, synchronous) so a custom theme doesn't flash the default.
 
-## Phase 2 — app consumption (future, needs a migration)
+## Further future (neither plan) — persistent / shared themes
 
-Out of scope, recorded for continuity. To let *end-users* (not just us) choose
-palettes:
+Out of scope for both plans, recorded for continuity. Both plans keep themes
+**local** (First → source code via the agent; Stretch → the operator's browser).
+The moment you want a theme **shared across users, persisted server-side, or
+pushed onto participants**, you need the database:
 
 - **Storage** — a `themes` table (or JSON column): `{name, tokens_light,
-  tokens_dark, owner/org, is_default}`. The migration lives here.
-- **Apply** — inject the stored token map as an inline `:root{…}` /
-  `:root[data-theme="dark"]{…}` block at render (or a `data-theme="<slug>"`
-  variant), gated like `rrw-theme` today.
-- **Governance** — who authors (operator / sys-admin / org-level), a default,
-  per-session override, and an **enforced AA gate** on save so a shared theme
-  can't be unreadable.
+  tokens_dark, scope/owner, is_default}`. The migration lives here.
+- **Scope** — per-operator / per-org / per-session (the pivotal decision;
+  per-session reaches participant surfaces).
+- **Apply** — inject the stored token map at render (a `data-theme="<slug>"`
+  variant or an inline override block), gated like `rrw-theme`.
+- **Governance** — who authors, a default, per-session override, and the
+  enforced AA gate on save.
 
-Until then, the Phase 1 JSON is authored in the harness and hand-ported into
-`base.html`, exactly as the dark palette was.
+That's a segment-sized feature (the migration is the easy part; scope + render
+path + governance are the work) — explicitly beyond First and Stretch.
