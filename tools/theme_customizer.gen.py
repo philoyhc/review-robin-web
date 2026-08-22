@@ -33,12 +33,48 @@ theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dar
 # opening mode); the JS re-syncs inputs to the active theme's model on toggle.
 chips = "\n".join(
     f'        <div class="tc-chip" data-token="{n}">'
-    f'<span class="tc-sw" style="background: var({n})"></span>'
     f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{n} colour">'
     f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{n} hex">'
     f'<span class="tc-name">{n}</span></div>'
     for n in order
 )
+
+# Seeds — shift a whole colour family in OKLCH from one control (slice 3). Each
+# seed's "anchor" token displays the family's current colour; moving it applies
+# the same OKLCH delta to every member, preserving the palette's tuned
+# relationships (no base.html re-tune needed — the shift is *relative*).
+FAMILIES = {
+    "blue": {"label": "Blue · primary", "anchor": "--accent-blue", "members": [
+        "--accent-blue", "--accent-blue-bg", "--accent-blue-bg-soft",
+        "--accent-blue-bg-faint", "--accent-blue-light", "--accent-blue-dark",
+        "--accent-blue-marker", "--accent-blue-strong"]},
+    "green": {"label": "Green · success", "anchor": "--accent-green", "members": [
+        "--accent-green", "--accent-green-bg", "--accent-green-marker",
+        "--accent-green-text", "--accent-green-bg-faint"]},
+    "amber": {"label": "Amber · Alert", "anchor": "--accent-amber", "members": [
+        "--accent-amber", "--accent-amber-bg", "--accent-amber-bg-mid",
+        "--accent-amber-dark", "--accent-amber-border"]},
+    "red": {"label": "Red · destructive", "anchor": "--accent-red", "members": [
+        "--accent-red", "--accent-red-bg", "--accent-red-soft",
+        "--accent-red-strong", "--accent-red-text",
+        "--danger-bg", "--danger-border", "--danger-text"]},
+    "violet": {"label": "Violet", "anchor": "--accent-violet-text", "members": [
+        "--accent-violet-bg", "--accent-violet-text"]},
+    "sky": {"label": "Sky · config", "anchor": "--accent-sky-text", "members": [
+        "--accent-sky-bg", "--accent-sky-text"]},
+}
+seed_swatches = "\n".join(
+    f'        <label class="tc-seed" data-family="{k}">'
+    f'<input type="color" class="tc-seed-color" value="{theme["light"].get(f["anchor"], "#000000")}" aria-label="{f["label"]} seed">'
+    f'<span>{f["label"]}</span></label>'
+    for k, f in FAMILIES.items()
+)
+seeds_section = f"""    <section class="ph-section">
+      <h2 class="ph-h">Seeds — shift a whole colour family (hue / lightness / chroma, OKLCH) from one control. The per-token grid below still overrides individual tokens.</h2>
+      <div class="tc-seed-row">
+{seed_swatches}
+      </div>
+    </section>"""
 
 # Contrast (AA) — representative foreground/background pairs. WCAG AA for normal
 # text is 4.5:1; the tool shows the live ratio + pass/fail per pair, per the
@@ -90,10 +126,14 @@ editor_css = r"""
     .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
     .tc-chip { display: flex; align-items: center; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
-    .tc-sw { width: 22px; height: 22px; border-radius: 4px;
-      border: 1px solid var(--border-default); flex: none; }
-    .tc-color { width: 30px; height: 24px; padding: 0; border: none;
-      background: none; cursor: pointer; flex: none; }
+    .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default);
+      border-radius: 4px; background: none; cursor: pointer; flex: none; }
+    .tc-seed-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .tc-seed { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+      font-size: 0.85rem; }
+    .tc-seed-color { width: 30px; height: 26px; padding: 0;
+      border: 1px solid var(--border-default); border-radius: 6px;
+      background: none; cursor: pointer; }
     .tc-hex { width: 76px; font-family: ui-monospace, monospace; font-size: 0.72rem;
       padding: 2px 4px; }
     .tc-name { font-family: ui-monospace, monospace; font-size: 0.68rem;
@@ -138,12 +178,16 @@ editor_section = f"""    <section class="ph-section">
       </div>
     </section>"""
 
-defaults_script = "  <script>window.RRW_DEFAULTS = " + json.dumps(theme) + ";</script>"
+defaults_script = (
+    "  <script>window.RRW_DEFAULTS = " + json.dumps(theme) + ";"
+    " window.RRW_FAMILIES = " + json.dumps(FAMILIES) + ";</script>"
+)
 
 editor_js = r"""  <script>
     (function () {
       var root = document.documentElement;
       var DEFAULTS = window.RRW_DEFAULTS;      // { light: {..}, dark: {..} }
+      var FAMILIES = window.RRW_FAMILIES;      // { fam: { anchor, members } }
       var model = clone(DEFAULTS);
       var mode = "light";
       var dirty = false;
@@ -182,6 +226,86 @@ editor_js = r"""  <script>
           badge.className = "tc-cx-badge " + (pass ? "pass" : "fail");
         });
       }
+
+      // --- OKLCH ↔ sRGB (Björn Ottosson) for the seed family-shift ---
+      function srgb2lin(c) { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
+      function lin2srgb(c) {
+        c = c <= 0.0031308 ? c*12.92 : 1.055*Math.pow(c, 1/2.4) - 0.055;
+        return Math.round(Math.min(1, Math.max(0, c)) * 255);
+      }
+      function rgb2oklch(hex) {
+        hex = norm6(hex);
+        var r = srgb2lin(parseInt(hex.slice(1,3),16)),
+            g = srgb2lin(parseInt(hex.slice(3,5),16)),
+            b = srgb2lin(parseInt(hex.slice(5,7),16));
+        var l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b),
+            m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
+            s = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+        var L = 0.2104542553*l + 0.7936177850*m - 0.0040720468*s,
+            A = 1.9779984951*l - 2.4285922050*m + 0.4505937099*s,
+            B = 0.0259040371*l + 0.7827717662*m - 0.8086757660*s;
+        var H = Math.atan2(B, A) * 180/Math.PI; if (H < 0) H += 360;
+        return { L: L, C: Math.sqrt(A*A + B*B), H: H };
+      }
+      function oklch2rgb(o) {
+        var h = o.H * Math.PI/180, A = o.C*Math.cos(h), B = o.C*Math.sin(h), L = o.L;
+        var l = L + 0.3963377774*A + 0.2158037573*B,
+            m = L - 0.1055613458*A - 0.0638541728*B,
+            s = L - 0.0894841775*A - 1.2914855480*B;
+        l = l*l*l; m = m*m*m; s = s*s*s;
+        var r = 4.0767416621*l - 3.3077115913*m + 0.2309699292*s,
+            g = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s,
+            b = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s;
+        return "#" + [r, g, b].map(function (v) {
+          return ("0" + lin2srgb(v).toString(16)).slice(-2);
+        }).join("");
+      }
+      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+      // Shift a whole family by the OKLCH delta between the seed's old and new
+      // value — preserves each member's relationship to the anchor (a bg stays
+      // a pale tint, text stays dark), just re-hued / re-lightened together.
+      function shiftFamily(fam, newHex) {
+        var f = FAMILIES[fam], old = rgb2oklch(model[mode][f.anchor]),
+            nw = rgb2oklch(newHex);
+        var dL = nw.L - old.L, dC = nw.C - old.C, dH = nw.H - old.H;
+        f.members.forEach(function (t) {
+          var hex;
+          if (t === f.anchor) {
+            hex = newHex;  // the seed IS the anchor (WYSIWYG)
+          } else {
+            var o = rgb2oklch(model[mode][t]);
+            // Taper the lightness / chroma delta near black & white so already-
+            // extreme members (pale bg tints, dark text) don't clip; hue rotates
+            // fully so the whole family re-hues together.
+            var room = 1 - Math.abs(2 * o.L - 1);
+            hex = oklch2rgb({
+              L: clamp(o.L + dL * room, 0, 1),
+              C: Math.max(0, o.C + dC * room),
+              H: ((o.H + dH) % 360 + 360) % 360
+            });
+          }
+          model[mode][t] = hex; root.style.setProperty(t, hex);
+        });
+        dirty = true;
+        refreshInputs(); refreshSeeds(); updateContrast(); status();
+      }
+      function refreshSeeds() {
+        document.querySelectorAll(".tc-seed").forEach(function (el) {
+          var f = FAMILIES[el.getAttribute("data-family")];
+          var c6 = norm6(model[mode][f.anchor]);
+          if (/^#[0-9a-fA-F]{6}$/.test(c6)) el.querySelector(".tc-seed-color").value = c6;
+        });
+      }
+      function refreshInputs() {
+        chips().forEach(function (c) {
+          var t = c.getAttribute("data-token"), v = model[mode][t];
+          if (v == null) return;
+          c.querySelector(".tc-hex").value = v;
+          var c6 = norm6(v);
+          if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
+        });
+      }
       function status() {
         var el = document.querySelector("[data-status]");
         if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · "
@@ -192,19 +316,11 @@ editor_js = r"""  <script>
         else root.removeAttribute("data-theme");
         var m = model[mode];
         Object.keys(m).forEach(function (t) { root.style.setProperty(t, m[t]); });
-        chips().forEach(function (c) {
-          var t = c.getAttribute("data-token"), v = model[mode][t];
-          if (v == null) return;
-          c.querySelector(".tc-hex").value = v;
-          var c6 = norm6(v);
-          if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
-        });
-        status();
-        updateContrast();
+        refreshInputs(); refreshSeeds(); status(); updateContrast();
       }
       function setToken(t, v) {
         model[mode][t] = v; root.style.setProperty(t, v); dirty = true;
-        status(); updateContrast();
+        refreshSeeds(); status(); updateContrast();
       }
 
       // --- localStorage save library ---
@@ -267,6 +383,14 @@ editor_js = r"""  <script>
             var c6 = norm6(v);
             if (/^#[0-9a-fA-F]{6}$/.test(c6)) color.value = c6;
           } else { hex.value = model[mode][t]; }
+        });
+      });
+
+      // --- seed controls (family shift) ---
+      document.querySelectorAll(".tc-seed").forEach(function (el) {
+        var fam = el.getAttribute("data-family");
+        el.querySelector(".tc-seed-color").addEventListener("input", function () {
+          shiftFamily(fam, this.value);
         });
       });
 
@@ -344,6 +468,8 @@ editor_js = r"""  <script>
 body = (
     toolbar
     + '\n\n  <div class="ph-body">\n'
+    + seeds_section
+    + "\n"
     + hc.component_gallery()
     + "\n"
     + contrast_section

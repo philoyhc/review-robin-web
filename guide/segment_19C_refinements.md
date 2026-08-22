@@ -496,8 +496,17 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
   pass/fail badge per bg/text pair (16 pairs) for the active theme, updating as
   tokens change. (Surfaces e.g. muted-on-card at 2.54:1 — intentionally-low
   decorative text.)
-- ☐ seeds + OKLCH derivation (with the formula-clean `base.html` re-tune
-  pre-step) → ☐ polish.
+- **✅ Slice 3 (shipped) — seeds + OKLCH derivation.** Six per-hue seed
+  controls (blue / green / amber / red / violet / sky) above the gallery. Moving
+  a seed re-hues its whole family by the OKLCH delta between the anchor's old and
+  new value, applied to each member and **tapered by `room = 1 − |2·L − 1|`** so
+  extreme-lightness members (pale bg tints, near-black darks) don't clip the sRGB
+  gamut; the anchor lands exactly (WYSIWYG). Because the shift is *relative* to
+  the current hand-tuned values, `base.html` stays untouched — the risky
+  "formula-clean re-tune" pre-step is **not needed** (delta-shift supersedes it).
+  Each editor chip also dropped its redundant static swatch (the `<input
+  type="color">` is the sample).
+- ☐ polish.
 
 ---
 
