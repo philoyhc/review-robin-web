@@ -30,14 +30,70 @@ order = [n for n, _ in hc.parse_light_tokens(base_css)]  # :root declaration ord
 theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dark": {...}}
 
 
+# Human-readable chip labels — shown instead of the raw `--token` name (the raw
+# name stays in `data-token` + the hover title, for the export → base.html map).
+LABELS = {
+    "--bg-page": "Page background",
+    "--bg-card": "Card background",
+    "--bg-muted": "Muted background",
+    "--text-on-accent": "Text on accent",
+    "--text-on-amber": "Text on amber",
+    "--border-subtle": "Subtle border",
+    "--border-default": "Default border",
+    "--neutral-marker": "Neutral marker",
+    "--text-primary": "Primary text",
+    "--text-secondary": "Secondary text",
+    "--text-muted": "Muted text",
+    "--accent-blue": "Blue / link",
+    "--accent-blue-bg": "Blue background",
+    "--accent-blue-bg-soft": "Blue background (soft)",
+    "--accent-blue-bg-faint": "Blue background (faint)",
+    "--accent-blue-light": "Blue (light)",
+    "--accent-blue-dark": "Blue (dark)",
+    "--accent-blue-marker": "Blue marker",
+    "--accent-blue-strong": "Blue (strong)",
+    "--accent-green": "Green",
+    "--accent-green-bg": "Green background",
+    "--accent-green-bg-faint": "Green background (faint)",
+    "--accent-green-marker": "Green marker",
+    "--accent-green-text": "Green text",
+    "--accent-amber": "Amber",
+    "--accent-amber-bg": "Amber background",
+    "--accent-amber-bg-mid": "Amber background (mid)",
+    "--accent-amber-dark": "Amber (dark)",
+    "--accent-amber-border": "Amber border",
+    "--accent-red": "Red",
+    "--accent-red-bg": "Red background",
+    "--accent-red-soft": "Red (soft)",
+    "--accent-red-strong": "Red (strong)",
+    "--accent-red-text": "Red text",
+    "--accent-violet-bg": "Violet background",
+    "--accent-violet-text": "Violet text",
+    "--accent-sky-bg": "Sky background",
+    "--accent-sky-text": "Sky text",
+    "--danger-bg": "Danger background",
+    "--danger-border": "Danger border",
+    "--danger-text": "Danger text",
+    "--instrument-tint-1": "Instrument tint 1",
+    "--instrument-tint-2": "Instrument tint 2",
+    "--instrument-tint-3": "Instrument tint 3",
+    "--instrument-tint-4": "Instrument tint 4",
+    "--instrument-tint-5": "Instrument tint 5",
+    "--instrument-tint-6": "Instrument tint 6",
+}
+
+
 def chip(n):
-    """One editable token chip (color-picker + hex + name), initialised to the
-    light value; the JS re-syncs inputs to the active theme's model on toggle."""
+    """One editable token chip (color-picker + hex + label), initialised to the
+    light value; the JS re-syncs inputs to the active theme's model on toggle.
+    The visible label is the human-readable name; the raw `--token` lives in
+    `data-token` and the hover title so the export→base.html map is unambiguous."""
+    label = LABELS.get(n, n)
     return (
-        f'        <div class="tc-chip" data-token="{n}">'
-        f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{n} colour">'
-        f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{n} hex">'
-        f'<span class="tc-name">{n}</span></div>'
+        f'        <div class="tc-chip" data-token="{n}" title="{n}">'
+        f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{label} colour">'
+        f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{label} hex">'
+        f'<span class="tc-name">{label}</span></div>'
     )
 
 
@@ -151,10 +207,14 @@ editor_css = r"""
     .tc-seed-color { width: 30px; height: 26px; padding: 0;
       border: 1px solid var(--border-default); border-radius: 6px;
       background: none; cursor: pointer; }
-    .tc-hex { width: 76px; font-family: ui-monospace, monospace; font-size: 0.72rem;
-      padding: 2px 4px; }
-    .tc-name { font-family: ui-monospace, monospace; font-size: 0.68rem;
-      color: var(--text-secondary); word-break: break-all; }
+    /* outrank base.html's `body.ui-v2 input[type="text"] { width: 100% }`
+       (0,2,2) — match the `body.ui-v2` prefix + two chip classes (0,3,2) or the
+       hex box fills the whole row. */
+    body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace;
+      font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box;
+      letter-spacing: -0.01em; }
+    .tc-name { flex: 1; min-width: 0; font-size: 0.75rem;
+      color: var(--text-secondary); line-height: 1.2; }
     .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
     .tc-cx { display: flex; align-items: center; gap: 8px; }
     .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px;
