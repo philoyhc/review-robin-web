@@ -23,6 +23,38 @@ repaints every surface instantly. The harness already renders the whole
 gallery + the 47-token swatch grid + a Light/Dark toggle — it just needs
 *inputs* and an *export*.
 
+## Generator & the three core controls (2026-08-22)
+
+**Generator — new file, shared helper.** Add `tools/theme_customizer.gen.py`
+(→ `tools/theme_customizer.html`) rather than overloading the read-only
+preview. Factor the pieces both need — the anchored `base.html` `<style>` lift,
+the `:root` token parse, and the component-gallery body — into a small
+`tools/_harness_common.py` that both `theme_preview.gen.py` and
+`theme_customizer.gen.py` import, so the preview stays a simple viewer and the
+customizer grows on its own. (Reusing `theme_preview.gen.py` in place is the
+lighter alternative if the shared-helper split feels heavy for two files.)
+
+The customizer needs three controls specifically:
+
+1. **Load from app / "Refresh to actual".** The generator **bakes base.html's
+   real light *and* dark token values** into the page at generate time as the
+   editing baseline (it already lifts both `:root` and
+   `:root[data-theme="dark"]`). This button re-applies that baked baseline —
+   discarding edits and snapping both themes back to the app's actual palette.
+   *Note:* "actual" is frozen at generate time; to pick up a later `base.html`
+   change, **regenerate** (`python3 tools/theme_customizer.gen.py`) — the static
+   page can't read `base.html` at runtime.
+2. **Edit light and dark separately.** The Light/Dark toggle switches which
+   theme you're *editing* and *previewing*; the two palettes are independent
+   (model `{light:{…}, dark:{…}}`, per "Two themes at once" below).
+3. **Save as one JSON, locally.** One button serialises **both** themes into a
+   single JSON file and downloads it (a `download` link — works for a local
+   file; the harness isn't sandboxed). Shape + round-trip in "JSON export /
+   import" below.
+
+These three are the MVP surface (Slice 1). The seed-and-derive layer (below) is
+the ergonomic upgrade on top.
+
 ## Scope boundary (important)
 
 - **Phase 1 — customizer + JSON export (this plan).** Lives entirely in the
@@ -153,9 +185,12 @@ Two payloads in one file:
 
 ## Build slices (if it ever gets scheduled)
 
-1. **Editable grid + JSON (manual, no derivation).** Every token → colour input
-   + live `setProperty`; flat `tokens` export/import; Reset. This alone is a
-   useful palette authoring tool and de-risks the plumbing.
+1. **Editable grid + the three controls (manual, no derivation).** New
+   `tools/theme_customizer.gen.py`; every token → colour input + live
+   `setProperty`; the three core controls above (**Load-from-app / refresh**,
+   **separate light/dark editing**, **Save both themes as one JSON** — plus
+   Import to round-trip). This alone is a useful palette authoring tool and
+   de-risks the plumbing.
 2. **Contrast badges** on the pairs (AA pass/fail). Cheap, high value.
 3. **Seeds + OKLCH derivation** — the ergonomic layer: seed row → `derive()` →
    families; per-token override; `seeds` in the JSON. The real work.
