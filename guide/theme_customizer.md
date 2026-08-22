@@ -181,7 +181,7 @@ coding agent turns into template code.
   port). This formalises the loop we already ran by hand for dark.
 - **Build slices:** (1) editable grid + the three controls + JSON;
   (2) contrast badges; (3) seeds + OKLCH derivation; (4) polish (presets,
-  tint-rotation control).
+  save-library UX).
 
 ---
 
@@ -200,12 +200,17 @@ and keep the tweak in their browser. "Tweak," not "publish."
   2. **Browser-local persistence** — Save writes the JSON to
      `localStorage["rrw-theme-custom"]` (sibling of the existing `rrw-theme`
      light/dark key).
-  3. **Runtime-apply** — a small synchronous head script in `base.html` (next to
-     the no-FOUC one) reads `rrw-theme-custom` and, if present, injects
+  3. **Runtime-apply** — a small synchronous script in `base.html`, placed
+     **after `base.html`'s own `<style>` block** (but still in `<head>`, before
+     `</head>` — so it runs before first paint *and* its override wins the
+     cascade). It reads `rrw-theme-custom` and, if present, injects
      `<style id="rrw-custom-theme">:root{ …light overrides… }
-     :root[data-theme="dark"]{ …dark overrides… }</style>` **before first
-     paint**. It overrides only the tweaked tokens; the existing light/dark
-     toggle keeps working because the overrides live in both guarded blocks.
+     :root[data-theme="dark"]{ …dark overrides… }</style>`. The override only
+     wins because it comes **after** the base `:root` blocks (equal specificity
+     → later wins) — placing it beside the no-FOUC script, which sits *before*
+     the `<style>`, would let base.html overwrite it. It overrides only the
+     tweaked tokens; the light/dark toggle keeps working because the overrides
+     live in both guarded blocks.
   4. **Revert to last saved** — discard in-progress edits and reload
      `rrw-theme-custom` (abandon an edit). **Reset to defaults** is separate —
      it clears the key and returns to `base.html`'s palette.
@@ -217,10 +222,13 @@ and keep the tweak in their browser. "Tweak," not "publish."
   (including participants') are untouched.
 - **Contrast is a hard gate here** — Save is blocked (or warns hard) on any AA
   failure, since the editor is in non-designer hands.
-- **Build slices:** (1) extract the First core into a reusable module + host it
-  on an operator page (read live tokens, live preview, no persistence yet);
-  (2) localStorage Save + the runtime-apply head script + Reset;
-  (3) the AA save-gate; (4) export/import + seed-first polish.
+- **Build slices** (scaffold-first per `AGENTS.md` → "Consequential UI lands
+  scaffold-first"): (1) **scaffold** the Display-mode section on
+  `/operator/settings` — real layout + copy, seed controls present but **inert**
+  (no reading, no preview, no save); (2) wire the editor — extract the First
+  core into a reusable module, host it in that section, read live tokens + live
+  preview; (3) localStorage Save + the runtime-apply script + Reset; (4) the AA
+  save-gate; (5) export/import + Revert-to-last-saved + seed polish.
 
 ### How Stretch rides on First (the reuse contract)
 
@@ -255,8 +263,9 @@ and keep the tweak in their browser. "Tweak," not "publish."
   change. Cleanest as a **self-contained pre-step**: land the formula-clean
   defaults first, then build the customizer on a clean base.
 - **Flash-free apply (Stretch)** — **confirmed:** the runtime `<style>`
-  injection is a synchronous head script (sibling of the no-FOUC light/dark
-  script) that runs before first paint, so a custom theme never flashes the
+  injection is a synchronous script in `<head>` **placed after `base.html`'s
+  `<style>`** (so it both runs before first paint *and* wins the cascade — see
+  Plan B, Runtime-apply) — a custom theme never flashes the
   default.
 
 ## Further future (neither plan) — persistent / shared themes
