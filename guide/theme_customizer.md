@@ -70,7 +70,7 @@ derives:
 | **Red** (destructive) | `--accent-red` + `-bg` / `-soft` / `-strong` / `-text`, and the soft-error `--danger-bg` / `-border` / `-text` |
 | **Violet** | `--accent-violet-bg` / `-text` |
 | **Sky** | `--accent-sky-bg` / `-text` |
-| **Instrument tints** | `--instrument-tint-1..6` — six hue stops rotated off one "tint chroma/lightness" control, or left as-is |
+| **Instrument tints** | `--instrument-tint-1..6` — six independent hue controls |
 
 **Fixed / structural (not seed-driven):** `--text-on-accent` (≈white, both
 themes) and `--text-on-amber` (the dark-label-on-light-amber exception) — manual
@@ -82,8 +82,8 @@ seed `oklch(L C H)`: **base** = seed; **-bg** = high-L/low-C (light) or
 low-L/low-C dark solid (dark); **-bg-soft/-faint** step toward the page bg;
 **-light** = +ΔL; **-dark/-strong/-text** = −ΔL in light, *inverted* to +ΔL in
 dark (light text on dark surface); **-marker** = light low-chroma tint. The
-neutral ramp is a lightness scale off the neutral seed, with a small tunable
-chroma so greys can lean warm/cool. Each family is one
+neutral ramp is a lightness scale off the neutral seed; greys stay neutral (no
+warmth control). Each family is one
 `derive(seed, mode) -> {token: value}`; the app's current values are the
 reference the defaults must reproduce (fixture: `derive(defaults) == base.html`).
 
@@ -190,12 +190,13 @@ coding agent turns into template code.
 **Goal:** let an operator tweak the light + dark themes for **their own view**
 and keep the tweak in their browser. "Tweak," not "publish."
 
-- **Reuses** the shared editor core verbatim — leaning on the **seed** controls
-  (a few hues) for a light-touch "tweak" UX, with the full grid behind Advanced.
+- **Reuses** the shared editor core — **seeds only** (a few hues) for a
+  light-touch "tweak" UX; the full per-token grid / Advanced is First-only
+  (developer).
 - **Adds (a thin app shell over the core):**
-  1. **An in-app operator page** hosting the editor — e.g. a Display-mode
-     section under `/operator/settings`, or its own `/operator/settings/theme`.
-     Server-rendered; the editor JS is the shared core, unchanged.
+  1. **A Display-mode section on `/operator/settings`** hosting the editor
+     (settled — not a dedicated route). Server-rendered; the editor JS is the
+     shared core, unchanged.
   2. **Browser-local persistence** — Save writes the JSON to
      `localStorage["rrw-theme-custom"]` (sibling of the existing `rrw-theme`
      light/dark key).
@@ -235,21 +236,28 @@ and keep the tweak in their browser. "Tweak," not "publish."
 
 ---
 
-## Open questions
+## Decisions (settled 2026-08-22)
 
-- **Editor host in the app (Stretch)** — a Display-mode section on
-  `/operator/settings`, or a dedicated `/operator/settings/theme`?
-- **Tweak depth (Stretch)** — seeds only (simplest, safest), or seeds +
-  Advanced full grid?
-- **Instrument tints** — six independent hues, or one knob rotated across six
-  stops?
-- **Neutral warmth** — expose a chroma/hue control on the grey ramp or keep it
-  neutral?
-- **Derivation fidelity** — the current palette wasn't built by a formula, so
-  `derive(default_seed)` won't hit every token exactly; treat mismatches as
-  seeded overrides, or re-tune the app values to be formula-clean?
-- **Flash-free apply (Stretch)** — confirm the runtime `<style>` injection runs
-  before paint (head, synchronous) so a custom theme doesn't flash the default.
+- **Editor host in the app (Stretch)** — a **Display-mode section on
+  `/operator/settings`** (not a dedicated route).
+- **Tweak depth (Stretch)** — **seeds only.** The full per-token grid /
+  Advanced mode stays First-only (developer). Simplest + safest in operator
+  hands.
+- **Instrument tints** — **six independent hue controls** (not one rotated
+  knob).
+- **Neutral warmth** — **greys stay neutral;** no warmth/chroma control on the
+  grey ramp.
+- **Derivation fidelity** — **re-tune the app's current token values to be
+  formula-clean:** adjust `base.html` so `derive(default_seed)` reproduces every
+  token exactly, with no leftover per-token overrides in the *defaults*. Note
+  this is a **deliberate, small visual change to today's shipped light/dark
+  palette** — author it in the harness and dev-slot-QA it like any palette
+  change. Cleanest as a **self-contained pre-step**: land the formula-clean
+  defaults first, then build the customizer on a clean base.
+- **Flash-free apply (Stretch)** — **confirmed:** the runtime `<style>`
+  injection is a synchronous head script (sibling of the no-FOUC light/dark
+  script) that runs before first paint, so a custom theme never flashes the
+  default.
 
 ## Further future (neither plan) — persistent / shared themes
 
