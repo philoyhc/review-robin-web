@@ -906,8 +906,12 @@ grow outward.
 #### 19C — Operator theme tweaker (Stretch)
 
 > Carved from the theme-customizer design (`guide/theme_customizer.md`
-> "Plan B — Stretch") 2026-08-22. **First** — the developer designer — is
-> scheduled as 19C Item 5; **Stretch** was split off and deferred.
+> "Plan B — Stretch") 2026-08-22. **First** — the developer designer — **✅
+> shipped as 19C Item 5 (2026-08-23)**, reworked onto the two-tier token
+> system (Item 6): `tools/theme_customizer.gen.py` (seeds + per-primitive
+> grid + semantic remaps + AA contrast + JSON export), data-driven and
+> app-agnostic. **Stretch** remains deferred — its dependency (a shared editor
+> core) is now satisfied, so it's a thin app shell away.
 
 **Ships.**
 
@@ -919,14 +923,17 @@ grow outward.
   synchronous head script (placed **after** `base.html`'s `<style>` so the
   override wins the cascade) injects it before first paint;
   Revert-to-last-saved + Reset-to-defaults.
-- Reuses **19C Item 5's editor core** verbatim — Stretch = that core + a thin
-  app shell (page + localStorage + runtime-apply). **No database, no
-  migration** — per-browser, exactly like the light/dark choice; participants
-  (other browsers) unaffected.
+- Reuses **19C Item 5's (now-shipped) two-tier editor core** — Stretch = that
+  core + a thin app shell (page + localStorage + runtime-apply). **No database,
+  no migration** — per-browser, exactly like the light/dark choice; participants
+  (other browsers) unaffected. Operator depth = **seeds only** (shifting the
+  chromatic primitive families); the per-primitive grid and semantic-remap panel
+  stay developer-only.
 
-**Why deferred.** No demonstrated need yet, and it depends on Item 5 (the shared
-editor core) landing first. Browser-local scope is a *personal preference*, not
-branding — limited value until operators actually ask to adjust colours.
+**Why deferred.** No demonstrated need yet. The Item 5 dependency (the shared
+editor core) has now **landed**, so the only remaining work is the app shell —
+but browser-local scope is a *personal preference*, not branding, so it stays
+parked until operators actually ask to adjust colours.
 
 **Lift trigger.** A pilot operator wants to tweak the palette (readability, mild
 brand alignment) for their own view.

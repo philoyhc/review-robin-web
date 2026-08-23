@@ -135,13 +135,23 @@ prim_section = f"""    <section class="tc-sec">
 {chr(10).join(prim_blocks)}
     </section>"""
 
-# semantic remap: per cluster, each token gets light + dark primitive <select>
-opts = "".join(f'<option value="{n}">{n}</option>' for n, _ in prims)
+# semantic remap: per cluster, each token gets light + dark <select>. A role can
+# map to a PRIMITIVE (the independent default) or to another SEMANTIC token — a
+# deliberate coupling (`--x: var(--y)`, both Tier 2), per the model's @coupled
+# rule. The dropdown offers both, grouped.
+sem_names = [t for _, toks in clusters for t in toks]
+opts = (
+    '<optgroup label="Primitive (independent)">'
+    + "".join(f'<option value="{n}">{n}</option>' for n, _ in prims)
+    + '</optgroup><optgroup label="Semantic (couple → @coupled)">'
+    + "".join(f'<option value="{t}">{t}</option>' for t in sem_names)
+    + "</optgroup>"
+)
 sem_blocks = []
 for cname, toks in clusters:
     rows = "\n".join(
         f'        <div class="tc-remap" data-sem="{t}">'
-        f'<span class="tc-remap-name">{pretty(t)}</span>'
+        f'<span class="tc-remap-name">{pretty(t)}<span class="tc-coupled" hidden>⛓ coupled</span></span>'
         f'<span class="tc-swatch" style="background: var({t});"></span>'
         f'<select class="tc-sel" data-mode="light">{opts}</select>'
         f'<select class="tc-sel" data-mode="dark">{opts}</select></div>'
@@ -153,7 +163,7 @@ for cname, toks in clusters:
         f'{rows}\n      </details>'
     )
 sem_section = f"""    <section class="tc-sec">
-      <h2 class="tc-h">Semantic remaps — repoint a role to a different primitive, per theme (a deliberate re-mapping). Edit the ACTIVE theme's column; both are saved + exported.</h2>
+      <h2 class="tc-h">Semantic remaps — repoint a role, per theme. Target a <strong>primitive</strong> (the independent default) or another <strong>semantic token</strong> — a deliberate coupling (<code>--x: var(--y)</code>, marked ⛓; export it as <code>@coupled</code>). Edit the ACTIVE theme's column; both are saved + exported.</h2>
 {chr(10).join(sem_blocks)}
     </section>"""
 
@@ -210,7 +220,10 @@ editor_css = r"""
     .tc-remap-head, .tc-remap { display: grid; grid-template-columns: 1.4fr 24px 1fr 1fr; gap: 8px; align-items: center; }
     .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 4px 0; }
     .tc-remap { padding: 3px 0; border-top: 1px solid var(--border-subtle); }
+    .tc-remap.is-coupled { box-shadow: inset 2px 0 0 0 var(--status-warning-accent); }
     .tc-remap-name { font-size: 0.76rem; }
+    .tc-coupled { display: inline-block; margin-left: 6px; font-size: 0.62rem; font-weight: 600;
+      color: var(--status-warning-fg); background: var(--status-warning-bg); border-radius: 9999px; padding: 0 6px; }
     .tc-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border-subtle); }
     body.ui-v2 .tc-remap select.tc-sel { width: 100%; font-size: 0.72rem; padding: 2px 4px; box-sizing: border-box;
       font-family: ui-monospace, monospace; border: 1px solid var(--border-default); border-radius: 5px; background: var(--surface-page); color: var(--text-body); }
@@ -251,7 +264,17 @@ editor_js = r"""  <script>
     function hexRgb(h) { h = norm6(h).replace("#", ""); return [0,2,4].map(function(i){return parseInt(h.slice(i,i+2),16);}); }
     function relLum(h) { var c = hexRgb(h).map(function (v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; }
     function contrast(a,b){ var x=relLum(a)+0.05, y=relLum(b)+0.05; return x>y ? x/y : y/x; }
-    function resolve(sem) { var m = semMap(); var p = m[sem]; return p ? model.prims[p] : null; }
+    function isSem(t) { return D.semLight[t] != null; }
+    // follow the map chain to a primitive: semantic -> (semantic|primitive) -> ... -> hex.
+    function resolve(sem) {
+      var m = semMap(), seen = {}, cur = sem;
+      for (var i = 0; i < 24; i++) {
+        if (model.prims[cur] != null) return model.prims[cur];  // reached a primitive
+        if (m[cur] == null || seen[cur]) return null;           // unmapped or cycle
+        seen[cur] = 1; cur = m[cur];
+      }
+      return null;
+    }
     function updateContrast() {
       document.querySelectorAll(".tc-cx").forEach(function (row) {
         var fg = resolve(row.getAttribute("data-fg")), bg = resolve(row.getAttribute("data-bg"));
@@ -308,11 +331,17 @@ editor_js = r"""  <script>
         if (/^#[0-9a-fA-F]{6}$/.test(c6)) el.querySelector(".tc-seed-color").value = c6;
       });
     }
+    function markCoupled(r, s) {
+      var c = isSem(model.semL[s]) || isSem(model.semD[s]);
+      r.classList.toggle("is-coupled", c);
+      var el = r.querySelector(".tc-coupled"); if (el) el.hidden = !c;
+    }
     function refreshRemaps() {
       document.querySelectorAll(".tc-remap").forEach(function (r) {
         var s = r.getAttribute("data-sem");
         r.querySelector('select[data-mode="light"]').value = model.semL[s];
         r.querySelector('select[data-mode="dark"]').value = model.semD[s];
+        markCoupled(r, s);
       });
     }
     function status() {
@@ -341,7 +370,7 @@ editor_js = r"""  <script>
           var tgt = sel.getAttribute("data-mode") === "dark" ? model.semD : model.semL;
           tgt[s] = sel.value;
           if (sel.getAttribute("data-mode") === mode) root.style.setProperty(s, "var(" + sel.value + ")");
-          dirty = true; updateContrast(); status();
+          dirty = true; updateContrast(); status(); markCoupled(r, s);
           r.querySelector(".tc-swatch").style.background = "var(" + s + ")";
         });
       });
