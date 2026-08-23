@@ -1,10 +1,12 @@
 # Semantic colour tokens — two-tier migration plan
 
-**Status:** proposed (plan only — no code yet). Supersedes the flat,
-colour-named token model documented in `spec/color_tokens.md`. Scoped as
-**Segment 19C Items 4–5** (theme machinery: the customizer + this token
-system) with an explicit **portability goal** — build it reusable by other
-apps of the same look and feel (see "Reusability across apps" below).
+**Status:** plan **agreed — all six decisions resolved (2026-08-23); Slice 1
+unblocked**, no code yet. Supersedes the flat, colour-named token model
+documented in `spec/color_tokens.md`. Scoped as **Segment 19C Items 4–5**
+(theme machinery: the customizer + this token system) with an explicit
+**portability goal** — reusable by other apps of the same look and feel, with
+a **clean extractable kernel as the unhurried end-state** (see "Reusability
+across apps" + "Decisions").
 
 ## Why
 
@@ -75,10 +77,10 @@ Tier 2  SEMANTIC     --btn-primary-bg, --text-body, --surface-card,
   default guards against. Default stays: map to a primitive.
 - **Theming lives in Tier 2.** Light `:root` maps each semantic token to a
   light-appropriate primitive; `:root[data-theme="dark"]` remaps the same
-  semantic tokens to dark-appropriate primitives. Primitives themselves do
-  **not** change per theme (a `--blue-600` is always the same blue). This
-  keeps "what dark mode does" readable as one block of role→primitive
-  reassignments.
+  semantic tokens to dark-appropriate primitives (decision #5 — one palette,
+  no parallel dark namespace). Primitives themselves do **not** change per
+  theme (`--blue-strong` is always the same blue). This keeps "what dark mode
+  does" readable as one block of role→primitive reassignments.
 
 ### Deliberate couplings — marker + registry
 
@@ -111,32 +113,39 @@ this registry.
 
 ### Tier 1 — the primitive palette
 
-The current values are already a Tailwind-shaped scale, so primitives fall
-out mechanically. Examples (exact assignment is slice-1 work):
+**Descriptively named** (decision #4) — `--{hue}-{shade-word}`, not numeric
+steps. One `{hue}` per colour family plus a neutral ramp; a small, consistent
+shade-word ladder (e.g. `-mist / -wash / -pale / -soft / -bright / -strong /
+-deep / -deeper`) covers the lightnesses. Examples (the exact shade vocabulary
+is finalised in slice 1):
 
 | Primitive | Value | (today's token at this value) |
 |---|---|---|
 | `--white` | `#ffffff` | `--bg-page`, `--bg-card`, `--text-on-accent` |
-| `--gray-900` | `#111827` | `--text-primary` |
-| `--gray-500` | `#6b7280` | `--text-secondary` |
-| `--gray-400` | `#9ca3af` | `--text-muted` |
-| `--gray-300` | `#d1d5db` | `--border-default`, `--neutral-marker` |
-| `--gray-200` | `#e5e7eb` | `--border-subtle` |
-| `--gray-100` | `#f5f5f7` | `--bg-muted` |
-| `--blue-600` | `#2563eb` | `--accent-blue` |
-| `--blue-500` | `#3b82f6` | `--accent-blue-light` |
-| `--blue-700` | `#1d4ed8` | `--accent-blue-dark` |
-| `--blue-800` | `#1e40af` | `--accent-blue-strong` |
-| `--blue-300` | `#93c5fd` | `--accent-blue-marker` |
-| `--blue-100` | `#dbeafe` | `--accent-blue-bg` |
-| `--blue-50`  | `#eff6ff` | `--accent-blue-bg-soft` |
-| … | | (amber / red / green / violet / sky / dark-mode steps likewise) |
+| `--ink` | `#111827` | `--text-primary` |
+| `--slate` | `#6b7280` | `--text-secondary` |
+| `--slate-soft` | `#9ca3af` | `--text-muted` |
+| `--gray` | `#d1d5db` | `--border-default`, `--neutral-marker` |
+| `--gray-soft` | `#e5e7eb` | `--border-subtle` |
+| `--gray-wash` | `#f5f5f7` | `--bg-muted` |
+| `--blue-strong` | `#2563eb` | `--accent-blue` |
+| `--blue-bright` | `#3b82f6` | `--accent-blue-light` |
+| `--blue-deep` | `#1d4ed8` | `--accent-blue-dark` |
+| `--blue-deeper` | `#1e40af` | `--accent-blue-strong` |
+| `--blue-soft` | `#93c5fd` | `--accent-blue-marker` |
+| `--blue-pale` | `#dbeafe` | `--accent-blue-bg` |
+| `--blue-wash` | `#eff6ff` | `--accent-blue-bg-soft` |
+| … | | (amber / red / green / violet / sky + the dark shades likewise) |
 
-Dark mode contributes its own steps (e.g. `--blue-dk-600 #4b8bf5`) — the
-dark palette is a *parallel* set of primitives the dark `:root` block maps
-semantic tokens onto. Slice 1 enumerates the full primitive set from the 47
-current light values + their 47 dark counterparts (many collapse — several
-current tokens already share a value).
+**One palette, no parallel dark set** (decision #5). Primitives are
+theme-agnostic; the dark shades (`#4b8bf5`, the dark inks `#0f141b / #1a212e
+/ #232c3b`, …) are simply **more named primitives in the same set**
+(`--blue-glow`, `--ink-abyss`, …). Dark mode is **not** a parallel `--blue-dk-*`
+namespace — the dark `:root` just **reassigns each semantic token to whichever
+existing primitive fits** (light `--btn-primary-bg: var(--blue-strong)`;
+dark `--btn-primary-bg: var(--blue-glow)`). Slice 1 enumerates the full
+descriptive palette from the 47 light + 47 dark values (many collapse —
+several tokens already share a value).
 
 ### Tier 2 — semantic naming convention
 
@@ -439,31 +448,29 @@ Totals: ~**595** `var()` call-sites + **94** definitions, across
 
 ---
 
-## Open decisions (resolve during Slice 0 review)
+## Decisions — all resolved (Slice 1 unblocked)
 
-> **1–3 are settled by the independent-slot rule** (each identified slot is
-> its own token — never collapse two because they coincide). Kept below,
-> marked resolved, for the record; revisit only to overturn the principle.
+**1–3** settled by the independent-slot rule; **4–6** decided by the author
+2026-08-23. Kept for the record.
 
-1. ~~**Two error treatments.**~~ **Resolved → keep separate.** The soft
-   inline save-error keeps its own `--status-error-soft-*` (the `--danger-*`
-   values), distinct from `--status-error-*`.
-2. ~~**Success two-tone.**~~ **Resolved → keep both slots.** Distinct
-   `--status-success-fg` (pill text) and `--status-success-accent`
-   (icon / border), independent even where they'd coincide.
-3. ~~**Roles / lifecycle collapse vs. distinct.**~~ **Resolved → distinct,
-   independent.** `--role-*` and `--lifecycle-*` are their own slots, each
-   mapping to a primitive (not to the status semantics).
-4. **Primitive naming.** Numeric Tailwind-style steps (`--blue-600`) vs.
-   descriptive (`--blue-strong`). Plan assumes numeric.
-5. **Dark primitives naming.** Parallel set (`--blue-dk-600`) vs. letting
-   the dark `:root` reassign the same semantic tokens to whatever primitive
-   fits (preferred — fewer names).
-6. **How far to factor for portability now (from the reusability goal).**
-   Physically separate the portable-core tokens from the app-specific layer
-   in Slice 1 — a delimited region now, or a `tokens.css` partial — vs. keep
-   one `:root` block and only *namespace* them ([P]/[A] by naming), splitting
-   the files later. Trade-off: earlier extraction cost vs. a cleaner kernel
-   sooner. Also: how far to data-drive the customizer (labels / clusters /
-   seeds read from the token file) in the tooling slice vs. after the app
-   migration settles.
+1. ~~**Two error treatments.**~~ **Keep separate.** Soft inline save-error
+   keeps `--status-error-soft-*` (the `--danger-*` values), distinct from
+   `--status-error-*`.
+2. ~~**Success two-tone.**~~ **Keep both slots.** `--status-success-fg` (pill
+   text) and `--status-success-accent` (icon / border).
+3. ~~**Roles / lifecycle collapse vs. distinct.**~~ **Distinct, independent.**
+   `--role-*` and `--lifecycle-*` are their own slots, each mapping to a
+   primitive.
+4. ~~**Primitive naming.**~~ **Descriptive** (`--blue-strong`), not numeric
+   steps. Shade-word ladder finalised in slice 1.
+5. ~~**Dark primitives.**~~ **One palette; the dark `:root` reassigns the
+   same semantic tokens to whichever primitive fits.** No parallel `--blue-dk-*`
+   set — dark shades are just more named primitives.
+6. ~~**Portability factoring.**~~ **Namespace now, extract cleanly at the
+   end — no rush.** No second app is in flight, so Slice 1 keeps one `:root`
+   block with [P]/[A] namespacing; a late slice lifts the primitives +
+   portable core into a **clean, self-contained kernel** (delimited block →
+   `tokens.css` partial) as the final outcome. The customizer is
+   data-driven in the tooling slice, once the app migration has settled —
+   not front-loaded. **Clean kernel is the target end-state, reached without
+   haste.**
