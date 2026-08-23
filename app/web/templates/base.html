@@ -30,59 +30,6 @@
          ────────────────────────────────────────────────────────── */
       :root {
         color-scheme: light;
-        /* Neutrals */
-        --bg-page: #ffffff;
-        --bg-card: #ffffff;      /* raised surface (cards, panels) — darkens in dark mode */
-        --text-on-accent: #ffffff; /* text on a filled accent control — stays light in dark mode */
-        --text-on-amber: #ffffff;  /* text on the filled-amber Alert (.danger-solid) — white in light; goes dark in dark mode, where the amber fill is light */
-        --bg-muted: #f5f5f7;
-        --border-subtle: #e5e7eb;
-        --border-default: #d1d5db;
-        --neutral-marker: #d1d5db;
-        --text-primary: #111827;
-        --text-secondary: #6b7280;
-        --text-muted: #9ca3af;
-        /* Semantic accents (emphasis / background pairs) */
-        --accent-blue: #2563eb;
-        --accent-blue-bg: #dbeafe;
-        --accent-blue-bg-soft: #eff6ff;
-        --accent-blue-bg-faint: #fafcff;
-        --accent-blue-light: #3b82f6;
-        --accent-blue-dark: #1d4ed8;
-        --accent-blue-marker: #93c5fd;
-        --accent-green: #059669;
-        --accent-green-bg: #d1fae5;
-        --accent-green-marker: #a7f3d0;
-        --accent-amber: #d97706;
-        --accent-amber-bg: #fef3c7;
-        --accent-amber-bg-mid: #fde68a;
-        --accent-amber-dark: #92400e;
-        --accent-red: #dc2626;
-        --accent-red-bg: #fee2e2;
-        --accent-red-soft: #ef4444;
-        --accent-red-strong: #b91c1c;   /* danger emphasis (banner border, danger-outline btn) */
-        --accent-red-text: #991b1b;      /* danger text on a red-bg pill / banner */
-        --accent-amber-border: #f59e0b;  /* warning-banner border / box-shadow rule */
-        --accent-green-text: #166534;    /* success text on a green-bg pill */
-        --accent-green-bg-faint: #f0fdf4;/* palest green surface (Operations tab strip) */
-        --accent-blue-strong: #1e40af;   /* strong/navy blue text (info pill, nav) */
-        --accent-violet-bg: #ede9fe;     /* "super" pill background */
-        --accent-violet-text: #5b21b6;   /* "super" pill text */
-        --accent-sky-bg: #e0f2fe;        /* config-value (unresolved) surface */
-        --accent-sky-text: #075985;      /* config-value text */
-        /* Soft inline-error treatment (Instruments save-error banner) —
-           a gentler danger than the hard .danger-banner red set above. */
-        --danger-bg: #fdecea;
-        --danger-border: #f2b8b5;
-        --danger-text: #8a1c14;
-        /* Instruments page — cycling per-instrument card tint (Tailwind *-50
-           tones) for at-a-glance identification. Indexed 1..6 in template. */
-        --instrument-tint-1: #f0f9ff;
-        --instrument-tint-2: #ecfdf5;
-        --instrument-tint-3: #f5f3ff;
-        --instrument-tint-4: #fff7ed;
-        --instrument-tint-5: #fff1f2;
-        --instrument-tint-6: #fffbeb;
         /* Type scale */
         --fs-tiny: 0.75rem;
         --fs-small: 0.875rem;
@@ -102,10 +49,11 @@
         --radius-button: 6px;
         --radius-card: 8px;
         --radius-pill: 9999px;
-        /* ===== Design tokens (two-tier) — 19C Item 6, Slice 1. Kernel-in-waiting: this
-           delimited region is the seed for a future tokens.css extraction. Slice 1 is
-           ADDITIVE + inert — nothing consumes these yet; the flat tokens above still
-           drive the app. [P]=portable core, [A]=app-specific. ===== */
+        /* ===== Design tokens (two-tier) — 19C Item 6. Tier 1 primitives + Tier 2
+           semantic layer; every component and template consumes ONLY these tokens.
+           The flat colour-named tokens have been fully retired. This delimited region
+           is the kernel candidate for a future tokens.css extraction. [P]=portable
+           core, [A]=app-specific. Catalogue: spec/color_tokens.md. ===== */
         /* Tier 1 — primitives: descriptive, theme-agnostic; the ONLY raw hex. */
         --white: #ffffff;
         --gray-wash: #f5f5f7;
@@ -310,55 +258,8 @@
          guide/theme_preview.html. */
       :root[data-theme="dark"] {
         color-scheme: dark;
-        --bg-page: #0f141b;
-        --bg-card: #1a212e;
-        --text-on-accent: #ffffff;
-        --text-on-amber: #111827;
-        --bg-muted: #232c3b;
-        --border-subtle: #2b3547;
-        --border-default: #3a465c;
-        --neutral-marker: #3a465c;
-        --text-primary: #e6eaf2;
-        --text-secondary: #a9b4c6;
-        --text-muted: #6f7b8e;
-        --accent-blue: #4b8bf5;
-        --accent-blue-bg: #16324f;
-        --accent-blue-bg-soft: #12283f;
-        --accent-blue-bg-faint: #0e1c2c;
-        --accent-blue-light: #60a5fa;
-        --accent-blue-dark: #93c5fd;
-        --accent-blue-marker: #3b82f6;
-        --accent-blue-strong: #93c5fd;
-        --accent-green: #34d399;
-        --accent-green-bg: #0f3d2e;
-        --accent-green-marker: #065f46;
-        --accent-green-text: #6ee7b7;
-        --accent-green-bg-faint: #0c2419;
-        --accent-amber: #fbbf24;
-        --accent-amber-bg: #3a2c0a;
-        --accent-amber-bg-mid: #4a3a10;
-        --accent-amber-dark: #fcd34d;
-        --accent-amber-border: #b45309;
-        --accent-red: #f87171;
-        --accent-red-bg: #3d1a1a;
-        --accent-red-soft: #ef4444;
-        --accent-red-strong: #f87171;
-        --accent-red-text: #fca5a5;
-        --accent-violet-bg: #2e2250;
-        --accent-violet-text: #c4b5fd;
-        --accent-sky-bg: #0c2f42;
-        --accent-sky-text: #7dd3fc;
-        --danger-bg: #3d1a1a;
-        --danger-border: #7f2a2a;
-        --danger-text: #fca5a5;
-        --instrument-tint-1: #0e1a24;
-        --instrument-tint-2: #0e1f18;
-        --instrument-tint-3: #191527;
-        --instrument-tint-4: #241a10;
-        --instrument-tint-5: #241318;
-        --instrument-tint-6: #221d0e;
-        /* ===== Design tokens — dark remap (19C Item 6, Slice 1). One palette; dark
-           reassigns each semantic token to whichever primitive fits. ===== */
+        /* ===== Design tokens — dark remap (19C Item 6). One palette; dark reassigns
+           each semantic token to whichever primitive fits (no parallel dark set). ===== */
         /* Surfaces [P] (tints [A]) */
         --surface-page: var(--ink-abyss);
         --surface-card: var(--ink-deep);
@@ -523,22 +424,6 @@
         color: var(--text-body);
       }
       body.ui-v2 .card.rs-help-card strong { color: var(--text-body); }
-      .warning-banner {
-        border: 1px solid var(--accent-amber-border);
-        background: var(--accent-amber-bg);
-        color: var(--accent-amber-dark);
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 16px;
-      }
-      .danger-banner {
-        border: 1px solid var(--accent-red-strong);
-        background: var(--accent-red-bg);
-        color: var(--accent-red-text);
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 16px;
-      }
       h1 { margin-top: 0; margin-bottom: 16px; }
       .page-subtitle {
         margin: -12px 0 16px 0;
@@ -758,48 +643,10 @@
        * "First PR — button restyle" called out in unfinished_business.md
        * #21. Until that ships, the rules below remain live.
        */
-      .btn, button.btn, a.btn {
-        display: inline-block;
-        padding: 8px 14px;
-        border: 1px solid var(--accent-blue);
-        border-radius: 8px;
-        background: var(--accent-blue);
-        color: var(--text-on-accent);
-        text-decoration: none;
-        text-align: center;
-        font-family: inherit;
-        font-size: 0.95em;
-        line-height: 1.35;
-        cursor: pointer;
-      }
       .btn[hidden], button.btn[hidden], a.btn[hidden] { display: none; }
       .btn:disabled, button.btn:disabled, a.btn.disabled {
         opacity: 0.5;
         cursor: not-allowed;
-      }
-      .btn.secondary {
-        background: var(--surface-card);
-        color: var(--accent-blue);
-      }
-      .btn.danger {
-        background: var(--surface-card);
-        color: var(--accent-red-strong);
-        border-color: var(--accent-red-strong);
-      }
-      .btn.danger-solid {
-        background: var(--accent-red-strong);
-        color: var(--text-on-accent);
-        border-color: var(--accent-red-strong);
-      }
-      .btn.alert {
-        background: var(--surface-card);
-        color: var(--accent-amber);
-        border-color: var(--accent-amber);
-      }
-      .btn.alert-solid {
-        background: var(--accent-amber);
-        color: var(--text-on-accent);
-        border-color: var(--accent-amber);
       }
       label { display: block; margin-top: 12px; font-weight: 600; }
       input[type="text"], textarea, input[type="datetime-local"] {
@@ -882,9 +729,9 @@
         align-items: center;
         justify-content: center;
         padding: 8px 14px;
-        border: 1px solid var(--accent-blue);
+        border: 1px solid var(--btn-primary-border);
         border-radius: 8px;
-        background: var(--accent-blue);
+        background: var(--btn-primary-bg);
         color: var(--text-on-accent);
         text-decoration: none;
         text-align: center;

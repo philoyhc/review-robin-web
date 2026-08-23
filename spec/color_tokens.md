@@ -1,179 +1,305 @@
 # Colour tokens — Review Robin Web App
 
-The complete inventory of the app's colour palette. The **authoritative
-source is `app/web/templates/base.html`'s `:root` block** — this document
-is the human-readable catalogue of what lives there: every colour token,
-its friendly name, its light and dark value, and where it is used.
+The app's colour system is **two-tier**, defined in `app/web/templates/base.html`'s
+`:root` blocks. **Tier 1 primitives** hold the raw palette; **Tier 2 semantic**
+tokens name every role and are the *only* thing components and templates consume.
+The former flat colour-named tokens (`--accent-blue`, `--bg-page`, …) are fully
+retired. This document is the catalogue; the design + rationale live in
+`guide/semantic_tokens.md`.
 
-The theming discipline (from `spec/visual_style_rrw.md`): *use tokens,
-never raw hex.* Light is the bare `:root { … }`; Dark is
-`:root[data-theme="dark"] { … }` (plus `color-scheme: dark`), toggled by
-`data-theme` on `<html>`. Any surface built from tokens themes for free.
+Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
+`spec/visual_style_general.md` (design system), `spec/ui_elements.md` (elements).
 
-Read alongside:
+**Maintenance.** Edit tokens in `base.html` (both `:root` blocks); keep the
+`tools/` harness `LABELS` and this catalogue in sync. Rules of the model
+(independent slots; marked `@coupled` for deliberate coupling; dark `:root`
+remaps semantics onto the one primitive palette) are in `guide/semantic_tokens.md`.
 
-- `spec/visual_style_general.md` — the portable design system: the semantic
-  accent definitions (blue / green / amber / red) these tokens instantiate.
-- `spec/visual_style_rrw.md` — the RRW accent assignments (blue = Setup,
-  green = Operations, amber = locked/warning, red = destructive), lifecycle
-  colours, and the light/dark mechanics.
-- `spec/ui_elements.md` — the `.btn` roles and other element treatments that
-  consume these tokens.
-
-**Tooling.** `tools/theme_customizer.gen.py` (designer) and
-`tools/theme_preview.gen.py` (read-only preview) both render this palette;
-the friendly names in this document come from `LABELS` in
-`tools/_harness_common.py`. See `guide/theme_customizer.md`.
-
-**Maintenance.** When adding, renaming, or removing a colour token: update
-`base.html` (both the `:root` and the `:root[data-theme="dark"]` blocks),
-the `LABELS` map in `tools/_harness_common.py`, and this document together.
-
-The palette is **47 colour tokens** plus **16 non-colour scale tokens**
-(type / spacing / radius), all defined in the one `:root` block.
+**79 primitives · 103 semantic tokens · 16 non-colour scale tokens.**
 
 ---
 
-## Neutral surfaces & text (11)
+## Tier 1 — primitives (descriptive, theme-agnostic)
 
-| Token | Friendly name | Light | Dark | Used by |
+| Primitive | Value |
+|---|---|
+| `--white` | `#ffffff` |
+| `--paper` | `#e6eaf2` |
+| `--ink-abyss` | `#0f141b` |
+| `--ink` | `#111827` |
+| `--ink-deep` | `#1a212e` |
+| `--ink-muted` | `#232c3b` |
+| `--slate-deeper` | `#2b3547` |
+| `--slate-deep` | `#3a465c` |
+| `--slate` | `#6b7280` |
+| `--slate-dim` | `#6f7b8e` |
+| `--slate-pale` | `#a9b4c6` |
+| `--gray` | `#9ca3af` |
+| `--gray-soft` | `#d1d5db` |
+| `--gray-mist` | `#e5e7eb` |
+| `--gray-wash` | `#f5f5f7` |
+| `--blue-abyss-faint` | `#0e1c2c` |
+| `--blue-abyss-soft` | `#12283f` |
+| `--blue-abyss` | `#16324f` |
+| `--blue-deep` | `#1d4ed8` |
+| `--blue-deeper` | `#1e40af` |
+| `--blue-strong` | `#2563eb` |
+| `--blue-bright` | `#3b82f6` |
+| `--blue-glow` | `#4b8bf5` |
+| `--blue-glow-soft` | `#60a5fa` |
+| `--blue-soft` | `#93c5fd` |
+| `--blue-pale` | `#dbeafe` |
+| `--blue-wash` | `#eff6ff` |
+| `--blue-mist` | `#fafcff` |
+| `--sky-deep` | `#075985` |
+| `--sky-abyss` | `#0c2f42` |
+| `--sky-soft` | `#7dd3fc` |
+| `--sky-pale` | `#e0f2fe` |
+| `--green-strong` | `#059669` |
+| `--green-abyss` | `#065f46` |
+| `--green-abyss-faint` | `#0c2419` |
+| `--green-abyss-mid` | `#0f3d2e` |
+| `--green-deep` | `#166534` |
+| `--green-bright` | `#34d399` |
+| `--green-glow` | `#6ee7b7` |
+| `--green-soft` | `#a7f3d0` |
+| `--green-pale` | `#d1fae5` |
+| `--green-wash` | `#f0fdf4` |
+| `--amber-abyss` | `#3a2c0a` |
+| `--amber-abyss-mid` | `#4a3a10` |
+| `--amber-deep` | `#92400e` |
+| `--amber-deep-dk` | `#b45309` |
+| `--amber-strong` | `#d97706` |
+| `--amber` | `#f59e0b` |
+| `--amber-bright` | `#fbbf24` |
+| `--amber-glow` | `#fcd34d` |
+| `--amber-soft` | `#fde68a` |
+| `--amber-pale` | `#fef3c7` |
+| `--red-abyss` | `#3d1a1a` |
+| `--red-deep` | `#991b1b` |
+| `--red-firm` | `#b91c1c` |
+| `--red-strong` | `#dc2626` |
+| `--red-bright` | `#f87171` |
+| `--red-soft` | `#fca5a5` |
+| `--red-pale` | `#fee2e2` |
+| `--danger-abyss-border` | `#7f2a2a` |
+| `--danger-deep` | `#8a1c14` |
+| `--danger-soft` | `#f2b8b5` |
+| `--danger-pale` | `#fdecea` |
+| `--violet-abyss` | `#2e2250` |
+| `--violet-strong` | `#5b21b6` |
+| `--violet-soft` | `#c4b5fd` |
+| `--violet-pale` | `#ede9fe` |
+| `--tint-sky-dark` | `#0e1a24` |
+| `--tint-mint-dark` | `#0e1f18` |
+| `--tint-lavender-dark` | `#191527` |
+| `--tint-cream-dark` | `#221d0e` |
+| `--tint-rose-dark` | `#241318` |
+| `--tint-peach-dark` | `#241a10` |
+| `--tint-mint` | `#ecfdf5` |
+| `--tint-sky` | `#f0f9ff` |
+| `--tint-lavender` | `#f5f3ff` |
+| `--tint-rose` | `#fff1f2` |
+| `--tint-peach` | `#fff7ed` |
+| `--tint-cream` | `#fffbeb` |
+
+---
+
+## Tier 2 — semantic tokens, by cluster
+
+Each row: the token, the primitive it maps to in **light** / **dark**, and the
+resolved hex. `[P]` portable core · `[A]` app-specific.
+
+### Surfaces [P] (tints [A])
+
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--bg-page` | Page background | `#ffffff` | `#0f141b` | `html` / `body` / page canvas; card fill; outline-button fill (Secondary / Destructive / Amber); text input background |
-| `--bg-card` | Card background | `#ffffff` | `#1a212e` | Card surfaces; active nav-tab; session-nav cards; row labels; status row |
-| `--bg-muted` | Muted background | `#f5f5f7` | `#232c3b` | Tab-strip backgrounds, table header + row hover, code blocks, handle / tag-mode pills, Secondary-button hover, sort-button hover |
-| `--border-subtle` | Subtle border | `#e5e7eb` | `#2b3547` | Hairlines — chrome bottom border, banners, session-nav cards, row dividers, status-row top |
-| `--border-default` | Default border | `#d1d5db` | `#3a465c` | Standard borders — cards, inputs, signout button, section dividers |
-| `--neutral-marker` | Neutral marker | `#d1d5db` | `#3a465c` | Inactive active-underline marker on the Setup / Page tab strips |
-| `--text-primary` | Primary text | `#111827` | `#e6eaf2` | Body text, headings, Secondary-button label, active nav-tab, help-card |
-| `--text-secondary` | Secondary text | `#6b7280` | `#a9b4c6` | Page subtitles, `.muted`/help text, chrome identity, Secondary-button border |
-| `--text-muted` | Muted text | `#9ca3af` | `#6f7b8e` | De-emphasised — breadcrumb separator, disabled nav-tabs, canonical field labels |
-| `--text-on-accent` | Text on accent | `#ffffff` | `#ffffff` | Label on filled accent — Primary / CTA / alert-solid buttons, selected tag-chip, skip-link, theme-toggle |
-| `--text-on-amber` | Text on amber | `#ffffff` | `#111827` | Label on filled amber — Alert (`.btn.danger-solid`) button |
+| `--surface-page` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
+| `--surface-card` | `--white` | `--ink-deep` | `#ffffff` | `#1a212e` |
+| `--surface-muted` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+| `--surface-tint-1` | `--tint-sky` | `--tint-sky-dark` | `#f0f9ff` | `#0e1a24` |
+| `--surface-tint-2` | `--tint-mint` | `--tint-mint-dark` | `#ecfdf5` | `#0e1f18` |
+| `--surface-tint-3` | `--tint-lavender` | `--tint-lavender-dark` | `#f5f3ff` | `#191527` |
+| `--surface-tint-4` | `--tint-peach` | `--tint-peach-dark` | `#fff7ed` | `#241a10` |
+| `--surface-tint-5` | `--tint-rose` | `--tint-rose-dark` | `#fff1f2` | `#241318` |
+| `--surface-tint-6` | `--tint-cream` | `--tint-cream-dark` | `#fffbeb` | `#221d0e` |
 
----
+### Text & links [P]
 
-## Blue — Setup identity, links, primary (8)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-blue` | Blue / link | `#2563eb` | `#4b8bf5` | Links; Primary / CTA button fill + border; input focus ring (border + outline); active states; card accents (next-action, editing, acknowledge, severity, selected data-shape); selected tag-chip; back-link |
-| `--accent-blue-bg` | Blue background | `#dbeafe` | `#16324f` | Info pill + banner background, count pill, reviewer / validated pills, focus-ring halo |
-| `--accent-blue-bg-soft` | Blue background (soft) | `#eff6ff` | `#12283f` | Resolved config value, session-home anchor, active severity-chip |
-| `--accent-blue-bg-faint` | Blue background (faint) | `#fafcff` | `#0e1c2c` | Selected data-shape card, acknowledge card, session-home-anchor hover |
-| `--accent-blue-light` | Blue (light) | `#3b82f6` | `#60a5fa` | Filled-button hover fill (Primary / CTA / alert-solid) |
-| `--accent-blue-dark` | Blue (dark) | `#1d4ed8` | `#93c5fd` | Reviewer-role pill text, sort-button focus outline |
-| `--accent-blue-marker` | Blue marker | `#93c5fd` | `#3b82f6` | Setup tab active-underline marker + session-home-anchor marker |
-| `--accent-blue-strong` | Blue (strong) | `#1e40af` | `#93c5fd` | Active nav-tab text, info-pill text |
+| `--text-body` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
+| `--text-subtle` | `--slate` | `--slate-pale` | `#6b7280` | `#a9b4c6` |
+| `--text-dim` | `--gray` | `--slate-dim` | `#9ca3af` | `#6f7b8e` |
+| `--text-on-accent` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--text-on-amber` | `--white` | `--ink` | `#ffffff` | `#111827` |
+| `--text-link` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--text-link-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 
----
+### Borders & focus [P]
 
-## Green — Operations identity, success (5)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-green` | Green | `#059669` | `#34d399` | Success-banner border; ready / reviewee / success pills; complete status icon; green next-action signal |
-| `--accent-green-bg` | Green background | `#d1fae5` | `#0f3d2e` | Success banner + success / ready / reviewee pill backgrounds |
-| `--accent-green-bg-faint` | Green background (faint) | `#f0fdf4` | `#0c2419` | Operations tab-strip background |
-| `--accent-green-marker` | Green marker | `#a7f3d0` | `#065f46` | Operations tab active-underline marker |
-| `--accent-green-text` | Green text | `#166534` | `#6ee7b7` | Success pill text |
+| `--border-subtle` | `--gray-mist` | `--slate-deeper` | `#e5e7eb` | `#2b3547` |
+| `--border-default` | `--gray-soft` | `--slate-deep` | `#d1d5db` | `#3a465c` |
+| `--focus-ring` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--focus-ring-halo` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--marker-neutral` | `--gray-soft` | `--slate-deep` | `#d1d5db` | `#3a465c` |
 
----
+### Buttons [P]
 
-## Amber — warning, lock, Alert (5)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-amber` | Amber | `#d97706` | `#fbbf24` | Warning-banner border; Amber-outline & alert-solid button; danger-solid hover; missing-card border; amber signal icon |
-| `--accent-amber-bg` | Amber background | `#fef3c7` | `#3a2c0a` | Warning surfaces — danger-zone & lock cards, warning banner / pill, draft / observer / empty pills, missing card |
-| `--accent-amber-bg-mid` | Amber background (mid) | `#fde68a` | `#4a3a10` | Amber-outline button hover fill |
-| `--accent-amber-dark` | Amber (dark) | `#92400e` | `#fcd34d` | The framing "brown" — Alert (`.danger-solid`) fill; Amber-outline text + border; danger-zone & lock border + h2; warning / draft / observer pill text; incomplete status icon |
-| `--accent-amber-border` | Amber border | `#f59e0b` | `#b45309` | Legacy `.warning-banner` border; pending new-model row shadow |
+| `--btn-primary-bg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--btn-primary-fg` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--btn-primary-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--btn-primary-bg-hover` | `--blue-bright` | `--blue-glow-soft` | `#3b82f6` | `#60a5fa` |
+| `--btn-secondary-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
+| `--btn-secondary-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
+| `--btn-secondary-border` | `--slate` | `--slate-pale` | `#6b7280` | `#a9b4c6` |
+| `--btn-secondary-bg-hover` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+| `--btn-destructive-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
+| `--btn-destructive-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--btn-destructive-border` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--btn-destructive-bg-hover` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
+| `--btn-alert-bg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--btn-alert-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
+| `--btn-alert-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--btn-alert-bg-hover` | `--amber-strong` | `--amber-bright` | `#d97706` | `#fbbf24` |
+| `--btn-amber-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
+| `--btn-amber-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--btn-amber-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--btn-amber-bg-hover` | `--amber-soft` | `--amber-abyss-mid` | `#fde68a` | `#4a3a10` |
 
----
+### Status / feedback [P]
 
-## Red — destructive, errors (5) + Danger inline-error (3)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-red` | Red | `#dc2626` | `#f87171` | Error-banner border; Destructive button text + border; form-error text; expired pill; danger icon-button; error signal icon |
-| `--accent-red-bg` | Red background | `#fee2e2` | `#3d1a1a` | Error banner + Destructive hover fill; error / expired pills; danger-banner background |
-| `--accent-red-soft` | Red (soft) | `#ef4444` | `#ef4444` | **Defined, no current consumer** — reserved (see Notes) |
-| `--accent-red-strong` | Red (strong) | `#b91c1c` | `#f87171` | Legacy `.btn.danger-solid` fill / border; danger-banner border |
-| `--accent-red-text` | Red text | `#991b1b` | `#fca5a5` | Error pill text; danger-banner text |
-| `--danger-bg` | Danger background | `#fdecea` | `#3d1a1a` | Instruments save-error banner background † |
-| `--danger-border` | Danger border | `#f2b8b5` | `#7f2a2a` | Instruments save-error banner border † |
-| `--danger-text` | Danger text | `#8a1c14` | `#fca5a5` | Instruments save-error banner text † |
+| `--status-info-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--status-info-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
+| `--status-info-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--status-success-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
+| `--status-success-fg` | `--green-deep` | `--green-glow` | `#166534` | `#6ee7b7` |
+| `--status-success-accent` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--status-success-border` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--status-warning-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
+| `--status-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--status-warning-border` | `--amber-strong` | `--amber-bright` | `#d97706` | `#fbbf24` |
+| `--status-warning-accent` | `--amber-strong` | `--amber-bright` | `#d97706` | `#fbbf24` |
+| `--status-error-bg` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
+| `--status-error-fg` | `--red-deep` | `--red-soft` | `#991b1b` | `#fca5a5` |
+| `--status-error-border` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--status-error-accent` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--toast-error-bg` | `--red-firm` | `--red-bright` | `#b91c1c` | `#f87171` |
+| `--status-error-soft-bg` | `--danger-pale` | `--red-abyss` | `#fdecea` | `#3d1a1a` |
+| `--status-error-soft-border` | `--danger-soft` | `--danger-abyss-border` | `#f2b8b5` | `#7f2a2a` |
+| `--status-error-soft-fg` | `--danger-deep` | `--red-soft` | `#8a1c14` | `#fca5a5` |
+| `--status-super-bg` | `--violet-pale` | `--violet-abyss` | `#ede9fe` | `#2e2250` |
+| `--status-super-fg` | `--violet-strong` | `--violet-soft` | `#5b21b6` | `#c4b5fd` |
 
-† The `--danger-*` trio is consumed by an inline `<style>` block in
-`app/web/templates/operator/instruments_index.html` (the soft inline
-save-error banner), not by `base.html`'s stylesheet.
+### Participant roles [A]
 
----
-
-## Violet — super pill (2)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-violet-bg` | Violet background | `#ede9fe` | `#2e2250` | Super pill background |
-| `--accent-violet-text` | Violet text | `#5b21b6` | `#c4b5fd` | Super pill text |
+| `--role-reviewer-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--role-reviewer-fg` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
+| `--role-reviewee-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
+| `--role-reviewee-fg` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--role-observer-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
+| `--role-observer-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 
----
+### Lifecycle badges [A]
 
-## Sky — config values (2)
-
-| Token | Friendly name | Light | Dark | Used by |
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--accent-sky-bg` | Sky background | `#e0f2fe` | `#0c2f42` | `.config-value` chip background |
-| `--accent-sky-text` | Sky text | `#075985` | `#7dd3fc` | `.config-value` chip text |
+| `--lifecycle-draft-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
+| `--lifecycle-draft-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--lifecycle-validated-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
+| `--lifecycle-validated-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--lifecycle-ready-bg` | `--green-pale` | `--green-abyss-mid` | `#d1fae5` | `#0f3d2e` |
+| `--lifecycle-ready-fg` | `--green-strong` | `--green-bright` | `#059669` | `#34d399` |
+| `--lifecycle-expired-bg` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
+| `--lifecycle-expired-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--lifecycle-archived-bg` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+
+### Navigation [A]
+
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
+|---|---|---|---|---|
+| `--nav-marker-setup` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
+| `--nav-marker-ops` | `--green-soft` | `--green-abyss` | `#a7f3d0` | `#065f46` |
+| `--nav-tab-active-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
+| `--nav-tab-active-bg` | `--white` | `--ink-deep` | `#ffffff` | `#1a212e` |
+| `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#f0fdf4` | `#0c2419` |
+| `--nav-home-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
+| `--nav-home-bg-hover` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
+| `--nav-home-marker` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
+
+### Config values [A]
+
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
+|---|---|---|---|---|
+| `--config-value-bg` | `--sky-pale` | `--sky-abyss` | `#e0f2fe` | `#0c2f42` |
+| `--config-value-fg` | `--sky-deep` | `--sky-soft` | `#075985` | `#7dd3fc` |
+| `--config-value-resolved-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
+
+### Card accents [A]
+
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
+|---|---|---|---|---|
+| `--card-active-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--card-active-bg` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
+| `--card-warning-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
+| `--card-warning-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--card-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+
+### Selection, toggles & markers [P]/[A]
+
+| Semantic token | Light → primitive | Dark → primitive | Light | Dark |
+|---|---|---|---|---|
+| `--selected-bg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--selected-fg` | `--white` | `--white` | `#ffffff` | `#ffffff` |
+| `--icon-btn-action-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--icon-btn-danger-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--focus-ring-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
+| `--row-pending-marker` | `--amber` | `--amber-deep-dk` | `#f59e0b` | `#b45309` |
+| `--chip-active-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--chip-active-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
+| `--chip-active-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
+| `--chip-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 
 ---
 
-## Instrument card tints (6)
+## Deliberate couplings
 
-Per-instrument card background tints, cycled across instruments via the
-`instrument_palette` list in
-`app/web/templates/operator/instruments_index.html` (not referenced by
-`base.html`'s stylesheet).
+Registry of intentional semantic→semantic couplings (`@coupled` marker in
+`base.html`). Per the independent-slot rule, none exist yet — every slot maps
+to a primitive.
 
-| Token | Friendly name | Light | Dark |
-|---|---|---|---|
-| `--instrument-tint-1` | Instrument tint 1 | `#f0f9ff` | `#0e1a24` |
-| `--instrument-tint-2` | Instrument tint 2 | `#ecfdf5` | `#0e1f18` |
-| `--instrument-tint-3` | Instrument tint 3 | `#f5f3ff` | `#191527` |
-| `--instrument-tint-4` | Instrument tint 4 | `#fff7ed` | `#241a10` |
-| `--instrument-tint-5` | Instrument tint 5 | `#fff1f2` | `#241318` |
-| `--instrument-tint-6` | Instrument tint 6 | `#fffbeb` | `#221d0e` |
+| Coupled slot | → tracks | Reason |
+|---|---|---|
+| *(none)* | | |
 
 ---
 
 ## Non-colour scale tokens (16)
 
-Defined in the same `:root` block; **not** redefined per theme (they are
-dimensions, not colours).
+Theme-agnostic; not redefined per theme.
 
-**Type scale** — `--fs-tiny` `0.75rem` · `--fs-small` `0.875rem` ·
-`--fs-body` `1rem` · `--fs-h2` `1.125rem` · `--fs-h1` `1.5rem`.
+**Type** — `--fs-tiny` 0.75rem · `--fs-small` 0.875rem · `--fs-body` 1rem · `--fs-h2` 1.125rem · `--fs-h1` 1.5rem.
 
-**Spacing scale** — `--space-1` `4px` · `--space-2` `8px` · `--space-3`
-`12px` · `--space-4` `16px` · `--space-6` `24px` · `--space-8` `32px` ·
-`--space-12` `48px` · `--space-16` `64px`.
+**Spacing** — `--space-1` 4px · `--space-2` 8px · `--space-3` 12px · `--space-4` 16px · `--space-6` 24px · `--space-8` 32px · `--space-12` 48px · `--space-16` 64px.
 
-**Radius** — `--radius-button` `6px` · `--radius-card` `8px` ·
-`--radius-pill` `9999px`.
+**Radius** — `--radius-button` 6px · `--radius-card` 8px · `--radius-pill` 9999px.
 
 ---
 
 ## Notes
 
-- **`--accent-red-soft` has no consumer.** It is defined in both `:root`
-  blocks and documented in `spec/visual_style_general.md` ("softer red for
-  surfaces that want to flag destructive context without alarming"), but no
-  rule in `base.html` or any template references it. Treat it as reserved.
-- **Consumed outside `base.html`.** The `--danger-*` trio and the six
-  `--instrument-tint-*` tokens are used only via inline template styles
-  (both in `operator/instruments_index.html`), so they don't appear in the
-  main stylesheet's rules.
-- **Dark-mode neutrals invert while accents stay hued.** In dark,
-  `--text-on-accent` remains `#ffffff` (labels on the still-blue Primary
-  fill) but `--text-on-amber` flips to near-black (`#111827`) for legibility
-  on the lighter dark-mode amber.
+- **Migrated from flat tokens** over Segment 19C Item 6 (`guide/semantic_tokens.md`);
+  `base.html` is now fully two-tier — no flat colour-named token remains.
+- **Dropped as unused:** `--accent-red-soft` (never referenced) and the dead
+  standalone `.warning-banner` / `.danger-banner` rules.
+- **Dark neutrals invert, accents stay hued:** e.g. `--text-on-accent` is white
+  in both themes (label on the still-blue Primary), while `--text-on-amber` flips
+  to near-black in dark.
