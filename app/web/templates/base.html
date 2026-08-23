@@ -955,7 +955,7 @@
         grid-template-rows: auto auto;
         /* Themeable: --accent-blue-marker is #93c5fd in light and darkens
            under [data-theme="dark"], so the nav marker follows the theme. */
-        --tab-marker-color: var(--accent-blue-marker);
+        --tab-marker-color: var(--nav-marker-setup);
       }
       /* Home anchor: spans both rows on the left, blue tint,
          shows a single centered "Session Home" label. (Session
@@ -965,7 +965,7 @@
       .session-home-anchor {
         grid-column: 1;
         grid-row: 1 / span 2;
-        background: var(--accent-blue-bg-soft);
+        background: var(--nav-home-bg);
         border-right: 1px solid var(--border-default);
         padding: 12px 16px;
         display: flex;
@@ -977,12 +977,12 @@
         position: relative;
       }
       .session-home-anchor:hover {
-        background: var(--accent-blue-bg-faint);
-        color: var(--text-primary);
+        background: var(--nav-home-bg-hover);
+        color: var(--text-body);
       }
       .session-home-anchor.active {
-        background: var(--bg-card);
-        color: var(--text-primary);
+        background: var(--nav-tab-active-bg);
+        color: var(--text-body);
       }
       .session-home-anchor.active::after {
         content: "";
@@ -991,7 +991,7 @@
         right: 18px;
         bottom: 0;
         height: 4px;
-        background: var(--tab-marker-color);
+        background: var(--nav-home-marker);
         border-radius: 2px;
       }
       .home-anchor-text {
@@ -1055,7 +1055,7 @@
         align-items: stretch;
       }
       .tab-strip-setup { background: var(--bg-muted); grid-column: 3; grid-row: 1; }
-      .tab-strip-ops   { background: var(--accent-green-bg-faint); grid-column: 3; grid-row: 2; }
+      .tab-strip-ops   { background: var(--nav-strip-ops-bg); grid-column: 3; grid-row: 2; }
       /* Page-internal nav-tab strip — same `.nav-tab` children as the
          chrome but framed for page body usage: light grey row tint
          (matches the Setup-row tint from `.tab-strip-setup`), thin
@@ -1069,7 +1069,7 @@
         overflow: hidden;
       }
       .tab-strip-page .nav-tab.active::after {
-        background: var(--neutral-marker);
+        background: var(--marker-neutral);
       }
       /* 16A PR 3: Sys Admin chrome (one-row tab strip across the
          Admin surfaces). Inherits ``tab-strip tab-strip-page``
@@ -1096,8 +1096,8 @@
         color: var(--text-primary);
       }
       .nav-tab.active {
-        background: var(--bg-card);
-        color: var(--accent-blue-strong);
+        background: var(--nav-tab-active-bg);
+        color: var(--nav-tab-active-fg);
         font-weight: 500;
       }
       .nav-tab.disabled,
@@ -1127,10 +1127,10 @@
          global .nav-tab.active::after (0,2,1). Applies on both v1
          and v2 pages — the :root tokens are globally available. */
       .tab-strip-setup .nav-tab.active::after {
-        background: var(--neutral-marker);
+        background: var(--marker-neutral);
       }
       .tab-strip-ops .nav-tab.active::after {
-        background: var(--accent-green-marker);
+        background: var(--nav-marker-ops);
       }
       .status-row {
         padding: 12px 16px;
@@ -2797,17 +2797,17 @@
         border-color: var(--border-subtle);
       }
       body.ui-v2 .session-home-anchor {
-        background: var(--accent-blue-bg-soft);
+        background: var(--nav-home-bg);
         border-right-color: var(--border-subtle);
         color: var(--text-secondary);
       }
       body.ui-v2 .session-home-anchor:hover {
-        background: var(--accent-blue-bg-faint);
-        color: var(--text-primary);
+        background: var(--nav-home-bg-hover);
+        color: var(--text-body);
       }
       body.ui-v2 .session-home-anchor.active {
-        background: var(--bg-page);
-        color: var(--text-primary);
+        background: var(--surface-page);
+        color: var(--text-body);
       }
       body.ui-v2 .row-label {
         border-right-color: var(--border-subtle);
@@ -2840,7 +2840,7 @@
         color: var(--text-primary);
         background: rgba(255, 255, 255, 0.7);
       }
-      body.ui-v2 .nav-tab.active { color: var(--text-primary); }
+      body.ui-v2 .nav-tab.active { color: var(--text-body); }
       /* Active-tab underline — match the row's tint family. Setup
          row tints grey, so its marker is grey (--neutral-marker);
          Operations row tints green, so its marker is the
@@ -2848,13 +2848,13 @@
          per-row markers above — these v2-scoped rules just keep
          the cascade tidy if v2-only tokens diverge later. */
       body.ui-v2 .tab-strip-setup .nav-tab.active::after {
-        background: var(--neutral-marker);
+        background: var(--marker-neutral);
       }
       body.ui-v2 .tab-strip-ops .nav-tab.active::after {
-        background: var(--accent-green-marker);
+        background: var(--nav-marker-ops);
       }
       body.ui-v2 .session-home-anchor.active::after {
-        background: var(--accent-blue-marker);
+        background: var(--nav-home-marker);
       }
       body.ui-v2 .status-row {
         background: var(--bg-page);
