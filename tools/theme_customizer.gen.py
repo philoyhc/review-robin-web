@@ -201,7 +201,18 @@ editor_css = r"""
       border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
     .tc-controls input[type=file] { display: none; }
     .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
-    .tc-body { padding: 0 20px 60px; max-width: 1100px; }
+    /* Two-part split: toolbar is a fixed header; A (preview) and B (tokens)
+       are independently-scrolling columns filling the rest of the viewport. */
+    body.ui-v2 { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    .ph-toolbar { margin-bottom: 0; flex: none; }
+    .tc-split { flex: 1; min-height: 0; display: flex; align-items: stretch; }
+    .tc-part { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 20px 60px; }
+    .tc-part-a { flex: 1.05; }
+    .tc-part-b { flex: 0.95; border-left: 1px solid var(--border-default); }
+    .tc-part-h { position: sticky; top: 0; z-index: 5; margin: -16px -20px 14px;
+      padding: 10px 20px; background: var(--surface-card); border-bottom: 1px solid var(--border-default);
+      font-size: 0.9rem; font-weight: 600; }
+    .tc-part-note { font-weight: 400; font-size: 0.78rem; color: var(--text-subtle); }
     .tc-sec { margin: 0 0 34px; }
     .tc-h { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle);
       border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
@@ -210,7 +221,7 @@ editor_css = r"""
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
     .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
-    .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
     body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
@@ -416,14 +427,27 @@ editor_js = r"""  <script>
   })();
   </script>"""
 
-body = (
-    toolbar
-    + '\n\n  <div class="tc-body">\n'
+part_a = (
+    '  <div class="tc-part tc-part-a">\n'
+    '    <h2 class="tc-part-h">Part A — Preview <span class="tc-part-note">(screen elements; colour-picking to come)</span></h2>\n'
+    + hc.component_gallery()
+    + "\n  </div>"
+)
+part_b = (
+    '  <div class="tc-part tc-part-b">\n'
+    '    <h2 class="tc-part-h">Part B — Tokens</h2>\n'
     + seeds_section + "\n"
     + prim_section + "\n"
-    + hc.component_gallery() + "\n"
     + contrast_section + "\n"
     + sem_section
+    + "\n  </div>"
+)
+
+body = (
+    toolbar
+    + '\n\n  <div class="tc-split">\n'
+    + part_a + "\n"
+    + part_b
     + "\n  </div>\n\n"
     + data_script + "\n"
     + editor_js + "\n"
