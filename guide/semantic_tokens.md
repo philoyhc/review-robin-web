@@ -1,7 +1,10 @@
 # Semantic colour tokens — two-tier migration plan
 
 **Status:** proposed (plan only — no code yet). Supersedes the flat,
-colour-named token model documented in `spec/color_tokens.md`.
+colour-named token model documented in `spec/color_tokens.md`. Scoped as
+**Segment 19C Items 4–5** (theme machinery: the customizer + this token
+system) with an explicit **portability goal** — build it reusable by other
+apps of the same look and feel (see "Reusability across apps" below).
 
 ## Why
 
@@ -101,14 +104,57 @@ Examples: `--btn-primary-bg`, `--btn-primary-fg`, `--btn-primary-bg-hover`,
 
 ---
 
+## Reusability across apps (design goal)
+
+**Build the machinery to be portable** — reusable by other apps that want
+this look and feel, not welded to Review Robin. That reshapes the design in
+three ways:
+
+1. **Split Tier 2 into a portable core + an app-specific layer.**
+   - **Portable core semantics** — every app of this family has these:
+     `surface-*`, `text-*`, `border-*` / `focus`, `btn-*` (the five roles),
+     `status-*` (info / success / warning / error). Clusters **1–5, 11, and
+     the borders/focus half of 3** below.
+   - **App-specific semantics** — Review-Robin domain: participant-role
+     pills, lifecycle badges, session-nav markers, config-value chips,
+     instrument tints. Clusters **6–10**. These **alias the portable core /
+     primitives** rather than introducing new colours, so a new app either
+     drops them or re-points them.
+   Naming keeps the split legible (portable tokens carry no domain word;
+   app-specific ones do — `--lifecycle-*`, `--role-*`, `--config-value-*`).
+
+2. **Keep the token layer extractable.** The primitives + portable core
+   should live as a **self-contained block** (a clearly delimited region of
+   `base.html` now; a candidate for its own `tokens.css` partial later) that
+   another app can lift wholesale, then **swap primitive values to rebrand**
+   and define only its own app-specific layer. The portable→app dependency
+   runs one way, so the core never imports app specifics.
+
+3. **Make the tooling app-agnostic.** The customizer / preview
+   (`tools/`, `guide/theme_customizer.md`) must be **parameterised by the
+   target token file**, not hard-wired to RRW: the friendly-name `LABELS`,
+   the seed families, and the zone/cluster definitions become **data** the
+   generator reads (ideally derived from the token file itself), not baked
+   constants. The JSON export/import is already the portable interchange
+   format — a coding agent ports it into any app's token block. Result: point
+   the customizer at another app's `tokens.css`, design, export, apply.
+
+The reusable deliverable is therefore: **{primitives + portable-core
+semantic layer} + {the app-agnostic customizer}** — a small design-system
+kernel; each app supplies its own primitive values and app-specific
+semantics on top.
+
+---
+
 ## Element → role taxonomy (the clustering)
 
 Eleven clusters, derived from the consumer audit. Each row is a proposed
 Tier-2 token and the **current** token it takes its value from (which fixes
 its Tier-1 primitive). This *is* the reorg deliverable; slice 1 turns it into
-the actual `:root` blocks.
+the actual `:root` blocks. **[P]** = portable core · **[A]** = app-specific
+(see "Reusability" above).
 
-### 1. Surfaces
+### 1. Surfaces — [P] (tints `--surface-tint-*` are [A])
 
 | Semantic | ← current | Notes |
 |---|---|---|
@@ -117,7 +163,7 @@ the actual `:root` blocks.
 | `--surface-muted` | `--bg-muted` | tab strips, table header/hover, code blocks |
 | `--surface-tint-1…6` | `--instrument-tint-1…6` | per-instrument card tints |
 
-### 2. Text & links
+### 2. Text & links — [P]
 
 | Semantic | ← current | Notes |
 |---|---|---|
@@ -128,7 +174,7 @@ the actual `:root` blocks.
 | `--text-on-amber` | `--text-on-amber` | label on filled amber |
 | `--text-link` | `--accent-blue` | **decoupled from `--btn-primary-bg`** — same value today, own token now |
 
-### 3. Borders & focus
+### 3. Borders & focus — [P]
 
 | Semantic | ← current |
 |---|---|
@@ -137,7 +183,7 @@ the actual `:root` blocks.
 | `--focus-ring` | `--accent-blue` (border + outline; halo = `--accent-blue-bg`) |
 | `--marker-neutral` | `--neutral-marker` |
 
-### 4. Buttons (5 roles × fill / label / border / hover)
+### 4. Buttons (5 roles × fill / label / border / hover) — [P]
 
 | Role | `-bg` | `-fg` | `-border` | `-bg-hover` |
 |---|---|---|---|---|
@@ -150,7 +196,7 @@ the actual `:root` blocks.
 (This is exactly the label/fill/border grid the customizer's Buttons zone
 already shows — the zone was an early sketch of this cluster.)
 
-### 5. Status / feedback (info · success · warning · error)
+### 5. Status / feedback (info · success · warning · error) — [P]
 
 Consumed by pills, banners, and inline messages.
 
@@ -167,7 +213,7 @@ inline save-error** (`--danger-bg/border/text`) is a *second* error
 treatment distinct from `--status-error-*`. Consolidate or keep as
 `--status-error-soft-*`.
 
-### 6. Participant-role pills
+### 6. Participant-role pills — [A]
 
 | Semantic | ← current |
 |---|---|
@@ -175,7 +221,7 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 | `--role-reviewee-bg / -fg` | `--accent-green-bg` / `--accent-green` |
 | `--role-observer-bg / -fg` | `--accent-amber-bg` / `--accent-amber-dark` |
 
-### 7. Lifecycle badges
+### 7. Lifecycle badges — [A]
 
 | Semantic | maps to |
 |---|---|
@@ -185,7 +231,7 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 | `--lifecycle-expired` | error (red) |
 | `--lifecycle-archived` | muted (`--bg-muted`) |
 
-### 8. Navigation
+### 8. Navigation — [A]
 
 | Semantic | ← current |
 |---|---|
@@ -196,14 +242,14 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 | `--nav-strip-ops-bg` | `--accent-green-bg-faint` |
 | `--nav-home-bg / -bg-hover / -marker` | `--accent-blue-bg-soft` / `--accent-blue-bg-faint` / `--accent-blue-marker` |
 
-### 9. Config values
+### 9. Config values — [A]
 
 | Semantic | ← current |
 |---|---|
 | `--config-value-bg / -fg` | `--accent-sky-bg` / `--accent-sky-text` |
 | `--config-value-resolved-bg` | `--accent-blue-bg-soft` |
 
-### 10. Card accents
+### 10. Card accents — [A]
 
 | Semantic | ← current |
 |---|---|
@@ -211,7 +257,7 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 | `--card-warning-bg / -border` | `--accent-amber-bg` / `--accent-amber-dark` (danger-zone, lock) |
 | next-action signals | reuse `--status-{success,warning,error,info}-fg` |
 
-### 11. Super pill (violet)
+### 11. Super pill (violet) — [P] (extended status accent)
 
 | Semantic | ← current |
 |---|---|
@@ -250,11 +296,15 @@ visually). Verified on the Azure dev slot, since the suite can't see CSS.
 - **Slice N+1 — retire the old flat tokens.** Once no rule references
   `--accent-*` / `--bg-*` / `--text-*` directly, delete them. Colour-named
   survivors, if any, fold into Tier-1 primitives.
-- **Tooling slice — rework the customizer + preview + docs.** The
-  customizer becomes two-tier: edit the **primitive palette** (and see every
-  semantic role repaint) and/or edit **semantic assignments**. The zones we
-  built map 1:1 onto the semantic clusters. Rewrite `spec/color_tokens.md`
-  as a two-tier catalogue; retarget `_harness_common.LABELS`.
+- **Tooling slice — rework the customizer + preview + docs, app-agnostic.**
+  The customizer becomes two-tier: edit the **primitive palette** (and see
+  every semantic role repaint) and/or edit **semantic assignments**. The
+  zones we built map 1:1 onto the semantic clusters. Per the reusability
+  goal, **parameterise it by the target token file** (labels / clusters /
+  seeds read as data, not baked to RRW) so it drives any app's `tokens.css`;
+  JSON export/import stays the portable interchange. Rewrite
+  `spec/color_tokens.md` as a two-tier catalogue; retarget
+  `_harness_common.LABELS` into data.
 
 ---
 
@@ -314,3 +364,11 @@ Totals: ~**595** `var()` call-sites + **94** definitions, across
 5. **Dark primitives naming.** Parallel set (`--blue-dk-600`) vs. letting
    the dark `:root` reassign the same semantic tokens to whatever primitive
    fits (preferred — fewer names).
+6. **How far to factor for portability now (from the reusability goal).**
+   Physically separate the portable-core tokens from the app-specific layer
+   in Slice 1 — a delimited region now, or a `tokens.css` partial — vs. keep
+   one `:root` block and only *namespace* them ([P]/[A] by naming), splitting
+   the files later. Trade-off: earlier extraction cost vs. a cleaner kernel
+   sooner. Also: how far to data-drive the customizer (labels / clusters /
+   seeds read from the token file) in the tooling slice vs. after the app
+   migration settles.

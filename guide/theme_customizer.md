@@ -8,6 +8,16 @@ sequenced so the second builds cleanly on the first. Both are **migration-free**
 (no database); a DB-backed "persistent / shared themes" version is a further
 future neither plan does.
 
+> **Portability goal (author directive, logged against 19C Items 4–5).** The
+> customizer should be built **app-agnostic** — reusable by other apps of the
+> same look and feel: parameterised by the target token file, with friendly
+> labels / seed families / zone-clusters read as **data** (ideally from the
+> token file) rather than baked to Review Robin, and JSON as the portable
+> interchange. This dovetails with the two-tier semantic-token migration
+> (`guide/semantic_tokens.md` §"Reusability across apps"): the reusable
+> kernel is {primitives + portable-core semantics} + {this app-agnostic
+> customizer}. Realised in that plan's tooling slice.
+
 ## The two plans at a glance
 
 - **First — developer theme *designer*** (in the `tools/` harness). Design the
