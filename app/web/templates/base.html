@@ -2675,16 +2675,16 @@
       /* draft = "not ready for action" — same warning treatment as
          .pill-empty so the status badge reads as "needs work". */
       body.ui-v2 .pill-lifecycle-draft {
-        background: var(--accent-amber-bg);
-        color: var(--accent-amber-dark);
+        background: var(--lifecycle-draft-bg);
+        color: var(--lifecycle-draft-fg);
       }
       body.ui-v2 .pill-lifecycle-validated {
-        background: var(--accent-blue-bg);
-        color: var(--accent-blue);
+        background: var(--lifecycle-validated-bg);
+        color: var(--lifecycle-validated-fg);
       }
       body.ui-v2 .pill-lifecycle-ready {
-        background: var(--accent-green-bg);
-        color: var(--accent-green);
+        background: var(--lifecycle-ready-bg);
+        color: var(--lifecycle-ready-fg);
       }
       /* expired = the response window has shut — same red
          treatment as the reviewer dashboard's "closed" pill +
@@ -2693,8 +2693,8 @@
          Operator-facing label is "Closed" (see
          ``app/services/lifecycle_display.py``). */
       body.ui-v2 .pill-lifecycle-expired {
-        background: var(--accent-red-bg);
-        color: var(--accent-red);
+        background: var(--lifecycle-expired-bg);
+        color: var(--lifecycle-expired-fg);
       }
       /* Role pills for the /me/ lobby cross-role column. The
          dashboard query is reviewer-only today; the three
@@ -2702,16 +2702,16 @@
          surface slices (lobby cross-role query — W18) can paint
          multiple pills per row without further CSS work. */
       body.ui-v2 .pill-role-reviewer {
-        background: var(--accent-blue-bg);
-        color: var(--accent-blue-dark);
+        background: var(--role-reviewer-bg);
+        color: var(--role-reviewer-fg);
       }
       body.ui-v2 .pill-role-reviewee {
-        background: var(--accent-green-bg);
-        color: var(--accent-green);
+        background: var(--role-reviewee-bg);
+        color: var(--role-reviewee-fg);
       }
       body.ui-v2 .pill-role-observer {
-        background: var(--accent-amber-bg);
-        color: var(--accent-amber-dark);
+        background: var(--role-observer-bg);
+        color: var(--role-observer-fg);
       }
       /* Role-navigator chip strip below the session-name header
          on each role-specific ``/me`` surface (review surface,
@@ -2899,8 +2899,8 @@
         margin-bottom: var(--space-3);
       }
       body.ui-v2 .pill-lifecycle-archived {
-        background: var(--bg-muted);
-        color: var(--text-primary);
+        background: var(--lifecycle-archived-bg);
+        color: var(--text-body);
       }
       /* Return-to-origin "← Back to {context}" link rendered at the
          top of detour destinations (About, /auth/me/debug). Per
