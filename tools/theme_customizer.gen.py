@@ -109,8 +109,27 @@ TARGETS = [
     _btn("destructive", "Destructive button", "destructive"),
     _btn("danger-solid", "Alert button", "alert"),
     _btn("alert", "Amber button", "amber"),
+    ("@page", "Page background", [("background", "bg", "--surface-page")]),
+    # Chrome — top bar
+    (".chrome-app-identity", "App identity", [("text", "fg", "--text-subtle")]),
+    (".chrome-user > div", "Signed-in text", [("text", "fg", "--text-subtle")]),
+    (".chrome-link", "Chrome link", [("text", "fg", "--text-link")]),
+    (".signout", "Sign out button", [("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    (".breadcrumb a", "Breadcrumb link", [("text", "fg", "--text-link")]),
+    ('.breadcrumb [aria-current="page"]', "Breadcrumb (current)", [("text", "fg", "--text-body")]),
+    (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-dim")]),
+    # Session navigation
+    (".session-home-anchor", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
+    (".row-label.active-group", "Nav row label (active)", [("text", "fg", "--text-body")]),
+    (".row-label:not(.active-group)", "Nav row label", [("text", "fg", "--text-dim")]),
+    (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
+    # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
+    (".card:not(.danger-zone) h2", "Card heading", [("text", "fg", "--text-body")]),
+    (".danger-zone h2", "Danger-zone heading", [("text", "fg", "--card-warning-fg")]),
     (".page-subtitle", "Page subtitle", [("text", "fg", "--text-subtle")]),
+    ("p:not([class])", "Body text", [("text", "fg", "--text-body")]),
+    ("p:not([class]) strong", "Strong emphasis", [("text", "fg", "--text-body")]),
     ("p a[href]", "Inline link", [("text", "fg", "--text-link")]),
     (".muted", "Muted text", [("text", "fg", "--text-subtle")]),
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
@@ -127,11 +146,26 @@ TARGETS = [
     (".pill-success", "Success pill", [("infill", "bg", "--status-success-bg"), ("text", "fg", "--status-success-accent")]),
     _pill("super", "Super pill"),
     (".pill-handle", "Handle pill", [("infill", "bg", "--surface-muted"), ("text", "fg", "--text-body")]),
+    (".warning-banner", "Warning banner",
+     [("background", "bg", "--status-warning-bg"), ("text", "fg", "--status-warning-fg"),
+      ("border", "border", "--status-warning-border")]),
+    (".danger-banner", "Danger banner",
+     [("background", "bg", "--status-error-bg"), ("text", "fg", "--status-error-fg"),
+      ("border", "border", "--status-error-border")]),
     (".ph-save-error", "Inline save error",
      [("background", "bg", "--status-error-soft-bg"), ("text", "fg", "--status-error-soft-fg"),
       ("border", "border", "--status-error-soft-border")]),
+    ("label", "Field label", [("text", "fg", "--text-body")]),
     ("input[type=text]", "Text input",
      [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    ("textarea", "Textarea",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    ("select", "Select",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    # table cell borders collapse against neighbours (per-side ambiguous), so
+    # only the fills / text are reflected here.
+    ("th", "Table header", [("background", "bg", "--surface-muted"), ("text", "fg", "--text-subtle")]),
+    ("td", "Table cell", [("text", "fg", "--text-body")]),
     (".config-value", "Config value", [("infill", "bg", "--config-value-bg"), ("text", "fg", "--config-value-fg")]),
     (".config-value-resolved", "Resolved config value", [("infill", "bg", "--config-value-resolved-bg")]),
     (".nav-tab.active", "Active nav tab", [("infill", "bg", "--nav-tab-active-bg"), ("text", "fg", "--text-body")]),
@@ -277,9 +311,10 @@ editor_css = r"""
       border-right: 1px solid var(--border-default); }
     .tc-part-c { flex: 1; min-width: 0; overflow-y: auto; }
     .tc-c-placeholder { color: var(--text-subtle); font-size: 0.85rem; max-width: 40ch; }
-    /* pickable preview elements + current selection */
-    .tc-pickable { cursor: pointer; }
-    .tc-pickable:hover { outline: 2px dashed var(--focus-ring); outline-offset: 2px; }
+    /* pickable preview elements + current selection (marked via data attr, not a
+       class, so class-absence selectors like p:not([class]) keep matching) */
+    [data-tc-pick] { cursor: pointer; }
+    [data-tc-pick]:hover { outline: 2px dashed var(--focus-ring); outline-offset: 2px; }
     .tc-picked { outline: 2px solid var(--focus-ring) !important; outline-offset: 2px; }
     /* Part C readout */
     .tc-c-el { font-size: 1rem; font-weight: 600; margin: 2px 0 2px; }
@@ -573,18 +608,23 @@ editor_js = r"""  <script>
 
     function selectTarget(ti, node) {
       if (partA) partA.querySelectorAll(".tc-picked").forEach(function (n) { n.classList.remove("tc-picked"); });
-      node.classList.add("tc-picked");
+      if (node !== partA) node.classList.add("tc-picked");  // don't outline the whole panel for page bg
       selectedTi = ti;
       renderC(ti);
     }
 
+    // "@page" is a virtual target: any click in Part A not consumed by a
+    // specific pickable (they stopPropagation) bubbles here = page background.
+    var pageTi = -1;
     (D.targets || []).forEach(function (t, ti) {
+      if (t.sel === "@page") { pageTi = ti; return; }
       if (!partA) return;
       partA.querySelectorAll(t.sel).forEach(function (node) {
-        node.classList.add("tc-pickable");
+        node.setAttribute("data-tc-pick", "1");
         node.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); selectTarget(ti, node); });
       });
     });
+    if (pageTi >= 0 && partA) partA.addEventListener("click", function () { selectTarget(pageTi, partA); });
 
     applyActive();
   })();
