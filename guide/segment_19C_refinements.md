@@ -3,8 +3,9 @@
 **Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
 via roster CSV headers; sole round-trip carrier); **Item 2 in progress**
 (settings-page Display mode card — scaffold slice first); **Item 5 in
-progress** (theme customizer — developer designer); **Item 6 planned**
-(semantic colour tokens — two-tier reorg; plan merged, `guide/semantic_tokens.md`).
+progress** (theme customizer — developer designer); **Item 6 ✅ shipped
+2026-08-23** (semantic colour tokens — two-tier reorg; the app is now fully
+two-tier, plan archived at `guide/archive/semantic_tokens.md`).
 A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
@@ -515,14 +516,34 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
 
 ---
 
-## Item 6 — Semantic colour tokens (two-tier reorg)
+## Item 6 — Semantic colour tokens (two-tier reorg) — ✅ shipped 2026-08-23
 
-**Status:** plan approved & merged (`guide/semantic_tokens.md`). **All six
-decisions resolved 2026-08-23 — Slice 1 unblocked**, implementation not yet
-started. Decisions: 1–3 keep-separate (independent-slot rule); 4 descriptive
-primitive names (`--blue-strong`); 5 one palette, dark `:root` remaps
-semantics (no parallel dark set); 6 namespace now, extract a clean kernel at
-the end — no rush (no second app in flight yet).
+**Status: ✅ complete (2026-08-23).** `base.html` is now fully two-tier —
+**79 descriptive primitives + 103 role-named semantic tokens** (16 non-colour
+scale tokens unchanged); every component and template inline style consumes
+only semantic tokens, and all flat colour-named tokens are retired. Every
+slice was value-preserving (verified by hex re-resolution) with the suite
+green throughout (2,697 passing). Catalogue: `spec/color_tokens.md`; design +
+decisions archived at `guide/archive/semantic_tokens.md`.
+
+Shipped across **17 PRs**: the plan + decisions (#2047 plan · #2048 blast-radius
+log · #2049 portability goal · #2050 independent-slot + coupling + completeness
+· #2051 decisions 4–6), then the migration (#2052 Slice 1 two-tier tokens
+introduced · #2053 Buttons · #2054 Status · #2055 roles+lifecycle · #2056 cards
+· #2057 navigation · #2058 links/focus/config/selection/icons · #2059
+surfaces+text · #2060 misc chips/signals · #2061 template inline styles · #2062
+cleanup — dead-code removal + flat-def retirement + spec rewrite).
+
+Decisions (all in `guide/archive/semantic_tokens.md`): 1–3 keep-separate
+(independent-slot rule); 4 descriptive primitive names (`--blue-strong`); 5 one
+palette, dark `:root` remaps semantics (no parallel dark set); 6 namespace with
+`[P]`/`[A]`, kernel extraction deferred — no rush.
+
+**Remaining (optional, Item 5 tooling slice):** the `tools/` customizer /
+preview still reference the retired flat-token names and need reworking
+app-agnostic + data-driven (the portability kernel). Tracked under Item 5.
+
+Historical detail below (kept for the record).
 
 ### The problem
 
@@ -545,7 +566,7 @@ Move to a **two-tier** system (confirmed with the author; plan-first):
 
 Full taxonomy (eleven element→role clusters), naming convention, the
 token-by-token mapping, and the migration order live in
-`guide/semantic_tokens.md` — the authoritative plan for this item.
+`guide/archive/semantic_tokens.md` — the authoritative plan for this item.
 
 **Portability goal (author directive).** Build the theme machinery — this
 token system *and* the customizer (Item 5) — **reusable by other apps of the
@@ -557,7 +578,7 @@ delimited block now, a `tokens.css` partial candidate later) so a new app
 lifts them and swaps primitive values to rebrand; and make the customizer
 **app-agnostic** (labels / clusters / seeds data-driven from the token file,
 JSON as the interchange). Reusable kernel = {primitives + portable-core
-semantics} + {the app-agnostic customizer}. See `guide/semantic_tokens.md`
+semantics} + {the app-agnostic customizer}. See `guide/archive/semantic_tokens.md`
 §"Reusability across apps".
 
 **Independent-slot principle (author directive).** Every identified semantic
@@ -569,7 +590,7 @@ choice (`@coupled` marker + registry entry), never as an unmarked chain. This
 settles former open decisions 1–3 (soft-error, success two-tone,
 roles/lifecycle) toward **keep separate**; only primitive naming, dark
 primitives, and portability-factoring remain open. See
-`guide/semantic_tokens.md` "Rules of the model" + "Deliberate couplings".
+`guide/archive/semantic_tokens.md` "Rules of the model" + "Deliberate couplings".
 
 ### Scope / blast radius (measured)
 
@@ -584,7 +605,7 @@ needs dev-slot QA.
 
 ### PR ladder
 
-Per `guide/semantic_tokens.md` "Migration strategy":
+Per `guide/archive/semantic_tokens.md` "Migration strategy":
 
 1. **Slice 1 — both tiers as inert aliases.** Add the primitives + full
    semantic layer to `:root` + `:root[data-theme="dark"]`, reproducing
@@ -599,7 +620,7 @@ Per `guide/semantic_tokens.md` "Migration strategy":
 
 ### Decisions — all resolved (2026-08-23); Slice 1 unblocked
 
-Full text in `guide/semantic_tokens.md` "Decisions". (1) soft-error, (2)
+Full text in `guide/archive/semantic_tokens.md` "Decisions". (1) soft-error, (2)
 success two-tone, (3) roles/lifecycle → **keep separate** (independent-slot
 rule). (4) primitive naming → **descriptive** (`--blue-strong`). (5) dark
 primitives → **one palette; dark `:root` remaps semantics** (no parallel dark
