@@ -85,6 +85,67 @@ PAIRS = [
     ("Selected", "--selected-fg", "--selected-bg"),
 ]
 
+# --- pick targets: preview element -> the semantic token each colour facet
+# paints from. `sel` is scoped inside Part A; `facets` are (label, prop, token)
+# where prop is bg / fg / border. This is the authority for Part C's readout
+# (which token an element uses) and for "what else uses this token" (grouping
+# every facet by token). Verified against base.html's rules; a browser-side
+# self-check compares each facet's computed colour to its token to catch drift.
+def _btn(mod, label, key):
+    sel = "button.btn" + (("." + mod) if mod else ":not(.secondary):not(.destructive):not(.danger-solid):not(.alert)")
+    return (sel, label, [("infill", "bg", f"--btn-{key}-bg"),
+                         ("text", "fg", f"--btn-{key}-fg"),
+                         ("border", "border", f"--btn-{key}-border")])
+
+
+def _pill(name, label):
+    return (f".pill-{name}", label, [("infill", "bg", f"--status-{name}-bg"),
+                                     ("text", "fg", f"--status-{name}-fg")])
+
+
+TARGETS = [
+    _btn("", "Primary button", "primary"),
+    _btn("secondary", "Secondary button", "secondary"),
+    _btn("destructive", "Destructive button", "destructive"),
+    _btn("danger-solid", "Alert button", "alert"),
+    _btn("alert", "Amber button", "amber"),
+    ("h1", "Heading", [("text", "fg", "--text-body")]),
+    (".page-subtitle", "Page subtitle", [("text", "fg", "--text-subtle")]),
+    ("p a[href]", "Inline link", [("text", "fg", "--text-link")]),
+    (".muted", "Muted text", [("text", "fg", "--text-subtle")]),
+    # a plain .card fills with --surface-page (raised via its border), not --surface-card
+    (".card:not(.rs-help-card):not(.danger-zone)", "Card surface",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
+    (".rs-help-card", "Help card", [("background", "bg", "--border-default"), ("text", "fg", "--text-body")]),
+    (".danger-zone", "Danger-zone card",
+     [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
+      ("border", "border", "--card-warning-border")]),
+    _pill("error", "Error pill"),
+    _pill("warning", "Warning pill"),
+    # info / success text are remapped under body.ui-v2 (not the -fg token)
+    (".pill-info", "Info pill", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
+    (".pill-success", "Success pill", [("infill", "bg", "--status-success-bg"), ("text", "fg", "--status-success-accent")]),
+    _pill("super", "Super pill"),
+    (".pill-handle", "Handle pill", [("infill", "bg", "--surface-muted"), ("text", "fg", "--text-body")]),
+    (".ph-save-error", "Inline save error",
+     [("background", "bg", "--status-error-soft-bg"), ("text", "fg", "--status-error-soft-fg"),
+      ("border", "border", "--status-error-soft-border")]),
+    ("input[type=text]", "Text input",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    (".config-value", "Config value", [("infill", "bg", "--config-value-bg"), ("text", "fg", "--config-value-fg")]),
+    (".config-value-resolved", "Resolved config value", [("infill", "bg", "--config-value-resolved-bg")]),
+    (".nav-tab.active", "Active nav tab", [("infill", "bg", "--nav-tab-active-bg"), ("text", "fg", "--text-body")]),
+    (".nav-tab:not(.active)", "Nav tab", [("text", "fg", "--text-dim")]),
+    (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
+    (".back-link", "Back link", [("text", "fg", "--text-link")]),
+    (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
+]
+TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
+            for i in range(1, 7)]
+
+targets_data = [{"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} for f, p, t in fac]}
+                for s, el, fac in TARGETS]
+
 DATA = {
     "prims": prim_val,
     "primOrder": [n for n, _ in prims],
@@ -92,6 +153,7 @@ DATA = {
     "semDark": sem_dark,
     "families": seed_families,
     "seedOrder": SEED_ORDER,
+    "targets": targets_data,
 }
 
 
@@ -215,6 +277,27 @@ editor_css = r"""
       border-right: 1px solid var(--border-default); }
     .tc-part-c { flex: 1; min-width: 0; overflow-y: auto; }
     .tc-c-placeholder { color: var(--text-subtle); font-size: 0.85rem; max-width: 40ch; }
+    /* pickable preview elements + current selection */
+    .tc-pickable { cursor: pointer; }
+    .tc-pickable:hover { outline: 2px dashed var(--focus-ring); outline-offset: 2px; }
+    .tc-picked { outline: 2px solid var(--focus-ring) !important; outline-offset: 2px; }
+    /* Part C readout */
+    .tc-c-el { font-size: 1rem; font-weight: 600; margin: 2px 0 2px; }
+    .tc-c-sub { color: var(--text-subtle); font-size: 0.76rem; margin: 0 0 14px; }
+    .tc-facet { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; }
+    .tc-facet-h { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; }
+    .tc-facet-h .tc-c-swatch { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border-subtle); flex: none; }
+    .tc-facet-h .tc-facet-name { text-transform: capitalize; }
+    .tc-facet-h .tc-facet-prop { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; }
+    .tc-c-row { display: grid; grid-template-columns: 84px 1fr; gap: 4px 10px; font-size: 0.78rem; align-items: baseline; }
+    .tc-c-row dt { color: var(--text-dim); }
+    .tc-c-row dd { margin: 0; }
+    .tc-c-row code { font-family: ui-monospace, monospace; font-size: 0.74rem; color: var(--text-body); }
+    .tc-c-chain { color: var(--text-subtle); }
+    .tc-c-hex { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-dim); margin-left: 4px; }
+    .tc-c-users { list-style: none; margin: 0; padding: 0; }
+    .tc-c-users li { font-size: 0.76rem; color: var(--text-body); padding: 1px 0; }
+    .tc-c-users .tc-c-none { color: var(--text-dim); font-style: italic; }
     .tc-part { box-sizing: border-box; padding: 18px 20px 32px; }
     .tc-part-b { border-top: 1px solid var(--border-default); }
     .tc-part-h { margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
@@ -365,6 +448,7 @@ editor_js = r"""  <script>
     function status() {
       var el = document.querySelector("[data-status]");
       if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · " + (dirty ? "unsaved changes" : "no changes");
+      renderSelected();
     }
 
     // ---- wiring ----
@@ -430,6 +514,78 @@ editor_js = r"""  <script>
       });
     });
 
+    // ---- Part C: click a preview element -> reflect its token + primitive + co-users ----
+    var partA = document.querySelector(".tc-part-a");
+    var cBody = document.querySelector("[data-c-body]");
+    var selectedTi = null;
+
+    // token -> [{el, f}] across every registered facet (drives "also uses")
+    var tokenUsers = {};
+    (D.targets || []).forEach(function (t) {
+      t.facets.forEach(function (f) { (tokenUsers[f.token] = tokenUsers[f.token] || []).push({ el: t.el, f: f.f }); });
+    });
+
+    function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+    function propLabel(p) { return p === "bg" ? "background" : p === "fg" ? "text colour" : "border colour"; }
+
+    // follow the active-theme map from a semantic token to its primitive
+    function resolvePrimChain(token) {
+      var m = semMap(), chain = [], seen = {}, cur = m[token];
+      while (cur != null && chain.length < 24) {
+        chain.push(cur);
+        if (model.prims[cur] != null) return { chain: chain, prim: cur, hex: model.prims[cur] };
+        if (seen[cur]) break;
+        seen[cur] = 1; cur = m[cur];
+      }
+      return { chain: chain, prim: null, hex: null };
+    }
+
+    function renderC(ti) {
+      var t = D.targets[ti];
+      var html = '<p class="tc-c-el">' + esc(t.el) + "</p>"
+        + '<p class="tc-c-sub">' + t.facets.length + " colour facet" + (t.facets.length > 1 ? "s" : "")
+        + " · editing <strong>" + mode + "</strong> · click another element to change</p>";
+      t.facets.forEach(function (f) {
+        var r = resolvePrimChain(f.token);
+        var users = (tokenUsers[f.token] || []).filter(function (u) { return !(u.el === t.el && u.f === f.f); });
+        var via = r.chain.length > 1
+          ? '<span class="tc-c-chain"> (via ' + r.chain.slice(0, -1).map(function (c) { return "<code>" + esc(c) + "</code>"; }).join(" → ") + ")</span>"
+          : "";
+        html += '<div class="tc-facet">'
+          + '<div class="tc-facet-h"><span class="tc-c-swatch" style="background: var(' + f.token + ')"></span>'
+          + '<span class="tc-facet-name">' + esc(f.f) + '</span> <span class="tc-facet-prop">' + propLabel(f.prop) + "</span></div>"
+          + '<dl class="tc-c-row">'
+          + "<dt>token</dt><dd><code>" + esc(f.token) + "</code></dd>"
+          + "<dt>primitive</dt><dd>"
+          + (r.prim ? "<code>" + esc(r.prim) + '</code><span class="tc-c-hex">' + esc(r.hex) + "</span>" + via
+                    : '<span class="tc-c-none">unresolved</span>')
+          + "</dd>"
+          + "<dt>also uses</dt><dd>"
+          + (users.length
+              ? '<ul class="tc-c-users">' + users.map(function (u) { return "<li>" + esc(u.el) + " · " + esc(u.f) + "</li>"; }).join("") + "</ul>"
+              : '<span class="tc-c-none">nothing else</span>')
+          + "</dd></dl></div>";
+      });
+      cBody.innerHTML = html;
+    }
+
+    function renderSelected() { if (selectedTi != null && cBody) renderC(selectedTi); }
+
+    function selectTarget(ti, node) {
+      if (partA) partA.querySelectorAll(".tc-picked").forEach(function (n) { n.classList.remove("tc-picked"); });
+      node.classList.add("tc-picked");
+      selectedTi = ti;
+      renderC(ti);
+    }
+
+    (D.targets || []).forEach(function (t, ti) {
+      if (!partA) return;
+      partA.querySelectorAll(t.sel).forEach(function (node) {
+        node.classList.add("tc-pickable");
+        node.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); selectTarget(ti, node); });
+      });
+    });
+
     applyActive();
   })();
   </script>"""
@@ -451,9 +607,11 @@ part_b = (
 )
 part_c = (
     '  <div class="tc-part tc-part-c">\n'
-    '    <h2 class="tc-part-h">Part C — Colour picker <span class="tc-part-note">(select a preview element; wiring to come)</span></h2>\n'
-    '    <p class="tc-c-placeholder">Pick an element in Part A to edit the colour of the semantic token it paints from. '
-    'This panel is a placeholder — the picking facility lands next.</p>\n'
+    '    <h2 class="tc-part-h">Part C — Selection <span class="tc-part-note">(click a preview element)</span></h2>\n'
+    '    <div class="tc-c-body" data-c-body>\n'
+    '      <p class="tc-c-placeholder">Click any coloured element in Part A to see which semantic token '
+    "paints it, which primitive that token resolves to, and what else the token covers.</p>\n"
+    "    </div>\n"
     "  </div>"
 )
 
