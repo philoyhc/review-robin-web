@@ -259,11 +259,14 @@ Consumed by pills, banners, and inline messages.
 | `--status-warning-*` | `--accent-amber-bg` | `--accent-amber-dark` | `--accent-amber` |
 | `--status-error-*` | `--accent-red-bg` | `--accent-red-text` | `--accent-red` |
 
-Open sub-decisions (see below): success has two fg tones today
-(`--accent-green` icon vs `--accent-green-text` pill text); and the **soft
-inline save-error** (`--danger-bg/border/text`) is a *second* error
-treatment distinct from `--status-error-*`. Consolidate or keep as
-`--status-error-soft-*`.
+Per the independent-slot rule (former decisions 1–2, now resolved): **success
+keeps two independent fg slots** — `--status-success-fg` (`--accent-green-text`,
+pill text) and `--status-success-accent` (`--accent-green`, icon / border) —
+and the **soft inline save-error keeps its own** `--status-error-soft-{bg,
+border,fg}` (← `--danger-{bg,border,text}`), distinct from `--status-error-*`.
+Live banners are the ui-v2 `.banner.banner-*`, whose borders resolve to the
+`--status-*-border` slots above; the standalone `.warning-banner` /
+`.danger-banner` are dead (see "Completeness pass").
 
 ### 6. Participant-role pills — [A]
 
@@ -315,11 +318,44 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 |---|---|
 | `--status-super-bg / -fg` | `--accent-violet-bg` / `--accent-violet-text` |
 
+### 12. Selection, toggles & markers — [P] / [A]
+
+The long tail surfaced by the completeness pass — live consumers that no
+earlier cluster named.
+
+| Semantic | ← current | [P]/[A] | Consumers |
+|---|---|---|---|
+| `--selected-bg` | `--accent-blue` | [P] | `.tag-chip.is-selected`, `.theme-toggle-opt[aria-pressed]`, `.skip-link` |
+| `--selected-fg` | `--text-on-accent` | [P] | (label on the above) |
+| `--icon-btn-action-fg` | `--accent-blue` | [P] | `.btn-icon.action` |
+| `--icon-btn-danger-fg` | `--accent-red` | [P] | `.btn-icon.danger` |
+| `--focus-ring-strong` | `--accent-blue-dark` | [P] | `.rrw-sort-btn:focus-visible` (a second, darker focus tone) |
+| `--row-pending-marker` | `--accent-amber-border` | [A] | `[data-row-pending]` warning box-shadow (the sole live consumer of `--accent-amber-border`) |
+
 **Relationships / hierarchy.** Clusters 6–7 (roles, lifecycle) and much of
-10 are *not new colours* — they alias the cluster-5 status palette. Naming
-them separately is deliberate: it lets, say, the "observer" pill diverge
-from the generic "warning" amber later without a rename. The dependency runs
-one way only: components → semantic → (status/foundation) → primitive.
+10 reuse the *same colours* as the cluster-5 status palette — but, per the
+independent-slot rule, each **maps to the primitive directly** (not to the
+status semantic), so "observer" can diverge from generic "warning" without a
+rename. A slot that *should* track a status role expresses it as a marked
+`@coupled` reference. Dependency runs one way: components → semantic →
+primitive (with the occasional marked semantic→semantic coupling).
+
+### Completeness pass (2026-08-23)
+
+All **47** current colour tokens are dispositioned:
+
+- **Mapped** into clusters 1–12: **44**.
+- **Kept, newly slotted** in cluster 12: `--accent-amber-border` (→
+  `--row-pending-marker`, one live consumer).
+- **Drop (dead — no live consumer):** `--accent-red-soft` (never referenced)
+  and `--accent-red-strong` (only the dead standalone `.danger-banner` +
+  legacy pre-`ui-v2` `.btn.danger*`). Remove the dead `.warning-banner` /
+  `.danger-banner` rules with them.
+
+Finding: **two banner implementations coexist** in `base.html` — the live
+ui-v2 `.banner.banner-*` (14 template uses; borders = `--status-*-border`)
+and the **dead** standalone `.warning-banner` / `.danger-banner` (0 uses).
+The migration drops the dead pair; no live element is uncovered.
 
 ---
 
@@ -396,8 +432,10 @@ Totals: ~**595** `var()` call-sites + **94** definitions, across
 - **The customizer is temporarily ahead of the app.** Until the tooling
   slice, the customizer still edits flat tokens; that's fine — it's dev-only
   and not wired in.
-- **`--accent-red-soft` is unused** (per `spec/color_tokens.md`) — drop it
-  in this migration rather than inventing a semantic home.
+- **Dead tokens dropped, not slotted** (per the Completeness pass):
+  `--accent-red-soft` (never referenced) and `--accent-red-strong` (only the
+  dead standalone `.danger-banner` + legacy `.btn.danger*`). Remove the dead
+  `.warning-banner` / `.danger-banner` CSS rules alongside them.
 
 ---
 
