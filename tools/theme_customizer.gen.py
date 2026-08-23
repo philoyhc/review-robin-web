@@ -30,65 +30,13 @@ order = [n for n, _ in hc.parse_light_tokens(base_css)]  # :root declaration ord
 theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dark": {...}}
 
 
-# Human-readable chip labels — shown instead of the raw `--token` name (the raw
-# name stays in `data-token` + the hover title, for the export → base.html map).
-LABELS = {
-    "--bg-page": "Page background",
-    "--bg-card": "Card background",
-    "--bg-muted": "Muted background",
-    "--text-on-accent": "Text on accent",
-    "--text-on-amber": "Text on amber",
-    "--border-subtle": "Subtle border",
-    "--border-default": "Default border",
-    "--neutral-marker": "Neutral marker",
-    "--text-primary": "Primary text",
-    "--text-secondary": "Secondary text",
-    "--text-muted": "Muted text",
-    "--accent-blue": "Blue / link",
-    "--accent-blue-bg": "Blue background",
-    "--accent-blue-bg-soft": "Blue background (soft)",
-    "--accent-blue-bg-faint": "Blue background (faint)",
-    "--accent-blue-light": "Blue (light)",
-    "--accent-blue-dark": "Blue (dark)",
-    "--accent-blue-marker": "Blue marker",
-    "--accent-blue-strong": "Blue (strong)",
-    "--accent-green": "Green",
-    "--accent-green-bg": "Green background",
-    "--accent-green-bg-faint": "Green background (faint)",
-    "--accent-green-marker": "Green marker",
-    "--accent-green-text": "Green text",
-    "--accent-amber": "Amber",
-    "--accent-amber-bg": "Amber background",
-    "--accent-amber-bg-mid": "Amber background (mid)",
-    "--accent-amber-dark": "Amber (dark)",
-    "--accent-amber-border": "Amber border",
-    "--accent-red": "Red",
-    "--accent-red-bg": "Red background",
-    "--accent-red-soft": "Red (soft)",
-    "--accent-red-strong": "Red (strong)",
-    "--accent-red-text": "Red text",
-    "--accent-violet-bg": "Violet background",
-    "--accent-violet-text": "Violet text",
-    "--accent-sky-bg": "Sky background",
-    "--accent-sky-text": "Sky text",
-    "--danger-bg": "Danger background",
-    "--danger-border": "Danger border",
-    "--danger-text": "Danger text",
-    "--instrument-tint-1": "Instrument tint 1",
-    "--instrument-tint-2": "Instrument tint 2",
-    "--instrument-tint-3": "Instrument tint 3",
-    "--instrument-tint-4": "Instrument tint 4",
-    "--instrument-tint-5": "Instrument tint 5",
-    "--instrument-tint-6": "Instrument tint 6",
-}
-
-
 def chip(n):
     """One editable token chip (color-picker + hex + label), initialised to the
     light value; the JS re-syncs inputs to the active theme's model on toggle.
-    The visible label is the human-readable name; the raw `--token` lives in
-    `data-token` and the hover title so the export→base.html map is unambiguous."""
-    label = LABELS.get(n, n)
+    The visible label is the human-readable name (`hc.friendly_label`); the raw
+    `--token` lives in `data-token` + the hover title so the export→base.html
+    map is unambiguous."""
+    label = hc.friendly_label(n)
     return (
         f'        <div class="tc-chip" data-token="{n}" title="{n}">'
         f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{label} colour">'
