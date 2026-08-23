@@ -544,6 +544,19 @@ Full taxonomy (eleven element→role clusters), naming convention, the
 token-by-token mapping, and the migration order live in
 `guide/semantic_tokens.md` — the authoritative plan for this item.
 
+**Portability goal (author directive).** Build the theme machinery — this
+token system *and* the customizer (Item 5) — **reusable by other apps of the
+same look and feel**. Concretely: split Tier 2 into a **portable core**
+(surfaces / text / borders / buttons / status — `[P]`) and an **app-specific
+layer** (participant roles, lifecycle, nav, config, tints — `[A]`) that
+aliases the core; keep the primitives + portable core **extractable** (a
+delimited block now, a `tokens.css` partial candidate later) so a new app
+lifts them and swaps primitive values to rebrand; and make the customizer
+**app-agnostic** (labels / clusters / seeds data-driven from the token file,
+JSON as the interchange). Reusable kernel = {primitives + portable-core
+semantics} + {the app-agnostic customizer}. See `guide/semantic_tokens.md`
+§"Reusability across apps".
+
 ### Scope / blast radius (measured)
 
 Presentation-layer only — **0** references in `app/**/*.py`, **0** in
