@@ -243,6 +243,7 @@
         --status-error-bg: var(--red-pale);
         --status-error-fg: var(--red-deep);
         --status-error-border: var(--red-strong);
+        --status-error-accent: var(--red-strong);
         --status-error-soft-bg: var(--danger-pale);
         --status-error-soft-border: var(--danger-soft);
         --status-error-soft-fg: var(--danger-deep);
@@ -405,6 +406,7 @@
         --status-error-bg: var(--red-abyss);
         --status-error-fg: var(--red-soft);
         --status-error-border: var(--red-bright);
+        --status-error-accent: var(--red-bright);
         --status-error-soft-bg: var(--red-abyss);
         --status-error-soft-border: var(--danger-abyss-border);
         --status-error-soft-fg: var(--red-soft);
@@ -841,13 +843,13 @@
         text-transform: uppercase;
         margin-right: 6px;
       }
-      .pill-error { background: var(--accent-red-bg); color: var(--accent-red-text); }
-      .pill-warning { background: var(--accent-amber-bg); color: var(--accent-amber-dark); }
-      .pill-info { background: var(--accent-blue-bg); color: var(--accent-blue-strong); }
-      .pill-success { background: var(--accent-green-bg); color: var(--accent-green-text); }
+      .pill-error { background: var(--status-error-bg); color: var(--status-error-fg); }
+      .pill-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+      .pill-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+      .pill-success { background: var(--status-success-bg); color: var(--status-success-fg); }
       /* Super-admin tier badge (18S) — violet, distinct from the
          blue admin/info pill so the protected top tier stands out. */
-      .pill-super { background: var(--accent-violet-bg); color: var(--accent-violet-text); }
+      .pill-super { background: var(--status-super-bg); color: var(--status-super-fg); }
       /* .session-meta-row / .session-detail-code retired with the old
          read-only Session Details card (18R Item 4 Slice 5b). */
       .session-status-row {
@@ -2415,7 +2417,7 @@
       }
       body.ui-v2 .form-error {
         font-size: var(--fs-small);
-        color: var(--accent-red);
+        color: var(--status-error-accent);
         margin: var(--space-1) 0 0 0;
       }
       /* Icon-button modifiers — borderless single-glyph affordances
@@ -2654,21 +2656,21 @@
       }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
-        background: var(--accent-blue-bg);
-        color: var(--text-primary);
+        background: var(--status-info-bg);
+        color: var(--text-body);
       }
       body.ui-v2 .pill-empty,
       body.ui-v2 .pill.pill-warning {
-        background: var(--accent-amber-bg);
-        color: var(--accent-amber-dark);
+        background: var(--status-warning-bg);
+        color: var(--status-warning-fg);
       }
       body.ui-v2 .pill.pill-success {
-        background: var(--accent-green-bg);
-        color: var(--accent-green);
+        background: var(--status-success-bg);
+        color: var(--status-success-accent);
       }
       body.ui-v2 .pill.pill-super {
-        background: var(--accent-violet-bg);
-        color: var(--accent-violet-text);
+        background: var(--status-super-bg);
+        color: var(--status-super-fg);
       }
       /* draft = "not ready for action" — same warning treatment as
          .pill-empty so the status badge reads as "needs work". */
@@ -2743,20 +2745,20 @@
         margin-bottom: var(--space-4);
       }
       body.ui-v2 .banner.banner-info {
-        border-color: var(--accent-blue);
-        background: var(--accent-blue-bg);
+        border-color: var(--status-info-border);
+        background: var(--status-info-bg);
       }
       body.ui-v2 .banner.banner-success {
-        border-color: var(--accent-green);
-        background: var(--accent-green-bg);
+        border-color: var(--status-success-border);
+        background: var(--status-success-bg);
       }
       body.ui-v2 .banner.banner-warning {
-        border-color: var(--accent-amber);
-        background: var(--accent-amber-bg);
+        border-color: var(--status-warning-border);
+        background: var(--status-warning-bg);
       }
       body.ui-v2 .banner.banner-error {
-        border-color: var(--accent-red);
-        background: var(--accent-red-bg);
+        border-color: var(--status-error-border);
+        background: var(--status-error-bg);
       }
       /* Activate-confirmation banner (Segment 11G PR D). Headline
          + warning list + Cancel/Acknowledge action row pinned to
