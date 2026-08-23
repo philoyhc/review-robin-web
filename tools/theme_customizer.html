@@ -3182,14 +3182,15 @@
     .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
     /* Page layout: the sticky toolbar spans the top. Below it, a left column
        stacks Part A (preview) over Part B (tokens) and scrolls on its own;
-       Part C sits on the right (also scrollable). The left column is exactly
-       five primitive cards wide (5 x 150 + 4 x 8 gap + 40 padding), so Part A
-       previews at that width and Part B's primitive grid shows five per row. */
+       Part C sits on the right (also scrollable). The left column holds five
+       primitive cards per row, scaled 20% past the base 5 x 150 width so the
+       cards have more room; Part A previews at that width and Part B's
+       primitive grid stays five per row (each card stretches to fill). */
     body.ui-v2 { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     .ph-toolbar { margin-bottom: 0; flex: none; }
     .tc-cols { --tc-card: 150px; --tc-gap: 8px; flex: 1; min-height: 0; display: flex; align-items: stretch; }
     .tc-left { flex: none; box-sizing: border-box; overflow-y: auto;
-      width: calc(5 * var(--tc-card) + 4 * var(--tc-gap) + 40px);
+      width: calc((5 * var(--tc-card) + 4 * var(--tc-gap) + 40px) * 1.2);
       border-right: 1px solid var(--border-default); }
     .tc-part-c { flex: 1; min-width: 0; overflow-y: auto; }
     .tc-c-placeholder { color: var(--text-subtle); font-size: 0.85rem; max-width: 40ch; }
@@ -3206,7 +3207,7 @@
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
     .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
-    .tc-grid { display: grid; grid-template-columns: repeat(5, var(--tc-card)); gap: var(--tc-gap); }
+    .tc-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--tc-gap); }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
     body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
