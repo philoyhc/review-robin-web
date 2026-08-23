@@ -133,112 +133,54 @@ def hue_family(hex_value):
     return "violet"
 
 
-# Human-readable label per token — a friendly version of the `--token` name.
-# Shared so the customizer's chips and the preview's swatch grid read the same.
-LABELS = {
-    "--bg-page": "Page background",
-    "--bg-card": "Card background",
-    "--bg-muted": "Muted background",
-    "--text-on-accent": "Text on accent",
-    "--text-on-amber": "Text on amber",
-    "--border-subtle": "Subtle border",
-    "--border-default": "Default border",
-    "--neutral-marker": "Neutral marker",
-    "--text-primary": "Primary text",
-    "--text-secondary": "Secondary text",
-    "--text-muted": "Muted text",
-    "--accent-blue": "Blue / link",
-    "--accent-blue-bg": "Blue background",
-    "--accent-blue-bg-soft": "Blue background (soft)",
-    "--accent-blue-bg-faint": "Blue background (faint)",
-    "--accent-blue-light": "Blue (light)",
-    "--accent-blue-dark": "Blue (dark)",
-    "--accent-blue-marker": "Blue marker",
-    "--accent-blue-strong": "Blue (strong)",
-    "--accent-green": "Green",
-    "--accent-green-bg": "Green background",
-    "--accent-green-bg-faint": "Green background (faint)",
-    "--accent-green-marker": "Green marker",
-    "--accent-green-text": "Green text",
-    "--accent-amber": "Amber",
-    "--accent-amber-bg": "Amber background",
-    "--accent-amber-bg-mid": "Amber background (mid)",
-    "--accent-amber-dark": "Amber (dark)",
-    "--accent-amber-border": "Amber border",
-    "--accent-red": "Red",
-    "--accent-red-bg": "Red background",
-    "--accent-red-soft": "Red (soft)",
-    "--accent-red-strong": "Red (strong)",
-    "--accent-red-text": "Red text",
-    "--accent-violet-bg": "Violet background",
-    "--accent-violet-text": "Violet text",
-    "--accent-sky-bg": "Sky background",
-    "--accent-sky-text": "Sky text",
-    "--danger-bg": "Danger background",
-    "--danger-border": "Danger border",
-    "--danger-text": "Danger text",
-    "--instrument-tint-1": "Instrument tint 1",
-    "--instrument-tint-2": "Instrument tint 2",
-    "--instrument-tint-3": "Instrument tint 3",
-    "--instrument-tint-4": "Instrument tint 4",
-    "--instrument-tint-5": "Instrument tint 5",
-    "--instrument-tint-6": "Instrument tint 6",
-}
-
-
-def friendly_label(token):
-    """Friendly display name for a `--token`, falling back to the raw name."""
-    return LABELS.get(token, token)
-
-
-# Harness-only chrome CSS (toolbar + gallery layout). base.html's lifted style
-# already themes html/body; this only adds the tool's own scaffolding.
+# Harness-only chrome CSS (toolbar + gallery layout). Consumes only the app's
+# Tier-2 **semantic** tokens (like every component now), so it themes for free.
 HARNESS_CSS = """
     /* ---- harness-only (not part of the app) ---- */
-    html { background: var(--bg-page); }
+    html { background: var(--surface-page); }
     body.ui-v2 {
       margin: 0;
       min-height: 100vh;
-      background: var(--bg-page);
-      color: var(--text-primary);
+      background: var(--surface-page);
+      color: var(--text-body);
     }
     .ph-toolbar {
       position: sticky; top: 0; z-index: 50;
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
       padding: 10px 20px; margin: 0 0 24px 0;
-      background: var(--bg-card); border-bottom: 1px solid var(--border-default);
+      background: var(--surface-card); border-bottom: 1px solid var(--border-default);
     }
     .ph-toolbar strong { font-size: 0.95rem; }
     .ph-seg { display: inline-flex; gap: 4px; }
     .ph-seg button {
       font: inherit; cursor: pointer; padding: 4px 12px; border-radius: 6px;
-      border: 1px solid var(--border-default); background: var(--bg-page);
-      color: var(--text-primary);
+      border: 1px solid var(--border-default); background: var(--surface-page);
+      color: var(--text-body);
     }
     .ph-seg button[aria-pressed="true"] {
-      background: var(--accent-blue); color: var(--text-on-accent);
-      border-color: var(--accent-blue);
+      background: var(--btn-primary-bg); color: var(--btn-primary-fg);
+      border-color: var(--btn-primary-border);
     }
-    .ph-note { color: var(--text-secondary); font-size: 0.85rem; }
+    .ph-note { color: var(--text-subtle); font-size: 0.85rem; }
     .ph-body { padding: 0 20px 60px; max-width: 1100px; }
     .ph-section { margin: 0 0 36px; }
     .ph-section > h2.ph-h { font-size: 0.8rem; letter-spacing: 0.08em;
-      text-transform: uppercase; color: var(--text-secondary);
+      text-transform: uppercase; color: var(--text-subtle);
       border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
     .ph-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
     .ph-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
     .ph-chip { border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; }
     .ph-chip .sw { height: 46px; }
     .ph-chip .lbl { font-family: ui-monospace, monospace; font-size: 0.7rem;
-      padding: 5px 7px; color: var(--text-secondary); word-break: break-all; }
+      padding: 5px 7px; color: var(--text-subtle); word-break: break-all; }
     .ph-chip .lbl b { display: block; font-family: system-ui, sans-serif;
-      font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+      font-size: 0.78rem; font-weight: 600; color: var(--text-body);
       word-break: normal; margin-bottom: 2px; }
-    /* stand-in for the Instruments save-error banner (uses the --danger-* tokens) */
+    /* stand-in for the Instruments save-error banner (soft error tokens) */
     .ph-save-error {
-      margin: 0; padding: 10px 14px; border: 1px solid var(--danger-border);
+      margin: 0; padding: 10px 14px; border: 1px solid var(--status-error-soft-border);
       border-left-width: 4px; border-radius: 6px;
-      background: var(--danger-bg); color: var(--danger-text); font-size: 0.9rem;
+      background: var(--status-error-soft-bg); color: var(--status-error-soft-fg); font-size: 0.9rem;
     }
     .ph-tint { border: 1px solid var(--border-subtle); border-radius: 8px;
       padding: 14px; font-size: 0.85rem; }
@@ -261,7 +203,7 @@ def component_sections():
     `text` zone to the front and embeds its tokens). Does NOT include the
     toolbar, the token grid, or the `ph-body` wrapper — callers add those."""
     tints = "\n".join(
-        f'        <div class="ph-tint" style="background: var(--instrument-tint-{i});">Instrument card tint {i}</div>'
+        f'        <div class="ph-tint" style="background: var(--surface-tint-{i});">Instrument card tint {i}</div>'
         for i in range(1, 7)
     )
     return [

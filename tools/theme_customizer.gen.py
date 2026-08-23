@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""Generate tools/theme_customizer.html — a standalone theme *designer*.
+"""Generate tools/theme_customizer.html — a standalone two-tier theme designer.
 
-Plan A ("First") of guide/theme_customizer.md, slice 1 (manual editor). Lifts
-base.html's real palette + component gallery (shared via _harness_common) and
-makes every colour token editable, repainting the whole gallery live. Design a
-light + dark palette here, then Export JSON — a coding agent ports its flat
-`tokens` map 1:1 into base.html's :root / :root[data-theme="dark"] blocks.
+Item 5 of guide/segment_19C_refinements.md, reworked for the two-tier token
+system (Item 6). Lifts base.html's palette and lets you design it live:
 
-Controls: Light/Dark (edit each theme separately) · Load defaults / Re-read
-base.html… (File-picker) · Save as… / a named-save library (localStorage) /
-Delete · Export JSON / Import JSON.
+- **Primitives** — edit the raw palette. Per-primitive colour pickers grouped
+  by name-family, plus **seed** controls that shift a whole chromatic family in
+  OKLCH from one swatch. Editing a primitive cascades through `var()` to every
+  semantic token and every gallery component instantly.
+- **Semantic remaps** — repoint any role to a different primitive, per theme
+  (a deliberate re-mapping). Light and dark are edited separately.
+- **Export JSON** — `{ primitives, semantic: { light, dark } }`, which a coding
+  agent ports 1:1 into base.html's Tier-1 + Tier-2 `:root` blocks.
 
-Later slices (per the plan): contrast (AA) badges, then seeds + OKLCH
-derivation. Regenerate after any base.html change:
-  python3 tools/theme_customizer.gen.py
+Data-driven: primitives, families, clusters, and the semantic maps are read
+from base.html itself (via _harness_common), so this drives any tokens.css of
+the same shape (portability goal, decision #6).
+
+Regenerate after any base.html change:  python3 tools/theme_customizer.gen.py
 Not production code; not wired into the app.
 """
+import colorsys
 import json
 import pathlib
 
@@ -26,583 +31,382 @@ BASE = ROOT / "app/web/templates/base.html"
 OUT = ROOT / "tools/theme_customizer.html"
 
 base_css = hc.lift_base_style(BASE.read_text(encoding="utf-8"))
-order = [n for n, _ in hc.parse_light_tokens(base_css)]  # :root declaration order
-theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dark": {...}}
+prims = hc.parse_primitives(base_css)              # [(name, hex)] ordered
+prim_val = dict(prims)
+sem = hc.parse_semantic(base_css)
+sem_light, sem_dark = dict(sem["light"]), dict(sem["dark"])
+clusters = [(n, t) for n, t in hc.parse_clusters(base_css) if t]
+
+# --- family grouping by descriptive name prefix (--<prefix>-<shade>) ---
+NEUTRAL_PREFIXES = {"white", "paper", "gray", "slate", "ink", "tint"}
+PREFIX_ORDER = ["white", "paper", "gray", "slate", "ink",
+                "blue", "sky", "green", "amber", "red", "danger", "violet", "tint"]
 
 
-def chip(n):
-    """One editable token chip (color-picker + hex + label), initialised to the
-    light value; the JS re-syncs inputs to the active theme's model on toggle.
-    The visible label is the human-readable name (`hc.friendly_label`); the raw
-    `--token` lives in `data-token` + the hover title so the export→base.html
-    map is unambiguous."""
-    label = hc.friendly_label(n)
-    return (
-        f'        <div class="tc-chip" data-token="{n}" title="{n}">'
-        f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{label} colour">'
-        f'<input type="text" class="tc-hex" value="{theme["light"].get(n, "")}" spellcheck="false" aria-label="{label} hex">'
-        f'<span class="tc-name">{label}</span></div>'
-    )
+def prefix(name):
+    return name[2:].split("-")[0]
 
 
-def chip_grid(names):
-    return '<div class="tc-grid">\n' + "\n".join(chip(n) for n in names) + "\n      </div>"
+groups = {}
+for name, val in prims:
+    groups.setdefault(prefix(name), []).append((name, val))
+prim_groups = [(p, groups[p]) for p in PREFIX_ORDER if p in groups]
 
 
-# Tokens that colour body text, links, and the page background — hoisted into
-# the first content zone (the "Text, links & background" section) so they sit
-# with the components they drive, instead of the flat grid below.
-TEXT_ZONE_TOKENS = [
-    "--bg-page",
-    "--text-primary", "--text-secondary", "--text-muted",
-    "--accent-blue",  # the link colour (a { color: var(--accent-blue) })
+def saturation(hexv):
+    h = hexv.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return colorsys.rgb_to_hsv(r, g, b)[1]
+
+
+# Seeds = chromatic families; anchor = the most-saturated member.
+seed_families = {}
+for p, members in groups.items():
+    if p in NEUTRAL_PREFIXES:
+        continue
+    anchor = max(members, key=lambda m: saturation(m[1]))[0]
+    seed_families[p] = {"anchor": anchor, "members": [n for n, _ in members]}
+SEED_ORDER = [p for p in PREFIX_ORDER if p in seed_families]
+
+# --- contrast pairs (semantic tokens; resolved per active theme) ---
+PAIRS = [
+    ("Body / page", "--text-body", "--surface-page"),
+    ("Body / card", "--text-body", "--surface-card"),
+    ("Subtle / card", "--text-subtle", "--surface-card"),
+    ("Dim / card", "--text-dim", "--surface-card"),
+    ("Link / page", "--text-link", "--surface-page"),
+    ("Primary btn", "--btn-primary-fg", "--btn-primary-bg"),
+    ("Alert btn", "--btn-alert-fg", "--btn-alert-bg"),
+    ("Destructive (outline)", "--btn-destructive-fg", "--surface-page"),
+    ("Pill · info", "--status-info-fg", "--status-info-bg"),
+    ("Pill · success", "--status-success-fg", "--status-success-bg"),
+    ("Pill · warning", "--status-warning-fg", "--status-warning-bg"),
+    ("Pill · error", "--status-error-fg", "--status-error-bg"),
+    ("Selected", "--selected-fg", "--selected-bg"),
 ]
 
-# Buttons zone — each of the five canonical roles gets its active + disabled
-# preview and, beneath it in the same 5-column grid, its text-label token (top
-# row) and its fill token (bottom row). Outline roles (Secondary / Destructive
-# / Amber) fill with the page background, so --bg-page recurs across the fill
-# row; that is accurate — those buttons share the page-bg fill.
-BUTTONS = [
-    ("Primary", ""),
-    ("Secondary", "secondary"),
-    ("Destructive", "destructive"),
-    ("Alert", "danger-solid"),
-    ("Amber", "alert"),
-]
-BUTTON_LABEL_TOKENS = [  # active-button text colour, per column
-    "--text-on-accent", "--text-primary", "--accent-red",
-    "--text-on-amber", "--accent-amber-dark",
-]
-BUTTON_FILL_TOKENS = [  # button fill (background) colour, per column
-    "--accent-blue", "--bg-page", "--bg-page",
-    "--accent-amber-dark", "--bg-page",
-]
-BUTTON_BORDER_TOKENS = [  # button border colour, per column (existing tokens —
-    "--accent-blue",       # no bespoke border tokens; 4/5 echo the fill/label
-    "--text-secondary",    # above, Secondary's neutral grey is its own token
-    "--accent-red",
-    "--accent-amber-dark",
-    "--accent-amber-dark",  # Amber (.btn.alert) border = its label token
-]
-# Only the button-distinct tokens are "claimed" out of the Other grid; the ones
-# shared with the Text zone (--accent-blue / --bg-page / --text-primary /
-# --text-secondary) stay there and merely appear here too — chips with the same
-# token stay in sync.
-BUTTON_CLAIMED = (
-    set(BUTTON_LABEL_TOKENS) | set(BUTTON_FILL_TOKENS) | set(BUTTON_BORDER_TOKENS)
-) - set(TEXT_ZONE_TOKENS)
-
-ZONED = set(TEXT_ZONE_TOKENS) | BUTTON_CLAIMED
-rest_tokens = [n for n in order if n not in ZONED]
-
-# Seeds — shift a whole colour family in OKLCH from one control (slice 3). Each
-# seed's "anchor" token displays the family's current colour; moving it applies
-# the same OKLCH delta to every member, preserving the palette's tuned
-# relationships (no base.html re-tune needed — the shift is *relative*).
-FAMILIES = {
-    "blue": {"label": "Blue · primary", "anchor": "--accent-blue", "members": [
-        "--accent-blue", "--accent-blue-bg", "--accent-blue-bg-soft",
-        "--accent-blue-bg-faint", "--accent-blue-light", "--accent-blue-dark",
-        "--accent-blue-marker", "--accent-blue-strong"]},
-    "green": {"label": "Green · success", "anchor": "--accent-green", "members": [
-        "--accent-green", "--accent-green-bg", "--accent-green-marker",
-        "--accent-green-text", "--accent-green-bg-faint"]},
-    "amber": {"label": "Amber · Alert", "anchor": "--accent-amber", "members": [
-        "--accent-amber", "--accent-amber-bg", "--accent-amber-bg-mid",
-        "--accent-amber-dark", "--accent-amber-border"]},
-    "red": {"label": "Red · destructive", "anchor": "--accent-red", "members": [
-        "--accent-red", "--accent-red-bg", "--accent-red-soft",
-        "--accent-red-strong", "--accent-red-text",
-        "--danger-bg", "--danger-border", "--danger-text"]},
-    "violet": {"label": "Violet", "anchor": "--accent-violet-text", "members": [
-        "--accent-violet-bg", "--accent-violet-text"]},
-    "sky": {"label": "Sky · config", "anchor": "--accent-sky-text", "members": [
-        "--accent-sky-bg", "--accent-sky-text"]},
+DATA = {
+    "prims": prim_val,
+    "primOrder": [n for n, _ in prims],
+    "semLight": sem_light,
+    "semDark": sem_dark,
+    "families": seed_families,
+    "seedOrder": SEED_ORDER,
 }
+
+
+def pretty(token):
+    return token.lstrip("-").replace("-", " ")
+
+
+# ---------- markup ----------
 seed_swatches = "\n".join(
-    f'        <label class="tc-seed" data-family="{k}">'
-    f'<input type="color" class="tc-seed-color" value="{theme["light"].get(f["anchor"], "#000000")}" aria-label="{f["label"]} seed">'
-    f'<span>{f["label"]}</span></label>'
-    for k, f in FAMILIES.items()
+    f'        <label class="tc-seed" data-fam="{p}">'
+    f'<input type="color" class="tc-seed-color" value="{prim_val[seed_families[p]["anchor"]]}" '
+    f'aria-label="{p} seed"><span>{p}</span></label>'
+    for p in SEED_ORDER
 )
-seeds_section = f"""    <section class="ph-section">
-      <h2 class="ph-h">Seeds — shift a whole colour family (hue / lightness / chroma, OKLCH) from one control. The per-token grid below still overrides individual tokens.</h2>
+seeds_section = f"""    <section class="tc-sec">
+      <h2 class="tc-h">Seeds — shift a whole chromatic primitive family (hue / lightness / chroma, OKLCH) from one swatch. The primitive grid below overrides individual primitives.</h2>
       <div class="tc-seed-row">
 {seed_swatches}
       </div>
     </section>"""
 
-# Contrast (AA) — representative foreground/background pairs. WCAG AA for normal
-# text is 4.5:1; the tool shows the live ratio + pass/fail per pair, per the
-# ACTIVE theme, updating as tokens change. (Slice 2.)
-PAIRS = [
-    ("Body text", "--text-primary", "--bg-page"),
-    ("Card text", "--text-primary", "--bg-card"),
-    ("Secondary / page", "--text-secondary", "--bg-page"),
-    ("Secondary / card", "--text-secondary", "--bg-card"),
-    ("Muted / card", "--text-muted", "--bg-card"),
-    ("Link", "--accent-blue", "--bg-page"),
-    ("Primary button", "--text-on-accent", "--accent-blue"),
-    ("Alert button", "--text-on-amber", "--accent-amber-dark"),
-    ("Destructive (outline)", "--accent-red", "--bg-page"),
-    ("Pill · error", "--accent-red-text", "--accent-red-bg"),
-    ("Pill · warning", "--accent-amber-dark", "--accent-amber-bg"),
-    ("Pill · info", "--accent-blue-strong", "--accent-blue-bg"),
-    ("Pill · success", "--accent-green-text", "--accent-green-bg"),
-    ("Pill · super", "--accent-violet-text", "--accent-violet-bg"),
-    ("Config value (sky)", "--accent-sky-text", "--accent-sky-bg"),
-    ("Soft error", "--danger-text", "--danger-bg"),
-]
+
+def prim_chip(name):
+    return (
+        f'        <div class="tc-chip" data-prim="{name}" title="{name}">'
+        f'<input type="color" class="tc-color" value="{prim_val[name]}" aria-label="{name}">'
+        f'<input type="text" class="tc-hex" value="{prim_val[name]}" spellcheck="false" aria-label="{name} hex">'
+        f'<span class="tc-name">{pretty(name)}</span></div>'
+    )
+
+
+prim_blocks = []
+for p, members in prim_groups:
+    chips = "\n".join(prim_chip(n) for n, _ in members)
+    prim_blocks.append(
+        f'      <div class="tc-fam"><h3 class="tc-fam-h">{p} ({len(members)})</h3>'
+        f'\n      <div class="tc-grid">\n{chips}\n      </div></div>'
+    )
+prim_section = f"""    <section class="tc-sec">
+      <h2 class="tc-h">Primitives ({len(prims)}) — the raw palette (theme-agnostic). Edit a swatch; every semantic token + component repaints live.</h2>
+{chr(10).join(prim_blocks)}
+    </section>"""
+
+# semantic remap: per cluster, each token gets light + dark primitive <select>
+opts = "".join(f'<option value="{n}">{n}</option>' for n, _ in prims)
+sem_blocks = []
+for cname, toks in clusters:
+    rows = "\n".join(
+        f'        <div class="tc-remap" data-sem="{t}">'
+        f'<span class="tc-remap-name">{pretty(t)}</span>'
+        f'<span class="tc-swatch" style="background: var({t});"></span>'
+        f'<select class="tc-sel" data-mode="light">{opts}</select>'
+        f'<select class="tc-sel" data-mode="dark">{opts}</select></div>'
+        for t in toks
+    )
+    sem_blocks.append(
+        f'      <details class="tc-cluster"><summary>{cname} · {len(toks)}</summary>\n'
+        f'      <div class="tc-remap-head"><span>role</span><span></span><span>light → primitive</span><span>dark → primitive</span></div>\n'
+        f'{rows}\n      </details>'
+    )
+sem_section = f"""    <section class="tc-sec">
+      <h2 class="tc-h">Semantic remaps — repoint a role to a different primitive, per theme (a deliberate re-mapping). Edit the ACTIVE theme's column; both are saved + exported.</h2>
+{chr(10).join(sem_blocks)}
+    </section>"""
+
 contrast_rows = "\n".join(
-    f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}" data-min="4.5">'
+    f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}">'
     f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
     f'<span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span></div>'
     for label, fg, bg in PAIRS
 )
-contrast_section = f"""    <section class="ph-section">
-      <h2 class="ph-h">Contrast (AA) — live WCAG ratio per bg/text pair, ACTIVE theme (target 4.5:1)</h2>
+contrast_section = f"""    <section class="tc-sec">
+      <h2 class="tc-h">Contrast (AA) — live WCAG ratio per semantic bg/text pair, ACTIVE theme (target 4.5:1)</h2>
       <div class="tc-cx-grid">
 {contrast_rows}
       </div>
     </section>"""
 
-editor_css = r"""
-    .tc-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .tc-controls button, .tc-controls label.tc-file {
-      font: inherit; font-size: 0.8em; cursor: pointer; padding: 3px 10px;
-      border-radius: 6px; border: 1px solid var(--border-default);
-      background: var(--bg-page); color: var(--text-primary);
-    }
-    .tc-controls input[type=file] { display: none; }
-    .tc-controls select { font: inherit; font-size: 0.8em; padding: 3px 6px;
-      border: 1px solid var(--border-default); border-radius: 6px;
-      background: var(--bg-page); color: var(--text-primary); }
-    .tc-sep { width: 1px; height: 20px; background: var(--border-default); }
-    .tc-status { color: var(--text-secondary); font-size: 0.8rem; }
-    .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-    .tc-zone-tokens { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); }
-    /* Buttons zone — 5-column grid: previews (active / disabled) above each
-       role's label + fill token, all aligned to the same 5 columns. */
-    .tc-btn-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px; align-items: center; }
-    .tc-btn-grid .btn { width: 100%; box-sizing: border-box; }
-    .tc-btn-cap { grid-column: 1 / -1; margin: 14px 0 2px; }
-    .tc-btn-cap-first { margin-top: 0; }
-    .tc-chip { display: flex; align-items: center; gap: 8px;
-      border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
-    .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default);
-      border-radius: 4px; background: none; cursor: pointer; flex: none; }
-    .tc-seed-row { display: flex; flex-wrap: wrap; gap: 14px; }
-    .tc-seed { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-      font-size: 0.85rem; }
-    .tc-seed-color { width: 30px; height: 26px; padding: 0;
-      border: 1px solid var(--border-default); border-radius: 6px;
-      background: none; cursor: pointer; }
-    /* outrank base.html's `body.ui-v2 input[type="text"] { width: 100% }`
-       (0,2,2) — match the `body.ui-v2` prefix + two chip classes (0,3,2) or the
-       hex box fills the whole row. */
-    body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace;
-      font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box;
-      letter-spacing: -0.01em; }
-    .tc-name { flex: 1; min-width: 0; font-size: 0.75rem;
-      color: var(--text-secondary); line-height: 1.2; }
-    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
-    .tc-cx { display: flex; align-items: center; gap: 8px; }
-    .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px;
-      border: 1px solid var(--border-subtle); font-size: 0.8rem; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis; }
-    .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem;
-      color: var(--text-secondary); min-width: 58px; text-align: right; }
-    .tc-cx-badge { font-size: 0.66rem; font-weight: 600; padding: 1px 8px;
-      border-radius: 9999px; min-width: 34px; text-align: center; }
-    .tc-cx-badge.pass { background: var(--accent-green-bg); color: var(--accent-green-text); }
-    .tc-cx-badge.fail { background: var(--accent-red-bg); color: var(--accent-red-text); }
-"""
-
 toolbar = """  <div class="ph-toolbar">
-    <strong>Theme customizer</strong>
+    <strong>Two-tier theme customizer</strong>
     <span class="ph-seg" role="group" aria-label="Theme">
       <button data-set="light" aria-pressed="true">Light</button>
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="tc-controls">
       <button data-act="defaults">Load defaults</button>
-      <label class="tc-file">Re-read base.html…<input type="file" accept=".html,text/html" data-act="reread"></label>
-      <span class="tc-sep"></span>
-      <button data-act="save">Save as…</button>
-      <select data-act="library" aria-label="Saved themes"><option value="">— saved —</option></select>
-      <button data-act="delete">Delete</button>
-      <span class="tc-sep"></span>
       <button data-act="export">Export JSON</button>
       <label class="tc-file">Import JSON…<input type="file" accept=".json,application/json" data-act="import"></label>
     </span>
     <span class="tc-status" data-status>Editing <strong>light</strong> · no changes</span>
   </div>"""
 
-# First content zone: text / links / background. The sample markup (shared with
-# the preview) sits with the very tokens that colour it, per the zone-by-zone
-# reorg — text / link / bg tokens live here, not in the flat grid below.
-text_zone = f"""    <section class="ph-section">
-      <h2 class="ph-h">Text, links &amp; background — the tokens here colour body text, links, and the page background. Edit the ACTIVE theme.</h2>
-{hc.TEXT_LINKS_SAMPLE}
-      <div class="tc-zone-tokens">
-        {chip_grid(TEXT_ZONE_TOKENS)}
-      </div>
-    </section>"""
+editor_css = r"""
+    .tc-controls { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tc-controls button, .tc-controls label.tc-file {
+      font: inherit; font-size: 0.8em; cursor: pointer; padding: 3px 10px; border-radius: 6px;
+      border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
+    .tc-controls input[type=file] { display: none; }
+    .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
+    .tc-body { padding: 0 20px 60px; max-width: 1100px; }
+    .tc-sec { margin: 0 0 34px; }
+    .tc-h { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle);
+      border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
+    .tc-seed-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+    .tc-seed { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; text-transform: capitalize; }
+    .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
+    .tc-fam { margin: 12px 0; }
+    .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
+    .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
+    .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
+    body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
+    .tc-name { flex: 1; min-width: 0; font-size: 0.72rem; color: var(--text-subtle); line-height: 1.2; }
+    .tc-cluster { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 4px 12px; }
+    .tc-cluster summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; padding: 4px 0; }
+    .tc-remap-head, .tc-remap { display: grid; grid-template-columns: 1.4fr 24px 1fr 1fr; gap: 8px; align-items: center; }
+    .tc-remap-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); padding: 4px 0; }
+    .tc-remap { padding: 3px 0; border-top: 1px solid var(--border-subtle); }
+    .tc-remap-name { font-size: 0.76rem; }
+    .tc-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+    body.ui-v2 .tc-remap select.tc-sel { width: 100%; font-size: 0.72rem; padding: 2px 4px; box-sizing: border-box;
+      font-family: ui-monospace, monospace; border: 1px solid var(--border-default); border-radius: 5px; background: var(--surface-page); color: var(--text-body); }
+    .tc-cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+    .tc-cx { display: flex; align-items: center; gap: 8px; }
+    .tc-cx-sample { flex: 1; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-subtle); min-width: 58px; text-align: right; }
+    .tc-cx-badge { font-size: 0.66rem; font-weight: 600; padding: 1px 8px; border-radius: 9999px; min-width: 34px; text-align: center; }
+    .tc-cx-badge.pass { background: var(--status-success-bg); color: var(--status-success-fg); }
+    .tc-cx-badge.fail { background: var(--status-error-bg); color: var(--status-error-fg); }
+"""
 
-
-def _btn_cells(disabled):
-    dis = " disabled" if disabled else ""
-    return "\n".join(
-        f'        <button class="btn {c}"{dis}>{n}</button>' for n, c in BUTTONS
-    )
-
-
-# Second content zone: buttons — a 5-column grid. Rows: active previews, then
-# each role's three defining tokens (label / fill / border), then the disabled
-# previews, all aligned to the same 5 columns.
-buttons_zone = f"""    <section class="ph-section">
-      <h2 class="ph-h">Buttons — canonical roles; each role's label / fill / border token sits in its column</h2>
-      <div class="tc-btn-grid">
-        <p class="muted tc-btn-cap tc-btn-cap-first">Active</p>
-{_btn_cells(False)}
-        <p class="muted tc-btn-cap">Tokens per role — text label (row 1) · fill (row 2) · border (row 3)</p>
-{chr(10).join(chip(t) for t in BUTTON_LABEL_TOKENS)}
-{chr(10).join(chip(t) for t in BUTTON_FILL_TOKENS)}
-{chr(10).join(chip(t) for t in BUTTON_BORDER_TOKENS)}
-        <p class="muted tc-btn-cap">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
-{_btn_cells(True)}
-      </div>
-    </section>"""
-
-# Remaining tokens — everything not yet hoisted into a dedicated zone.
-editor_section = f"""    <section class="ph-section">
-      <h2 class="ph-h">Other colour tokens ({len(rest_tokens)}) — text / link / background and button tokens now live in their zones above; edit the rest here. Switch Light/Dark to edit the other palette.</h2>
-      <div class="tc-grid">
-{chr(10).join(chip(n) for n in rest_tokens)}
-      </div>
-    </section>"""
-
-# The gallery sections minus the zones hoisted above (`text`, `buttons`).
-gallery_rest = "\n\n".join(
-    html for key, html in hc.component_sections() if key not in ("text", "buttons")
-)
-
-defaults_script = (
-    "  <script>window.RRW_DEFAULTS = " + json.dumps(theme) + ";"
-    " window.RRW_FAMILIES = " + json.dumps(FAMILIES) + ";</script>"
-)
+data_script = "  <script>window.RRW = " + json.dumps(DATA) + ";</script>"
 
 editor_js = r"""  <script>
-    (function () {
-      var root = document.documentElement;
-      var DEFAULTS = window.RRW_DEFAULTS;      // { light: {..}, dark: {..} }
-      var FAMILIES = window.RRW_FAMILIES;      // { fam: { anchor, members } }
-      var model = clone(DEFAULTS);
-      var mode = "light";
-      var dirty = false;
-      var LIB_KEY = "rrw-theme-designs";
+  (function () {
+    var root = document.documentElement;
+    var D = window.RRW;
+    function clone(o) { return JSON.parse(JSON.stringify(o)); }
+    var model = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) };
+    var mode = "light";
+    var dirty = false;
 
-      function clone(o) { return JSON.parse(JSON.stringify(o)); }
-      function chips() { return document.querySelectorAll(".tc-chip"); }
-      function norm6(v) {
-        return /^#[0-9a-fA-F]{3}$/.test(v)
-          ? "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3] : v;
-      }
-      function hexRgb(h) {
-        h = h.replace("#", "");
-        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
-      }
-      function relLum(h) {
-        var c = hexRgb(h).map(function (v) {
-          v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
-        });
-        return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
-      }
-      function contrast(fg, bg) {
-        var a = relLum(fg)+0.05, b = relLum(bg)+0.05;
-        return a > b ? a/b : b/a;
-      }
-      function updateContrast() {
-        document.querySelectorAll(".tc-cx").forEach(function (row) {
-          var fg = model[mode][row.getAttribute("data-fg")];
-          var bg = model[mode][row.getAttribute("data-bg")];
-          if (!fg || !bg) return;
-          var r = contrast(fg, bg), min = parseFloat(row.getAttribute("data-min"));
-          row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
-          var badge = row.querySelector(".tc-cx-badge"), pass = r >= min;
-          badge.textContent = pass ? "AA" : "AA ✗";
-          badge.className = "tc-cx-badge " + (pass ? "pass" : "fail");
-        });
-      }
+    function semMap() { return mode === "dark" ? model.semD : model.semL; }
+    function norm6(v) { return /^#[0-9a-fA-F]{3}$/.test(v) ? "#" + v[1]+v[1]+v[2]+v[2]+v[3]+v[3] : v; }
 
-      // --- OKLCH ↔ sRGB (Björn Ottosson) for the seed family-shift ---
-      function srgb2lin(c) { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
-      function lin2srgb(c) {
-        c = c <= 0.0031308 ? c*12.92 : 1.055*Math.pow(c, 1/2.4) - 0.055;
-        return Math.round(Math.min(1, Math.max(0, c)) * 255);
-      }
-      function rgb2oklch(hex) {
-        hex = norm6(hex);
-        var r = srgb2lin(parseInt(hex.slice(1,3),16)),
-            g = srgb2lin(parseInt(hex.slice(3,5),16)),
-            b = srgb2lin(parseInt(hex.slice(5,7),16));
-        var l = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b),
-            m = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
-            s = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
-        var L = 0.2104542553*l + 0.7936177850*m - 0.0040720468*s,
-            A = 1.9779984951*l - 2.4285922050*m + 0.4505937099*s,
-            B = 0.0259040371*l + 0.7827717662*m - 0.8086757660*s;
-        var H = Math.atan2(B, A) * 180/Math.PI; if (H < 0) H += 360;
-        return { L: L, C: Math.sqrt(A*A + B*B), H: H };
-      }
-      function oklch2rgb(o) {
-        var h = o.H * Math.PI/180, A = o.C*Math.cos(h), B = o.C*Math.sin(h), L = o.L;
-        var l = L + 0.3963377774*A + 0.2158037573*B,
-            m = L - 0.1055613458*A - 0.0638541728*B,
-            s = L - 0.0894841775*A - 1.2914855480*B;
-        l = l*l*l; m = m*m*m; s = s*s*s;
-        var r = 4.0767416621*l - 3.3077115913*m + 0.2309699292*s,
-            g = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s,
-            b = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s;
-        return "#" + [r, g, b].map(function (v) {
-          return ("0" + lin2srgb(v).toString(16)).slice(-2);
-        }).join("");
-      }
-      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    // ---- apply the whole model as inline :root overrides for the active mode ----
+    function applyActive() {
+      if (mode === "dark") root.setAttribute("data-theme", "dark");
+      else root.removeAttribute("data-theme");
+      D.primOrder.forEach(function (p) { root.style.setProperty(p, model.prims[p]); });
+      var m = semMap();
+      Object.keys(m).forEach(function (s) { root.style.setProperty(s, "var(" + m[s] + ")"); });
+      refreshInputs(); refreshSeeds(); refreshRemaps(); updateContrast(); status();
+    }
 
-      // Shift a whole family by the OKLCH delta between the seed's old and new
-      // value — preserves each member's relationship to the anchor (a bg stays
-      // a pale tint, text stays dark), just re-hued / re-lightened together.
-      function shiftFamily(fam, newHex) {
-        var f = FAMILIES[fam], old = rgb2oklch(model[mode][f.anchor]),
-            nw = rgb2oklch(newHex);
-        var dL = nw.L - old.L, dC = nw.C - old.C, dH = nw.H - old.H;
-        f.members.forEach(function (t) {
-          var hex;
-          if (t === f.anchor) {
-            hex = newHex;  // the seed IS the anchor (WYSIWYG)
-          } else {
-            var o = rgb2oklch(model[mode][t]);
-            // Taper the lightness / chroma delta near black & white so already-
-            // extreme members (pale bg tints, dark text) don't clip; hue rotates
-            // fully so the whole family re-hues together.
-            var room = 1 - Math.abs(2 * o.L - 1);
-            hex = oklch2rgb({
-              L: clamp(o.L + dL * room, 0, 1),
-              C: Math.max(0, o.C + dC * room),
-              H: ((o.H + dH) % 360 + 360) % 360
-            });
-          }
-          model[mode][t] = hex; root.style.setProperty(t, hex);
-        });
-        dirty = true;
-        refreshInputs(); refreshSeeds(); updateContrast(); status();
-      }
-      function refreshSeeds() {
-        document.querySelectorAll(".tc-seed").forEach(function (el) {
-          var f = FAMILIES[el.getAttribute("data-family")];
-          var c6 = norm6(model[mode][f.anchor]);
-          if (/^#[0-9a-fA-F]{6}$/.test(c6)) el.querySelector(".tc-seed-color").value = c6;
-        });
-      }
-      function refreshInputs() {
-        chips().forEach(function (c) {
-          var t = c.getAttribute("data-token"), v = model[mode][t];
-          if (v == null) return;
-          c.querySelector(".tc-hex").value = v;
-          var c6 = norm6(v);
-          if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
-        });
-      }
-      function status() {
-        var el = document.querySelector("[data-status]");
-        if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · "
-          + (dirty ? "unsaved changes" : "no changes");
-      }
-      function applyActive() {
-        if (mode === "dark") root.setAttribute("data-theme", "dark");
-        else root.removeAttribute("data-theme");
-        var m = model[mode];
-        Object.keys(m).forEach(function (t) { root.style.setProperty(t, m[t]); });
-        refreshInputs(); refreshSeeds(); status(); updateContrast();
-      }
-      function setToken(t, v) {
-        model[mode][t] = v; root.style.setProperty(t, v); dirty = true;
-        refreshSeeds(); status(); updateContrast();
-      }
+    // ---- WCAG contrast ----
+    function hexRgb(h) { h = norm6(h).replace("#", ""); return [0,2,4].map(function(i){return parseInt(h.slice(i,i+2),16);}); }
+    function relLum(h) { var c = hexRgb(h).map(function (v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; }
+    function contrast(a,b){ var x=relLum(a)+0.05, y=relLum(b)+0.05; return x>y ? x/y : y/x; }
+    function resolve(sem) { var m = semMap(); var p = m[sem]; return p ? model.prims[p] : null; }
+    function updateContrast() {
+      document.querySelectorAll(".tc-cx").forEach(function (row) {
+        var fg = resolve(row.getAttribute("data-fg")), bg = resolve(row.getAttribute("data-bg"));
+        if (!fg || !bg) return;
+        var r = contrast(fg, bg), pass = r >= 4.5;
+        row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
+        var b = row.querySelector(".tc-cx-badge");
+        b.textContent = pass ? "AA" : "AA ✗"; b.className = "tc-cx-badge " + (pass ? "pass" : "fail");
+      });
+    }
 
-      // --- localStorage save library ---
-      function loadLib() {
-        try { return JSON.parse(localStorage.getItem(LIB_KEY) || "{}"); }
-        catch (e) { return {}; }
-      }
-      function saveLib(l) {
-        try { localStorage.setItem(LIB_KEY, JSON.stringify(l)); } catch (e) {}
-      }
-      function refreshLibrary(sel) {
-        var l = loadLib(), cur = sel.value;
-        sel.innerHTML = '<option value="">— saved —</option>';
-        Object.keys(l).sort().forEach(function (n) {
-          var o = document.createElement("option"); o.value = n; o.textContent = n;
-          sel.appendChild(o);
-        });
-        sel.value = cur;
-      }
+    // ---- OKLCH <-> sRGB (Bjorn Ottosson) for seed family shifts ----
+    function s2l(c){ c/=255; return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+    function l2s(c){ c = c<=0.0031308 ? c*12.92 : 1.055*Math.pow(c,1/2.4)-0.055; return Math.round(Math.min(1,Math.max(0,c))*255); }
+    function rgb2oklch(hex){ hex=norm6(hex); var r=s2l(parseInt(hex.slice(1,3),16)),g=s2l(parseInt(hex.slice(3,5),16)),b=s2l(parseInt(hex.slice(5,7),16));
+      var l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b), m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b), s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+      var L=0.2104542553*l+0.7936177850*m-0.0040720468*s, A=1.9779984951*l-2.4285922050*m+0.4505937099*s, B=0.0259040371*l+0.7827717662*m-0.8086757660*s;
+      var H=Math.atan2(B,A)*180/Math.PI; if(H<0)H+=360; return {L:L,C:Math.sqrt(A*A+B*B),H:H}; }
+    function oklch2rgb(o){ var h=o.H*Math.PI/180,A=o.C*Math.cos(h),B=o.C*Math.sin(h),L=o.L;
+      var l=L+0.3963377774*A+0.2158037573*B, m=L-0.1055613458*A-0.0638541728*B, s=L-0.0894841775*A-1.2914855480*B; l=l*l*l;m=m*m*m;s=s*s*s;
+      var r=4.0767416621*l-3.3077115913*m+0.2309699292*s, g=-1.2684380046*l+2.6097574011*m-0.3413193965*s, b=-0.0041960863*l-0.7034186147*m+1.7076147010*s;
+      return "#"+[r,g,b].map(function(v){return ("0"+l2s(v).toString(16)).slice(-2);}).join(""); }
+    function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
-      function download(name, text) {
-        var blob = new Blob([text], { type: "application/json" });
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob); a.download = name;
-        document.body.appendChild(a); a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-      }
-
-      // Parse a base.html file's :root blocks in the browser. Anchor on the
-      // <style> TAG at line start (same trap as the Python generator: prose
-      // mentions of "<style>" in head comments would otherwise be grabbed).
-      function parseBaseHtml(text) {
-        var m = text.match(/^[ \t]*<style>[ \t]*\n([\s\S]*?)<\/style>/m);
-        var css = m ? m[1] : "";
-        function block(re) {
-          var b = css.match(re), d = {};
-          if (b) {
-            var rx = /(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8});/g, mm;
-            while ((mm = rx.exec(b[1]))) d[mm[1]] = mm[2];
-          }
-          return d;
+    function shiftFamily(fam, newHex) {
+      var f = D.families[fam], old = rgb2oklch(model.prims[f.anchor]), nw = rgb2oklch(newHex);
+      var dL = nw.L-old.L, dC = nw.C-old.C, dH = nw.H-old.H;
+      f.members.forEach(function (t) {
+        var hex;
+        if (t === f.anchor) { hex = newHex; }
+        else {
+          var o = rgb2oklch(model.prims[t]);
+          var room = 1 - Math.abs(2*o.L - 1);   // taper near black/white to avoid clipping
+          hex = oklch2rgb({ L: clamp(o.L + dL*room, 0, 1), C: Math.max(0, o.C + dC*room), H: ((o.H+dH)%360+360)%360 });
         }
-        return {
-          light: block(/:root\s*\{([\s\S]*?)\}/),
-          dark: block(/:root\[data-theme="dark"\]\s*\{([\s\S]*?)\}/)
-        };
-      }
-
-      // --- wire the token chips ---
-      chips().forEach(function (c) {
-        var t = c.getAttribute("data-token");
-        var color = c.querySelector(".tc-color"), hex = c.querySelector(".tc-hex");
-        color.addEventListener("input", function () {
-          hex.value = color.value; setToken(t, color.value);
-        });
-        hex.addEventListener("change", function () {
-          var v = hex.value.trim();
-          if (/^#[0-9a-fA-F]{3,8}$/.test(v)) {
-            setToken(t, v);
-            var c6 = norm6(v);
-            if (/^#[0-9a-fA-F]{6}$/.test(c6)) color.value = c6;
-          } else { hex.value = model[mode][t]; }
-        });
+        model.prims[t] = hex; root.style.setProperty(t, hex);
       });
+      dirty = true; refreshInputs(); refreshSeeds(); updateContrast(); status();
+    }
 
-      // --- seed controls (family shift) ---
+    function setPrim(name, v) { model.prims[name] = v; root.style.setProperty(name, v); dirty = true; refreshSeeds(); updateContrast(); status(); }
+
+    // ---- refresh UI from model ----
+    function refreshInputs() {
+      document.querySelectorAll(".tc-chip").forEach(function (c) {
+        var n = c.getAttribute("data-prim"), v = model.prims[n]; if (v == null) return;
+        c.querySelector(".tc-hex").value = v; var c6 = norm6(v);
+        if (/^#[0-9a-fA-F]{6}$/.test(c6)) c.querySelector(".tc-color").value = c6;
+      });
+    }
+    function refreshSeeds() {
       document.querySelectorAll(".tc-seed").forEach(function (el) {
-        var fam = el.getAttribute("data-family");
-        el.querySelector(".tc-seed-color").addEventListener("input", function () {
-          shiftFamily(fam, this.value);
+        var a = D.families[el.getAttribute("data-fam")].anchor, c6 = norm6(model.prims[a]);
+        if (/^#[0-9a-fA-F]{6}$/.test(c6)) el.querySelector(".tc-seed-color").value = c6;
+      });
+    }
+    function refreshRemaps() {
+      document.querySelectorAll(".tc-remap").forEach(function (r) {
+        var s = r.getAttribute("data-sem");
+        r.querySelector('select[data-mode="light"]').value = model.semL[s];
+        r.querySelector('select[data-mode="dark"]').value = model.semD[s];
+      });
+    }
+    function status() {
+      var el = document.querySelector("[data-status]");
+      if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · " + (dirty ? "unsaved changes" : "no changes");
+    }
+
+    // ---- wiring ----
+    document.querySelectorAll(".tc-chip").forEach(function (c) {
+      var n = c.getAttribute("data-prim"), col = c.querySelector(".tc-color"), hex = c.querySelector(".tc-hex");
+      col.addEventListener("input", function () { hex.value = col.value; setPrim(n, col.value); });
+      hex.addEventListener("change", function () {
+        var v = hex.value.trim();
+        if (/^#[0-9a-fA-F]{3,8}$/.test(v)) { setPrim(n, v); var c6 = norm6(v); if (/^#[0-9a-fA-F]{6}$/.test(c6)) col.value = c6; }
+        else { hex.value = model.prims[n]; }
+      });
+    });
+    document.querySelectorAll(".tc-seed").forEach(function (el) {
+      var fam = el.getAttribute("data-fam");
+      el.querySelector(".tc-seed-color").addEventListener("input", function () { shiftFamily(fam, this.value); });
+    });
+    document.querySelectorAll(".tc-remap").forEach(function (r) {
+      var s = r.getAttribute("data-sem");
+      r.querySelectorAll(".tc-sel").forEach(function (sel) {
+        sel.addEventListener("change", function () {
+          var tgt = sel.getAttribute("data-mode") === "dark" ? model.semD : model.semL;
+          tgt[s] = sel.value;
+          if (sel.getAttribute("data-mode") === mode) root.style.setProperty(s, "var(" + sel.value + ")");
+          dirty = true; updateContrast(); status();
+          r.querySelector(".tc-swatch").style.background = "var(" + s + ")";
         });
       });
+    });
 
-      // --- toolbar ---
-      var seg = document.querySelectorAll(".ph-seg button");
-      seg.forEach(function (b) {
-        b.addEventListener("click", function () {
-          mode = b.getAttribute("data-set");
-          seg.forEach(function (x) {
-            x.setAttribute("aria-pressed", x === b ? "true" : "false");
-          });
-          applyActive();
-        });
+    var seg = document.querySelectorAll(".ph-seg button");
+    seg.forEach(function (b) {
+      b.addEventListener("click", function () {
+        mode = b.getAttribute("data-set");
+        seg.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+        applyActive();
       });
+    });
 
-      var lib = document.querySelector('[data-act="library"]');
-      document.querySelectorAll("[data-act]").forEach(function (el) {
-        var act = el.getAttribute("data-act");
-        if (act === "defaults") el.addEventListener("click", function () {
-          model = clone(DEFAULTS); dirty = false; applyActive();
-        });
-        if (act === "reread") el.addEventListener("change", function () {
-          var f = el.files[0]; if (!f) return;
-          var r = new FileReader();
-          r.onload = function () {
-            try {
-              var p = parseBaseHtml(r.result);
-              if (Object.keys(p.light).length) {
-                DEFAULTS = p; model = clone(p); dirty = false; applyActive();
-              } else { alert("No :root tokens found in that file."); }
-            } catch (e) { alert("Couldn't parse base.html: " + e); }
-            el.value = "";
-          };
-          r.readAsText(f);
-        });
-        if (act === "save") el.addEventListener("click", function () {
-          var n = prompt("Save theme as:"); if (!n) return;
-          var l = loadLib(); l[n] = clone(model); saveLib(l);
-          refreshLibrary(lib); lib.value = n; dirty = false; status();
-        });
-        if (act === "library") el.addEventListener("change", function () {
-          var n = el.value; if (!n) return;
-          var l = loadLib();
-          if (l[n]) { model = clone(l[n]); dirty = false; applyActive(); }
-        });
-        if (act === "delete") el.addEventListener("click", function () {
-          var n = lib.value; if (!n) return;
-          if (!confirm('Delete saved theme "' + n + '"?')) return;
-          var l = loadLib(); delete l[n]; saveLib(l); refreshLibrary(lib);
-        });
-        if (act === "export") el.addEventListener("click", function () {
-          download("rrw-theme.json",
-            JSON.stringify({ version: 1, tokens: model }, null, 2));
-        });
-        if (act === "import") el.addEventListener("change", function () {
-          var f = el.files[0]; if (!f) return;
-          var r = new FileReader();
-          r.onload = function () {
-            try {
-              var j = JSON.parse(r.result), t = j.tokens || j;
-              if (t.light && t.dark) { model = clone(t); dirty = true; applyActive(); }
-              else { alert("JSON needs { tokens: { light, dark } }."); }
-            } catch (e) { alert("Bad JSON: " + e); }
-            el.value = "";
-          };
-          r.readAsText(f);
-        });
+    document.querySelectorAll("[data-act]").forEach(function (el) {
+      var act = el.getAttribute("data-act");
+      if (act === "defaults") el.addEventListener("click", function () {
+        model = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) }; dirty = false; applyActive();
       });
+      if (act === "export") el.addEventListener("click", function () {
+        var out = JSON.stringify({ version: 2, primitives: model.prims, semantic: { light: model.semL, dark: model.semD } }, null, 2);
+        var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out], { type: "application/json" }));
+        a.download = "rrw-theme.json"; document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+      });
+      if (act === "import") el.addEventListener("change", function () {
+        var f = el.files[0]; if (!f) return; var r = new FileReader();
+        r.onload = function () {
+          try {
+            var j = JSON.parse(r.result);
+            if (j.primitives && j.semantic) {
+              model = { prims: clone(j.primitives), semL: clone(j.semantic.light), semD: clone(j.semantic.dark) };
+              dirty = true; applyActive();
+            } else { alert("JSON needs { primitives, semantic: { light, dark } }."); }
+          } catch (e) { alert("Bad JSON: " + e); }
+          el.value = "";
+        };
+        r.readAsText(f);
+      });
+    });
 
-      refreshLibrary(lib);
-      applyActive();
-    })();
+    applyActive();
+  })();
   </script>"""
 
 body = (
     toolbar
-    + '\n\n  <div class="ph-body">\n'
-    + seeds_section
-    + "\n"
-    + text_zone
-    + "\n"
-    + buttons_zone
-    + "\n"
-    + gallery_rest
-    + "\n"
-    + contrast_section
-    + "\n"
-    + editor_section
+    + '\n\n  <div class="tc-body">\n'
+    + seeds_section + "\n"
+    + prim_section + "\n"
+    + hc.component_gallery() + "\n"
+    + contrast_section + "\n"
+    + sem_section
     + "\n  </div>\n\n"
-    + defaults_script
-    + "\n"
-    + editor_js
-    + "\n"
+    + data_script + "\n"
+    + editor_js + "\n"
 )
 
 html = hc.page(
-    "Review Robin — theme customizer",
+    "Review Robin — two-tier theme customizer",
     "tools/theme_customizer.gen.py",
     base_css,
     editor_css,
     body,
 )
 OUT.write_text(html, encoding="utf-8")
-print(f"Wrote {OUT.relative_to(ROOT)} ({len(html)} bytes, {len(order)} tokens)")
+print(f"Wrote {OUT.relative_to(ROOT)} ({len(html)} bytes, {len(prims)} primitives, "
+      f"{len(SEED_ORDER)} seeds, {sum(len(t) for _, t in clusters)} semantic remaps)")
