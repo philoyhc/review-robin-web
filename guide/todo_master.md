@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 5 (theme customizer — dev designer) scheduled (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) in progress (detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2252,6 +2252,23 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   `app/`. Pre-step: re-tune the current palette to be formula-clean. Full plan:
   `guide/theme_customizer.md` "Plan A — First". The operator-facing **Stretch**
   half is deferred (`guide/deferred_consolidated.md` Part A "Operator theming").
+  (Now also carries the **tooling slice** of Item 6 — reworking the `tools/`
+  customizer / preview two-tier + app-agnostic, since they still reference the
+  retired flat-token names.)
+- **Item 6 (✅ shipped 2026-08-23)** — **semantic colour tokens (two-tier
+  reorg).** Migrated `base.html` off the flat colour-named palette
+  (`--accent-blue`, `--bg-page`, …) onto a **two-tier** system: **79
+  descriptive primitives** (`--blue-strong`, `--ink`, …) under **103
+  role-named semantic tokens** (`--btn-primary-bg`, `--surface-card`,
+  `--status-warning-*`, `--text-link`, …) that every component + template
+  inline style now consumes exclusively; all flat tokens retired. Independent
+  slots by default, `@coupled` for deliberate coupling; one palette (dark
+  `:root` remaps semantics). Every slice value-preserving (hex re-resolution
+  verified), suite green throughout. Shipped across **17 PRs** (#2047–#2062:
+  plan + decisions, then 11 migration slices ending in dead-code cleanup +
+  flat-def retirement). Catalogue `spec/color_tokens.md`; design + decisions
+  archived at `guide/archive/semantic_tokens.md`. Remaining tooling slice
+  folded into Item 5.
 
 ## Upcoming
 

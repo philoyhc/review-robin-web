@@ -1,9 +1,14 @@
 # Semantic colour tokens — two-tier migration plan
 
-**Status:** plan **agreed — all six decisions resolved (2026-08-23); Slice 1
-unblocked**, no code yet. Supersedes the flat, colour-named token model
-documented in `spec/color_tokens.md`. Scoped as **Segment 19C Items 4–5**
-(theme machinery: the customizer + this token system) with an explicit
+**Status:** ✅ **SHIPPED 2026-08-23 — archived.** The migration is complete
+(19C Item 6, 17 PRs #2047–#2062); `base.html` is fully two-tier and all flat
+tokens are retired. This is the design + decision record, kept for reference;
+the live catalogue is `spec/color_tokens.md`. The one deferred piece — the
+app-agnostic customizer tooling (the portability kernel) — is tracked under
+19C Item 5. Original plan status preserved below.
+
+Supersedes the flat, colour-named token model. Scoped as **Segment 19C Items
+4–5** (theme machinery: the customizer + this token system) with an explicit
 **portability goal** — reusable by other apps of the same look and feel, with
 a **clean extractable kernel as the unhurried end-state** (see "Reusability
 across apps" + "Decisions").

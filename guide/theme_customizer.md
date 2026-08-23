@@ -14,7 +14,7 @@ future neither plan does.
 > labels / seed families / zone-clusters read as **data** (ideally from the
 > token file) rather than baked to Review Robin, and JSON as the portable
 > interchange. This dovetails with the two-tier semantic-token migration
-> (`guide/semantic_tokens.md` §"Reusability across apps"): the reusable
+> (`guide/archive/semantic_tokens.md` §"Reusability across apps"): the reusable
 > kernel is {primitives + portable-core semantics} + {this app-agnostic
 > customizer}. Realised in that plan's tooling slice.
 

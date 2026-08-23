@@ -5,7 +5,7 @@ The app's colour system is **two-tier**, defined in `app/web/templates/base.html
 tokens name every role and are the *only* thing components and templates consume.
 The former flat colour-named tokens (`--accent-blue`, `--bg-page`, …) are fully
 retired. This document is the catalogue; the design + rationale live in
-`guide/semantic_tokens.md`.
+`guide/archive/semantic_tokens.md`.
 
 Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 `spec/visual_style_general.md` (design system), `spec/ui_elements.md` (elements).
@@ -13,7 +13,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 **Maintenance.** Edit tokens in `base.html` (both `:root` blocks); keep the
 `tools/` harness `LABELS` and this catalogue in sync. Rules of the model
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
-remaps semantics onto the one primitive palette) are in `guide/semantic_tokens.md`.
+remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
 **79 primitives · 103 semantic tokens · 16 non-colour scale tokens.**
 
@@ -296,7 +296,7 @@ Theme-agnostic; not redefined per theme.
 
 ## Notes
 
-- **Migrated from flat tokens** over Segment 19C Item 6 (`guide/semantic_tokens.md`);
+- **Migrated from flat tokens** over Segment 19C Item 6 (`guide/archive/semantic_tokens.md`);
   `base.html` is now fully two-tier — no flat colour-named token remains.
 - **Dropped as unused:** `--accent-red-soft` (never referenced) and the dead
   standalone `.warning-banner` / `.danger-banner` rules.
