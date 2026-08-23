@@ -460,13 +460,13 @@
         --row-pending-marker: var(--amber-deep-dk);
         /* ===== end design tokens ===== */
       }
-      html { font-size: 100%; background: var(--bg-page); }
+      html { font-size: 100%; background: var(--surface-page); }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         margin: 40px;
         max-width: 1400px;
-        color: var(--text-primary);
-        background: var(--bg-page);
+        color: var(--text-body);
+        background: var(--surface-page);
         line-height: 1.35;
       }
       body.narrow { max-width: 800px; }
@@ -477,15 +477,15 @@
       .table-scroll { overflow-x: auto; }
       .pill.pill-handle {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: var(--bg-muted);
-        color: var(--text-primary);
+        background: var(--surface-muted);
+        color: var(--text-body);
         text-transform: none;
         font-weight: 500;
       }
       .help-preview {
         white-space: pre-wrap;
         font-size: 0.9em;
-        color: var(--text-primary);
+        color: var(--text-body);
         margin: 0;
       }
       /*
@@ -505,9 +505,9 @@
         background: var(--border-default);
         padding: 10px 14px;
         border-radius: 6px;
-        color: var(--text-primary);
+        color: var(--text-body);
       }
-      body.ui-v2 .card.rs-help-card strong { color: var(--text-primary); }
+      body.ui-v2 .card.rs-help-card strong { color: var(--text-body); }
       .warning-banner {
         border: 1px solid var(--accent-amber-border);
         background: var(--accent-amber-bg);
@@ -527,7 +527,7 @@
       h1 { margin-top: 0; margin-bottom: 16px; }
       .page-subtitle {
         margin: -12px 0 16px 0;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         font-size: 0.95em;
       }
       a { color: var(--text-link); }
@@ -543,18 +543,18 @@
       .chrome-left { display: flex; flex-direction: column; gap: 4px; }
       .chrome-app-identity {
         font-size: 0.85em;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         text-decoration: none;
       }
       .chrome-app-identity:hover { text-decoration: underline; }
       .breadcrumb { font-size: 0.95em; }
       .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
-      .breadcrumb span[aria-current="page"] { color: var(--text-primary); font-weight: 600; }
-      .breadcrumb-sep { color: var(--text-muted); margin: 0 6px; }
+      .breadcrumb span[aria-current="page"] { color: var(--text-body); font-weight: 600; }
+      .breadcrumb-sep { color: var(--text-dim); margin: 0 6px; }
       .chrome-user {
         font-size: 0.85em;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         text-align: right;
         line-height: 1.4;
       }
@@ -565,10 +565,10 @@
         border: 1px solid var(--border-default);
         border-radius: 6px;
         text-decoration: none;
-        color: var(--text-primary);
+        color: var(--text-body);
         font-size: 0.9em;
       }
-      .chrome-user .signout:hover { background: var(--bg-muted); }
+      .chrome-user .signout:hover { background: var(--surface-muted); }
       .card {
         border: 2px solid var(--border-default);
         border-radius: 12px;
@@ -583,7 +583,7 @@
         text-align: left;
         vertical-align: middle;
       }
-      th { background: var(--bg-muted); }
+      th { background: var(--surface-muted); }
       th.col-shrink, td.col-shrink { width: 1%; white-space: nowrap; }
       /*
        * Reviewer-surface column-width hints. With table-layout: auto the
@@ -652,8 +652,8 @@
           to right,
           transparent 0,
           transparent 2px,
-          var(--text-muted) 2px,
-          var(--text-muted) 4px,
+          var(--text-dim) 2px,
+          var(--text-dim) 4px,
           transparent 4px,
           transparent 6px
         );
@@ -664,8 +664,8 @@
           to right,
           transparent 0,
           transparent 1px,
-          var(--text-secondary) 1px,
-          var(--text-secondary) 5px,
+          var(--text-subtle) 1px,
+          var(--text-subtle) 5px,
           transparent 5px,
           transparent 6px
         );
@@ -687,7 +687,7 @@
         opacity: 0.4;
       }
       .new-model-band2-pill-drop-before {
-        box-shadow: -3px 0 0 0 var(--text-secondary);
+        box-shadow: -3px 0 0 0 var(--text-subtle);
       }
       /*
        * Wave 4 PR 3 — pending visual for Band 3 response-field
@@ -710,14 +710,14 @@
       .new-model-band2-pill-grip {
         display: inline-block;
         margin-right: 6px;
-        color: var(--text-muted);
+        color: var(--text-dim);
         font-size: 0.9em;
         letter-spacing: -1px;
         transition: color 0.1s ease-in-out;
       }
       [data-new-model-band2-pill][data-reorderable="true"]:hover
         .new-model-band2-pill-grip {
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       /*
        * `||` divider that sits between display pills and response
@@ -726,13 +726,13 @@
        * shape stays unchanged for instruments without responses.
        */
       .new-model-band2-pills-divider {
-        color: var(--text-muted);
+        color: var(--text-dim);
         font-weight: bold;
         font-size: 1.1em;
         padding: 0 4px;
         user-select: none;
       }
-      .muted { color: var(--text-secondary); }
+      .muted { color: var(--text-subtle); }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
        * .danger / .danger-solid / .alert / .alert-solid) are the
@@ -763,11 +763,11 @@
         cursor: not-allowed;
       }
       .btn.secondary {
-        background: var(--bg-card);
+        background: var(--surface-card);
         color: var(--accent-blue);
       }
       .btn.danger {
-        background: var(--bg-card);
+        background: var(--surface-card);
         color: var(--accent-red-strong);
         border-color: var(--accent-red-strong);
       }
@@ -777,7 +777,7 @@
         border-color: var(--accent-red-strong);
       }
       .btn.alert {
-        background: var(--bg-card);
+        background: var(--surface-card);
         color: var(--accent-amber);
         border-color: var(--accent-amber);
       }
@@ -878,8 +878,8 @@
         cursor: pointer;
       }
       .btn-cta.disabled {
-        background: var(--text-muted);
-        border-color: var(--text-muted);
+        background: var(--text-dim);
+        border-color: var(--text-dim);
         cursor: not-allowed;
       }
       .btn-row {
@@ -895,7 +895,7 @@
         padding: 0 2px;
         font-size: 0.8em;
         line-height: 1;
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
       /* Inline text-style "reset to default" button. Reads like a
@@ -949,7 +949,7 @@
         border-radius: 8px;
         overflow: hidden;
         margin-bottom: 20px;
-        background: var(--bg-card);
+        background: var(--surface-card);
       }
       .session-nav-grid {
         display: grid;
@@ -975,7 +975,7 @@
         justify-content: center;
         text-align: center;
         text-decoration: none;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         position: relative;
       }
       .session-home-anchor:hover {
@@ -1012,11 +1012,11 @@
         padding: 12px 16px;
         font-size: 0.78rem;
         font-weight: 700;
-        color: var(--text-muted);
+        color: var(--text-dim);
         text-transform: uppercase;
         letter-spacing: 0.06em;
         white-space: nowrap;
-        background: var(--bg-card);
+        background: var(--surface-card);
         border-right: 1px solid var(--border-subtle);
       }
       /* Understated right-arrow after each row label, pointing
@@ -1043,12 +1043,12 @@
       .row-label.active-group,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
       .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       .row-label.active-group::after,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
       .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
-        border-left-color: var(--text-primary);
+        border-left-color: var(--text-body);
       }
       /* Tab strip rows — group tint sits on the strip itself.
          Setup row sits in grid row 1; Operations row in row 2. */
@@ -1056,7 +1056,7 @@
         display: flex;
         align-items: stretch;
       }
-      .tab-strip-setup { background: var(--bg-muted); grid-column: 3; grid-row: 1; }
+      .tab-strip-setup { background: var(--surface-muted); grid-column: 3; grid-row: 1; }
       .tab-strip-ops   { background: var(--nav-strip-ops-bg); grid-column: 3; grid-row: 2; }
       /* Page-internal nav-tab strip — same `.nav-tab` children as the
          chrome but framed for page body usage: light grey row tint
@@ -1065,7 +1065,7 @@
          hover lightens to white. Used by the Email Template selector
          and the Previews-page email-tab strip. */
       .tab-strip-page {
-        background: var(--bg-muted);
+        background: var(--surface-muted);
         border: 1px solid var(--border-default);
         border-radius: 6px;
         overflow: hidden;
@@ -1087,7 +1087,7 @@
         flex: 1 1 0;
         padding: 12px 14px;
         text-align: center;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         text-decoration: none;
         font-size: 0.92rem;
         background: transparent;
@@ -1095,7 +1095,7 @@
       }
       .nav-tab:hover {
         background: rgba(255, 255, 255, 0.7);
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       .nav-tab.active {
         background: var(--nav-tab-active-bg);
@@ -1104,13 +1104,13 @@
       }
       .nav-tab.disabled,
       .nav-tab[aria-disabled="true"]:not(.active) {
-        color: var(--text-muted);
+        color: var(--text-dim);
         cursor: not-allowed;
       }
       .nav-tab.disabled:hover,
       .nav-tab[aria-disabled="true"]:not(.active):hover {
         background: transparent;
-        color: var(--text-muted);
+        color: var(--text-dim);
       }
       .nav-tab.active::after {
         content: "";
@@ -1137,7 +1137,7 @@
       .status-row {
         padding: 12px 16px;
         font-size: 0.9rem;
-        background: var(--bg-card);
+        background: var(--surface-card);
         border-top: 1px solid var(--border-subtle);
       }
       .status-row p { margin: 0; }
@@ -1388,10 +1388,10 @@
          for the rollout plan (PRs A → G).
          ────────────────────────────────────────────────────────── */
       body.ui-v2 {
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       body.ui-v2 a { color: var(--text-link); }
-      body.ui-v2 .muted { color: var(--text-secondary); }
+      body.ui-v2 .muted { color: var(--text-subtle); }
       /* Headings */
       body.ui-v2 h1 {
         font-size: var(--fs-h1);
@@ -1413,7 +1413,7 @@
       }
       body.ui-v2 .page-subtitle {
         font-size: var(--fs-small);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         margin: -8px 0 var(--space-4) 0;
       }
       /* Cards — default + lock + danger-zone variants.
@@ -1424,7 +1424,7 @@
       body.ui-v2 .card {
         border: 2px solid var(--border-default);
         border-radius: var(--radius-card);
-        background: var(--bg-page);
+        background: var(--surface-page);
         padding: var(--space-4);
         /* No margin-bottom here: it was producing a doubled
            vertical gap on the Setup pages (the cards' margin
@@ -1495,7 +1495,7 @@
       }
       body.ui-v2 .card.setup-coverage .setup-coverage-label {
         font-weight: 600;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         font-size: 0.92em;
       }
       body.ui-v2 .card.setup-coverage .setup-coverage-issues {
@@ -1529,11 +1529,11 @@
       }
       body.ui-v2 .issue-why summary {
         cursor: pointer;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       body.ui-v2 .issue-why p {
         margin: var(--space-2) 0 0 0;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       /* Severity-filter chip strip — anchor links flipping
          ?severity= on the Validate page. The active chip carries
@@ -1554,11 +1554,11 @@
         border: 1px solid var(--border-default);
         border-radius: 999px;
         text-decoration: none;
-        color: var(--text-primary);
+        color: var(--text-body);
         font-size: 0.92em;
       }
       body.ui-v2 .severity-chip:hover {
-        background: var(--bg-muted);
+        background: var(--surface-muted);
       }
       body.ui-v2 .severity-chip.active {
         border-color: var(--accent-blue);
@@ -1602,13 +1602,13 @@
          responses for analysis"), not in opacity flips that would
          desynchronise sibling placeholders. */
       body.ui-v2 .card.placeholder {
-        background: var(--bg-muted);
+        background: var(--surface-muted);
       }
       body.ui-v2 .card.placeholder h2 {
-        color: var(--text-muted);
+        color: var(--text-dim);
       }
       body.ui-v2 .card.placeholder p {
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       body.ui-v2 .card.placeholder,
       body.ui-v2 .card.placeholder * {
@@ -1695,13 +1695,13 @@
       body.ui-v2 .quick-setup-slot-heading .muted,
       body.ui-v2 .extract-data-row-label .muted {
         font-weight: normal;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         margin-left: var(--space-2);
       }
       body.ui-v2 .quick-setup-slot-heading .quick-setup-slot-action {
         font-weight: normal;
         font-size: var(--fs-small);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         margin-left: var(--space-2);
       }
       body.ui-v2 .quick-setup-confirm-replace {
@@ -1778,7 +1778,7 @@
       body.ui-v2 .shaper-preview-th {
         display: inline-block;
         white-space: nowrap;
-        background: var(--bg-muted);
+        background: var(--surface-muted);
         padding: 2px var(--space-2);
       }
       /* PR 10 of the chip-controlled-drop slice — preview
@@ -1800,7 +1800,7 @@
       body.ui-v2
         .data-shape-card[data-shape-current-self-review-handling="both"]
         .shaper-preview-th[data-aggregate="true"] {
-        box-shadow: inset 0 -3px 0 var(--text-secondary);
+        box-shadow: inset 0 -3px 0 var(--text-subtle);
       }
       /* Empty-state placeholder cell that surfaces inside the
          preview row when no column chips are selected on the
@@ -1809,7 +1809,7 @@
          muted and italic; matches the rest of the page's
          ``form-help`` muted-text palette. */
       body.ui-v2 .shaper-preview-placeholder {
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         font-style: italic;
         font-weight: normal;
         background: transparent;
@@ -1820,7 +1820,7 @@
       body.ui-v2 .shaper-axis-pipe {
         display: inline-block;
         padding: 0 var(--space-2);
-        color: var(--text-muted);
+        color: var(--text-dim);
         font-weight: 600;
         opacity: 0.5;
       }
@@ -1835,7 +1835,7 @@
         border-radius: 6px;
         padding: var(--space-2);
         margin-top: var(--space-2);
-        background: var(--bg-card);
+        background: var(--surface-card);
       }
       /* When no Data shape sub-card is in edit mode, the Data
          shaper's selector chips (scope row + content row) lock:
@@ -1891,7 +1891,7 @@
         #extract-data-shaper[data-shaper-chips-locked="true"]
         [data-shaper-include-empty-rows-chip].is-selected {
         background: var(--accent-blue-bg);
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       /* Selected sub-card — the one currently in edit mode.
          Border switches to the accent-blue used for primary
@@ -2148,12 +2148,12 @@
         vertical-align: middle;
       }
       body.ui-v2 th {
-        background: var(--bg-muted);
-        color: var(--text-secondary);
+        background: var(--surface-muted);
+        color: var(--text-subtle);
         font-size: var(--fs-small);
         font-weight: 500;
       }
-      body.ui-v2 tbody tr:hover { background: var(--bg-muted); }
+      body.ui-v2 tbody tr:hover { background: var(--surface-muted); }
       body.ui-v2 th.col-shrink,
       body.ui-v2 td.col-shrink {
         width: 1%;
@@ -2184,11 +2184,11 @@
       }
       body.ui-v2 .sessions-tag-filter-label {
         font-size: var(--fs-small);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       body.ui-v2 .pill.pill-tag-clear {
-        background: var(--bg-muted);
-        color: var(--text-primary);
+        background: var(--surface-muted);
+        color: var(--text-body);
         cursor: pointer;
       }
       /* Tag-filter chips — clickable; the selected ones flip to a
@@ -2199,8 +2199,8 @@
         color: var(--selected-fg);
       }
       body.ui-v2 .pill.tag-mode-chip {
-        background: var(--bg-muted);
-        color: var(--text-primary);
+        background: var(--surface-muted);
+        color: var(--text-body);
         cursor: pointer;
       }
       /* Setup-page column-visibility chips (Segment 18E Part 1) —
@@ -2223,7 +2223,7 @@
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
       body.ui-v2 .session-expander > td {
-        background: var(--bg-muted);
+        background: var(--surface-muted);
         padding: var(--space-3) var(--space-4);
       }
       body.ui-v2 .session-expander-body {
@@ -2322,7 +2322,7 @@
         margin: var(--space-3) 0 var(--space-1) 0;
         font-weight: 500;
         font-size: var(--fs-small);
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       body.ui-v2 input[type="text"],
       body.ui-v2 input[type="datetime-local"],
@@ -2338,8 +2338,8 @@
         box-sizing: border-box;
         border: 1px solid var(--border-default);
         border-radius: var(--radius-button);
-        background: var(--bg-page);
-        color: var(--text-primary);
+        background: var(--surface-page);
+        color: var(--text-body);
       }
       /* Textareas resize vertically only, never horizontally — a long
          entry should grow downward, not drag wider than its column and
@@ -2416,7 +2416,7 @@
       }
       body.ui-v2 .form-help {
         font-size: var(--fs-small);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         margin: var(--space-1) 0 var(--space-3) 0;
       }
       body.ui-v2 .form-error {
@@ -2429,7 +2429,7 @@
          .btn-icon rule lives in the legacy block above; v2 adds two
          semantic colour modifiers so templates can drop their
          inline color: # styles. */
-      body.ui-v2 .btn-icon { color: var(--text-secondary); font-size: 1em; }
+      body.ui-v2 .btn-icon { color: var(--text-subtle); font-size: 1em; }
       body.ui-v2 .btn-icon.danger { color: var(--icon-btn-danger-fg); }
       body.ui-v2 .btn-icon.action { color: var(--icon-btn-action-fg); }
       /* Order cell — number on the left, ▲/▼ stacked vertically on
@@ -2509,11 +2509,11 @@
       body.ui-v2 .card.next-action .next-action-signal--amber-warning
         .next-action-signal-icon { color: var(--accent-amber); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey
-        .next-action-signal-icon { color: var(--text-muted); }
+        .next-action-signal-icon { color: var(--text-dim); }
       body.ui-v2 .card.next-action .next-action-signal--error
         .next-action-signal-icon { color: var(--accent-red); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey {
-        color: var(--text-muted);
+        color: var(--text-dim);
       }
       body.ui-v2 .card.next-action .next-action-buttons {
         display: flex;
@@ -2635,13 +2635,13 @@
       /* Code block — bg-muted-tinted block for monospace content
          (e.g. rendered email bodies on the Outbox page). */
       body.ui-v2 .code-block {
-        background: var(--bg-muted);
+        background: var(--surface-muted);
         padding: var(--space-3);
         border-radius: var(--radius-button);
         white-space: pre-wrap;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: var(--fs-small);
-        color: var(--text-primary);
+        color: var(--text-body);
         margin: 0;
       }
       /* Pills — count (blue tint, bold dark text) for normal
@@ -2729,12 +2729,12 @@
         margin: 0 0 var(--space-4) 0;
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-muted {
-        background: var(--bg-muted);
-        color: var(--text-muted);
+        background: var(--surface-muted);
+        color: var(--text-dim);
         text-decoration: none;
       }
       body.ui-v2 .rs-role-nav a.rs-role-nav-muted:hover {
-        color: var(--text-primary);
+        color: var(--text-body);
         text-decoration: underline;
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-active {
@@ -2785,15 +2785,15 @@
       /* Chrome — repaint to palette tokens; per-row accent on the
          active-tab marker; row tints at 5% accent. */
       body.ui-v2 .chrome { border-bottom-color: var(--border-subtle); }
-      body.ui-v2 .chrome-app-identity { color: var(--text-secondary); }
-      body.ui-v2 .chrome-user { color: var(--text-secondary); }
+      body.ui-v2 .chrome-app-identity { color: var(--text-subtle); }
+      body.ui-v2 .chrome-user { color: var(--text-subtle); }
       body.ui-v2 .chrome-user .signout {
         border-color: var(--border-default);
-        color: var(--text-primary);
+        color: var(--text-body);
       }
-      body.ui-v2 .breadcrumb-sep { color: var(--text-muted); }
+      body.ui-v2 .breadcrumb-sep { color: var(--text-dim); }
       body.ui-v2 .breadcrumb span[aria-current="page"] {
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       body.ui-v2 .session-nav-card {
         border-color: var(--border-subtle);
@@ -2801,7 +2801,7 @@
       body.ui-v2 .session-home-anchor {
         background: var(--nav-home-bg);
         border-right-color: var(--border-subtle);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       body.ui-v2 .session-home-anchor:hover {
         background: var(--nav-home-bg-hover);
@@ -2813,7 +2813,7 @@
       }
       body.ui-v2 .row-label {
         border-right-color: var(--border-subtle);
-        color: var(--text-muted);
+        color: var(--text-dim);
       }
       /* Row-label emphasis — applies when the operator is on a
          page in this group OR when hovering any tab in the group's
@@ -2823,23 +2823,23 @@
       body.ui-v2 .row-label.active-group,
       body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
       body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
-        color: var(--text-primary);
+        color: var(--text-body);
       }
       body.ui-v2 .row-label.active-group::after,
       body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
       body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
-        border-left-color: var(--text-primary);
+        border-left-color: var(--text-body);
       }
       body.ui-v2 .tab-strip-setup { background: rgba(37, 99, 235, 0.05); }
       body.ui-v2 .tab-strip-ops   { background: rgba(5, 150, 105, 0.05); }
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
-      body.ui-v2 .nav-tab { color: var(--text-muted); font-weight: 600; }
+      body.ui-v2 .nav-tab { color: var(--text-dim); font-weight: 600; }
       /* Hover emphasises the tab text; the v1 :hover rule is
          shadowed by the v2 base on equal specificity, so re-emit. */
       body.ui-v2 .nav-tab:hover {
-        color: var(--text-primary);
+        color: var(--text-body);
         background: rgba(255, 255, 255, 0.7);
       }
       body.ui-v2 .nav-tab.active { color: var(--text-body); }
@@ -2859,10 +2859,10 @@
         background: var(--nav-home-marker);
       }
       body.ui-v2 .status-row {
-        background: var(--bg-page);
+        background: var(--surface-page);
         border-top-color: var(--border-subtle);
         font-size: var(--fs-small);
-        color: var(--text-secondary);
+        color: var(--text-subtle);
       }
       /* Sessions-list lobby header — pairs the H1 with the "Create
          new session" Primary affordance flush right. Body is a v2
@@ -2951,7 +2951,7 @@
         cursor: pointer;
         border: 0;
         background: transparent;
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         padding: 0 10px;
       }
       .theme-toggle-opt + .theme-toggle-opt {
@@ -2961,7 +2961,7 @@
         background: var(--selected-bg);
         color: var(--selected-fg);
       }
-      .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-primary); }
+      .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-body); }
       /* Reviewer top-bar variant — lighter chrome for reviewer-facing
          pages per spec/visual_style_rrw.md "Reviewer-facing pages →
          Top bar". Lighter "Review Robin" identity (no version), no
@@ -3026,7 +3026,7 @@
         margin: 0 var(--space-2);
       }
       body.ui-v2 .rs-page-nav-counter {
-        color: var(--text-secondary);
+        color: var(--text-subtle);
         font-size: 0.9rem;
       }
       /* Denser reviewer-table rows (Segment 17B). The reviewer
@@ -3260,13 +3260,13 @@
         border: 1px solid transparent;
         border-radius: 4px;
         cursor: pointer;
-        color: var(--text-muted);
+        color: var(--text-dim);
         font: inherit;
         font-size: 0.85em;
       }
       body.ui-v2 .rrw-sort-btn:hover {
         border-color: var(--border-default);
-        background: var(--bg-muted);
+        background: var(--surface-muted);
       }
       body.ui-v2 .rrw-sort-btn:focus-visible {
         outline: 2px solid var(--focus-ring-strong);
@@ -3277,7 +3277,7 @@
         font-variant-numeric: tabular-nums;
       }
       body.ui-v2 .rrw-sort-badge-active {
-        color: var(--text-primary);
+        color: var(--text-body);
         font-weight: 600;
       }
       /* Segment 15A Slice 2 — two-line `Friendly / canonical`
@@ -3289,7 +3289,7 @@
         display: block;
         font-size: 0.75em;
         font-weight: 400;
-        color: var(--text-muted);
+        color: var(--text-dim);
         margin-top: 1px;
       }
       /* Segment 15A Slice 3 — per-page inline editor for the
