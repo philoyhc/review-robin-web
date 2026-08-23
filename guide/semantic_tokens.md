@@ -54,12 +54,60 @@ Tier 2  SEMANTIC     --btn-primary-bg, --text-body, --surface-card,
   `var(--btn-primary-bg)`, never `var(--blue-600)`.
 - **Primitives are the only place raw hex lives.** Semantic tokens are all
   `var(--primitive)` references.
+- **Every semantic slot is independent by default** *(core principle —
+  author directive)*. Each identified slot is **its own token that maps to a
+  primitive**. **Two slots that share a value today still get separate
+  tokens**, so either can be re-pointed later without a rename and without
+  disturbing the other. `--text-link` and `--btn-primary-bg` are distinct
+  even though both resolve to `--blue-600` now; `--role-reviewer-bg` is
+  distinct from `--status-info-bg`; the soft inline error keeps its own
+  `--status-error-soft-*`. Never collapse two slots because they coincide —
+  coincidence of value is not identity of role.
+- **Deliberate coupling is allowed — but it must be a marked choice.** A slot
+  *may* be defined in terms of another (`--x: var(--y)`) to intentionally
+  make the two track together — when the design *wants* them locked, not
+  merely equal today. This is the one sanctioned exception to
+  semantic→primitive resolution, and it only counts when it is **flagged as
+  intent**, so it reads as a decision rather than an accidental chain:
+  annotate the definition with the `@coupled` marker and record it in the
+  Deliberate-couplings registry (below). An **unmarked** semantic→semantic
+  reference is disallowed — that's exactly the accidental coupling the
+  default guards against. Default stays: map to a primitive.
 - **Theming lives in Tier 2.** Light `:root` maps each semantic token to a
   light-appropriate primitive; `:root[data-theme="dark"]` remaps the same
   semantic tokens to dark-appropriate primitives. Primitives themselves do
   **not** change per theme (a `--blue-600` is always the same blue). This
   keeps "what dark mode does" readable as one block of role→primitive
   reassignments.
+
+### Deliberate couplings — marker + registry
+
+When a coupling is genuinely wanted (two slots that should *stay* locked, not
+just happen to match), express it and flag it:
+
+```css
+/* @coupled → --status-info-bg : reviewer chip intentionally tracks Info */
+--role-reviewer-bg: var(--status-info-bg);
+```
+
+- **Marker.** The `@coupled → <target> : <reason>` comment immediately above
+  (or trailing) the declaration. Machine-readable, so an audit / the
+  customizer can find every coupling and distinguish it from an accidental
+  `var(--semantic)` reference (which is disallowed).
+- **Registry.** Every coupling is also listed here, so the set is reviewable
+  in one place:
+
+  | Coupled slot | → tracks | Reason |
+  |---|---|---|
+  | *(none yet)* | | Decisions 1–3 kept the tempting pairs independent |
+
+- **Tooling.** The customizer surfaces a coupled slot as *"→ tracks
+  {target}"* — editing the target moves both; the coupling can be broken
+  deliberately (repoint the slot to a primitive), which also removes its
+  registry entry.
+
+Default remains independence; a coupling is only ever an explicit entry in
+this registry.
 
 ### Tier 1 — the primitive palette
 
@@ -117,9 +165,13 @@ three ways:
      the borders/focus half of 3** below.
    - **App-specific semantics** — Review-Robin domain: participant-role
      pills, lifecycle badges, session-nav markers, config-value chips,
-     instrument tints. Clusters **6–10**. These **alias the portable core /
-     primitives** rather than introducing new colours, so a new app either
-     drops them or re-points them.
+     instrument tints. Clusters **6–10**. By default each is an
+     **independent slot that maps to a primitive** rather than introducing
+     new colours, so a new app either drops them or re-points them without
+     touching the core. Where an app-specific slot is *meant* to track a core
+     role (e.g. a chip that should always equal Info), that is expressed as a
+     **marked deliberate coupling** to the core semantic — an explicit choice,
+     per the coupling rule, not an implicit dependency.
    Naming keeps the split legible (portable tokens carry no domain word;
    app-specific ones do — `--lifecycle-*`, `--role-*`, `--config-value-*`).
 
@@ -207,11 +259,14 @@ Consumed by pills, banners, and inline messages.
 | `--status-warning-*` | `--accent-amber-bg` | `--accent-amber-dark` | `--accent-amber` |
 | `--status-error-*` | `--accent-red-bg` | `--accent-red-text` | `--accent-red` |
 
-Open sub-decisions (see below): success has two fg tones today
-(`--accent-green` icon vs `--accent-green-text` pill text); and the **soft
-inline save-error** (`--danger-bg/border/text`) is a *second* error
-treatment distinct from `--status-error-*`. Consolidate or keep as
-`--status-error-soft-*`.
+Per the independent-slot rule (former decisions 1–2, now resolved): **success
+keeps two independent fg slots** — `--status-success-fg` (`--accent-green-text`,
+pill text) and `--status-success-accent` (`--accent-green`, icon / border) —
+and the **soft inline save-error keeps its own** `--status-error-soft-{bg,
+border,fg}` (← `--danger-{bg,border,text}`), distinct from `--status-error-*`.
+Live banners are the ui-v2 `.banner.banner-*`, whose borders resolve to the
+`--status-*-border` slots above; the standalone `.warning-banner` /
+`.danger-banner` are dead (see "Completeness pass").
 
 ### 6. Participant-role pills — [A]
 
@@ -263,11 +318,44 @@ treatment distinct from `--status-error-*`. Consolidate or keep as
 |---|---|
 | `--status-super-bg / -fg` | `--accent-violet-bg` / `--accent-violet-text` |
 
+### 12. Selection, toggles & markers — [P] / [A]
+
+The long tail surfaced by the completeness pass — live consumers that no
+earlier cluster named.
+
+| Semantic | ← current | [P]/[A] | Consumers |
+|---|---|---|---|
+| `--selected-bg` | `--accent-blue` | [P] | `.tag-chip.is-selected`, `.theme-toggle-opt[aria-pressed]`, `.skip-link` |
+| `--selected-fg` | `--text-on-accent` | [P] | (label on the above) |
+| `--icon-btn-action-fg` | `--accent-blue` | [P] | `.btn-icon.action` |
+| `--icon-btn-danger-fg` | `--accent-red` | [P] | `.btn-icon.danger` |
+| `--focus-ring-strong` | `--accent-blue-dark` | [P] | `.rrw-sort-btn:focus-visible` (a second, darker focus tone) |
+| `--row-pending-marker` | `--accent-amber-border` | [A] | `[data-row-pending]` warning box-shadow (the sole live consumer of `--accent-amber-border`) |
+
 **Relationships / hierarchy.** Clusters 6–7 (roles, lifecycle) and much of
-10 are *not new colours* — they alias the cluster-5 status palette. Naming
-them separately is deliberate: it lets, say, the "observer" pill diverge
-from the generic "warning" amber later without a rename. The dependency runs
-one way only: components → semantic → (status/foundation) → primitive.
+10 reuse the *same colours* as the cluster-5 status palette — but, per the
+independent-slot rule, each **maps to the primitive directly** (not to the
+status semantic), so "observer" can diverge from generic "warning" without a
+rename. A slot that *should* track a status role expresses it as a marked
+`@coupled` reference. Dependency runs one way: components → semantic →
+primitive (with the occasional marked semantic→semantic coupling).
+
+### Completeness pass (2026-08-23)
+
+All **47** current colour tokens are dispositioned:
+
+- **Mapped** into clusters 1–12: **44**.
+- **Kept, newly slotted** in cluster 12: `--accent-amber-border` (→
+  `--row-pending-marker`, one live consumer).
+- **Drop (dead — no live consumer):** `--accent-red-soft` (never referenced)
+  and `--accent-red-strong` (only the dead standalone `.danger-banner` +
+  legacy pre-`ui-v2` `.btn.danger*`). Remove the dead `.warning-banner` /
+  `.danger-banner` rules with them.
+
+Finding: **two banner implementations coexist** in `base.html` — the live
+ui-v2 `.banner.banner-*` (14 template uses; borders = `--status-*-border`)
+and the **dead** standalone `.warning-banner` / `.danger-banner` (0 uses).
+The migration drops the dead pair; no live element is uncovered.
 
 ---
 
@@ -344,21 +432,28 @@ Totals: ~**595** `var()` call-sites + **94** definitions, across
 - **The customizer is temporarily ahead of the app.** Until the tooling
   slice, the customizer still edits flat tokens; that's fine — it's dev-only
   and not wired in.
-- **`--accent-red-soft` is unused** (per `spec/color_tokens.md`) — drop it
-  in this migration rather than inventing a semantic home.
+- **Dead tokens dropped, not slotted** (per the Completeness pass):
+  `--accent-red-soft` (never referenced) and `--accent-red-strong` (only the
+  dead standalone `.danger-banner` + legacy `.btn.danger*`). Remove the dead
+  `.warning-banner` / `.danger-banner` CSS rules alongside them.
 
 ---
 
 ## Open decisions (resolve during Slice 0 review)
 
-1. **Two error treatments.** Consolidate `--danger-*` (soft inline
-   save-error) into `--status-error-*`, or keep a distinct
-   `--status-error-soft-*`? (They're different values today.)
-2. **Success two-tone.** One `--status-success-fg`, or split
-   `-fg` (pill text, darker) from `-accent` (icon/border)?
-3. **Roles / lifecycle as aliases vs. distinct primitives.** Plan assumes
-   distinct semantic *names* aliasing the shared status primitives (cheap
-   future divergence). Confirm.
+> **1–3 are settled by the independent-slot rule** (each identified slot is
+> its own token — never collapse two because they coincide). Kept below,
+> marked resolved, for the record; revisit only to overturn the principle.
+
+1. ~~**Two error treatments.**~~ **Resolved → keep separate.** The soft
+   inline save-error keeps its own `--status-error-soft-*` (the `--danger-*`
+   values), distinct from `--status-error-*`.
+2. ~~**Success two-tone.**~~ **Resolved → keep both slots.** Distinct
+   `--status-success-fg` (pill text) and `--status-success-accent`
+   (icon / border), independent even where they'd coincide.
+3. ~~**Roles / lifecycle collapse vs. distinct.**~~ **Resolved → distinct,
+   independent.** `--role-*` and `--lifecycle-*` are their own slots, each
+   mapping to a primitive (not to the status semantics).
 4. **Primitive naming.** Numeric Tailwind-style steps (`--blue-600`) vs.
    descriptive (`--blue-strong`). Plan assumes numeric.
 5. **Dark primitives naming.** Parallel set (`--blue-dk-600`) vs. letting

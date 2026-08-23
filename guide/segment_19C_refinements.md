@@ -557,6 +557,17 @@ JSON as the interchange). Reusable kernel = {primitives + portable-core
 semantics} + {the app-agnostic customizer}. See `guide/semantic_tokens.md`
 §"Reusability across apps".
 
+**Independent-slot principle (author directive).** Every identified semantic
+slot is its own token, mapping to a primitive by default; two slots that
+share a value today still get separate tokens so either can diverge later
+without a rename. **Deliberate coupling is allowed but must be marked** — a
+slot may be defined in terms of another (`--x: var(--y)`) only as a flagged
+choice (`@coupled` marker + registry entry), never as an unmarked chain. This
+settles former open decisions 1–3 (soft-error, success two-tone,
+roles/lifecycle) toward **keep separate**; only primitive naming, dark
+primitives, and portability-factoring remain open. See
+`guide/semantic_tokens.md` "Rules of the model" + "Deliberate couplings".
+
 ### Scope / blast radius (measured)
 
 Presentation-layer only — **0** references in `app/**/*.py`, **0** in
@@ -585,13 +596,13 @@ Per `guide/semantic_tokens.md` "Migration strategy":
 
 ### Open decisions (gate Slice 1)
 
-Listed in `guide/semantic_tokens.md`: (1) consolidate the soft inline
-save-error (`--danger-*`) into `--status-error-*` or keep a soft variant;
-(2) success one fg tone vs. split pill-text / icon; (3) roles + lifecycle as
-distinct semantic names aliasing the status palette (assumed) vs. collapsed;
-(4) primitive naming — numeric steps (assumed) vs. descriptive; (5) dark
-primitives — parallel named set vs. dark `:root` reassigns semantic tokens
-(preferred).
+Listed in `guide/semantic_tokens.md`. **1–3 are settled by the
+independent-slot principle** (keep the soft-error, success two-tone, and
+roles/lifecycle as separate slots). **Remaining:** (4) primitive naming —
+numeric steps (assumed) vs. descriptive; (5) dark primitives — parallel named
+set vs. dark `:root` reassigns semantic tokens (preferred); (6) how far to
+factor for portability now (delimited block / `tokens.css` partial vs.
+namespace-only) + how far to data-drive the customizer.
 
 ### Definition of done
 
