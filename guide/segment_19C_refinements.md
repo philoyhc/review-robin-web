@@ -558,12 +558,15 @@ semantics} + {the app-agnostic customizer}. See `guide/semantic_tokens.md`
 §"Reusability across apps".
 
 **Independent-slot principle (author directive).** Every identified semantic
-slot is its own token, mapping to a primitive — never to another semantic
-token; two slots that share a value today still get separate tokens so either
-can diverge later without a rename. This settles former open decisions 1–3
-(soft-error, success two-tone, roles/lifecycle) toward **keep separate**;
-only primitive naming, dark primitives, and portability-factoring remain
-open. See `guide/semantic_tokens.md` "Rules of the model".
+slot is its own token, mapping to a primitive by default; two slots that
+share a value today still get separate tokens so either can diverge later
+without a rename. **Deliberate coupling is allowed but must be marked** — a
+slot may be defined in terms of another (`--x: var(--y)`) only as a flagged
+choice (`@coupled` marker + registry entry), never as an unmarked chain. This
+settles former open decisions 1–3 (soft-error, success two-tone,
+roles/lifecycle) toward **keep separate**; only primitive naming, dark
+primitives, and portability-factoring remain open. See
+`guide/semantic_tokens.md` "Rules of the model" + "Deliberate couplings".
 
 ### Scope / blast radius (measured)
 

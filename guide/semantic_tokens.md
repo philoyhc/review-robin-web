@@ -54,22 +54,60 @@ Tier 2  SEMANTIC     --btn-primary-bg, --text-body, --surface-card,
   `var(--btn-primary-bg)`, never `var(--blue-600)`.
 - **Primitives are the only place raw hex lives.** Semantic tokens are all
   `var(--primitive)` references.
-- **Every semantic slot is independent** *(core principle — author
-  directive)*. Each identified slot is **its own token that maps to a
-  primitive** — never to *another* semantic token (resolution is flat:
-  semantic → primitive, no semantic→semantic chains). **Two slots that share
-  a value today still get separate tokens**, so either can be re-pointed
-  later without a rename and without disturbing the other. `--text-link` and
-  `--btn-primary-bg` are distinct even though both resolve to `--blue-600`
-  now; `--role-reviewer-bg` is distinct from `--status-info-bg`; the soft
-  inline error keeps its own `--status-error-soft-*`. Never collapse two
-  slots because they coincide — coincidence of value is not identity of role.
+- **Every semantic slot is independent by default** *(core principle —
+  author directive)*. Each identified slot is **its own token that maps to a
+  primitive**. **Two slots that share a value today still get separate
+  tokens**, so either can be re-pointed later without a rename and without
+  disturbing the other. `--text-link` and `--btn-primary-bg` are distinct
+  even though both resolve to `--blue-600` now; `--role-reviewer-bg` is
+  distinct from `--status-info-bg`; the soft inline error keeps its own
+  `--status-error-soft-*`. Never collapse two slots because they coincide —
+  coincidence of value is not identity of role.
+- **Deliberate coupling is allowed — but it must be a marked choice.** A slot
+  *may* be defined in terms of another (`--x: var(--y)`) to intentionally
+  make the two track together — when the design *wants* them locked, not
+  merely equal today. This is the one sanctioned exception to
+  semantic→primitive resolution, and it only counts when it is **flagged as
+  intent**, so it reads as a decision rather than an accidental chain:
+  annotate the definition with the `@coupled` marker and record it in the
+  Deliberate-couplings registry (below). An **unmarked** semantic→semantic
+  reference is disallowed — that's exactly the accidental coupling the
+  default guards against. Default stays: map to a primitive.
 - **Theming lives in Tier 2.** Light `:root` maps each semantic token to a
   light-appropriate primitive; `:root[data-theme="dark"]` remaps the same
   semantic tokens to dark-appropriate primitives. Primitives themselves do
   **not** change per theme (a `--blue-600` is always the same blue). This
   keeps "what dark mode does" readable as one block of role→primitive
   reassignments.
+
+### Deliberate couplings — marker + registry
+
+When a coupling is genuinely wanted (two slots that should *stay* locked, not
+just happen to match), express it and flag it:
+
+```css
+/* @coupled → --status-info-bg : reviewer chip intentionally tracks Info */
+--role-reviewer-bg: var(--status-info-bg);
+```
+
+- **Marker.** The `@coupled → <target> : <reason>` comment immediately above
+  (or trailing) the declaration. Machine-readable, so an audit / the
+  customizer can find every coupling and distinguish it from an accidental
+  `var(--semantic)` reference (which is disallowed).
+- **Registry.** Every coupling is also listed here, so the set is reviewable
+  in one place:
+
+  | Coupled slot | → tracks | Reason |
+  |---|---|---|
+  | *(none yet)* | | Decisions 1–3 kept the tempting pairs independent |
+
+- **Tooling.** The customizer surfaces a coupled slot as *"→ tracks
+  {target}"* — editing the target moves both; the coupling can be broken
+  deliberately (repoint the slot to a primitive), which also removes its
+  registry entry.
+
+Default remains independence; a coupling is only ever an explicit entry in
+this registry.
 
 ### Tier 1 — the primitive palette
 
@@ -127,10 +165,13 @@ three ways:
      the borders/focus half of 3** below.
    - **App-specific semantics** — Review-Robin domain: participant-role
      pills, lifecycle badges, session-nav markers, config-value chips,
-     instrument tints. Clusters **6–10**. Each is an **independent slot that
-     maps to a primitive** (not to a core semantic — per the independent-slot
-     rule) rather than introducing new colours, so a new app either drops
-     them or re-points them without touching the core.
+     instrument tints. Clusters **6–10**. By default each is an
+     **independent slot that maps to a primitive** rather than introducing
+     new colours, so a new app either drops them or re-points them without
+     touching the core. Where an app-specific slot is *meant* to track a core
+     role (e.g. a chip that should always equal Info), that is expressed as a
+     **marked deliberate coupling** to the core semantic — an explicit choice,
+     per the coupling rule, not an implicit dependency.
    Naming keeps the split legible (portable tokens carry no domain word;
    app-specific ones do — `--lifecycle-*`, `--role-*`, `--config-value-*`).
 
