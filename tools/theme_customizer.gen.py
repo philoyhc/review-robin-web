@@ -201,14 +201,15 @@ editor_css = r"""
       border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
     .tc-controls input[type=file] { display: none; }
     .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
-    /* Two-part split: toolbar is a fixed header; A (preview) and B (tokens)
-       are independently-scrolling columns filling the rest of the viewport. */
+    /* Two-part split: toolbar is a fixed header; A (preview) sits on top and
+       B (tokens) below, each a full-width, independently-scrolling pane so the
+       preview and the token controls stay visible together. */
     body.ui-v2 { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     .ph-toolbar { margin-bottom: 0; flex: none; }
-    .tc-split { flex: 1; min-height: 0; display: flex; align-items: stretch; }
-    .tc-part { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 20px 60px; }
-    .tc-part-a { flex: 1.05; }
-    .tc-part-b { flex: 0.95; border-left: 1px solid var(--border-default); }
+    .tc-split { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .tc-part { min-height: 0; overflow-y: auto; padding: 16px 20px 60px; }
+    .tc-part-a { flex: 1; }
+    .tc-part-b { flex: 1; border-top: 1px solid var(--border-default); }
     .tc-part-h { position: sticky; top: 0; z-index: 5; margin: -16px -20px 14px;
       padding: 10px 20px; background: var(--surface-card); border-bottom: 1px solid var(--border-default);
       font-size: 0.9rem; font-weight: 600; }

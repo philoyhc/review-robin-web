@@ -207,94 +207,6 @@ def component_sections():
         for i in range(1, 7)
     )
     return [
-        ("buttons", """    <section class="ph-section">
-      <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
-      <p class="muted" style="margin: 0 0 6px;">Active</p>
-      <div class="ph-row" style="margin-bottom: 14px;">
-        <button class="btn">Primary</button>
-        <button class="btn secondary">Secondary</button>
-        <button class="btn destructive">Destructive</button>
-        <button class="btn danger-solid">Alert</button>
-        <button class="btn alert">Amber</button>
-      </div>
-      <p class="muted" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
-      <div class="ph-row">
-        <button class="btn" disabled>Primary</button>
-        <button class="btn secondary" disabled>Secondary</button>
-        <button class="btn destructive" disabled>Destructive</button>
-        <button class="btn danger-solid" disabled>Alert</button>
-        <button class="btn alert" disabled>Amber</button>
-      </div>
-    </section>"""),
-        ("text", f"""    <section class="ph-section">
-      <h2 class="ph-h">Text &amp; links</h2>
-{TEXT_LINKS_SAMPLE}
-    </section>"""),
-        ("cards", """    <section class="ph-section">
-      <h2 class="ph-h">Cards</h2>
-      <div class="card">
-        <h2>Plain card</h2>
-        <p>A standard raised card surface. Body text sits on <code>--bg-card</code>.</p>
-      </div>
-      <div class="card rs-help-card"><strong>Help card.</strong> A tinted help slab — body text plus a strong lead.</div>
-      <div class="card danger-zone" id="danger-zone">
-        <h2>Danger Zone</h2>
-        <p>Destructive-action card. The button is fixed-width here.</p>
-        <button class="btn destructive">Clear all settings</button>
-      </div>
-    </section>"""),
-        ("pills", """    <section class="ph-section">
-      <h2 class="ph-h">Pills</h2>
-      <div class="ph-row">
-        <span class="pill pill-error">error</span>
-        <span class="pill pill-warning">warning</span>
-        <span class="pill pill-info">info</span>
-        <span class="pill pill-success">success</span>
-        <span class="pill pill-super">super</span>
-        <span class="pill pill-handle">HANDLE_ID</span>
-      </div>
-    </section>"""),
-        ("banners", """    <section class="ph-section">
-      <h2 class="ph-h">Banners</h2>
-      <div class="warning-banner">Warning banner — an amber advisory.</div>
-      <div class="danger-banner">Danger banner — a hard red alert.</div>
-      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--danger-*</code> tokens).</p>
-    </section>"""),
-        ("table", """    <section class="ph-section">
-      <h2 class="ph-h">Table &amp; config values</h2>
-      <table>
-        <thead><tr><th>Field</th><th>Value</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td>Timezone</td><td><span class="config-value">Asia/Singapore</span></td><td><span class="pill pill-success">set</span></td></tr>
-          <tr><td>SMTP host</td><td><span class="config-value-resolved">smtp.office365.com</span></td><td><span class="pill pill-info">inherited</span></td></tr>
-          <tr><td>App password</td><td><span class="muted">not set</span></td><td><span class="pill pill-warning">pending</span></td></tr>
-        </tbody>
-      </table>
-    </section>"""),
-        ("tints", f"""    <section class="ph-section">
-      <h2 class="ph-h">Instrument card tints</h2>
-      <div class="ph-row">
-{tints}
-      </div>
-    </section>"""),
-        ("forms", """    <section class="ph-section">
-      <h2 class="ph-h">Form controls (the settings / setup pages are form-heavy)</h2>
-      <div class="card">
-        <label for="ph-in">Text input</label>
-        <input type="text" id="ph-in" placeholder="reviews@your-org.edu" value="Course Reviews">
-        <label for="ph-em">Email input</label>
-        <input type="email" id="ph-em" placeholder="you@example.com">
-        <label for="ph-num">Number input</label>
-        <input type="number" id="ph-num" value="587">
-        <label for="ph-sel">Select</label>
-        <select id="ph-sel"><option>STARTTLS</option><option>SSL/TLS</option><option>None</option></select>
-        <label for="ph-ta">Textarea</label>
-        <textarea id="ph-ta" placeholder="Type a note…">Multi-line help text sits here.</textarea>
-        <label for="ph-dis">Disabled input</label>
-        <input type="text" id="ph-dis" value="frozen value" disabled>
-        <p class="muted" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
-      </div>
-    </section>"""),
         ("chrome", """    <section class="ph-section">
       <h2 class="ph-h">Chrome — top bar</h2>
       <div class="chrome">
@@ -345,6 +257,92 @@ def component_sections():
         <span class="tag-chip">External</span>
       </div>
       <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
+    </section>"""),
+        ("text", f"""    <section class="ph-section">
+      <h2 class="ph-h">Text &amp; links</h2>
+{TEXT_LINKS_SAMPLE}
+    </section>"""),
+        ("cards", f"""    <section class="ph-section">
+      <h2 class="ph-h">Cards</h2>
+      <div class="card">
+        <h2>Plain card</h2>
+        <p>A standard raised card surface. Body text sits on <code>--bg-card</code>.</p>
+      </div>
+      <div class="card rs-help-card"><strong>Help card.</strong> A tinted help slab — body text plus a strong lead.</div>
+      <div class="card danger-zone" id="danger-zone">
+        <h2>Danger Zone</h2>
+        <p>Destructive-action card. The button is fixed-width here.</p>
+        <button class="btn destructive">Clear all settings</button>
+      </div>
+      <p class="muted" style="margin: 16px 0 6px;">Instrument card tints</p>
+      <div class="ph-row">
+{tints}
+      </div>
+    </section>"""),
+        ("forms", """    <section class="ph-section">
+      <h2 class="ph-h">Form controls (the settings / setup pages are form-heavy)</h2>
+      <div class="card">
+        <label for="ph-in">Text input</label>
+        <input type="text" id="ph-in" placeholder="reviews@your-org.edu" value="Course Reviews">
+        <label for="ph-em">Email input</label>
+        <input type="email" id="ph-em" placeholder="you@example.com">
+        <label for="ph-num">Number input</label>
+        <input type="number" id="ph-num" value="587">
+        <label for="ph-sel">Select</label>
+        <select id="ph-sel"><option>STARTTLS</option><option>SSL/TLS</option><option>None</option></select>
+        <label for="ph-ta">Textarea</label>
+        <textarea id="ph-ta" placeholder="Type a note…">Multi-line help text sits here.</textarea>
+        <label for="ph-dis">Disabled input</label>
+        <input type="text" id="ph-dis" value="frozen value" disabled>
+        <p class="muted" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
+      </div>
+    </section>"""),
+        ("buttons", """    <section class="ph-section">
+      <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
+      <p class="muted" style="margin: 0 0 6px;">Active</p>
+      <div class="ph-row" style="margin-bottom: 14px;">
+        <button class="btn">Primary</button>
+        <button class="btn secondary">Secondary</button>
+        <button class="btn destructive">Destructive</button>
+        <button class="btn danger-solid">Alert</button>
+        <button class="btn alert">Amber</button>
+      </div>
+      <p class="muted" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
+      <div class="ph-row">
+        <button class="btn" disabled>Primary</button>
+        <button class="btn secondary" disabled>Secondary</button>
+        <button class="btn destructive" disabled>Destructive</button>
+        <button class="btn danger-solid" disabled>Alert</button>
+        <button class="btn alert" disabled>Amber</button>
+      </div>
+    </section>"""),
+        ("pills", """    <section class="ph-section">
+      <h2 class="ph-h">Pills</h2>
+      <div class="ph-row">
+        <span class="pill pill-error">error</span>
+        <span class="pill pill-warning">warning</span>
+        <span class="pill pill-info">info</span>
+        <span class="pill pill-success">success</span>
+        <span class="pill pill-super">super</span>
+        <span class="pill pill-handle">HANDLE_ID</span>
+      </div>
+    </section>"""),
+        ("banners", """    <section class="ph-section">
+      <h2 class="ph-h">Banners</h2>
+      <div class="warning-banner">Warning banner — an amber advisory.</div>
+      <div class="danger-banner">Danger banner — a hard red alert.</div>
+      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--danger-*</code> tokens).</p>
+    </section>"""),
+        ("table", """    <section class="ph-section">
+      <h2 class="ph-h">Table &amp; config values</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Value</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Timezone</td><td><span class="config-value">Asia/Singapore</span></td><td><span class="pill pill-success">set</span></td></tr>
+          <tr><td>SMTP host</td><td><span class="config-value-resolved">smtp.office365.com</span></td><td><span class="pill pill-info">inherited</span></td></tr>
+          <tr><td>App password</td><td><span class="muted">not set</span></td><td><span class="pill pill-warning">pending</span></td></tr>
+        </tbody>
+      </table>
     </section>"""),
     ]
 
