@@ -241,6 +241,7 @@
         --status-warning-bg: var(--amber-pale);
         --status-warning-fg: var(--amber-deep);
         --status-warning-border: var(--amber-strong);
+        --status-warning-accent: var(--amber-strong);
         --status-error-bg: var(--red-pale);
         --status-error-fg: var(--red-deep);
         --status-error-border: var(--red-strong);
@@ -293,6 +294,10 @@
         --icon-btn-danger-fg: var(--red-strong);
         --focus-ring-strong: var(--blue-deep);
         --row-pending-marker: var(--amber);
+        --chip-active-border: var(--blue-strong);
+        --chip-active-fg: var(--blue-strong);
+        --chip-active-bg: var(--blue-wash);
+        --chip-selected-bg: var(--blue-pale);
         /* ===== end design tokens ===== */
       }
       /* Dark palette — overrides the light :root values above when the
@@ -406,6 +411,7 @@
         --status-warning-bg: var(--amber-abyss);
         --status-warning-fg: var(--amber-glow);
         --status-warning-border: var(--amber-bright);
+        --status-warning-accent: var(--amber-bright);
         --status-error-bg: var(--red-abyss);
         --status-error-fg: var(--red-soft);
         --status-error-border: var(--red-bright);
@@ -458,6 +464,10 @@
         --icon-btn-danger-fg: var(--red-bright);
         --focus-ring-strong: var(--blue-soft);
         --row-pending-marker: var(--amber-deep-dk);
+        --chip-active-border: var(--blue-glow);
+        --chip-active-fg: var(--blue-glow);
+        --chip-active-bg: var(--blue-abyss-soft);
+        --chip-selected-bg: var(--blue-abyss);
         /* ===== end design tokens ===== */
       }
       html { font-size: 100%; background: var(--surface-page); }
@@ -697,7 +707,7 @@
        * clears when ✓ is clicked.
        */
       [data-new-model-rf-row][data-row-pending="true"] {
-        box-shadow: inset 3px 0 0 0 var(--accent-amber-border);
+        box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
         background: rgba(254, 243, 199, 0.5);
       }
       /*
@@ -1561,9 +1571,9 @@
         background: var(--surface-muted);
       }
       body.ui-v2 .severity-chip.active {
-        border-color: var(--accent-blue);
-        color: var(--accent-blue);
-        background: var(--accent-blue-bg-soft);
+        border-color: var(--chip-active-border);
+        color: var(--chip-active-fg);
+        background: var(--chip-active-bg);
       }
       body.ui-v2 .card.danger-zone {
         border-color: var(--card-warning-border);
@@ -1890,7 +1900,7 @@
       body.ui-v2
         #extract-data-shaper[data-shaper-chips-locked="true"]
         [data-shaper-include-empty-rows-chip].is-selected {
-        background: var(--accent-blue-bg);
+        background: var(--chip-selected-bg);
         color: var(--text-body);
       }
       /* Selected sub-card — the one currently in edit mode.
@@ -2505,13 +2515,13 @@
         line-height: 1.2;
       }
       body.ui-v2 .card.next-action .next-action-signal--green
-        .next-action-signal-icon { color: var(--accent-green); }
+        .next-action-signal-icon { color: var(--status-success-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-warning
-        .next-action-signal-icon { color: var(--accent-amber); }
+        .next-action-signal-icon { color: var(--status-warning-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey
         .next-action-signal-icon { color: var(--text-dim); }
       body.ui-v2 .card.next-action .next-action-signal--error
-        .next-action-signal-icon { color: var(--accent-red); }
+        .next-action-signal-icon { color: var(--status-error-accent); }
       body.ui-v2 .card.next-action .next-action-signal--amber-grey {
         color: var(--text-dim);
       }
@@ -2973,11 +2983,11 @@
       /* Status-symbol indicators on the reviewer surface — replaces
          the inline-styled ✓ / ⚠ glyphs per spec/ui_elements.md §9. */
       body.ui-v2 .status-icon-complete {
-        color: var(--accent-green);
+        color: var(--status-success-accent);
         font-weight: 600;
       }
       body.ui-v2 .status-icon-incomplete {
-        color: var(--accent-amber-dark);
+        color: var(--status-warning-fg);
         font-weight: 600;
       }
       /* Reviewer-surface page header — H1 sits inline with the
