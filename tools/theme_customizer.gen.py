@@ -212,7 +212,7 @@ editor_css = r"""
       background: var(--bg-page); color: var(--text-primary); }
     .tc-sep { width: 1px; height: 20px; background: var(--border-default); }
     .tc-status { color: var(--text-secondary); font-size: 0.8rem; }
-    .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+    .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
     .tc-zone-tokens { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); }
     .tc-chip { display: flex; align-items: center; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
