@@ -53,6 +53,86 @@ def parse_theme_tokens(base_css):
     }
 
 
+# ---- Two-tier parsing (data-driven; works for any tokens.css of this shape) ----
+# The palette is Tier 1 primitives (`--name: #hex;`) + Tier 2 semantic tokens
+# (`--name: var(--primitive);`), the semantic block grouped by `/* Label */`
+# cluster comments. Dark `:root` re-maps the same semantic tokens; primitives
+# live only in light `:root` (theme-agnostic).
+_SEM_RE = re.compile(r"(--[a-z0-9-]+):\s*var\((--[a-z0-9-]+)\)\s*;")
+_LIGHT_SEL = r":root"
+_DARK_SEL = r':root\[data-theme="dark"\]'
+
+
+def _block_text(base_css, selector_re):
+    m = re.search(selector_re + r"\s*\{(.*?)\n\s*\}", base_css, re.DOTALL)
+    return m.group(1) if m else ""
+
+
+def parse_primitives(base_css):
+    """Ordered `[(name, hex)]` — the Tier-1 primitives (hex-valued, light root)."""
+    return [(m.group(1), m.group(2))
+            for m in _TOKEN_RE.finditer(_block_text(base_css, _LIGHT_SEL))]
+
+
+def parse_semantic(base_css):
+    """`{"light": [(sem, prim)], "dark": [(sem, prim)]}` — semantic→primitive maps."""
+    return {
+        "light": [(m.group(1), m.group(2))
+                  for m in _SEM_RE.finditer(_block_text(base_css, _LIGHT_SEL))],
+        "dark": [(m.group(1), m.group(2))
+                 for m in _SEM_RE.finditer(_block_text(base_css, _DARK_SEL))],
+    }
+
+
+def parse_clusters(base_css):
+    """Ordered `[(cluster_label, [sem_token, …])]` from the light Tier-2
+    `/* Label */` comments — the data-driven cluster grouping."""
+    text = _block_text(base_css, _LIGHT_SEL)
+    if "Tier 2" in text:                       # drop the Tier-1 half
+        text = text.split("Tier 2", 1)[1]
+    clusters, cur = [], None
+    for line in text.splitlines():
+        cm = re.match(r"\s*/\*\s*(.+?)\s*\*/\s*$", line)
+        sm = re.match(r"\s*(--[a-z0-9-]+):\s*var\(", line)
+        if cm:
+            label = cm.group(1)
+            if label.startswith("==") or "end design tokens" in label:
+                continue
+            cur = (label, [])
+            clusters.append(cur)
+        elif sm and cur is not None:
+            cur[1].append(sm.group(1))
+    return clusters
+
+
+# Coarse hue family for a hex — groups primitives for seed controls (data-driven,
+# no hard-coded token names). Returns one of: neutral, red, amber, green, sky,
+# blue, violet.
+def hue_family(hex_value):
+    h = hex_value.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx - mn < 24:
+        return "neutral"
+    import colorsys
+    hu = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0] * 360
+    if hu < 20 or hu >= 330:
+        return "red"
+    if hu < 45:
+        return "amber"
+    if hu < 90:
+        return "amber" if g < 200 else "green"
+    if hu < 165:
+        return "green"
+    if hu < 200:
+        return "sky"
+    if hu < 255:
+        return "blue"
+    return "violet"
+
+
 # Human-readable label per token — a friendly version of the `--token` name.
 # Shared so the customizer's chips and the preview's swatch grid read the same.
 LABELS = {
