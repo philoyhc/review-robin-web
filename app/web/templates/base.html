@@ -284,6 +284,7 @@
         --card-active-bg: var(--blue-mist);
         --card-warning-bg: var(--amber-pale);
         --card-warning-border: var(--amber-deep);
+        --card-warning-fg: var(--amber-deep);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
         --selected-fg: var(--white);
@@ -447,6 +448,7 @@
         --card-active-bg: var(--blue-abyss-faint);
         --card-warning-bg: var(--amber-abyss);
         --card-warning-border: var(--amber-glow);
+        --card-warning-fg: var(--amber-glow);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
         --selected-fg: var(--white);
@@ -1444,8 +1446,8 @@
         margin: 0 0 var(--space-3) 0;
       }
       body.ui-v2 .card.lock {
-        border-color: var(--accent-amber-dark);
-        background: var(--accent-amber-bg);
+        border-color: var(--card-warning-border);
+        background: var(--card-warning-bg);
       }
       /* Setup-coverage card on the Validate page. The header is
          a flex row so the H2 and the descriptive subtitle sit on
@@ -1562,11 +1564,11 @@
         background: var(--accent-blue-bg-soft);
       }
       body.ui-v2 .card.danger-zone {
-        border-color: var(--accent-amber-dark);
-        background: var(--accent-amber-bg);
+        border-color: var(--card-warning-border);
+        background: var(--card-warning-bg);
       }
       body.ui-v2 .card.danger-zone h2 {
-        color: var(--accent-amber-dark);
+        color: var(--card-warning-fg);
       }
       /* Disabled card — plain greying for cards whose body is
          intentionally inert in the current state. Used on Session
@@ -1899,9 +1901,9 @@
          placeholder for the wiring slice — actual chip-state
          restoration on ``✎`` click follows. */
       body.ui-v2 .data-shape-card[data-shape-selected="true"] {
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 1px var(--accent-blue);
-        background: var(--accent-blue-bg-faint);
+        border-color: var(--card-active-border);
+        box-shadow: 0 0 0 1px var(--card-active-border);
+        background: var(--card-active-bg);
       }
       /* Unlocked (= currently-being-edited) instrument card
          on the Instruments page picks up the same accent-blue
@@ -1913,8 +1915,8 @@
          card already carries a per-instrument palette
          background that should win). */
       body.ui-v2 .card[data-instrument-editing="true"] {
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 1px var(--accent-blue);
+        border-color: var(--card-active-border);
+        box-shadow: 0 0 0 1px var(--card-active-border);
       }
       body.ui-v2 .data-shape-actions {
         display: flex;
@@ -2459,7 +2461,7 @@
       body.ui-v2 .card.next-action {
         display: flex;
         flex-direction: column;
-        border-color: var(--accent-blue);
+        border-color: var(--card-active-border);
       }
       /* Horizontal divider between the two sections that the
          activated state renders inside the body (Manage / Monitor
@@ -3048,8 +3050,8 @@
          unchanged. */
       body.ui-v2 .rs-missing-card {
         margin: var(--space-4) 0;
-        border-color: var(--accent-amber);
-        background: var(--accent-amber-bg);
+        border-color: var(--status-warning-border);
+        background: var(--card-warning-bg);
       }
       body.ui-v2 .rs-missing-card .rs-missing-list {
         column-count: 2;
@@ -3186,9 +3188,9 @@
         margin-left: auto;
         margin-top: var(--space-6);
         box-sizing: border-box;
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 1px var(--accent-blue);
-        background: var(--accent-blue-bg-faint);
+        border-color: var(--card-active-border);
+        box-shadow: 0 0 0 1px var(--card-active-border);
+        background: var(--card-active-bg);
       }
       body.ui-v2 .rs-acknowledge-card h2 { margin: 0; }
       body.ui-v2 .rs-acknowledge-form-row {
