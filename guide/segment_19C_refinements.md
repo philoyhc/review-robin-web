@@ -2,11 +2,16 @@
 
 **Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
 via roster CSV headers; sole round-trip carrier); **Item 2 in progress**
-(settings-page Display mode card — scaffold slice first). A holding segment for **small,
+(settings-page Display mode card — scaffold slice first); **Item 5 in
+progress** (theme customizer — developer designer); **Item 6 planned**
+(semantic colour tokens — two-tier reorg; plan merged, `guide/semantic_tokens.md`).
+A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
 for behaviour / contract polish. Items land as independent slices; the
 segment stays open as a home for further refinements as they're identified.
+(Item 6 is the largest so far — a multi-PR migration; it may graduate to its
+own segment if it grows.)
 
 > Consequential-UI note: per `CLAUDE.md` → "Working approach", anything that
 > adds a card / nav / affordance lands **scaffold-first**. Item 1 is a
@@ -507,6 +512,80 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
   Each editor chip also dropped its redundant static swatch (the `<input
   type="color">` is the sample).
 - ☐ polish.
+
+---
+
+## Item 6 — Semantic colour tokens (two-tier reorg)
+
+**Status:** plan approved & merged (`guide/semantic_tokens.md`, PR #2047).
+Implementation not started — Slice 1 is gated on the five open decisions in
+the plan.
+
+### The problem
+
+The palette is one flat list of **colour-named** tokens (`--accent-blue`,
+`--bg-page`, …; catalogued in `spec/color_tokens.md`). Naming by colour
+instead of role couples unrelated elements — `--accent-blue` is the link
+colour *and* the Primary-button fill *and* the focus ring, so they can't
+diverge. The theme-customizer "one token, many zones" friction (Item 5) is
+the symptom of this missing semantic layer.
+
+### The decision
+
+Move to a **two-tier** system (confirmed with the author; plan-first):
+
+- **Tier 1 — primitives** (`--blue-600`, `--gray-500`, …): the raw colour
+  scale, named by hue + step, theme-agnostic.
+- **Tier 2 — semantic** (`--btn-primary-bg`, `--surface-card`,
+  `--status-warning-bg`, `--text-link`, …): named by role; redefined per
+  theme; **the only thing components consume.**
+
+Full taxonomy (eleven element→role clusters), naming convention, the
+token-by-token mapping, and the migration order live in
+`guide/semantic_tokens.md` — the authoritative plan for this item.
+
+### Scope / blast radius (measured)
+
+Presentation-layer only — **0** references in `app/**/*.py`, **0** in
+`tests/`, no DB/behavior. `base.html`: **94** token definitions (47 light +
+47 dark) + **505** `var(--…)` call-sites. **~90** more inline `var()`
+call-sites across **17** templates (dominated by
+`operator/instruments_index.html`). Plus `tools/` (customizer / preview) and
+the palette docs. ~**595** call-sites total, ~85% in `base.html`, all
+mechanical value-preserving swaps. No automated visual coverage → each slice
+needs dev-slot QA.
+
+### PR ladder
+
+Per `guide/semantic_tokens.md` "Migration strategy":
+
+1. **Slice 1 — both tiers as inert aliases.** Add the primitives + full
+   semantic layer to `:root` + `:root[data-theme="dark"]`, reproducing
+   today's values exactly; nothing consumes them yet. Additive, visually
+   inert (scaffold-first).
+2. **Slices 2…N — migrate consumers, one cluster per PR** (buttons → status
+   / pills / banners → roles + lifecycle → cards + nav → config + focus →
+   surfaces + text last). Template inline styles migrate with their cluster.
+3. **Retire the flat tokens** once nothing references them.
+4. **Tooling + docs slice** — two-tier customizer; rewrite
+   `spec/color_tokens.md`; retarget `_harness_common.LABELS`.
+
+### Open decisions (gate Slice 1)
+
+Listed in `guide/semantic_tokens.md`: (1) consolidate the soft inline
+save-error (`--danger-*`) into `--status-error-*` or keep a soft variant;
+(2) success one fg tone vs. split pill-text / icon; (3) roles + lifecycle as
+distinct semantic names aliasing the status palette (assumed) vs. collapsed;
+(4) primitive naming — numeric steps (assumed) vs. descriptive; (5) dark
+primitives — parallel named set vs. dark `:root` reassigns semantic tokens
+(preferred).
+
+### Definition of done
+
+`base.html` and all templates reference **only** semantic (Tier-2) tokens;
+primitives are the only place raw hex lives; the customizer, preview, and
+`spec/color_tokens.md` are two-tier; every slice value-preserving and
+dev-slot-verified.
 
 ---
 

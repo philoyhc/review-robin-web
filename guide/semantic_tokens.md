@@ -260,15 +260,37 @@ visually). Verified on the Azure dev slot, since the suite can't see CSS.
 
 ## Impact & risks
 
-- **base.html churn is large but mechanical.** ~200 `var(--…)` call-sites
-  move; each is a value-preserving swap. Splitting by cluster keeps every PR
-  reviewable.
-- **Two template inline-style consumers** (`operator/instruments_index.html`:
-  `--danger-*` and the `--instrument-tint-*` palette) migrate with their
-  clusters — don't forget them; the CSS-only grep misses them.
-- **No automated visual coverage.** Correctness = "pixels unchanged," which
-  the pytest suite can't assert. Each slice needs a dev-slot look; PR
-  descriptions must say so.
+### Blast radius (measured)
+
+**Presentation-layer only — zero Python, zero tests, zero DB/behavior.**
+Tokens live only in CSS + template inline styles, so the migration never
+reaches the three-layer core.
+
+| Area | Scope |
+|---|---|
+| `base.html` | **94** token definitions (47 light + 47 dark → primitives + semantic layer) + **505** `var(--…)` call-sites to repoint |
+| Other templates (17 files) | **~90** inline `var(--…)` call-sites — dominated by `operator/instruments_index.html` (**47**: the `--danger-*` save-error banner + the `--instrument-tint` palette + more); the rest are 1–7 each across operator / reviewer / error surfaces |
+| `tools/` | customizer, preview, `_harness_common` — reworked in the tooling slice |
+| Docs | `spec/color_tokens.md` (rewrite to two-tier), `spec/visual_style_rrw.md` (touch-ups), `spec/README.md` |
+
+**Not touched:** `app/**/*.py` (routes / services / models) — **0**
+references; `tests/` — **0**; migrations / config / behavior — none.
+
+Totals: ~**595** `var()` call-sites + **94** definitions, across
+`base.html` + 17 templates + tooling + 4 docs. ~85% of the churn is one file
+(`base.html`), all mechanical value-preserving swaps.
+
+### Risks
+
+- **base.html churn is large but mechanical.** Splitting by cluster keeps
+  every PR reviewable; each swap is value-preserving.
+- **Template inline-style consumers migrate with their clusters** — the
+  CSS-only grep misses them. Chief among them:
+  `operator/instruments_index.html` (`--danger-*` with the status/error
+  cluster; `--instrument-tint-*` with surfaces).
+- **No automated visual coverage.** The pytest suite touches **0** tokens, so
+  correctness = "pixels unchanged" — each slice needs a dev-slot look, stated
+  in the PR description.
 - **The customizer is temporarily ahead of the app.** Until the tooling
   slice, the customizer still edits flat tokens; that's fine — it's dev-only
   and not wired in.
