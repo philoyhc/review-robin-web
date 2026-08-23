@@ -201,13 +201,20 @@ editor_css = r"""
       border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
     .tc-controls input[type=file] { display: none; }
     .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
-    /* Two-part layout: sticky toolbar, then Part A (preview) in full, then
-       Part B (tokens) below it. The whole page scrolls as one — no per-pane
-       scroll bars. */
-    .ph-toolbar { margin-bottom: 0; }
-    .tc-part { padding: 18px 20px 32px; }
-    /* Part A previews the real screen at a realistic content width (~60vw). */
-    .tc-part-a { max-width: 60%; }
+    /* Page layout: the sticky toolbar spans the top. Below it, a left column
+       stacks Part A (preview) over Part B (tokens) and scrolls on its own;
+       Part C sits on the right (also scrollable). The left column is exactly
+       five primitive cards wide (5 x 150 + 4 x 8 gap + 40 padding), so Part A
+       previews at that width and Part B's primitive grid shows five per row. */
+    body.ui-v2 { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    .ph-toolbar { margin-bottom: 0; flex: none; }
+    .tc-cols { --tc-card: 150px; --tc-gap: 8px; flex: 1; min-height: 0; display: flex; align-items: stretch; }
+    .tc-left { flex: none; box-sizing: border-box; overflow-y: auto;
+      width: calc(5 * var(--tc-card) + 4 * var(--tc-gap) + 40px);
+      border-right: 1px solid var(--border-default); }
+    .tc-part-c { flex: 1; min-width: 0; overflow-y: auto; }
+    .tc-c-placeholder { color: var(--text-subtle); font-size: 0.85rem; max-width: 40ch; }
+    .tc-part { box-sizing: border-box; padding: 18px 20px 32px; }
     .tc-part-b { border-top: 1px solid var(--border-default); }
     .tc-part-h { margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
       font-size: 0.9rem; font-weight: 600; }
@@ -220,7 +227,7 @@ editor_css = r"""
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
     .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
-    .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .tc-grid { display: grid; grid-template-columns: repeat(5, var(--tc-card)); gap: var(--tc-gap); }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
     body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
@@ -441,12 +448,22 @@ part_b = (
     + sem_section
     + "\n  </div>"
 )
+part_c = (
+    '  <div class="tc-part tc-part-c">\n'
+    '    <h2 class="tc-part-h">Part C — Colour picker <span class="tc-part-note">(select a preview element; wiring to come)</span></h2>\n'
+    '    <p class="tc-c-placeholder">Pick an element in Part A to edit the colour of the semantic token it paints from. '
+    'This panel is a placeholder — the picking facility lands next.</p>\n'
+    "  </div>"
+)
 
 body = (
     toolbar
-    + '\n\n  <div class="tc-split">\n'
+    + '\n\n  <div class="tc-cols">\n'
+    + '  <div class="tc-left">\n'
     + part_a + "\n"
-    + part_b
+    + part_b + "\n"
+    + "  </div>\n"
+    + part_c
     + "\n  </div>\n\n"
     + data_script + "\n"
     + editor_js + "\n"
