@@ -130,11 +130,19 @@ BUTTON_FILL_TOKENS = [  # button fill (background) colour, per column
     "--accent-blue", "--bg-page", "--bg-page",
     "--accent-amber-dark", "--bg-page",
 ]
+BUTTON_BORDER_TOKENS = [  # button border colour, per column (existing tokens —
+    "--accent-blue",       # no bespoke border tokens; 4/5 echo the fill/label
+    "--text-secondary",    # above, Secondary's neutral grey is its own token
+    "--accent-red",
+    "--accent-amber-dark",
+    "--accent-amber-dark",  # Amber (.btn.alert) border = its label token
+]
 # Only the button-distinct tokens are "claimed" out of the Other grid; the ones
-# shared with the Text zone (--accent-blue / --bg-page / --text-primary) stay
-# there and merely appear here too — chips with the same token stay in sync.
+# shared with the Text zone (--accent-blue / --bg-page / --text-primary /
+# --text-secondary) stay there and merely appear here too — chips with the same
+# token stay in sync.
 BUTTON_CLAIMED = (
-    set(BUTTON_LABEL_TOKENS) | set(BUTTON_FILL_TOKENS)
+    set(BUTTON_LABEL_TOKENS) | set(BUTTON_FILL_TOKENS) | set(BUTTON_BORDER_TOKENS)
 ) - set(TEXT_ZONE_TOKENS)
 
 ZONED = set(TEXT_ZONE_TOKENS) | BUTTON_CLAIMED
@@ -303,19 +311,20 @@ def _btn_cells(disabled):
     )
 
 
-# Second content zone: buttons — a 5-column grid. Rows: active previews,
-# disabled previews, then the per-column label token (top) and fill token
-# (bottom), so each role's two defining tokens sit directly under it.
+# Second content zone: buttons — a 5-column grid. Rows: active previews, then
+# each role's three defining tokens (label / fill / border), then the disabled
+# previews, all aligned to the same 5 columns.
 buttons_zone = f"""    <section class="ph-section">
-      <h2 class="ph-h">Buttons — canonical roles; each role's text-label token (top) and fill token (bottom) sit in its column</h2>
+      <h2 class="ph-h">Buttons — canonical roles; each role's label / fill / border token sits in its column</h2>
       <div class="tc-btn-grid">
         <p class="muted tc-btn-cap tc-btn-cap-first">Active</p>
 {_btn_cells(False)}
-        <p class="muted tc-btn-cap">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
-{_btn_cells(True)}
-        <p class="muted tc-btn-cap">Tokens — top row: text label · bottom row: fill</p>
+        <p class="muted tc-btn-cap">Tokens per role — text label (row 1) · fill (row 2) · border (row 3)</p>
 {chr(10).join(chip(t) for t in BUTTON_LABEL_TOKENS)}
 {chr(10).join(chip(t) for t in BUTTON_FILL_TOKENS)}
+{chr(10).join(chip(t) for t in BUTTON_BORDER_TOKENS)}
+        <p class="muted tc-btn-cap">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
+{_btn_cells(True)}
       </div>
     </section>"""
 
