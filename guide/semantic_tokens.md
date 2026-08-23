@@ -54,6 +54,16 @@ Tier 2  SEMANTIC     --btn-primary-bg, --text-body, --surface-card,
   `var(--btn-primary-bg)`, never `var(--blue-600)`.
 - **Primitives are the only place raw hex lives.** Semantic tokens are all
   `var(--primitive)` references.
+- **Every semantic slot is independent** *(core principle — author
+  directive)*. Each identified slot is **its own token that maps to a
+  primitive** — never to *another* semantic token (resolution is flat:
+  semantic → primitive, no semantic→semantic chains). **Two slots that share
+  a value today still get separate tokens**, so either can be re-pointed
+  later without a rename and without disturbing the other. `--text-link` and
+  `--btn-primary-bg` are distinct even though both resolve to `--blue-600`
+  now; `--role-reviewer-bg` is distinct from `--status-info-bg`; the soft
+  inline error keeps its own `--status-error-soft-*`. Never collapse two
+  slots because they coincide — coincidence of value is not identity of role.
 - **Theming lives in Tier 2.** Light `:root` maps each semantic token to a
   light-appropriate primitive; `:root[data-theme="dark"]` remaps the same
   semantic tokens to dark-appropriate primitives. Primitives themselves do
@@ -117,9 +127,10 @@ three ways:
      the borders/focus half of 3** below.
    - **App-specific semantics** — Review-Robin domain: participant-role
      pills, lifecycle badges, session-nav markers, config-value chips,
-     instrument tints. Clusters **6–10**. These **alias the portable core /
-     primitives** rather than introducing new colours, so a new app either
-     drops them or re-points them.
+     instrument tints. Clusters **6–10**. Each is an **independent slot that
+     maps to a primitive** (not to a core semantic — per the independent-slot
+     rule) rather than introducing new colours, so a new app either drops
+     them or re-points them without touching the core.
    Naming keeps the split legible (portable tokens carry no domain word;
    app-specific ones do — `--lifecycle-*`, `--role-*`, `--config-value-*`).
 
@@ -351,14 +362,19 @@ Totals: ~**595** `var()` call-sites + **94** definitions, across
 
 ## Open decisions (resolve during Slice 0 review)
 
-1. **Two error treatments.** Consolidate `--danger-*` (soft inline
-   save-error) into `--status-error-*`, or keep a distinct
-   `--status-error-soft-*`? (They're different values today.)
-2. **Success two-tone.** One `--status-success-fg`, or split
-   `-fg` (pill text, darker) from `-accent` (icon/border)?
-3. **Roles / lifecycle as aliases vs. distinct primitives.** Plan assumes
-   distinct semantic *names* aliasing the shared status primitives (cheap
-   future divergence). Confirm.
+> **1–3 are settled by the independent-slot rule** (each identified slot is
+> its own token — never collapse two because they coincide). Kept below,
+> marked resolved, for the record; revisit only to overturn the principle.
+
+1. ~~**Two error treatments.**~~ **Resolved → keep separate.** The soft
+   inline save-error keeps its own `--status-error-soft-*` (the `--danger-*`
+   values), distinct from `--status-error-*`.
+2. ~~**Success two-tone.**~~ **Resolved → keep both slots.** Distinct
+   `--status-success-fg` (pill text) and `--status-success-accent`
+   (icon / border), independent even where they'd coincide.
+3. ~~**Roles / lifecycle collapse vs. distinct.**~~ **Resolved → distinct,
+   independent.** `--role-*` and `--lifecycle-*` are their own slots, each
+   mapping to a primitive (not to the status semantics).
 4. **Primitive naming.** Numeric Tailwind-style steps (`--blue-600`) vs.
    descriptive (`--blue-strong`). Plan assumes numeric.
 5. **Dark primitives naming.** Parallel set (`--blue-dk-600`) vs. letting
