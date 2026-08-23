@@ -30,65 +30,13 @@ order = [n for n, _ in hc.parse_light_tokens(base_css)]  # :root declaration ord
 theme = hc.parse_theme_tokens(base_css)                  # {"light": {...}, "dark": {...}}
 
 
-# Human-readable chip labels — shown instead of the raw `--token` name (the raw
-# name stays in `data-token` + the hover title, for the export → base.html map).
-LABELS = {
-    "--bg-page": "Page background",
-    "--bg-card": "Card background",
-    "--bg-muted": "Muted background",
-    "--text-on-accent": "Text on accent",
-    "--text-on-amber": "Text on amber",
-    "--border-subtle": "Subtle border",
-    "--border-default": "Default border",
-    "--neutral-marker": "Neutral marker",
-    "--text-primary": "Primary text",
-    "--text-secondary": "Secondary text",
-    "--text-muted": "Muted text",
-    "--accent-blue": "Blue / link",
-    "--accent-blue-bg": "Blue background",
-    "--accent-blue-bg-soft": "Blue background (soft)",
-    "--accent-blue-bg-faint": "Blue background (faint)",
-    "--accent-blue-light": "Blue (light)",
-    "--accent-blue-dark": "Blue (dark)",
-    "--accent-blue-marker": "Blue marker",
-    "--accent-blue-strong": "Blue (strong)",
-    "--accent-green": "Green",
-    "--accent-green-bg": "Green background",
-    "--accent-green-bg-faint": "Green background (faint)",
-    "--accent-green-marker": "Green marker",
-    "--accent-green-text": "Green text",
-    "--accent-amber": "Amber",
-    "--accent-amber-bg": "Amber background",
-    "--accent-amber-bg-mid": "Amber background (mid)",
-    "--accent-amber-dark": "Amber (dark)",
-    "--accent-amber-border": "Amber border",
-    "--accent-red": "Red",
-    "--accent-red-bg": "Red background",
-    "--accent-red-soft": "Red (soft)",
-    "--accent-red-strong": "Red (strong)",
-    "--accent-red-text": "Red text",
-    "--accent-violet-bg": "Violet background",
-    "--accent-violet-text": "Violet text",
-    "--accent-sky-bg": "Sky background",
-    "--accent-sky-text": "Sky text",
-    "--danger-bg": "Danger background",
-    "--danger-border": "Danger border",
-    "--danger-text": "Danger text",
-    "--instrument-tint-1": "Instrument tint 1",
-    "--instrument-tint-2": "Instrument tint 2",
-    "--instrument-tint-3": "Instrument tint 3",
-    "--instrument-tint-4": "Instrument tint 4",
-    "--instrument-tint-5": "Instrument tint 5",
-    "--instrument-tint-6": "Instrument tint 6",
-}
-
-
 def chip(n):
     """One editable token chip (color-picker + hex + label), initialised to the
     light value; the JS re-syncs inputs to the active theme's model on toggle.
-    The visible label is the human-readable name; the raw `--token` lives in
-    `data-token` and the hover title so the export→base.html map is unambiguous."""
-    label = LABELS.get(n, n)
+    The visible label is the human-readable name (`hc.friendly_label`); the raw
+    `--token` lives in `data-token` + the hover title so the export→base.html
+    map is unambiguous."""
+    label = hc.friendly_label(n)
     return (
         f'        <div class="tc-chip" data-token="{n}" title="{n}">'
         f'<input type="color" class="tc-color" value="{theme["light"].get(n, "#000000")}" aria-label="{label} colour">'
@@ -110,22 +58,42 @@ TEXT_ZONE_TOKENS = [
     "--accent-blue",  # the link colour (a { color: var(--accent-blue) })
 ]
 
-# Buttons zone — the tokens specific to the button roles. The Primary fill is
-# the Blue/link token and the Secondary label / border reuse the text + page
-# tokens, both already in the Text zone above, so only the button-distinct
-# tokens live here: on-fill label colours, the Primary hover, and the
-# Destructive / Alert role colours.
-BUTTON_ZONE_TOKENS = [
-    "--text-on-accent",     # Primary button label
-    "--accent-blue-light",  # Primary button hover fill
-    "--accent-red",         # Destructive (outline red)
-    "--accent-red-bg",      # Destructive hover fill
-    "--accent-amber-dark",  # Alert fill + Amber outline
-    "--text-on-amber",      # Alert button label
-    "--accent-amber",       # Alert hover fill
+# Buttons zone — each of the five canonical roles gets its active + disabled
+# preview and, beneath it in the same 5-column grid, its text-label token (top
+# row) and its fill token (bottom row). Outline roles (Secondary / Destructive
+# / Amber) fill with the page background, so --bg-page recurs across the fill
+# row; that is accurate — those buttons share the page-bg fill.
+BUTTONS = [
+    ("Primary", ""),
+    ("Secondary", "secondary"),
+    ("Destructive", "destructive"),
+    ("Alert", "danger-solid"),
+    ("Amber", "alert"),
 ]
+BUTTON_LABEL_TOKENS = [  # active-button text colour, per column
+    "--text-on-accent", "--text-primary", "--accent-red",
+    "--text-on-amber", "--accent-amber-dark",
+]
+BUTTON_FILL_TOKENS = [  # button fill (background) colour, per column
+    "--accent-blue", "--bg-page", "--bg-page",
+    "--accent-amber-dark", "--bg-page",
+]
+BUTTON_BORDER_TOKENS = [  # button border colour, per column (existing tokens —
+    "--accent-blue",       # no bespoke border tokens; 4/5 echo the fill/label
+    "--text-secondary",    # above, Secondary's neutral grey is its own token
+    "--accent-red",
+    "--accent-amber-dark",
+    "--accent-amber-dark",  # Amber (.btn.alert) border = its label token
+]
+# Only the button-distinct tokens are "claimed" out of the Other grid; the ones
+# shared with the Text zone (--accent-blue / --bg-page / --text-primary /
+# --text-secondary) stay there and merely appear here too — chips with the same
+# token stay in sync.
+BUTTON_CLAIMED = (
+    set(BUTTON_LABEL_TOKENS) | set(BUTTON_FILL_TOKENS) | set(BUTTON_BORDER_TOKENS)
+) - set(TEXT_ZONE_TOKENS)
 
-ZONED = set(TEXT_ZONE_TOKENS) | set(BUTTON_ZONE_TOKENS)
+ZONED = set(TEXT_ZONE_TOKENS) | BUTTON_CLAIMED
 rest_tokens = [n for n in order if n not in ZONED]
 
 # Seeds — shift a whole colour family in OKLCH from one control (slice 3). Each
@@ -214,6 +182,13 @@ editor_css = r"""
     .tc-status { color: var(--text-secondary); font-size: 0.8rem; }
     .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
     .tc-zone-tokens { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); }
+    /* Buttons zone — 5-column grid: previews (active / disabled) above each
+       role's label + fill token, all aligned to the same 5 columns. */
+    .tc-btn-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px; align-items: center; }
+    .tc-btn-grid .btn { width: 100%; box-sizing: border-box; }
+    .tc-btn-cap { grid-column: 1 / -1; margin: 14px 0 2px; }
+    .tc-btn-cap-first { margin-top: 0; }
     .tc-chip { display: flex; align-items: center; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default);
@@ -265,8 +240,6 @@ toolbar = """  <div class="ph-toolbar">
     <span class="tc-status" data-status>Editing <strong>light</strong> · no changes</span>
   </div>"""
 
-_sections = dict(hc.component_sections())
-
 # First content zone: text / links / background. The sample markup (shared with
 # the preview) sits with the very tokens that colour it, per the zone-by-zone
 # reorg — text / link / bg tokens live here, not in the flat grid below.
@@ -278,13 +251,28 @@ text_zone = f"""    <section class="ph-section">
       </div>
     </section>"""
 
-# Second content zone: buttons. Hoist the button previews and append the
-# button-specific tokens below them (built from the shared gallery section).
-_buttons_html = _sections["buttons"].rstrip()
-assert _buttons_html.endswith("</section>")
-buttons_zone = _buttons_html[: -len("</section>")].rstrip() + f"""
-      <div class="tc-zone-tokens">
-        {chip_grid(BUTTON_ZONE_TOKENS)}
+
+def _btn_cells(disabled):
+    dis = " disabled" if disabled else ""
+    return "\n".join(
+        f'        <button class="btn {c}"{dis}>{n}</button>' for n, c in BUTTONS
+    )
+
+
+# Second content zone: buttons — a 5-column grid. Rows: active previews, then
+# each role's three defining tokens (label / fill / border), then the disabled
+# previews, all aligned to the same 5 columns.
+buttons_zone = f"""    <section class="ph-section">
+      <h2 class="ph-h">Buttons — canonical roles; each role's label / fill / border token sits in its column</h2>
+      <div class="tc-btn-grid">
+        <p class="muted tc-btn-cap tc-btn-cap-first">Active</p>
+{_btn_cells(False)}
+        <p class="muted tc-btn-cap">Tokens per role — text label (row 1) · fill (row 2) · border (row 3)</p>
+{chr(10).join(chip(t) for t in BUTTON_LABEL_TOKENS)}
+{chr(10).join(chip(t) for t in BUTTON_FILL_TOKENS)}
+{chr(10).join(chip(t) for t in BUTTON_BORDER_TOKENS)}
+        <p class="muted tc-btn-cap">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
+{_btn_cells(True)}
       </div>
     </section>"""
 

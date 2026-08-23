@@ -23,7 +23,7 @@ colour_tokens = hc.parse_light_tokens(base_css)
 
 swatches = "\n".join(
     f'        <div class="ph-chip"><div class="sw" style="background: var({n});"></div>'
-    f'<div class="lbl">{n}<br>light {v}</div></div>'
+    f'<div class="lbl"><b>{hc.friendly_label(n)}</b><br>{n} · light {v}</div></div>'
     for n, v in colour_tokens
 )
 
@@ -39,7 +39,7 @@ body = f"""  <div class="ph-toolbar">
   <div class="ph-body">
 {hc.component_gallery()}
     <section class="ph-section">
-      <h2 class="ph-h">All colour tokens ({len(colour_tokens)}) — swatch = ACTIVE theme; label = light reference value</h2>
+      <h2 class="ph-h">All colour tokens ({len(colour_tokens)}) — swatch = ACTIVE theme; friendly name + token + light reference value</h2>
       <div class="ph-swatches">
 {swatches}
       </div>

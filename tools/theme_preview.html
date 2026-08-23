@@ -3048,6 +3048,9 @@
     .ph-chip .sw { height: 46px; }
     .ph-chip .lbl { font-family: ui-monospace, monospace; font-size: 0.7rem;
       padding: 5px 7px; color: var(--text-secondary); word-break: break-all; }
+    .ph-chip .lbl b { display: block; font-family: system-ui, sans-serif;
+      font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+      word-break: normal; margin-bottom: 2px; }
     /* stand-in for the Instruments save-error banner (uses the --danger-* tokens) */
     .ph-save-error {
       margin: 0; padding: 10px 14px; border: 1px solid var(--danger-border);
@@ -3230,55 +3233,55 @@
     </section>
 
     <section class="ph-section">
-      <h2 class="ph-h">All colour tokens (47) — swatch = ACTIVE theme; label = light reference value</h2>
+      <h2 class="ph-h">All colour tokens (47) — swatch = ACTIVE theme; friendly name + token + light reference value</h2>
       <div class="ph-swatches">
-        <div class="ph-chip"><div class="sw" style="background: var(--bg-page);"></div><div class="lbl">--bg-page<br>light #ffffff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--bg-card);"></div><div class="lbl">--bg-card<br>light #ffffff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--text-on-accent);"></div><div class="lbl">--text-on-accent<br>light #ffffff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--text-on-amber);"></div><div class="lbl">--text-on-amber<br>light #ffffff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--bg-muted);"></div><div class="lbl">--bg-muted<br>light #f5f5f7</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--border-subtle);"></div><div class="lbl">--border-subtle<br>light #e5e7eb</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--border-default);"></div><div class="lbl">--border-default<br>light #d1d5db</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--neutral-marker);"></div><div class="lbl">--neutral-marker<br>light #d1d5db</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--text-primary);"></div><div class="lbl">--text-primary<br>light #111827</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--text-secondary);"></div><div class="lbl">--text-secondary<br>light #6b7280</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--text-muted);"></div><div class="lbl">--text-muted<br>light #9ca3af</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue);"></div><div class="lbl">--accent-blue<br>light #2563eb</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg);"></div><div class="lbl">--accent-blue-bg<br>light #dbeafe</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg-soft);"></div><div class="lbl">--accent-blue-bg-soft<br>light #eff6ff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg-faint);"></div><div class="lbl">--accent-blue-bg-faint<br>light #fafcff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-light);"></div><div class="lbl">--accent-blue-light<br>light #3b82f6</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-dark);"></div><div class="lbl">--accent-blue-dark<br>light #1d4ed8</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-marker);"></div><div class="lbl">--accent-blue-marker<br>light #93c5fd</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-green);"></div><div class="lbl">--accent-green<br>light #059669</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-bg);"></div><div class="lbl">--accent-green-bg<br>light #d1fae5</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-marker);"></div><div class="lbl">--accent-green-marker<br>light #a7f3d0</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber);"></div><div class="lbl">--accent-amber<br>light #d97706</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-bg);"></div><div class="lbl">--accent-amber-bg<br>light #fef3c7</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-bg-mid);"></div><div class="lbl">--accent-amber-bg-mid<br>light #fde68a</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-dark);"></div><div class="lbl">--accent-amber-dark<br>light #92400e</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-red);"></div><div class="lbl">--accent-red<br>light #dc2626</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-bg);"></div><div class="lbl">--accent-red-bg<br>light #fee2e2</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-soft);"></div><div class="lbl">--accent-red-soft<br>light #ef4444</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-strong);"></div><div class="lbl">--accent-red-strong<br>light #b91c1c</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-text);"></div><div class="lbl">--accent-red-text<br>light #991b1b</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-border);"></div><div class="lbl">--accent-amber-border<br>light #f59e0b</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-text);"></div><div class="lbl">--accent-green-text<br>light #166534</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-bg-faint);"></div><div class="lbl">--accent-green-bg-faint<br>light #f0fdf4</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-strong);"></div><div class="lbl">--accent-blue-strong<br>light #1e40af</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-violet-bg);"></div><div class="lbl">--accent-violet-bg<br>light #ede9fe</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-violet-text);"></div><div class="lbl">--accent-violet-text<br>light #5b21b6</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-sky-bg);"></div><div class="lbl">--accent-sky-bg<br>light #e0f2fe</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--accent-sky-text);"></div><div class="lbl">--accent-sky-text<br>light #075985</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--danger-bg);"></div><div class="lbl">--danger-bg<br>light #fdecea</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--danger-border);"></div><div class="lbl">--danger-border<br>light #f2b8b5</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--danger-text);"></div><div class="lbl">--danger-text<br>light #8a1c14</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-1);"></div><div class="lbl">--instrument-tint-1<br>light #f0f9ff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-2);"></div><div class="lbl">--instrument-tint-2<br>light #ecfdf5</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-3);"></div><div class="lbl">--instrument-tint-3<br>light #f5f3ff</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-4);"></div><div class="lbl">--instrument-tint-4<br>light #fff7ed</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-5);"></div><div class="lbl">--instrument-tint-5<br>light #fff1f2</div></div>
-        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-6);"></div><div class="lbl">--instrument-tint-6<br>light #fffbeb</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--bg-page);"></div><div class="lbl"><b>Page background</b><br>--bg-page · light #ffffff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--bg-card);"></div><div class="lbl"><b>Card background</b><br>--bg-card · light #ffffff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-on-accent);"></div><div class="lbl"><b>Text on accent</b><br>--text-on-accent · light #ffffff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-on-amber);"></div><div class="lbl"><b>Text on amber</b><br>--text-on-amber · light #ffffff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--bg-muted);"></div><div class="lbl"><b>Muted background</b><br>--bg-muted · light #f5f5f7</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--border-subtle);"></div><div class="lbl"><b>Subtle border</b><br>--border-subtle · light #e5e7eb</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--border-default);"></div><div class="lbl"><b>Default border</b><br>--border-default · light #d1d5db</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--neutral-marker);"></div><div class="lbl"><b>Neutral marker</b><br>--neutral-marker · light #d1d5db</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-primary);"></div><div class="lbl"><b>Primary text</b><br>--text-primary · light #111827</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-secondary);"></div><div class="lbl"><b>Secondary text</b><br>--text-secondary · light #6b7280</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--text-muted);"></div><div class="lbl"><b>Muted text</b><br>--text-muted · light #9ca3af</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue);"></div><div class="lbl"><b>Blue / link</b><br>--accent-blue · light #2563eb</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg);"></div><div class="lbl"><b>Blue background</b><br>--accent-blue-bg · light #dbeafe</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg-soft);"></div><div class="lbl"><b>Blue background (soft)</b><br>--accent-blue-bg-soft · light #eff6ff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-bg-faint);"></div><div class="lbl"><b>Blue background (faint)</b><br>--accent-blue-bg-faint · light #fafcff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-light);"></div><div class="lbl"><b>Blue (light)</b><br>--accent-blue-light · light #3b82f6</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-dark);"></div><div class="lbl"><b>Blue (dark)</b><br>--accent-blue-dark · light #1d4ed8</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-marker);"></div><div class="lbl"><b>Blue marker</b><br>--accent-blue-marker · light #93c5fd</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-green);"></div><div class="lbl"><b>Green</b><br>--accent-green · light #059669</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-bg);"></div><div class="lbl"><b>Green background</b><br>--accent-green-bg · light #d1fae5</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-marker);"></div><div class="lbl"><b>Green marker</b><br>--accent-green-marker · light #a7f3d0</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber);"></div><div class="lbl"><b>Amber</b><br>--accent-amber · light #d97706</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-bg);"></div><div class="lbl"><b>Amber background</b><br>--accent-amber-bg · light #fef3c7</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-bg-mid);"></div><div class="lbl"><b>Amber background (mid)</b><br>--accent-amber-bg-mid · light #fde68a</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-dark);"></div><div class="lbl"><b>Amber (dark)</b><br>--accent-amber-dark · light #92400e</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-red);"></div><div class="lbl"><b>Red</b><br>--accent-red · light #dc2626</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-bg);"></div><div class="lbl"><b>Red background</b><br>--accent-red-bg · light #fee2e2</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-soft);"></div><div class="lbl"><b>Red (soft)</b><br>--accent-red-soft · light #ef4444</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-strong);"></div><div class="lbl"><b>Red (strong)</b><br>--accent-red-strong · light #b91c1c</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-red-text);"></div><div class="lbl"><b>Red text</b><br>--accent-red-text · light #991b1b</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-amber-border);"></div><div class="lbl"><b>Amber border</b><br>--accent-amber-border · light #f59e0b</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-text);"></div><div class="lbl"><b>Green text</b><br>--accent-green-text · light #166534</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-green-bg-faint);"></div><div class="lbl"><b>Green background (faint)</b><br>--accent-green-bg-faint · light #f0fdf4</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-blue-strong);"></div><div class="lbl"><b>Blue (strong)</b><br>--accent-blue-strong · light #1e40af</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-violet-bg);"></div><div class="lbl"><b>Violet background</b><br>--accent-violet-bg · light #ede9fe</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-violet-text);"></div><div class="lbl"><b>Violet text</b><br>--accent-violet-text · light #5b21b6</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-sky-bg);"></div><div class="lbl"><b>Sky background</b><br>--accent-sky-bg · light #e0f2fe</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--accent-sky-text);"></div><div class="lbl"><b>Sky text</b><br>--accent-sky-text · light #075985</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--danger-bg);"></div><div class="lbl"><b>Danger background</b><br>--danger-bg · light #fdecea</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--danger-border);"></div><div class="lbl"><b>Danger border</b><br>--danger-border · light #f2b8b5</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--danger-text);"></div><div class="lbl"><b>Danger text</b><br>--danger-text · light #8a1c14</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-1);"></div><div class="lbl"><b>Instrument tint 1</b><br>--instrument-tint-1 · light #f0f9ff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-2);"></div><div class="lbl"><b>Instrument tint 2</b><br>--instrument-tint-2 · light #ecfdf5</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-3);"></div><div class="lbl"><b>Instrument tint 3</b><br>--instrument-tint-3 · light #f5f3ff</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-4);"></div><div class="lbl"><b>Instrument tint 4</b><br>--instrument-tint-4 · light #fff7ed</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-5);"></div><div class="lbl"><b>Instrument tint 5</b><br>--instrument-tint-5 · light #fff1f2</div></div>
+        <div class="ph-chip"><div class="sw" style="background: var(--instrument-tint-6);"></div><div class="lbl"><b>Instrument tint 6</b><br>--instrument-tint-6 · light #fffbeb</div></div>
       </div>
     </section>
   </div>
