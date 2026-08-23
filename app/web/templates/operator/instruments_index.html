@@ -33,11 +33,11 @@
     .save-error-banner {
       margin: 0 0 12px 0;
       padding: 10px 14px;
-      border: 1px solid var(--danger-border);
+      border: 1px solid var(--status-error-soft-border);
       border-left-width: 4px;
       border-radius: 6px;
-      background: var(--danger-bg);
-      color: var(--danger-text);
+      background: var(--status-error-soft-bg);
+      color: var(--status-error-soft-fg);
       font-size: 0.9rem;
     }
     .save-error-banner ul { margin: 6px 0 0 0; padding-left: 20px; }
@@ -51,8 +51,8 @@
        "Clear responses first" title stays as the explanation. */
     [data-new-model-rf-data-type]:disabled,
     [data-new-model-rf-bound]:disabled {
-      background: var(--bg-muted);
-      color: var(--text-muted);
+      background: var(--surface-muted);
+      color: var(--text-dim);
       cursor: not-allowed;
       opacity: 0.7;
     }
@@ -78,20 +78,20 @@
       border: 1px solid transparent;
       border-radius: 4px;
       cursor: pointer;
-      color: var(--text-muted);
+      color: var(--text-dim);
       font: inherit;
       font-size: 0.85em;
     }
     body.ui-v2 .sort-btn:hover {
       border-color: var(--border-default);
-      background: var(--bg-muted);
+      background: var(--surface-muted);
     }
     body.ui-v2 .sort-badge {
       display: inline;
       font-variant-numeric: tabular-nums;
     }
     body.ui-v2 .sort-badge.sort-badge-empty {
-      color: var(--text-muted);
+      color: var(--text-dim);
     }
     /* Band 2 preview table — keep cell + input padding compact so
        the operator-side preview row matches the reviewer surface's
@@ -123,7 +123,7 @@
        cosmetic, not ``pointer-events: none``. */
     body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
     body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
-      background: var(--accent-blue);
+      background: var(--selected-bg);
       color: var(--text-on-accent);
       opacity: 0.4;
     }
@@ -145,7 +145,7 @@
       font-size: 1.5rem;
       padding: 4px 10px;
       line-height: 1;
-      color: var(--text-primary);
+      color: var(--text-body);
       transition: transform 0.15s ease-out;
     }
     body.ui-v2 .instrument-card-drag-handle {
@@ -155,7 +155,7 @@
       margin-right: 6px;
       line-height: 1;
       letter-spacing: -2px;
-      color: var(--text-primary);
+      color: var(--text-body);
       cursor: grab;
       user-select: none;
     }
@@ -165,14 +165,14 @@
     body.ui-v2 .instrument-card-short-label {
       margin-left: 6px;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: var(--text-subtle);
     }
     /* Operator-only ``Instrument_{id}`` fallback on the card
        title — rendered when no short_label is set. Styled muted
        + italic so it reads as a placeholder nudging the operator
        to set a proper short label rather than as a chosen name. */
     body.ui-v2 .card-title-fallback {
-      color: var(--text-secondary);
+      color: var(--text-subtle);
       font-style: italic;
       font-weight: 500;
     }
@@ -209,12 +209,12 @@
     body.ui-v2 .page-break-card > * {
       position: relative;
       z-index: 1;
-      background: var(--bg-page);
+      background: var(--surface-page);
       padding: 4px 8px;
     }
     body.ui-v2 .page-break-card-label {
       font-size: 0.875rem;
-      color: var(--text-secondary);
+      color: var(--text-subtle);
       letter-spacing: 0.02em;
       text-transform: uppercase;
     }
@@ -222,16 +222,16 @@
       cursor: pointer;
       border: 1px solid var(--border-default);
       border-radius: 4px;
-      background: var(--bg-page);
-      color: var(--text-secondary);
+      background: var(--surface-page);
+      color: var(--text-subtle);
       font-size: 1.1rem;
       line-height: 1;
       padding: 2px 8px;
       transition: color 0.15s, border-color 0.15s;
     }
     body.ui-v2 .page-break-card-delete:hover:not(:disabled) {
-      color: var(--text-primary);
-      border-color: var(--text-secondary);
+      color: var(--text-body);
+      border-color: var(--text-subtle);
     }
     body.ui-v2 .page-break-card-delete:disabled {
       cursor: not-allowed;
@@ -251,7 +251,7 @@
       left: 50%;
       transform: translateX(-50%);
       max-width: 480px;
-      background: var(--accent-red-strong);
+      background: var(--toast-error-bg);
       color: var(--text-on-accent);
       padding: 14px 22px;
       border-radius: 8px;
@@ -360,7 +360,7 @@
   {# Lightened cycling palette (Tailwind *-50 tones) — hints of color
      for instrument identification while keeping table grid lines
      legible on the tinted background. #}
-  {% set instrument_palette = ['var(--instrument-tint-1)', 'var(--instrument-tint-2)', 'var(--instrument-tint-3)', 'var(--instrument-tint-4)', 'var(--instrument-tint-5)', 'var(--instrument-tint-6)'] %}
+  {% set instrument_palette = ['var(--surface-tint-1)', 'var(--surface-tint-2)', 'var(--surface-tint-3)', 'var(--surface-tint-4)', 'var(--surface-tint-5)', 'var(--surface-tint-6)'] %}
 
   {# Per-instrument action row. Shared by the ordinary instrument card
      and the Segment 13C group-scoped placeholder card so both carry
@@ -980,7 +980,7 @@
                       onclick="newModelToggleCombinator(this)"
                       title="Toggle combinator">{{ _stored_combinator }}</button>
             </div>
-            <div style="width: 3px; background: var(--text-muted); flex-shrink: 0;"></div>
+            <div style="width: 3px; background: var(--text-dim); flex-shrink: 0;"></div>
             <div data-new-model-rule-cells
                  style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
               {% for _rule in _cells %}
@@ -1002,7 +1002,7 @@
                       <span data-new-model-rule-field-helper
                             style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary);
+                                   color: var(--text-body);
                                    padding-left: 2px;">{{ field_helper }}</span>
                     </div>
                   {% endif %}
@@ -1037,7 +1037,7 @@
                                 {% if not _use_tag_operand %}display: none;{% endif %}">
                       <span style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary);
+                                   color: var(--text-body);
                                    padding-left: 2px;">{{ operand_tag_helper }}</span>
                     </div>
                   {% endif %}
@@ -1180,7 +1180,7 @@
                         disabled aria-disabled="true"
                         title="Group identity marker">THE SAME</button>
               </div>
-              <div style="width: 3px; background: var(--text-muted); flex-shrink: 0;"></div>
+              <div style="width: 3px; background: var(--text-dim); flex-shrink: 0;"></div>
               <div data-new-model-unit-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}
@@ -1197,7 +1197,7 @@
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <span style="flex: 0 0 66.66%; min-width: 0;
                                    font-size: 0.75rem;
-                                   color: var(--text-primary);
+                                   color: var(--text-body);
                                    padding-left: 2px;">Reviewee tag</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
