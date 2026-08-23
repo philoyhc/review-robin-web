@@ -517,9 +517,12 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
 
 ## Item 6 — Semantic colour tokens (two-tier reorg)
 
-**Status:** plan approved & merged (`guide/semantic_tokens.md`, PR #2047).
-Implementation not started — Slice 1 is gated on the five open decisions in
-the plan.
+**Status:** plan approved & merged (`guide/semantic_tokens.md`). **All six
+decisions resolved 2026-08-23 — Slice 1 unblocked**, implementation not yet
+started. Decisions: 1–3 keep-separate (independent-slot rule); 4 descriptive
+primitive names (`--blue-strong`); 5 one palette, dark `:root` remaps
+semantics (no parallel dark set); 6 namespace now, extract a clean kernel at
+the end — no rush (no second app in flight yet).
 
 ### The problem
 
@@ -594,15 +597,14 @@ Per `guide/semantic_tokens.md` "Migration strategy":
 4. **Tooling + docs slice** — two-tier customizer; rewrite
    `spec/color_tokens.md`; retarget `_harness_common.LABELS`.
 
-### Open decisions (gate Slice 1)
+### Decisions — all resolved (2026-08-23); Slice 1 unblocked
 
-Listed in `guide/semantic_tokens.md`. **1–3 are settled by the
-independent-slot principle** (keep the soft-error, success two-tone, and
-roles/lifecycle as separate slots). **Remaining:** (4) primitive naming —
-numeric steps (assumed) vs. descriptive; (5) dark primitives — parallel named
-set vs. dark `:root` reassigns semantic tokens (preferred); (6) how far to
-factor for portability now (delimited block / `tokens.css` partial vs.
-namespace-only) + how far to data-drive the customizer.
+Full text in `guide/semantic_tokens.md` "Decisions". (1) soft-error, (2)
+success two-tone, (3) roles/lifecycle → **keep separate** (independent-slot
+rule). (4) primitive naming → **descriptive** (`--blue-strong`). (5) dark
+primitives → **one palette; dark `:root` remaps semantics** (no parallel dark
+set). (6) portability → **namespace now, extract a clean kernel at the end,
+no rush** (no second app yet); customizer data-driven in the tooling slice.
 
 ### Definition of done
 
