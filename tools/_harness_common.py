@@ -224,7 +224,7 @@ def component_sections():
       </div>
     </section>"""),
         ("nav", """    <section class="ph-section">
-      <h2 class="ph-h">Session navigation (tab strips + active states)</h2>
+      <h2 class="ph-h">Session navigation, back-link, page header &amp; chips</h2>
       <div class="session-nav-grid">
         <a class="session-home-anchor" href="#" title="Spring Review"><span class="home-anchor-text">Session Home</span></a>
         <div class="row-label setup-row row-setup active-group">Setup</div>
@@ -245,10 +245,7 @@ def component_sections():
           <a class="nav-tab" href="#">Extract data</a>
         </div>
       </div>
-    </section>"""),
-        ("chips", """    <section class="ph-section">
-      <h2 class="ph-h">Tag chips &amp; back-link / page header</h2>
-      <a class="back-link" href="#">&larr; Back to Sessions</a>
+      <a class="back-link" href="#" style="display: inline-block; margin-top: 16px;">&larr; Back to Sessions</a>
       <div class="rs-page-header"><h1>Reviewers</h1></div>
       <div class="ph-row" style="margin: 8px 0;">
         <span class="tag-chip is-selected">Tutor</span>

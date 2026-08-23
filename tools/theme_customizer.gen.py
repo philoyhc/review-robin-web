@@ -206,6 +206,8 @@ editor_css = r"""
        scroll bars. */
     .ph-toolbar { margin-bottom: 0; }
     .tc-part { padding: 18px 20px 32px; }
+    /* Part A previews the real screen at a realistic content width (~60vw). */
+    .tc-part-a { max-width: 60%; }
     .tc-part-b { border-top: 1px solid var(--border-default); }
     .tc-part-h { margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
       font-size: 0.9rem; font-weight: 600; }
