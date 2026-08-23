@@ -207,6 +207,7 @@
         --border-subtle: var(--gray-mist);
         --border-default: var(--gray-soft);
         --focus-ring: var(--blue-strong);
+        --focus-ring-halo: var(--blue-pale);
         --marker-neutral: var(--gray-soft);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-strong);
@@ -371,6 +372,7 @@
         --border-subtle: var(--slate-deeper);
         --border-default: var(--slate-deep);
         --focus-ring: var(--blue-glow);
+        --focus-ring-halo: var(--blue-abyss);
         --marker-neutral: var(--slate-deep);
         /* Buttons [P] */
         --btn-primary-bg: var(--blue-glow);
@@ -528,7 +530,7 @@
         color: var(--text-secondary);
         font-size: 0.95em;
       }
-      a { color: var(--accent-blue); }
+      a { color: var(--text-link); }
       .chrome {
         display: flex;
         justify-content: space-between;
@@ -546,7 +548,7 @@
       }
       .chrome-app-identity:hover { text-decoration: underline; }
       .breadcrumb { font-size: 0.95em; }
-      .breadcrumb a { color: var(--accent-blue); text-decoration: none; }
+      .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
       .breadcrumb span[aria-current="page"] { color: var(--text-primary); font-weight: 600; }
       .breadcrumb-sep { color: var(--text-muted); margin: 0 6px; }
@@ -810,8 +812,8 @@
         display: inline-block;
         padding: 6px 10px;
         min-height: 1.25em;
-        background: var(--accent-sky-bg);
-        color: var(--accent-sky-text);
+        background: var(--config-value-bg);
+        color: var(--config-value-fg);
         border-radius: 6px;
       }
       .config-value-multiline { white-space: pre-wrap; }
@@ -820,7 +822,7 @@
          one row per offset. */
       .config-offset-row { display: flex; align-items: center; gap: var(--space-2); }
       .config-offset-row + .config-offset-row { margin-top: var(--space-1); }
-      .config-value-resolved { background: var(--accent-blue-bg-soft); }
+      .config-value-resolved { background: var(--config-value-resolved-bg); }
       /* User interface settings — both toggles on one line in display and
          edit modes; label text at normal weight/size with the On/Off pill
          (display) or checkbox (edit) inline after it, in the same slot. */
@@ -907,7 +909,7 @@
         border: 0;
         padding: 0;
         cursor: pointer;
-        color: var(--accent-blue);
+        color: var(--text-link);
         font: inherit;
         text-decoration: none;
       }
@@ -1388,7 +1390,7 @@
       body.ui-v2 {
         color: var(--text-primary);
       }
-      body.ui-v2 a { color: var(--accent-blue); }
+      body.ui-v2 a { color: var(--text-link); }
       body.ui-v2 .muted { color: var(--text-secondary); }
       /* Headings */
       body.ui-v2 h1 {
@@ -2193,8 +2195,8 @@
          filled accent so the active filter set reads at a glance. */
       body.ui-v2 .tag-chip { cursor: pointer; }
       body.ui-v2 .tag-chip.is-selected {
-        background: var(--accent-blue);
-        color: var(--text-on-accent);
+        background: var(--selected-bg);
+        color: var(--selected-fg);
       }
       body.ui-v2 .pill.tag-mode-chip {
         background: var(--bg-muted);
@@ -2366,8 +2368,8 @@
       body.ui-v2 textarea:focus,
       body.ui-v2 select:focus {
         outline: none;
-        border-color: var(--accent-blue);
-        box-shadow: 0 0 0 1px var(--accent-blue-bg);
+        border-color: var(--focus-ring);
+        box-shadow: 0 0 0 1px var(--focus-ring-halo);
       }
       /* Keyboard focus gets a strong, high-contrast ring on top of
          the subtle border treatment above. ``:focus-visible`` keeps
@@ -2378,7 +2380,7 @@
       body.ui-v2 input[type="email"]:focus-visible,
       body.ui-v2 textarea:focus-visible,
       body.ui-v2 select:focus-visible {
-        outline: 2px solid var(--accent-blue);
+        outline: 2px solid var(--focus-ring);
         outline-offset: 1px;
       }
       /* Skip-to-content link — first focusable element on every
@@ -2389,8 +2391,8 @@
         top: -48px;
         z-index: 1000;
         padding: var(--space-2) var(--space-4);
-        background: var(--accent-blue);
-        color: var(--text-on-accent);
+        background: var(--selected-bg);
+        color: var(--selected-fg);
         border-radius: var(--radius-button, 6px);
         text-decoration: none;
         transition: top 0.15s ease;
@@ -2428,8 +2430,8 @@
          semantic colour modifiers so templates can drop their
          inline color: # styles. */
       body.ui-v2 .btn-icon { color: var(--text-secondary); font-size: 1em; }
-      body.ui-v2 .btn-icon.danger { color: var(--accent-red); }
-      body.ui-v2 .btn-icon.action { color: var(--accent-blue); }
+      body.ui-v2 .btn-icon.danger { color: var(--icon-btn-danger-fg); }
+      body.ui-v2 .btn-icon.action { color: var(--icon-btn-action-fg); }
       /* Order cell — number on the left, ▲/▼ stacked vertically on
          the right (up above, down below). Used in the Display Fields
          + Response Fields tables on the Instruments page. The
@@ -2910,7 +2912,7 @@
       body.ui-v2 .back-link {
         display: inline-block;
         margin-bottom: var(--space-3);
-        color: var(--accent-blue);
+        color: var(--text-link);
         font-size: var(--fs-small);
         text-decoration: none;
       }
@@ -2921,7 +2923,7 @@
         display: inline-block;
         margin-top: var(--space-1);
         margin-right: var(--space-2);
-        color: var(--accent-blue);
+        color: var(--text-link);
         font-size: 0.9em;
         text-decoration: none;
       }
@@ -2956,8 +2958,8 @@
         border-left: 1px solid var(--border-default);
       }
       .theme-toggle-opt[aria-pressed="true"] {
-        background: var(--accent-blue);
-        color: var(--text-on-accent);
+        background: var(--selected-bg);
+        color: var(--selected-fg);
       }
       .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-primary); }
       /* Reviewer top-bar variant — lighter chrome for reviewer-facing
@@ -3267,7 +3269,7 @@
         background: var(--bg-muted);
       }
       body.ui-v2 .rrw-sort-btn:focus-visible {
-        outline: 2px solid var(--accent-blue-dark);
+        outline: 2px solid var(--focus-ring-strong);
         outline-offset: 1px;
       }
       body.ui-v2 .rrw-sort-badge {
