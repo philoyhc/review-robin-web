@@ -1,0 +1,47 @@
+{
+  "_comment": "Area classification for codebase_assessment_*.md (skill: codebase-assessment). First match wins, so narrow areas go first. Written 2026-09-04 because auto-detection put tools/*.html into `templates` (they are generated dev-tooling gallery pages, not app templates \u2014 an 8,310-line phantom +38%) and tools/*.py into `production` (tools/README.md: scripts that operate ON the repo but are not part of the app or its test suite).",
+  "areas": [
+    {
+      "name": "tests",
+      "include": [
+        "tests/**"
+      ]
+    },
+    {
+      "name": "migrations",
+      "include": [
+        "alembic/versions/**"
+      ]
+    },
+    {
+      "name": "templates",
+      "include": [
+        "app/web/templates/**"
+      ]
+    },
+    {
+      "name": "tooling",
+      "include": [
+        "tools/**"
+      ]
+    },
+    {
+      "name": "production",
+      "include": [
+        "app/*.py",
+        "app/**/*.py",
+        "alembic/env.py"
+      ]
+    },
+    {
+      "name": "docs",
+      "include": [
+        "*.md",
+        "docs/**",
+        "spec/**",
+        "guide/**",
+        ".claude/**"
+      ]
+    }
+  ]
+}
