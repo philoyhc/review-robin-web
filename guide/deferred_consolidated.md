@@ -907,9 +907,11 @@ grow outward.
 
 > Carved from the theme-customizer design (`guide/theme_customizer.md`
 > "Plan B — Stretch") 2026-08-22. **First** — the developer designer — **✅
-> shipped as 19C Item 5 (2026-08-23)**, reworked onto the two-tier token
-> system (Item 6): `tools/theme_customizer.gen.py` (seeds + per-primitive
-> grid + semantic remaps + AA contrast + JSON export), data-driven and
+> v1 shipped as 19C Item 5 (2026-09-04, PRs #2065–#2083)** on the two-tier
+> token system (Item 6): a three-part `tools/theme_customizer.html` — Part A
+> real-gallery preview, Part B token editing (seeds + per-primitive grid +
+> semantic remaps + AA contrast), Part C click-to-reflect + primitive-picker
+> editing, plus Save/Undo/Revert and JSON export/import — data-driven and
 > app-agnostic. **Stretch** remains deferred — its dependency (a shared editor
 > core) is now satisfied, so it's a thin app shell away.
 

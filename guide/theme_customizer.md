@@ -1,9 +1,13 @@
 # Theme customizer — plan
 
-**Status:** **First** is scheduled as **Segment 19C Item 5**
-(`guide/segment_19C_refinements.md`); **Stretch** is deferred pending pilot
-feedback (`guide/deferred_consolidated.md` Part A → "Operator theming"). This
-doc is the full design for both. **Two plans that share one editor core**,
+**Status:** **First — ✅ v1 shipped 2026-09-04** as **Segment 19C Item 5**
+(`guide/segment_19C_refinements.md`, PRs #2065–#2083): a three-part,
+data-driven `tools/theme_customizer.html` designer — Part A previews the real
+gallery, Part B edits tokens (seeds / primitives / contrast / semantic remaps),
+Part C click-to-reflect + primitive-picker editing, with Save/Undo/Revert and
+Export/Import JSON. **Stretch** (operator in-app tweaker) is deferred pending
+pilot feedback (`guide/deferred_consolidated.md` Part A → "Operator theming").
+This doc is the full design for both. **Two plans that share one editor core**,
 sequenced so the second builds cleanly on the first. Both are **migration-free**
 (no database); a DB-backed "persistent / shared themes" version is a further
 future neither plan does.

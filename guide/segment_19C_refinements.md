@@ -1,11 +1,15 @@
 # Segment 19C — Refinements
 
-**Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
-via roster CSV headers; sole round-trip carrier); **Item 2 in progress**
-(settings-page Display mode card — scaffold slice first); **Item 5 in
-progress** (theme customizer — developer designer); **Item 6 ✅ shipped
-2026-08-23** (semantic colour tokens — two-tier reorg; the app is now fully
-two-tier, plan archived at `guide/archive/semantic_tokens.md`).
+**Status: all six items ✅ shipped** — the segment stays **open** as a home for
+further small refinements. **Item 1 ✅ 2026-08-20** (friendly tag labels via
+roster CSV headers; sole round-trip carrier); **Item 2 ✅ 2026-08-21**
+(light/dark Display mode — chrome toggle, W1–W8); **Item 3 ✅** (Danger Zone
+hardening); **Item 4 ✅** (button treatment refinements); **Item 5 ✅ v1
+2026-09-04** (theme customizer — developer designer; three-part
+click-to-reflect/edit designer, PRs #2065–#2083; operator-facing **Stretch**
+deferred to `guide/deferred_consolidated.md`); **Item 6 ✅ 2026-08-23**
+(semantic colour tokens — two-tier reorg; the app is now fully two-tier, plan
+archived at `guide/archive/semantic_tokens.md`).
 A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
@@ -471,13 +475,46 @@ Colour correctness needs a dev-slot eyeball.
 
 ---
 
-## Item 5 — Theme customizer (developer designer) — in progress
+## Item 5 — Theme customizer (developer designer) — ✅ v1 shipped 2026-09-04
 
 The developer-facing half of the theme-customizer design — **full plan in
-`guide/theme_customizer.md` ("Plan A — First")**. Migration-free; lives in the
-`tools/` harness, touches nothing in `app/`. (The operator-facing **Stretch**
-half is deferred — `guide/deferred_consolidated.md` Part A "Operator theming";
-it reuses this item's editor core.)
+`guide/theme_customizer.md` ("Plan A — First")**. Data-driven / app-agnostic
+(parses primitives, semantic maps, and clusters from `base.html` itself, so it
+drives any tokens.css of the same shape — the portability kernel, decision #6).
+Lives in the `tools/` harness and is not wired into the app. (The operator-facing
+**Stretch** half is deferred — `guide/deferred_consolidated.md` Part A "Operator
+theming"; it reuses this item's editor core.)
+
+**v1 (shipped, PRs #2065–#2083).** `tools/theme_customizer.gen.py` →
+`tools/theme_customizer.html`, a three-part visual designer:
+- **Part A — Preview.** The real component gallery (chrome, nav, cards, forms,
+  buttons, pills, banners, table…) in top-down page order, in a left column
+  pinned to five primitive-cards wide; the actual screen elements, so tokens are
+  designed against them.
+- **Part B — Tokens.** Seeds (five chromatic families, OKLCH delta-shift),
+  Primitives (grouped by family; edit any swatch, live repaint), Contrast (AA)
+  badges, and Semantic remaps (repoint a role to a primitive or, deliberately,
+  another semantic — the `@coupled` chain — per theme).
+- **Part C — Selection.** Click any coloured element in Part A → it reflects
+  (a) the element + colour facet, (b) the semantic token painting it,
+  (c) the primitive that token resolves to in the active theme (with the
+  coupling chain), and (d) what else the token covers. Click a facet's swatch
+  → a primitive picker repoints that token live. A build-time registry maps
+  every element+facet to its token and is **self-verified against the element's
+  computed colour in both themes** (0 mismatches).
+- **Toolbar.** Light/Dark, Undo (per-gesture history), Save + Revert (a local
+  `localStorage` checkpoint that auto-restores on reload — intermediate saves
+  without exporting), Load defaults, Export / Import JSON
+  (`{version, primitives, semantic:{light,dark}}`, ported 1:1 into `base.html`).
+
+Along the way the tool surfaced and fixed real `base.html` gaps (nav tab-strip
+backgrounds tokenized; nav chrome + active tab take `--surface-page`; primitive
+families rationalized — sky→`--blue-cyan-*`, danger→`--red-warm-*`, neutrals as
+one family) — all value-preserving except the intentional nav-chrome shift.
+
+**Deferred / optional follow-ons:** Ctrl/Cmd-Z + Redo; sort the Neutral group
+light→dark; editing a primitive's own value from the picker; the operator-facing
+Stretch (see deferred_consolidated). Original slice notes below.
 
 **What.** Grow the theme-preview harness into a visual **designer** for the
 light + dark palettes: seed-and-derive (OKLCH) editing with live repaint,
@@ -512,7 +549,10 @@ dev-slot-QA it. Land this first, then build seed-derive on a clean base.
   "formula-clean re-tune" pre-step is **not needed** (delta-shift supersedes it).
   Each editor chip also dropped its redundant static swatch (the `<input
   type="color">` is the sample).
-- ☐ polish.
+- **✅ Slices 4+ (shipped) — the designer proper.** Part A/B/C restructure;
+  click-to-reflect + primitive-picker editing in Part C; Save/Undo/Revert with
+  localStorage; app-agnostic data-driven parsing; primitive-family
+  rationalization. See the v1 summary above.
 
 ---
 
@@ -539,9 +579,9 @@ Decisions (all in `guide/archive/semantic_tokens.md`): 1–3 keep-separate
 palette, dark `:root` remaps semantics (no parallel dark set); 6 namespace with
 `[P]`/`[A]`, kernel extraction deferred — no rush.
 
-**Remaining (optional, Item 5 tooling slice):** the `tools/` customizer /
-preview still reference the retired flat-token names and need reworking
-app-agnostic + data-driven (the portability kernel). Tracked under Item 5.
+**Tooling slice — ✅ done under Item 5 (v1 shipped 2026-09-04):** the `tools/`
+customizer / preview were reworked two-tier, app-agnostic + data-driven (parsing
+primitives / semantics / clusters from `base.html` — the portability kernel).
 
 Historical detail below (kept for the record).
 
