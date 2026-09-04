@@ -191,8 +191,6 @@ HARNESS_CSS = """
     }
     .warning-banner { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
     .danger-banner { background: var(--status-error-bg); color: var(--status-error-fg); border-color: var(--status-error-border); }
-    .ph-tint { border: 1px solid var(--border-subtle); border-radius: 8px;
-      padding: 14px; font-size: 0.85rem; }
 """
 
 
@@ -211,10 +209,6 @@ def component_sections():
     callers can reorder / relocate individual zones (the customizer hoists the
     `text` zone to the front and embeds its tokens). Does NOT include the
     toolbar, the token grid, or the `ph-body` wrapper — callers add those."""
-    tints = "\n".join(
-        f'        <div class="ph-tint" style="background: var(--surface-tint-{i});">Instrument card tint {i}</div>'
-        for i in range(1, 7)
-    )
     return [
         ("chrome", """    <section class="ph-section">
       <h2 class="ph-h">Chrome — top bar</h2>
@@ -265,7 +259,7 @@ def component_sections():
       <h2 class="ph-h">Text &amp; links</h2>
 {TEXT_LINKS_SAMPLE}
     </section>"""),
-        ("cards", f"""    <section class="ph-section">
+        ("cards", """    <section class="ph-section">
       <h2 class="ph-h">Cards</h2>
       <div class="card">
         <h2>Plain card</h2>
@@ -276,10 +270,6 @@ def component_sections():
         <h2>Danger Zone</h2>
         <p>Destructive-action card. The button is fixed-width here.</p>
         <button class="btn destructive">Clear all settings</button>
-      </div>
-      <p class="muted" style="margin: 16px 0 6px;">Instrument card tints</p>
-      <div class="ph-row">
-{tints}
       </div>
     </section>"""),
         ("forms", """    <section class="ph-section">
@@ -302,21 +292,12 @@ def component_sections():
     </section>"""),
         ("buttons", """    <section class="ph-section">
       <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
-      <p class="muted" style="margin: 0 0 6px;">Active</p>
-      <div class="ph-row" style="margin-bottom: 14px;">
+      <div class="ph-row">
         <button class="btn">Primary</button>
         <button class="btn secondary">Secondary</button>
         <button class="btn destructive">Destructive</button>
         <button class="btn danger-solid">Alert</button>
         <button class="btn alert">Amber</button>
-      </div>
-      <p class="muted" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
-      <div class="ph-row">
-        <button class="btn" disabled>Primary</button>
-        <button class="btn secondary" disabled>Secondary</button>
-        <button class="btn destructive" disabled>Destructive</button>
-        <button class="btn danger-solid" disabled>Alert</button>
-        <button class="btn alert" disabled>Amber</button>
       </div>
     </section>"""),
         ("pills", """    <section class="ph-section">
