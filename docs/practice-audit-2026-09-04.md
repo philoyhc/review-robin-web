@@ -18,10 +18,10 @@
 > repository. **Branch protection was not added** — see §1 and §3.
 >
 > Appendix A's one **Behind** score, context hygiene, was closed after the
-> appendix was written: `CLAUDE.md` went 266 → ~180 lines and the twin-file
-> convention it cites as unenforced is now a test. A.2's table and §5's
-> carry-forward list describe the state at the time of writing and are left
-> unedited.
+> appendix was written: `CLAUDE.md` went 266 → 183 lines and the twin-file
+> convention it cited as unenforced is now a test (#2092). A.2, A.5 and §5
+> carry dated "closed" annotations recording that; the original findings are
+> preserved alongside them rather than rewritten.
 >
 > The findings below are the record as it stood on the audit date and are
 > left unedited. Two things noted here rather than in the text: the
@@ -444,7 +444,9 @@ the highest-frequency defect class is one no reviewer could catch either.
 - The twin `CLAUDE.md` / `AGENTS.md` files kept in sync by hand ("No automation
   enforces this yet"). They are byte-identical today, but this is a second
   unenforced convention. A symlink, or a single file, avoids it — cheap at
-  project start, awkward later.
+  project start, awkward later. **(Closed 2026-09-04 in #2092 by a third check
+  in `tests/unit/test_doc_conventions.py` — the retrofit, not the cheap
+  version. The advice stands unchanged for a new project.)**
 
 ---
 
@@ -547,7 +549,7 @@ the cage.*
 | Idempotent tools | Largely **not applicable** — no autonomous loop mutates state unattended. The one place it bites is `alembic upgrade head` on every push to `main`, which is idempotent by design. | N/A, honestly |
 | Stop conditions | **Not applicable for the same reason.** Nothing here runs unbounded. | N/A, honestly |
 | Maker–checker split | **Just closed** (§4 R2, shipped in #2087) after being the audit's live gap. | Level, newly |
-| Context hygiene | `CLAUDE.md` at 266 lines against a ~100-line guideline, with one rule stated 3× and another 4× (§3). | **Behind** |
+| Context hygiene | Was `CLAUDE.md` at 266 lines against a ~100-line guideline, one rule stated 3× and another 4× (§3). **Closed 2026-09-04 in #2092**: 183 lines / 1,631 words, the duplicated section deleted, the 50-module inventory replaced by a pointer. | Was **Behind**; now level |
 | Machine-checkable done | `pytest` (2,699), `ruff`, dual-dialect CI, Alembic round-trip, plus the drift gate from R1. | **Ahead** |
 
 **The honest framing is that RRW is not running the kind of loop the
@@ -565,13 +567,24 @@ merges. What #2088 did was write that stop condition down. In loop-engineering
 terms, that is exactly the right move for a human-verified loop: make the
 condition explicit and inspectable rather than mechanising it prematurely.
 
-**The one place the benchmark bites hard is pillar 4.** Context hygiene is
-last by blast radius but it is not optional, and it is the pillar RRW
-measurably fails: the instruction file is 2.6× the guideline, carries
-duplicated rules, and until #2087 carried a claim about its own CI that had
-been false for months. The literature's phrasing — *loops die of context bloat
-before they die of anything else* — describes a real exposure here, since that
+**The one place the benchmark bit hard was pillar 4.** Context hygiene is
+last by blast radius but it is not optional, and at the time of writing it was
+the pillar RRW measurably failed: the instruction file was 2.6× the guideline,
+carried duplicated rules, and until #2087 carried a claim about its own CI that
+had been false for months. The literature's phrasing — *loops die of context
+bloat before they die of anything else* — described a real exposure, since that
 file is loaded into every agent session in the repository.
+
+**Closed 2026-09-04 (#2092).** `CLAUDE.md` went 266 → 183 lines and 2,692 →
+1,631 words. The measurements that drove it: "Stack summary" restated **15 of
+its 16** claim-bearing phrases from earlier in the same file; "Architecture at
+a glance" listed 50 module filenames that `spec/architecture.md` already
+carries at the right altitude, and listed them *incompletely*, which is worse
+than a pointer because it implies completeness; the two longest index entries
+ran to 95 and 88 words. The twin-file convention §5 cites below as unenforced
+is now a test. It remains above the ~100-line guideline, deliberately — the
+remaining lines are normative or index, and cutting further would cost more
+than the bloat did.
 
 ---
 
@@ -658,10 +671,12 @@ codebases do not. The maker–checker split it lacked is now closed. Its
 human-verified loop is a deliberate and defensible shape, not an immature
 version of an autonomous one.
 
-Behind: context hygiene — a 266-line instruction file with duplicated rules,
-loaded into every session. And the browser-only defect class, which is both
-the largest measured category of real defects here and the one no layer of
-the current practice catches.
+Behind: the browser-only defect class, which is both the largest measured
+category of real defects here and the one no layer of the current practice
+catches. Context hygiene was the other half of this verdict — a 266-line
+instruction file with duplicated rules, loaded into every session — and was
+closed the same day (#2092, see A.2). It is left in the table above as the
+record of what the benchmark found.
 
 Level, and worth stating plainly: nothing in the current discipline suggests
 RRW should be running autonomous loops. The threshold — *a machine-checkable
