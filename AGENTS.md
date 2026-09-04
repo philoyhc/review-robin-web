@@ -28,7 +28,9 @@ other AI coding agent working in this repository.
   doesn't cleanly fit one of those roles — don't invent a new one
   without confirmation. (The pre-19B six-name scheme — Primary Outline /
   Alert Outline / Danger Outline — is superseded; `.alert-solid`
-  collapses to Primary and `.danger` is a context class.)
+  collapses to Primary and `.danger` is a context class.) This and the
+  lifecycle display-label mapping are enforced by
+  `tests/unit/test_doc_conventions.py`.
 - Do not implement Microsoft authentication in app code unless
   explicitly requested; assume Azure App Service Easy Auth will provide
   authenticated identity headers in deployed environments.
@@ -236,21 +238,20 @@ The three doc folders each have their own README (`spec/README.md`,
 `docs/README.md`, `guide/README.md`) that spell out the role and list
 the contents.
 
-## Workflow notes
-
-- The human author does not run Python locally for routine work. The agent's session container is the pre-PR gate — `pytest` (and `ruff` once wired into CI) must pass there before pushing. End-to-end verification happens on the Azure dev slot after deploy; if a change touches UI/redirects/auth that the test suite can't exercise, say so explicitly in the PR description rather than claiming verification.
-- Land changes as small, reviewable slices following the plans in `guide/`. Don't bundle independent concerns (e.g. an unrelated bug fix) into a feature PR.
-
 ## Where work runs
 
 - The human author does not run Python, alembic, or a database
   locally. There is no laptop dev loop.
-- The agent's session container is the primary pre-PR gate: run
-  `pytest` (and lint, once it's wired into CI) there before pushing.
+- The agent's session container is the pre-PR gate: `pytest` and
+  `ruff check .` must both pass there before pushing. Both run in CI
+  (`ci.yml`) on every PR, alongside `ci-postgres.yml`, which
+  round-trips the Alembic chain and runs the full suite against
+  Postgres 16.
 - End-to-end verification happens on the Azure dev slot after deploy,
   not in the agent's sandbox. When a change touches UI or anything
   the test suite can't exercise (templates, redirects, real auth),
-  say so in the PR description rather than claiming it was verified.
+  say so explicitly in the PR description rather than claiming it was
+  verified.
 - `docs/local_setup.md` and `ALLOW_FAKE_AUTH=true` exist for the
   agent's sandbox, not for a human dev loop.
 

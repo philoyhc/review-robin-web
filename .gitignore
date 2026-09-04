@@ -32,4 +32,8 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
-.claude/
+# Agent-harness config is local, EXCEPT the checked-in subagent definitions
+# (.claude/agents/spec-writer.md has always been tracked; without the
+# negation a new agent file is silently ignored and never committed).
+.claude/*
+!.claude/agents/
