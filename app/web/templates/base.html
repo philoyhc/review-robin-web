@@ -224,6 +224,7 @@
         --nav-marker-ops: var(--green-soft);
         --nav-tab-active-fg: var(--blue-deeper);
         --nav-tab-active-bg: var(--white);
+        --nav-strip-setup-bg: var(--blue-wash);
         --nav-strip-ops-bg: var(--green-wash);
         --nav-home-bg: var(--blue-wash);
         --nav-home-bg-hover: var(--blue-mist);
@@ -349,6 +350,7 @@
         --nav-marker-ops: var(--green-abyss);
         --nav-tab-active-fg: var(--blue-soft);
         --nav-tab-active-bg: var(--ink-deep);
+        --nav-strip-setup-bg: var(--tint-sky-dark);
         --nav-strip-ops-bg: var(--green-abyss-faint);
         --nav-home-bg: var(--blue-abyss-soft);
         --nav-home-bg-hover: var(--blue-abyss-faint);
@@ -2692,8 +2694,8 @@
       body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
         border-left-color: var(--text-body);
       }
-      body.ui-v2 .tab-strip-setup { background: rgba(37, 99, 235, 0.05); }
-      body.ui-v2 .tab-strip-ops   { background: rgba(5, 150, 105, 0.05); }
+      body.ui-v2 .tab-strip-setup { background: var(--nav-strip-setup-bg); }
+      body.ui-v2 .tab-strip-ops   { background: var(--nav-strip-ops-bg); }
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }

@@ -119,7 +119,8 @@ TARGETS = [
     ('.breadcrumb [aria-current="page"]', "Breadcrumb (current)", [("text", "fg", "--text-body")]),
     (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-dim")]),
     # Session navigation
-    (".session-home-anchor", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
+    (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
+    (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label.active-group", "Nav row label (active)", [("text", "fg", "--text-body")]),
     (".row-label:not(.active-group)", "Nav row label", [("text", "fg", "--text-dim")]),
     (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
@@ -171,7 +172,12 @@ TARGETS = [
     (".config-value", "Config value", [("infill", "bg", "--config-value-bg"), ("text", "fg", "--config-value-fg")]),
     (".config-value-resolved", "Resolved config value", [("infill", "bg", "--config-value-resolved-bg")]),
     (".nav-tab.active", "Active nav tab", [("infill", "bg", "--nav-tab-active-bg"), ("text", "fg", "--text-body")]),
-    (".nav-tab:not(.active)", "Nav tab", [("text", "fg", "--text-dim")]),
+    # inactive tabs are transparent, so their visible fill is the strip behind
+    # them — and the Setup / Operations strips are independent tokens.
+    (".tab-strip-setup .nav-tab:not(.active)", "Nav tab · Setup",
+     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-setup-bg")]),
+    (".tab-strip-ops .nav-tab:not(.active)", "Nav tab · Operations",
+     [("text", "fg", "--text-dim"), ("strip", "bg", "--nav-strip-ops-bg")]),
     (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
     (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),

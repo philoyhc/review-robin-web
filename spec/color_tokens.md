@@ -230,6 +230,7 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | `--nav-marker-ops` | `--green-soft` | `--green-abyss` | `#a7f3d0` | `#065f46` |
 | `--nav-tab-active-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--nav-tab-active-bg` | `--white` | `--ink-deep` | `#ffffff` | `#1a212e` |
+| `--nav-strip-setup-bg` | `--blue-wash` | `--tint-sky-dark` | `#eff6ff` | `#0e1a24` |
 | `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#f0fdf4` | `#0c2419` |
 | `--nav-home-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
 | `--nav-home-bg-hover` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
