@@ -124,8 +124,8 @@ TARGETS = [
     # Session navigation
     (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label.active-group", "Nav row label (active)", [("text", "fg", "--text-body")]),
-    (".row-label:not(.active-group)", "Nav row label", [("text", "fg", "--text-dim")]),
+    (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
+    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-dim")]),
     (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
