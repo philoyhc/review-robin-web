@@ -93,6 +93,9 @@ PAIRS = [
 # self-check compares each facet's computed colour to its token to catch drift.
 def _btn(mod, label, key):
     sel = "button.btn" + (("." + mod) if mod else ":not(.secondary):not(.destructive):not(.danger-solid):not(.alert)")
+    # exclude in-card button instances (e.g. the danger-zone button) — they just
+    # follow their canonical role, so only the Buttons-section samples are picked.
+    sel += ":not(.danger-zone *)"
     return (sel, label, [("infill", "bg", f"--btn-{key}-bg"),
                          ("text", "fg", f"--btn-{key}-fg"),
                          ("border", "border", f"--btn-{key}-border")])

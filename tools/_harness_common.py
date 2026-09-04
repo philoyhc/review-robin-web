@@ -280,7 +280,7 @@ def component_sections():
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>
         <p>Destructive-action card. The button is fixed-width here.</p>
-        <button class="btn destructive">Clear all settings</button>
+        <button class="btn destructive">Destructive</button>
       </div>
       <p class="muted ph-anno" style="margin: 16px 0 6px;">Instrument card tints</p>
       <div class="ph-row">
