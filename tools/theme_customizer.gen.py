@@ -131,7 +131,9 @@ TARGETS = [
     ("p:not([class])", "Body text", [("text", "fg", "--text-body")]),
     ("p:not([class]) strong", "Strong emphasis", [("text", "fg", "--text-body")]),
     ("p a[href]", "Inline link", [("text", "fg", "--text-link")]),
-    (".muted", "Muted text", [("text", "fg", "--text-subtle")]),
+    # .ph-anno = preview-annotation captions (Active / Disabled / tints heading /
+    # focus-ring hint) — visible labels, not app elements, so not pickable.
+    (".muted:not(.ph-anno)", "Muted text", [("text", "fg", "--text-subtle")]),
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
     (".card:not(.rs-help-card):not(.danger-zone)", "Card surface",
      [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
@@ -174,6 +176,8 @@ TARGETS = [
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
     (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
 ]
+TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
+            for i in range(1, 7)]
 
 targets_data = [{"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} for f, p, t in fac]}
                 for s, el, fac in TARGETS]
