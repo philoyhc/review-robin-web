@@ -291,22 +291,32 @@ contrast_section = f"""    <section class="tc-sec">
 toolbar = """  <div class="ph-toolbar">
     <strong>Two-tier theme customizer</strong>
     <span class="ph-seg" role="group" aria-label="Theme">
-      <button data-set="light" aria-pressed="true">Light</button>
-      <button data-set="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-set="light" aria-pressed="true">Light</button>
+      <button type="button" data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="tc-controls">
-      <button data-act="defaults">Load defaults</button>
-      <button data-act="export">Export JSON</button>
+      <button type="button" data-act="undo" disabled>Undo</button>
+      <button type="button" data-act="save">Save</button>
+      <button type="button" data-act="revert" disabled>Revert to saved</button>
+      <button type="button" data-act="defaults">Load defaults</button>
+      <button type="button" data-act="export">Export JSON</button>
       <label class="tc-file">Import JSON…<input type="file" accept=".json,application/json" data-act="import"></label>
     </span>
     <span class="tc-status" data-status>Editing <strong>light</strong> · no changes</span>
   </div>"""
 
 editor_css = r"""
-    .tc-controls { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .tc-controls button, .tc-controls label.tc-file {
-      font: inherit; font-size: 0.8em; cursor: pointer; padding: 3px 10px; border-radius: 6px;
+    /* one consistent style for every toolbar control (segment + actions) */
+    .ph-toolbar .ph-seg button, .ph-toolbar .tc-controls button, .ph-toolbar .tc-controls label.tc-file {
+      font: inherit; font-size: 0.8rem; line-height: 1; cursor: pointer; height: 30px;
+      padding: 0 12px; border-radius: 6px; box-sizing: border-box;
+      display: inline-flex; align-items: center; white-space: nowrap;
       border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
+    .ph-toolbar .ph-seg { display: inline-flex; gap: 4px; }
+    .ph-toolbar .ph-seg button[aria-pressed="true"] {
+      background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-border); }
+    .tc-controls { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tc-controls button:disabled { opacity: 0.45; cursor: default; }
     .tc-controls input[type=file] { display: none; }
     .tc-status { color: var(--text-subtle); font-size: 0.8rem; }
     /* Page layout: the sticky toolbar spans the top. Below it, a left column
@@ -411,6 +421,22 @@ editor_js = r"""  <script>
     var mode = "light";
     var dirty = false;
 
+    // ---- undo history + local (non-exporting) save ----
+    var SAVE_KEY = "rrw-theme-draft";
+    var undoStack = [];
+    var savedSnapshot = null;   // last Save (also mirrored to localStorage)
+    function snapshot() { return { prims: clone(model.prims), semL: clone(model.semL), semD: clone(model.semD) }; }
+    function eq(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+    function pushUndo() { undoStack.push(snapshot()); if (undoStack.length > 60) undoStack.shift(); }
+    // coalesce a burst of continuous edits (colour-picker drag) into one undo step
+    var burst = false, burstT = null;
+    function markContinuous() { if (!burst) pushUndo(); burst = true; clearTimeout(burstT); burstT = setTimeout(function () { burst = false; }, 500); }
+    function markDiscrete() { pushUndo(); burst = false; clearTimeout(burstT); }
+    function refreshTools() {
+      var u = document.querySelector('[data-act="undo"]'); if (u) u.disabled = undoStack.length === 0;
+      var r = document.querySelector('[data-act="revert"]'); if (r) r.disabled = savedSnapshot == null;
+    }
+
     function semMap() { return mode === "dark" ? model.semD : model.semL; }
     function norm6(v) { return /^#[0-9a-fA-F]{3}$/.test(v) ? "#" + v[1]+v[1]+v[2]+v[2]+v[3]+v[3] : v; }
 
@@ -510,29 +536,35 @@ editor_js = r"""  <script>
       });
     }
     function status() {
+      dirty = !eq(model, savedSnapshot || { prims: D.prims, semL: D.semLight, semD: D.semDark });
       var el = document.querySelector("[data-status]");
-      if (el) el.innerHTML = "Editing <strong>" + mode + "</strong> · " + (dirty ? "unsaved changes" : "no changes");
+      if (el) {
+        var state = !dirty ? (savedSnapshot ? "saved" : "no changes") : (savedSnapshot ? "unsaved changes since save" : "unsaved changes");
+        el.innerHTML = "Editing <strong>" + mode + "</strong> · " + state;
+      }
+      refreshTools();
       renderSelected();
     }
 
     // ---- wiring ----
     document.querySelectorAll(".tc-chip").forEach(function (c) {
       var n = c.getAttribute("data-prim"), col = c.querySelector(".tc-color"), hex = c.querySelector(".tc-hex");
-      col.addEventListener("input", function () { hex.value = col.value; setPrim(n, col.value); });
+      col.addEventListener("input", function () { markContinuous(); hex.value = col.value; setPrim(n, col.value); });
       hex.addEventListener("change", function () {
         var v = hex.value.trim();
-        if (/^#[0-9a-fA-F]{3,8}$/.test(v)) { setPrim(n, v); var c6 = norm6(v); if (/^#[0-9a-fA-F]{6}$/.test(c6)) col.value = c6; }
+        if (/^#[0-9a-fA-F]{3,8}$/.test(v)) { markDiscrete(); setPrim(n, v); var c6 = norm6(v); if (/^#[0-9a-fA-F]{6}$/.test(c6)) col.value = c6; }
         else { hex.value = model.prims[n]; }
       });
     });
     document.querySelectorAll(".tc-seed").forEach(function (el) {
       var fam = el.getAttribute("data-fam");
-      el.querySelector(".tc-seed-color").addEventListener("input", function () { shiftFamily(fam, this.value); });
+      el.querySelector(".tc-seed-color").addEventListener("input", function () { markContinuous(); shiftFamily(fam, this.value); });
     });
     document.querySelectorAll(".tc-remap").forEach(function (r) {
       var s = r.getAttribute("data-sem");
       r.querySelectorAll(".tc-sel").forEach(function (sel) {
         sel.addEventListener("change", function () {
+          markDiscrete();
           var tgt = sel.getAttribute("data-mode") === "dark" ? model.semD : model.semL;
           tgt[s] = sel.value;
           if (sel.getAttribute("data-mode") === mode) root.style.setProperty(s, "var(" + sel.value + ")");
@@ -553,8 +585,21 @@ editor_js = r"""  <script>
 
     document.querySelectorAll("[data-act]").forEach(function (el) {
       var act = el.getAttribute("data-act");
+      if (act === "undo") el.addEventListener("click", function () {
+        if (!undoStack.length) return;
+        burst = false; model = undoStack.pop(); applyActive();
+      });
+      if (act === "save") el.addEventListener("click", function () {
+        savedSnapshot = snapshot();
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(savedSnapshot)); } catch (e) { /* private mode / disabled */ }
+        status();
+      });
+      if (act === "revert") el.addEventListener("click", function () {
+        if (!savedSnapshot) return;
+        markDiscrete(); model = clone(savedSnapshot); applyActive();
+      });
       if (act === "defaults") el.addEventListener("click", function () {
-        model = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) }; dirty = false; applyActive();
+        markDiscrete(); model = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) }; applyActive();
       });
       if (act === "export") el.addEventListener("click", function () {
         var out = JSON.stringify({ version: 2, primitives: model.prims, semantic: { light: model.semL, dark: model.semD } }, null, 2);
@@ -568,8 +613,9 @@ editor_js = r"""  <script>
           try {
             var j = JSON.parse(r.result);
             if (j.primitives && j.semantic) {
+              markDiscrete();
               model = { prims: clone(j.primitives), semL: clone(j.semantic.light), semD: clone(j.semantic.dark) };
-              dirty = true; applyActive();
+              applyActive();
             } else { alert("JSON needs { primitives, semantic: { light, dark } }."); }
           } catch (e) { alert("Bad JSON: " + e); }
           el.value = "";
@@ -688,10 +734,10 @@ editor_js = r"""  <script>
     }
 
     function pickPrimitive(token, prim) {
+      markDiscrete();
       var tgt = (mode === "dark") ? model.semD : model.semL;
       tgt[token] = prim;                                   // repoint for the active theme
       root.style.setProperty(token, "var(" + prim + ")");  // live repaint
-      dirty = true;
       closePicker();
       refreshRemaps(); updateContrast(); status();         // status() re-renders Part C
     }
@@ -717,6 +763,15 @@ editor_js = r"""  <script>
       closePicker();
     });
     document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closePicker(); });
+
+    // restore a locally-saved draft (persists across reloads; Load defaults clears it)
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && s.prims && s.semL && s.semD) { savedSnapshot = s; model = clone(s); }
+      }
+    } catch (e) { /* private mode / disabled / bad data */ }
 
     applyActive();
   })();
