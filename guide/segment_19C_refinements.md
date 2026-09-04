@@ -1,12 +1,15 @@
 # Segment 19C — Refinements
 
-**Status:** In progress — **Item 1 ✅ shipped 2026-08-20** (friendly labels
-via roster CSV headers; sole round-trip carrier); **Item 2 in progress**
-(settings-page Display mode card — scaffold slice first); **Item 5 ✅ v1
-shipped 2026-09-04** (theme customizer — developer designer; three-part
-click-to-reflect/edit designer, PRs #2065–#2083); **Item 6 ✅ shipped
-2026-08-23** (semantic colour tokens — two-tier reorg; the app is now fully
-two-tier, plan archived at `guide/archive/semantic_tokens.md`).
+**Status: all six items ✅ shipped** — the segment stays **open** as a home for
+further small refinements. **Item 1 ✅ 2026-08-20** (friendly tag labels via
+roster CSV headers; sole round-trip carrier); **Item 2 ✅ 2026-08-21**
+(light/dark Display mode — chrome toggle, W1–W8); **Item 3 ✅** (Danger Zone
+hardening); **Item 4 ✅** (button treatment refinements); **Item 5 ✅ v1
+2026-09-04** (theme customizer — developer designer; three-part
+click-to-reflect/edit designer, PRs #2065–#2083; operator-facing **Stretch**
+deferred to `guide/deferred_consolidated.md`); **Item 6 ✅ 2026-08-23**
+(semantic colour tokens — two-tier reorg; the app is now fully two-tier, plan
+archived at `guide/archive/semantic_tokens.md`).
 A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
