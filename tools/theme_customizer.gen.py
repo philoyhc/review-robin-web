@@ -38,19 +38,30 @@ sem_light, sem_dark = dict(sem["light"]), dict(sem["dark"])
 clusters = [(n, t) for n, t in hc.parse_clusters(base_css) if t]
 
 # --- family grouping by descriptive name prefix (--<prefix>-<shade>) ---
-NEUTRAL_PREFIXES = {"white", "paper", "gray", "slate", "ink", "tint"}
-PREFIX_ORDER = ["white", "paper", "gray", "slate", "ink",
-                "blue", "sky", "green", "amber", "red", "danger", "violet", "tint"]
+# white/paper/gray/slate/ink are one Black–Grey–White ramp, shown as a single
+# "neutral" family. sky folds into blue and danger into red (the primitives are
+# named --blue-cyan-* / --red-warm-*, so they group under blue / red).
+NEUTRAL_PREFIXES = {"white", "paper", "gray", "slate", "ink"}
+NON_SEED = NEUTRAL_PREFIXES | {"tint"}                 # families with no seed control
+SEED_PREFIX_ORDER = ["blue", "green", "amber", "red", "violet"]
+DISPLAY_ORDER = ["neutral", "blue", "green", "amber", "red", "violet", "tint"]
 
 
 def prefix(name):
     return name[2:].split("-")[0]
 
 
-groups = {}
+def display_group(name):
+    p = prefix(name)
+    return "neutral" if p in NEUTRAL_PREFIXES else p
+
+
+groups = {}      # by prefix — chromatic seed families
+dgroups = {}     # by display group — the primitive grid (neutrals merged into one)
 for name, val in prims:
     groups.setdefault(prefix(name), []).append((name, val))
-prim_groups = [(p, groups[p]) for p in PREFIX_ORDER if p in groups]
+    dgroups.setdefault(display_group(name), []).append((name, val))
+prim_groups = [(g, dgroups[g]) for g in DISPLAY_ORDER if g in dgroups]
 
 
 def saturation(hexv):
@@ -62,11 +73,11 @@ def saturation(hexv):
 # Seeds = chromatic families; anchor = the most-saturated member.
 seed_families = {}
 for p, members in groups.items():
-    if p in NEUTRAL_PREFIXES:
+    if p in NON_SEED:
         continue
     anchor = max(members, key=lambda m: saturation(m[1]))[0]
     seed_families[p] = {"anchor": anchor, "members": [n for n, _ in members]}
-SEED_ORDER = [p for p in PREFIX_ORDER if p in seed_families]
+SEED_ORDER = [p for p in SEED_PREFIX_ORDER if p in seed_families]
 
 # --- contrast pairs (semantic tokens; resolved per active theme) ---
 PAIRS = [

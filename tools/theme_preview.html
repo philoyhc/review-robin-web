@@ -66,10 +66,10 @@
         --blue-abyss: #16324f;
         --blue-abyss-soft: #12283f;
         --blue-abyss-faint: #0e1c2c;
-        --sky-pale: #e0f2fe;
-        --sky-deep: #075985;
-        --sky-soft: #7dd3fc;
-        --sky-abyss: #0c2f42;
+        --blue-cyan-pale: #e0f2fe;
+        --blue-cyan-deep: #075985;
+        --blue-cyan-soft: #7dd3fc;
+        --blue-cyan-abyss: #0c2f42;
         --green-wash: #f0fdf4;
         --green-pale: #d1fae5;
         --green-soft: #a7f3d0;
@@ -97,10 +97,10 @@
         --red-deep: #991b1b;
         --red-firm: #b91c1c;
         --red-abyss: #3d1a1a;
-        --danger-pale: #fdecea;
-        --danger-soft: #f2b8b5;
-        --danger-deep: #8a1c14;
-        --danger-abyss-border: #7f2a2a;
+        --red-warm-pale: #fdecea;
+        --red-warm-soft: #f2b8b5;
+        --red-warm-deep: #8a1c14;
+        --red-warm-border: #7f2a2a;
         --violet-pale: #ede9fe;
         --violet-soft: #c4b5fd;
         --violet-strong: #5b21b6;
@@ -180,9 +180,9 @@
         --status-error-border: var(--red-strong);
         --status-error-accent: var(--red-strong);
         --toast-error-bg: var(--red-firm);
-        --status-error-soft-bg: var(--danger-pale);
-        --status-error-soft-border: var(--danger-soft);
-        --status-error-soft-fg: var(--danger-deep);
+        --status-error-soft-bg: var(--red-warm-pale);
+        --status-error-soft-border: var(--red-warm-soft);
+        --status-error-soft-fg: var(--red-warm-deep);
         --status-super-bg: var(--violet-pale);
         --status-super-fg: var(--violet-strong);
         /* Participant roles [A] */
@@ -213,8 +213,8 @@
         --nav-home-bg-hover: var(--blue-mist);
         --nav-home-marker: var(--blue-soft);
         /* Config values [A] */
-        --config-value-bg: var(--sky-pale);
-        --config-value-fg: var(--sky-deep);
+        --config-value-bg: var(--blue-cyan-pale);
+        --config-value-fg: var(--blue-cyan-deep);
         --config-value-resolved-bg: var(--blue-wash);
         /* Card accents [A] */
         --card-active-border: var(--blue-strong);
@@ -307,7 +307,7 @@
         --status-error-accent: var(--red-bright);
         --toast-error-bg: var(--red-bright);
         --status-error-soft-bg: var(--red-abyss);
-        --status-error-soft-border: var(--danger-abyss-border);
+        --status-error-soft-border: var(--red-warm-border);
         --status-error-soft-fg: var(--red-soft);
         --status-super-bg: var(--violet-abyss);
         --status-super-fg: var(--violet-soft);
@@ -339,8 +339,8 @@
         --nav-home-bg-hover: var(--blue-abyss-faint);
         --nav-home-marker: var(--blue-bright);
         /* Config values [A] */
-        --config-value-bg: var(--sky-abyss);
-        --config-value-fg: var(--sky-soft);
+        --config-value-bg: var(--blue-cyan-abyss);
+        --config-value-fg: var(--blue-cyan-soft);
         --config-value-resolved-bg: var(--blue-abyss-soft);
         /* Card accents [A] */
         --card-active-border: var(--blue-glow);
@@ -3412,7 +3412,7 @@
       <h2 class="ph-h">Banners</h2>
       <div class="warning-banner">Warning banner — an amber advisory.</div>
       <div class="danger-banner">Danger banner — a hard red alert.</div>
-      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--danger-*</code> tokens).</p>
+      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--red-warm-*</code> tokens).</p>
     </section>
 
     <section class="ph-section">
@@ -3444,7 +3444,7 @@
         <div class="pv-chip"><div class="pv-sw" style="background: #eff6ff;"></div><div class="pv-lbl"><code>--blue-wash</code><span>#eff6ff</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #fafcff;"></div><div class="pv-lbl"><code>--blue-mist</code><span>#fafcff</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #f0fdf4;"></div><div class="pv-lbl"><code>--green-wash</code><span>#f0fdf4</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #fdecea;"></div><div class="pv-lbl"><code>--danger-pale</code><span>#fdecea</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #fdecea;"></div><div class="pv-lbl"><code>--red-warm-pale</code><span>#fdecea</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #ede9fe;"></div><div class="pv-lbl"><code>--violet-pale</code><span>#ede9fe</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #f0f9ff;"></div><div class="pv-lbl"><code>--tint-sky</code><span>#f0f9ff</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #ecfdf5;"></div><div class="pv-lbl"><code>--tint-mint</code><span>#ecfdf5</span></div></div>
@@ -3459,7 +3459,7 @@
         <div class="pv-chip"><div class="pv-sw" style="background: #241318;"></div><div class="pv-lbl"><code>--tint-rose-dark</code><span>#241318</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #221d0e;"></div><div class="pv-lbl"><code>--tint-cream-dark</code><span>#221d0e</span></div></div>
       </div></div>
-      <div class="pv-hue"><h3 class="pv-hue-h">blue (20)</h3>
+      <div class="pv-hue"><h3 class="pv-hue-h">blue (21)</h3>
       <div class="pv-chips">
         <div class="pv-chip"><div class="pv-sw" style="background: #a9b4c6;"></div><div class="pv-lbl"><code>--slate-pale</code><span>#a9b4c6</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #6f7b8e;"></div><div class="pv-lbl"><code>--slate-dim</code><span>#6f7b8e</span></div></div>
@@ -3477,14 +3477,11 @@
         <div class="pv-chip"><div class="pv-sw" style="background: #16324f;"></div><div class="pv-lbl"><code>--blue-abyss</code><span>#16324f</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #12283f;"></div><div class="pv-lbl"><code>--blue-abyss-soft</code><span>#12283f</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #0e1c2c;"></div><div class="pv-lbl"><code>--blue-abyss-faint</code><span>#0e1c2c</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #e0f2fe;"></div><div class="pv-lbl"><code>--sky-pale</code><span>#e0f2fe</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #075985;"></div><div class="pv-lbl"><code>--sky-deep</code><span>#075985</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #0c2f42;"></div><div class="pv-lbl"><code>--sky-abyss</code><span>#0c2f42</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #e0f2fe;"></div><div class="pv-lbl"><code>--blue-cyan-pale</code><span>#e0f2fe</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #075985;"></div><div class="pv-lbl"><code>--blue-cyan-deep</code><span>#075985</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #7dd3fc;"></div><div class="pv-lbl"><code>--blue-cyan-soft</code><span>#7dd3fc</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #0c2f42;"></div><div class="pv-lbl"><code>--blue-cyan-abyss</code><span>#0c2f42</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #c4b5fd;"></div><div class="pv-lbl"><code>--violet-soft</code><span>#c4b5fd</span></div></div>
-      </div></div>
-      <div class="pv-hue"><h3 class="pv-hue-h">sky (1)</h3>
-      <div class="pv-chips">
-        <div class="pv-chip"><div class="pv-sw" style="background: #7dd3fc;"></div><div class="pv-lbl"><code>--sky-soft</code><span>#7dd3fc</span></div></div>
       </div></div>
       <div class="pv-hue"><h3 class="pv-hue-h">green (12)</h3>
       <div class="pv-chips">
@@ -3520,9 +3517,9 @@
         <div class="pv-chip"><div class="pv-sw" style="background: #991b1b;"></div><div class="pv-lbl"><code>--red-deep</code><span>#991b1b</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #b91c1c;"></div><div class="pv-lbl"><code>--red-firm</code><span>#b91c1c</span></div></div>
         <div class="pv-chip"><div class="pv-sw" style="background: #3d1a1a;"></div><div class="pv-lbl"><code>--red-abyss</code><span>#3d1a1a</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #f2b8b5;"></div><div class="pv-lbl"><code>--danger-soft</code><span>#f2b8b5</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #8a1c14;"></div><div class="pv-lbl"><code>--danger-deep</code><span>#8a1c14</span></div></div>
-        <div class="pv-chip"><div class="pv-sw" style="background: #7f2a2a;"></div><div class="pv-lbl"><code>--danger-abyss-border</code><span>#7f2a2a</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #f2b8b5;"></div><div class="pv-lbl"><code>--red-warm-soft</code><span>#f2b8b5</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #8a1c14;"></div><div class="pv-lbl"><code>--red-warm-deep</code><span>#8a1c14</span></div></div>
+        <div class="pv-chip"><div class="pv-sw" style="background: #7f2a2a;"></div><div class="pv-lbl"><code>--red-warm-border</code><span>#7f2a2a</span></div></div>
       </div></div>
       <div class="pv-hue"><h3 class="pv-hue-h">violet (2)</h3>
       <div class="pv-chips">
@@ -3608,9 +3605,9 @@
         <tr><td class="pv-name">status error border<code>--status-error-border</code></td><td><span class="pv-dot" style="background: var(--status-error-border);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
         <tr><td class="pv-name">status error accent<code>--status-error-accent</code></td><td><span class="pv-dot" style="background: var(--status-error-accent);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
         <tr><td class="pv-name">toast error bg<code>--toast-error-bg</code></td><td><span class="pv-dot" style="background: var(--toast-error-bg);"></span><code>--red-firm</code> <span class="pv-hex">#b91c1c</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
-        <tr><td class="pv-name">status error soft bg<code>--status-error-soft-bg</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-bg);"></span><code>--danger-pale</code> <span class="pv-hex">#fdecea</span></td><td><code>--red-abyss</code> <span class="pv-hex">#3d1a1a</span></td></tr>
-        <tr><td class="pv-name">status error soft border<code>--status-error-soft-border</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-border);"></span><code>--danger-soft</code> <span class="pv-hex">#f2b8b5</span></td><td><code>--danger-abyss-border</code> <span class="pv-hex">#7f2a2a</span></td></tr>
-        <tr><td class="pv-name">status error soft fg<code>--status-error-soft-fg</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-fg);"></span><code>--danger-deep</code> <span class="pv-hex">#8a1c14</span></td><td><code>--red-soft</code> <span class="pv-hex">#fca5a5</span></td></tr>
+        <tr><td class="pv-name">status error soft bg<code>--status-error-soft-bg</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-bg);"></span><code>--red-warm-pale</code> <span class="pv-hex">#fdecea</span></td><td><code>--red-abyss</code> <span class="pv-hex">#3d1a1a</span></td></tr>
+        <tr><td class="pv-name">status error soft border<code>--status-error-soft-border</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-border);"></span><code>--red-warm-soft</code> <span class="pv-hex">#f2b8b5</span></td><td><code>--red-warm-border</code> <span class="pv-hex">#7f2a2a</span></td></tr>
+        <tr><td class="pv-name">status error soft fg<code>--status-error-soft-fg</code></td><td><span class="pv-dot" style="background: var(--status-error-soft-fg);"></span><code>--red-warm-deep</code> <span class="pv-hex">#8a1c14</span></td><td><code>--red-soft</code> <span class="pv-hex">#fca5a5</span></td></tr>
         <tr><td class="pv-name">status super bg<code>--status-super-bg</code></td><td><span class="pv-dot" style="background: var(--status-super-bg);"></span><code>--violet-pale</code> <span class="pv-hex">#ede9fe</span></td><td><code>--violet-abyss</code> <span class="pv-hex">#2e2250</span></td></tr>
         <tr><td class="pv-name">status super fg<code>--status-super-fg</code></td><td><span class="pv-dot" style="background: var(--status-super-fg);"></span><code>--violet-strong</code> <span class="pv-hex">#5b21b6</span></td><td><code>--violet-soft</code> <span class="pv-hex">#c4b5fd</span></td></tr>
       </tbody></table></details>
@@ -3653,8 +3650,8 @@
       <details class="pv-cluster" open><summary>Config values [A] · 3</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
-        <tr><td class="pv-name">config value bg<code>--config-value-bg</code></td><td><span class="pv-dot" style="background: var(--config-value-bg);"></span><code>--sky-pale</code> <span class="pv-hex">#e0f2fe</span></td><td><code>--sky-abyss</code> <span class="pv-hex">#0c2f42</span></td></tr>
-        <tr><td class="pv-name">config value fg<code>--config-value-fg</code></td><td><span class="pv-dot" style="background: var(--config-value-fg);"></span><code>--sky-deep</code> <span class="pv-hex">#075985</span></td><td><code>--sky-soft</code> <span class="pv-hex">#7dd3fc</span></td></tr>
+        <tr><td class="pv-name">config value bg<code>--config-value-bg</code></td><td><span class="pv-dot" style="background: var(--config-value-bg);"></span><code>--blue-cyan-pale</code> <span class="pv-hex">#e0f2fe</span></td><td><code>--blue-cyan-abyss</code> <span class="pv-hex">#0c2f42</span></td></tr>
+        <tr><td class="pv-name">config value fg<code>--config-value-fg</code></td><td><span class="pv-dot" style="background: var(--config-value-fg);"></span><code>--blue-cyan-deep</code> <span class="pv-hex">#075985</span></td><td><code>--blue-cyan-soft</code> <span class="pv-hex">#7dd3fc</span></td></tr>
         <tr><td class="pv-name">config value resolved bg<code>--config-value-resolved-bg</code></td><td><span class="pv-dot" style="background: var(--config-value-resolved-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
       </tbody></table></details>
       <details class="pv-cluster" open><summary>Card accents [A] · 5</summary>
