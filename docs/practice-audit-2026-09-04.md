@@ -6,6 +6,24 @@
 
 <!-- retired-term-ok: file -->
 
+> **Status (updated 2026-09-04).** Both recommendations are implemented and
+> the withdrawn one stays withdrawn. R1 (documentation-drift test) shipped in
+> **#2086** as `tests/unit/test_doc_conventions.py`, together with the six
+> live violations it caught. R2 (fresh-context diff reviewer) shipped in
+> **#2087** as `.claude/agents/diff-reviewer.md`, alongside the `CLAUDE.md`
+> de-duplication and stale-CI-claim fixes logged in §3. The §5 carry-forward
+> item about writing the merge policy down shipped in **#2088**
+> (`CONTRIBUTING.md` "When to wait for CI"), which also added
+> `new_project_practices_setup.md`, the portable version of §5 for a new
+> repository. **Branch protection was not added** — see §1 and §3.
+>
+> The findings below are the record as it stood on the audit date and are
+> left unedited. Two things noted here rather than in the text: the
+> `diff-reviewer` has not yet been run against a real diff (it parses and the
+> harness loads it, which is all that has been demonstrated), and the check
+> shipped in #2086 needed a file-level escape hatch that the version printed
+> in §4 lacks — this document itself was the first thing it wrongly flagged.
+
 **Question asked.** Two gaps were suspected in the development practice: that
 project conventions are held in place by the developer noticing violations
 rather than by anything that fails, and that nothing sits between code being
