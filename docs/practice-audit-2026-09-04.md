@@ -649,6 +649,29 @@ Three qualifications, in descending confidence:
    4× duplication figure is 1× or 4× is simply unknown — and unlike most
    claims in this document, that one could be measured cheaply.
 
+   **Measured 2026-09-04** (`tools/code_metrics.py`, now a standard item in
+   the assessments). **Duplication**, production code: 15.8% of lines sit in
+   a duplicated block of ≥6 lines, 6.5% at ≥10, 3.0% at ≥15, 1.1% at ≥25.
+   Read ≥10 as the headline — the short blocks are import and decorator
+   boilerplate, and spot-checking the ≥10 hits found real shared scaffolding
+   (`_setup_reviewers.py` and `_setup_reviewees.py` share 40 ten-line
+   windows, each ~47% duplicated). Tests run roughly 2.5× that rate, which
+   is normal for table-driven integration tests and not obviously worth
+   fixing. **Churn**: across 120 merges sampled evenly over 2,082, 92.1% of
+   deleted Python lines were younger than 14 days — but the same share of
+   *all* lines in those files at that moment was 82.0%, a **ratio of 1.1×**.
+   Deletions here are essentially age-blind: the code being deleted was
+   young because the whole codebase was young, not because recent work is
+   being specifically rewritten. Surviving `app/` code has a median line age
+   of 109 days.
+
+   **The bare 92% figure would have been alarming and wrong**, which is why
+   the tool reports the baseline beside it and the convention in
+   `guide/README.md` says never to quote one without the other. On the
+   evidence, RRW does not exhibit the churn pattern the vibe-coding
+   literature describes. The duplication finding is real but modest, and the
+   two sibling roster slices are the one place a shared helper would pay.
+
 3. **Security posture is documented but not continuously checked.**
    `docs/security_posture.md` is thorough, and §1's inventory found no
    automated security scanning in CI. Against a reported ~45% OWASP-vulnerability
