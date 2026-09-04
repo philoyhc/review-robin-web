@@ -8,6 +8,7 @@ the standard library plus `git` on PATH.
     python3 tools/code_metrics.py              # both metrics, app/ and tests/
     python3 tools/code_metrics.py --dup-only
     python3 tools/code_metrics.py --churn-days 30
+    python3 tools/code_metrics.py --churn-only --churn-sample 200   # quick, noisy
 
 Why these two. `docs/practice-audit-2026-09-04.md` Appendix A benchmarked
 the practice against the 2026 vibe-coding evidence and found that the two
@@ -23,11 +24,23 @@ copy-paste. Read the >=10 row as the headline for production code.
 **Churn** is the share of deleted lines that were younger than
 `--churn-days` when they were deleted — i.e. how much of the work is
 rewriting recent work rather than adding to settled code. Computed by
-blaming each deleted line against the parent commit, over a sample of
-merges sampled evenly across the whole history (`--churn-sample`),
-because blaming every commit in a 4,000-commit history is not worth the
-wall-clock — and because sampling only the head would let a run of
-documentation PRs decide the number.
+blaming each deleted line against the parent commit, across **every**
+first-parent merge on `origin/main`.
+
+Walking the whole history is the point. An earlier version sampled merges
+evenly and it was the sampling, not the sample size, that was wrong:
+deletions per merge are heavy-tailed, so the figure is decided by whichever
+few large merges the sample lands on. Measured on this repo 2026-09-04, the
+ratio read 1.4x / 1.4x / 0.9x / 1.0x / 0.8x / 1.0x / 1.1x / 1.1x / 1.1x at
+sample sizes 60 / 120 / 100 / 200 / 300 / 500 / 700 / 1000 / 400 — no floor
+above which it settles. The full history (2,085 merges) gives 1.0x
+deterministically in ~76s. A metric an assessment quotes and the next
+assessment compares against has to be reproducible, and 76s once per
+snapshot is the right trade.
+
+`--churn-sample N` remains for a quick look while iterating on the tool. It
+warns, and its output must not be compared against the action thresholds in
+`guide/README.md` or against a previous snapshot.
 """
 
 from __future__ import annotations
@@ -43,6 +56,10 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 BLOCK_SIZES = (6, 10, 15, 25)
 HUNK = re.compile(r"^@@ -(\d+)(?:,\d+)? \+")
+# Sentinel for --churn-sample: walk every merge. Sampling is opt-in because
+# no sample size was found at which the ratio settles (see the module
+# docstring for the measured spread). Measured 2026-09-04.
+CHURN_SAMPLE_ALL = 0
 
 
 def _git(*args: str) -> str:
@@ -104,10 +121,10 @@ def churn(days: int, sample: int) -> None:
     all_merges = [m for m in _git(
         "log", "origin/main", "--first-parent", "--merges", "--format=%H %ct",
     ).split("\n") if m.strip()]
-    # Sample evenly across the whole history, not the most recent N: a run of
-    # documentation-only PRs at the head would otherwise dominate and report a
-    # churn figure computed from a handful of deleted lines.
-    if len(all_merges) > sample:
+    # Sampling is opt-in and evenly spread across the whole history, never the
+    # most recent N: a run of documentation-only PRs at the head would
+    # otherwise dominate and report a figure computed from a handful of lines.
+    if sample > CHURN_SAMPLE_ALL and len(all_merges) > sample:
         step = len(all_merges) / sample
         merges = [all_merges[int(i * step)] for i in range(sample)]
     else:
@@ -172,7 +189,14 @@ def churn(days: int, sample: int) -> None:
     if not total:
         print("  no Python deletions in the sampled merges")
         return
-    print(f"  sampled {len(merges)} merges spread evenly across {len(all_merges)} on origin/main")
+    if len(merges) == len(all_merges):
+        print(f"  all {len(all_merges):,} merges on origin/main")
+    else:
+        print(f"  sampled {len(merges)} merges spread evenly across "
+              f"{len(all_merges):,} on origin/main")
+        print("  WARNING: sampled. The ratio below is sample-dependent at any "
+              "size — do not compare it against a threshold or against another "
+              "snapshot. Drop --churn-sample for the reproducible figure.")
     base_total = base_young + base_old
     base_pct = base_young / base_total * 100 if base_total else 0.0
     churn_pct = young / total * 100
@@ -192,7 +216,11 @@ def main() -> int:
     parser.add_argument("--dup-only", action="store_true")
     parser.add_argument("--churn-only", action="store_true")
     parser.add_argument("--churn-days", type=int, default=14)
-    parser.add_argument("--churn-sample", type=int, default=40)
+    parser.add_argument(
+        "--churn-sample", type=int, default=CHURN_SAMPLE_ALL,
+        help="sample N merges instead of walking all of them; sample-dependent, "
+             "for iterating on this tool only",
+    )
     args = parser.parse_args()
 
     if not args.churn_only:

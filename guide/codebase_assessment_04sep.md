@@ -23,6 +23,14 @@ how the repo is *worked on* rather than what it does.
 **91 merge commits, 108 non-merge commits, 17 calendar days** (2026-08-19 →
 2026-09-04), PRs **#2005–#2095**.
 
+**Amended 2026-09-04, same day.** The churn figure in §2 was re-taken after the
+§8 move #1 fix landed (`tools/code_metrics.py` now walks the full history rather
+than a sample); §5, §6 and §8 follow it. The pinned SHA is unchanged and still
+describes the tree the numbers came from: the only merge on `main` between
+`814372a7` and the amendment (#2096, this document itself) touches **zero
+Python files**, so the re-taken churn figure is identical at both commits. All
+other numbers are as originally taken.
+
 **Counting convention changed this snapshot, deliberately.** `guide/assessment.json`
 now pins the area classification. Auto-detection had put `tools/*.html` — two
 generated dev-tooling gallery pages — into `templates`, producing a phantom
@@ -173,14 +181,15 @@ share 40 ten-line windows and are ~47% duplicated each, the one place a shared
 helper would pay. Tests at ~2.5× production is normal for table-driven
 integration tests.
 
-**Churn: 1.1×** (deleted lines younger than 14 days, against the ambient age of
-the same files at that moment; `--churn-sample 400`). 92% of deleted Python
-lines were under 14 days old, but so were 78% of *all* lines in those files —
-deletions here are essentially age-blind. Surviving `app/` code has a median
-line age of **109 days**. On this evidence the codebase does not exhibit the
-churn pattern the 2026 AI-authored-code literature describes. **The bare 92%
-would have said the opposite**, which is why the convention in `guide/README.md`
-forbids quoting it without the ratio. Caveat in §6: the ratio is sample-dependent.
+**Churn: 1.0×** (deleted lines younger than 14 days, against the ambient age of
+the same files at that moment), computed across **all 2,085 first-parent merges**
+on `main` — 71,862 deleted Python lines. 74.3% of them were under 14 days old,
+but so were 77.0% of *all* lines in those files at the moment of deletion:
+deletions here are age-blind, and marginally *older* than ambient. Surviving
+`app/` code has a median line age of **109 days**. On this evidence the codebase
+does not exhibit the churn pattern the 2026 AI-authored-code literature
+describes. **The bare 74% would have suggested the opposite**, which is why the
+convention in `guide/README.md` forbids quoting it without the ratio.
 
 ---
 
@@ -242,7 +251,7 @@ move #3, which did not ship.
   twin-file identity check. `CLAUDE.md` shrank 266 → 183 lines in the same arc,
   which is the rarer half — most instruction files only grow.
 - **The codebase does not show the AI-authored-code failure pattern.** Measured,
-  not asserted: duplication 6.5% at ≥10-line blocks, churn ratio 1.1×, median
+  not asserted: duplication 6.5% at ≥10-line blocks, churn ratio 1.0×, median
   surviving line age 109 days. §2 has the method; the numbers are reproducible
   from `tools/code_metrics.py`.
 - **Dual-dialect CI is load-bearing and green.** Every PR round-trips the whole
@@ -310,13 +319,22 @@ Each carries a written reason at the skip site.
   blanking light mode — a generated-artefact failure of exactly the kind §5
   flags as an ongoing `tooling/` cost.
 
-**One defect introduced this window and not yet fixed.**
-`tools/code_metrics.py` (#2094) computes a **sample-dependent** churn ratio:
-1.4× at `--churn-sample` 60 and 120, converging to 1.1× at 240 and 400. The
-default is 40. The action threshold written into `guide/README.md` in #2095 is
-~1.5×, which sits inside the small-sample noise band and could fire spuriously.
-The 1.1× figure quoted in §2 is the converged one (n=400) and is stated with its
-sample size. **Fix is a one-line default change plus a note; see §8 move #1.**
+**One defect introduced this window, found and fixed same-day.**
+`tools/code_metrics.py` (#2094) shipped with a **sample-dependent** churn ratio
+and a default sample of 40. Sweeping the sample size did not find a floor above
+which it settles — the ratio read 1.4× / 1.4× / 0.9× / 1.0× / 0.8× / 1.0× /
+1.1× / 1.1× / 1.1× at 60 / 120 / 100 / 200 / 300 / 500 / 700 / 1000 / 400 —
+so the first attempted fix, raising the default to a "stable floor" of 300, was
+itself wrong. **Sampling was the defect, not the sample size:** deletions per
+merge are heavy-tailed, so the figure is decided by whichever few large merges
+the sample lands on. The action threshold written into `guide/README.md` in
+#2095 is ~1.5×, which sat inside that noise band and would have fired spuriously
+on the very run meant to establish the trend.
+
+The tool now walks every merge by default — deterministic 1.0×, ~76s, which is
+the right cost for a number quoted once per snapshot. `--churn-sample N` remains
+for iterating on the tool and warns that its output must not be compared against
+a threshold or another snapshot. §2's figure is the deterministic one.
 
 ---
 
@@ -359,26 +377,27 @@ actually reach its participants.
 
 **Recommended next moves**
 
-1. **Fix the churn-metric default** (`tools/code_metrics.py`, one line). It is
-   first because it is minutes of work and because a metric that can read 1.4×
-   on noise, against a threshold of 1.5×, will produce a false alarm in the next
-   assessment — the run that is meant to establish the trend. Raise the default
-   sample to ~300 and record the convergence in the docstring.
-2. **Start Segment 14B email dispatch.** Third snapshot as the top
+1. **Start Segment 14B email dispatch.** Third snapshot as the top
    recommendation. Everything else on the v1 list is polish or blocked on an
    institutional dependency; this is blocked on nothing but a decision. The
    outbox, the SMTP backend and the templates already exist — what is missing is
    the caller.
-3. **Write `spec/permissions.md` and `spec/email_template_editor.md`.** Cheap,
-   and #2 makes the second one load-bearing rather than tidy. The new
+2. **Write `spec/permissions.md` and `spec/email_template_editor.md`.** Cheap,
+   and #1 makes the second one load-bearing rather than tidy. The new
    documentation gate verifies agreement but cannot detect *absence*, so these
    two stay invisible to automation until written.
 
+**Only two this time, deliberately.** The third slot went to the churn-metric
+fix, which shipped the same day (§6). Nothing else in the body clears the
+bar: the duplication figure is under the threshold `guide/README.md` sets, and
+acting on an under-threshold metric is the make-work that convention exists to
+prevent.
+
 **Settling 19aug's proposals.** Move #1 (start 14B email) **did not ship** —
-carried forward as #2 again, now for the third consecutive snapshot. Move #2
+carried forward as #1 again, now for the third consecutive snapshot. Move #2
 (archive Segment 18S) **shipped** — `guide/archive/segment_18S_security.md`.
 Move #3 (close the Segment 19 spec coverage gap) **did not ship** — carried
-forward as #3. Its §9 watchlist held: `_instruments.py` unchanged at 1,247,
+forward as #2. Its §9 watchlist held: `_instruments.py` unchanged at 1,247,
 `session_lifecycle.py` unchanged at 1,056, no split queued.
 
 ---

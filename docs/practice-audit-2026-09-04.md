@@ -657,15 +657,24 @@ Three qualifications, in descending confidence:
    (`_setup_reviewers.py` and `_setup_reviewees.py` share 40 ten-line
    windows, each ~47% duplicated). Tests run roughly 2.5× that rate, which
    is normal for table-driven integration tests and not obviously worth
-   fixing. **Churn**: across 120 merges sampled evenly over 2,082, 92.1% of
-   deleted Python lines were younger than 14 days — but the same share of
-   *all* lines in those files at that moment was 82.0%, a **ratio of 1.1×**.
-   Deletions here are essentially age-blind: the code being deleted was
-   young because the whole codebase was young, not because recent work is
-   being specifically rewritten. Surviving `app/` code has a median line age
-   of 109 days.
+   fixing. **Churn**: across all 2,085 first-parent merges, 74.3% of the
+   71,862 deleted Python lines were younger than 14 days — but the same
+   share of *all* lines in those files at that moment was 77.0%, a **ratio
+   of 1.0×**. Deletions here are age-blind, marginally older than ambient:
+   the code being deleted was young because the whole codebase was young,
+   not because recent work is being specifically rewritten. Surviving `app/`
+   code has a median line age of 109 days.
 
-   **The bare 92% figure would have been alarming and wrong**, which is why
+   > **Corrected 2026-09-04, same day.** This paragraph originally read
+   > "92.1% … 82.0% … ratio of 1.1×", from a 120-merge sample. Sampling
+   > turned out to be the defect: deletions per merge are heavy-tailed and
+   > the ratio never settles at any sample size (1.4× / 1.4× / 0.9× / 1.0× /
+   > 0.8× / 1.0× / 1.1× / 1.1× / 1.1× at 60 / 120 / 100 / 200 / 300 / 500 /
+   > 700 / 1000 / 400). `tools/code_metrics.py` now walks the full history by
+   > default, which is deterministic. The conclusion is unchanged; only the
+   > figures are. See `guide/codebase_assessment_04sep.md` §6.
+
+   **The bare 74% figure would have been alarming and wrong**, which is why
    the tool reports the baseline beside it and the convention in
    `guide/README.md` says never to quote one without the other. On the
    evidence, RRW does not exhibit the churn pattern the vibe-coding
