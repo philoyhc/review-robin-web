@@ -482,3 +482,222 @@ the highest-frequency defect class is one no reviewer could catch either.
 - **`tests/unit/test_doc_conventions.py` does not exist in the repository.**
   It was written and run against a scratch copy; the output quoted in R1 is
   real, but nothing from this audit has been committed beyond this document.
+
+---
+
+# Appendix A — Benchmark against current practice (2026-09-04)
+
+**What this is.** The audit above judged the practice against itself: what is
+enforced here, what recurs here. This appendix judges it against the outside
+— specifically **loop engineering**, the discipline named in June 2026, and
+the accumulated 2026 evidence on **vibe coding** and the **spec-driven
+development** movement that defines itself against it.
+
+**Evidentiary standard — weaker than the audit body, deliberately flagged.**
+Every claim in §§1–6 was demonstrated by running something. Nothing in this
+appendix can be. It rests on secondary sources: practitioner essays, vendor
+guides and trade reporting. Several primary sources (Osmani's own Substack,
+IBM's explainer) were unreachable from this container's network egress, so
+the loop-engineering summary below is assembled from secondary accounts of
+them. **Treat the external figures as reported, not verified** — see
+"Limitations of this appendix" at the end. Claims about RRW itself carry the
+audit's original standard, and are cross-referenced to the section that
+established them.
+
+---
+
+## A.1 The benchmark: loop engineering
+
+The term crystallised in June 2026 — Peter Steinberger arguing the skill had
+moved from prompting agents to designing their loops, Addy Osmani naming and
+structuring the practice the next day. It sits, in Osmani's framing, "one
+floor above the harness": you stop hand-writing prompts and start designing
+the loop the agent runs inside — what it does between tool calls, when it
+checks its own work, how it decides it is finished.
+
+The practice reduces to four pillars, ordered by blast radius:
+
+| # | Pillar | Prevents |
+|---|---|---|
+| 1 | **Idempotent tools** | a retry corrupting state |
+| 2 | **Stop conditions** | a bug looping forever |
+| 3 | **Maker–checker split** (a real critic) | confidently wrong output |
+| 4 | **Context hygiene** | slow quality rot |
+
+Two claims from that literature matter most here. First: **self-critique does
+not count** — models are poor judges of their own work, so the grader must be
+split from the generator. Second, the stop condition is not "the agent
+believes it is finished" but "**the verifier passes**". The stated threshold
+for bothering at all: *if the work has a machine-checkable definition of done
+and runs long enough to matter, stop optimising the model and start building
+the cage.*
+
+---
+
+## A.2 How RRW scores, pillar by pillar
+
+| Pillar | RRW | Verdict |
+|---|---|---|
+| Idempotent tools | Largely **not applicable** — no autonomous loop mutates state unattended. The one place it bites is `alembic upgrade head` on every push to `main`, which is idempotent by design. | N/A, honestly |
+| Stop conditions | **Not applicable for the same reason.** Nothing here runs unbounded. | N/A, honestly |
+| Maker–checker split | **Just closed** (§4 R2, shipped in #2087) after being the audit's live gap. | Level, newly |
+| Context hygiene | `CLAUDE.md` at 266 lines against a ~100-line guideline, with one rule stated 3× and another 4× (§3). | **Behind** |
+| Machine-checkable done | `pytest` (2,699), `ruff`, dual-dialect CI, Alembic round-trip, plus the drift gate from R1. | **Ahead** |
+
+**The honest framing is that RRW is not running the kind of loop the
+discipline is about.** Its loop is human-verified: an agent proposes, CI
+checks what it can, and a person merges. Pillars 1 and 2 exist to stop an
+*unattended* loop destroying something; RRW's loop stops every few minutes at
+a human. Scoring those two as gaps would be manufacturing findings, which
+this audit's own terms forbid.
+
+That framing also explains the §1 result. Loop engineering says the stop
+condition should be "the verifier passes, not the agent believes it is
+finished". RRW's stop condition is a person's judgement of what the diff
+touches — and §1 measured that judgement being applied correctly across 244
+merges. What #2088 did was write that stop condition down. In loop-engineering
+terms, that is exactly the right move for a human-verified loop: make the
+condition explicit and inspectable rather than mechanising it prematurely.
+
+**The one place the benchmark bites hard is pillar 4.** Context hygiene is
+last by blast radius but it is not optional, and it is the pillar RRW
+measurably fails: the instruction file is 2.6× the guideline, carries
+duplicated rules, and until #2087 carried a claim about its own CI that had
+been false for months. The literature's phrasing — *loops die of context bloat
+before they die of anything else* — describes a real exposure here, since that
+file is loaded into every agent session in the repository.
+
+---
+
+## A.3 The benchmark: vibe coding, and what replaced it
+
+Karpathy's term (early 2025) for loosely prompting a model and shipping what
+comes back. The 2026 reporting on it is uniformly bad, and worth quoting
+because RRW is an AI-authored codebase and therefore squarely in the
+population being measured:
+
+- code churn **up 41%**; duplication **up 4×**; refactoring down from 25% of
+  changed lines (2021) to **under 10%** (2024);
+- **95%** of developers report feeling productive while producing measurably
+  lower-quality code; in one controlled study, sixteen experienced developers
+  in million-line codebases were **19% slower** with AI tools while reporting
+  feeling **20% faster**;
+- roughly **45%** of AI-generated samples introduced a common OWASP
+  vulnerability; March 2026 alone saw **35 CVEs** attributed to AI-generated
+  code;
+- the qualitative failure: debugging code *nobody fully wrote or owns*.
+
+The counter-movement that went mainstream in 2026 is **spec-driven
+development** — specifications as the source of truth, code as a generated or
+verified secondary artifact, with the implementing role separated from the
+verifying one. Its central claim is worth reading twice against §3 of this
+audit: **SDD catches architectural violations and API contract drift that unit
+tests structurally cannot.**
+
+That is, almost word for word, the conclusion Investigation C reached from
+RRW's own defect history — arrived at independently, from 30 fix commits,
+without knowing the movement existed.
+
+---
+
+## A.4 How RRW scores against the vibe-coding failure modes
+
+**RRW is not a vibe-coded codebase, and the evidence for that is specific.**
+`spec/` predates the SDD movement's mainstreaming and functions exactly as SDD
+prescribes: a `spec-writer` subagent exists to keep specs matched to code;
+route/service/model layering is stated and enforced by review; changes land as
+small reviewable slices with a stated no-bundling rule; 2,699 tests run on
+every PR against two dialects. On the "code nobody owns" failure mode, the
+mitigation is unusually strong — commit messages here routinely carry the
+*reasoning*, not just the change, and §2's frequency evidence was reconstructable
+three months after the fact precisely because of that.
+
+Three qualifications, in descending confidence:
+
+1. **The browser-only blind spot is real and unmitigated by any of this.**
+   §4 R2 measured ~50% of recent fix commits as defects no test and no diff
+   reader could catch — caption selectability, a 4px misalignment, a keypress
+   toggling a card. The project has itself filed the gap (`5eebec53`, the
+   template-JS runtime-test gap). Against the SDD claim that specs catch what
+   unit tests structurally cannot, this is the class **neither** catches: the
+   verifier is a human looking at the Azure dev slot. It is the one part of
+   RRW's loop with no machine-checkable definition of done, and it is where
+   the defects actually are.
+
+2. **Duplication and churn are not measured here.** The vibe-coding figures
+   above are exactly the metrics RRW does not track. `guide/codebase_assessment_*.md`
+   tracks LOC and file sizes, not churn or duplication ratio. Whether RRW's
+   4× duplication figure is 1× or 4× is simply unknown — and unlike most
+   claims in this document, that one could be measured cheaply.
+
+3. **Security posture is documented but not continuously checked.**
+   `docs/security_posture.md` is thorough, and §1's inventory found no
+   automated security scanning in CI. Against a reported ~45% OWASP-vulnerability
+   rate in AI-generated code, "documented" and "checked on every PR" are
+   different things. This is a candidate finding for a future audit, not a
+   recommendation here — the audit's three-recommendation budget was spent,
+   and two of the three were withdrawn or unspent for good reasons.
+
+---
+
+## A.5 Verdict
+
+Measured against the practice as it stands in September 2026, RRW is **ahead
+on the thing that is hardest to retrofit and behind on the thing that is
+cheapest to fix.**
+
+Ahead: it was doing spec-driven development before the term went mainstream,
+and it has a machine-checkable definition of done that most AI-authored
+codebases do not. The maker–checker split it lacked is now closed. Its
+human-verified loop is a deliberate and defensible shape, not an immature
+version of an autonomous one.
+
+Behind: context hygiene — a 266-line instruction file with duplicated rules,
+loaded into every session. And the browser-only defect class, which is both
+the largest measured category of real defects here and the one no layer of
+the current practice catches.
+
+Level, and worth stating plainly: nothing in the current discipline suggests
+RRW should be running autonomous loops. The threshold — *a machine-checkable
+definition of done, and long enough to matter* — is not met by a solo project
+whose slices are sized to be reviewed in one sitting.
+
+---
+
+## Limitations of this appendix
+
+- **No claim here was verified by running anything.** That is the difference
+  between this appendix and §§1–6, and it is the reason it is an appendix.
+- **The external figures are reported, not checked.** The churn, duplication,
+  OWASP and CVE numbers come from secondary trade reporting; the "19% slower"
+  study is cited second-hand. Primary sources for the loop-engineering
+  material (Osmani's Substack, IBM's explainer) were unreachable from this
+  container, so that section is assembled from secondary accounts. Any of
+  these could be wrong or quoted out of context, and none should be repeated
+  as fact without checking the primary source.
+- **"Loop engineering" is three months old at the time of writing.** Its
+  vocabulary may not survive, and benchmarking against a term that new risks
+  measuring a fashion rather than a practice. The four pillars are used here
+  because each maps to a failure mode with an independent basis, not because
+  the label is settled.
+- **The comparison population is not RRW's population.** The vibe-coding
+  figures describe teams shipping loosely-prompted code, often at commercial
+  scale. RRW is one author, one reviewer-of-record, and a spec folder. Where
+  the figures are used above, they are used to name a *risk class*, not to
+  assert RRW sits at the reported rate.
+- **A.4's claim that RRW "is not a vibe-coded codebase" is a judgement**, not
+  a measurement. It is supported by the artefacts named, and it is exactly the
+  kind of claim a second reader should be sceptical of when the person making
+  it has been working inside the repository all day.
+
+**Sources.** Loop engineering: [ADTmag](https://adtmag.com/articles/2026/07/01/loop-engineering-emerges-as-developers-put-ai-coding-agents-on-repeat.aspx),
+[MindStudio](https://www.mindstudio.ai/blog/what-is-loop-engineering-ai-coding-agents),
+[explainx.ai](https://explainx.ai/blog/what-is-loop-engineering-ai-agents-2026),
+[Tosea](https://tosea.ai/blog/loop-engineering-ai-agents-complete-guide-2026),
+[heyuan110](https://www.heyuan110.com/posts/ai/2026-07-05-loop-engineering/).
+Vibe coding: [The New Stack](https://thenewstack.io/vibe-coding-could-cause-catastrophic-explosions-in-2026/),
+[Keyhole Software](https://keyholesoftware.com/vibe-coding-trends-2026/),
+[GIANTY](https://www.gianty.com/vibe-coding-what-works-and-what-breaks-for-dev/).
+Spec-driven development: [Augment Code](https://www.augmentcode.com/guides/what-is-spec-driven-development),
+[thebcms](https://www.thebcms.com/blog/spec-driven-development/),
+[MarkTechPost](https://www.marktechpost.com/2026/05/08/9-best-ai-tools-for-spec-driven-development-in-2026-kiro-bmad-gsd-and-more-compare/).
