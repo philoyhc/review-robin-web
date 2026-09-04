@@ -174,8 +174,6 @@ TARGETS = [
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
     (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
 ]
-TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
-            for i in range(1, 7)]
 
 targets_data = [{"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} for f, p, t in fac]}
                 for s, el, fac in TARGETS]

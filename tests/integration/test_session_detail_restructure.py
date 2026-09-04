@@ -1137,8 +1137,11 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     from datetime import datetime, timezone
 
     review_session = _make_session(client, db, code="cfg-offset")
+    # Far-future Start so the resolved send datetime stays ahead of "now"
+    # (a past Start flips the config card's display and drops the resolved
+    # pill — the assertion below). Matches the 2099 dates used elsewhere here.
     review_session.scheduled_activate_at = datetime(
-        2026, 8, 30, 0, 0, tzinfo=timezone.utc
+        2099, 8, 30, 0, 0, tzinfo=timezone.utc
     )
     review_session.invite_offsets = ["-P1D"]
     db.commit()
