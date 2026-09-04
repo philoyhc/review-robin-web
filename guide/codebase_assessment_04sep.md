@@ -18,18 +18,26 @@ how the repo is *worked on* rather than what it does.
   A three-part designer in `tools/`, app-agnostic.
 - **Development-practice audit + follow-through** (PRs #2085 → #2095,
   2026-09-04). `docs/practice-audit-2026-09-04.md` and everything downstream.
+  The arc continued past this window's cut: #2096 is this document and #2097
+  the churn-metric fix in §6. Both are outside the pinned window and outside
+  every number below.
 
 **Numbers taken at** `814372a7` on `main`; window `88b93c8..814372a7` —
 **91 merge commits, 108 non-merge commits, 17 calendar days** (2026-08-19 →
 2026-09-04), PRs **#2005–#2095**.
 
 **Amended 2026-09-04, same day.** The churn figure in §2 was re-taken after the
-§8 move #1 fix landed (`tools/code_metrics.py` now walks the full history rather
-than a sample); §5, §6 and §8 follow it. The pinned SHA is unchanged and still
-describes the tree the numbers came from: the only merge on `main` between
-`814372a7` and the amendment (#2096, this document itself) touches **zero
-Python files**, so the re-taken churn figure is identical at both commits. All
-other numbers are as originally taken.
+§8 move #1 fix landed in #2097 (`tools/code_metrics.py` now walks the full
+history rather than a sample); §5, §6 and §8 follow it. **The pinned SHA is
+unchanged and the re-taken figure does not depend on it:** re-running the tool
+on `main` two merges past the pin — 2,087 first-parent merges rather than
+2,085, including #2097's own deletions — returns 74.3% / 77.0% / **1.0×**,
+identical to one decimal place. That is a stronger guarantee than the pin
+itself, so the coupling rule is satisfied by measurement rather than by
+argument. Every other number in this document is as originally taken at
+`814372a7` and was re-checked unchanged at the amendment: the top-ten
+production files, the package shape, and the §9 watchlist all still read as
+tabulated.
 
 **Counting convention changed this snapshot, deliberately.** `guide/assessment.json`
 now pins the area classification. Auto-detection had put `tools/*.html` — two
@@ -319,7 +327,7 @@ Each carries a written reason at the skip site.
   blanking light mode — a generated-artefact failure of exactly the kind §5
   flags as an ongoing `tooling/` cost.
 
-**One defect introduced this window, found and fixed same-day.**
+**One defect introduced this window, found and fixed same-day (#2097).**
 `tools/code_metrics.py` (#2094) shipped with a **sample-dependent** churn ratio
 and a default sample of 40. Sweeping the sample size did not find a floor above
 which it settles — the ratio read 1.4× / 1.4× / 0.9× / 1.0× / 0.8× / 1.0× /
@@ -331,8 +339,8 @@ the sample lands on. The action threshold written into `guide/README.md` in
 #2095 is ~1.5×, which sat inside that noise band and would have fired spuriously
 on the very run meant to establish the trend.
 
-The tool now walks every merge by default — deterministic 1.0×, ~76s, which is
-the right cost for a number quoted once per snapshot. `--churn-sample N` remains
+The tool now walks every merge by default (#2097) — deterministic 1.0×, ~76s,
+which is the right cost for a number quoted once per snapshot. `--churn-sample N` remains
 for iterating on the tool and warns that its output must not be compared against
 a threshold or another snapshot. §2's figure is the deterministic one.
 
@@ -388,7 +396,7 @@ actually reach its participants.
    two stay invisible to automation until written.
 
 **Only two this time, deliberately.** The third slot went to the churn-metric
-fix, which shipped the same day (§6). Nothing else in the body clears the
+fix, which shipped the same day (#2097; §6). Nothing else in the body clears the
 bar: the duplication figure is under the threshold `guide/README.md` sets, and
 acting on an under-threshold metric is the make-work that convention exists to
 prevent.
