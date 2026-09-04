@@ -1049,6 +1049,29 @@ drift is caught in CI.
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the
   Easy-Auth-side sign-in record is sufficient.
+- **Automated security scanning in CI.** Nothing scans for
+  vulnerabilities on any PR — no SAST, no dependency-vulnerability
+  check (`docs/practice-audit-2026-09-04.md` §1 has the full
+  check inventory). Raised in that audit's Appendix A.4 against
+  the 2026 reporting that ~45% of AI-generated code samples carry
+  a common OWASP issue, and deliberately logged there as a
+  *candidate for a future audit, not a recommendation*: the audit
+  found no evidence of that defect class in this codebase, and its
+  founding brief excluded anything requiring new infrastructure to
+  install and maintain. Deferred 2026-09-04 on that basis.
+  **If taken up, scope it narrowly** — a dependency-vulnerability
+  check over `pyproject.toml` (pip-audit, or GitHub's own
+  Dependabot alerts, which need no workflow at all) rather than a
+  code scanner. A noisy check that gets ignored is the failure
+  mode this practice has now rejected twice (the British-spelling
+  checker in the audit's §4, the `CLAUDE.md` line-count budget in
+  #2092). **What would move it on:** a first real security finding
+  in review, a dependency CVE reaching the pilot, or the move from
+  pilot to a wider deployment — at which point "documented" and
+  "checked every PR" stop being the same thing.
+  `docs/security_posture.md` carries the authorization model, the
+  permission / destructive-action audit and the CSRF posture; it is
+  thorough, and it is not continuously verified.
 
 ---
 
