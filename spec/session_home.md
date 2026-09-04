@@ -17,7 +17,7 @@ transitions.
 | `draft` | Draft | live |
 | `validated` | Validated | live |
 | `ready` | **Activated** | live |
-| `expired` | Expired | live (Workflow-card "Close session": `ready → expired`) |
+| `expired` | Closed | live (Workflow-card "Close session": `ready → expired`) |
 | `archived` | Archived | live (Workflow "Archive" / lobby "Purge and archive"; reversible via unarchive → draft) |
 
 The enum/display divergence on `ready` → "Activated" exists because

@@ -40,7 +40,7 @@ draft                    validated                    ready
 | `draft` | Draft | Setup is open; reviewer surface read-only. |
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
-| `expired` | Expired | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
+| `expired` | Closed | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
 | `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session` (Segment 18A Part 3). Since the 18R archive harmonization `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired) — the Workflow card's per-session Archive button can fire from any state, while the lobby bulk-archive still pre-filters to `draft`. `unarchive_session` restores `archived → draft`. |
 
 The internal enum is `SessionStatus` in

@@ -114,7 +114,7 @@ back to the lobby; no session context yet — this page creates one). Layout:
 - **Upload + actions card (½, top-right).** A `multiple` file input taking
   the loose CSVs and/or the two ZIP bundles (Setup + Responses, unpacked
   server-side — [§4](#4-required-file-set)), plus two buttons:
-  - **Validate** — Primary Outline; always available. Runs the pre-flight
+  - **Validate** — Secondary; always available. Runs the pre-flight
     ([§3.3](#33-pre-flight-validation-mandatory)).
   - **Rehydrate** — Primary; **disabled until the current upload has passed
     validation**. Commits the validated set.
@@ -181,8 +181,8 @@ database), with no Storage Account. (A local temp-file or a re-upload-on-commit
 design would have avoided the migration but not survived scale-out; the
 `bytea` stash was chosen for that reason.)
 
-**Button styles.** Validate = Primary Outline; Rehydrate = Primary (per
-`spec/domain_assumptions.md`). Rehydrate is additive — it creates a new
+**Button styles.** Validate = Secondary; Rehydrate = Primary (per
+`spec/ui_elements.md` §6). Rehydrate is additive — it creates a new
 session and never mutates or deletes an existing one.
 
 ## 4. Required file set

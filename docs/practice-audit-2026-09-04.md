@@ -4,6 +4,8 @@
 (PR #2084 merged 2026-09-04 07:33 UTC) · **History examined:** 4,460 commits,
 2026-04-27 → 2026-09-04.
 
+<!-- retired-term-ok: file -->
+
 **Question asked.** Two gaps were suspected in the development practice: that
 project conventions are held in place by the developer noticing violations
 rather than by anything that fails, and that nothing sits between code being
