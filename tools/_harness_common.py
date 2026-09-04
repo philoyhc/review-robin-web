@@ -239,7 +239,8 @@ def component_sections():
         ("nav", """    <section class="ph-section">
       <h2 class="ph-h">Session navigation, back-link, page header &amp; chips</h2>
       <div class="session-nav-grid">
-        <a class="session-home-anchor" href="#" title="Spring Review"><span class="home-anchor-text">Session Home</span></a>
+        <a class="session-home-anchor active" href="#" style="grid-row: 1;" title="Session Home (selected)"><span class="home-anchor-text">Session Home</span></a>
+        <a class="session-home-anchor" href="#" style="grid-row: 2;" title="Session Home"><span class="home-anchor-text">Session Home</span></a>
         <div class="row-label setup-row row-setup active-group">Setup</div>
         <div class="tab-strip tab-strip-setup row-setup">
           <a class="nav-tab active" href="#">Reviewers</a>

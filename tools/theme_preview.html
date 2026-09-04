@@ -207,6 +207,7 @@
         --nav-marker-ops: var(--green-soft);
         --nav-tab-active-fg: var(--blue-deeper);
         --nav-tab-active-bg: var(--white);
+        --nav-strip-setup-bg: var(--blue-wash);
         --nav-strip-ops-bg: var(--green-wash);
         --nav-home-bg: var(--blue-wash);
         --nav-home-bg-hover: var(--blue-mist);
@@ -332,6 +333,7 @@
         --nav-marker-ops: var(--green-abyss);
         --nav-tab-active-fg: var(--blue-soft);
         --nav-tab-active-bg: var(--ink-deep);
+        --nav-strip-setup-bg: var(--tint-sky-dark);
         --nav-strip-ops-bg: var(--green-abyss-faint);
         --nav-home-bg: var(--blue-abyss-soft);
         --nav-home-bg-hover: var(--blue-abyss-faint);
@@ -2675,8 +2677,8 @@
       body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
         border-left-color: var(--text-body);
       }
-      body.ui-v2 .tab-strip-setup { background: rgba(37, 99, 235, 0.05); }
-      body.ui-v2 .tab-strip-ops   { background: rgba(5, 150, 105, 0.05); }
+      body.ui-v2 .tab-strip-setup { background: var(--nav-strip-setup-bg); }
+      body.ui-v2 .tab-strip-ops   { background: var(--nav-strip-ops-bg); }
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
@@ -3270,7 +3272,7 @@
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Read-only preview of base.html's real two-tier palette
-      (79 primitives · 103 semantic).
+      (79 primitives · 104 semantic).
       Design tool only — not wired into the app. To edit, use theme_customizer.</span>
   </div>
 
@@ -3295,7 +3297,8 @@
     <section class="ph-section">
       <h2 class="ph-h">Session navigation, back-link, page header &amp; chips</h2>
       <div class="session-nav-grid">
-        <a class="session-home-anchor" href="#" title="Spring Review"><span class="home-anchor-text">Session Home</span></a>
+        <a class="session-home-anchor active" href="#" style="grid-row: 1;" title="Session Home (selected)"><span class="home-anchor-text">Session Home</span></a>
+        <a class="session-home-anchor" href="#" style="grid-row: 2;" title="Session Home"><span class="home-anchor-text">Session Home</span></a>
         <div class="row-label setup-row row-setup active-group">Setup</div>
         <div class="tab-strip tab-strip-setup row-setup">
           <a class="nav-tab active" href="#">Reviewers</a>
@@ -3634,13 +3637,14 @@
         <tr><td class="pv-name">lifecycle expired fg<code>--lifecycle-expired-fg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-expired-fg);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
         <tr><td class="pv-name">lifecycle archived bg<code>--lifecycle-archived-bg</code></td><td><span class="pv-dot" style="background: var(--lifecycle-archived-bg);"></span><code>--gray-wash</code> <span class="pv-hex">#f5f5f7</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Navigation [A] · 8</summary>
+      <details class="pv-cluster" open><summary>Navigation [A] · 9</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">nav marker setup<code>--nav-marker-setup</code></td><td><span class="pv-dot" style="background: var(--nav-marker-setup);"></span><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td><td><code>--blue-bright</code> <span class="pv-hex">#3b82f6</span></td></tr>
         <tr><td class="pv-name">nav marker ops<code>--nav-marker-ops</code></td><td><span class="pv-dot" style="background: var(--nav-marker-ops);"></span><code>--green-soft</code> <span class="pv-hex">#a7f3d0</span></td><td><code>--green-abyss</code> <span class="pv-hex">#065f46</span></td></tr>
         <tr><td class="pv-name">nav tab active fg<code>--nav-tab-active-fg</code></td><td><span class="pv-dot" style="background: var(--nav-tab-active-fg);"></span><code>--blue-deeper</code> <span class="pv-hex">#1e40af</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
         <tr><td class="pv-name">nav tab active bg<code>--nav-tab-active-bg</code></td><td><span class="pv-dot" style="background: var(--nav-tab-active-bg);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink-deep</code> <span class="pv-hex">#1a212e</span></td></tr>
+        <tr><td class="pv-name">nav strip setup bg<code>--nav-strip-setup-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-setup-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--tint-sky-dark</code> <span class="pv-hex">#0e1a24</span></td></tr>
         <tr><td class="pv-name">nav strip ops bg<code>--nav-strip-ops-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-ops-bg);"></span><code>--green-wash</code> <span class="pv-hex">#f0fdf4</span></td><td><code>--green-abyss-faint</code> <span class="pv-hex">#0c2419</span></td></tr>
         <tr><td class="pv-name">nav home bg<code>--nav-home-bg</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
         <tr><td class="pv-name">nav home bg hover<code>--nav-home-bg-hover</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg-hover);"></span><code>--blue-mist</code> <span class="pv-hex">#fafcff</span></td><td><code>--blue-abyss-faint</code> <span class="pv-hex">#0e1c2c</span></td></tr>
