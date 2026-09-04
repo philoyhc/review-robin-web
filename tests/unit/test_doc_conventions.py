@@ -1,4 +1,4 @@
-"""Guard the two documentation conventions that only prose enforces.
+"""Guard the documentation conventions that only prose enforces.
 
 Same idea as the ``EVENT_SCHEMAS`` strict-mode gate in
 ``app/services/audit.py``: the rule lives in code, so drift fails a test
@@ -97,4 +97,19 @@ def test_retired_button_terminology_is_absent_from_live_docs() -> None:
         f"prescription, mark that line with {TERM_ESCAPE!r} — or, for a document "
         f"that is a historical record throughout, put {FILE_ESCAPE!r} anywhere "
         f"in it. Otherwise use the canonical role name."
+    )
+
+
+def test_agent_instruction_twins_are_identical() -> None:
+    """CLAUDE.md and AGENTS.md are byte-identical by convention.
+
+    They carried a note saying no automation enforced it; this is that
+    automation. Both files are loaded into every agent session, so a
+    divergence means two agents working from different rules.
+    """
+    claude = (REPO / "CLAUDE.md").read_bytes()
+    agents = (REPO / "AGENTS.md").read_bytes()
+    assert claude == agents, (
+        "CLAUDE.md and AGENTS.md have diverged — copy one over the other "
+        "(`cp CLAUDE.md AGENTS.md`) before committing."
     )

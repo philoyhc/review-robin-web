@@ -83,14 +83,18 @@ be negated into — git will not descend into an excluded directory, so the
 ### 3. One agent-instruction file, and keep it an index (ongoing)
 
 - **One file, not twins.** If your tooling wants several names
-  (`CLAUDE.md`, `AGENTS.md`, …), symlink them. RRW keeps two byte-identical
-  files in sync by hand, with a comment in both saying no automation enforces
-  it — a second unenforced convention created to serve the first.
+  (`CLAUDE.md`, `AGENTS.md`, …), symlink them. RRW kept two byte-identical
+  files in sync by hand, with a comment in both saying no automation
+  enforced it — a second unenforced convention created to serve the first.
+  It is now enforced by a test, which is the cheaper retrofit when a
+  symlink is awkward; one file from the start is cheaper still.
 - **Aim for an index, not an encyclopaedia.** Current practitioner guidance
   is roughly 100 lines pointing at deeper documents, on the grounds that
-  instruction compliance degrades as the file grows. RRW's sits at 266 lines,
-  of which about 12 bullets are genuinely normative; the rest is orientation
-  that would serve better as links.
+  instruction compliance degrades as the file grows. RRW's reached 266 lines,
+  of which about 12 bullets were genuinely normative; the rest was
+  orientation that served better as links, and was cut back to ~180 by
+  deleting a section whose claims were all restated elsewhere, replacing a
+  50-module inventory with a pointer, and capping index entries at one line.
 - **Watch for the same rule stated three times.** In RRW one convention
   appeared 3×, another 4×, and two adjacent sections restated the same three
   instructions back to back — including one claim ("lint is not yet in CI")
