@@ -51,10 +51,10 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--blue-pale` | `#dbeafe` |
 | `--blue-wash` | `#eff6ff` |
 | `--blue-mist` | `#fafcff` |
-| `--sky-deep` | `#075985` |
-| `--sky-abyss` | `#0c2f42` |
-| `--sky-soft` | `#7dd3fc` |
-| `--sky-pale` | `#e0f2fe` |
+| `--blue-cyan-deep` | `#075985` |
+| `--blue-cyan-abyss` | `#0c2f42` |
+| `--blue-cyan-soft` | `#7dd3fc` |
+| `--blue-cyan-pale` | `#e0f2fe` |
 | `--green-strong` | `#059669` |
 | `--green-abyss` | `#065f46` |
 | `--green-abyss-faint` | `#0c2419` |
@@ -82,10 +82,10 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--red-bright` | `#f87171` |
 | `--red-soft` | `#fca5a5` |
 | `--red-pale` | `#fee2e2` |
-| `--danger-abyss-border` | `#7f2a2a` |
-| `--danger-deep` | `#8a1c14` |
-| `--danger-soft` | `#f2b8b5` |
-| `--danger-pale` | `#fdecea` |
+| `--red-warm-border` | `#7f2a2a` |
+| `--red-warm-deep` | `#8a1c14` |
+| `--red-warm-soft` | `#f2b8b5` |
+| `--red-warm-pale` | `#fdecea` |
 | `--violet-abyss` | `#2e2250` |
 | `--violet-strong` | `#5b21b6` |
 | `--violet-soft` | `#c4b5fd` |
@@ -191,9 +191,9 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | `--status-error-border` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--status-error-accent` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--toast-error-bg` | `--red-firm` | `--red-bright` | `#b91c1c` | `#f87171` |
-| `--status-error-soft-bg` | `--danger-pale` | `--red-abyss` | `#fdecea` | `#3d1a1a` |
-| `--status-error-soft-border` | `--danger-soft` | `--danger-abyss-border` | `#f2b8b5` | `#7f2a2a` |
-| `--status-error-soft-fg` | `--danger-deep` | `--red-soft` | `#8a1c14` | `#fca5a5` |
+| `--status-error-soft-bg` | `--red-warm-pale` | `--red-abyss` | `#fdecea` | `#3d1a1a` |
+| `--status-error-soft-border` | `--red-warm-soft` | `--red-warm-border` | `#f2b8b5` | `#7f2a2a` |
+| `--status-error-soft-fg` | `--red-warm-deep` | `--red-soft` | `#8a1c14` | `#fca5a5` |
 | `--status-super-bg` | `--violet-pale` | `--violet-abyss` | `#ede9fe` | `#2e2250` |
 | `--status-super-fg` | `--violet-strong` | `--violet-soft` | `#5b21b6` | `#c4b5fd` |
 
@@ -240,8 +240,8 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 
 | Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
-| `--config-value-bg` | `--sky-pale` | `--sky-abyss` | `#e0f2fe` | `#0c2f42` |
-| `--config-value-fg` | `--sky-deep` | `--sky-soft` | `#075985` | `#7dd3fc` |
+| `--config-value-bg` | `--blue-cyan-pale` | `--blue-cyan-abyss` | `#e0f2fe` | `#0c2f42` |
+| `--config-value-fg` | `--blue-cyan-deep` | `--blue-cyan-soft` | `#075985` | `#7dd3fc` |
 | `--config-value-resolved-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
 
 ### Card accents [A]

@@ -106,8 +106,8 @@ def parse_clusters(base_css):
 
 
 # Coarse hue family for a hex — groups primitives for seed controls (data-driven,
-# no hard-coded token names). Returns one of: neutral, red, amber, green, sky,
-# blue, violet.
+# no hard-coded token names). Returns one of: neutral, red, amber, green,
+# blue, violet. (Cyan/sky hues fold into blue.)
 def hue_family(hex_value):
     h = hex_value.lstrip("#")
     if len(h) == 3:
@@ -126,10 +126,8 @@ def hue_family(hex_value):
         return "amber" if g < 200 else "green"
     if hu < 165:
         return "green"
-    if hu < 200:
-        return "sky"
     if hu < 255:
-        return "blue"
+        return "blue"        # includes cyan/sky hues (folded into blue)
     return "violet"
 
 
@@ -339,7 +337,7 @@ def component_sections():
       <h2 class="ph-h">Banners</h2>
       <div class="warning-banner">Warning banner — an amber advisory.</div>
       <div class="danger-banner">Danger banner — a hard red alert.</div>
-      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--danger-*</code> tokens).</p>
+      <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--red-warm-*</code> tokens).</p>
     </section>"""),
         ("table", """    <section class="ph-section">
       <h2 class="ph-h">Table &amp; config values</h2>

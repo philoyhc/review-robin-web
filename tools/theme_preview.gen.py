@@ -29,7 +29,7 @@ sem = hc.parse_semantic(base_css)                # {"light": [(sem, prim)], "dar
 sem_light, sem_dark = dict(sem["light"]), dict(sem["dark"])
 clusters = [(n, t) for n, t in hc.parse_clusters(base_css) if t]  # drop 0-token headers
 
-HUE_ORDER = ["neutral", "blue", "sky", "green", "amber", "red", "violet"]
+HUE_ORDER = ["neutral", "blue", "green", "amber", "red", "violet"]
 
 
 def pretty(token):
