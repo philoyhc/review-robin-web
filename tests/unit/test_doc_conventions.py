@@ -61,7 +61,13 @@ def test_lifecycle_tables_match_the_display_label_mapping() -> None:
                     f"{rel}:{number}: `{enum}` documented as {label!r}, "
                     f"mapping says {DISPLAY_LABELS[enum]!r}"
                 )
-    assert not wrong, "lifecycle display-label drift:\n  " + "\n  ".join(wrong)
+    assert not wrong, (
+        "lifecycle display-label drift:\n  "
+        + "\n  ".join(wrong)
+        + "\nDISPLAY_LABELS in app/services/lifecycle_display.py is the source "
+        "of truth; correct the prose, not the mapping — unless the mapping "
+        "itself is what changed."
+    )
 
 
 def test_retired_button_terminology_is_absent_from_live_docs() -> None:
@@ -85,5 +91,10 @@ def test_retired_button_terminology_is_absent_from_live_docs() -> None:
                     hits.append(f"{rel}:{number}: {term!r}")
     assert not hits, (
         "retired button terminology (superseded by the canonical .btn roles "
-        "in spec/ui_elements.md section 6):\n  " + "\n  ".join(hits)
+        "in spec/ui_elements.md section 6):\n  "
+        + "\n  ".join(hits)
+        + f"\nIf a hit is a deliberate historical reference rather than a live "
+        f"prescription, mark that line with {TERM_ESCAPE!r} — or, for a document "
+        f"that is a historical record throughout, put {FILE_ESCAPE!r} anywhere "
+        f"in it. Otherwise use the canonical role name."
     )
