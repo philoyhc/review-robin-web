@@ -187,4 +187,9 @@ as byte-identical twins; AI-agent guidance),
 [`rrw_design_rationale.md`](rrw_design_rationale.md) (the *why*
 behind RRW's design — problem framing, the Review Robin (VBA) +
 TEAMMATES lineage, core decisions, and stated trade-offs),
+[`new_project_practices_setup.md`](new_project_practices_setup.md)
+(a portable day-one checklist for a *new* repository, generalised
+from `docs/practice-audit-2026-09-04.md` — merge policy, agent-config
+tracking, a fresh-context diff reviewer, and the
+convention-as-failing-test pattern; nothing in it is RRW-specific),
 `README.md` (this file).
