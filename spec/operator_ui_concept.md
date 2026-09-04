@@ -26,17 +26,17 @@ When this doc disagrees with one of those, the more specific doc wins for the ar
 
 ## Lifecycle vocabulary
 
-Sessions move through a small lifecycle. Three live states; two reserved future states. Internal enum values appear here; user-facing display labels are mapped through the helper documented in `spec/session_home.md` (notably `ready` → "Activated").
+Sessions move through a small lifecycle. All five states are live. Internal enum values appear here; user-facing display labels are mapped through the helper documented in `spec/session_home.md` (notably `ready` → "Activated").
 
 | Enum | Display label | Status |
 |---|---|---|
 | `draft` | Draft | live |
 | `validated` | Validated | live |
 | `ready` | **Activated** | live |
-| `expired` | Expired | reserved (Segment 9.3+; deadline has passed) |
-| `archived` | Archived | reserved (Segment 12+) |
+| `expired` | Closed | live (Workflow-card "Close session": `ready → expired`) |
+| `archived` | Archived | live (Workflow "Archive" / lobby "Purge and archive"; reversible via unarchive → draft) |
 
-Older docs and CSS occasionally reference a `closed` state; that state is not in the canonical enum. Slated for cleanup; `expired` and `archived` are the post-life states.
+There is no `closed` state in the canonical enum — `expired` is the post-response-window state, and it *displays* as "Closed". `expired` and `archived` are the two post-life states.
 
 ## Page taxonomy
 
