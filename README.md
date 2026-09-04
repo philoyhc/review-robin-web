@@ -14,7 +14,12 @@ For the *why* — the class of problem RRW targets, the two
 projects that shaped it (an Excel/VBA predecessor and
 TEAMMATES), the constraints that made it look the way it does,
 and the trade-offs it knowingly accepts — see
-[`rrw_design_rationale.md`](rrw_design_rationale.md).
+[`rrw_design_rationale.md`](rrw_design_rationale.md). For the
+*how* — the working practice, read as a form of spec-driven
+development: the three-layer document model, the segment plan as
+the unit of work, which conventions are enforced by a failing
+test, and where a human is still the verifier — see
+[`rrw_sdd_in_practice.md`](rrw_sdd_in_practice.md).
 
 ## What's in the app today
 
@@ -187,6 +192,10 @@ as byte-identical twins; AI-agent guidance),
 [`rrw_design_rationale.md`](rrw_design_rationale.md) (the *why*
 behind RRW's design — problem framing, the Review Robin (VBA) +
 TEAMMATES lineage, core decisions, and stated trade-offs),
+[`rrw_sdd_in_practice.md`](rrw_sdd_in_practice.md) (the *how* —
+RRW's working practice read against spec-driven development:
+plan on the way in, spec on the way out, conventions as failing
+tests, a separate reader, a human verifier of last resort),
 [`new_project_practices_setup.md`](new_project_practices_setup.md)
 (a portable day-one checklist for a *new* repository, generalised
 from `docs/practice-audit-2026-09-04.md` — merge policy, agent-config
