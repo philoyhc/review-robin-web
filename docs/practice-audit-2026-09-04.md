@@ -17,6 +17,12 @@
 > `new_project_practices_setup.md`, the portable version of §5 for a new
 > repository. **Branch protection was not added** — see §1 and §3.
 >
+> Appendix A's one **Behind** score, context hygiene, was closed after the
+> appendix was written: `CLAUDE.md` went 266 → ~180 lines and the twin-file
+> convention it cites as unenforced is now a test. A.2's table and §5's
+> carry-forward list describe the state at the time of writing and are left
+> unedited.
+>
 > The findings below are the record as it stood on the audit date and are
 > left unedited. Two things noted here rather than in the text: the
 > `diff-reviewer` has not yet been run against a real diff (it parses and the
