@@ -287,7 +287,6 @@ def component_sections():
         <textarea id="ph-ta" placeholder="Type a note…">Multi-line help text sits here.</textarea>
         <label for="ph-dis">Disabled input</label>
         <input type="text" id="ph-dis" value="frozen value" disabled>
-        <p class="muted" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
       </div>
     </section>"""),
         ("buttons", """    <section class="ph-section">
