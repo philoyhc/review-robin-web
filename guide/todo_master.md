@@ -2191,7 +2191,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) in progress (detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2244,17 +2244,23 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   `--text-on-amber` label token — white in light (unchanged), dark in dark mode
   where the amber fill lightens (#2024). `base.html` + `spec/ui_elements.md` §6.
   Full suite green.
-- **Item 5 (scheduled)** — **theme customizer (developer designer).** Grow the
-  `tools/` theme-preview harness into a visual designer for the light + dark
-  palettes: seed-and-derive (OKLCH) editing + live repaint + AA contrast badges
-  + load-from-app / named-save library + **export JSON** that a coding agent
-  ports 1:1 into `base.html`'s `:root` blocks. Migration-free; nothing in
-  `app/`. Pre-step: re-tune the current palette to be formula-clean. Full plan:
-  `guide/theme_customizer.md` "Plan A — First". The operator-facing **Stretch**
-  half is deferred (`guide/deferred_consolidated.md` Part A "Operator theming").
-  (Now also carries the **tooling slice** of Item 6 — reworking the `tools/`
-  customizer / preview two-tier + app-agnostic, since they still reference the
-  retired flat-token names.)
+- **Item 5 (✅ v1 shipped 2026-09-04)** — **theme customizer (developer
+  designer).** `tools/theme_customizer.gen.py` → `tools/theme_customizer.html`,
+  a data-driven three-part designer: **Part A** previews the real component
+  gallery; **Part B** edits tokens (OKLCH seed families, per-primitive pickers +
+  live repaint, AA contrast badges, per-theme semantic remaps with `@coupled`
+  chains); **Part C** — click any preview element to reflect its element/facet →
+  semantic token → resolved primitive → co-users, and click a swatch to repoint
+  the token via a primitive picker. Toolbar: Light/Dark, Undo, Save/Revert
+  (localStorage checkpoint, auto-restores), Load defaults, Export/Import JSON
+  ported 1:1 into `base.html`. App-agnostic (parses primitives/semantics/
+  clusters from `base.html`; the portability kernel). Absorbed Item 6's tooling
+  slice (two-tier + data-driven) and surfaced real `base.html` fixes (nav
+  tab-strip backgrounds tokenized; nav chrome → `--surface-page`; primitive
+  families rationalized: sky→`--blue-cyan-*`, danger→`--red-warm-*`, neutrals as
+  one family). PRs #2065–#2083. Full plan: `guide/theme_customizer.md` "Plan A —
+  First". The operator-facing **Stretch** half remains deferred
+  (`guide/deferred_consolidated.md` Part A "Operator theming").
 - **Item 6 (✅ shipped 2026-08-23)** — **semantic colour tokens (two-tier
   reorg).** Migrated `base.html` off the flat colour-named palette
   (`--accent-blue`, `--bg-page`, …) onto a **two-tier** system: **79
