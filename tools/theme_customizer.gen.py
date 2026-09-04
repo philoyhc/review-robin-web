@@ -185,6 +185,7 @@ targets_data = [{"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} 
 DATA = {
     "prims": prim_val,
     "primOrder": [n for n, _ in prims],
+    "primGroups": [{"p": p, "members": [n for n, _ in members]} for p, members in prim_groups],
     "semLight": sem_light,
     "semDark": sem_dark,
     "families": seed_families,
@@ -323,7 +324,23 @@ editor_css = r"""
     .tc-c-sub { color: var(--text-subtle); font-size: 0.76rem; margin: 0 0 14px; }
     .tc-facet { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; }
     .tc-facet-h { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; }
-    .tc-facet-h .tc-c-swatch { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border-subtle); flex: none; }
+    .tc-facet-h .tc-c-swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--border-subtle); flex: none; }
+    button.tc-c-swatch { -webkit-appearance: none; appearance: none; padding: 0; cursor: pointer; }
+    button.tc-c-swatch:hover { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+    button.tc-c-swatch::after { content: "✎"; display: block; font-size: 11px; line-height: 20px; text-align: center;
+      color: #fff; mix-blend-mode: difference; opacity: 0; }
+    button.tc-c-swatch:hover::after { opacity: 1; }
+    /* primitive picker popover */
+    .tc-pp { position: fixed; z-index: 100; width: 264px; max-height: 62vh; overflow-y: auto;
+      background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 10px;
+      box-shadow: 0 10px 34px rgba(0,0,0,0.20); padding: 10px; }
+    .tc-pp-group { margin-bottom: 8px; }
+    .tc-pp-glabel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin: 0 0 4px; }
+    .tc-pp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+    .tc-pp-sw { -webkit-appearance: none; appearance: none; width: 100%; aspect-ratio: 1; padding: 0;
+      border: 1px solid var(--border-subtle); border-radius: 4px; cursor: pointer; }
+    .tc-pp-sw:hover { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+    .tc-pp-sw.is-current { outline: 2px solid var(--text-body); outline-offset: 1px; }
     .tc-facet-h .tc-facet-name { text-transform: capitalize; }
     .tc-facet-h .tc-facet-prop { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; }
     .tc-c-row { display: grid; grid-template-columns: 84px 1fr; gap: 4px 10px; font-size: 0.78rem; align-items: baseline; }
@@ -390,6 +407,7 @@ editor_js = r"""  <script>
 
     // ---- apply the whole model as inline :root overrides for the active mode ----
     function applyActive() {
+      closePicker();  // per-theme mapping differs; don't leave a stale picker open
       if (mode === "dark") root.setAttribute("data-theme", "dark");
       else root.removeAttribute("data-theme");
       D.primOrder.forEach(function (p) { root.style.setProperty(p, model.prims[p]); });
@@ -581,7 +599,7 @@ editor_js = r"""  <script>
       var t = D.targets[ti];
       var html = '<p class="tc-c-el">' + esc(t.el) + "</p>"
         + '<p class="tc-c-sub">' + t.facets.length + " colour facet" + (t.facets.length > 1 ? "s" : "")
-        + " · editing <strong>" + mode + "</strong> · click another element to change</p>";
+        + " · editing <strong>" + mode + "</strong> · click a swatch to repoint its primitive</p>";
       t.facets.forEach(function (f) {
         var r = resolvePrimChain(f.token);
         var users = (tokenUsers[f.token] || []).filter(function (u) { return !(u.el === t.el && u.f === f.f); });
@@ -589,7 +607,8 @@ editor_js = r"""  <script>
           ? '<span class="tc-c-chain"> (via ' + r.chain.slice(0, -1).map(function (c) { return "<code>" + esc(c) + "</code>"; }).join(" → ") + ")</span>"
           : "";
         html += '<div class="tc-facet">'
-          + '<div class="tc-facet-h"><span class="tc-c-swatch" style="background: var(' + f.token + ')"></span>'
+          + '<div class="tc-facet-h"><button type="button" class="tc-c-swatch" data-pick-token="' + f.token
+          + '" title="Change primitive" style="background: var(' + f.token + ')"></button>'
           + '<span class="tc-facet-name">' + esc(f.f) + '</span> <span class="tc-facet-prop">' + propLabel(f.prop) + "</span></div>"
           + '<dl class="tc-c-row">'
           + "<dt>token</dt><dd><code>" + esc(f.token) + "</code></dd>"
@@ -627,6 +646,68 @@ editor_js = r"""  <script>
       });
     });
     if (pageTi >= 0 && partA) partA.addEventListener("click", function () { selectTarget(pageTi, partA); });
+
+    // ---- primitive picker: click a Part C swatch -> repoint its token ----
+    var pp = document.createElement("div");
+    pp.className = "tc-pp"; pp.hidden = true; pp.setAttribute("role", "dialog"); pp.setAttribute("aria-label", "Choose a primitive");
+    pp.innerHTML = (D.primGroups || []).map(function (g) {
+      return '<div class="tc-pp-group"><div class="tc-pp-glabel">' + esc(g.p) + "</div>"
+        + '<div class="tc-pp-grid">'
+        + g.members.map(function (n) {
+            return '<button type="button" class="tc-pp-sw" data-prim="' + n + '" title="' + esc(n) + '" style="background: var(' + n + ')"></button>';
+          }).join("")
+        + "</div></div>";
+    }).join("");
+    document.body.appendChild(pp);
+    var ppToken = null;
+
+    function closePicker() { if (pp) { pp.hidden = true; ppToken = null; } }
+
+    function openPicker(token, anchor) {
+      ppToken = token;
+      var cur = resolvePrimChain(token).prim;
+      pp.querySelectorAll(".tc-pp-sw").forEach(function (sw) {
+        sw.classList.toggle("is-current", sw.getAttribute("data-prim") === cur);
+      });
+      pp.hidden = false;  // unhide first so we can measure
+      var r = anchor.getBoundingClientRect(), w = pp.offsetWidth, h = pp.offsetHeight;
+      var left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+      var top = r.bottom + 6;
+      if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+      pp.style.left = left + "px";
+      pp.style.top = top + "px";
+    }
+
+    function pickPrimitive(token, prim) {
+      var tgt = (mode === "dark") ? model.semD : model.semL;
+      tgt[token] = prim;                                   // repoint for the active theme
+      root.style.setProperty(token, "var(" + prim + ")");  // live repaint
+      dirty = true;
+      closePicker();
+      refreshRemaps(); updateContrast(); status();         // status() re-renders Part C
+    }
+
+    pp.addEventListener("click", function (ev) {
+      var sw = ev.target.closest(".tc-pp-sw");
+      if (sw && ppToken) pickPrimitive(ppToken, sw.getAttribute("data-prim"));
+    });
+
+    // cBody's innerHTML is rebuilt on every render, so delegate the swatch click
+    if (cBody) cBody.addEventListener("click", function (ev) {
+      var sw = ev.target.closest(".tc-c-swatch[data-pick-token]");
+      if (!sw) return;
+      ev.stopPropagation();
+      var token = sw.getAttribute("data-pick-token");
+      if (!pp.hidden && ppToken === token) { closePicker(); return; }  // toggle off
+      openPicker(token, sw);
+    });
+
+    document.addEventListener("click", function (ev) {
+      if (pp.hidden) return;
+      if (ev.target.closest(".tc-pp") || ev.target.closest(".tc-c-swatch[data-pick-token]")) return;
+      closePicker();
+    });
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closePicker(); });
 
     applyActive();
   })();
