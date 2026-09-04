@@ -132,7 +132,7 @@ TARGETS = [
     (".card:not(.danger-zone) h2", "Card heading", [("text", "fg", "--text-body")]),
     (".danger-zone h2", "Danger-zone heading", [("text", "fg", "--card-warning-fg")]),
     (".page-subtitle", "Page subtitle", [("text", "fg", "--text-subtle")]),
-    ("p:not([class])", "Body text", [("text", "fg", "--text-body")]),
+    ("p:not([class]):not(.danger-zone *)", "Body text", [("text", "fg", "--text-body")]),
     ("p:not([class]) strong", "Strong emphasis", [("text", "fg", "--text-body")]),
     ("p a[href]", "Inline link", [("text", "fg", "--text-link")]),
     # .ph-anno = preview-annotation captions (Active / Disabled / tints heading /
