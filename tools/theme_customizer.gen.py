@@ -124,8 +124,8 @@ TARGETS = [
     # Session navigation
     (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label.active-group", "Nav row label (active)", [("text", "fg", "--text-body")]),
-    (".row-label:not(.active-group)", "Nav row label", [("text", "fg", "--text-dim")]),
+    (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
+    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-dim")]),
     (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
@@ -306,15 +306,24 @@ toolbar = """  <div class="ph-toolbar">
   </div>"""
 
 editor_css = r"""
-    /* one consistent style for every toolbar control (segment + actions) */
+    /* one consistent style for every toolbar control (segment + actions).
+       margin:0 resets the base.html ui-v2 <label> margin so the Import label
+       lines up with the buttons. */
     .ph-toolbar .ph-seg button, .ph-toolbar .tc-controls button, .ph-toolbar .tc-controls label.tc-file {
-      font: inherit; font-size: 0.8rem; line-height: 1; cursor: pointer; height: 30px;
+      font: inherit; font-size: 0.8rem; line-height: 1; cursor: pointer; height: 30px; margin: 0;
       padding: 0 12px; border-radius: 6px; box-sizing: border-box;
       display: inline-flex; align-items: center; white-space: nowrap;
-      border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body); }
+      border: 1px solid var(--border-default); background: var(--surface-page); color: var(--text-body);
+      transition: background 0.12s ease, border-color 0.12s ease; }
     .ph-toolbar .ph-seg { display: inline-flex; gap: 4px; }
     .ph-toolbar .ph-seg button[aria-pressed="true"] {
       background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-border); }
+    /* mouse-over tint */
+    .ph-toolbar .ph-seg button:hover:not([aria-pressed="true"]),
+    .ph-toolbar .tc-controls button:not(:disabled):hover,
+    .ph-toolbar .tc-controls label.tc-file:hover {
+      background: var(--surface-muted); }
+    .ph-toolbar .ph-seg button[aria-pressed="true"]:hover { background: var(--btn-primary-bg-hover); }
     .tc-controls { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .tc-controls button:disabled { opacity: 0.45; cursor: default; }
     .tc-controls input[type=file] { display: none; }
