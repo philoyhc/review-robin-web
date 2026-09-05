@@ -2027,7 +2027,7 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   chrome for parity with the operator chrome. Audit + plan:
   `guide/archive/landing_pages.md`.
 
-### Segment 19A — Documentation hygiene — ✅ complete 2026-09-05 (started 2026-08-19; detailed plan: `guide/segment_19A_spec_documentation.md`)
+### Segment 19A — Documentation hygiene — ✅ complete + archived 2026-09-05 (started 2026-08-19; plan archived: `guide/archive/segment_19A_spec_documentation.md`)
 
 > **Renamed 19 → 19A on 2026-08-19** when the code-level consistency
 > remediation split off into its own sibling **Segment 19B** (below).
@@ -2107,7 +2107,10 @@ filed. Eight update-in-place findings, and no write-or-deepen work for
 the first time, the coverage gate now holding that ground. The fixes are
 ordinary follow-on work.
 
-**Segment 19A is closed** — both items shipped 2026-09-05.
+**Segment 19A is closed and archived** — both items shipped 2026-09-05.
+The first sweep's eight update-in-place findings carry forward to
+**19C Item 7**; they were out of scope for the item that produced them,
+by that item's own rule.
 
 ### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
@@ -2236,7 +2239,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — **open** (a standing home for small refinements; Item 7 in progress) — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2408,8 +2411,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 20** (19B closed
-2026-08-19; 19C closed 2026-09-04; Self-review consolidation closed 2026-05-30;
+**14B (gated on Azure provisioning), 19C Item 7, 20** (19B closed
+2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
 18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
@@ -2454,6 +2457,21 @@ dep chains called out at the bottom of this file.
   **Part 2** (a sweep cadence template + dated sweep notes).
   **Plan:** `guide/segment_19A_spec_documentation.md`.
 
+- **19C Item 7 — Sweep follow-through** *(opened 2026-09-05)*. Actions
+  the eight update-in-place findings from the first drift sweep
+  (`guide/sweep_2026-09-05_spec-docs.md`) across ten live `spec/` +
+  `docs/` files: two stale segment/date attributions, a lifecycle state
+  diagram showing three of five states, five module paths left behind by
+  the 18O package split, an understated user card, an implied instrument
+  cap, two docs pointing at files retired into them, and the
+  `visual_style_general.md` token vocabulary that needs a decision before
+  any edit is right. Six of the eight are carried from the 2026-08-18
+  sweep, where they sat unactioned as "minor". Three PRs, grouped by the
+  kind of judgement each needs. Landed on 19C because that segment is
+  deliberately open as a home for small refinements (its `## Future
+  items` section) — not a new segment.
+  **Plan:** `guide/segment_19C_refinements.md` Item 7.
+
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
   documentation pass + technical-support contact item
@@ -2474,7 +2492,7 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **20** is
+- **19C Item 7, 20** are
   independent of the email + audit pipelines and can interleave
-  at any time. (19A closed 2026-09-05 — Part 3 as Item 3, Part 2 as
-  Item 2.)
+  at any time. (19A closed + archived 2026-09-05 — Part 3 as Item 3,
+  Part 2 as Item 2; 19C Item 7 carries its sweep's findings.)
