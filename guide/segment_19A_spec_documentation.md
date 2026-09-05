@@ -777,3 +777,73 @@ same register as the codebase-assessment thresholds.
 > `segment-plan` skill, any `spec/` or `docs/` file PR 3's sweep commits
 > to changing gains a bullet here as it is discovered, with the addition
 > noted in `### Status`.
+
+### Status
+
+**2026-09-05 — the ladder ran, with rungs 1 and 2 swapped.** PR 2
+(#2113) went first because it carried the fix for the false pass this
+item's own planning had exposed, and `close_check.py` was reporting a
+green C3 for `19A.2` that it should not. The rungs were independent —
+PR 1 prose, PR 2 tooling — so nothing was lost. Then PR 1 (#2114) and
+PR 3 (this).
+
+Findings from the build:
+
+- **The item-window fix landed as planned and is demonstrated, not
+  asserted.** `19A.2` moved from C3 pass (on Item 3's `docs/status.md`
+  row, window opening at `5a5350c7`) to C3 fail (window at `ee859311`,
+  its own). `19A.3` was unaffected — its two headings share a commit —
+  and the `--archived` baseline stayed at 85/101, so no history was
+  silently re-scored. Ordering is by ancestry, not date: dates tie, and
+  can run backwards.
+- **One template command was wrong when first written.** `git diff
+  --stat <date>..HEAD` fails, because a bare date is not a git revision.
+  Caught by running all five entry-point commands before writing them
+  down, and fixed to use `rev-list --before`. An untested command in a
+  checklist is how the checklist stops being used.
+- **The first sweep validated the carry-forward section on its first
+  run**, which was the point of putting it first. Of the six notes
+  `spec_sweep_18Aug.md` filed as "minor / non-actionable" eighteen days
+  ago and nobody re-read: four are still true, one (C1) was **wrong in
+  the opposite direction** — `_preview_surface.py`'s docstring
+  misattributes Segment 18Q, while the spec's dating was right all along
+  — and one (C4) is worse than filed: the token is not a shade off, it
+  no longer exists. The dead-reference pass independently rediscovered
+  C3 from scratch, which is the cost carrying findings forward avoids.
+- **No write-or-deepen findings, for the first time.** The coverage gate
+  from Item 3 now holds that ground; the sweep's remaining value is the
+  eight update-in-place findings no constant could have named. Worth
+  re-checking at the next sweep before concluding it generalises.
+- **`--stale` reconciles with the plan's blast radius**: 13 of 64
+  untouched, being the plan's measured 11 of 55 for `spec/` + `docs/`
+  plus two root docs it counted in scope but not in that figure.
+
+Decisions confirmed at build:
+
+- The cadence numbers (8 weeks / 500 merges) stand unmeasured against
+  real use — the first sweep was run early, on 18 days and 151 merges,
+  to validate the template rather than because it was due. The item's
+  first open question is unanswered by design.
+- **No new `Doc impact` bullets.** The sweep *recommends*; the plan's
+  Out of scope puts its fixes outside this item, so nothing here commits
+  to a spec edit that has not been made. The eight findings are ordinary
+  follow-on work, tracked by the sweep document.
+- The orphan-spec list (15 of 37 live specs mapped by no routing module,
+  mostly cross-cutting by nature) is recorded in the template as the
+  evidence Item 3's deferred orphan-spec test would need. One sweep is
+  not enough to size a `CROSS_CUTTING` allowlist; several would be.
+
+- **The close sequence's `spec-writer` step is vacuous for this item, and
+  that is worth saying rather than ticking.** Item 2's manifest names one
+  path, `docs/status.md`, and no file under `spec/` — so there is no
+  governing spec for a reader to check the code against. The substitute
+  is that each of the sweep's eight findings was verified against the
+  repository before being filed (git history for the two attribution
+  errors, `base.html` for the token vocabulary, `Path.exists` for the
+  dead references), and one candidate finding was rejected on that
+  evidence. A sweep that files unverified findings is worse than no
+  sweep, so the verification is the substance; the skipped step is a
+  formality that did not apply.
+
+**With Items 2 and 3 both closed, Segment 19A is complete** and the plan
+can move to `guide/archive/`.
