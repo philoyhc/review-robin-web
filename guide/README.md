@@ -17,9 +17,22 @@ rule, which nothing checked before 2026-09-05. It reports; you act. It
 cannot tell you whether an edit was *right*, so run `spec-writer` over
 the same files afterwards.
 
+**Every 8 weeks, or 500 merges since the last sweep — whichever comes
+first — run a drift sweep.** `python3 tools/close_check.py --stale`
+answers whether one is due and orders the reading; copy
+`sweep_template.md` to `guide/sweep_<YYYY-MM-DD>_<scope>.md` (the dated
+filename is what `--stale` reads to find the previous sweep). The sweep
+is the close check's complement, not its repeat: a close check reads only
+the paths one plan committed to, so a spec no segment ever named is
+invisible to it — on 2026-09-05, 13 of 64 live docs had not been touched
+since the previous sweep. Two triggers because either alone misleads; the
+gap that motivated this was 93 days *and* 1,120 merges.
+
 | Path | Covers |
 |---|---|
 | `segment_*.md` | Plans for the current and upcoming segments. |
+| `sweep_template.md` | Blank drift sweep — carried-forward findings first (the 2026-05-11 sweep's two Tier-1 gaps sat 117 days because the next sweep never re-read them), then findings by disposition (write/deepen · update · consolidate · retire · move), then every file read with no finding, then every in-scope file *not* read. Ends with the five entry-point commands — staleness, dropped commitments, orphan specs, dead cross-references, the app diff since the last sweep. A sweep recommends; the fixes ship afterwards as ordinary work. It carries no `Doc impact` and `close_check.py` does not read it. Planned in `segment_19A_spec_documentation.md` Item 2. |
+| `sweep_<YYYY-MM-DD>_<scope>.md` | A dated sweep's working notes. The filename's date is machine-read by `tools/close_check.py --stale`; keep the shape. |
 | `segment_plan_template.md` | Blank segment / item plan with every section prompted — Opportunity → Decision → Semantics → Judgment calls → Blast radius (measured) → PR ladder → Definition of done → Open questions → Out of scope → Doc impact (+ a Status block added when intended and done diverge). Two headings are machine-read by `tools/close_check.py` (`## Doc impact`, `## Status`); do not rename them. `Doc impact` is matched exactly, so suffixing it retires a manifest without deleting it; `Status` tolerates a suffix. The operational guide for using it is the `segment-plan` skill (`.claude/skills/segment-plan/SKILL.md`). |
 | `codebase_assessment_*.md` | Codebase-vs-functional-spec snapshots. Only the latest snapshot lives here; older snapshots retire to `archive/` once a newer one supersedes them. **Standard quantitative items:** LOC + biggest files (as before), plus duplication and churn from `python3 tools/code_metrics.py` — added 2026-09-04 after `docs/practice-audit-2026-09-04.md` Appendix A found both unmeasured. Quote the churn figure with its baseline ratio, never alone. **Record them every time; act on them only past a threshold** — duplication at >=10-line blocks rising materially between assessments (the 2026-09-04 baseline is 6.5% for `app/`), or a churn ratio meaningfully above ~1.5x (baseline 1.0x, i.e. deletions are age-blind). The churn figure is deterministic — the tool walks the full merge history, ~76s; `--churn-sample` output is sample-dependent at any size and is not comparable between snapshots. Below those, the numbers are a trend line, not a task: 6.5% duplication is fine, and "improving" it is how a recurring metric turns into make-work. These are reading prompts for a human in a document that is already judgement-based — deliberately not a CI gate, which is the form that gets argued with, raised, then disabled. |
 | `todo_master.md` | Prioritized sequence — Done / Upcoming roadmap. Read this first when picking up between segments. (Tracks open items directly post-2026-05-10; the earlier `unfinished_business.md` catalog retired to `archive/` once its items shipped or got absorbed into named segments.) |
