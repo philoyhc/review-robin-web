@@ -2418,6 +2418,15 @@ on* rather than what it does. Brief and findings:
   skipped since 2026-05-24 pending work that has since shipped, so the
   extract either drops shim-resolved RTD responses or does not, and
   nobody has re-checked. Assessment's move #1.
+- **#2120** — that move answered the same day: **stale marker, no bug.**
+  The extract carries the response value correctly; PR iii-b4 had fixed
+  it and nobody re-ran the test. Skip removed, assertion strengthened to
+  guard the `Value` cell it was always about (the old one asserted on the
+  reviewee's name, which appears whether or not the response does) and
+  mutation-checked. Suite 2,704 passed / 16 skipped. The residue is an
+  open question, not a task: a skip marker outlived its stated remedy by
+  104 days and nothing noticed — none of the new gates reads a
+  `@pytest.mark.skip` reason against the work it names.
 - **#2105** — why 14B email is deliberately gated on institutional Azure
   provisioning, and why that is acceptable (participant model = roster +
   sign-in, so an operator's own email covers invitations; targeted

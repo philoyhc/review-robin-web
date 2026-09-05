@@ -143,12 +143,6 @@ def test_summary_renders_after_full_submission(
     assert "Carol" in body
 
 
-@pytest.mark.skip(
-    reason="Segment 18J Wave 2 PR iii-b2 — response saved via the "
-    "shim-resolved RTD path no longer flows into the extract; the "
-    "extract needs an iii-b3/b4 update to handle inline-shaped "
-    "fields the same way."
-)
 def test_summary_csv_streams_reviewer_only_rows(
     db: Session,
     alice: AuthenticatedUser,
@@ -182,6 +176,15 @@ def test_summary_csv_streams_reviewer_only_rows(
     # header from the unified extract is present too.
     assert "ReviewerName" in body
     assert "Carol" in body
+    # The submitted answer itself must reach the ``Value`` column, not
+    # just the roster names around it. This is the assertion the skip
+    # (2026-05-24 → 2026-09-05) was actually about: 18J Wave 2 PR iii-b2
+    # broke the shim-resolved RTD path into the extract, and iii-b4 fixed
+    # it without anyone re-running this. Asserting on ``Carol`` alone
+    # would pass with an empty response row.
+    data_rows = [row for row in body.splitlines() if row.startswith("Rae,")]
+    assert len(data_rows) == 1, body
+    assert ",rating,Rating,1-to-5int,3," in data_rows[0], data_rows[0]
 
 
 def test_dashboard_link_points_at_summary_when_submitted(

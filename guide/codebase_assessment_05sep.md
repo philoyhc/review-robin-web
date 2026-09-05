@@ -19,6 +19,15 @@ docs-currency commit ahead of `main` at `47be6bda`. Window `814372a7..eff2661f`:
 **23 merges, 31 non-merge commits, 2026-09-04 → 2026-09-05**, PRs **#2096–#2118**
 (#2096 is the prior snapshot itself).
 
+**Amended 2026-09-05, after first writing.** §6's open qualification —
+`test_reviewer_summary.py:146`, skipped since 2026-05-24 — was resolved by
+unskipping and running it: **the extract is correct and the marker was stale.**
+§5, §6 and §8 are updated below with dated notes rather than rewritten. The §2
+size tables and the pinned SHA are **not** re-taken and remain at `eff2661f`;
+the only change since is that one test file (the skip removed, its assertion
+strengthened), which moves the suite to **2,704 passed / 16 skipped** and `tests`
+LOC by nine lines. Everything else in §2 stands as measured.
+
 **This document stands alone.** It archives alongside
 `guide/codebase_assessment_04sep.md`, which it supersedes. Authority for ship
 state is `docs/status.md`; the functional contract audited against is
@@ -107,7 +116,8 @@ Physical lines, git-tracked files only, area classification pinned in
 **Test-to-production ratio: 1.58**, flat (1.582 prior). The +94 test lines are
 `test_spec_coverage.py`; no product test moved, because no product code moved.
 
-**Tests:** 2,703 passed, 17 skipped, `ruff check .` clean. Both CI tracks green
+**Tests:** 2,703 passed, 17 skipped at the pinned SHA (**2,704 / 16** after the
+same-day amendment above), `ruff check .` clean. Both CI tracks green
 on every PR in the window (`test` on SQLite, `postgres` round-tripping the
 Alembic chain against `postgres:16`).
 
@@ -249,11 +259,12 @@ remains a human judgement made at a sweep.
   derived from one observed gap (93 days, 1,120 merges). The first sweep was run
   early, on 18 days and 151 merges, to validate the template — so neither trigger
   has fired in anger. **Planned to revisit** after two or three real cycles.
-- **A skipped test has gone 104 days unread, and it may be hiding a data-loss
-  path.** `test_reviewer_summary.py:146` (§6) was skipped in May pending work
-  that has since shipped; nobody re-ran it. The cost is that the extract's
-  handling of shim-resolved RTD responses is unverified either way. **No plan** —
-  it is filed in §6 and §8 as the next thing to check.
+- ~~**A skipped test has gone 104 days unread, and it may be hiding a data-loss
+  path.**~~ **Resolved 2026-09-05** — see §6. The extract was correct; the marker
+  was stale. What survives as a weakness is narrower and worth keeping: **nothing
+  re-reads a skip marker.** This one outlived its own stated remedy by 104 days,
+  and the gates built this window all look at documents, not at test markers.
+  **No plan.**
 - **51 of 64 in-scope live documents have not been read by any sweep.** They were
   covered only by the four mechanical passes, which see broken references and
   absent specs but not a paragraph that quietly stopped being true. The sweep
@@ -267,7 +278,24 @@ checked to say that: the full suite (2,703 passed, 17 skipped) on both dialects;
 is comment-only apart from one string (§1) and so introduced no new surface to
 regress.
 
-**The qualification, and it is a real one.** The 17 skips are not
+**Resolved 2026-09-05 — the extract is correct and the marker was stale.**
+Unskipped and run: the test passes, and the CSV carries the submitted answer in
+the `Value` column (`Rae,…,Carol,…,rating,Rating,1-to-5int,3,FALSE,…`), so
+shim-resolved RTD responses do reach the extract. PR iii-b4 had fixed it; nobody
+re-ran the test to find out. **No bug. No data was ever at risk in shipped
+code** — the risk was only ever that nobody knew.
+
+The skip is now removed and the test's assertion strengthened, because the
+original would have passed without it: it asserted `"Carol" in body`, and Carol
+is the *reviewee* — her name appears in the row whether or not the response
+value does. It now asserts the exact `Value` cell, and was mutation-checked
+(changing the submitted rating makes it fail). Suite: **2,704 passed, 16
+skipped.**
+
+The original finding is kept below as written, because the reasoning that
+surfaced it is the point.
+
+**The qualification, as filed.** The 17 skips are not
 environment-gated, and none is an `xfail`. Fifteen are `@pytest.mark.skip`
 markers recording behaviour retired by Wave 5 PR 5.3 and the 18J legacy-card
 work, where the assertion no longer describes a shipped surface; one
@@ -282,6 +310,7 @@ skipped since May. **Nobody has re-checked, and this assessment did not resolve
 it** — doing so means unskipping and running it, which is work, not measurement.
 It is filed here as the highest-value single thing to check next, and it is
 exactly the class of unread claim this window's tooling was built to prevent.
+*(Checked the same day: stale marker, no bug — see above.)*
 
 Caught and fixed **in the practice tooling** during the window, all before merge:
 
@@ -334,12 +363,15 @@ provisioning.
 
 **Recommended next moves, in order:**
 
-1. **Unskip `test_reviewer_summary.py:146` and find out which it is.** It is the
-   only item here that might be a live defect rather than a plan — the extract
-   either drops shim-resolved RTD responses or it does not, and nobody has known
-   which since May. Cheap to answer (unskip, run, read), and the answer either
-   deletes a stale marker or opens a bug. It goes first because a possible
-   data-loss path outranks any amount of feature work.
+1. ~~**Unskip `test_reviewer_summary.py:146` and find out which it is.**~~
+   **Done 2026-09-05, same day.** Stale marker, no bug: the extract carries the
+   response value correctly. The skip is removed and the assertion strengthened
+   to guard the `Value` cell it was always about. What the exercise leaves behind
+   is a question this snapshot cannot answer: **a skip marker outlived its own
+   stated remedy by 104 days and nothing noticed.** The gates built this window
+   read documents; none reads a `@pytest.mark.skip` reason against the work it
+   names. Whether that deserves a mechanism or just a line in the sweep template
+   is the open question — filed, unplanned.
 2. **Segment 20 (operator polish + documentation).** It is the only unblocked
    feature work left, and it is the natural consumer of everything this window
    built — it will be the first segment planned, built and closed entirely under
