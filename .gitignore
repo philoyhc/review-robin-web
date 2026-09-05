@@ -37,3 +37,4 @@ Thumbs.db
 # negation a new agent file is silently ignored and never committed).
 .claude/*
 !.claude/agents/
+!.claude/skills/
