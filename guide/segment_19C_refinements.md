@@ -889,6 +889,38 @@ and it needs design thought (dating a bullet from the heading of the item
 its tag names is the obvious candidate). Recorded so the next reader does
 not take a green 19C as evidence that its newest item has landed.
 
+**2026-09-05 — Item 7 PR 3, closing the item.** Finding 2.4 decided in
+favour of **declaring the names illustrative**, against repointing them.
+The deciding argument was the customizer, not tidiness:
+`tools/theme_customizer.gen.py` reads `app/web/templates/base.html`
+directly and exports JSON ported back into it, so the refinement loop is
+`base.html` ⇄ customizer with `spec/color_tokens.md` as the hand-synced
+catalogue. Every *other* document that names tokens is therefore a copy of
+an authority it does not hold — and this one drifted three days after the
+19C Item 6 reorg, which is the failure Article V names. Repointing would
+have created a fourth copy and guaranteed the next drift; it would also
+have put RRW-specific identifiers into a document whose first line calls
+itself portable and app-agnostic.
+
+The palette keeps its roles and example hexes — those are portable design
+decisions, and stripping them would leave a designer with nothing to act
+on. What changed is one blockquote under `## Color palette` stating that
+these are the system's *role* names, that `spec/color_tokens.md` is
+authoritative for the shipped identifiers (it already retires the flat
+`accent-*` vocabulary by name), and that values change in `base.html` or
+live in the customizer. `color_tokens.md` already pointed back here, so
+the pair is now consistent in both directions.
+
+With 2.4 closed, `spec/visual_style_general.md` is genuinely edited inside
+the window rather than passing C3 on Item 3's 2026-08-20 commit — the
+blind spot noted above no longer masks anything for this item. It remains
+true of the check in general.
+
+**Item 7 is complete**: all eight sweep findings closed, seven actioned
+and one declined with a reason. `docs/status.md` gains no row — the item
+changed no behaviour, and its record lives in the sweep's findings ledger
+and here.
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones

@@ -26,6 +26,23 @@ This document is app-agnostic. It defines the design system itself: principles, 
 
 ## Color palette
 
+> **These are the design system's *role names*, not Review Robin's shipped
+> token identifiers.** This document is portable (see the header), so the
+> names below — `bg-page`, `accent-blue`, `text-secondary` and the rest —
+> describe the role a colour plays and the shade ladder each role needs,
+> with example hexes for orientation. They are deliberately not the
+> identifiers in the app's CSS.
+>
+> Review Robin's shipped tokens are **two-tier** since Segment 19C Item 6
+> (Tier 1 primitives, Tier 2 semantic), defined in
+> `app/web/templates/base.html` and catalogued in `spec/color_tokens.md` —
+> which is authoritative for the names, and which explicitly retires the
+> flat `accent-*` / `bg-*` vocabulary used here. To *change* a colour, edit
+> `base.html` (or design it live in `tools/theme_customizer.html`, which
+> reads and writes exactly those tokens); to look one up, read
+> `spec/color_tokens.md`. Read this section for intent, that one for
+> identifiers.
+
 Anchor the entire UI on this palette. No off-palette colors should appear without a specific documented reason.
 
 **Neutrals (the workhorse).**
