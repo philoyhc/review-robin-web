@@ -2027,7 +2027,7 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   chrome for parity with the operator chrome. Audit + plan:
   `guide/archive/landing_pages.md`.
 
-### Segment 19A — Documentation hygiene — in progress; started 2026-08-19 (detailed plan: `guide/segment_19A_spec_documentation.md`)
+### Segment 19A — Documentation hygiene — in progress; started 2026-08-19; Part 1 ✅ shipped 2026-09-05 (detailed plan: `guide/segment_19A_spec_documentation.md`)
 
 > **Renamed 19 → 19A on 2026-08-19** when the code-level consistency
 > remediation split off into its own sibling **Segment 19B** (below).
@@ -2060,9 +2060,23 @@ charter: coverage-gap closure for the Tier-1 specs flagged in
   retirements (local_setup §10, authentication "does not implement",
   status.md /edit route rows).
 
-**Still open (the original charter):** Part 1 — Tier-1 **spec coverage-gap**
-closure (`spec/email_template_editor.md`, `spec/permissions.md`) + Parts 2–3
-(sweep cadence template + coverage gate). See the plan doc.
+**Part 1 — Tier-1 spec coverage-gap closure — ✅ shipped 2026-09-05 (PR
+#2101).** `spec/permissions.md` (the gate catalogue, per-route matrix —
+128 / 128 session-scoped routes verified gated — role and ownership
+invariants with status codes) and `spec/email_template_editor.md` (page
+contract, `email_template_overrides` resolver, merge tags, Settings-CSV
+grammar, no lifecycle lock, and the two ship-state facts: the send path
+transmits nothing; the responses-received toggle has no consumer). Written
+from the code, four months after the 2026-05-11 sweep flagged them;
+writing them surfaced and fixed five spec-vs-code drifts in neighbouring
+files (functional spec §11.2 / §17, `lifecycle.md` §5, `csv_contracts.md`,
+`audience_and_identity_model.md` §4b, `settings_inventory.md` §3).
+
+**Still open:** Parts 2–3 — sweep cadence template + the route-to-spec
+coverage gate. The practice audit (#2085) is the argument for Part 3: the
+new documentation gate verifies *agreement* where a code constant exists
+but cannot detect *absence*, which is exactly how Part 1 stayed open for
+four months unnoticed. See the plan doc.
 
 ### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
@@ -2276,6 +2290,71 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
   archived at `guide/archive/semantic_tokens.md`. Remaining tooling slice
   folded into Item 5.
 
+### Development-practice audit + follow-through — done 2026-09-04 → 2026-09-05 (PRs #2085 → #2105)
+
+Not a numbered segment: the first arc to change how the repo is *worked
+on* rather than what it does. Brief and findings:
+`docs/practice-audit-2026-09-04.md`; the practice read as a form of SDD:
+`rrw_sdd_in_practice.md`; the six rules distilled from it:
+`constitution.md`.
+
+- **#2085** — the audit. What actually gates a merge (measured over the
+  last 244 merges: stratification by what the diff touches, followed
+  without branch protection — so branch protection was *not*
+  recommended); which conventions are mechanical vs prose, each
+  established by running a deliberate violation (five live violations
+  found); the defect census over 30 fix commits (6 documentation drift /
+  9 logic / 15 browser-only).
+- **#2086** — `tests/unit/test_doc_conventions.py`: every live lifecycle
+  table must agree with `DISPLAY_LABELS`; the retired pre-19B button
+  vocabulary must not be *prescribed* in live prose (line- and file-level
+  escape markers); the six live violations fixed or marked.
+- **#2087** — `.claude/agents/diff-reviewer.md` (reads a diff cold against
+  the governing spec; report-only; no model pin) + the `.gitignore` fix:
+  `.claude/` ignored wholesale had silently swallowed new agent files.
+- **#2088** — merge policy written into `CONTRIBUTING.md` "When to wait
+  for CI"; `new_project_practices_setup.md`, a portable day-one checklist.
+- **#2089 / #2090 / #2093** — status current; **Appendix A** benchmarks the
+  practice against loop engineering's four pillars and the 2026
+  vibe-coding evidence (ahead on the hard-to-retrofit — spec set and
+  machine-checkable done from day one; behind on the browser-only defect
+  class); context-hygiene close recorded.
+- **#2091** — five claim-vs-reality defects found by the reviewer's first
+  run (on the audit's own PRs), fixed.
+- **#2092** — `CLAUDE.md` / `AGENTS.md` trimmed 266 → 183 lines (a
+  duplicated Stack summary, a fifty-module inventory that was both
+  duplicated in `spec/architecture.md` and incomplete); twins enforced by
+  a third check.
+- **#2094 / #2095** — `tools/code_metrics.py`: duplication as a curve
+  across block sizes + churn against the ambient age of the same files;
+  standard assessment items with actionability thresholds in
+  `guide/README.md` (6.5% duplication at ≥10 lines; churn 1.0×); security
+  scanning deferred to `deferred_consolidated.md` Part B, narrowly scoped.
+- **#2096 / #2097 / #2098** — codebase assessment 2026-09-04 with
+  `guide/assessment.json` pinning the area classification (auto-detection
+  had put generated `tools/*.html` into `templates`, a phantom +38%);
+  churn made deterministic by walking all merges after sampling proved to
+  have no stable floor (1.4× → 0.8× across sizes); provenance notes
+  corrected.
+- **#2099 / #2100** — `rrw_sdd_in_practice.md`: spec-anchored SDD with a
+  phase rule — plan on the way in, spec on the way out, `status.md`
+  records it — from the evidence that 14% of code-touching merges also
+  touch a live spec while 20% (51% recently) touch a plan; revised after
+  external review, incl. a retrospective test in which the reviewer, run
+  cold at `9b9cc457`, found Codex's P0.2 25 days early.
+- **#2101** — `spec/permissions.md` + `spec/email_template_editor.md`
+  (19A Part 1, above) + five drift fixes.
+- **#2102 / #2103 / #2104** — `docs/status.md` current through #2101;
+  three stale code comments corrected; `constitution.md`.
+- **#2105** — why 14B email is deliberately gated on institutional Azure
+  provisioning, and why that is acceptable (participant model = roster +
+  sign-in, so an operator's own email covers invitations; targeted
+  reminders are the real gap). Recorded in the 14B plan, the deferred
+  ledger, `status.md`, `known_limitations.md`, the 04sep assessment (dated
+  notes) and the queue entry below.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -2289,7 +2368,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B, 19, 20** (Self-review consolidation closed 2026-05-30;
+**14B (gated on Azure provisioning), 19A Parts 2–3, 20** (19B closed
+2026-08-19; 19C closed 2026-09-04; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
 18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
@@ -2325,18 +2405,13 @@ dep chains called out at the bottom of this file.
 #### Stubs
 
 - **19A — Documentation hygiene** *(stub created 2026-05-11 as "19";
-  renamed 19 → 19A 2026-08-19; **started 2026-08-19** — see the
-  in-progress entry at the end of **Done**)*. Broadened from spec-only to
-  spec/ **+** docs/ currency: the periodic `spec/` hygiene sweeps + Tier-1
-  coverage-gap closure (`guide/archive/spec_sweep_11may.md`) run alongside
-  the `docs/`-sweep follow-through (`guide/archive/docs_sweep_19Aug.md` —
-  fully executed 2026-08-19). **Plan:** `guide/segment_19A_spec_documentation.md`.
-
-- **19B — Consistency remediation** *(started 2026-08-19; see the
-  in-progress entry at the end of **Done**)*. Code-level sibling of 19A:
-  works through `guide/archive/consistency_audit.md` (same functionality, divergent
-  call paths). Items 1–2 (whole service column S1–S8) shipped; route / UI / view
-  sweeps remain. **Plan:** `guide/archive/segment_19B_consistency.md`.
+  renamed 19 → 19A 2026-08-19; **started 2026-08-19**; **Part 1 shipped
+  2026-09-05** — see the in-progress entry in **Done**)*. Broadened from
+  spec-only to spec/ **+** docs/ currency. Remaining: **Part 2** (a sweep
+  cadence template + dated sweep notes) and **Part 3** (a route-to-spec
+  coverage gate — the one thing that would make the "spec on the way out"
+  rule mechanical rather than conventional; `constitution.md` Articles I
+  and II). **Plan:** `guide/segment_19A_spec_documentation.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
@@ -2355,7 +2430,9 @@ dep chains called out at the bottom of this file.
   (Migration `c4f6a8b0d2e5`); 14B Part A is the first writer.
 - **Within 14B**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps. **18G Part 3 (reminders)** shipped 2026-05-21 and layered on
-  top of 14B Parts A / B / C.
-- **19, 20** are
+  top of 14B Parts A / B / C — its offsets fire into the dev outbox until
+  Part A lights the transport, which is why reminders are the real gap the
+  14B deferral leaves open.
+- **19A Parts 2–3, 20** are
   independent of the email + audit pipelines and can interleave
   at any time.
