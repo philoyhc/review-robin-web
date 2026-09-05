@@ -2411,6 +2411,13 @@ on* rather than what it does. Brief and findings:
   as 19C Item 7 (seven fixed, one declined). Corrected `todo_master`'s
   claim that 19C had closed — its own header keeps it open as a standing
   home for refinements.
+- **#2119** — `todo_master` + `docs/status.md` brought current, and the
+  2026-09-05 codebase assessment (`guide/codebase_assessment_05sep.md`,
+  taken at `eff2661f`); 04sep retired to `archive/`. Its §6 turned up the
+  one thing worth acting on: `test_reviewer_summary.py:146` has been
+  skipped since 2026-05-24 pending work that has since shipped, so the
+  extract either drops shim-resolved RTD responses or does not, and
+  nobody has re-checked. Assessment's move #1.
 - **#2105** — why 14B email is deliberately gated on institutional Azure
   provisioning, and why that is acceptable (participant model = roster +
   sign-in, so an operator's own email covers invitations; targeted
