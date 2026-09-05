@@ -2486,20 +2486,21 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19E — Operator onboarding surfaces** *(stub created 2026-09-05,
-  carved out of Segment 20)*. In-app explanatory UI: the **Start Here**
-  page and page-level guidance on the five setup screens (workplan
-  §18 items 1 + 2). Needs the app, not the host, so it is not gated.
-  The Start Here page adds a page **and** a nav affordance, so it lands
-  **scaffold-first** per `CLAUDE.md` → "Working approach".
+- **19E — Operator onboarding** *(stub created 2026-09-05, carved out
+  of Segment 20; **absorbed the short-lived 19F the same day**)*.
+  Everything a first-time operator needs to get oriented, workplan §18
+  items 1 + 2 + 4 + 5: the **Start Here** page, page-level guidance on
+  the five setup screens, **sample CSV templates**, and a **sample
+  session fixture**. Needs the app, not the host, so it is not gated.
+  Two constraints carry from the plan: the Start Here page adds a page
+  **and** a nav affordance, so it lands **scaffold-first** per
+  `CLAUDE.md` → "Working approach"; and the templates are **derived
+  from the parsers that consume them**, never hand-maintained, or the
+  repo gains a second source of truth for `spec/csv_contracts.md`.
+  (19F split Items 3 + 4 out on an implementation-layer distinction —
+  services/data vs. view — which is not a theme, and the rule is
+  thematic. Folded back; no 19F plan exists.)
   **Plan:** `guide/segment_19E_operator_onboarding.md`.
-
-- **19F — Starter artefacts** *(stub created 2026-09-05, carved out of
-  Segment 20)*. Sample CSV templates + a sample session fixture
-  (workplan §18 items 4 + 5). Templates are **derived from the parsers
-  that consume them**, never hand-maintained — a checked-in CSV would
-  be a second source of truth for `spec/csv_contracts.md`. Not gated.
-  **Plan:** `guide/segment_19F_starter_artefacts.md`.
 
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does
@@ -2511,8 +2512,7 @@ dep chains called out at the bottom of this file.
   items had already shipped (validation explanations via
   `ValidationRule.why`; operator guide = `docs/quickstart.md`;
   developer setup = `docs/local_setup.md`; known limitations =
-  `docs/known_limitations.md`), four moved out to 19E / 19F / 19C
-  Item 8. What is left: the **administrator guide** for the
+  `docs/known_limitations.md`), four moved out to 19E / 19C Item 8. What is left: the **administrator guide** for the
   institutional host, the institutional half of **troubleshooting**, a
   **currency pass** over `quickstart` + `known_limitations`, and
   setting the technical-support address 19C Item 8 introduces.
@@ -2530,7 +2530,7 @@ dep chains called out at the bottom of this file.
   14B deferral leaves open.
 - **20** is independent of the email + audit pipelines, but as of
   2026-09-05 it is **gated on the institutional Azure deployment**, not
-  interleavable. **19E** and **19F**, carved out of it the same day, are
-  the interleavable remainder and carry no ordering constraint. (19A
+  interleavable. **19E**, carved out of it the same day, is the
+  interleavable remainder and carries no ordering constraint. (19A
   closed + archived 2026-09-05 — Part 3 as Item 3, Part 2 as Item 2;
   its sweep's findings shipped as 19C Item 7.)
