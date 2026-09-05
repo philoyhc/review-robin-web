@@ -833,5 +833,17 @@ Decisions confirmed at build:
   evidence Item 3's deferred orphan-spec test would need. One sweep is
   not enough to size a `CROSS_CUTTING` allowlist; several would be.
 
+- **The close sequence's `spec-writer` step is vacuous for this item, and
+  that is worth saying rather than ticking.** Item 2's manifest names one
+  path, `docs/status.md`, and no file under `spec/` — so there is no
+  governing spec for a reader to check the code against. The substitute
+  is that each of the sweep's eight findings was verified against the
+  repository before being filed (git history for the two attribution
+  errors, `base.html` for the token vocabulary, `Path.exists` for the
+  dead references), and one candidate finding was rejected on that
+  evidence. A sweep that files unverified findings is worse than no
+  sweep, so the verification is the substance; the skipped step is a
+  formality that did not apply.
+
 **With Items 2 and 3 both closed, Segment 19A is complete** and the plan
 can move to `guide/archive/`.
