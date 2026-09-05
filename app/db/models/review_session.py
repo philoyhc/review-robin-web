@@ -42,7 +42,7 @@ class ReviewSession(Base, TimestampMixin):
     # each with ``_subject`` / ``_body`` / ``_cc`` / ``_bcc`` variants).
     # Plus one bool flag — ``responses_received_enabled`` — gating the
     # post-submit confirmation auto-send (default ``True`` when absent;
-    # consumed by Segment 11C Part 2 PR H).
+    # no submit-time consumer yet — Segment 14B wires the send).
     email_template_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     # Per-session display timezone (Segment 18B). An IANA zone

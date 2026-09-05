@@ -37,10 +37,11 @@ class User(Base, TimestampMixin):
     )
 
     # Workspace-level sys-admin flag (Segment 16A). Read by
-    # ``require_sys_admin`` to gate the Sys Admin chrome + the
-    # admin-only mutating surfaces (Manual assignment upload,
-    # future SMTP test-send). Lit up by Segment 16A PRs 1-2; until
-    # then this column sits inert. Bootstrap source on
+    # ``require_sys_admin`` to gate the Sys Admin chrome (Sessions
+    # Diagnostics, Accounts Management, the adopt door) and the
+    # audit-log CSV export — spec/permissions.md §3. (The manual
+    # assignment upload once gated here retired 2026-05-11, 16A PR 5.)
+    # Lit up by Segment 16A PRs 1-2. Bootstrap source on
     # first-sign-in is the ``SYS_ADMIN_EMAILS`` env var
     # (still owned by ``app/config.py``); the persisted column
     # is the live source of truth after that — removing an
