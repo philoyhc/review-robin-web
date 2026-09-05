@@ -11,7 +11,7 @@ exist produces a guide that has to be rewritten the day it does.
 
 Everything in the original §18 list that does **not** need the host is
 now out of this segment — either already shipped (four items, audited
-below) or moved to **19E** / **19F** / **19C Item 8**. What is left is
+below) or moved to **19E** / **19C Item 8**. What is left is
 the part that only the deployment can settle.
 
 > **Renumbered 2026-05-10** from the original
@@ -44,8 +44,8 @@ had already shipped under other segments; three move out; three stay.
 | 1. Start Here page | **not built** — no such page, route or template | **19E** |
 | 2. Inline guidance on setup screens | **not built** as guidance. The `.form-help` primitive exists but carries mechanical instruction ("Fill in the new row below, then Save."), not "what is this page for" | **19E** |
 | 3. Validation explanations | **✅ shipped.** `ValidationRule.why` is populated for all 18 registered rules and renders as a "Why this check?" `<details>` disclosure per issue (`app/web/templates/operator/partials/validation_results.html`, `spec/validate_page.md` §3.1) | done |
-| 4. Sample CSV templates | **not built** — nothing downloadable, no blank-template route | **19F** |
-| 5. Sample session fixture | **not built** — no seed / demo / fixture session | **19F** |
+| 4. Sample CSV templates | **not built** — nothing downloadable, no blank-template route | **19E** |
+| 5. Sample session fixture | **not built** — no seed / demo / fixture session | **19E** |
 | 6. Operator guide | **✅ shipped** as `docs/quickstart.md` (324 lines, one session end-to-end: create, set up, launch, watch, share) | currency pass stays here |
 | 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, `docs/azure_provision.md`, `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
 | 8. Developer setup guide | **✅ shipped** as `docs/local_setup.md` (322 lines) | done |
@@ -79,7 +79,7 @@ had already shipped under other segments; three move out; three stay.
 
 - Anything that can be written or built without the host. That is the
   whole point of the 2026-09-05 split: if it does not need the
-  deployment, it belongs in 19E / 19F / 19C, not here.
+  deployment, it belongs in 19E / 19C, not here.
 - Re-doing the four items the audit found already shipped. A currency
   pass over `quickstart` / `known_limitations` is not a rewrite.
 - New feature work not in the workplan §18 list.
