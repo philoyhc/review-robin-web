@@ -372,7 +372,7 @@ cell.
 
 The canonical computation surface is
 `assignments.classify_self_review(db, session_id=, rows=)` in
-`app/services/assignments.py`; on individual-scoped
+`app/services/assignments/`; on individual-scoped
 instruments it collapses to the per-row
 `is_self_review(reviewer, reviewee)` test, and on group-
 scoped instruments it applies the whole-group rule.
@@ -469,7 +469,7 @@ group containing the reviewer as one of its members**. The
 self-review toggle drops the **whole group** when toggled off,
 not just the self-row inside it. The implementation:
 `_self_review_assignment_ids` in
-`app/services/assignments.py` walks group_key membership rather
+`app/services/assignments/` walks group_key membership rather
 than per-row reviewer/reviewee identity.
 
 ## Evaluation algorithm
@@ -510,7 +510,7 @@ Steps:
      `session.self_reviews_active` for self pairs.
 
 The engine is pure (no DB writes); the materialise step is the
-caller's responsibility. `app/services/assignments.py` is the
+caller's responsibility. `app/services/assignments/` is the
 write-side caller.
 
 ### Determinism

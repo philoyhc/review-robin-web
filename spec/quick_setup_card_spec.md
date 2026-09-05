@@ -45,7 +45,7 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 - The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names; `status` defaults to `active` when omitted.
 
 **Slot 4 — Settings** (right column, bottom).
-- File upload accepting a session-settings CSV (the inverse shape of `serialize_session_config`'s wide CSV output — see `app/services/session_config_io.py`).
+- File upload accepting a session-settings CSV (the inverse shape of `serialize_session_config`'s wide CSV output — see `app/services/session_config_io/`).
 - Passive indicator: a "Settings configured" pill (always populated — a session always has settings).
 - Wired in Segment 12A-3 PR 4 against `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
 

@@ -116,7 +116,7 @@ Call sites (every setup-mutating service in the codebase):
   status flips)
 - `app/services/relationships.py` (pair-context import +
   delete-all + per-row CRUD)
-- `app/services/assignments.py` (`replace_assignments` +
+- `app/services/assignments/` (`replace_assignments` +
   `delete_all_assignments`)
 - `app/services/field_labels.py` (per-session friendly-label
   set / clear)

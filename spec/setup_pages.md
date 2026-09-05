@@ -54,7 +54,7 @@ Every Setup Page renders, top-to-bottom:
    pills per entity.
 3. **"Fields with data" pill row** — badge per CSV column that has
    at least one populated value (`reviewer_fields_with_data` /
-   `reviewee_fields_with_data` in `app/services/assignments.py`;
+   `reviewee_fields_with_data` in `app/services/assignments/`;
    `relationships.fields_with_data` in
    `app/services/relationships.py`). Drives operator awareness of
    which optional fields the latest import populated. The raw CSV
@@ -596,7 +596,7 @@ above.
   (HTML structure + `<style>` + `<script>`). Each page picks its
   own `STORAGE_KEY` and CSS class names so they don't collide.
 - Per-entity row counts and the raw "fields with data" CSV column
-  names come from the helpers in `app/services/assignments.py`
+  names come from the helpers in `app/services/assignments/`
   (`reviewer_fields_with_data`, `reviewee_fields_with_data`) and
   `app/services/relationships.py`
   (`fields_with_data`) — keep them in sync with any new optional

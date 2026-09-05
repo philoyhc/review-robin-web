@@ -162,6 +162,31 @@ claim otherwise.
 The next sweep should start here rather than re-running the same
 mechanical passes over the files this one already opened.
 
+## Findings ledger
+
+Kept current as the findings close, so the **next** sweep reads this table
+as its §0 carry-forward input rather than re-deriving eight findings. This
+makes a dated snapshot a living file; that cost was accepted deliberately
+(19C Item 7, `## Status`).
+
+| # | Finding | Status | Closed by |
+|---|---|---|---|
+| 2.1 | `_preview_surface.py` misattributes Segment 18Q | **done** | 19C Item 7 PR 1 — now attributes the 2026-05-28 follow-on to 11F (PRs #1530 / #1531) |
+| 2.2 | `lifecycle.md` §1 diagram shows 3 of 5 states | open | Item 7 PR 2 |
+| 2.3 | five `app/services/*.py` paths are now packages | **done** | 19C Item 7 PR 1 — five specs renamed; `docs/status.md` left as dated history |
+| 2.4 | `visual_style_general.md` names a retired `accent-*` vocabulary | open | Item 7 PR 3, pending the author's decision |
+| 2.5 | `operator_ui_concept.md` understates the user card | open | Item 7 PR 2 |
+| 2.6 | `domain_assumptions.md` implies an instrument cap | open | Item 7 PR 2 |
+| 2.7 | `docs/security_posture.md` points at a retired file | **declined** | Not drift: the reference is a dated provenance note ("formerly …, retired 2026-08-19"), not a live pointer. Filed by the mechanical pass, which sees that a path is absent but not why it is named. Manifest bullet waived with this reason |
+| 2.8 | `visual_style_rrw.md` names two specs that do not exist | **re-diagnosed**, open | Both were marked "(forthcoming)" and have **never existed** (zero commits, ever) — unwritten aspirations, not specs "consolidated away in 2026-05" as filed here. Repointing them is a content judgement; moved to Item 7 PR 2 |
+
+**Two of this sweep's own eight findings did not survive re-verification
+at build.** Both came from the dead-reference pass, and both failed the
+same way: the scan can tell that a path is absent, not why the document
+names it. The sweep's §6 rejected one candidate on exactly that ground and
+should have caught these two as well. The next sweep's §0 should treat a
+mechanical hit as a lead, not a finding.
+
 ## Headline numbers
 
 | | |
