@@ -65,6 +65,7 @@ lands its manifest and its spec edit in one commit reads as unhonoured.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import pathlib
 import re
@@ -82,6 +83,17 @@ ITEM_HEADING = re.compile(r"^## Item (\d+)\b")
 SEGMENT_ID = re.compile(r"^([A-Za-z0-9]+)(?:\.(\d+))?$")
 
 PASS, FAIL, WARN, SKIP = "pass", "fail", "warn", "skip"
+
+# Sweep cadence (Segment 19A Item 2). Two signals because either alone
+# misleads: a quiet eight weeks needs a sweep less than a frantic three,
+# and calendar time alone let 1,120 merges pass as "only three months".
+SWEEP_INTERVAL_WEEKS = 8
+SWEEP_INTERVAL_MERGES = 500
+# What a whole-folder sweep reads: live spec/ + docs/ + the root practice
+# docs. Wider than the manifest regex, deliberately — that regex bounds
+# what a plan may *commit* to; this bounds what a reader must *read*.
+SWEEP_SCOPE_DIRS = ("spec", "docs")
+SWEEP_DATED_NAME = re.compile(r"^sweep_(\d{4}-\d{2}-\d{2})_")
 
 
 class Unresolvable(Exception):
@@ -214,22 +226,61 @@ def pre_archive_path(plan: pathlib.Path) -> str:
     return relative.replace("guide/archive/", "guide/")
 
 
-def window(plan: pathlib.Path, depth: int) -> tuple[str | None, str, str | None]:
-    """(start commit, end commit, start date) for the manifest's level."""
-    heading = "^" + ("###" if depth == 3 else "##") + " Doc impact$"
+def _first_commit_matching(plan: pathlib.Path, pattern: str) -> list[str] | None:
+    """[sha, date] of the first commit adding a line matching `pattern`.
+
+    Searched on the pre-archive path first, never with ``--follow``, per the
+    window rules in this module's docstring.
+    """
+    for candidate in dict.fromkeys(
+        [pre_archive_path(plan), plan.relative_to(REPO).as_posix()]
+    ):
+        found = [
+            row for row in _git(
+                "log", "--reverse", "--format=%H %ad", "--date=short",
+                "-G", pattern, "--", candidate,
+            ).split("\n") if row.strip()
+        ]
+        if found:
+            return found[0].split(" ", 1)
+    return None
+
+
+def _later_commit(a: list[str] | None, b: list[str] | None) -> list[str] | None:
+    """Whichever of two commits comes later in history."""
+    if a is None or b is None:
+        return a or b
+    if a[0] == b[0]:
+        return a
+    # Ancestry is the honest ordering; dates can tie or run backwards.
+    if subprocess.run(
+        ["git", "-C", str(REPO), "merge-base", "--is-ancestor", a[0], b[0]]
+    ).returncode == 0:
+        return b
+    return a
+
+
+def window(
+    plan: pathlib.Path, depth: int, item: int | None = None
+) -> tuple[str | None, str, str | None]:
+    """(start commit, end commit, start date) for the manifest's level.
+
+    For an item, the window opens at the later of the ``### Doc impact``
+    heading and that item's own ``## Item <n>`` heading. The heading
+    pickaxe alone is not enough once a file carries more than one item:
+    every item would inherit the *first* item's start, and a path another
+    item had edited would read as honoured. That was a live false pass —
+    ``19A.2`` reported C3 pass on Item 3's ``docs/status.md`` row (fixed
+    2026-09-05, Segment 19A Item 2 PR 2).
+    """
     relative = plan.relative_to(REPO).as_posix()
     archived = "guide/archive/" in relative
 
-    start = None
-    for candidate in dict.fromkeys([pre_archive_path(plan), relative]):
-        found = _git(
-            "log", "--reverse", "--format=%H %ad", "--date=short",
-            "-G", heading, "--", candidate,
-        ).split("\n")
-        found = [row for row in found if row.strip()]
-        if found:
-            start = found[0].split(" ", 1)
-            break
+    start = _first_commit_matching(
+        plan, "^" + ("###" if depth == 3 else "##") + " Doc impact$"
+    )
+    if item is not None:
+        start = _later_commit(start, _first_commit_matching(plan, f"^## Item {item} "))
 
     if archived:
         adds = [
@@ -310,11 +361,11 @@ def coverage_note(start: str | None, end: str, committed: set[str]) -> list[str]
 
 def check_manifest(
     plan: pathlib.Path, found: dict, depth: int, body: tuple[int, int], label: str,
-    status_present: bool,
+    status_present: bool, item: int | None = None,
 ) -> dict:
     lines = found["lines"]
     bullets = parse_bullets(lines, *body)
-    start, end, start_date = window(plan, depth)
+    start, end, start_date = window(plan, depth, item)
 
     committed: list[dict] = []
     for bullet in bullets:
@@ -432,6 +483,7 @@ def run(segment: str, item: int | None) -> dict:
                 "line": item_docs[item],
                 "label": f"Item {item}",
                 "status": found["items"][item]["status"] is not None,
+                "item": item,
             })
     elif has_segment:
         targets.append({
@@ -444,6 +496,7 @@ def run(segment: str, item: int | None) -> dict:
             targets.append({
                 "depth": 3, "line": item_docs[number], "label": f"Item {number}",
                 "status": found["items"][number]["status"] is not None,
+                "item": number,
             })
     elif found["stray"]:
         c1.append(
@@ -467,7 +520,8 @@ def run(segment: str, item: int | None) -> dict:
         body = _section(lines, target["line"], target["depth"])
         result["levels"].append(
             check_manifest(
-                plan, found, target["depth"], body, target["label"], target["status"]
+                plan, found, target["depth"], body, target["label"],
+                target["status"], target.get("item"),
             )
         )
     return result
@@ -574,20 +628,130 @@ def archived_report(stream) -> None:
     )
 
 
+def sweep_scope() -> list[str]:
+    """Live spec/ + docs/ + root practice docs, repo-relative, sorted."""
+    paths = [
+        path.relative_to(REPO).as_posix()
+        for directory in SWEEP_SCOPE_DIRS
+        for path in (REPO / directory).rglob("*.md")
+        if "archive" not in path.relative_to(REPO).parts
+    ]
+    paths += [path.name for path in REPO.glob("*.md")]
+    return sorted(paths)
+
+
+def last_sweep_date() -> str | None:
+    """Newest `guide/sweep_<YYYY-MM-DD>_*.md`, or None if none exists yet.
+
+    Only the dated convention is read. The three pre-convention sweeps
+    (`spec_sweep_11may.md` and friends) carry no parseable date, so
+    guessing one would be worse than asking for ``--since``.
+    """
+    dates = [
+        match.group(1)
+        for path in (REPO / "guide").glob("sweep_*.md")
+        if (match := SWEEP_DATED_NAME.match(path.name))
+    ]
+    return max(dates) if dates else None
+
+
+def stale_report(since: str | None, stream) -> int:
+    """List in-scope docs by age, and answer 'are we due for a sweep?'."""
+    since = since or last_sweep_date()
+    if since is not None:
+        try:
+            datetime.date.fromisoformat(since)
+        except ValueError:
+            raise Unresolvable(f"--since {since!r} is not a YYYY-MM-DD date")
+
+    today = datetime.date.today()
+    rows = []
+    for path in sweep_scope():
+        edited = _git("log", "-1", "--format=%ad", "--date=short", "--", path).strip()
+        if not edited:
+            continue
+        age = (today - datetime.date.fromisoformat(edited)).days
+        rows.append((age, edited, path))
+    rows.sort(reverse=True)
+
+    print(f"DOC STALENESS ({len(rows)} live files in spec/, docs/, root)", file=stream)
+    for age, edited, path in rows:
+        mark = " <-" if since and edited < since else "   "
+        print(f"  {age:4d} d  {edited}  {path}{mark}", file=stream)
+
+    if since is None:
+        print(
+            "\n  No dated sweep found (guide/sweep_<YYYY-MM-DD>_*.md). Pass "
+            "--since <date> for the trigger arithmetic.",
+            file=stream,
+        )
+        return 0
+
+    untouched = sum(1 for _, edited, _ in rows if edited < since)
+    days = (today - datetime.date.fromisoformat(since)).days
+    if not _git("rev-parse", "--verify", "--quiet", "origin/main").strip():
+        raise Unresolvable(
+            "origin/main does not resolve, so the merge count would read 0 "
+            "and the trigger would say 'not due' for the wrong reason — "
+            "fetch first"
+        )
+    merges = len([
+        row for row in _git(
+            "rev-list", "--merges", f"--since={since}", "origin/main"
+        ).split("\n") if row.strip()
+    ])
+    due_weeks = days >= SWEEP_INTERVAL_WEEKS * 7
+    due_merges = merges >= SWEEP_INTERVAL_MERGES
+    print(
+        f"\n  {untouched} of {len(rows)} not modified since the last sweep "
+        f"({since}) — marked <- above; read those first.",
+        file=stream,
+    )
+    print(f"\nSWEEP TRIGGER (last sweep {since})", file=stream)
+    print(
+        f"  elapsed  {days:4d} d of {SWEEP_INTERVAL_WEEKS * 7} "
+        f"({SWEEP_INTERVAL_WEEKS} weeks){'  <- due' if due_weeks else ''}",
+        file=stream,
+    )
+    print(
+        f"  merges   {merges:4d}   of {SWEEP_INTERVAL_MERGES}"
+        f"{'  <- due' if due_merges else ''}",
+        file=stream,
+    )
+    print(
+        f"  => {'DUE' if due_weeks or due_merges else 'not due'}", file=stream
+    )
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("id", nargs="?", help="segment or item id, e.g. 18R or 19A.3")
     parser.add_argument("--archived", action="store_true",
                         help="report across every archived plan; always exits 0")
+    parser.add_argument("--stale", action="store_true",
+                        help="list live spec/ + docs/ + root docs by age, and "
+                             "report whether a sweep is due; always exits 0")
+    parser.add_argument("--since", metavar="YYYY-MM-DD",
+                        help="date of the last sweep, for --stale; defaults to "
+                             "the newest guide/sweep_<date>_*.md")
     parser.add_argument("--json", action="store_true",
                         help="machine-readable copy on stdout")
     args = parser.parse_args()
 
+    if args.since and not args.stale:
+        parser.error("--since is only meaningful with --stale")
+    if args.stale:
+        try:
+            return stale_report(args.since, sys.stderr)
+        except Unresolvable as exc:
+            print(f"close_check: {exc}", file=sys.stderr)
+            return 2
     if args.archived:
         archived_report(sys.stderr)
         return 0
     if not args.id:
-        parser.error("an id is required unless --archived is given")
+        parser.error("an id is required unless --archived or --stale is given")
 
     try:
         segment, item = parse_id(args.id)
