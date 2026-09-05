@@ -547,3 +547,14 @@ Decisions confirmed at build:
 - The window-start worry does not bite on the archive: heading-appearance
   and file-first starts give an identical 89/109. It remains a live-plan
   concern, as the plan predicted.
+- **`spec-writer` pass at close (PR 3) found one real flag, accepted.**
+  The "Spec registration" paragraph PR 1 added to
+  `spec/architecture.md` named two of the registry's three sanctioned
+  outcomes, omitting `SPEC_PENDING` + `EXPECTED_PENDING`. Left as
+  written it pushed a reader shipping a surface ahead of its spec
+  toward `INFRASTRUCTURE_MODULES` — precisely the misuse the registry's
+  own comment warns against. The paragraph now states all three, plus
+  the live-file requirement. A second, optional flag (no drift found in
+  the layering module map; `spec_registry.py` needs no entry there,
+  since it ships no routes and is treated exactly as `deps.py` and the
+  other `app/web/` helpers are) needed no action.

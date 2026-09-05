@@ -147,11 +147,17 @@ instrument-card AJAX endpoints (`_instruments_band2.py`,
 `request.json()` validation; R4 aligns them.
 
 **Spec registration.** A new routing module must be registered in
-`app/web/spec_registry.py`, mapped to the live spec that governs its
-routes (or to `INFRASTRUCTURE_MODULES` if it carries no user-facing
-contract). `tests/unit/test_spec_coverage.py` enumerates the route
-table at runtime and fails on any module the registry does not name, so
-a surface cannot ship with no spec at all.
+`app/web/spec_registry.py`, in exactly one of three ways: mapped in
+`SPEC_COVERAGE` to the live spec that governs its routes; listed in
+`INFRASTRUCTURE_MODULES` if it carries no user-facing contract; or
+mapped to `SPEC_PENDING` **with a matching `EXPECTED_PENDING` entry**,
+which is how a surface ships ahead of its spec — declaring the debt
+rather than hiding it. Do not reach for `INFRASTRUCTURE_MODULES` to get
+a spec-less page past the check; that is what the pending path is for. A
+mapped path must be a live file under `spec/` or `docs/`, never one
+moved to an `archive/`. `tests/unit/test_spec_coverage.py` enumerates
+the route table at runtime and fails on any module the registry does not
+name, so a surface cannot ship with no spec at all.
 
 ## Conceptual hierarchy
 
