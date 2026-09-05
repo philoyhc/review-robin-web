@@ -61,7 +61,7 @@ Each rung: what it lands, and what it must not touch. Strike dropped rungs; do n
 
 - 
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <ID>` exits 0
+- `python3 tools/close_check.py <ID>` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` records intended vs done
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
