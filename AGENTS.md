@@ -161,6 +161,7 @@ reject it.
 - **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
 - **`docs/practice-audit-2026-09-04.md`** — what gates a merge here, and which conventions are enforced by a check rather than by noticing.
+- **`constitution.md`** — the six rules every change is held to (plan in / spec out; constant-derived gates only; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
 - **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 

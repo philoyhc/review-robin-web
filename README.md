@@ -19,7 +19,10 @@ and the trade-offs it knowingly accepts — see
 development: the three-layer document model, the segment plan as
 the unit of work, which conventions are enforced by a failing
 test, and where a human is still the verifier — see
-[`rrw_sdd_in_practice.md`](rrw_sdd_in_practice.md).
+[`rrw_sdd_in_practice.md`](rrw_sdd_in_practice.md). The six rules
+every change is held to, extracted from that document's core
+decisions with rationale and trade-off and nothing else, are
+[`constitution.md`](constitution.md).
 
 ## What's in the app today
 
@@ -196,6 +199,8 @@ TEAMMATES lineage, core decisions, and stated trade-offs),
 RRW's working practice read against spec-driven development:
 plan on the way in, spec on the way out, conventions as failing
 tests, a separate reader, a human verifier of last resort),
+[`constitution.md`](constitution.md) (the six binding rules distilled
+from that document's §6 — decision, rationale, trade-off, and stop),
 [`new_project_practices_setup.md`](new_project_practices_setup.md)
 (a portable day-one checklist for a *new* repository, generalised
 from `docs/practice-audit-2026-09-04.md` — merge policy, agent-config
