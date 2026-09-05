@@ -27,12 +27,14 @@ Cross-references:
 ## 1. State machine
 
 ```
-        Validate Setup            Activate Session
-   ┌─────────────────────→  ┌───────────────────────→
-draft                    validated                    ready
-   ←─────────────────────┘  ←───────────────────────┐
-        invalidate                Pause Session
-        (any setup mutation)     (with confirm)
+        Validate Setup            Activate Session         Close session
+   ┌─────────────────────→  ┌───────────────────────→  ┌──────────────→
+draft                    validated                    ready           expired
+   ←─────────────────────┘  ←───────────────────────┐  ←──────────────┘
+   ↑    invalidate                Pause Session         Revert to draft
+   │    (any setup mutation)     (with confirm)
+   │
+   └──── unarchive ──── archived ←──── archive (from any non-archived state)
 ```
 
 | State | Display label | Meaning |

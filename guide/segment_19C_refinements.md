@@ -849,6 +849,27 @@ timeline, and what a module was called in 2026-05 is history.
 the sweep document's own ledger, since that is where the next sweep will
 look. It makes a dated snapshot into a living file, which is the cost.
 
+**2026-09-05 — Item 7 PR 2, landed in the same pull request as PR 1.**
+The ladder planned two PRs; both slices ship as two clearly separated
+commits on one branch instead, because they were requested together and a
+merge round-trip between them would buy nothing — the reviewer benefit
+the split exists for (checking one class of judgement at a time) is
+preserved by the commit boundary.
+
+Shipped: finding 2.2 (`lifecycle.md` §1 now draws all five states,
+including the archive edge from any non-archived state, which the state
+table already documented); 2.5 (the user card's `(super admin)` /
+`(sys admin)` suffix, super winning when both apply); 2.6 (the 1-6
+instrument range restated as typical usage — nothing in code bounds it);
+and 2.8 as re-diagnosed above, repointed to `spec/instruments.md` and
+`spec/reviewer-surface.md`. Those two content lists are kept as **open
+design notes**, not moved: neither spec covers large-table ergonomics or
+the pacing guidance today, and repointing a promise to a document that
+does not keep it would trade one wrong reference for another.
+
+Item 7 now waits only on finding 2.4 (PR 3) and the author's decision on
+`spec/visual_style_general.md`.
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones

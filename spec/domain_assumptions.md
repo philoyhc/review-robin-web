@@ -19,8 +19,9 @@ index pointing into the canonical visual-style docs.
 #### Session
 
 Contains the same universe of Reviewers, Reviewees, Assignments,
-1-6 Instruments and their associated Response Forms, Email,
-deadline.
+Instruments and their associated Response Forms, Email,
+deadline. (Typically 1-6 Instruments — a description of usage, not
+a cap. Nothing in the code bounds the count.)
 
 At any one time, operating under one assignment mode (FullMatrix,
 Manual, RuleBased; note that FullMatrix should be absorbed as a
