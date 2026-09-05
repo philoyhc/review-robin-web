@@ -945,6 +945,17 @@ here as `Item N` with the same problem / decision / scope / done-when shape,
 and keep each a self-contained slice. The user will populate this list as
 refinements are identified.
 
+- **Technical-support contact (global) — moved here from Segment 20
+  2026-09-05.** A deployment-wide "something looks broken" address, distinct
+  from the per-session operational help contact on `ReviewSession`
+  (`app/schemas/sessions.py`). Reached by a reviewer hitting an auth failure,
+  a 500, or an invalid link. New env var read through `app/config.py`, surfaced
+  on the chrome footer, the error pages and the invalid-link landing; **unset
+  renders nothing**, which is why the mechanism does not wait for the
+  institutional Azure deployment — only the address does, and setting it is
+  Segment 20's job. Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe;
+  small, isolated, `[chrome]`.
+
 - **Dark-mode input background (from Item 2 QA).** In dark mode form controls
   use `var(--bg-page)`, so `<input>` / `<select>` / `<textarea>` sit at the same
   near-black as the page canvas and are delineated only by their border. A

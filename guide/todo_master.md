@@ -2449,7 +2449,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 20** (19B closed
+**14B and 20 (both gated on the institutional Azure
+deployment concluding — decision 2026-09-05)** (19B closed
 2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
@@ -2485,24 +2486,36 @@ dep chains called out at the bottom of this file.
 
 #### Stubs
 
-- **19A — Documentation hygiene** *(stub created 2026-05-11 as "19";
-  renamed 19 → 19A 2026-08-19; **started 2026-08-19**; **Part 1 shipped
-  2026-09-05** — see the in-progress entry in **Done**)*. Broadened from
-  spec-only to spec/ **+** docs/ currency. **Part 3 shipped 2026-09-05** as Item 3 (the
-  route-to-spec coverage gate + `tools/close_check.py`; the "spec on the
-  way out" rule is now checkable rather than conventional —
-  `constitution.md` Articles I and II revised to say so). Remaining:
-  **Part 2** (a sweep cadence template + dated sweep notes).
-  **Plan:** `guide/segment_19A_spec_documentation.md`.
+- **19E — Operator onboarding surfaces** *(stub created 2026-09-05,
+  carved out of Segment 20)*. In-app explanatory UI: the **Start Here**
+  page and page-level guidance on the five setup screens (workplan
+  §18 items 1 + 2). Needs the app, not the host, so it is not gated.
+  The Start Here page adds a page **and** a nav affordance, so it lands
+  **scaffold-first** per `CLAUDE.md` → "Working approach".
+  **Plan:** `guide/segment_19E_operator_onboarding.md`.
 
-- **20 — Operator polish + documentation** *(renumbered
-  from the original Segment 15, 2026-05-10)*. The
-  documentation pass + technical-support contact item
-  the original Segment 15 stub bundled. Runs after
-  Segment 14A (production hardening) so the system is
-  operationally credible before the documentation is
-  written for it. Workplan §18 items 1–10 (Start Here
-  page through Known limitations page).
+- **19F — Starter artefacts** *(stub created 2026-09-05, carved out of
+  Segment 20)*. Sample CSV templates + a sample session fixture
+  (workplan §18 items 4 + 5). Templates are **derived from the parsers
+  that consume them**, never hand-maintained — a checked-in CSV would
+  be a second source of truth for `spec/csv_contracts.md`. Not gated.
+  **Plan:** `guide/segment_19F_starter_artefacts.md`.
+
+- **20 — Operator polish + documentation** *(renumbered from the
+  original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does
+  not start until the institutional Azure deployment has successfully
+  concluded** (`docs/deployment_nus.md`) — its remaining scope is the
+  documentation *of a real deployment*, and a guide written against a
+  host that does not exist gets rewritten the day it does. Narrowed the
+  same day by an item-by-item audit of workplan §18: four of the ten
+  items had already shipped (validation explanations via
+  `ValidationRule.why`; operator guide = `docs/quickstart.md`;
+  developer setup = `docs/local_setup.md`; known limitations =
+  `docs/known_limitations.md`), four moved out to 19E / 19F / 19C
+  Item 8. What is left: the **administrator guide** for the
+  institutional host, the institutional half of **troubleshooting**, a
+  **currency pass** over `quickstart` + `known_limitations`, and
+  setting the technical-support address 19C Item 8 introduces.
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
 ### Sequencing notes
@@ -2515,7 +2528,9 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **20** is
-  independent of the email + audit pipelines and can interleave
-  at any time. (19A closed + archived 2026-09-05 — Part 3 as Item 3,
-  Part 2 as Item 2; its sweep's findings shipped as 19C Item 7.)
+- **20** is independent of the email + audit pipelines, but as of
+  2026-09-05 it is **gated on the institutional Azure deployment**, not
+  interleavable. **19E** and **19F**, carved out of it the same day, are
+  the interleavable remainder and carry no ordering constraint. (19A
+  closed + archived 2026-09-05 — Part 3 as Item 3, Part 2 as Item 2;
+  its sweep's findings shipped as 19C Item 7.)
