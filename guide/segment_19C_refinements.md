@@ -769,9 +769,9 @@ would be perverse.
    `_preview_surface.py` segment misattribution; five stale
    `app/services/*.py` paths renamed to their packages; the security doc's
    pointer at the authentication doc it absorbed; and
-   `spec/visual_style_rrw.md`'s two references to specs consolidated away
-   in 2026-05. All verifiable against the repository. Must not touch spec
-   *content*.
+   ~~`spec/visual_style_rrw.md`'s two references to specs consolidated away
+   in 2026-05~~ — **moved to PR 2 at build; see Status.** All verifiable
+   against the repository. Must not touch spec *content*.
 2. **PR 2 — spec content that understates or contradicts the code.**
    Findings 2.2, 2.5, 2.6: `lifecycle.md` §1 showing three of five states;
    `operator_ui_concept.md`'s user card omitting the `(super admin)` /
@@ -813,6 +813,81 @@ would be perverse.
 - Any code change beyond the one docstring in finding 2.1.
 
 ---
+
+## Status
+
+**2026-09-05 — Item 7 PR 1.** Two of the sweep's own findings did not
+survive re-verification at build. Both were filed by the mechanical
+dead-reference pass, which can see that a path does not exist but not
+*why* the document names it — the sweep's rule is that a finding is
+verified before it is filed, and these two were not verified closely
+enough.
+
+- **Finding 2.7 declined.** `docs/security_posture.md` reads "Absorbs the
+  identity-subsystem write-up (formerly `docs/authentication.md`, retired
+  2026-08-19)". That is a correct, dated provenance note, not a pointer a
+  reader could follow and be let down by. Its manifest bullet carries a
+  reasoned waiver rather than being deleted, so the next sweep inherits
+  the decision instead of re-filing the finding.
+- **Finding 2.8 re-diagnosed and moved to PR 2.** The two specs
+  `visual_style_rrw.md` names are marked "(forthcoming)" and have **never
+  existed** — zero commits, ever. They are unwritten aspirations from an
+  old plan, not specs "consolidated away in 2026-05" as the sweep claimed.
+  Repointing them to the live specs that own those surfaces today is a
+  content judgement about what those documents actually cover, so it
+  belongs in PR 2, not in a slice whose rule is "must not touch spec
+  content".
+
+**Shipped in PR 1:** finding 2.1 (the `_preview_surface.py` docstring now
+attributes the 2026-05-28 follow-on to Segment 11F, PRs #1530 / #1531 —
+verified against the commit that created the file) and finding 2.3 (five
+`app/services/*.py` paths across five specs renamed to their packages).
+The same module names in `docs/status.md` were left alone: it is a dated
+timeline, and what a module was called in 2026-05 is history.
+
+**Decided here (the item's second open question):** closure is tracked in
+the sweep document's own ledger, since that is where the next sweep will
+look. It makes a dated snapshot into a living file, which is the cost.
+
+**2026-09-05 — Item 7 PR 2, landed in the same pull request as PR 1.**
+The ladder planned two PRs; both slices ship as two clearly separated
+commits on one branch instead, because they were requested together and a
+merge round-trip between them would buy nothing — the reviewer benefit
+the split exists for (checking one class of judgement at a time) is
+preserved by the commit boundary.
+
+Shipped: finding 2.2 (`lifecycle.md` §1 now draws all five states,
+including the archive edge from any non-archived state, which the state
+table already documented); 2.5 (the user card's `(super admin)` /
+`(sys admin)` suffix, super winning when both apply); 2.6 (the 1-6
+instrument range restated as typical usage — nothing in code bounds it);
+and 2.8 as re-diagnosed above, repointed to `spec/instruments.md` and
+`spec/reviewer-surface.md`. Those two content lists are kept as **open
+design notes**, not moved: neither spec covers large-table ergonomics or
+the pacing guidance today, and repointing a promise to a document that
+does not keep it would trade one wrong reference for another.
+
+Item 7 now waits only on finding 2.4 (PR 3) and the author's decision on
+`spec/visual_style_general.md`.
+
+**`close_check.py 19C` exits 0 anyway, and should not be read as "Item 7
+is done".** Finding 2.4 is outstanding, but its manifest bullet's path,
+`spec/visual_style_general.md`, passes C3 on commit `bf2d5ad8` — Item
+**3**'s danger-zone work from 2026-08-20, inside the same segment window.
+
+This is the segment-level analogue of the item-window false pass fixed in
+the archived 19A Item 2 PR 2, and unlike that one it is **inherent to the
+documented semantics** rather than a bug: C3 asks whether a path was
+touched inside the segment's window, and a segment-level manifest spanning
+seven items over three weeks gives an older item's edit every chance to
+satisfy a newer item's bullet. The item-level fix worked because an item
+has its own heading to date from; a `(Item n)`-tagged bullet has no such
+anchor today.
+
+Not fixed here — it is a change to `close_check.py`, not to this segment,
+and it needs design thought (dating a bullet from the heading of the item
+its tag names is the obvious candidate). Recorded so the next reader does
+not take a green 19C as evidence that its newest item has landed.
 
 ## Future items (add as they come up)
 
@@ -861,6 +936,7 @@ refinements are identified.
   rename (Item 7).
 - `docs/security_posture.md` — drop the pointer to the retired
   authentication doc, whose content this file absorbed (Item 7).
+  <!-- doc-impact-waived: finding 2.7 declined at PR 1 — the reference is a dated provenance note ("formerly ..., retired 2026-08-19"), not a live pointer; see Status -->
 - `spec/visual_style_rrw.md` — repoint the two references to specs
   consolidated into the instruments spec in 2026-05 (Item 7).
 - `spec/lifecycle.md` — §1 state diagram to show all five states, plus the

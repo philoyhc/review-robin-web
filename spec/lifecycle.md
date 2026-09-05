@@ -27,12 +27,14 @@ Cross-references:
 ## 1. State machine
 
 ```
-        Validate Setup            Activate Session
-   ┌─────────────────────→  ┌───────────────────────→
-draft                    validated                    ready
-   ←─────────────────────┘  ←───────────────────────┐
-        invalidate                Pause Session
-        (any setup mutation)     (with confirm)
+        Validate Setup            Activate Session         Close session
+   ┌─────────────────────→  ┌───────────────────────→  ┌──────────────→
+draft                    validated                    ready           expired
+   ←─────────────────────┘  ←───────────────────────┐  ←──────────────┘
+   ↑    invalidate                Pause Session         Revert to draft
+   │    (any setup mutation)     (with confirm)
+   │
+   └──── unarchive ──── archived ←──── archive (from any non-archived state)
 ```
 
 | State | Display label | Meaning |
@@ -116,7 +118,7 @@ Call sites (every setup-mutating service in the codebase):
   status flips)
 - `app/services/relationships.py` (pair-context import +
   delete-all + per-row CRUD)
-- `app/services/assignments.py` (`replace_assignments` +
+- `app/services/assignments/` (`replace_assignments` +
   `delete_all_assignments`)
 - `app/services/field_labels.py` (per-session friendly-label
   set / clear)

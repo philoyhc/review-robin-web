@@ -665,7 +665,7 @@ navigation"; restating in this principle's context:
   overflow on typical viewports. This is a Setup-side
   responsibility; the reviewer surface trusts the value it's
   given. Spec lives in the forthcoming
-  `spec/instruments_setup_spec.md`. The reviewer surface also
+  `spec/instruments.md`. The reviewer surface also
   ships a defensive CSS truncation rule
   (`max-width: 16em; text-overflow: ellipsis`) on Page buttons
   as belt-and-suspenders.
@@ -769,7 +769,8 @@ This document (further down):
   clarifies the underlying rationale (added in the same change as
   this section).
 
-`spec/instruments_setup_spec.md` (forthcoming):
+`spec/instruments.md` owns the operator-side instrument surface. Not
+yet specced there, and still open design notes:
 
 - Explicit guidance to operators that instrument boundaries are
   pacing tools, not just data-grouping tools.
@@ -777,7 +778,8 @@ This document (further down):
   above.
 - Soft-warning logic for column-type ergonomics.
 
-`spec/response_form_component_spec.md` (forthcoming):
+`spec/reviewer-surface.md` owns the response form. Not yet specced
+there, and still open design notes:
 
 - The full large-table ergonomics design.
 - Specific handling of auto-save, return-to-place, sticky headers,
@@ -793,11 +795,10 @@ This document (further down):
   surface spec; the URL pattern, page anatomy, form scope, and
   per-page status pills implementing this principle on the live
   surface.
-- `spec/instruments_setup_spec.md` (forthcoming) — operator-side
-  instrument design, where pacing decisions are made.
-- `spec/response_form_component_spec.md` (forthcoming) — the
-  detailed UI design for the response form itself, including
-  large-table handling.
+- `spec/instruments.md` — operator-side instrument design, where
+  pacing decisions are made.
+- `spec/reviewer-surface.md` — the response form itself; the
+  large-table handling above is not yet written there.
 
 ---
 
