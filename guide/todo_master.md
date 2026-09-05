@@ -2092,6 +2092,24 @@ in Part 1 would have passed the coverage gate. `constitution.md` Article
 II and `rrw_sdd_in_practice.md` §6.1 / §6.3 / §7 revised — the exit is now
 checkable, not mechanised. The item closes in place; 19A stays live.
 
+**19C Item 7 — sweep follow-through — ✅ shipped 2026-09-05 (PRs #2116 →
+#2118).** All eight findings from the first drift sweep closed: seven
+actioned, one declined with a reasoned `doc-impact-waived`. Three slices
+grouped by the kind of judgement each needed — mechanical reference
+corrections, spec content that understated or contradicted the code, and
+the `visual_style_general.md` token-vocabulary decision. Two of the
+sweep's own findings did not survive re-verification at build (2.7 was a
+dated provenance note, not a dead pointer; 2.8's "forthcoming" specs had
+never existed rather than been consolidated away) — both from the
+mechanical dead-reference pass, whose hits are now treated as leads
+rather than findings. Finding 2.4 decided in favour of declaring
+`visual_style_general.md`'s names the portable system's *role* names,
+with `spec/color_tokens.md` authoritative for shipped identifiers: the
+customizer reads `base.html` directly, so a fourth copy of the names
+would have guaranteed the next drift. Landed on 19C rather than a new
+segment because 19C is deliberately open as a home for small
+refinements. Ledger: `guide/sweep_2026-09-05_spec-docs.md`.
+
 **Item 2 (Part 2) — the drift-sweep cadence — ✅ shipped 2026-09-05
 (PRs #2112 → #2115),** closing the segment. `guide/sweep_template.md`
 gives the sweep one shape — carried-forward findings first, then findings
@@ -2239,7 +2257,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — **open** (a standing home for small refinements; Item 7 in progress) — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — **open** (a standing home for small refinements; all seven items shipped) — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2389,6 +2407,10 @@ on* rather than what it does. Brief and findings:
 - **#2112 → #2115** — 19A Item 2: the drift-sweep cadence planned, the
   item-window false pass fixed, `close_check.py --stale`, the sweep
   template, and the first sweep. 19A closes.
+- **#2116 → #2118** — 19A archived; the sweep's eight findings actioned
+  as 19C Item 7 (seven fixed, one declined). Corrected `todo_master`'s
+  claim that 19C had closed — its own header keeps it open as a standing
+  home for refinements.
 - **#2105** — why 14B email is deliberately gated on institutional Azure
   provisioning, and why that is acceptable (participant model = roster +
   sign-in, so an operator's own email covers invitations; targeted
@@ -2411,7 +2433,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 19C Item 7, 20** (19B closed
+**14B (gated on Azure provisioning), 20** (19B closed
 2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
@@ -2457,21 +2479,6 @@ dep chains called out at the bottom of this file.
   **Part 2** (a sweep cadence template + dated sweep notes).
   **Plan:** `guide/segment_19A_spec_documentation.md`.
 
-- **19C Item 7 — Sweep follow-through** *(opened 2026-09-05)*. Actions
-  the eight update-in-place findings from the first drift sweep
-  (`guide/sweep_2026-09-05_spec-docs.md`) across ten live `spec/` +
-  `docs/` files: two stale segment/date attributions, a lifecycle state
-  diagram showing three of five states, five module paths left behind by
-  the 18O package split, an understated user card, an implied instrument
-  cap, two docs pointing at files retired into them, and the
-  `visual_style_general.md` token vocabulary that needs a decision before
-  any edit is right. Six of the eight are carried from the 2026-08-18
-  sweep, where they sat unactioned as "minor". Three PRs, grouped by the
-  kind of judgement each needs. Landed on 19C because that segment is
-  deliberately open as a home for small refinements (its `## Future
-  items` section) — not a new segment.
-  **Plan:** `guide/segment_19C_refinements.md` Item 7.
-
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
   documentation pass + technical-support contact item
@@ -2492,7 +2499,7 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **19C Item 7, 20** are
+- **20** is
   independent of the email + audit pipelines and can interleave
   at any time. (19A closed + archived 2026-09-05 — Part 3 as Item 3,
-  Part 2 as Item 2; 19C Item 7 carries its sweep's findings.)
+  Part 2 as Item 2; its sweep's findings shipped as 19C Item 7.)
