@@ -413,7 +413,7 @@ def build_email_preview_body(
 _MERGE_TAG_DESCRIPTIONS = {
     "$reviewer_name": "Reviewer's name from the roster.",
     "$session_name": "Session name.",
-    "$deadline": "Session deadline (YYYY-MM-DD), blank when unset.",
+    "$deadline": "Session deadline as YYYY-MM-DD HH:MM (UTC); blank when unset.",
     "$help_contact": "Per-session help contact.",
     "$invite_url": "Reviewer-specific invitation URL.",
     "$submitted_at": (

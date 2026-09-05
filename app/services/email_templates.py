@@ -1,9 +1,9 @@
 """Email-template rendering for invitations, reminders, and the
 post-submit responses-received confirmation.
 
-Layered between ``app/services/invitations.py`` / the reviewer-submit
-handler (Segment 11C Part 2 PR H) and the ``email_template_overrides``
-JSON column on ``ReviewSession`` (populated by the operator-facing
+Layered between its consumers — ``app/services/invitations.py`` today;
+the reviewer-submit enqueue once Segment 14B wires it — and the
+``email_template_overrides`` JSON column on ``ReviewSession`` (populated by the operator-facing
 editor — Segment 11E PRs 2 + 6). Per-session overrides fall through
 key-by-key to the in-code defaults below; rendering uses
 ``string.Template.safe_substitute`` so a typo'd merge tag in an
@@ -275,8 +275,10 @@ def responses_received_enabled(review_session: ReviewSession) -> bool:
 
     Default ``True`` when the override key is missing or stored as a
     non-bool (the editor's checkbox starts checked). Honours an
-    explicit ``True`` and an explicit ``False``. Consumed by Segment
-    11C Part 2 PR H's submit-time enqueue."""
+    explicit ``True`` and an explicit ``False``. Intended consumer: the
+    reviewer-submit enqueue (Segment 14B). Nothing reads this at submit
+    time yet — the editor stores, round-trips and previews it, but the
+    send is not wired (spec/email_template_editor.md §7)."""
     overrides = review_session.email_template_overrides or {}
     value = overrides.get(RESPONSES_RECEIVED_ENABLED_KEY)
     if isinstance(value, bool):
