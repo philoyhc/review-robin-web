@@ -37,12 +37,12 @@ Shipped so far:
   fixed five spec-vs-code drifts in neighbouring files (each listed in
   the new specs' "Drift noted" sections).
 
-- **Part 3 — planned in full as Item 3 below (2026-09-05); not started.**
+- **Part 3 — planned in full as Item 3 below (2026-09-05) and ✅ shipped the same day** (PRs #2109 → #2111): the spec-coverage gate and `tools/close_check.py`. Item 3 closes in place; 19A stays live for Part 2.
   The externally drafted "segment close check and spec coverage gate"
   spec, reviewed against the repo and converted to the item shape with
   the review's corrections folded in.
 
-**Still open:** Part 2 (sweep cadence — sketch) and Item 3 (planned).
+**Still open:** Part 2 (sweep cadence — sketch).
 
 ## Goal
 
@@ -427,7 +427,7 @@ dropped; see *Judgment calls*.
   impact and gated for undeclared surfaces; §7 no longer lists the
   coverage gate as deferred.
 - `### Doc impact` section present and current
-- `python3 tools/close_check.py 19A.3` exits 0 <!-- built in PR 2 of this item; until then, check by hand -->
+- `python3 tools/close_check.py 19A.3` exits 0
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `### Status` records intended vs done
 - `docs/status.md` row added; this item closes in place (19A stays live for Part 2)
@@ -470,3 +470,91 @@ dropped; see *Judgment calls*.
   (review); `guide/README.md` close sentence; `guide/segment_plan_template.md`
   and `.claude/skills/segment-plan/SKILL.md` (remove the *pending*
   markers); `tools/README.md` row; `guide/todo_master.md` (PR 3).
+
+### Status
+
+**2026-09-05 — the ladder ran as planned: PR 1 (#2109) registry + tests,
+PR 2 (#2110) `tools/close_check.py`, PR 3 (this) the process docs.** No
+rung was dropped, merged or reordered. Three things the build found that
+the plan had wrong or did not anticipate:
+
+- **The plan's route enumeration does not work on this FastAPI.** The
+  Semantics specify `{route.endpoint.__module__ for route in
+  create_app().routes}`. FastAPI 0.141 keeps `include_router` results as
+  lazy `_IncludedRouter` wrappers instead of flattening them, so that
+  expression yields **2** modules, not 30 — and a test written to the
+  plan would have passed vacuously against an almost-empty set.
+  `spec_registry.routing_modules()` walks the table recursively and
+  raises below a 100-route floor, so a future framework change fails by
+  name rather than as a confusing set diff.
+
+- **Heading matching had to become asymmetric, and the plan is the
+  reason.** `Doc impact` is matched **exactly**; `Status` tolerates a
+  suffix. Prefix-matching `Doc impact` would break this very file: its
+  retired sketch manifest is `## Doc impact — segment sketch (2026-05-11;
+  superseded)`, so read by prefix the file carries two shapes and fails
+  its own C1. Suffixing a heading is now the documented way to retire a
+  manifest without deleting it (`guide/README.md`,
+  `guide/segment_plan_template.md`, the `segment-plan` skill).
+
+- **Correction to this plan's Blast radius: the recorded 94/110 (85%)
+  and 19-of-32 are inflated.** That measurement counted a *merge commit*
+  as honouring a path. Investigated across all four paths where it
+  matters: in each, the merge has a parent that predates the window and
+  is byte-identical to the merge on that path — the merge was bringing
+  already-landed `main` content into a feature branch, not editing a
+  spec. Three are in 18B (specs edited by the 15D/15F sweeps on
+  2026-05-15, before 18B's plan existed) and one in 18H. So the
+  non-merge rule the Semantics specify is *correct*, not one of two
+  defensible readings, and merge-inclusive would report a false pass in
+  the one direction this check cannot afford. Checked for the opposite
+  risk too — git's default history simplification can hide a real edit
+  behind a merge — by comparing `git log` against `--full-history` on
+  all 101 live committed paths: **they agree on every one.** The
+  authoritative baseline is now the script's:
+
+  | Measure | 2026-09-05 |
+  |---|---|
+  | Live committed paths honoured | 85 / 101 (84%) |
+  | Plans fully honoured | 21 of 32 |
+  | Committed paths that no longer exist | 8 |
+  | Archived plans with no manifest | 58 of 90 |
+  | `--archived` runtime | 3.0 s |
+
+  Two of those differ from the plan for reasons other than merges:
+  missing paths now sit outside the honour denominator (they are C2's
+  business, not C3's), which is why fully-honoured reads 21 rather than
+  19; and the script counts 109 committed paths against the recorded
+  110, a one-path gap not attributable to any definitional lever tested
+  (window start, merge handling, extraction form, dedupe). The original
+  was a one-off script; this one is the reproducible definition.
+
+Decisions confirmed at build:
+
+- The nine judgment calls above stand unchanged, including the dropped
+  D7/C5 and `EXPECTED_PENDING = ()`.
+- **`routes_about` maps to a spec, not `INFRASTRUCTURE_MODULES`** (the
+  item's fourth open question): `spec/operator_ui_concept.md` carries a
+  dedicated `### /about — About` contract section.
+- Four candidate mappings were dropped for failing their own evidence
+  check — `csv_contracts` for `_quick_setup`, `visibility_policy` for
+  `_instruments`, `reconciling_regeneration` for `_assignments`, and
+  `role_navigator` for `_dashboard`. The seeding rule that produced
+  them is recorded in `app/web/spec_registry.py`.
+- C6 stays warn-only: only **15 of 90** archived plans carry a `Status`
+  block, which is the measurement the item's second open question asked
+  for. Revisit after three closes under the current template.
+- The window-start worry does not bite on the archive: heading-appearance
+  and file-first starts give an identical 89/109. It remains a live-plan
+  concern, as the plan predicted.
+- **`spec-writer` pass at close (PR 3) found one real flag, accepted.**
+  The "Spec registration" paragraph PR 1 added to
+  `spec/architecture.md` named two of the registry's three sanctioned
+  outcomes, omitting `SPEC_PENDING` + `EXPECTED_PENDING`. Left as
+  written it pushed a reader shipping a surface ahead of its spec
+  toward `INFRASTRUCTURE_MODULES` — precisely the misuse the registry's
+  own comment warns against. The paragraph now states all three, plus
+  the live-file requirement. A second, optional flag (no drift found in
+  the layering module map; `spec_registry.py` needs no entry there,
+  since it ships no routes and is treated exactly as `deps.py` and the
+  other `app/web/` helpers are) needed no action.

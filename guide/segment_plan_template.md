@@ -5,6 +5,9 @@
 <!--
 Delete the HTML comments as you fill each section. Two headings are machine-read
 by tools/close_check.py and must not be renamed: "## Doc impact" and "## Status".
+"Doc impact" is matched EXACTLY, so suffixing it ("## Doc impact - superseded")
+is how you retire a manifest without deleting it; "Status" tolerates a suffix,
+so "## Status (started 2026-08-19)" still counts.
 For a segment with items, repeat the item block below per item at ### level and
 write Doc impact once, at the end, with (Item n) tags.
 -->
@@ -58,7 +61,7 @@ Each rung: what it lands, and what it must not touch. Strike dropped rungs; do n
 
 - 
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <ID>` exits 0 <!-- script not yet built; until it lands, check by hand: Doc impact present at the closing level, every committed path exists and was edited during the segment or carries a reasoned waiver -->
+- `python3 tools/close_check.py <ID>` exits 0
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` records intended vs done
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row

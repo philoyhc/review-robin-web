@@ -34,8 +34,13 @@ exists, the rule stays prose, read by a person or a reader (III).
 Vigilance fails at exactly the things vigilance is structurally bad at;
 a derived test does not.
 
-*Trade-off.* A gate checks agreement, never absence: it cannot notice
-the spec that was never written. Nothing here mechanises the exit of I.
+*Trade-off.* A gate sees only what a constant can name. The route table
+names every routing surface, so a surface with no spec at all is caught
+(`tests/unit/test_spec_coverage.py`, 2026-09-05); nothing names what a
+spec must *contain*, so one that exists and says too little still passes.
+The exit of I is **checkable, not mechanised** — `tools/close_check.py`
+is run by a person at the close, and it asks whether the committed edit
+happened, never whether it was right.
 
 ## III. Maker and checker are separate
 
