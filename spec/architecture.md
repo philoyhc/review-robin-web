@@ -146,6 +146,13 @@ instrument-card AJAX endpoints (`_instruments_band2.py`,
 `_instruments_pagination.py`) predate this note and still hand-roll
 `request.json()` validation; R4 aligns them.
 
+**Spec registration.** A new routing module must be registered in
+`app/web/spec_registry.py`, mapped to the live spec that governs its
+routes (or to `INFRASTRUCTURE_MODULES` if it carries no user-facing
+contract). `tests/unit/test_spec_coverage.py` enumerates the route
+table at runtime and fails on any module the registry does not name, so
+a surface cannot ship with no spec at all.
+
 ## Conceptual hierarchy
 
 The shape of the data model is deliberate. From the operator's
