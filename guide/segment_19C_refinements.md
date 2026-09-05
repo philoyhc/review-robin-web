@@ -870,6 +870,25 @@ does not keep it would trade one wrong reference for another.
 Item 7 now waits only on finding 2.4 (PR 3) and the author's decision on
 `spec/visual_style_general.md`.
 
+**`close_check.py 19C` exits 0 anyway, and should not be read as "Item 7
+is done".** Finding 2.4 is outstanding, but its manifest bullet's path,
+`spec/visual_style_general.md`, passes C3 on commit `bf2d5ad8` — Item
+**3**'s danger-zone work from 2026-08-20, inside the same segment window.
+
+This is the segment-level analogue of the item-window false pass fixed in
+the archived 19A Item 2 PR 2, and unlike that one it is **inherent to the
+documented semantics** rather than a bug: C3 asks whether a path was
+touched inside the segment's window, and a segment-level manifest spanning
+seven items over three weeks gives an older item's edit every chance to
+satisfy a newer item's bullet. The item-level fix worked because an item
+has its own heading to date from; a `(Item n)`-tagged bullet has no such
+anchor today.
+
+Not fixed here — it is a change to `close_check.py`, not to this segment,
+and it needs design thought (dating a bullet from the heading of the item
+its tag names is the obvious candidate). Recorded so the next reader does
+not take a green 19C as evidence that its newest item has landed.
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
