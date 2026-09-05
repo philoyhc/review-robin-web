@@ -99,6 +99,10 @@ dedicated spec. Part 1 of 19A picks them up.
 
 ### Part 2 — Periodic drift audit cadence
 
+> **Superseded 2026-09-05 by Item 2 below**, which plans this in full.
+> Sketch kept as written. Its "every K segments shipped" trigger did not
+> survive measurement — see Item 2's Decision.
+
 **Goal.** Establish a **cadenced** spec sweep — every N
 weeks (or every K segments shipped, whichever comes first)
 — that surfaces drift before it accretes.
@@ -558,3 +562,218 @@ Decisions confirmed at build:
   the layering module map; `spec_registry.py` needs no entry there,
   since it ships no routes and is treated exactly as `deps.py` and the
   other `app/web/` helpers are) needed no action.
+
+
+---
+
+## Item 2 — Periodic drift-sweep cadence
+
+**Opened:** 2026-09-05 · **Theme:** give the whole-folder sweep a trigger,
+a shape, and a memory · **Related:** `guide/archive/spec_sweep_11may.md`,
+`guide/archive/spec_sweep_18Aug.md`, `guide/archive/docs_sweep_19Aug.md`,
+Item 3 (the per-segment close check), `constitution.md` Articles II / IV /
+VI. Supersedes the Part 2 sketch above. Every number below was produced by
+a command on 2026-09-05 at `e98453b7`.
+
+### Opportunity
+
+Three whole-folder sweeps have happened: `spec/` on **2026-05-11**,
+`spec/` again on **2026-08-18**, `docs/` on **2026-08-19**. The gap
+between the first two was **93 days and 1,120 merges**; the gap between
+the second and third was one day. That is not a cadence — sweeps happened
+when someone noticed they were overdue.
+
+Three defects follow from that, each with evidence:
+
+- **Findings are not carried forward.** The 2026-05-11 sweep identified
+  two Tier-1 spec gaps. They closed on **2026-09-05**, 117 days later
+  (#2101), because the 2026-08-18 sweep did not re-read the 2026-05-11
+  sweep's own findings. A sweep whose open items nothing re-reads is a
+  report, not a cadence.
+- **Each sweep invented its own axis** — finding-type (F/C/S) in May,
+  direction-of-drift (code-behind-spec vs code-ahead-of-spec) in August,
+  disposition (revise / update / consolidate / retire) in the docs sweep.
+  Three shapes means no sweep can be compared with the one before it, and
+  nothing can tell whether drift is getting better or worse.
+- **Nothing reads the files no segment touched.** Item 3's
+  `close_check.py` only reads paths a plan *committed to*; a spec no
+  segment named is invisible to it by construction. Measured today:
+  **11 of 55** live `spec/` + `docs/` files have not been modified since
+  the last sweep, the stalest at **117 days**
+  (`spec/email_infra_options.md`), **111** (`spec/timezone_display.md`)
+  and **109** (`spec/domain_assumptions.md`). Those eleven are exactly
+  the sweep's reason to exist.
+
+The complement runs the other way too, which is why neither mechanism
+replaces the other: the `DISPLAY_LABELS` gate caught the
+`expired → "Closed"` drift that had *survived* the 2026-08-18
+whole-folder sweep. A human sweep sees what no constant can name; a
+derived test sees what a reader's eye slides over.
+
+### Decision
+
+A **sweep** is a dated working document, generated from one fixed
+template, produced on a stated trigger, that: (a) reconciles the previous
+sweep's open findings *before* opening new ones; (b) partitions findings
+by **disposition** (the docs-sweep axis — it maps one-to-one onto PRs);
+and (c) names every file it read and found nothing in, so silence is
+deliberate rather than ambiguous.
+
+**Trigger: 8 weeks, or 500 merges on `main` since the last sweep,
+whichever comes first.** Two signals because either alone misleads — a
+quiet eight weeks needs a sweep less than a frantic three, and calendar
+time alone would have let the 1,120-merge gap pass as "only three
+months".
+
+**Rejected, with reasons.** *The sketch's "every K segments shipped"* —
+unmeasurable in practice: plans are archived in batches, not when the
+work ships (41 archived in 2026-05, 1 in 06, 4 in 08), so K is noise.
+Merges are monotonic and cheap. *A scheduled agent that sweeps on its
+own* — Article IV; a sweep is a judgement exercise whose output is a
+recommendation, and there is no exit condition a machine could check.
+*Folding the sweep into `close_check.py`'s per-segment run* — the two
+cadences have different readers and different scopes, and the sweep's
+whole point is the files no plan named (`segment-plan` skill, "Closing a
+segment": do not run the whole-folder sweep at close). *Making staleness
+a failing test* — Article VI: it would fire on specs that are stable by
+design (`spec/blob_storage.md` is a deliberate stub) and would need an
+allowlist that grows forever. Staleness is a **reading prompt**, in the
+same register as the codebase-assessment thresholds.
+
+### Semantics
+
+- **Scope.** Live `spec/` (38) + `docs/` (17) + the root practice docs
+  (9 — `constitution.md`, `rrw_sdd_in_practice.md`, `CLAUDE.md` and
+  siblings). Anything under an `archive/` is history and is out.
+- **Carry-forward.** Each sweep opens with the previous sweep's
+  un-actioned findings, each with its age in days. A carried finding is
+  closed as **done**, **moot** (the code changed underneath it), or
+  **declined** with a reason — never dropped silently. This is the
+  defect that let the Tier-1 gaps sit four months.
+- **No-action list.** Every in-scope file read with no finding is named.
+  A file absent from both the findings and the no-action list was *not
+  read*, and the sweep says so rather than implying coverage.
+- **Staleness is an entry point, not a finding.** `--stale` orders the
+  reading; a file untouched for 117 days gets read first, and may well
+  be correct. "Stale" never appears as a finding on its own.
+- **A sweep is not a segment.** It produces findings; the fixes ship as
+  ordinary work afterwards, tracked by the sweep document. It carries no
+  `Doc impact` and `close_check.py` does not read it.
+
+### Judgment calls — decided
+
+- **2026-09-05 — disposition is the axis**, not finding-type or
+  drift-direction. It is the only one of the three that maps onto the
+  unit of work: a "retire" finding and an "update in place" finding
+  become different PRs, whereas an F-vs-S distinction does not.
+- **2026-09-05 — `--stale` extends `tools/close_check.py`** rather than
+  becoming its own script. It reuses `REPO`, `_git` and
+  `last_touched_ever` verbatim, and both modes answer the same question
+  (has this doc been maintained) at different scopes.
+- **2026-09-05 — root practice docs are in scope for the sweep** even
+  though `close_check.py`'s manifest regex deliberately excludes them
+  (Item 3's judgment call). Different jobs: the regex bounds what a plan
+  can *commit* to; the sweep bounds what a reader must *read*. Noted
+  because the asymmetry will look like an inconsistency later.
+- **2026-09-05 — the first sweep is deliberately partial.** Reconciling
+  three prior sweeps plus the 11 stale files, not all 55. A template
+  validated on a bounded pass beats one validated on an exhausting pass
+  that gets abandoned half way.
+- **2026-09-05 — planning this item exposed a false pass in Item 3's
+  close check, and PR 2 fixes it.** `close_check.py` dates an item-level
+  window by the first appearance of `^### Doc impact$` anywhere in the
+  file. Item 3's docstring called this out as a multi-item caveat; the
+  moment this file gained a *second* item it stopped being theoretical.
+  `close_check.py 19A.2` today reports C3 **pass** for `docs/status.md`
+  on the strength of commit `427f5bb9` — which is Item **3**'s status
+  row. No Item 2 row exists. The fix is to start an item's window at the
+  later of the `### Doc impact` heading and that item's own
+  `## Item <n>` heading, both of which are already parsed. Recorded here
+  rather than hot-fixed silently, because a check that passes when it
+  should fail is worse than no check.
+
+### Blast radius (measured)
+
+| What | Count | Command |
+|---|---|---|
+| Live `spec/` / `docs/` / root `.md` in scope | 38 / 17 / 9 | `find spec docs -name '*.md' -not -path '*archive*' \| wc -l`; `ls *.md \| wc -l` |
+| Prior sweeps to reconcile | 3 | `ls guide/archive/*sweep*.md` |
+| Their line counts | 657 / 158 / 400 | `wc -l guide/archive/*sweep*.md` |
+| Live files untouched since the last sweep | 11 of 55 | per-file `git log -1 --format=%ad -- <path>` vs 2026-08-18 |
+| Stalest three | 117 / 111 / 109 days | as above |
+| Merges between the first two sweeps | 1,120 over 93 days | `git rev-list --count --merges --since --until origin/main` |
+| Merges since the last sweep | 151 over 18 days | as above |
+| Existing derived doc gates (unaffected) | 6 checks | `grep -c "^def test_" tests/unit/test_doc_conventions.py tests/unit/test_spec_coverage.py` |
+
+### PR ladder
+
+1. **PR 1 — the template and the convention.** `guide/sweep_template.md`
+   (carry-forward block, disposition sections, no-action list, trigger
+   arithmetic); the naming convention `guide/sweep_<YYYY-MM-DD>_<scope>.md`;
+   a `guide/README.md` row and the cadence sentence. Must not touch
+   `tools/`, `app/` or `tests/`.
+2. **PR 2 — `tools/close_check.py --stale`, plus the item-window fix.**
+   `--stale` lists in-scope live docs by days since last edit and reports
+   the trigger arithmetic (weeks and merges since a given date), so "are
+   we due?" is one command; report-only, exit 0. The same PR fixes the
+   item-window false pass in the judgment call above — an item's window
+   starts at the later of its `### Doc impact` and its own `## Item <n>`
+   heading — and shows `19A.2` failing C3 before the fix and after.
+   `tools/README.md` row updated. Must not touch `guide/` prose.
+3. **PR 3 — the first sweep under the template.** Reconciles the three
+   prior sweeps' open findings and reads the 11 files untouched since
+   2026-08-18. Lands the sweep document only; the fixes it recommends are
+   ordinary follow-on work, not this item.
+
+### Definition of done
+
+- `guide/sweep_template.md` exists and its carry-forward block names the
+  2026-05-11 four-month gap as the defect it prevents.
+- `python3 tools/close_check.py --stale` lists the in-scope files by age
+  and answers the trigger question; exits 0.
+- One sweep document exists under the new template and convention, having
+  reconciled all three prior sweeps.
+- `python3 tools/close_check.py 19A.2` fails C3 on an unhonoured
+  `docs/status.md` before PR 3 lands its row — i.e. the item-window fix
+  is demonstrated, not asserted.
+- `guide/README.md` states the trigger and the naming convention.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19A.2` exits 0
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` records intended vs done
+- `docs/status.md` row added; this item closes in place — and with Items 2
+  and 3 both closed, 19A itself can be archived.
+
+### Open questions
+
+- Are 8 weeks / 500 merges the right numbers? Decided by the first two
+  sweeps run under them — if neither trigger ever fires first, one is
+  redundant.
+- Should a sweep document carry a `Doc impact` manifest so
+  `close_check.py` can read it? Leaning no: a sweep recommends, a plan
+  commits, and giving the sweep a manifest would blur that. Revisit if
+  sweep findings start going unactioned again.
+- The orphan-spec test (every live spec referenced by ≥1 routing module,
+  with a `CROSS_CUTTING` allowlist) remains Item 3's deferred question. A
+  sweep may generate the evidence that decides it.
+
+### Out of scope
+
+- The drift fixes the first sweep recommends — ordinary follow-on work,
+  tracked by the sweep document.
+- A scheduled or autonomous sweep (Article IV).
+- Making staleness a failing test (Article VI; see Decision).
+- Re-sweeping the 44 files touched since 2026-08-18 — the first sweep is
+  deliberately partial (judgment call above).
+
+### Doc impact
+
+- `docs/status.md` — row when the item lands (PR 3).
+- *(for the human — outside the script's `spec/` + `docs/` regex)*
+  `guide/README.md` (trigger + convention, PR 1); `tools/README.md` row
+  (PR 2); `guide/todo_master.md` (PR 3).
+
+> The manifest cannot pre-name what a sweep will find. Per the
+> `segment-plan` skill, any `spec/` or `docs/` file PR 3's sweep commits
+> to changing gains a bullet here as it is discovered, with the addition
+> noted in `### Status`.

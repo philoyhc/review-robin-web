@@ -2457,6 +2457,6 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **19A Parts 2–3, 20** are
+- **19A Part 2, 20** are
   independent of the email + audit pipelines and can interleave
-  at any time.
+  at any time. (Part 3 shipped 2026-09-05 as Item 3.)
