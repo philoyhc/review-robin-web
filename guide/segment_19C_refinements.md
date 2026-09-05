@@ -676,6 +676,144 @@ dev-slot-verified.
 
 ---
 
+## Item 7 — Sweep follow-through (the 2026-09-05 drift findings)
+
+**Opened:** 2026-09-05 · **Source:** `guide/sweep_2026-09-05_spec-docs.md` §2
+
+### Opportunity
+
+The first sweep under `guide/sweep_template.md` filed **eight
+update-in-place findings** across ten live `spec/` + `docs/` files. By that
+sweep's own scope rule the fixes are ordinary follow-on work rather than
+part of the item that produced them, and this segment's `## Future items`
+section is the landing place for exactly that kind of small refinement.
+
+Six of the eight are **carried from `spec_sweep_18Aug.md`**, where they
+were filed as "minor / cosmetic (non-actionable)" and then never re-read
+for eighteen days. Two of those six were mis-filed: one had the drift on
+the wrong side entirely (the code comment was wrong, not the spec), and
+one was recorded as smaller than it is. A finding that survives two sweeps
+unactioned is not minor, it is unattended.
+
+None is catchable by a constant — `test_doc_conventions.py` and
+`test_spec_coverage.py` both pass on all ten files today.
+
+### Decision
+
+Fix all eight, in three slices grouped **by the kind of judgement each
+needs** rather than by file: mechanical reference corrections, then spec
+content that understates or contradicts the code, then the one finding
+that needs a decision before any edit is right.
+
+**Rejected.** *One PR per file* — ten PRs for ten small edits, no reviewer
+benefit; the grouping lets a reviewer check a whole class at once.
+*Folding the fixes into the sweep's own PR* — the sweep recommends and a
+person decides; collapsing the two makes the sweep an agent that edits,
+which `constitution.md` Article IV rules out. *Leaving them as sweep
+findings only* — the exact failure the carry-forward section exists to
+catch; reproducing it in the first cycle after building the mechanism
+would be perverse.
+
+### Semantics
+
+- **A stale module path is prose, not a link.** The five references to
+  `app/services/assignments.py` and friends still resolve through the
+  package `__init__`; the fix names the package, restructures nothing.
+- **Finding 2.1 changes code, not a spec.** The docstring in
+  `app/web/routes_operator/_preview_surface.py` misattributes its segment
+  (it says 18Q; the file was created 2026-05-28 and 18Q is Blob storage).
+  The spec it was blamed against is correct. No behaviour, no tests.
+- **Finding 2.4 is not a rename.** `spec/visual_style_general.md` is the
+  *portable* design system, so its 17 `accent-*` names may be
+  illustrative by intent. Either outcome — repoint them to the post-19C
+  vocabulary, or state in the doc that `spec/color_tokens.md` is
+  authoritative and these are examples — is a legitimate close. Picking
+  silently is not.
+- **Nothing here is a contract change.** Every edit makes a document match
+  code that already shipped. If one turns out to need a code change
+  instead, that is a `## Status` entry, not a quiet widening.
+
+### Judgment calls — decided
+
+- **2026-09-05 — grouped by judgement kind, not by file or folder.**
+  "Are these references dead?" and "does this paragraph match the code?"
+  are different reading jobs; mixing them makes both harder.
+- **2026-09-05 — finding 2.4 lands last, on its own.** It is the only one
+  that cannot be settled against the repository alone, so it must not
+  block the seven that can.
+- **2026-09-05 — a path merely *mentioned* in a `Doc impact` bullet is not
+  backticked.** `close_check.py` treats every backticked `spec/`/`docs/`
+  path under the heading as a commitment; naming a retired or neighbouring
+  file in passing would commit this segment to editing it. C2 caught
+  exactly that in this item's first draft. Backticks there mean "I will
+  change this file".
+- **2026-09-05 — `spec/blob_storage.md` is deliberately not a finding.**
+  It references a module never written, but it is a labelled stub for
+  deferred infrastructure. Recorded in the sweep's *Retire* section so the
+  next sweep does not re-propose it.
+
+### Blast radius (measured)
+
+| What | Count | Command |
+|---|---|---|
+| Findings to action | 8 | `guide/sweep_2026-09-05_spec-docs.md` §2 |
+| Live `spec/` + `docs/` files touched | 10 | the findings' targets, deduplicated |
+| Code files touched | 1 (docstring only) | finding 2.1 |
+| Stale `app/services/*.py` references | 5 across 5 files | `grep -rln '<mod>.py' spec/ docs/ --exclude-dir=archive` |
+| `accent-*` names in `visual_style_general.md` | 17 | `grep -oE "accent-[a-z-]+" spec/visual_style_general.md \| sort -u \| wc -l` |
+| Carried from the 2026-08-18 sweep | 6 of 8 | that sweep's §C, reconciled in the new sweep's §0 |
+
+### PR ladder
+
+1. **PR 1 — dead and wrong references.** Findings 2.1, 2.3, 2.7, 2.8: the
+   `_preview_surface.py` segment misattribution; five stale
+   `app/services/*.py` paths renamed to their packages; the security doc's
+   pointer at the authentication doc it absorbed; and
+   `spec/visual_style_rrw.md`'s two references to specs consolidated away
+   in 2026-05. All verifiable against the repository. Must not touch spec
+   *content*.
+2. **PR 2 — spec content that understates or contradicts the code.**
+   Findings 2.2, 2.5, 2.6: `lifecycle.md` §1 showing three of five states;
+   `operator_ui_concept.md`'s user card omitting the `(super admin)` /
+   `(sys admin)` suffix `base.html` renders; `domain_assumptions.md`'s
+   "1-6 Instruments" implying a cap that is not in code. Must not touch
+   `visual_style_general.md`.
+3. **PR 3 — `spec/visual_style_general.md` (finding 2.4).** Lands whichever
+   outcome the author picks, and records the choice in `## Status`.
+
+### Definition of done
+
+- All eight findings closed in `guide/sweep_2026-09-05_spec-docs.md`'s
+  ledger — actioned, or declined with a reason recorded there so the next
+  sweep carries the decision rather than the finding.
+- No `app/services/*.py` path in live `spec/` or `docs/` names a module
+  that is now a package.
+- `spec/lifecycle.md` §1 shows all five states.
+- The `visual_style_general.md` decision is recorded in `## Status`, not
+  only in the diff.
+- `python3 tools/close_check.py 19C` exits 0 with the Item 7 bullets
+  honoured.
+
+### Open questions
+
+- Finding 2.4: repoint the 17 names, or declare them illustrative and
+  point at `spec/color_tokens.md`? **Decided by the author**, before PR 3.
+- Should the sweep document gain a findings ledger later sweeps read, or
+  should closure be tracked only in this item? Leaning on the sweep
+  document, since that is where the next sweep will look — but it makes a
+  dated snapshot into a living file. Decide at PR 1.
+
+### Out of scope
+
+- Re-sweeping the 51 files the 2026-09-05 sweep did not read — the next
+  sweep's job, on its own trigger.
+- The orphan-spec test and a `CROSS_CUTTING` allowlist — still the
+  archived 19A Item 3's deferred question, needing several sweeps'
+  evidence.
+- Any code change beyond the one docstring in finding 2.1.
+
+---
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones
@@ -715,3 +853,20 @@ refinements are identified.
   amber surface (done — Item 3).
 - `spec/ui_elements.md` §6 — Secondary outline (`text-secondary`) + the Alert
   button's `--text-on-amber` label token (done — Item 4).
+- `spec/assignments.md`, `spec/setup_pages.md` — name the
+  `app/services/assignments/` package, not the retired module path (Item 7).
+- `spec/quick_setup_card_spec.md` — `app/services/session_config_io/`
+  package rename (Item 7).
+- `spec/settings_inventory.md` — `app/services/scheduled_events/` package
+  rename (Item 7).
+- `docs/security_posture.md` — drop the pointer to the retired
+  authentication doc, whose content this file absorbed (Item 7).
+- `spec/visual_style_rrw.md` — repoint the two references to specs
+  consolidated into the instruments spec in 2026-05 (Item 7).
+- `spec/lifecycle.md` — §1 state diagram to show all five states, plus the
+  package rename (Item 7).
+- `spec/operator_ui_concept.md` — document the `(super admin)` /
+  `(sys admin)` suffix on the user card (Item 7).
+- `spec/domain_assumptions.md` — drop or qualify "1-6 Instruments"; there
+  is no cap in code (Item 7).
+- `spec/visual_style_general.md` — the finding 2.4 decision (Item 7).

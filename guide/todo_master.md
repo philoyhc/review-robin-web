@@ -2109,8 +2109,8 @@ ordinary follow-on work.
 
 **Segment 19A is closed and archived** — both items shipped 2026-09-05.
 The first sweep's eight update-in-place findings carry forward to
-**Segment 19D** below; they were out of scope for the item that produced
-them, by that item's own rule.
+**19C Item 7**; they were out of scope for the item that produced them,
+by that item's own rule.
 
 ### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
@@ -2239,7 +2239,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — **open** (a standing home for small refinements; Item 7 in progress) — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).
@@ -2411,8 +2411,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 19D, 20** (19B closed
-2026-08-19; 19C closed 2026-09-04; Self-review consolidation closed 2026-05-30;
+**14B (gated on Azure provisioning), 19C Item 7, 20** (19B closed
+2026-08-19; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
 18K + 18L + 18M + 18N closed 2026-05-28; 18J retired
@@ -2457,8 +2457,8 @@ dep chains called out at the bottom of this file.
   **Part 2** (a sweep cadence template + dated sweep notes).
   **Plan:** `guide/segment_19A_spec_documentation.md`.
 
-- **19D — Sweep follow-through** *(opened 2026-09-05)*. Actions the
-  eight update-in-place findings from the first drift sweep
+- **19C Item 7 — Sweep follow-through** *(opened 2026-09-05)*. Actions
+  the eight update-in-place findings from the first drift sweep
   (`guide/sweep_2026-09-05_spec-docs.md`) across ten live `spec/` +
   `docs/` files: two stale segment/date attributions, a lifecycle state
   diagram showing three of five states, five module paths left behind by
@@ -2467,10 +2467,10 @@ dep chains called out at the bottom of this file.
   `visual_style_general.md` token vocabulary that needs a decision before
   any edit is right. Six of the eight are carried from the 2026-08-18
   sweep, where they sat unactioned as "minor". Three PRs, grouped by the
-  kind of judgement each needs. A new segment rather than an item because
-  19A and 19C have both closed, and 19C's segment-level manifest could not
-  take an item without failing its own one-shape check.
-  **Plan:** `guide/segment_19D_sweep_followthrough.md`.
+  kind of judgement each needs. Landed on 19C because that segment is
+  deliberately open as a home for small refinements (its `## Future
+  items` section) — not a new segment.
+  **Plan:** `guide/segment_19C_refinements.md` Item 7.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
@@ -2492,7 +2492,7 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **19D, 20** are
+- **19C Item 7, 20** are
   independent of the email + audit pipelines and can interleave
   at any time. (19A closed + archived 2026-09-05 — Part 3 as Item 3,
-  Part 2 as Item 2; 19D carries its sweep's findings.)
+  Part 2 as Item 2; 19C Item 7 carries its sweep's findings.)
