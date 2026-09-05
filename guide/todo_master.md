@@ -2027,7 +2027,7 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   chrome for parity with the operator chrome. Audit + plan:
   `guide/archive/landing_pages.md`.
 
-### Segment 19A — Documentation hygiene — in progress; started 2026-08-19; Part 1 ✅ + Item 3 (Part 3) ✅ shipped 2026-09-05 (detailed plan: `guide/segment_19A_spec_documentation.md`)
+### Segment 19A — Documentation hygiene — ✅ complete 2026-09-05 (started 2026-08-19; detailed plan: `guide/segment_19A_spec_documentation.md`)
 
 > **Renamed 19 → 19A on 2026-08-19** when the code-level consistency
 > remediation split off into its own sibling **Segment 19B** (below).
@@ -2092,8 +2092,22 @@ in Part 1 would have passed the coverage gate. `constitution.md` Article
 II and `rrw_sdd_in_practice.md` §6.1 / §6.3 / §7 revised — the exit is now
 checkable, not mechanised. The item closes in place; 19A stays live.
 
-**Still open:** Part 2 — a sweep cadence template + dated sweep notes.
-See the plan doc.
+**Item 2 (Part 2) — the drift-sweep cadence — ✅ shipped 2026-09-05
+(PRs #2112 → #2115),** closing the segment. `guide/sweep_template.md`
+gives the sweep one shape — carried-forward findings first, then findings
+by disposition, then every file read with no finding, then every in-scope
+file not read — and `tools/close_check.py --stale` answers whether one is
+due (8 weeks or 500 merges). The sketch's "every K segments" trigger did
+not survive measurement: plans are archived in batches, so K is noise.
+The first sweep (`guide/sweep_2026-09-05_spec-docs.md`, 13 of 64 files)
+validated the carry-forward section on its first run — of six notes the
+August sweep filed as non-actionable and nobody re-read, four are still
+true, one was wrong in the opposite direction, and one is worse than
+filed. Eight update-in-place findings, and no write-or-deepen work for
+the first time, the coverage gate now holding that ground. The fixes are
+ordinary follow-on work.
+
+**Segment 19A is closed** — both items shipped 2026-09-05.
 
 ### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
@@ -2369,6 +2383,9 @@ on* rather than what it does. Brief and findings:
 - **#2109 / #2110 / #2111** — 19A Item 3 built: the spec-coverage
   registry + gate, `tools/close_check.py`, and the process docs. See the
   19A entry above for the baseline and the corrections it carries.
+- **#2112 → #2115** — 19A Item 2: the drift-sweep cadence planned, the
+  item-window false pass fixed, `close_check.py --stale`, the sweep
+  template, and the first sweep. 19A closes.
 - **#2105** — why 14B email is deliberately gated on institutional Azure
   provisioning, and why that is acceptable (participant model = roster +
   sign-in, so an operator's own email covers invitations; targeted
@@ -2391,7 +2408,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 19A Part 2, 20** (19B closed
+**14B (gated on Azure provisioning), 20** (19B closed
 2026-08-19; 19C closed 2026-09-04; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
@@ -2457,6 +2474,7 @@ dep chains called out at the bottom of this file.
   top of 14B Parts A / B / C — its offsets fire into the dev outbox until
   Part A lights the transport, which is why reminders are the real gap the
   14B deferral leaves open.
-- **19A Part 2, 20** are
+- **20** is
   independent of the email + audit pipelines and can interleave
-  at any time. (Part 3 shipped 2026-09-05 as Item 3.)
+  at any time. (19A closed 2026-09-05 — Part 3 as Item 3, Part 2 as
+  Item 2.)
