@@ -78,7 +78,7 @@ Three things about how plans are used matter more than their shape:
 
 ## 6. The core decisions
 
-Each decision below is stated as *what was decided, why, and what it trades off*, with the evidence that it is actually followed rather than merely written down.
+Each decision below is stated as *what was decided, why, and what it trades off*, with the evidence that it is actually followed rather than merely written down. The six of these that bind every change — stripped of evidence, keeping rationale and trade-off — are extracted into `constitution.md`; that file is derived from this section, so change this one first.
 
 ### 6.1 Plan on the way in, spec on the way out
 
