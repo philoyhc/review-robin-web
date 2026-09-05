@@ -921,6 +921,23 @@ and one declined with a reason. `docs/status.md` gains no row — the item
 changed no behaviour, and its record lives in the sweep's findings ledger
 and here.
 
+**2026-09-05 — the blind spot is now checked, and this plan carries the
+first adjudicated warning.** `tools/close_check.py` dates each
+`(Item n)`-tagged bullet in a segment-level manifest from that item's own
+heading, so a newer item's commitment can no longer be satisfied by an
+older item's edit. Running it here now reports one warning, which this
+entry adjudicates:
+
+- `spec/ui_elements.md` (the `(done — Item 4)` bullet) was edited on
+  2026-08-20 by `4a72813c` "style: soften Secondary button outline to
+  `text-secondary`" — exactly what the bullet promises — while the Item 4
+  heading was logged the next day, 2026-08-21, by `49a8177f` "docs: log
+  19C refinements — Item 3 (Danger Zone) + Item 4 (buttons)". Honoured;
+  the item was written up after its work landed. This is the retroactive
+  case the check warns about rather than failing on, and it is why it
+  warns: nothing in the timestamps distinguishes it from another item's
+  edit.
+
 ## Future items (add as they come up)
 
 Landing place for further small operator-facing refinements. Log new ones

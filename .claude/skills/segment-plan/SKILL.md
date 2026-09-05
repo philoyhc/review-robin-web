@@ -90,7 +90,7 @@ Every line must be something a reader can check without asking the author. Good:
 
 ```
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <id>` exits 0
+- `python3 tools/close_check.py <id>` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` records intended vs done
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
@@ -113,7 +113,7 @@ When asked to "update the plan" after a build, do the five things above. Do not 
 Closing is a sequence, and the plan is the record of it. `<id>` is `19C` for a segment or `19C.1` for an item. In order:
 
 1. The `Doc impact` section at the closing level is current — every bullet honoured, waived with reason, or added.
-2. `python3 tools/close_check.py <id>` exits 0. If it fails, fix the plan or the spec; do not close. It checks the manifest at the closing level (one shape per file), that every committed path exists and is live, that every un-waived path was edited inside the segment's window, and that each waiver carries a reason; a missing `Status` block warns rather than fails. It reports only — it edits nothing and moves nothing, and it asks whether an edit happened, never whether it was right. That judgement is step 3's.
+2. `python3 tools/close_check.py <id>` exits 0 **and any warning is adjudicated**. If it fails, fix the plan or the spec; do not close. It checks the manifest at the closing level (one shape per file), that every committed path exists and is live, that every un-waived path was edited inside the segment's window, and that each waiver carries a reason; a missing `Status` block warns rather than fails. On a segment-level manifest each `(Item n)`-tagged bullet is dated from that item's own heading, not the segment's start, so a newer item cannot inherit an older one's edit; an edit that predates its item's heading warns, because items are sometimes logged after their work lands and the timestamps cannot tell that apart from another item's edit. Read the warnings — the exit code alone does not close the loop. It reports only — it edits nothing and moves nothing, and it asks whether an edit happened, never whether it was right. That judgement is step 3's.
 3. Run `spec-writer` against the doc-impact files only. Adjudicate its flags; record any that changed a decision in `Status`.
 4. `Status` carries the final intended-versus-done account.
 5. Add the `docs/status.md` row. For a segment close (or the last item of a segment): move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.

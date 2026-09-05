@@ -35,6 +35,10 @@ at close, and the human's. The script reports; the human acts.
   manifest (`.claude/skills/segment-plan/SKILL.md`).
 - **C2** every committed path exists and is not under an `archive/`.
 - **C3** every un-waived path was modified inside the plan's window.
+  On a segment-level manifest a bullet tagged `(Item n)` gets a
+  narrower window of its own — see "The window" — and an edit that
+  falls inside the segment's window but before that item's heading
+  existed **warns** rather than fails.
 - **C4** every waiver carries a reason.
 - **C6** a `Status` block exists at the closing level — **warn only** in
   v1, promoted to a failure once the template has been in force for a
@@ -60,6 +64,30 @@ End = `HEAD`, or for an archived plan the commit that added the archived
 path. A path is honoured by at least one non-merge commit touching it in
 `(start, end]` — the start commit itself is excluded, so a plan that
 lands its manifest and its spec edit in one commit reads as unhonoured.
+
+A **segment-level** manifest spans every item, so that one window let an
+older item's edit satisfy a newer item's bullet. Measured on `19C` at
+`2520dc7d`: C3 read a silent `PASS` while three Item 7 commitments were
+outstanding, because the same specs had been edited for Item 3 three
+weeks earlier. A bullet tagged `(Item n)` therefore opens at the **later**
+of the segment window and that item's own `## Item n` heading; until the
+heading existed the bullet was not yet making that promise. A bullet
+carrying two tags takes the later item.
+
+That anchor **warns, it does not fail**, and the distinction is the whole
+design. Items are often written up after their work lands — `19C`'s
+Items 3 and 4 were logged on 2026-08-21 in a commit titled "log 19C
+refinements", for spec edits that shipped on 2026-08-20. Nothing in the
+timestamps separates that from an edit made for a different item, so a
+FAIL here would fire on honest work and the check would be routinely
+waived, or switched off (`constitution.md` Article VI). It reports the
+ambiguity, names both readings, and a person resolves it in one
+`git log`. Measured across all 96 plans this fires once, and changes no
+plan's exit code.
+
+The cost is that the close gate still exits 0 with a warning standing, so
+the definition-of-done line reads "exits 0; any warning adjudicated" —
+the reader, not the exit code, closes the loop.
 """
 
 from __future__ import annotations
@@ -80,6 +108,16 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 WAIVER = re.compile(r"<!--\s*doc-impact-waived:(.*?)-->", re.DOTALL)
 ITEM_HEADING = re.compile(r"^## Item (\d+)\b")
+# An "(Item n)" ownership tag on a segment-level manifest bullet. The
+# parenthetical must *begin* with the item reference (after an optional
+# "done —"), which is every form in use across the 96 plans — "(Item 1)",
+# "(Item 2, on wiring)", "(done — Item 3)" — and excludes the prose
+# references that share the words: "(18S Item 3)" points at another
+# segment's item, "(footgun from Item 1)" and "(Slice 1 of Item 4)" are
+# commentary. A bullet naming two items carries two parentheticals
+# (`18R`'s `docs/status.md`), not one listing both.
+ITEM_TAG = re.compile(r"\((?:done\s*[—–-]\s*)?(Items?\s+\d+[^)]*)\)")
+ITEM_TAG_NUMBER = re.compile(r"\bItem\s+(\d+)")
 SEGMENT_ID = re.compile(r"^([A-Za-z0-9]+)(?:\.(\d+))?$")
 
 PASS, FAIL, WARN, SKIP = "pass", "fail", "warn", "skip"
@@ -214,6 +252,11 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
             if path not in seen:
                 seen.append(path)
         bullet["paths"] = seen
+        bullet["items"] = sorted({
+            int(number)
+            for tag in ITEM_TAG.findall(bullet["text"])
+            for number in ITEM_TAG_NUMBER.findall(tag)
+        })
     return bullets
 
 
@@ -258,6 +301,35 @@ def _later_commit(a: list[str] | None, b: list[str] | None) -> list[str] | None:
     ).returncode == 0:
         return b
     return a
+
+
+_ITEM_START_CACHE: dict[tuple[str, int], list[str] | None] = {}
+
+
+def item_heading_start(plan: pathlib.Path, number: int) -> list[str] | None:
+    """[sha, date] of the commit that added ``## Item <n>`` to this plan."""
+    key = (plan.as_posix(), number)
+    if key not in _ITEM_START_CACHE:
+        _ITEM_START_CACHE[key] = _first_commit_matching(
+            plan, f"^## Item {number} "
+        )
+    return _ITEM_START_CACHE[key]
+
+
+def bullet_window_start(
+    plan: pathlib.Path, base: list[str] | None, items: list[int]
+) -> list[str] | None:
+    """Window start for one segment-level bullet.
+
+    The later of the segment window and the `## Item n` heading of each
+    item the bullet is tagged with; the latest, for a bullet naming two.
+    Why this exists and why it only warns: module docstring, "The
+    window".
+    """
+    start = base
+    for number in items:
+        start = _later_commit(start, item_heading_start(plan, number))
+    return start
 
 
 def window(
@@ -367,8 +439,13 @@ def check_manifest(
     bullets = parse_bullets(lines, *body)
     start, end, start_date = window(plan, depth, item)
 
+    base = [start, start_date] if start else None
     committed: list[dict] = []
     for bullet in bullets:
+        # Item tags only bind a segment-level manifest; an item-level one
+        # is already anchored on its own heading by window().
+        tagged = bullet["items"] if depth == 2 else []
+        entry_start = bullet_window_start(plan, base, tagged) if tagged else base
         for path in bullet["paths"]:
             committed.append(
                 {
@@ -376,6 +453,9 @@ def check_manifest(
                     "line": bullet["line"],
                     "waived": bullet["waived"],
                     "reason": bullet["reason"],
+                    "items": tagged,
+                    "start": entry_start[0] if entry_start else None,
+                    "start_date": entry_start[1] if entry_start else None,
                 }
             )
 
@@ -394,7 +474,7 @@ def check_manifest(
     })
 
     # C3 — every un-waived path modified in the window.
-    c3, honoured_count, checked = [], 0, 0
+    c3, c3_warn, honoured_count, checked = [], [], 0, 0
     if start is None:
         checks.append({
             "id": "C3", "what": "paths modified in window",
@@ -406,18 +486,31 @@ def check_manifest(
             if entry["waived"] or not (REPO / entry["path"]).is_file():
                 continue
             checked += 1
-            when = honoured(entry["path"], start, end)
-            if when:
+            entry_start = entry["start"] or start
+            if honoured(entry["path"], entry_start, end):
                 honoured_count += 1
-            else:
-                ever = last_touched_ever(entry["path"]) or "never"
-                c3.append(
-                    f"{entry['path']} not modified in window "
-                    f"(last modified {ever}, line {entry['line']})"
+                continue
+            # Fall back to the segment window: an edit inside it but
+            # before this item's heading is ambiguous, not absent.
+            if entry["items"] and honoured(entry["path"], start, end):
+                honoured_count += 1
+                c3_warn.append(
+                    f"{entry['path']} was edited in the segment window but "
+                    f"before Item {max(entry['items'])} existed "
+                    f"({entry['start_date']}) — either the item was logged "
+                    f"after its work landed, or this is another item's edit "
+                    f"(line {entry['line']})"
                 )
+                continue
+            ever = last_touched_ever(entry["path"]) or "never"
+            c3.append(
+                f"{entry['path']} not modified in window "
+                f"(last modified {ever}, line {entry['line']})"
+            )
         checks.append({
             "id": "C3", "what": "paths modified in window",
-            "status": FAIL if c3 else PASS, "detail": c3,
+            "status": FAIL if c3 else (WARN if c3_warn else PASS),
+            "detail": c3 + c3_warn,
         })
 
     # C4 — every waiver reasoned.
