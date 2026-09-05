@@ -2315,6 +2315,12 @@ dep chains called out at the bottom of this file.
    Catalog #34 (queue-based batch invitation sending — Part C).
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
+   **Gated on institutional Azure provisioning (decision
+   2026-09-05)** — not started until the host exists with a sending
+   identity. Operationally optional meanwhile: invitations are
+   covered by the operator's own broadcast email (participant model
+   = roster + sign-in); the real gap is targeted reminders. Rationale
+   in the plan's Status section.
 
 #### Stubs
 

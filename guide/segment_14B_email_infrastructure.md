@@ -53,6 +53,52 @@ Sized as **multiple Parts**, sketched below. Parts A → B → C →
 D → E land in dependency order; Parts F → H are independent
 backend swaps and ship as deployment demand dictates.
 
+### Why this segment is stalled — and why that is acceptable (decision 2026-09-05)
+
+Three consecutive codebase assessments (19aug, 04sep and the one
+before) named "start 14B" as the top recommended move, the 04sep one
+adding that it was "blocked on nothing but a decision". This is that
+decision, recorded so the next assessment settles it rather than
+repeating it.
+
+**Why it waits.** The dispatch leg needs a sending identity the
+institution will accept — an in-tenant Graph application permission,
+Azure Communication Services, or a sanctioned relay (Options B–D in
+`spec/email_infra_options.md`); institutional Microsoft 365 tenants
+typically block basic SMTP AUTH, so Option A built against personal
+Azure would be the wrong thing built twice. That identity exists only
+once the institutional Azure host is provisioned
+(`docs/deployment_nus.md`), which is expected soon. **Part A starts
+when provisioning lands, not before.**
+
+**Why that is acceptable — email is optional in a clear sense.** Since
+the participant model shipped (2026-05-30 → 06-03), access is
+*roster identity + Easy Auth sign-in*, not a token in an email. A
+reviewer, reviewee or observer who signs in reaches everything they
+are entitled to at `/me`; the invitation token is a convenience
+landing, not a credential (`spec/permissions.md` §2). An operator can
+therefore notify participants with a **generic email from their own
+mailbox pointing at the app's URL** — no per-reviewer message, no
+token, nothing sent by the app. `docs/quickstart.md` §6 already
+documents exactly this as the operating procedure. Invitations are
+covered without the app sending anything.
+
+**The real gap is reminders.** What a broadcast cannot do is target
+the incomplete: a nudge to *exactly* those reviewers who have not yet
+submitted, on a schedule, with their own link. Today the operator
+reads the Responses page's coverage view and chases by hand. Two
+smaller gaps sit behind it: the responses-received confirmation (its
+editor toggle is stored and previewed but has no consumer —
+`spec/email_template_editor.md` §7), and the 18G scheduled auto-send
+offsets, which today fire into the dev outbox only.
+
+**What lifts it, and what comes first when it does.** Institutional
+Azure provisioned with a sending identity. Part A (the transport call
+on the existing send path) is then the first slice, and
+`send_reminders_to_incomplete` — which already exists as a service —
+is the payoff: reminders, not invitations, are what the app adds over
+an operator's own mailbox.
+
 ## Why a separate segment
 
 The original Segment 11C Part 2 plan bundled three things:

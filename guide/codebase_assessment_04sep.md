@@ -271,7 +271,8 @@ move #3, which did not ship.
 
 ## 5. Weaknesses
 
-- **Email is the long pole and has not moved in three snapshots.** `email_send.py`
+- **Email is the long pole and has not moved in three snapshots.** *(Settled
+  2026-09-05 as deliberately gated on Azure provisioning — see §8.)* `email_send.py`
   ships an SMTP backend and the outbox writes rows, but nothing dispatches.
   Invitations, reminders and result notifications all depend on it, and a pilot
   that cannot email participants is a pilot that runs on broadcast links. It was
@@ -390,6 +391,15 @@ actually reach its participants.
    institutional dependency; this is blocked on nothing but a decision. The
    outbox, the SMTP backend and the templates already exist — what is missing is
    the caller.
+
+   > **Settled 2026-09-05.** The decision was taken, and it is *not yet*:
+   > 14B is gated on institutional Azure provisioning (the dispatch leg
+   > needs an in-tenant sending identity), and email is operationally
+   > optional meanwhile — since the participant model, an operator's own
+   > broadcast email covers invitations; the real gap is targeted
+   > reminders. Rationale in `guide/segment_14B_email_infrastructure.md`
+   > Status. The next snapshot should carry it as *gated*, not as an open
+   > recommendation.
 2. **Write `spec/permissions.md` and `spec/email_template_editor.md`.** Cheap,
    and #1 makes the second one load-bearing rather than tidy. The new
    documentation gate verifies agreement but cannot detect *absence*, so these

@@ -1004,6 +1004,21 @@ with the simplest acceptable infrastructure choices.
 
 ---
 
+- **Email dispatch — Segment 14B Part A onward.** Deliberately
+  gated on institutional Azure provisioning (decision 2026-09-05;
+  full rationale in `guide/segment_14B_email_infrastructure.md`
+  "Why this segment is stalled"). The dispatch leg needs a sending
+  identity the institution will accept (Options B–D in
+  `spec/email_infra_options.md`); building Option A against personal
+  Azure would be built twice. **Operationally optional meanwhile:**
+  since the participant model, access is roster + sign-in, so an
+  operator's own generic email pointing at the app URL covers
+  invitations (`docs/quickstart.md` §6). **The real gap is
+  reminders** — targeting exactly the reviewers who have not
+  submitted — chased by hand from the Responses page until then.
+  **Lift trigger:** the institutional host exists with a sending
+  identity; Part A is the first slice, reminders the payoff.
+
 ### 2. Postgres platform migrations (destructive, Postgres-only)
 
 Inherited from Segment 4A (`guide/archive/segment_04A.md`),

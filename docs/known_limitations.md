@@ -37,9 +37,17 @@ bugs — they trace to the Segment 14A plan and
 
 ## Functional scope
 
-- **Email not yet wired.** Invitation / reminder email delivery
-  is Segment 14B; today the dev outbox records what *would* be
-  sent.
+- **Email not yet wired — deliberately, until Azure is provisioned.**
+  Invitation / reminder email delivery is Segment 14B; today the dev
+  outbox records what *would* be sent. This is a decision
+  (2026-09-05), not a gap waiting for attention: the dispatch leg
+  needs an in-tenant sending identity that exists only once the
+  institutional host is provisioned. Meanwhile email is optional —
+  access is roster + sign-in, so the operator's own email pointing
+  at the app URL covers invitations (`docs/quickstart.md` §6). What
+  is genuinely missing is **targeted reminders** to reviewers who
+  have not submitted; until 14B, chase them by hand from the
+  Responses page's coverage view.
 - **No automatic data expiry.** Nothing is purged on a schedule;
   retention is entirely operator-driven (see
   `docs/backup_restore.md`).
