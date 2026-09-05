@@ -197,7 +197,9 @@ the `responses_received_enabled` flag.
 
 **Surface:** `/operator/sessions/{id}/setup-invite` (Email Template
 page). The page has three internal nav tabs (Invitation / Reminder /
-Responses received) and a side-by-side composer + preview region.
+Responses received) and a two-card body: the composer beside a
+merge-tag reference card (rendered previews live on the Previews
+hub). Full page contract: `spec/email_template_editor.md`.
 
 **String overrides** (per template kind, with the empty string
 meaning "use the default"):

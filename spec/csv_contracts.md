@@ -403,7 +403,7 @@ one file.
 ```
 session.name,Spring Review,String
 session.deadline,2026-06-01T08:00:00+08:00,DateTime
-email_template_overrides.invitation_subject,Please review your assigned reviewees,String
+email_overrides.invitation.subject,Please review your assigned reviewees,String
 rtd.Long_text.data_type,Long_text,String
 instruments[1].name,Default,String
 instruments[1].display_fields[1].source_type,reviewee,String
