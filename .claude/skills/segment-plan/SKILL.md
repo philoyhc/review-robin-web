@@ -51,7 +51,7 @@ Write these sections in this order. Two of them are machine-read and must use th
 | Doc impact | `## Doc impact` | **yes** | See "Doc impact contract". |
 | Status | `## Status` | **yes** | Absent at planning time. Added during or at the end of the build. See "Revising a plan". |
 
-`Doc impact` and `Status` are parsed by `tools/close_check.py` at `##` (segment) or `###` (item) level. Do not rename them, and do not have both a segment-level and item-level `Doc impact` in one file.
+`Doc impact` and `Status` are parsed by `tools/close_check.py` at `##` (segment) or `###` (item) level. Do not rename them, and do not have both a segment-level and item-level `Doc impact` in one file. `Doc impact` is matched **exactly** — suffixing the heading (`## Doc impact — segment sketch (superseded)`) is how a plan retires a stale manifest without deleting it, and Segment 19A does exactly that. `Status` tolerates a suffix, because dated headings are the convention.
 
 ## Measuring blast radius
 
@@ -113,7 +113,7 @@ When asked to "update the plan" after a build, do the five things above. Do not 
 Closing is a sequence, and the plan is the record of it. `<id>` is `19C` for a segment or `19C.1` for an item. In order:
 
 1. The `Doc impact` section at the closing level is current — every bullet honoured, waived with reason, or added.
-2. `python3 tools/close_check.py <id>` exits 0. If it fails, fix the plan or the spec; do not close. *(The script is specified but not yet built — until it lands, perform its checks by hand: Doc impact section present at the closing level; every committed path exists and was edited during the segment or carries a reasoned waiver.)*
+2. `python3 tools/close_check.py <id>` exits 0. If it fails, fix the plan or the spec; do not close. It checks the manifest at the closing level (one shape per file), that every committed path exists and is live, that every un-waived path was edited inside the segment's window, and that each waiver carries a reason; a missing `Status` block warns rather than fails. It reports only — it edits nothing and moves nothing, and it asks whether an edit happened, never whether it was right. That judgement is step 3's.
 3. Run `spec-writer` against the doc-impact files only. Adjudicate its flags; record any that changed a decision in `Status`.
 4. `Status` carries the final intended-versus-done account.
 5. Add the `docs/status.md` row. For a segment close (or the last item of a segment): move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.

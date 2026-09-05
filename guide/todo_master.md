@@ -2027,7 +2027,7 @@ Continues the 18R holding segment beyond the Items 1–2 work above.
   chrome for parity with the operator chrome. Audit + plan:
   `guide/archive/landing_pages.md`.
 
-### Segment 19A — Documentation hygiene — in progress; started 2026-08-19; Part 1 ✅ shipped 2026-09-05 (detailed plan: `guide/segment_19A_spec_documentation.md`)
+### Segment 19A — Documentation hygiene — in progress; started 2026-08-19; Part 1 ✅ + Item 3 (Part 3) ✅ shipped 2026-09-05 (detailed plan: `guide/segment_19A_spec_documentation.md`)
 
 > **Renamed 19 → 19A on 2026-08-19** when the code-level consistency
 > remediation split off into its own sibling **Segment 19B** (below).
@@ -2072,11 +2072,28 @@ writing them surfaced and fixed five spec-vs-code drifts in neighbouring
 files (functional spec §11.2 / §17, `lifecycle.md` §5, `csv_contracts.md`,
 `audience_and_identity_model.md` §4b, `settings_inventory.md` §3).
 
-**Still open:** Parts 2–3 — sweep cadence template + the route-to-spec
-coverage gate. The practice audit (#2085) is the argument for Part 3: the
-new documentation gate verifies *agreement* where a code constant exists
-but cannot detect *absence*, which is exactly how Part 1 stayed open for
-four months unnoticed. See the plan doc.
+**Item 3 (Part 3) — the phase rule's exit made checkable — ✅ shipped
+2026-09-05 (PRs #2109 → #2111).** Planned in full that morning from an
+externally drafted spec, then built the same day. Two mechanisms, neither
+an agent, both at the segment boundary. `app/web/spec_registry.py` +
+`tests/unit/test_spec_coverage.py` gate the *undeclared* half — all 30
+first-party routing modules mapped to the specs that govern them, and a
+new routing module fails the suite unless it names one (`EXPECTED_PENDING`
+is empty). `tools/close_check.py <id>` makes the *declared* half
+checkable — it reads a plan's `Doc impact` manifest at the closing level
+and verifies each committed path exists, is live, and was edited inside
+the segment's window, with reasoned waivers and a warn-only `Status`
+check. **Baseline over the 90 archived plans, 3.0 s: 85 of 101 live
+committed paths honoured (84%), 21 of 32 plans fully honoured, 8
+committed paths gone, 58 plans with no manifest** — correcting the plan's
+recorded 85% / 19-of-32, which had counted merge commits as honouring.
+Neither check judges whether a spec says *enough*: both Tier-1 gaps closed
+in Part 1 would have passed the coverage gate. `constitution.md` Article
+II and `rrw_sdd_in_practice.md` §6.1 / §6.3 / §7 revised — the exit is now
+checkable, not mechanised. The item closes in place; 19A stays live.
+
+**Still open:** Part 2 — a sweep cadence template + dated sweep notes.
+See the plan doc.
 
 ### Segment 19B — Consistency remediation — ✅ complete 2026-08-19 (detailed plan: `guide/archive/segment_19B_consistency.md`)
 
@@ -2346,6 +2363,12 @@ on* rather than what it does. Brief and findings:
   (19A Part 1, above) + five drift fixes.
 - **#2102 / #2103 / #2104** — `docs/status.md` current through #2101;
   three stale code comments corrected; `constitution.md`.
+- **#2106 / #2107 / #2108** — `todo_master.md` brought current; the
+  `segment-plan` skill + `guide/segment_plan_template.md`; Segment 19A
+  Item 3 planned in full.
+- **#2109 / #2110 / #2111** — 19A Item 3 built: the spec-coverage
+  registry + gate, `tools/close_check.py`, and the process docs. See the
+  19A entry above for the baseline and the corrections it carries.
 - **#2105** — why 14B email is deliberately gated on institutional Azure
   provisioning, and why that is acceptable (participant model = roster +
   sign-in, so an operator's own email covers invitations; targeted
@@ -2368,7 +2391,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**14B (gated on Azure provisioning), 19A Parts 2–3, 20** (19B closed
+**14B (gated on Azure provisioning), 19A Part 2, 20** (19B closed
 2026-08-19; 19C closed 2026-09-04; Self-review consolidation closed 2026-05-30;
 Extract data closed 2026-05-30; URL remodel
 ``/reviewer/`` → ``/me/`` closed 2026-05-30 in PRs #1668 + #1669;
@@ -2407,11 +2430,12 @@ dep chains called out at the bottom of this file.
 - **19A — Documentation hygiene** *(stub created 2026-05-11 as "19";
   renamed 19 → 19A 2026-08-19; **started 2026-08-19**; **Part 1 shipped
   2026-09-05** — see the in-progress entry in **Done**)*. Broadened from
-  spec-only to spec/ **+** docs/ currency. Remaining: **Part 2** (a sweep
-  cadence template + dated sweep notes) and **Part 3** (a route-to-spec
-  coverage gate — the one thing that would make the "spec on the way out"
-  rule mechanical rather than conventional; `constitution.md` Articles I
-  and II). **Plan:** `guide/segment_19A_spec_documentation.md`.
+  spec-only to spec/ **+** docs/ currency. **Part 3 shipped 2026-09-05** as Item 3 (the
+  route-to-spec coverage gate + `tools/close_check.py`; the "spec on the
+  way out" rule is now checkable rather than conventional —
+  `constitution.md` Articles I and II revised to say so). Remaining:
+  **Part 2** (a sweep cadence template + dated sweep notes).
+  **Plan:** `guide/segment_19A_spec_documentation.md`.
 
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
