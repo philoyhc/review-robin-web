@@ -183,7 +183,10 @@ Multi-tenancy + system-wide settings remain forward-looking.
 The session creator becomes the inaugural `session_operators`
 row with `role="owner"` at session-create time. Additional
 owners are added / removed by current owners via the Owners
-card on `/operator/sessions/{id}/edit` (Segment 16B PR 2);
+sub-card on Session Home's config card in edit mode
+(`/operator/sessions/{id}?editing=1#config-owners-card` —
+Segment 16B PR 2, relocated from the retired Edit page by 18R
+Item 4; gate and invariant contract in `spec/permissions.md` §4.2);
 the Add-owner picker offers any workspace operator
 (`users WHERE (is_operator OR is_sys_admin) AND NOT EXISTS
 (SELECT 1 FROM session_operators ...)`). The service-layer

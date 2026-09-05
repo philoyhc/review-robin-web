@@ -331,7 +331,7 @@ GET-side rendering rules.
 ## 5. UI lock-card pattern
 
 **On Setup pages** (Reviewers / Reviewees / Relationships /
-Instruments / Email Template) while session is `ready`: the
+Instruments) while session is `ready`: the
 mutating-card grid (Upload, Danger Zone) is hidden and a
 **yellow lock card** renders in its place with copy explaining
 that setup is locked and offering a "Revert to draft" inline
@@ -342,6 +342,11 @@ query param scoped to the page set (`reviewers`, `reviewees`,
 `relationships`, `instruments`, `setup-invite`) so the operator
 lands back on the page they were trying to edit after the
 revert.
+
+The **Email Template** page is the exception: it renders no lock
+card and its routes carry no `_require_editable`, so email copy
+stays editable in every lifecycle state — see
+`spec/email_template_editor.md` §5.
 
 **Visual treatment:** `accent-amber-dark` border, `accent-amber-bg`
 interior, outline-amber button. Documented in

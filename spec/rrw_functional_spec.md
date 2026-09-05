@@ -1590,13 +1590,16 @@ template by substituting per-reviewer merge fields:
 - **Invitation**: `$reviewer_name`, `$session_name`,
   `$deadline`, `$help_contact`, `$invite_url`.
 - **Reminder**: `$reviewer_name`, `$session_name`,
-  `$deadline`, `$help_contact`. (No `$invite_url` — the
-  reviewer has already opened the invitation.)
+  `$deadline`, `$help_contact`, `$invite_url` — the same set
+  as the invitation; the default reminder body repeats the
+  sign-in link.
 - **Responses received**: `$reviewer_name`, `$session_name`,
   `$deadline`, `$help_contact`, `$submitted_at`.
 
-Unmatched merge tags render as empty. The 2000-character
-body limit applies per template.
+An unrecognised merge tag is left in the text verbatim — never
+blanked, never an error — so a typo cannot fail a send. Subjects
+are capped at 255 characters by the editor; bodies carry no
+length limit. Full editor contract: `spec/email_template_editor.md`.
 
 Per-template **cc** and **bcc** override fields let the
 operator copy a help-contact mailbox or an audit address on
@@ -1694,8 +1697,7 @@ is **wired**:
 
 - Per-session invitation, reminder, and responses-received
   templates with merge-tag substitution, reset-to-default
-  per-field, per-template cc/bcc, and the 2000-character
-  body limit.
+  per-field, and per-template cc/bcc.
 - Invitation rows with per-reviewer one-shot tokens (hashed
   at rest, raw token in email body only).
 - The opened-at idempotent stamping on token redemption,
@@ -2078,23 +2080,37 @@ triggered purge for these needs.
 
 ## 17. Permissions and access control
 
-RRW enforces access at three gates:
+RRW enforces access at six gates (the full catalogue, with
+failure semantics and the per-route matrix, is
+`spec/permissions.md`):
 
 1. **Workspace operator** — applies to every `/operator/*`
    surface. The signed-in identity must be on the workspace
-   allowlist.
+   allowlist (operator or admin flag).
 2. **Per-session operator** — applies to session-scoped
    `/operator/sessions/{id}/*` surfaces. The signed-in
-   identity must be an owner of that session.
+   identity must be an owner of that session. An admin who
+   is not an owner may *read* the session's diagnostics but
+   must self-add as owner (an audited action) before editing.
 3. **Sys admin** — applies to the workspace governance and
    diagnostics surfaces. The signed-in identity must carry
-   the sys-admin flag.
+   the admin flag; changing *who is an admin* additionally
+   requires the config-derived super-admin tier.
 
-A fourth gate applies to reviewer surfaces:
+Three gates apply to participant surfaces, all by
+case-insensitive email match against an **active** roster row:
 
-4. **Reviewer in session** — the signed-in identity's email
-   must match an active reviewer row on the session, or the
-   invitation token must be valid for the signed-in identity.
+4. **Reviewer in session** — the reviewer surface, save /
+   submit / clear, and the post-submit summary.
+5. **Reviewee in session** — the reviewee results surface; a
+   reviewee whose identifier is not an email can never reach
+   it.
+6. **Observer in session** — the observer collation surface.
+
+An invitation token grants nothing on its own: the token
+landing checks the signed-in email against the invitation's
+reviewer email (403 on mismatch) and then forwards to the
+reviewer surface, which applies gate 4.
 
 Every gate is enforced server-side; UI affordances that the
 current identity cannot use render either inert (with an
@@ -2187,12 +2203,14 @@ references:
 | CSV import / export contracts | `spec/csv_contracts.md` |
 | UI vocabulary (button styles, layout) | `spec/domain_assumptions.md` |
 | Email backend options | `spec/email_infra_options.md` |
+| Email Template editor (page contract, overrides, merge tags) | `spec/email_template_editor.md` |
 | Group-scoped instruments | `spec/instruments.md` (operator-card / model side); `spec/assignments.md` (fan-out / aggregation) |
 | Instruments page contract | `spec/instruments.md` |
 | Lifecycle states and transitions | `spec/lifecycle.md` |
 | Operations-row pages (Validate / Previews / Invitations / Responses) | `spec/operations_pages.md` |
 | Operator button audit (canonical styles) | `spec/operator_button_audit.md` |
 | Operator UI shell + chrome | `spec/operator_ui_concept.md` |
+| Permissions / authorization (gates, per-route matrix, role + ownership invariants) | `spec/permissions.md` |
 | Previews hub | `spec/preview_hub.md` |
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
 | Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |

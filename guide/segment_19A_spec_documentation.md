@@ -29,9 +29,13 @@ Shipped so far:
   and the update-in-place batch (revoke-UI / conftest / status-header
   fixes). `docs/` went 20 → 16 files.
 
-**Still open:** Part 1 below — the Tier-1 **spec coverage-gap** closure
-(`spec/email_template_editor.md`, `spec/permissions.md`) flagged by the
-2026-05-11 sweep — plus Parts 2–3 (sweep cadence + coverage gate).
+- **Part 1 — Tier-1 spec coverage-gap closure** (`spec/permissions.md`,
+  `spec/email_template_editor.md`) — **shipped 2026-09-05**, four months
+  after the 2026-05-11 sweep flagged them. Writing them surfaced and
+  fixed five spec-vs-code drifts in neighbouring files (each listed in
+  the new specs' "Drift noted" sections).
+
+**Still open:** Parts 2–3 (sweep cadence + coverage gate).
 
 ## Goal
 
