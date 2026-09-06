@@ -280,16 +280,24 @@ def test_the_disclosure_uses_the_instrument_cards_triangle(
     one showing."""
     body = client.get("/guide").text  # the rules live in base.html
 
-    guidance_rule = body.split("body.ui-v2 .page-guidance > summary::before")[1]
+    # ::after, not ::before — the triangle follows the heading so the
+    # text starts flush with every other card heading on the page.
+    guidance_rule = body.split("body.ui-v2 .page-guidance > summary::after")[1]
     assert "25BE" in guidance_rule.split("}")[0]
+    assert "body.ui-v2 .page-guidance > summary::before" not in body
 
-    open_rule = body.split("body.ui-v2 .page-guidance[open] > summary::before")[1]
+    open_rule = body.split("body.ui-v2 .page-guidance[open] > summary::after")[1]
     assert "rotate(180deg)" in open_rule.split("}")[0]
 
     # Both suppressions, because engines disagree on which one works.
-    summary_rule = body.split("body.ui-v2 .page-guidance > summary {")[1]
-    assert "list-style: none" in summary_rule.split("}")[0]
+    summary_rule = body.split("body.ui-v2 .page-guidance > summary {")[1].split("}")[0]
+    assert "list-style: none" in summary_rule
     assert "body.ui-v2 .page-guidance > summary::-webkit-details-marker" in body
+
+    # Card-header type: the summary is this card's heading and should
+    # read as one, matching `body.ui-v2 h2`.
+    assert "font-size: var(--fs-h2)" in summary_rule
+    assert "font-weight: 600" in summary_rule
 
 
 def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:

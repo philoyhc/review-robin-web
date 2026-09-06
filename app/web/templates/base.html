@@ -1478,20 +1478,33 @@
       body.ui-v2 .page-guidance > summary {
         cursor: pointer;
         color: var(--card-help-fg);
-        font-size: 0.95em;
+        /* Card-header type. The summary *is* this card's heading, so it
+           takes the same treatment as a `.card h2` rather than reading
+           as a smaller label — mirrored here rather than inherited
+           because a <summary> is not an <h2>. No bottom margin: closed,
+           the heading is the whole card; open, `.page-guidance-body`
+           brings its own top margin. */
+        font-size: var(--fs-h2);
+        font-weight: 600;
+        line-height: 1.3;
+        margin: 0;
         list-style: none;
       }
       body.ui-v2 .page-guidance > summary::-webkit-details-marker {
         display: none;
       }
-      body.ui-v2 .page-guidance > summary::before {
+      /* Triangle *after* the heading, not before it: leading with the
+         glyph indents the text out of line with every other card
+         heading on the page, which is the thing this summary is meant
+         to match. */
+      body.ui-v2 .page-guidance > summary::after {
         content: "\25BE";
         display: inline-block;
-        width: 1.1em;
+        margin-left: 0.4em;
         line-height: 1;
         transition: transform 0.15s ease-out;
       }
-      body.ui-v2 .page-guidance[open] > summary::before {
+      body.ui-v2 .page-guidance[open] > summary::after {
         transform: rotate(180deg);
       }
       body.ui-v2 .page-guidance-body {

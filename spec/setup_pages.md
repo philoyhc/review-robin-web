@@ -51,12 +51,16 @@ Every Setup Page renders, top-to-bottom:
 0. **Page guidance** (`partials/_page_guidance.html` — Segment 19E
    rung 6). A `<details class="card page-guidance">` — a **half-width
    card**, not an inline band. **Closed by default**, showing one
-   line: the summary `What this page is for` behind the **same solid
-   triangle the collapsible instrument cards use**
-   (`.instrument-card-toggle-icon`, U+25BE), with the same
-   rotate-180-when-open convention — down closed, up expanded. One
-   disclosure glyph across the app, so an operator learns it once. The
-   native marker is suppressed both ways engines need
+   line: the summary `What this page is for`, set in **card-header
+   type** (`--fs-h2`, weight 600 — the summary *is* this card's
+   heading, so it reads as one and starts flush with every other card
+   heading on the page), followed by the **same solid triangle the
+   collapsible instrument cards use** (`.instrument-card-toggle-icon`,
+   U+25BE) with the same rotate-180-when-open convention — down closed,
+   up expanded. One disclosure glyph across the app, so an operator
+   learns it once. The glyph sits **after** the text rather than before
+   it: leading with it would indent the heading out of line with its
+   neighbours. The native marker is suppressed both ways engines need
    (`list-style: none` and `::-webkit-details-marker`). Open, the card
    grows downwards in place.
 

@@ -780,6 +780,20 @@ fix.
 
 All three generated theme tools re-run from their generators.
 
+**2026-09-06 — the guidance summary reads as a card heading** (author). Set in
+`--fs-h2` / weight 600, matching `body.ui-v2 h2`, with the triangle moved from
+`::before` to `::after`.
+
+Both halves are the same point. The summary *is* this card's heading, so it
+should look like every other card heading on the page; and a leading glyph
+indents the text out of line with those neighbours, which is precisely the
+alignment the type change is buying. Margin stays 0 — closed, the heading is
+the whole card, and `.page-guidance-body` brings its own top margin when open.
+
+The h2 rule is **mirrored rather than inherited**: a `<summary>` is not an
+`<h2>`, so `body.ui-v2 h2` does not reach it. The test now asserts the type
+alongside the glyph, so the two cannot drift apart silently.
+
 ---
 
 ## PR ladder
