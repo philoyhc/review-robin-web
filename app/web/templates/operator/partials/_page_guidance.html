@@ -4,10 +4,12 @@
    operator who already knows the page should not scroll past a
    paragraph they have read, and one who does not gets it in one click.
 
-   The macro renders a **card**, and every placement puts it in a
-   half-width grid slot beside or above the page's own cards — width
-   comes from the grid, not from the macro, so a page can compose it
-   without fighting a hard-coded size. Closed it is one line: a chevron
+   The macro renders a **card**, and every placement puts it in one
+   column of a ``.card-columns`` pair — width comes from the column, not
+   from the macro, so a page composes it without fighting a hard-coded
+   size. It took a grid-position argument while one page used a row
+   grid; that page moved to column stacks too, so the argument went
+   rather than sitting unused. Closed it is one line: a chevron
    and the summary. Open, the card grows downwards in place.
 
    Native <details>, no JS — the same primitive the Validate page's
@@ -33,14 +35,12 @@
    Usage:
 
        {% import "operator/partials/_page_guidance.html" as page_guidance %}
-       {% call page_guidance.guidance("card-tr") %}
+       {% call page_guidance.guidance() %}
          <p>...</p>
        {% endcall %}
 #}
-{% macro guidance(slot_class="") -%}
-{# ``slot_class`` is a grid-position class only (``card-tr`` etc.), never
-   styling: placement belongs to the page, the card's look belongs here. #}
-<details class="card page-guidance {{ slot_class }}">
+{% macro guidance() -%}
+<details class="card page-guidance">
   <summary>What this page is for</summary>
   <div class="page-guidance-body">{{ caller() }}</div>
 </details>

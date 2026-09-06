@@ -280,7 +280,8 @@
 
   {# Page status info — a half-width info card on the left (deadline +
      accepting counts + the Expand all / Collapse all bulk controls) and
-     the half-width guidance card on the right (19E rung 6b).
+     the half-width guidance card on the left (19E rung 6b — the
+     guidance leads, matching the roster pages).
      ``card-columns`` (1fr 1fr, start-aligned) makes each side an
      independent stack, so opening the guidance grows only its own
      column rather than dragging the deadline card's height with it. The bulk visibility-when-closed toggle retired in
@@ -289,6 +290,14 @@
   <div class="card-columns">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
+    <div>
+      {% call page_guidance.guidance() %}
+        <p>Guidance to follow — placement scaffold only
+          (19E rung 6b). Draft copy is in
+          <code>guide/page_help_text.md</code>.</p>
+      {% endcall %}
+    </div>
+
     <div>
     <div class="card">
       <p style="margin: 0;">
@@ -314,14 +323,6 @@
         <button class="btn secondary" type="button" data-instruments-collapse-all>Collapse all instruments</button>
       </div>
     </div>
-    </div>
-
-    <div>
-      {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
-      {% endcall %}
     </div>
   </div>
 

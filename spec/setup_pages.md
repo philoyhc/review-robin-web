@@ -54,9 +54,8 @@ Every Setup Page renders, top-to-bottom:
    line: a chevron (the native marker is suppressed) and the summary
    `What this page is for`. Open, the card grows downwards in place.
 
-   Width comes from the grid slot the page puts it in, never from the
-   macro; the macro's optional argument is a grid-position class
-   (`card-tr` and friends) and carries no styling. Closed, the card is
+   Width comes from the column the page puts it in, never from the
+   macro — the macro takes no arguments. Closed, the card is
    one line: `padding: 12px 16px` and `align-self: start`, so a
    stretching grid cannot inflate it to a neighbour's height.
 
@@ -78,8 +77,8 @@ Every Setup Page renders, top-to-bottom:
    |---|---|
    | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Fields with data` then `Operator actions` on the right. The Activated lock card sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
-   | Email Template | `.page-grid` — composer spans both left rows (`card-l`), guidance `card-tr`, merge tags `card-br` |
-   | Instruments | `.card-columns` — `Session deadline` left, guidance right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
+   | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
+   | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
 
    The summary wording is
    fixed in the macro rather than passed per page, because it is a
