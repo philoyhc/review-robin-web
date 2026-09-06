@@ -513,8 +513,34 @@ families rationalized — sky→`--blue-cyan-*`, danger→`--red-warm-*`, neutra
 one family) — all value-preserving except the intentional nav-chrome shift.
 
 **Deferred / optional follow-ons:** Ctrl/Cmd-Z + Redo; sort the Neutral group
-light→dark; editing a primitive's own value from the picker; the operator-facing
-Stretch (see deferred_consolidated). Original slice notes below.
+light→dark; editing a primitive's own value from the picker; **add / delete
+primitives** (below); the operator-facing Stretch (see deferred_consolidated).
+Original slice notes below.
+
+**Add / delete primitives — deferred 2026-09-06, wanted for portability.**
+v1 edits a primitive's *value* freely: each swatch in Part B carries a colour
+input and a hex field, both wired to `setPrim` (live `setProperty` repaint), and
+a chromatic family can be shifted wholesale from its seed. What it cannot do is
+change the palette's *membership* — the primitive grid is emitted at build time
+from `parse_primitives(base_css)`, and `applyActive()` walks `D.primOrder`, the
+build-time name list, rather than `Object.keys(model.prims)`. So a primitive the
+generator did not see is stored in the model and never reaches the DOM, and a
+semantic pointed at it resolves to an undefined `var()`.
+
+That is a real limit on the portability kernel (decision #6): a `tokens.css` of
+the same shape but a *different* palette can only be explored by editing the
+79 names this build happens to have. It also bit the 19C input-boundary work —
+`tools/theme_variants.gen.py` has to preview off-palette border values by
+overriding `--gray-soft` / `--slate-deep` instead of adding primitives, which
+drags `--marker-neutral` along with them.
+
+Scope when it is taken: `model.prims` becomes the authority in `applyActive`
+(iterate its keys, not `D.primOrder`); Part B's grid renders from the model
+rather than a build-time list; add/delete affordances with a delete guarded on
+"no semantic still points here"; and the export/import contract gains nothing
+new, since `{version: 2, primitives, semantic}` already carries an arbitrary
+primitive map. Not gated on anything — it is deferred by priority, not by a
+dependency.
 
 **What.** Grow the theme-preview harness into a visual **designer** for the
 light + dark palettes: seed-and-derive (OKLCH) editing with live repaint,
@@ -1002,10 +1028,37 @@ refinements are identified.
   - Raising `--border-default` to 3:1 instead of adding a fill is the obvious
     alternative and is **not** obviously worse — it needs no new token and no
     spec row. It does change every bordered surface, not just inputs, which is
-    the trade to weigh. Decide it in the item, don't assume the fill.
+    the trade to weigh.
 
-  Still small, but no longer isolated: one token, one spec table, one harness
-  pick-list.
+  **Decided 2026-09-06 (user).** Border tweak only — no new input-surface
+  token, no new spec row, no change to the customizer pick-list. The current UI
+  reads acceptably in use; this is a contrast-headroom item, not a defect
+  report, and the fill route is out of proportion to it. To be tried in
+  `tools/theme_customizer.html` before anything is committed to `base.html`.
+
+  **Candidate, if the tweak is taken.** `--border-default` repoints to the
+  **existing** primitive `--slate-dim` (`#6f7b8e`) in *both* themes. Measured
+  against `--surface-page`:
+
+  | Primitive | Light (`#ffffff`) | Dark (`#0f141b`) |
+  |---|---|---|
+  | `--gray-soft` / `--slate-deep` (today) | 1.47:1 | 1.70:1 |
+  | `--gray` `#9ca3af` | 2.54:1 | 7.28:1 |
+  | **`--slate-dim` `#6f7b8e`** | **4.29:1** | **4.31:1** |
+  | `--slate` `#6b7280` | 4.83:1 | 3.82:1 |
+
+  `--slate-dim` is the only one that lands near-symmetrically in both themes,
+  and one primitive serving both columns collapses the change to a single
+  Tier 2 row. Two things to look at in the customizer rather than reason about:
+  4.3:1 is roughly triple today's contrast, which on a **2px** `.card` border
+  may read heavier than intended; and the repoint moves every bordered
+  surface — cards, nav, tables — not just inputs. `--gray` is the fallback if
+  `--slate-dim` looks too strong, at the cost of leaving light at 2.54:1,
+  still short of 3:1.
+
+  Scope, after the decision: one line in `base.html`, one row in
+  `spec/color_tokens.md`. The token stays `--border-default`, so the
+  customizer pick-list and its self-check are untouched.
 
 ---
 

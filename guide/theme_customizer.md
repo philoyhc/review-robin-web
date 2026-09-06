@@ -22,6 +22,62 @@ future neither plan does.
 > kernel is {primitives + portable-core semantics} + {this app-agnostic
 > customizer}. Realised in that plan's tooling slice.
 
+## Status — intended vs shipped (2026-09-06)
+
+Added after the fact. **Everything below this section is the plan as written
+before the build**, and two parts of it were overtaken by what shipped — the
+token vocabulary and the seed model. Intent is not rewritten (that is the
+point of a plan); this section says what to distrust and why.
+
+**1. The token names throughout are pre-two-tier and no longer exist.** This
+doc was written against the flat palette. Segment 19C Item 6 (the two-tier
+reorg, shipped 2026-08-23) replaced it, and `spec/color_tokens.md` records the
+old names as retired. Verified against `base.html` today: `--accent-blue`,
+`--bg-page`, `--text-primary` and `--instrument-tint-1` are **gone** (0
+definitions each); the survivors named here are `--text-on-accent` and
+`--text-on-amber`. Read the seed table's token lists as *which roles a seed
+covers*, never as names to type. `spec/color_tokens.md` is the live catalogue.
+
+**2. The JSON contract shipped as v2, with a different shape.** Planned:
+`{version: 1, seeds: {light, dark}, tokens: {light, dark}}`, where `tokens` is
+the flat portable map and `seeds` exists so the editor can re-derive on import.
+Shipped (`tools/theme_customizer.gen.py`, the Export handler):
+
+```json
+{ "version": 2, "primitives": { "--white": "#ffffff", … },
+  "semantic": { "light": { "--border-default": "--gray-soft", … }, "dark": { … } } }
+```
+
+Two tiers, matching the reorg: a flat primitive→hex map, plus a per-theme
+semantic→target map whose target is a primitive or (deliberately) another
+semantic, exported as `@coupled`. There is no `seeds` block — see 3.
+
+**3. Seeds became a relative shift, not a derivation.** The plan specified
+`derive(seed, mode) -> {token: value}` per family, with per-token overrides
+that win over derivation and survive re-deriving, and a
+`derive(defaults) == base.html` fixture. What shipped is `shiftFamily()`: it
+reads the family anchor's OKLCH before and after, and applies that **delta** to
+each member's own current value, tapered near black and white to avoid
+clipping. So a seed nudges the family from wherever it already is rather than
+regenerating it from scratch. Consequences worth knowing: there is no
+derivation for an override to survive (every primitive is simply a value, and
+all of them are directly editable), no defaults-reproduction fixture is needed
+or present, and `seeds` has nothing to serialise — which is why the export
+carries `primitives` instead.
+
+**What held.** The portability directive (data-driven, parsed from the token
+file rather than baked to Review Robin), two separately-edited themes behind
+one toggle, live WCAG badges (shipped as `>= 4.5` AA per contrast row), and
+Plan A shipping first with Stretch deferred.
+
+**Known limit, recorded 2026-09-06.** The customizer edits primitive *values*
+but cannot add or delete primitives, which caps the portability kernel at
+whatever palette the build parsed. Cause and scope are in
+`guide/segment_19C_refinements.md` Item 5 → "Add / delete primitives"; not
+repeated here.
+
+---
+
 ## The two plans at a glance
 
 - **First — developer theme *designer*** (in the `tools/` harness). Design the
@@ -70,6 +126,9 @@ No build step, no runtime deps. The core is four things:
    it for a coding agent; Stretch *stores* it in localStorage.
 
 ### The model — seed-and-derive
+
+> **Partly superseded — token names are pre-two-tier, and seeds shipped as a
+> relative OKLCH shift rather than a derivation. See `## Status` above.**
 
 The *ergonomic* version isn't 47 pickers — a handful of **seed** hues drive the
 families, with per-token override for the stubborn cases.
@@ -121,6 +180,8 @@ render itself unreadable. The single most valuable guardrail — build it early,
 and make it a **hard gate** in Stretch (an operator isn't a designer).
 
 ### JSON contract (identical for both plans)
+
+> **Superseded — shipped as v2 with a different shape. See `## Status` above.**
 
 ```json
 {
