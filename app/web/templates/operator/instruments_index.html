@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "operator/partials/_page_guidance.html" as page_guidance %}
 
 {% block title %}Instruments — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -278,8 +279,8 @@
   </div>
 
   {# Page status info — a half-width info card on the left (deadline +
-     accepting counts) and a half-width companion card on the right
-     that hosts the Expand all / Collapse all bulk controls.
+     accepting counts + the Expand all / Collapse all bulk controls) and
+     the half-width guidance card on the right (19E rung 6b).
      ``page-grid`` (1fr 1fr, stretched alignment) keeps both cards the
      same height. The bulk visibility-when-closed toggle retired in
      18R Item 3 — visibility when closed is now governed by the
@@ -300,17 +301,21 @@
         &middot;
         <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
       </p>
-    </div>
-    <div class="card" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 8px;">
       {# Segment 18M PR 0 — Expand all / Collapse all instruments
          operate on every per-instrument <details.instrument-card-
          collapsible> on the page. Inline script below the loop wires
-         the click handlers. #}
-      <div style="display: flex; gap: 8px; margin: 0;">
+         the click handlers. Moved in from their own card (19E rung 6b)
+         so that card could become the guidance card: a card holding
+         nothing but two bulk toggles was the page's cheapest half. #}
+      <div style="display: flex; gap: 8px; margin: 12px 0 0 0;">
         <button class="btn secondary" type="button" data-instruments-expand-all>Expand all instruments</button>
         <button class="btn secondary" type="button" data-instruments-collapse-all>Collapse all instruments</button>
       </div>
     </div>
+    {% call page_guidance.guidance() %}
+      <p>Guidance to follow — placement scaffold only (19E rung 6b).
+        Draft copy is in <code>guide/page_help_text.md</code>.</p>
+    {% endcall %}
   </div>
 
   {% if is_ready %}

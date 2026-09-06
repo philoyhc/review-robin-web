@@ -49,10 +49,24 @@ import paths these pages expose, see
 Every Setup Page renders, top-to-bottom:
 
 0. **Page guidance** (`partials/_page_guidance.html` — Segment 19E
-   rung 6). A `<details class="page-guidance">` disclosure, summary
-   `What this page is for`, **closed by default** and sitting above
-   the page's cards (and above any page-internal tab strip: it
-   explains the page, not the selected tab). The summary wording is
+   rung 6). A `<details class="card page-guidance">` — a **half-width
+   card**, not an inline band. **Closed by default**, showing one
+   line: a chevron (the native marker is suppressed) and the summary
+   `What this page is for`. Open, the card grows downwards in place.
+
+   Width comes from the grid slot the page puts it in, never from the
+   macro; the macro's optional argument is a grid-position class
+   (`card-tr` and friends) and carries no styling. Per-page
+   placements:
+
+   | Page | Placement |
+   |---|---|
+   | Reviewers / Reviewees / Relationships | `Fields with data` card at half width, guidance to its right in the same `.bottom-grid` row |
+   | Observers | Half width, top right, own `.bottom-grid` row above `Cohort match rule` |
+   | Email Template | `.page-grid` — composer spans both left rows (`card-l`), guidance `card-tr`, merge tags `card-br` |
+   | Instruments | Right slot of the existing `.page-grid`; the `Expand all` / `Collapse all` toggles moved into the left `Session deadline` card to free it |
+
+   The summary wording is
    fixed in the macro rather than passed per page, because it is a
    repeated affordance and an operator learns a control faster when
    it reads identically everywhere; a page needing different wording
@@ -72,8 +86,10 @@ Every Setup Page renders, top-to-bottom:
    *transient* page-level feedback — persistent explanation is not
    that.
 
-   **Rollout status.** Piloted on Email Template; the remaining five
-   pages follow in rung 6's second stage.
+   **Rollout status.** All six pages carry the card. Email Template
+   carries real copy (rung 6a); the other five carry placeholder
+   bodies pending rung 6b's copy slice, drafted in
+   `guide/page_help_text.md`.
 
 1. **Chrome** (`session-nav-card` partial — two-row top nav with the
    Setup row highlighted).

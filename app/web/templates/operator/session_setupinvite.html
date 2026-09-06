@@ -12,27 +12,6 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# 19E rung 6 pilot — page-level guidance, above the template
-     selector rather than below it. The three tabs choose *which* email;
-     this explains the page as a whole, so putting it under the tabs
-     would read as commentary on the selected tab. #}
-  {% call page_guidance.guidance() %}
-    <p>
-      A session has three emails: an <strong>invitation</strong>, a
-      <strong>reminder</strong>, and a <strong>confirmation</strong> sent when
-      a reviewer submits. Each tab edits one of them for this session only.
-      Leave a field blank and the default shown in grey is used; the merge
-      tags on the right are substituted when the mail is built.
-    </p>
-    <p>
-      <strong>Sending is not switched on yet</strong>, so what you save here is
-      stored, not delivered. Nothing about access depends on it — reviewers
-      reach their work by signing in, and the roster is what lets them in. See
-      <a href="/guide?return_to={{ request.url.path }}#guide-give_access">Give
-      reviewers access</a> in the Guide.
-    </p>
-  {% endcall %}
-
   {# Template selector — Invitation / Reminder / Responses received.
      Page-internal nav tabs sharing the chrome's ``.nav-tab`` styling
      so the visual vocabulary stays consistent (per spec/ui_elements.md
@@ -64,8 +43,13 @@
      a clean state and Save returns to disabled. No flash banner is
      needed; the disabled→enabled→disabled cycle is the visual
      signal. #}
-  <div class="bottom-grid">
-    <div class="card email-composer" id="email-composer">
+  {# 19E rung 6b scaffold — three-slot page grid. The composer spans
+     both rows on the left; the right column stacks the guidance card
+     above the merge-tag reference it introduces. Was a full-width
+     disclosure above the tab strip in rung 6a; the author moved it
+     here when the help cards became half-width cards. #}
+  <div class="page-grid">
+    <div class="card email-composer card-l" id="email-composer">
       <h2>{{ (active_template|replace("_", " "))|capitalize }} email</h2>
 
       <form method="post"
@@ -160,7 +144,24 @@
       </div>
     </div>
 
-    <div class="card merge-tags" id="merge-tags">
+    {% call page_guidance.guidance("card-tr") %}
+    <p>
+      A session has three emails: an <strong>invitation</strong>, a
+      <strong>reminder</strong>, and a <strong>confirmation</strong> sent when
+      a reviewer submits. Each tab edits one of them for this session only.
+      Leave a field blank and the default shown in grey is used; the merge
+      tags on the right are substituted when the mail is built.
+    </p>
+    <p>
+      <strong>Sending is not switched on yet</strong>, so what you save here is
+      stored, not delivered. Nothing about access depends on it — reviewers
+      reach their work by signing in, and the roster is what lets them in. See
+      <a href="/guide?return_to={{ request.url.path }}#guide-give_access">Give
+      reviewers access</a> in the Guide.
+    </p>
+    {% endcall %}
+
+    <div class="card merge-tags card-br" id="merge-tags">
       <h2>Merge tags</h2>
       <p class="muted">
         Use these placeholders in the subject or body; they're substituted at send time.

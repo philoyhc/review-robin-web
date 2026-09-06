@@ -37,13 +37,18 @@ own the dispatch leg. The design record is
 
 ## 2. Page contract
 
-Chrome → status-pill strip → **page guidance** → template selector →
-two-card body.
+Chrome → status-pill strip → template selector → three-slot
+`.page-grid`: composer spanning both left rows (`card-l`), **page
+guidance** top right (`card-tr`), merge tags bottom right (`card-br`).
 
-**Page guidance** (Segment 19E rung 6 pilot). The shared
-`<details class="page-guidance">` disclosure specced in
-`spec/setup_pages.md` "Shared body shape", above the template
-selector because it explains the page rather than the selected tab.
+**Page guidance.** The shared half-width
+`<details class="card page-guidance">` card specced in
+`spec/setup_pages.md` "Shared body shape", stacked directly above the
+merge-tag reference it introduces. *(Rung 6a placed it full-width
+above the template selector, reasoning that page-level guidance should
+precede the page's own sub-navigation; rung 6b's card form answers
+that differently — the guidance reads as one of the page's cards
+rather than a band over them.)*
 Its body states three things this page's controls do not: that a
 session has three emails and each tab edits one of them for this
 session only; that a blank field falls back to the default shown as

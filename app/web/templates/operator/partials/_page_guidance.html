@@ -4,6 +4,12 @@
    operator who already knows the page should not scroll past a
    paragraph they have read, and one who does not gets it in one click.
 
+   The macro renders a **card**, and every placement puts it in a
+   half-width grid slot beside or above the page's own cards — width
+   comes from the grid, not from the macro, so a page can compose it
+   without fighting a hard-coded size. Closed it is one line: a chevron
+   and the summary. Open, the card grows downwards in place.
+
    Native <details>, no JS — the same primitive the Validate page's
    per-issue "Why this check?" already ships
    (``partials/validation_results.html`` -> ``.issue-why``), one level
@@ -27,12 +33,14 @@
    Usage:
 
        {% import "operator/partials/_page_guidance.html" as page_guidance %}
-       {% call page_guidance.guidance() %}
+       {% call page_guidance.guidance("card-tr") %}
          <p>...</p>
        {% endcall %}
 #}
-{% macro guidance() -%}
-<details class="page-guidance">
+{% macro guidance(slot_class="") -%}
+{# ``slot_class`` is a grid-position class only (``card-tr`` etc.), never
+   styling: placement belongs to the page, the card's look belongs here. #}
+<details class="card page-guidance {{ slot_class }}">
   <summary>What this page is for</summary>
   <div class="page-guidance-body">{{ caller() }}</div>
 </details>
