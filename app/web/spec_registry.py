@@ -107,6 +107,9 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     ),
     "app.web.routes_operator._preview_surface": ("spec/preview_hub.md",),
     "app.web.routes_operator._extracts": ("spec/csv_contracts.md",),
+    # GET /templates/starter.zip — the generic setup templates. Not
+    # session-scoped, so it sits outside routes_operator.
+    "app.web.routes_templates": ("spec/csv_contracts.md",),
     "app.web.routes_operator._extract_data": ("spec/extract_data.md",),
     "app.web.routes_operator._rehydrate": ("spec/rehydrate.md",),
     "app.web.routes_operator._sys_admin": ("spec/permissions.md",),
