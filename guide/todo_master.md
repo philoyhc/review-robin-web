@@ -2257,7 +2257,7 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Segment 19C — Refinements — **open** (a standing home for small refinements; all seven items shipped) — Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
+### Segment 19C — Refinements — **open** (a standing home for small refinements; all eight items shipped) — Item 8 (input boundaries — `--border-default` to `--slate-dim` for 3:1, `.rs-help-card` onto its own `--card-help-*` family) ✅ shipped 2026-09-06; Item 7 (the first drift sweep's eight findings) ✅ shipped 2026-09-05; Items 1 / 3 / 4 ✅ shipped 2026-08-20; Item 2 (dark mode) ✅ shipped 2026-08-21 (W1–W8); Item 6 (semantic colour tokens — two-tier reorg) ✅ shipped 2026-08-23; Item 5 (theme customizer — dev designer) ✅ v1 shipped 2026-09-04 (three-part reflect/edit designer, PRs #2065–#2083; detailed plan: `guide/segment_19C_refinements.md`)
 
 Holding segment for small operator-facing behaviour / contract refinements —
 the sibling of 19A (docs hygiene) and 19B (code consistency).

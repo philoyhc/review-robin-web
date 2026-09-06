@@ -256,12 +256,17 @@ Each element entry follows the same shape:
 > *Migration delta:* none — net-new in 11B.
 > *PR:* Segment 11B (PRs B / 390 / 391 / 392 / 393).
 
-> **Reviewer help cards (`.rs-help-card` family)** — bg-muted
-> tinted blocks listing per-instrument response-field help text.
-> Two-up grid (`.rs-help-grid`) when ≥2 items; single full-width
-> (`.rs-help-card-solo`) when exactly one.
-> *Current:* `.rs-help-grid`, `.rs-help-card`, `.rs-help-card-solo`
-> in `base.html`, on their own `--card-help-bg` / `-border` / `-fg`
+> **Reviewer help cards (`.rs-help-card` family)** — tinted blocks
+> listing per-instrument response-field help text. Always a
+> `.rs-help-grid` row of half-width `.rs-help-card` items, whatever
+> the count: the lone-help case used to expand to full width via
+> `.rs-help-card-solo`, retired 2026-05-05 (`62a85fee`) when the
+> per-instrument intro became a half-width card grid and the single
+> card started landing in column 2 beside the heading card.
+> Regression-tested — `test_reviewer_response_flow.py` asserts the
+> modifier does not render.
+> *Current:* `.rs-help-grid`, `.rs-help-card` in `base.html`, on
+> their own `--card-help-bg` / `-border` / `-fg`
 > family (`#f5f5f7` / `#111827` light, `#232c3b` / `#e6eaf2` dark) —
 > the shape `.danger-zone` already uses.
 > *Canonical:* a **slab**, not a card with a contrasting edge, so

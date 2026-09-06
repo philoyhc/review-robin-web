@@ -413,11 +413,14 @@ together on every Band 3 / R toggle).
 
 - **Help block** above the table (below the heading row), listing each
   response field that has both `help_text` set and
-  `help_text_visible=true`. Two variants:
-  - Multiple visible help items → `.rs-help-grid` (responsive grid
-    of `.rs-help-card` items).
-  - Exactly one visible help item → `.rs-help-card.rs-help-card-solo`
-    (full-width single-card variant).
+  `help_text_visible=true`. One shape, whatever the count: a
+  `.rs-help-grid` row of half-width `.rs-help-card` items. The
+  `.rs-help-card-solo` full-width variant for the lone-help case was
+  **retired 2026-05-05** (`62a85fee`) when the per-instrument intro
+  became a half-width card grid — a single help card now lands in
+  column 2 beside the heading card rather than expanding.
+  `test_reviewer_response_flow.py` asserts the modifier does not
+  render.
 
 Single-instrument sessions with both `short_label` and `description`
 empty render no H2 at all (regression-tested; see
