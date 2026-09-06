@@ -60,8 +60,14 @@ Every Setup Page renders, top-to-bottom:
    one line: `padding: 12px 16px` and `align-self: start`, so a
    stretching grid cannot inflate it to a neighbour's height.
 
-   **The top half-width cards sit in `.card-columns`, not a row
-   grid.** `.card-columns` is `1fr 1fr` with `align-items: start`, and
+   **Every half-width card above the preview table shares one
+   `.card-columns`, not a row grid — and not two of them.** Two
+   containers look identical while everything is closed and still lose
+   the point: growth in the upper one pushes both columns of the lower
+   one down. A full-width card (the Activated lock card) therefore
+   cannot sit between the pairs; `.card-columns` has no spanning slot,
+   so it goes above the container, where its "cannot edit" notice
+   reads anyway. `.card-columns` is `1fr 1fr` with `align-items: start`, and
    each child is a *column* that stacks its own cards — so opening the
    guidance pushes down only what is below it in its own column, and
    the other column neither moves nor stretches. That is the whole
@@ -70,7 +76,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — `Fields with data` leads the left column, guidance the right |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: `Fields with data` then the tag-label editor on the left, guidance then `Operator actions` on the right. The Activated lock card sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.page-grid` — composer spans both left rows (`card-l`), guidance `card-tr`, merge tags `card-br` |
    | Instruments | `.card-columns` — `Session deadline` left, guidance right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |

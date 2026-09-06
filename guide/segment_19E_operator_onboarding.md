@@ -652,6 +652,39 @@ a looking question; moving the guidance there is the answer, and it also makes
 the column stack meaningful — guidance above the editor it explains, with the
 actions card untouched beside them.
 
+**2026-09-06 — rung 6b: the roster pages' top region merged into one column
+container** (author: the two-column layout "still not putting the top cards in
+2 columns properly").
+
+They were right, and the first fix was half a fix. Each roster page has **two**
+row grids above the preview table — `Fields with data` + guidance, then the
+tag-label editor + `Operator actions` — and I had converted only the first. Two
+`.card-columns` containers look identical while everything is closed, and still
+lose the point of the change: growth in the upper container pushes **both**
+columns of the lower one down. Column independence only holds inside one
+container.
+
+**The full-width lock card was what split them in the first place.**
+`.card-columns` has no spanning slot, so an Activated-session lock card cannot
+sit between the two pairs. It moves above the container — where a "you cannot
+edit this while the session is ongoing" notice reads better anyway.
+
+The merged shape: left column `Fields with data` → tag-label editor, right
+column guidance → `Operator actions`, each card keeping the side it already
+had.
+
+**Pinned by a test that asserts source order, not appearance.** Left column in
+full then right column in full is the flattening only a single two-stack
+container produces; two stacked grids interleave. It also asserts the first
+`.bottom-grid` in the document comes *after* those four cards — the Upload /
+Danger Zone pair below the table is still legitimately a row grid, so the test
+asserts position rather than absence.
+
+Two boundary attempts failed before that: slicing the page at `<table` breaks
+on an empty roster (no rows, no table, so "above the table" is the whole page),
+and slicing at `id="upload-csv"` still includes the grid's own opening tag a
+few characters earlier. Asserting relative order needs no boundary at all.
+
 ---
 
 ## PR ladder

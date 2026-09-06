@@ -22,10 +22,41 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# 19E rung 6b — two independent column stacks. The
-     "Fields with data" card takes the left column, the guidance
-     card the right, and opening the guidance grows only its own
-     column rather than the whole row. #}
+  {% if is_ready %}
+    <div class="card lock">
+      <p style="margin: 0 0 12px 0;">
+        The reviewers cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="reviewers">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required
+                   data-delete-confirm="revert">
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn alert" type="submit"
+                  data-delete-btn="revert"
+                  disabled aria-disabled="true">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
+
+  {# 19E rung 6b — every card above the preview table in two
+     independent column stacks: "Fields with data" then the tag-label
+     editor on the left, the guidance card then Operator actions on the
+     right. Opening the guidance grows only the right column, and the
+     left one neither moves nor stretches.
+
+     The Activated lock card sits ABOVE the container rather than
+     between the two pairs (where it used to be, splitting them into
+     two row grids): it is full width, and a full-width card inside a
+     two-column stack would have to span, which `.card-columns` does
+     not do. Its notice reads at the top of the page anyway. #}
   <div class="card-columns">
     <div>
       <div class="card">
@@ -51,44 +82,7 @@
       </p>
     {% endif %}
       </div>
-    </div>
 
-    <div>
-      {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
-      {% endcall %}
-    </div>
-  </div>
-
-  {% if is_ready %}
-    <div class="card lock">
-      <p style="margin: 0 0 12px 0;">
-        The reviewers cannot be modified while the session is ongoing.
-        Revert the session to draft if you wish to modify anything.
-      </p>
-      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
-        <input type="hidden" name="return_to" value="reviewers">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required
-                   data-delete-confirm="revert">
-            Yes, revert <strong>{{ session.name }}</strong> to draft.
-          </label>
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit"
-                  data-delete-btn="revert"
-                  disabled aria-disabled="true">Revert to draft</button>
-        </p>
-      </form>
-    </div>
-  {% endif %}
-
-  {# Friendly-labels editor (left, half-width) + operator-actions
-     card (right, half-width). #}
-  <div class="bottom-grid">
     {% set field_labels_form_action =
           "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
     {% set field_labels_source_type = "reviewer" %}
@@ -101,6 +95,16 @@
           [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
+
+    
+    </div>
+
+    <div>
+      {% call page_guidance.guidance() %}
+        <p>Guidance to follow — placement scaffold only
+          (19E rung 6b). Draft copy is in
+          <code>guide/page_help_text.md</code>.</p>
+      {% endcall %}
 
     <div class="card operator-actions-card">
       <h2>Operator actions</h2>
@@ -198,7 +202,11 @@
         </div>
       {% endif %}
     </div>
+    </div>
   </div>
+
+
+
 
   {# Hidden form shells. ``form=`` attributes on the table
      checkboxes / edit-row inputs / card buttons attach to these. #}
