@@ -429,16 +429,17 @@ editor_css = r"""
     .tc-seed-color { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; background: none; cursor: pointer; }
     .tc-fam { margin: 12px 0; }
     .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
-    .tc-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--tc-gap); }
+    .tc-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--tc-gap); }
     .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
     .tc-chip.tc-picked { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
     /* Unreferenced primitive — no semantic token in EITHER theme resolves to
-       it. Literal colours, not tokens: this is diagnostic chrome, and a marker
+       it. Colour alone, no badge: a word in the chip's flow was wide enough to
+       widen the card, and the red already says what a glance needs. Part C
+       names the condition in words when the chip is selected.
+       Literal colours, not tokens: this is diagnostic chrome, and a marker
        painted in the palette under test can be edited into invisibility.
        Semi-transparent so it reads over both themes' chip backgrounds. */
     .tc-chip.tc-orphan { border-color: #dc2626; background: rgba(220, 38, 38, 0.12); }
-    .tc-chip.tc-orphan .tc-name::after { content: " unreferenced"; color: #dc2626; font-size: 0.62rem;
-      text-transform: uppercase; letter-spacing: 0.05em; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
     body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
     .tc-name { flex: 1; min-width: 0; font-size: 0.72rem; color: var(--text-subtle); line-height: 1.2; }
@@ -786,8 +787,9 @@ editor_js = r"""  <script>
         + "<dt>dark</dt><dd>" + list(uD, "dark") + "</dd>"
         + "</dl></div>";
       if (!uL.length && !uD.length) {
-        html += '<p class="tc-c-orphan">Unreferenced \u2014 no semantic token resolves to this '
-          + "primitive in either theme. Editing it changes nothing on screen.</p>";
+        html += '<p class="tc-c-orphan">No semantic token resolves to this primitive in '
+          + "either theme \u2014 editing it changes nothing on screen. That is what the "
+          + "red chip in the Primitives grid marks.</p>";
       }
       cBody.innerHTML = html;
     }
@@ -939,8 +941,8 @@ part_c = (
     '      <p class="tc-c-placeholder">Click any coloured element in Part A to see which semantic token '
     "paints it, which primitive that token resolves to, and what else the token covers. "
     "Click a <strong>primitive</strong> in Part B for the other direction \u2014 every semantic token "
-    "that resolves to it, listed per theme. A primitive no token reaches in either theme is marked "
-    "<strong>unreferenced</strong> in the grid.</p>\n"
+    "that resolves to it, listed per theme. A primitive no token reaches in either theme shows "
+    "as a <strong>red chip</strong> in the grid.</p>\n"
     "    </div>\n"
     "  </div>"
 )
