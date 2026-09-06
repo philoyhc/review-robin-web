@@ -76,7 +76,7 @@ Every Setup Page renders, top-to-bottom:
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: `Fields with data` then the tag-label editor on the left, guidance then `Operator actions` on the right. The Activated lock card sits above the container, not between the pairs. |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — **every** card above the preview table: guidance then the tag-label editor on the left, `Fields with data` then `Operator actions` on the right. The Activated lock card sits above the container, not between the pairs. |
    | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.page-grid` — composer spans both left rows (`card-l`), guidance `card-tr`, merge tags `card-br` |
    | Instruments | `.card-columns` — `Session deadline` left, guidance right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |

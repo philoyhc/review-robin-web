@@ -685,6 +685,16 @@ on an empty roster (no rows, no table, so "above the table" is the whole page),
 and slicing at `id="upload-csv"` still includes the grid's own opening tag a
 few characters earlier. Asserting relative order needs no boundary at all.
 
+**2026-09-06 — roster pages: guidance and `Fields with data` swap columns**
+(author). Left column is now guidance then the tag-label editor; right is
+`Fields with data` then `Operator actions`. Opening the guidance therefore
+grows the *left* column.
+
+Only the two leading cards moved; the tag-label editor and `Operator actions`
+keep their sides. The ordering test inverts with them rather than being
+loosened — it still asserts one column in full then the other, which is what
+distinguishes a single two-stack container from two stacked row grids.
+
 ---
 
 ## PR ladder
