@@ -86,14 +86,30 @@ def test_the_roster_templates_parse_with_no_issues() -> None:
         assert len(result.rows) == 1, filename
 
 
-def test_the_roster_templates_capture_no_label_overrides() -> None:
-    """Bare headers must read as "no override captured". If a template
-    header ever grew a `<Column>.<label>` suffix it would silently rename
-    the operator's tag column on upload."""
+def test_the_roster_templates_capture_their_worked_label_overrides() -> None:
+    """The templates demonstrate the `<Column>.<label>` grammar, so the
+    importer must actually read those labels back — otherwise the header
+    is decoration. This is also the live consequence: uploading a
+    template unedited renames that session's tag columns to Tutor /
+    Group, which the Guide card tells the operator."""
     files = _files()
 
-    assert csv_imports.parse_reviewer_csv(files["reviewers.csv"]).field_labels == {}
-    assert csv_imports.parse_reviewee_csv(files["reviewees.csv"]).field_labels == {}
+    assert csv_imports.parse_reviewer_csv(files["reviewers.csv"]).field_labels == {
+        ("reviewer", "tag_1"): "Tutor",
+        ("reviewer", "tag_2"): "Group",
+    }
+    assert csv_imports.parse_reviewee_csv(files["reviewees.csv"]).field_labels == {
+        ("reviewee", "tag_1"): "Tutor",
+        ("reviewee", "tag_2"): "Group",
+    }
+
+
+def test_the_observer_template_captures_no_label_overrides() -> None:
+    """Observer tags are outside the labelable set, so nothing there can
+    become an override however the header is written."""
+    files = _files()
+
+    assert csv_imports.parse_observer_csv(files["observers.csv"]).field_labels == {}
 
 
 def test_the_relationships_template_parses_against_its_own_rosters(
@@ -141,7 +157,7 @@ def test_the_guide_offers_the_download(client: TestClient) -> None:
     body = client.get("/guide").text
 
     assert DOWNLOAD_URL in body
-    assert "download that session's roster" in body  # the bare-header caveat
+    assert "Tutor" in body  # the worked-label caveat names the example labels
 
 
 def test_the_lobby_first_run_card_offers_the_download(client: TestClient) -> None:
