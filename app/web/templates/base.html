@@ -3245,6 +3245,9 @@
             {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}
               <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
             {% endif %}
+            {% if request.url.path not in ("/guide", "/auth/me/debug") %}
+              <a class="chrome-link" href="/guide?return_to={{ request.url.path | urlencode }}">Guide</a>
+            {% endif %}
             {% if request.url.path not in ("/about", "/auth/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
             {% endif %}
