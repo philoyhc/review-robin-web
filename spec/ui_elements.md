@@ -267,15 +267,23 @@ Each element entry follows the same shape:
 > modifier does not render.
 > *Current:* `.rs-help-grid`, `.rs-help-card` in `base.html`, on
 > their own `--card-help-bg` / `-border` / `-fg`
-> family (`#f5f5f7` / `#111827` light, `#232c3b` / `#e6eaf2` dark) —
-> the shape `.danger-zone` already uses.
-> *Canonical:* a **slab**, not a card with a contrasting edge, so
-> `--card-help-border` resolves to the fill's primitive and the
-> 2px `.card` border disappears into it. The tokenization pass had
-> pointed the fill at `--border-default`; that matched only while
-> the border token was very light, and Segment 19C Item 8 moved it
-> to a 3:1 boundary colour. Own tokens rather than borrowed ones is
-> what stops the next border change reaching this card.
+> family (`#e5e7eb` / `#d1d5db` / `#111827` light,
+> `#232c3b` / `#2b3547` / `#e6eaf2` dark) — the shape
+> `.danger-zone` already uses. **Shared since 19E rung 6a with
+> `.page-guidance`**, the Setup pages' guidance disclosure, which is
+> why the theme customizer's facet is named `Help card` rather than
+> `Instrument help card`.
+> *Canonical:* a **slab with a soft edge** — `--card-help-border` is
+> one step darker than the fill, ~1.5:1 against the page in both
+> themes: enough shape to sit alone in a column, not an outline.
+> *(Through 19C Item 8 the border resolved to the fill's own
+> primitive so the 2px `.card` edge vanished entirely; right while
+> the slab sat inside another card, wrong once `.page-guidance` made
+> it a card of its own. See `spec/color_tokens.md`.)* The
+> tokenization pass had pointed the fill at `--border-default`; that
+> matched only while the border token was very light, and 19C Item 8
+> moved it to a 3:1 boundary colour. Own tokens rather than borrowed
+> ones is what stops the next border change reaching this card.
 > *Migration delta:* none beyond token swap.
 > *PR:* A (tokens) for color tokens; otherwise no change.
 

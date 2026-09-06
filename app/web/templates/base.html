@@ -87,7 +87,7 @@
         --blue-cyan-deep: #075985;
         --blue-cyan-soft: #7dd3fc;
         --blue-cyan-abyss: #0c2f42;
-        --green-wash: #f0fdf4;
+        --green-wash: #ddf4e3;
         --green-pale: #d1fae5;
         --green-soft: #a7f3d0;
         --green-bright: #34d399;
@@ -224,9 +224,9 @@
         --nav-marker-ops: var(--green-soft);
         --nav-tab-active-fg: var(--blue-deeper);
         --nav-tab-active-bg: var(--white);
-        --nav-strip-setup-bg: var(--blue-wash);
+        --nav-strip-setup-bg: var(--blue-pale);
         --nav-strip-ops-bg: var(--green-wash);
-        --nav-home-bg: var(--blue-wash);
+        --nav-home-bg: var(--blue-pale);
         --nav-home-bg-hover: var(--blue-mist);
         --nav-home-marker: var(--blue-soft);
         /* Config values [A] */
@@ -239,13 +239,19 @@
         --card-warning-bg: var(--amber-pale);
         --card-warning-border: var(--amber-deep);
         --card-warning-fg: var(--amber-deep);
-        /* Reviewer help cards. Border deliberately resolves to the same
-           primitive as the fill, so the slab reads as a tinted block
-           rather than a card with a contrasting edge — but the two map
-           independently, not `border: var(--card-help-bg)`, so either
-           can be repointed alone. */
-        --card-help-bg: var(--gray-wash);
-        --card-help-border: var(--gray-wash);
+        /* Help cards — the Instruments page's slabs (`.rs-help-card`)
+           and the Setup pages' guidance disclosure (`.page-guidance`).
+           Border is one step darker than the fill: a soft edge, ~1.5:1
+           against the page in both themes, which gives the card a shape
+           without outlining it. It used to resolve to the fill's own
+           primitive so the edge vanished — right while the slab sat
+           *inside* another card (19C Item 8), wrong once 19E rung 6b
+           made it a card of its own in a column, where an edgeless card
+           reads as unanchored. The two still map independently, not
+           `border: var(--card-help-bg)`, so either can be repointed
+           alone. */
+        --card-help-bg: var(--gray-mist);
+        --card-help-border: var(--gray-soft);
         --card-help-fg: var(--ink);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
@@ -374,7 +380,7 @@
         --card-warning-border: var(--amber-glow);
         --card-warning-fg: var(--amber-glow);
         --card-help-bg: var(--ink-muted);
-        --card-help-border: var(--ink-muted);
+        --card-help-border: var(--slate-deeper);
         --card-help-fg: var(--paper);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
