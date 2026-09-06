@@ -281,6 +281,41 @@ resolved per-session today by `require_reviewee_in_session` and its siblings.
 A workspace-level "does this person have any such row anywhere" query does not
 exist yet.
 
+**2026-09-06 — rung 3 shipped.** The lobby first-run card. It replaces the
+plain empty state in `sessions_list.html` rather than sitting beside it: the
+existing card already occupied that slot, and two onboarding cards in an empty
+lobby is one too many. `id="lobby-first-run"` is the handle the tests gate on.
+
+**The trigger needed no new mechanism.** The template's `{% if sessions %}`
+already branches on the *non-archived* subset, which is exactly the
+zero-visible-sessions rule `## Semantics` specifies — so the archive-everything
+case falls out of the existing structure rather than being coded for. Confirmed
+by a test that archives the only session and asserts the card returns.
+
+**The card reuses the Guide's section headings verbatim** — "Create and set
+up", "Prepare and launch", "Give reviewers access" — and a test asserts all
+three appear on *both* surfaces. The alternative, writing fresh copy for the
+card, gives the same workflow two vocabularies and no way to notice when they
+diverge.
+
+**Judgment call at build: the card's Guide link is byte-identical to the
+chrome's** on this page (both `/guide?return_to=/operator/sessions`, the chrome
+deriving `return_to` from the current path). The first version of the test
+substring-matched the link and passed on the chrome's alone — proving nothing.
+The tests now count occurrences: two at first run, one thereafter. Left
+identical rather than differentiated with a marker attribute, since a test-only
+hook in the markup is a worse trade than a counting assertion.
+
+**Blast-radius correction: `Go to Archive` is unreachable in exactly this
+state.** The only in-app link to `/operator/sessions/archived` lives in the
+Search card, inside the populated branch, so an operator who archives every
+session loses the route to their own archive — and the `N archived` stats pill
+goes with it. Found while reading the branch this rung hangs off; **not fixed
+here**, since it is a pre-existing defect independent of the card and
+`CLAUDE.md` → "Working approach" rules out bundling one into this PR. Recorded
+as a Known gap in `spec/sessions_overview.md` and raised with the author for
+its own slice.
+
 ---
 
 ## PR ladder

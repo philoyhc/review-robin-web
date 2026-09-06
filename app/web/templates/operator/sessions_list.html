@@ -719,9 +719,42 @@
       })();
     </script>
   {% else %}
-    <div class="card">
-      <p>You don't have any sessions yet.</p>
-      <p class="muted">Create a session to invite reviewers, build assignments, and collect responses.</p>
+    {# Segment 19E rung 3 — the lobby first-run card.
+
+       Trigger is the same `sessions` emptiness the plain empty state used:
+       zero NON-ARCHIVED sessions, not "has never had one". An operator who
+       archives everything sees this again, which is intended — they are back
+       at the start (`guide/segment_19E_operator_onboarding.md` -> Semantics,
+       "Lobby card trigger").
+
+       The Guide link is the reason this card exists. `/guide` is the
+       canonical documentation, and the chrome link alone is easy to miss on
+       a first visit; an operator with no sessions is the one moment
+       orientation is both most needed and cheapest to place. The steps below
+       deliberately reuse the Guide's own section vocabulary ("Create and set
+       up", "Prepare and launch", "Give reviewers access") so the card reads
+       as a table of contents for it rather than a second account of the
+       workflow. #}
+    <div class="card" id="lobby-first-run">
+      <h2>You don't have any sessions yet.</h2>
+      <p>
+        A <strong>session</strong> is one review round — its own people,
+        form, dates, and results. Getting one running takes three passes:
+      </p>
+      <ol>
+        <li><strong>Create and set it up</strong> — name it, add your
+          reviewers and reviewees, pair them into assignments, and choose the
+          questions they answer.</li>
+        <li><strong>Prepare and launch</strong> — run the pre-flight
+          check, fix anything blocking, then activate.</li>
+        <li><strong>Give reviewers access</strong> — share the app's
+          address; people sign in and see the reviews that apply to them.</li>
+      </ol>
+      <p class="muted">
+        The <a href="/guide?return_to=/operator/sessions">Guide</a> walks
+        through each of these, and what reviewers, reviewees, and observers
+        see. It stays available from the top of every page.
+      </p>
       <div class="btn-pair">
         <a class="btn-cta" href="/operator/sessions/new">Create new session</a>
       </div>
