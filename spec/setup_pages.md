@@ -51,8 +51,19 @@ Every Setup Page renders, top-to-bottom:
 0. **Page guidance** (`partials/_page_guidance.html` — Segment 19E
    rung 6). A `<details class="card page-guidance">` — a **half-width
    card**, not an inline band. **Closed by default**, showing one
-   line: a chevron (the native marker is suppressed) and the summary
-   `What this page is for`. Open, the card grows downwards in place.
+   line: the summary `What this page is for` behind the **same solid
+   triangle the collapsible instrument cards use**
+   (`.instrument-card-toggle-icon`, U+25BE), with the same
+   rotate-180-when-open convention — down closed, up expanded. One
+   disclosure glyph across the app, so an operator learns it once. The
+   native marker is suppressed both ways engines need
+   (`list-style: none` and `::-webkit-details-marker`). Open, the card
+   grows downwards in place.
+
+   It fills with the shared `--card-help-*` tokens
+   (`spec/color_tokens.md`), the same set `.rs-help-card` uses — which
+   is why the theme customizer's facet is named `Help card` rather than
+   after either caller.
 
    Width comes from the column the page puts it in, never from the
    macro — the macro takes no arguments. Closed, the card is

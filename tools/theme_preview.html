@@ -1047,6 +1047,23 @@
       .page-grid > .card-l  { grid-column: 1; grid-row: 1 / span 2; }
       .page-grid > .card-tr { grid-column: 2; grid-row: 1; }
       .page-grid > .card-br { grid-column: 2; grid-row: 2; }
+      /* Two independent column stacks — 19E rung 6b tweak. Unlike
+         .page-grid / .bottom-grid, which lay cards out in ROWS, each
+         child here is a *column* that stacks its own cards. A card
+         that grows — the guidance card opening — pushes down only what
+         sits below it in its own column; the other column neither
+         moves nor stretches to match. ``align-items: start`` is what
+         buys that: the default ``stretch`` would make both columns as
+         tall as the taller one. */
+      body.ui-v2 .card-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+      /* Grid children default to ``min-width: auto``, which lets a wide
+         table or a long unbroken string push a column past its share. */
+      body.ui-v2 .card-columns > * { min-width: 0; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1410,6 +1427,56 @@
         margin: var(--space-2) 0 0 0;
         color: var(--text-subtle);
       }
+      /* Page-level guidance disclosure — 19E rung 6. One per Setup
+         page, closed by default. Fills with the help-card semantics
+         (19C Item 8) rather than its own tokens: it is the same kind
+         of thing one level up, and those tokens are already
+         contrast-checked in both themes. The summary is link-coloured
+         because it is the page's one clickable affordance that is not
+         a control. */
+      body.ui-v2 details.card.page-guidance {
+        background: var(--card-help-bg);
+        border-color: var(--card-help-border);
+        color: var(--card-help-fg);
+        /* Closed, the card is one line and should look it. Tighter than
+           a normal .card's 20px, and ``align-self: start`` so a grid
+           that stretches its row (``.page-grid``) cannot inflate it to
+           a neighbour's height. */
+        padding: 12px 16px;
+        align-self: start;
+      }
+      /* Same solid triangle the collapsible instrument cards use
+         (`.instrument-card-toggle-icon`, U+25BE) and the same
+         rotate-180-when-open convention: down closed, up open. One
+         disclosure glyph across the app, so an operator learns it once.
+         The native marker is suppressed three ways because engines
+         disagree — `list-style` for Firefox and current Chrome, the
+         -webkit pseudo-element for Safari and older Chrome. */
+      body.ui-v2 .page-guidance > summary {
+        cursor: pointer;
+        color: var(--card-help-fg);
+        font-size: 0.95em;
+        list-style: none;
+      }
+      body.ui-v2 .page-guidance > summary::-webkit-details-marker {
+        display: none;
+      }
+      body.ui-v2 .page-guidance > summary::before {
+        content: "\25BE";
+        display: inline-block;
+        width: 1.1em;
+        line-height: 1;
+        transition: transform 0.15s ease-out;
+      }
+      body.ui-v2 .page-guidance[open] > summary::before {
+        transform: rotate(180deg);
+      }
+      body.ui-v2 .page-guidance-body {
+        margin-top: var(--space-3);
+        font-size: 0.95em;
+      }
+      body.ui-v2 .page-guidance-body > :first-child { margin-top: 0; }
+      body.ui-v2 .page-guidance-body > :last-child { margin-bottom: 0; }
       /* Severity-filter chip strip — anchor links flipping
          ?severity= on the Validate page. The active chip carries
          a thicker border + slight background tint so the operator
@@ -3381,7 +3448,7 @@
         <p>Destructive-action card. The button is fixed-width here.</p>
         <button class="btn destructive">Destructive</button>
       </div>
-      <div class="card rs-help-card"><strong>Rating</strong> — Instrument help card,
+      <div class="card rs-help-card"><strong>Rating</strong> — Help card,
         the read view. A tinted slab: its border resolves to the fill&#39;s primitive,
         so the 2px card edge disappears into it.</div>
       <!-- The unlocked state on the operator Instruments page: the same card

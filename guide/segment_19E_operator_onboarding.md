@@ -717,6 +717,26 @@ The bulk-toggle test kept its substantive assertion — the `Expand all` /
 only the ordering half, which the swap reverses. Losing the buttons would still
 be silent, so that half stays.
 
+**2026-09-06 — the disclosure glyph, and a customizer facet renamed**
+(author).
+
+**Confirmed: the guidance card uses the shared `--card-help-*` tokens**, the
+same set `.rs-help-card` has used since 19C Item 8 — so those tokens now have
+two callers, and the theme customizer's facets named `Instrument help card` /
+`Instrument help card with edit box` misdescribed what editing them changes.
+Renamed to **`Help card`** / `Help card with edit box`, at the generator
+(`tools/theme_customizer.gen.py`, `tools/_harness_common.py`) with all three
+generated pages re-run — editing the HTML directly would have been undone by
+the next regeneration. `Help-card edit box` was already named without the
+prefix, which is the consistency the rename restores.
+
+**The chevron became the instrument cards' solid triangle** (U+25BE,
+`rotate(180deg)` when open — down closed, up expanded). The pilot invented a
+rotating `›` when the app already had a disclosure glyph; one glyph across the
+app means an operator learns the control once. Pinned by a test that asserts
+the code point, the rotation, *and* both native-marker suppressions — engines
+disagree about which one works, and losing either would show two markers.
+
 ---
 
 ## PR ladder

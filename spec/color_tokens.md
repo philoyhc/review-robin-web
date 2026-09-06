@@ -285,6 +285,13 @@ change to a border token cannot reach it. See "Card accents" above and
 | `--card-help-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 
 
+**Two callers, one token set.** `--card-help-*` paints both
+`.rs-help-card` (the Instruments page's help slabs) and
+`.page-guidance` (the `What this page is for` disclosure on every Setup
+page, Segment 19E rung 6). The theme customizer's facet is therefore
+named **`Help card`**, not `Instrument help card` — a facet named after
+one caller would misdescribe what editing it changes.
+
 **`--card-help-border` resolves to the same primitive as `--card-help-bg`, on
 purpose.** `.rs-help-card` is a tinted slab, not a card with a contrasting
 edge (`spec/ui_elements.md` §"Reviewer help cards"), so its border has to
