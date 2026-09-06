@@ -118,6 +118,56 @@ Every Setup Page renders, top-to-bottom:
    **Rollout status.** All six pages carry the card with real copy —
    Email Template's landed at rung 6a, the other five at rung 6b.
 
+   **The copy contract.** The shipped words live in the six templates
+   and nowhere else — reproducing them here would make every wording
+   tweak a two-file edit, and a second copy drifts. What is specced is
+   what an edit is *held to*:
+
+   1. **Short.** Two paragraphs; a third only when it is a distinct
+      question (Instruments). An operator opening a disclosure wants
+      the thing they were missing, not the page's manual.
+   2. **Say what the page's own controls do not.** A card labelled
+      "Upload Reviewers" already says it uploads reviewers. Each page's
+      guidance earns its place by carrying one fact the page is
+      otherwise silent about, listed in the table below;
+      `test_every_setup_page_states_its_own_invisible_fact` pins each
+      one, so a rewrite that loses the fact fails rather than merely
+      reading differently.
+   3. **Link to the Guide; never restate it**, and put the link **at
+      the end** — a link mid-card invites the reader out before they
+      have finished. Five pages point at `#guide-create_and_set_up`;
+      Email Template points at `#guide-give_access`. One Guide card
+      serving five pages holds only because each body links after
+      making its own point; the day a body needs to send an operator to
+      a *particular* explanation, the fix is splitting that Guide card,
+      not lengthening the guidance.
+   4. **Guide vocabulary, verbatim** — "Prepare", "Activate",
+      "Validated", "instrument", "assignment" — so an operator moving
+      between the two does not have to translate.
+   5. **No layout references.** "The card on the right" survives
+      exactly until someone moves the card; name things by their label.
+      **One sanctioned exception:** Email Template's "the merge tags on
+      the right", because that card has no label an operator could
+      match on beyond its `Merge tags` heading, and "on the right" is
+      how they will look for it. Recorded as an exception so it is not
+      read as licence.
+
+   | Page | The fact its card must carry |
+   |---|---|
+   | Reviewers | The email is the identity a sign-in is matched against, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete |
+   | Reviewees | A plain identifier is legitimate — and costs that person their own results, since there is no address to match a sign-in against (surfaced only as `reviewees.unreachable_for_results` on Validate) |
+   | Relationships | They do **not** decide who reviews whom; they are context for the instrument's assignment rule to filter on |
+   | Observers | The cohort rule grants sight rather than narrowing it — an observer with no rule sees **nothing** (see "Cohort match rule editor" below) |
+   | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited |
+   | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
+
+   Instruments runs *what an instrument is* → *when you want another* →
+   *what each one controls*: the order the questions arrive in, and the
+   order that keeps the Guide link at the end.
+
+   Drafted in `guide/archive/page_help_text.md`, retired 2026-09-06 —
+   read it for why each sentence was chosen, not for what the app says.
+
 1. **Chrome** (`session-nav-card` partial — two-row top nav with the
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts

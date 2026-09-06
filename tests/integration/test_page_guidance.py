@@ -548,10 +548,11 @@ def test_the_observers_copy_matches_the_empty_cohort_default() -> None:
     the default ever flips to open-by-absence the test fails here and
     the sentence gets rewritten rather than quietly becoming a lie.
 
-    Read `guide/page_help_text.md`'s Observers callout for why this is
-    the more consequential direction: "sees everything" is a privacy bug
-    an operator would report, "sees nothing" is a silent failure they
-    would never think to look for.
+    `spec/setup_pages.md` "Cohort match rule editor" carries the rule;
+    its §0 copy contract carries the fact this page's card must state.
+    Why this is the more consequential direction: "sees everything" is a
+    privacy bug an operator would report within the hour, "sees nothing"
+    is a silent failure they would never think to look for.
     """
     assert not observer_has_rule(Observer(cohort_rule=None))
     assert not observer_has_rule(Observer(cohort_rule={"rules": []}))

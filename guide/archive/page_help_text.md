@@ -4,17 +4,26 @@
 Setup page** (Segment 19E rung 6). Rung 6a shipped the scaffold and
 piloted it on Email Template; rung 6b takes the remaining five pages, and
 this is where their wording is worked out before it goes into a template.
-Both rungs have now shipped. The file **stays live while the wording is
-under review** — the shipped copy may still be tweaked, and this is where
-the reasoning behind each page's text lives while that happens. It
-retires to `guide/archive/` with the segment plan, not before.
+**RETIRED 2026-09-06.** Both rungs shipped, the wording settled, and this
+file did the job it was written for. Read it for the drafting history —
+what each page's copy was before the author's revisions, and why each
+sentence was chosen — not for what the app says today.
 
-**This file is a drafting surface, not a contract.** The shipped text
-lives in the page templates; the scaffold's contract lives in
-`spec/setup_pages.md` "Shared body shape" and each page's own spec. Once
-the wording settles, this file's job is done — it retires to
-`guide/archive/` with the segment plan rather than becoming a second
-place where the copy appears to live.
+**The shipped copy lives in the six page templates, and nowhere else.**
+That is deliberate, and it is this file's own original judgement: a
+second place the copy appears to live drifts from the first. Promoting
+this file to `spec/` was considered at retirement and rejected for
+exactly that reason — it would have made every wording tweak a two-file
+edit.
+
+**What outlived it, and where it went.** The parts that were *contract*
+rather than drafts — the five rules an edit is held to, the fact each
+page's card must carry, the Guide-anchor convention, and the one
+sanctioned rule-5 exception — moved to `spec/setup_pages.md` "Shared
+body shape" §0, which already owns the scaffold. Nothing below is
+canonical; where this file and that spec disagree, the spec wins, and
+where the spec and a template disagree, `tests/integration/test_page_guidance.py`
+fails.
 
 ---
 

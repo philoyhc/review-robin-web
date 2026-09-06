@@ -6,8 +6,9 @@ the only build item outstanding**, and the close sequence has not been run.
 Paused by the author with the segment mostly done — not blocked, and not
 abandoned. What that means for anyone picking it up:
 
-- `guide/page_help_text.md` stays in `guide/` (it retires to
-  `guide/archive/` with this plan, at close).
+- `guide/page_help_text.md` has **retired early** to
+  `guide/archive/` (2026-09-06, once the wording settled) rather than
+  waiting for the close. See `## Status`.
 - `visible_audiences()` still returns every audience for every viewer.
   `spec/audience_and_identity_model.md` is the one outstanding `Doc impact`
   path, and it is committed but unhonoured until rung 7 lands — so
@@ -897,6 +898,8 @@ card, not lengthening the guidance.
 **19E is not closed.** The author is reviewing the wording and expects to
 tweak it, so `guide/page_help_text.md` stays in `guide/` rather than
 retiring to `guide/archive/`, and the close sequence has not been run.
+*(Half superseded 2026-09-06: the wording settled and the drafting doc
+retired early. The segment is still open — see the entry below.)*
 
 **2026-09-06 — the Guide loses two sections in the author's copy pass, and
 both losses are moves** (author-directed, on their reading of the shipped
@@ -936,6 +939,39 @@ narrows to a section whose audience is *not* the operator.
 
 `For reviewers` also lost its "open the link and sign in" step in the same
 pass, for the same reason as `Before you start`.
+
+**2026-09-06 — the drafting doc retires early, and takes a wrong turn on
+the way** (author-directed).
+
+`guide/page_help_text.md` is in `guide/archive/`, ahead of the close.
+The wording had settled, so the condition this plan set for keeping it
+live was met.
+
+The route there is the part worth recording. The instruction was first
+to update it to the shipped copy and promote it to
+`spec/page_help_text.md`, and that is what I built — a spec reproducing
+all six pages' copy, plus a test binding the blocks to the templates so
+the pair could not drift. The author then asked whether retiring it and
+keeping the code as the source of truth would be better. It is, and the
+built version is the argument: **the binding test makes drift loud, not
+free.** Every wording tweak becomes a two-file edit, and this segment
+produced five such tweaks in a single afternoon. The file's own opening
+paragraph had said as much from the day it was written — *"rather than
+becoming a second place where the copy appears to live"* — so the
+correct move was the one it had already called.
+
+What survives is the half that was never copy. `spec/setup_pages.md` §0
+gains a **copy contract**: the five rules an edit is held to, a table of
+the one fact each page's card must carry, the Guide-anchor convention
+with the reasoning for why one card serves five pages, the sanctioned
+rule-5 exception, and the Instruments paragraph order. Rule 2 now points
+at `test_every_setup_page_states_its_own_invisible_fact`, which already
+pins those facts — so the spec describes a rule a test enforces, which
+is the repo's idiom rather than a new one.
+
+Nothing reproduces the copy, so nothing can drift from it, and no
+binding test is needed. The archived file opens with a note saying
+where the contract went and that it is no longer canonical.
 
 ---
 
