@@ -957,6 +957,21 @@ heading, so a newer item's commitment can no longer be satisfied by an
 older item's edit. Running it here now reports one warning, which this
 entry adjudicates:
 
+**2026-09-06 — Item 8's two warnings, adjudicated; Item 4's has cleared.**
+`close_check.py 19C` now warns on Item 8's own bullets and no longer on Item
+4's. Both movements are the check behaving as documented, not drift:
+
+- `spec/color_tokens.md` and `spec/ui_elements.md` (the two `(Item 8)` bullets)
+  were edited in the **same commit that added the `## Item 8` heading**. The
+  window is half-open — `(start, end]`, the start commit excluded — so a slice
+  that lands its manifest and its spec edit together reads as unhonoured. The
+  module docstring names this case exactly. Honoured; the edits are in the
+  commit that opened the window.
+- The `(done — Item 4)` warning below has **cleared on its own**:
+  `spec/ui_elements.md` was edited again for Item 8, well after Item 4's
+  heading existed, so the bullet now honours without help. Left recorded
+  because the reasoning is what makes the next one cheap to read.
+
 - `spec/ui_elements.md` (the `(done — Item 4)` bullet) was edited on
   2026-08-20 by `4a72813c` "style: soften Secondary button outline to
   `text-secondary`" — exactly what the bullet promises — while the Item 4
