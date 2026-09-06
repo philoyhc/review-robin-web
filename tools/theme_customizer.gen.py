@@ -152,7 +152,13 @@ TARGETS = [
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
     (".card:not(.rs-help-card):not(.danger-zone)", "Card surface",
      [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".rs-help-card", "Help card", [("background", "bg", "--border-default"), ("text", "fg", "--text-body")]),
+    # Border facet included even though it is invisible by design (it resolves
+    # to the fill's primitive): Part C is how you find out *which* token paints
+    # an edge, and leaving it out is how this row went stale when 19C Item 8
+    # moved the fill off --border-default.
+    (".rs-help-card", "Help card",
+     [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
+      ("border", "border", "--card-help-border")]),
     (".danger-zone", "Danger-zone card",
      [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
       ("border", "border", "--card-warning-border")]),

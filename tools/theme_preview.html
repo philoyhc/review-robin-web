@@ -222,6 +222,14 @@
         --card-warning-bg: var(--amber-pale);
         --card-warning-border: var(--amber-deep);
         --card-warning-fg: var(--amber-deep);
+        /* Reviewer help cards. Border deliberately resolves to the same
+           primitive as the fill, so the slab reads as a tinted block
+           rather than a card with a contrasting edge — but the two map
+           independently, not `border: var(--card-help-bg)`, so either
+           can be repointed alone. */
+        --card-help-bg: var(--gray-wash);
+        --card-help-border: var(--gray-wash);
+        --card-help-fg: var(--ink);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
         --selected-fg: var(--white);
@@ -348,6 +356,9 @@
         --card-warning-bg: var(--amber-abyss);
         --card-warning-border: var(--amber-glow);
         --card-warning-fg: var(--amber-glow);
+        --card-help-bg: var(--ink-muted);
+        --card-help-border: var(--ink-muted);
+        --card-help-fg: var(--paper);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
         --selected-fg: var(--white);
@@ -399,27 +410,33 @@
       /* Tinted slab inside the per-instrument intro grid, rather than
          a regular card with a contrasting border + interior.
 
-         The fill is `--surface-muted`, which is what `spec/ui_elements.md`
-         §"Reviewer help cards" has always called for ("bg-muted tinted
-         blocks", recorded value `#f5f5f7`). It used to borrow
-         `--border-default` — a border colour used as a surface — which
-         happened to look right only while that token was very light. It
-         stopped being right the moment the border moved to `--slate-dim`
-         for the 3:1 boundary work: body text on the slab would have
-         dropped to 3.96:1 light / 3.41:1 dark, both under AA. Fill roles
-         come from the surface cluster; border roles do not paint. (19C
-         Item 8.)
+         Its own `--card-help-*` family, the shape `.danger-zone` already
+         uses. The fill is what `spec/ui_elements.md` §"Reviewer help
+         cards" has always called for ("bg-muted tinted blocks", recorded
+         value `#f5f5f7`); it used to borrow `--border-default` — a border
+         colour used as a surface — which looked right only while that
+         token was very light, and stopped being right the moment the
+         border moved to `--slate-dim` for the 3:1 boundary work (body
+         text on the slab would have hit 3.96:1 light / 3.41:1 dark, both
+         under AA).
+
+         `--card-help-border` resolves to the same primitive as the fill,
+         so the slab has no visible edge — the point of this variant,
+         which `.card`'s 2px `--border-default` otherwise gives it. They
+         map independently rather than one pointing at the other, so
+         either can be repointed alone. (19C Item 8.)
 
          Selector co-targets `.card` to outweigh the later
          `body.ui-v2 .card` background rule (equal class specificity but
          later wins on cascade). */
       body.ui-v2 .card.rs-help-card {
-        background: var(--surface-muted);
+        border-color: var(--card-help-border);
+        background: var(--card-help-bg);
+        color: var(--card-help-fg);
         padding: 10px 14px;
         border-radius: 6px;
-        color: var(--text-body);
       }
-      body.ui-v2 .card.rs-help-card strong { color: var(--text-body); }
+      body.ui-v2 .card.rs-help-card strong { color: var(--card-help-fg); }
       h1 { margin-top: 0; margin-bottom: 16px; }
       .page-subtitle {
         margin: -12px 0 16px 0;
@@ -3283,7 +3300,7 @@
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Read-only preview of base.html's real two-tier palette
-      (79 primitives · 104 semantic).
+      (79 primitives · 107 semantic).
       Design tool only — not wired into the app. To edit, use theme_customizer.</span>
   </div>
 
@@ -3665,7 +3682,7 @@
         <tr><td class="pv-name">config value fg<code>--config-value-fg</code></td><td><span class="pv-dot" style="background: var(--config-value-fg);"></span><code>--blue-cyan-deep</code> <span class="pv-hex">#075985</span></td><td><code>--blue-cyan-soft</code> <span class="pv-hex">#7dd3fc</span></td></tr>
         <tr><td class="pv-name">config value resolved bg<code>--config-value-resolved-bg</code></td><td><span class="pv-dot" style="background: var(--config-value-resolved-bg);"></span><code>--blue-wash</code> <span class="pv-hex">#eff6ff</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Card accents [A] · 5</summary>
+      <details class="pv-cluster" open><summary>Card accents [A] · 8</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">card active border<code>--card-active-border</code></td><td><span class="pv-dot" style="background: var(--card-active-border);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
@@ -3673,6 +3690,9 @@
         <tr><td class="pv-name">card warning bg<code>--card-warning-bg</code></td><td><span class="pv-dot" style="background: var(--card-warning-bg);"></span><code>--amber-pale</code> <span class="pv-hex">#fef3c7</span></td><td><code>--amber-abyss</code> <span class="pv-hex">#3a2c0a</span></td></tr>
         <tr><td class="pv-name">card warning border<code>--card-warning-border</code></td><td><span class="pv-dot" style="background: var(--card-warning-border);"></span><code>--amber-deep</code> <span class="pv-hex">#92400e</span></td><td><code>--amber-glow</code> <span class="pv-hex">#fcd34d</span></td></tr>
         <tr><td class="pv-name">card warning fg<code>--card-warning-fg</code></td><td><span class="pv-dot" style="background: var(--card-warning-fg);"></span><code>--amber-deep</code> <span class="pv-hex">#92400e</span></td><td><code>--amber-glow</code> <span class="pv-hex">#fcd34d</span></td></tr>
+        <tr><td class="pv-name">card help bg<code>--card-help-bg</code></td><td><span class="pv-dot" style="background: var(--card-help-bg);"></span><code>--gray-wash</code> <span class="pv-hex">#f5f5f7</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
+        <tr><td class="pv-name">card help border<code>--card-help-border</code></td><td><span class="pv-dot" style="background: var(--card-help-border);"></span><code>--gray-wash</code> <span class="pv-hex">#f5f5f7</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
+        <tr><td class="pv-name">card help fg<code>--card-help-fg</code></td><td><span class="pv-dot" style="background: var(--card-help-fg);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
       </tbody></table></details>
       <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 10</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>

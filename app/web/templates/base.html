@@ -239,6 +239,14 @@
         --card-warning-bg: var(--amber-pale);
         --card-warning-border: var(--amber-deep);
         --card-warning-fg: var(--amber-deep);
+        /* Reviewer help cards. Border deliberately resolves to the same
+           primitive as the fill, so the slab reads as a tinted block
+           rather than a card with a contrasting edge — but the two map
+           independently, not `border: var(--card-help-bg)`, so either
+           can be repointed alone. */
+        --card-help-bg: var(--gray-wash);
+        --card-help-border: var(--gray-wash);
+        --card-help-fg: var(--ink);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
         --selected-fg: var(--white);
@@ -365,6 +373,9 @@
         --card-warning-bg: var(--amber-abyss);
         --card-warning-border: var(--amber-glow);
         --card-warning-fg: var(--amber-glow);
+        --card-help-bg: var(--ink-muted);
+        --card-help-border: var(--ink-muted);
+        --card-help-fg: var(--paper);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
         --selected-fg: var(--white);
@@ -416,27 +427,33 @@
       /* Tinted slab inside the per-instrument intro grid, rather than
          a regular card with a contrasting border + interior.
 
-         The fill is `--surface-muted`, which is what `spec/ui_elements.md`
-         §"Reviewer help cards" has always called for ("bg-muted tinted
-         blocks", recorded value `#f5f5f7`). It used to borrow
-         `--border-default` — a border colour used as a surface — which
-         happened to look right only while that token was very light. It
-         stopped being right the moment the border moved to `--slate-dim`
-         for the 3:1 boundary work: body text on the slab would have
-         dropped to 3.96:1 light / 3.41:1 dark, both under AA. Fill roles
-         come from the surface cluster; border roles do not paint. (19C
-         Item 8.)
+         Its own `--card-help-*` family, the shape `.danger-zone` already
+         uses. The fill is what `spec/ui_elements.md` §"Reviewer help
+         cards" has always called for ("bg-muted tinted blocks", recorded
+         value `#f5f5f7`); it used to borrow `--border-default` — a border
+         colour used as a surface — which looked right only while that
+         token was very light, and stopped being right the moment the
+         border moved to `--slate-dim` for the 3:1 boundary work (body
+         text on the slab would have hit 3.96:1 light / 3.41:1 dark, both
+         under AA).
+
+         `--card-help-border` resolves to the same primitive as the fill,
+         so the slab has no visible edge — the point of this variant,
+         which `.card`'s 2px `--border-default` otherwise gives it. They
+         map independently rather than one pointing at the other, so
+         either can be repointed alone. (19C Item 8.)
 
          Selector co-targets `.card` to outweigh the later
          `body.ui-v2 .card` background rule (equal class specificity but
          later wins on cascade). */
       body.ui-v2 .card.rs-help-card {
-        background: var(--surface-muted);
+        border-color: var(--card-help-border);
+        background: var(--card-help-bg);
+        color: var(--card-help-fg);
         padding: 10px 14px;
         border-radius: 6px;
-        color: var(--text-body);
       }
-      body.ui-v2 .card.rs-help-card strong { color: var(--text-body); }
+      body.ui-v2 .card.rs-help-card strong { color: var(--card-help-fg); }
       h1 { margin-top: 0; margin-bottom: 16px; }
       .page-subtitle {
         margin: -12px 0 16px 0;

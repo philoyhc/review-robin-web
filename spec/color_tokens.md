@@ -278,6 +278,20 @@ fills with `--surface-muted`, per `spec/ui_elements.md` §"Reviewer help cards".
 | `--card-warning-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--card-warning-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--card-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
+| `--card-help-bg` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+| `--card-help-border` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+| `--card-help-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
+
+
+**`--card-help-border` resolves to the same primitive as `--card-help-bg`, on
+purpose.** `.rs-help-card` is a tinted slab, not a card with a contrasting
+edge (`spec/ui_elements.md` §"Reviewer help cards"), so its border has to
+disappear into its fill — otherwise `.card`'s 2px `--border-default` outlines
+it, which at the post-19C-Item-8 border value is a 3.94:1 edge in light. They
+are **two independent mappings, not a coupling**: `--card-help-border` points
+at a primitive, never at `var(--card-help-bg)`, so either can be repointed
+alone without dragging the other. The same reason the help card has its own
+`-fg` rather than inheriting `--text-body`.
 
 ### Selection, toggles & markers [P]/[A]
 
