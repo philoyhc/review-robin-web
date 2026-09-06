@@ -1013,7 +1013,7 @@ with the simplest acceptable infrastructure choices.
   Azure would be built twice. **Operationally optional meanwhile:**
   since the participant model, access is roster + sign-in, so an
   operator's own generic email pointing at the app URL covers
-  invitations (`docs/quickstart.md` §6). **The real gap is
+  invitations (the in-app Guide's "Give reviewers access"). **The real gap is
   reminders** — targeting exactly the reviewers who have not
   submitted — chased by hand from the Responses page until then.
   **Lift trigger:** the institutional host exists with a sending
@@ -1213,7 +1213,7 @@ This is a **pre-processing utility**, **not a rule-engine mode** — which
 is exactly why it can be added without touching the idempotent generate
 path. And it is *already achievable manually today*: randomize in a
 spreadsheet, drop the groups into a spare tag column, upload the CSV, and
-use a tag-based rule (the same tag → rule flow the quickstart describes
+use a tag-based rule (the same tag → rule flow the Guide describes
 for tutorial groups).
 
 **What would move it back onto the roadmap.** Pilot evidence that

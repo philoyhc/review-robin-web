@@ -10,7 +10,7 @@ Authoritative for "what does the code currently do" — read
 | File | Covers |
 |---|---|
 | `status.md` | Current implementation state + segment history. Updated at the end of each segment. |
-| `quickstart.md` | **Operator manual** — a simple end-to-end walkthrough for a colleague running their first review (create → CSV-import rosters → set up → activate → share the app link → monitor → release results). Assumes the app is hosted/running on Azure; reflects that email + magic-link invitations aren't enabled yet (participants reach the app via a link you broadcast, then sign in). Carries marked slots for screen captures. |
+| `archive/quickstart.md` | **Retired 2026-09-06 — superseded by the in-app Guide at `/guide`.** Was the operator manual: an end-to-end walkthrough for a colleague running their first review. Segment 19E rung 2 moved the material into `app/web/templates/guide.html` and made that canonical, so the documentation lives where the app is. Kept as the record of what the Guide was built from; **do not edit it** — corrections go to the template. |
 | `architecture.md` | Cloud / deployment topology (App Service + Postgres + Key Vault + Monitor + Storage behind Easy Auth), a rendered diagram, and the provisioned-resource cost table. The infra companion to `spec/architecture.md` (which covers the app's domain layering). |
 | `database.md` | SQLAlchemy + Alembic conventions, dialect parity, where Postgres lives. |
 | `local_setup.md` | Developer how-to for running tests, migrations, and the dev server locally — including a **Running in a GitHub Codespace** section (absorbed from the retired `codespace_setup.md`: SQLite + fake auth, port forwarding, optional Postgres parity + devcontainer). |

@@ -380,13 +380,17 @@ to contact. `/guide` is how to run a session.
 Suppressed on its own path, exactly as `/about` is, so the row never offers a
 link to the page already being viewed.
 
-**Shipped so far (Segment 19E rung 1): the scaffold only.** Every section
-renders with its real heading and placeholder body copy, ungated. Two things
-the plan commits to that are *not* yet true and must not be read from this
-section as though they were: the material from `docs/quickstart.md` has not
-moved in, and sections are not yet filtered by the viewer's role. Both land at
-rung 2, which is also when `docs/quickstart.md` retires into this page and
-stops being the canonical operator documentation.
+**Canonical since Segment 19E rung 2.** The material from
+`docs/quickstart.md` moved in and that file retired to
+`docs/archive/quickstart.md`; corrections belong here, not there.
+
+Sections are declared with an audience in `app/web/views/_guide.py` and the
+template renders only sections whose audience is visible. **That filter runs
+but does not yet narrow anything** — `visible_audiences()` returns every
+audience for every viewer until rung 7 replaces its body with a real resolver.
+So a signed-in user currently sees every section, including the three
+addressed to reviewers, observers and reviewees. Do not read this entry as
+describing role-gated output; it describes a live seam with an open gate.
 
 Whether `/guide` should be viewable **without signing in** is open and belongs
 to Segment 20: `resolve_current_user` raises 401 today, so an anonymous Guide

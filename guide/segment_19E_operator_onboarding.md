@@ -217,6 +217,42 @@ the same row already did. Two inaccuracies in the adjacent `/about` spec entry
 were fixed rather than left beside a new correct one: `.chrome-app-identity` is
 a `<span>`, not a link, and "currently a stub" predated 18R Item 6.
 
+**2026-09-06 — rung 2 shipped.** `docs/quickstart.md`'s material moved into
+`app/web/templates/guide.html`; the file retired to `docs/archive/quickstart.md`
+with a header naming its successor and forbidding edits. All live references
+repointed — `docs/README.md`'s index row, `docs/known_limitations.md`,
+`docs/status.md` (twice), `guide/segment_20_*`, `guide/todo_master.md`,
+`guide/segment_14B_*`, `guide/deferred_consolidated.md`, and the
+`docs/quickstart.md §4c` docstring example in `tools/close_check.py`. Dated
+history in `todo_master`'s Done rows and `docs/practice-audit-2026-09-04.md`
+was left alone: those record what was true then.
+
+The audience seam landed as planned — `app/web/views/_guide.py` owns the
+section→audience map and `visible_audiences()`, the template gates each card
+on its key, and `visible_audiences()` returns everything until rung 7. It is
+**exercised, not merely present**: a mutation test strips the `{% if %}` gates
+from the template and exactly one test fails. That test was the reason for
+landing the filter early, so it earns its place.
+
+**Answering the open question "how much of `docs/quickstart.md` survives the
+move".** Its ten numbered sections became eight operator cards: §3 and §4
+merged into "Create and set up a session" (creating a session and setting it up
+are one continuous act, and splitting them put a card boundary mid-task), and
+§9 "What your reviewers experience" was folded into a reviewer-addressed "For
+reviewers" card rather than kept as operator-facing description. Two cards are
+new, with no quickstart source: **For observers** and **For reviewees**. They
+had to be written, because the doc only ever addressed operators — which is
+itself the argument for the Guide being role-aware.
+
+**What did not survive: the nineteen `📷 Screenshot —` placeholders and the
+checklist at the foot of the file.** They were never-taken TODOs, and an
+in-app page carrying "screenshot goes here" callouts is worse than one
+carrying none. The intent is real and is not lost — it is recorded here, and
+the archived file still holds the full list of nineteen filenames and the
+suggested location. Whether the Guide should carry screenshots at all is a
+better question once there is a deployed host to capture, so it belongs with
+Segment 20's currency pass rather than with 19E.
+
 **2026-09-06 — role-awareness moved out of rung 2 to a new rung 7, after the
 content is settled** (author decision). The original ladder put role-filtering
 in the same slice as the quickstart move. Separating them, because they fail

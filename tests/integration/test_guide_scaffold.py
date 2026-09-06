@@ -1,19 +1,37 @@
 """The `/guide` page scaffold — Segment 19E rung 1.
 
-Scaffold-only coverage: the route exists, every section heading the rung
-commits to is present, the chrome link behaves like `/about`'s, and the
-return-to-origin affordance resolves. Content assertions belong to rung 2,
-which moves `docs/quickstart.md` in; this file deliberately asserts
-headings rather than prose so it does not have to churn when that lands.
+Covers the route, every committed section heading, the chrome link
+behaving like `/about`'s, and the return-to-origin affordance.
+
+Headings rather than prose, deliberately: the copy is editorial and will
+be revised repeatedly before rung 7, and a test that pins paragraphs
+turns every wording improvement into a test edit. What must not change
+silently is which sections exist — see `SECTIONS`.
 """
 
 from __future__ import annotations
 
+import pathlib
+
+import pytest
 from fastapi.testclient import TestClient
 
-# The section headings rung 1 commits to. Rung 2 may add sections; it must
-# not silently drop one, which is what pinning the list here catches.
-SECTIONS = (
+from app.auth.identity import AuthenticatedUser
+from app.web import routes_guide
+from app.web.views._guide import (
+    AUDIENCES,
+    SECTIONS,
+    visible_audiences,
+    visible_sections,
+)
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+
+# The headings the page commits to, in reading order. Rung 7 may narrow who
+# sees which, but a section must not silently disappear — that is what pinning
+# the list here catches. Named for headings so it does not collide with the
+# view's SECTIONS, which carries the audience mapping.
+SECTION_HEADINGS = (
     "What Review Robin Web does",
     "Before you start",
     "Create and set up a session",
@@ -37,7 +55,7 @@ def test_guide_renders(client: TestClient) -> None:
 
 def test_guide_renders_every_committed_section(client: TestClient) -> None:
     body = client.get("/guide").text
-    missing = [s for s in SECTIONS if f"<h2>{s}</h2>" not in body]
+    missing = [s for s in SECTION_HEADINGS if f"<h2>{s}</h2>" not in body]
     assert not missing, f"missing Guide sections: {missing}"
 
 
@@ -76,3 +94,65 @@ def test_chrome_omits_the_guide_link_on_the_guide_itself(client: TestClient) -> 
     # /about's own link still shows — the two pages are siblings, not one
     # page absorbing the other.
     assert 'class="chrome-link" href="/about' in body
+
+
+
+# --------------------------------------------------------------------
+# The audience filter — Segment 19E rung 2.
+#
+# It runs today and resolves to "everything"; rung 7 replaces the resolver.
+# These assert the seam is *live*, not merely present, so the path cannot
+# rot between now and then.
+
+
+def _viewer() -> AuthenticatedUser:
+    return AuthenticatedUser(
+        principal_id="guide-test", email="nobody@example.edu", name="Nobody"
+    )
+
+
+def test_every_audience_is_visible_before_rung_7() -> None:
+    assert visible_audiences(_viewer()) == frozenset(AUDIENCES)
+
+
+def test_every_declared_section_is_visible_before_rung_7() -> None:
+    assert visible_sections(_viewer()) == frozenset(s.key for s in SECTIONS)
+
+
+def test_the_template_gates_on_the_view_not_on_its_own_logic(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Narrowing the audience set must actually drop cards.
+
+    The point of landing the filter early is that it is exercised. If the
+    template stopped consulting `visible_sections`, every other test here
+    would still pass — this one would not. Patched on `routes_guide`, which
+    imported the symbol directly, so this also pins that the route is what
+    feeds the template.
+    """
+    monkeypatch.setattr(
+        routes_guide, "visible_sections", lambda user: frozenset({"getting_help"})
+    )
+    body = client.get("/guide").text
+    assert "<h2>Getting help</h2>" in body
+    assert "<h2>For reviewers</h2>" not in body
+    assert "<h2>What Review Robin Web does</h2>" not in body
+
+
+def test_quickstart_retired_to_archive() -> None:
+    """The move is part of the contract, not incidental tidying."""
+    assert not (REPO / "docs" / "quickstart.md").exists()
+    archived = REPO / "docs" / "archive" / "quickstart.md"
+    assert archived.exists()
+    assert "RETIRED" in archived.read_text().splitlines()[0]
+
+
+def test_headings_and_audience_mapping_stay_in_step() -> None:
+    """One list of headings, one of audiences — they describe the same page.
+
+    Adding a card to the template and forgetting its `GuideSection` would
+    leave it ungatable, and rung 7 would ship it to everyone regardless of
+    audience. Deriving the count from both sides catches that at the point
+    it is introduced rather than at the point it matters.
+    """
+    assert len(SECTION_HEADINGS) == len(SECTIONS)

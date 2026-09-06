@@ -44,7 +44,8 @@ bugs — they trace to the Segment 14A plan and
   needs an in-tenant sending identity that exists only once the
   institutional host is provisioned. Meanwhile email is optional —
   access is roster + sign-in, so the operator's own email pointing
-  at the app URL covers invitations (`docs/quickstart.md` §6). What
+  at the app URL covers invitations (the in-app Guide at `/guide`,
+  "Give reviewers access"). What
   is genuinely missing is **targeted reminders** to reviewers who
   have not submitted; until 14B, chase them by hand from the
   Responses page's coverage view.

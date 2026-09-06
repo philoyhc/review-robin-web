@@ -5,11 +5,14 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  {# Segment 19E rung 1 — SCAFFOLD. Real headings and layout, placeholder
-     body copy. Rung 2 moves the material in from docs/quickstart.md (which
-     retires into this page) and adds role-awareness, so the operator
-     sections track quickstart's arc one-to-one and the move stays
-     mechanical. Do not add real copy here; that is rung 2's slice. #}
+  {# Segment 19E rung 2. This page is the canonical operator documentation —
+     docs/quickstart.md retired into it (docs/archive/quickstart.md).
+
+     Each card is gated on its key being in `visible_sections`, which
+     app/web/views/_guide.py computes. That filter RUNS today and resolves to
+     every section for every viewer; rung 7 replaces the resolver and touches
+     nothing here. Copy lives in this template; audience policy lives in the
+     view. #}
   <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
 
   <h1>Guide</h1>
@@ -17,71 +20,280 @@
     How to run a review session, and what each role sees.
   </p>
 
+  {% if "what_it_does" in visible_sections %}
   <div class="card">
     <h2>What Review Robin Web does</h2>
-    <p class="muted">Placeholder — the shape of a session: reviewers, reviewees,
-      relationships, instruments, and what comes out at the end.</p>
+    <p>
+      Review Robin Web runs <strong>structured review sessions</strong>:
+      reviewers fill in a form about a group of reviewees, and the app
+      collects, organises, and shares the results. As the operator you decide
+      who reviews whom, what questions they answer, and who sees the outcome.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Term</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Session</strong></td><td>One review round — its own people, form, dates, and results.</td></tr>
+        <tr><td><strong>Operator</strong></td><td>You: the person who sets up and runs the session.</td></tr>
+        <tr><td><strong>Reviewer</strong></td><td>Someone who fills in the form.</td></tr>
+        <tr><td><strong>Reviewee</strong></td><td>Someone who is being reviewed.</td></tr>
+        <tr><td><strong>Instrument</strong></td><td>A set of questions reviewers answer. A session can hold several.</td></tr>
+        <tr><td><strong>Assignment</strong></td><td>One reviewer-reviews-one-reviewee pairing.</td></tr>
+        <tr><td><strong>Observer</strong> <span class="muted">(optional)</span></td><td>Someone who may view collated results without reviewing.</td></tr>
+      </tbody>
+    </table>
   </div>
+  {% endif %}
 
+  {% if "before_you_start" in visible_sections %}
   <div class="card">
     <h2>Before you start</h2>
-    <p class="muted">Placeholder — what to have ready before creating a session.</p>
+    <ul>
+      <li>Review Robin Web is a hosted web app — there is nothing to install.
+        Reach it at the address your administrator gave you.</li>
+      <li><strong>Sign in with your institutional account.</strong> The app uses
+        single sign-on, so there is no separate password to create.</li>
+      <li>If your address is on the operator allowlist you land on the
+        <strong>Sessions</strong> lobby. An empty lobby is expected — you have
+        not made a session yet.</li>
+    </ul>
   </div>
+  {% endif %}
 
+  {% if "create_and_set_up" in visible_sections %}
   <div class="card">
     <h2>Create and set up a session</h2>
-    <p class="muted">Placeholder — creating the session, then the Setup pages in
-      the order they are meant to be worked.</p>
-  </div>
+    <p>
+      On the Sessions lobby, choose <strong>Add new</strong>, give the session a
+      name and a short unique code, optionally set a deadline and description,
+      and save. New sessions start in <strong>Draft</strong>: nothing is live,
+      and everything is freely editable.
+    </p>
+    <p>
+      The <strong>Workflow</strong> card at the top of every session page is the
+      control panel — it always shows the most useful next action for the
+      session's current state.
+    </p>
 
+    <h3>Reviewers and reviewees</h3>
+    <p>
+      <strong>Use CSV uploads</strong> for anything beyond a handful of people.
+      Each roster CSV needs a name column and an email column, plus three tag
+      columns. Use the tags for attributes that drive rule-based assignment —
+      a tutor, a tutorial group — so that, say, each student reviews only
+      their own group.
+    </p>
+    <p>
+      Headers are <code>ReviewerName</code>, <code>ReviewerEmail</code>,
+      <code>ReviewerTag1</code>–<code>3</code> for reviewers, and
+      <code>RevieweeName</code>, <code>RevieweeEmail</code>,
+      <code>RevieweeTag1</code>–<code>3</code> for reviewees. Friendly tag
+      labels can be set later on the Reviewers / Reviewees pages, or keyed
+      into the header after a period — <code>ReviewerTag1.Tutor</code>, with
+      the values still in the column. Leaving a tag header bare on a later
+      re-upload clears the label.
+    </p>
+    <div class="card rs-help-card">
+      <strong>Email addresses must be the ones people sign in with.</strong>
+      The app matches each person to their roster row by their signed-in
+      address, so a mismatch means they never see their review. This is the
+      single most important setup step — and it is the app's
+      <em>identifier</em> for a person, not an address the app sends mail to.
+    </div>
+    <p>
+      The <strong>Quick Setup</strong> card on Session Home takes the roster
+      CSVs (and Relationships and Settings, if you use them) in one place.
+      Working page by page instead, each Setup page has its own upload card.
+      Only a few people? Type them straight in. Either way reviewers and
+      reviewees may overlap, and any row can be marked <strong>inactive</strong>
+      to exclude someone without deleting them.
+    </p>
+
+    <h3>Build the form (Instruments)</h3>
+    <p>
+      Each session starts with one instrument you can rename and shape. An
+      instrument carries an assignment rule, <strong>response fields</strong>
+      (the questions reviewers answer) and <strong>display fields</strong>
+      (read-only context shown to the reviewer, such as the reviewee's name).
+    </p>
+
+    <h3>Who reviews whom</h3>
+    <p>
+      Each instrument carries its own assignment rule, set on the
+      <strong>Instrument assignment rule</strong> band of its card: who does
+      the review, who is being reviewed, and whether the unit of review is
+      each reviewee individually or a group. Setting all three to
+      <em>all, all, individual</em> pairs everyone eligible with everyone
+      else. To narrow it, switch a link to <strong>filter</strong> and choose
+      the tags and connectors.
+    </p>
+    <p>
+      Pairs are not generated here — that happens when you Prepare the session.
+      Afterwards the <strong>Assignments</strong> page shows the resulting
+      pairs per instrument, where you can spot-check coverage and use the
+      Self-reviews toggle.
+    </p>
+
+    <h3>Optional: visibility, relationships, observers</h3>
+    <p>
+      Per instrument you can set who sees responses and in what form — raw,
+      anonymised, or summarised — for reviewers, reviewees and observers. Turn
+      on <strong>Relationships</strong> if your review needs per-pairing
+      context, and <strong>Observers</strong> if some people should view
+      results without reviewing. Both are off by default.
+    </p>
+  </div>
+  {% endif %}
+
+  {% if "prepare_and_launch" in visible_sections %}
   <div class="card">
     <h2>Prepare and launch</h2>
-    <p class="muted">Placeholder — assignments, Validate, and activating the
-      session.</p>
+    <ol>
+      <li>On Session Home, use the Workflow card's <strong>Prepare
+        session</strong>. This generates the assignment pairs from every
+        instrument's rule <em>and</em> runs a pre-flight check. Nothing goes
+        live yet.</li>
+      <li>Fix anything blocking; warnings are fine to proceed past. The session
+        moves to <strong>Validated</strong>.</li>
+      <li>When you are ready, <strong>Activate</strong>. Instruments open for
+        responses.</li>
+    </ol>
+    <p>
+      Before launching, the <strong>Previews</strong> page shows the exact form
+      a specific reviewer will see — a good final sanity check.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "give_access" in visible_sections %}
   <div class="card">
     <h2>Give reviewers access</h2>
-    <p class="muted">Placeholder — how reviewers reach their reviews.</p>
+    <p>
+      The app does not send invitation emails yet, and magic links are not
+      switched on — and you need neither to run a review. Access is based on
+      the roster, so you share the app's address yourself and people sign in.
+    </p>
+    <ol>
+      <li>Make sure the session is <strong>Activated</strong> and your reviewers
+        are on the roster with the addresses they will sign in with.</li>
+      <li>Broadcast the app's address through your own channel — an LMS
+        announcement, an email to the class, a course page.</li>
+      <li>Each person signs in and immediately sees the reviews that apply to
+        them. No invitation or code needed.</li>
+    </ol>
+    <p class="muted">
+      Share the link, they sign in, they see their reviews. This is separate
+      from the addresses that <em>identify</em> people on the roster, which are
+      essential.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "watch_progress" in visible_sections %}
   <div class="card">
     <h2>Watch progress</h2>
-    <p class="muted">Placeholder — tracking responses while the session runs.</p>
+    <p>
+      The <strong>Invitations</strong> page shows, per reviewer, how far
+      through the form each person is. Its invitation and reminder columns sit
+      idle until email sending is switched on. The
+      <strong>Responses</strong> page flips the view: per reviewee, how much
+      coverage they have received.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "close_and_share" in visible_sections %}
   <div class="card">
     <h2>Close, release, and share results</h2>
-    <p class="muted">Placeholder — ending the session and getting the results to
-      the people who need them.</p>
+    <ol>
+      <li>Use the Workflow card to <strong>Close</strong> the session, which
+        stops new responses, and then <strong>Release responses</strong> when
+        you are ready.</li>
+      <li>Reviewees see their results on their own page, in the form you
+        allowed.</li>
+      <li>Observers, if enabled, see collated results on their collation
+        page.</li>
+    </ol>
+    <p>
+      The <strong>Extract data</strong> page downloads CSVs of everything —
+      reviewers, reviewees, relationships, settings, and the full responses
+      table — for analysis or archiving.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "tips" in visible_sections %}
   <div class="card">
     <h2>Tips and troubleshooting</h2>
-    <p class="muted">Placeholder — the things that commonly go wrong, and what to
-      do about them.</p>
+    <ul>
+      <li><strong>Import with CSVs.</strong> Beyond a handful of people, upload
+        rather than type — and it is what makes Quick Setup worthwhile.</li>
+      <li><strong>Roster addresses must match sign-in addresses.</strong> People
+        are recognised by the address they log in with.</li>
+      <li><strong>No invitation emails needed to launch.</strong> Share the app
+        link and signed-in participants see their own reviews.</li>
+      <li><strong>Everything is editable in Draft.</strong> Set up freely before
+        validating.</li>
+      <li><strong>Validate early.</strong> The pre-flight catches missing pieces
+        before you share the link.</li>
+      <li><strong>Made a mistake after activating?</strong> The Workflow card's
+        Revert action returns a session to Draft.</li>
+      <li><strong>Inactive versus delete.</strong> Marking someone inactive
+        excludes them while keeping their history; deleting removes them
+        entirely.</li>
+      <li><strong>Reruns.</strong> Duplicate a session, or rebuild one from its
+        exported CSVs with Rehydrate from the lobby.</li>
+    </ul>
   </div>
+  {% endif %}
 
+  {% if "for_reviewers" in visible_sections %}
   <div class="card">
     <h2>For reviewers</h2>
-    <p class="muted">Placeholder — what a reviewer sees and does.</p>
+    <ol>
+      <li>Open the link your operator shared and <strong>sign in</strong> with
+        your institutional account.</li>
+      <li>Your dashboard lists the reviews that apply to you. Click into one to
+        see the reviewees assigned to you and the questions to answer.</li>
+      <li><strong>Save</strong> as you go and <strong>Submit</strong> when
+        finished. You can revisit until the session closes.</li>
+    </ol>
   </div>
+  {% endif %}
 
+  {% if "for_observers" in visible_sections %}
   <div class="card">
     <h2>For observers</h2>
-    <p class="muted">Placeholder — what an observer sees on the collation
-      surface.</p>
+    <p>
+      An observer views collated results for a session without reviewing
+      anyone. Once the operator releases responses, your collation page shows
+      the results in the form the operator allowed — raw, anonymised, or
+      summarised.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "for_reviewees" in visible_sections %}
   <div class="card">
     <h2>For reviewees</h2>
-    <p class="muted">Placeholder — what a reviewee sees on their results
-      page.</p>
+    <p>
+      A reviewee is someone being reviewed. After the operator closes the
+      session and releases responses, your results appear on your own page, in
+      the form the operator allowed — raw, anonymised, or summarised. Until
+      then there is nothing to see.
+    </p>
   </div>
+  {% endif %}
 
+  {% if "getting_help" in visible_sections %}
   <div class="card">
     <h2>Getting help</h2>
-    <p class="muted">Placeholder — where to go when this page does not answer
-      the question.</p>
+    <p>
+      A session's <strong>Validate</strong> page explains most setup problems in
+      plain language. For anything else, contact your Review Robin Web
+      administrator.
+    </p>
   </div>
+  {% endif %}
 {% endblock %}
