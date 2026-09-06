@@ -164,6 +164,12 @@ are different registers and should not merge.
   to link from an email, and the roles overlap in practice.
 - **Item 4 sequenced last** (2026-09-06). Per-page guidance has to speak the
   Guide's vocabulary; writing them in parallel guarantees two voices.
+- **Role-filtering is wired from rung 2 but resolves to "all" until rung 7**
+  (2026-09-06). The alternative — leave the seam out and add it at rung 7 —
+  means the filter arrives untested against real content. Running it from the
+  start with a constant audience set keeps the code path exercised by every
+  rung's tests, so rung 7 changes one resolver rather than introducing a
+  mechanism.
 - **One segment-level `Doc impact`, tagged by PR rung rather than by item**
   (2026-09-06). The four pieces of scope split unevenly across six PRs, so
   item-level manifests would have needed `## Item n` headings that do not match
@@ -200,6 +206,47 @@ Named, not counted:
 
 ---
 
+## Status
+
+**2026-09-06 — rung 1 shipped** (PR #2131). The `/guide` scaffold: route,
+twelve section shells, chrome link beside About, `?return_to=`, and the
+`SPEC_COVERAGE` entry the 19A Item 3 gate requires. One test assumption
+corrected at build — Jinja's `urlencode` leaves `/` unescaped, so the chrome
+link renders `return_to=/about`, as the existing Settings and About links in
+the same row already did. Two inaccuracies in the adjacent `/about` spec entry
+were fixed rather than left beside a new correct one: `.chrome-app-identity` is
+a `<span>`, not a link, and "currently a stub" predated 18R Item 6.
+
+**2026-09-06 — role-awareness moved out of rung 2 to a new rung 7, after the
+content is settled** (author decision). The original ladder put role-filtering
+in the same slice as the quickstart move. Separating them, because they fail
+differently: the content is a long editorial pass that will take several
+iterations to get right, and role-filtering is a query problem with a
+correctness risk — showing someone the wrong sections, or hiding sections they
+need. Bundling them means every copy edit re-opens the gating question, and the
+gating cannot be reviewed on its own.
+
+The app is not openly available, so an ungated Guide costs nothing meanwhile.
+
+**Rungs 2–6 wire for it and leave it inert**, in the specific sense that the
+*filter runs* from rung 2 onward — each section declares its audience and the
+template renders only sections whose audience is in a `visible_audiences` set —
+but the set is a constant containing every audience. The seam is therefore live
+and covered by tests from the moment it exists; rung 7 replaces the constant
+with a real resolver and nothing else. A seam that is built but never executed
+is worse than no seam: it rots unobserved, which is the failure mode this shape
+avoids.
+
+Rung 7's actual work is the resolver, not the template. Noted at rung 1's
+close: **role membership is not a property of `AuthenticatedUser`.**
+`is_sys_admin` / `is_super_admin` are, but "is this person a reviewer /
+observer / reviewee" is a function of their rows in some session's roster,
+resolved per-session today by `require_reviewee_in_session` and its siblings.
+A workspace-level "does this person have any such row anywhere" query does not
+exist yet.
+
+---
+
 ## PR ladder
 
 **1 — Guide scaffold.** `routes_guide.py`, the `/guide` template with every
@@ -208,9 +255,11 @@ chrome link, `?return_to=` plumbing, the `spec_registry.py` entry. Must not
 move any quickstart content. Scaffold-first per `CLAUDE.md` → "Working
 approach": this adds both a page and a navigation affordance.
 
-**2 — Guide content + quickstart retirement.** Move the material in, add
-role-awareness, move `docs/quickstart.md` to `docs/archive/`, repoint the 11
-live references. Must not touch the lobby or templates.
+**2 — Guide content + quickstart retirement.** Move the material in, ~~add
+role-awareness,~~ *(moved to rung 7 on 2026-09-06 — see `## Status`; rung 2
+lands the audience declarations and the filter, with the audience set held at
+"all")*, move `docs/quickstart.md` to `docs/archive/`, repoint the 11 live
+references. Must not touch the lobby or templates.
 
 **3 — Lobby first-run card.** Scaffold and wiring together — one card on an
 existing page, no new nav. Must not change the lobby's table or filters.
@@ -225,11 +274,20 @@ lands, only its inputs.
 **6 — Inline page guidance.** One `<details>` per setup page, written against
 the Guide's settled vocabulary. Must not restate the Guide; it links there.
 
+**7 — Activate role-awareness** *(added 2026-09-06)*. Replace the
+all-audiences constant with a real resolver: a workspace-level query for
+whether the signed-in user holds any reviewer / observer / reviewee row, plus
+their operator status. Must not touch Guide copy — if a section turns out to be
+addressed to the wrong audience, that is a rung 2 correction landing before
+this rung, not a change made while activating the filter.
+
 ---
 
 ## Definition of done
 
-- `/guide` renders for every role, and for a signed-in user with none.
+- `/guide` renders for every role, and for a signed-in user with none
+  (**rung 7**; before it, every signed-in user sees every section — see
+  `## Status`).
 - `docs/quickstart.md` is under `docs/archive/`; `grep -rln quickstart` over
   live files returns only the archive pointer and the Guide's own references.
 - `app/web/spec_registry.py` maps `app.web.routes_guide`, and
@@ -295,7 +353,8 @@ the segment window.
 - `spec/operator_ui_concept.md` — the `/guide` page: chrome placement beside
   `/about`, role-aware sections, and the `?return_to=` treatment (PR 1).
 - `spec/audience_and_identity_model.md` — which roles see which Guide sections,
-  including the signed-in-no-role case (PR 2).
+  including the signed-in-no-role case (**PR 7**, retagged from PR 2 on
+  2026-09-06 when role-awareness moved; see `## Status`).
 - `spec/sessions_overview.md` — the lobby's first-run card and its
   zero-sessions trigger (PR 3).
 - `spec/csv_contracts.md` — the two template sets, that they are derived from
