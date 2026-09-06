@@ -794,6 +794,42 @@ The h2 rule is **mirrored rather than inherited**: a `<summary>` is not an
 `<h2>`, so `body.ui-v2 h2` does not reach it. The test now asserts the type
 alongside the glyph, so the two cannot drift apart silently.
 
+**2026-09-06 — two Operations pages get an inline note, not a help card**
+(author, after asking whether Operations and Session Home want guidance cards).
+
+I proposed cards for Invitations, Assignments and Responses. The author took
+the first two and **rejected Responses**, correctly: the release-and-visibility
+rule I wanted to put there is set on **Instruments**, and that page is the
+*operator's* view of responses, not the reviewee's. A fact stated on the page
+that does not own it is how two sources of truth start.
+
+They also chose the lighter form. Neither page gets a `.page-guidance` card;
+each gets one `.muted` line inside the card it concerns:
+
+- **Assignments**, under `Per-instrument status` — *"Pairs are materialised
+  from each instrument's rule and appear at Prepare."* The page's one invisible
+  fact: pairs are a derivative, so an operator hunting for an add/remove
+  control will not find one.
+- **Invitations**, above the counters — *"Note: Invitation and reminder columns
+  are inactive until email sending is switched on."* Without it, four of eight
+  counters that never move read as broken rather than not-yet-switched-on.
+
+**Guidance cards stay a Setup-page affordance.** A card is for a page whose
+*whole purpose* needs explaining; a sentence about one card's own table is not
+that, and scattering the card idiom across pages that need one line would
+dilute the thing an operator has just learned to look for.
+
+**The Invitations note has an expiry, and it is wired to fail loudly.** It
+becomes false the moment 14B ships. `guide/segment_14B_email_infrastructure.md`
+now opens its `## Status` with the three surfaces that must be retired then,
+and two of the three carry test assertions — a red test when email lands beats
+a comment nobody greps for. The Guide's own version of the claim is listed
+there too, unpinned.
+
+Also fixed at build: both assertions normalise whitespace. The templates wrap
+mid-sentence, so a literal match tripped on the newline — and would have
+tripped again on any re-wrap.
+
 ---
 
 ## PR ladder
@@ -934,7 +970,10 @@ the segment window.
 - `spec/setup_pages.md` — the page-level `<details>` guidance in the shared body
   shape (PR 6).
 - `spec/email_template_editor.md` — the pilot page's own guidance copy in its
-  §2 page contract (PR 6). **Added 2026-09-06 at build**: the rung's original
+  §2 page contract (PR 6).
+- `spec/assignments.md` — the inline note under `Per-instrument status` saying
+  pairs are materialised at Prepare (added 2026-09-06; see `## Status`).
+- `spec/operations_pages.md` — the Invitations counters note (same). **Added 2026-09-06 at build**: the rung's original
   bullet named only the shared Setup-pages spec, but the Setup pages are not
   all governed by it — `spec_registry.py` maps `_setup_invite` here, and this
   is where the Email Template page's contract lives. See `## Status`.
