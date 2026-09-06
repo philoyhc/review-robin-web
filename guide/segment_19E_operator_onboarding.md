@@ -170,33 +170,44 @@ are different registers and should not merge.
   start with a constant audience set keeps the code path exercised by every
   rung's tests, so rung 7 changes one resolver rather than introducing a
   mechanism.
-- **Template downloads live in the Workflow card, as a "Download setup
-  templates" row after the Setup checklist** (2026-09-06, author). Both options
-  the plan weighed were wrong in the same way: they put the templates somewhere
-  the operator has to go *looking*, on the strength of a guess about where they
-  would look. The Workflow card puts them in the operator's field of view at the
-  moment they are useful — the draft session exists and its roster is empty,
-  which is exactly the state the Setup checklist describes. Hence the gating:
-  **the row renders when and only when the Setup checklist renders** (`is_draft`),
-  so it appears with the punch list and leaves with it rather than persisting as
-  clutter through the session's whole life.
+- ~~**Template downloads live in the Workflow card, as a "Download setup
+  templates" row after the Setup checklist**~~ *(decided and then reversed the
+  same day — 2026-09-06. Kept because the reason for the reversal is the
+  argument for the shape that replaced it.)* The Workflow card put the
+  templates in the operator's field of view at the moment they are useful, and
+  made them **session-aware**: roster headers carry each renamed tag column's
+  friendly label (`ReviewerTagN.<label>`, 19C Item 1), so a template generated
+  inside a session matches that session's importer exactly. What killed it: the
+  Quick Setup card renders on `session_new.html` as well as
+  `session_detail.html`, so an operator can upload rosters **before any session
+  exists** — and a Workflow-card template cannot reach them there.
 
-  Two consequences, both recorded at the decision rather than discovered later:
+- **Template downloads live on the two pre-session surfaces: the Guide's
+  "Create and set up a session" card, and the lobby first-run card**
+  (2026-09-06, author, superseding the above). An operator may reasonably want
+  the templates *while* creating a session, filling them for Quick Setup on
+  `session_new.html`, rather than after. Both surfaces exist before any session
+  does, and both are already where a new operator is looking — the Guide is the
+  canonical documentation and the first-run card is what an empty lobby shows.
 
-  - **Templates become session-aware, which is an upgrade.** Roster headers carry
-    each renamed tag column's friendly label (`ReviewerTagN.<label>`, 19C Item 1,
-    the sole round-trip carrier for those labels). A template served from inside
-    a session is generated against *that session's* labels, so it matches the
-    file the importer expects for that session. A generic download from the Guide
-    or Extract Data could not do this.
-  - **It does not cover the create-time path.** The Quick Setup card renders on
-    both `session_new.html` and `session_detail.html`, so an operator can upload
-    rosters *before* any session — and therefore any Workflow card — exists. That
-    operator has no route to a template. Not fatal (create a bare session, take
-    the templates from Home, upload there) and arguably not worth solving, since
-    the create-time upload is for an operator who already has files. Flagged for
-    the author; a second link from the Guide or the Quick Setup card would close
-    it if wanted.
+  **This forces the templates to be truly generic**, which is the trade the
+  reversal buys and costs:
+
+  - **Cost: bare headers clear friendly labels on re-import.** A generic
+    template cannot carry `ReviewerTagN.<label>` suffixes, and a bare tag header
+    is not neutral — `field_labels.apply_captured_labels` **clears** every
+    in-scope slot the header does not name (`app/services/field_labels.py`;
+    mirrors how an absent tag *value* re-imports as NULL). So an operator who
+    renamed `ReviewerTag1` to `Tutor`, then filled a generic template and
+    uploaded it into that session, would silently lose the rename. Harmless in
+    the case this decision optimises for — a fresh session has no overrides —
+    and the existing per-session roster **export** already serves labeled
+    headers for anyone re-uploading. The Guide's card copy must say so; that is
+    a rung 4 content obligation, not a footnote.
+  - **Benefit: one artefact, no session dependency.** The four files are
+    identical for every operator, so they can be generated from the serializers'
+    `HEADER` tuples with no `review_session` in hand, and served from a route
+    that needs no session scope.
 
 - **One segment-level `Doc impact`, tagged by PR rung rather than by item**
   (2026-09-06). The four pieces of scope split unevenly across six PRs, so
@@ -365,9 +376,10 @@ existing page, no new nav. Must not change the lobby's table or filters.
 
 **4 — Starter template set.** Derivation from the four serializers, the
 download location, one mock row per file. Must not add a demo set.
-*(Download location decided 2026-09-06: a `Download setup templates` row in
-the Workflow card, immediately after the Setup checklist and gated on the same
-`is_draft` condition — see `## Judgment calls — decided`.)*
+*(Download location decided 2026-09-06: the Guide's "Create and set up a
+session" card and the lobby first-run card — both pre-session surfaces, so the
+templates are generic. A Workflow-card row was decided first and reversed the
+same day; see `## Judgment calls — decided` for why.)*
 
 **5 — Demo template set.** The fuller data plus the round-trip test (download
 → Quick Setup → `validated`). Must not change the derivation code rung 4
@@ -422,8 +434,10 @@ this rung, not a change made while activating the filter.
 - ~~**Where exactly does the template download live** — a card on the Guide, or a
   tile in Extract Data? Leaning Guide, since that is where a newcomer is, but an
   experienced operator refetching a template may look in Extract Data. Decided
-  by: the author at rung 4.~~ **Decided 2026-09-06: neither — the Workflow
-  card.** See `## Judgment calls — decided`.
+  by: the author at rung 4.~~ **Decided 2026-09-06: the Guide's "Create and
+  set up a session" card and the lobby first-run card** — the Guide half of the
+  original leaning, plus the surface rung 3 had just built. See `## Judgment
+  calls — decided`.
 - **How much of `docs/quickstart.md` survives the move.** Ten sections written
   as a document may not map one-to-one onto a page. Decided at rung 2, recorded
   in `## Status`.
@@ -454,15 +468,20 @@ no item headings for the close check to date a bullet from. Every bullet takes
 the segment window.
 
 - `spec/operator_ui_concept.md` — the `/guide` page: chrome placement beside
-  `/about`, role-aware sections, and the `?return_to=` treatment (PR 1).
+  `/about`, role-aware sections, and the `?return_to=` treatment (PR 1); the
+  template downloads in its "Create and set up a session" card (PR 4, added
+  2026-09-06 with the download location).
 - `spec/audience_and_identity_model.md` — which roles see which Guide sections,
   including the signed-in-no-role case (**PR 7**, retagged from PR 2 on
   2026-09-06 when role-awareness moved; see `## Status`).
 - `spec/sessions_overview.md` — the lobby's first-run card and its
-  zero-sessions trigger (PR 3).
+  zero-sessions trigger (PR 3); the template-download links the card gains
+  (PR 4, added 2026-09-06 when the download location was decided).
 - `spec/csv_contracts.md` — the two template sets, that they are derived from
   the serializers rather than authored, and the `example.edu` convention
-  (PRs 4 + 5).
+  (PRs 4 + 5). Includes that the templates are **generic** — bare headers, no
+  `<Column>.<label>` suffixes — and therefore clear friendly-label overrides on
+  re-import into a session that has them (added 2026-09-06).
 - `spec/setup_pages.md` — the page-level `<details>` guidance in the shared body
   shape (PR 6).
 - `docs/README.md` — `quickstart.md` retires to `docs/archive/`; the index
