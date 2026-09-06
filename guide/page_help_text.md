@@ -42,16 +42,37 @@ about the scaffold — raise it rather than working around it.
 
 ---
 
+## Shape and placement — decided 2026-09-06
+
+The guidance is a **half-width card**, not an inline disclosure. Closed
+it is one line — a chevron and `What this page is for`. Open, the card
+grows downwards in place. Width comes from the grid slot each page puts
+it in, never from the macro.
+
+| Page | Placement |
+|---|---|
+| Reviewers / Reviewees / Relationships | `Fields with data` card drops to half width; guidance to its right, same row |
+| Observers | Top right, own row above `Cohort match rule` |
+| Email Template | Above `Merge tags` in the right column |
+| Instruments | `Expand all` / `Collapse all` move into the `Session deadline` card; the vacated card becomes the guidance card |
+
+Placements shipped as a scaffold with placeholder bodies; the copy below
+fills them. Two things to judge on the dev slot rather than argue here:
+the Observers row leaves an **empty top-left slot**, and an open card may
+**stretch its row neighbour** since both grids stretch.
+
+---
+
 ## Status
 
 | Page | Guide anchor | Draft | Shipped |
 |---|---|---|---|
-| Email Template | `#guide-give_access` | below | ✅ rung 6a |
-| Reviewers | `#guide-create_and_set_up` | below | rung 6b |
-| Reviewees | `#guide-create_and_set_up` | below | rung 6b |
-| Relationships | `#guide-create_and_set_up` | below | rung 6b |
-| Observers | `#guide-create_and_set_up` | below | rung 6b |
-| Instruments | `#guide-create_and_set_up` | below | rung 6b |
+| Email Template | `#guide-give_access` | below | ✅ copy rung 6a · placement rung 6b |
+| Reviewers | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
+| Reviewees | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
+| Relationships | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
+| Observers | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
+| Instruments | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
 
 Four of the five remaining pages point at the same Guide section, which
 is a signal worth watching: `create_and_set_up` is the Guide's longest

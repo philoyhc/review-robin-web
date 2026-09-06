@@ -209,6 +209,37 @@ are different registers and should not merge.
     `HEADER` tuples with no `review_session` in hand, and served from a route
     that needs no session scope.
 
+- **Page guidance is a half-width card, not an inline disclosure**
+  (2026-09-06, author, superseding the rung 6a pilot's shape). Closed, it is
+  one line — a chevron and `What this page is for`; open, the card grows
+  downwards in place. The card form gives the guidance a slot in each page's
+  existing grid rather than a full-width band above it, so it reads as one of
+  the page's cards rather than as a preamble to them. Width comes from the
+  grid slot, not the macro, so a page composes it without fighting a
+  hard-coded size.
+
+- **Per-page placements, decided together rather than page by page**
+  (2026-09-06, author):
+
+  | Page | Placement |
+  |---|---|
+  | Reviewers / Reviewees / Relationships | `Fields with data` card drops to half width; guidance card to its right, same row |
+  | Observers | Half width, top right, in its own row above `Cohort match rule` |
+  | Email Template | Half width, above `Merge tags` in the right column |
+  | Instruments | The `Expand all` / `Collapse all` buttons move into the `Session deadline (auto-close)` card; the card they vacate becomes the guidance card |
+
+  The Instruments move is the only one that changes something other than the
+  guidance: a card holding nothing but two bulk toggles was the page's
+  cheapest half to reclaim, and the toggles read better beside the counts they
+  act on than alone in their own card.
+
+  **This supersedes rung 6a's "above the tab strip" placement** on Email
+  Template. The pilot reasoned that page-level guidance should precede the
+  page's own sub-navigation; the card form answers the same worry differently,
+  by making the guidance visibly one of the page's cards rather than a banner
+  over them. The rung 6a test that pinned the old ordering is replaced, not
+  deleted — it now pins the new one.
+
 - **One segment-level `Doc impact`, tagged by PR rung rather than by item**
   (2026-09-06). The four pieces of scope split unevenly across six PRs, so
   item-level manifests would have needed `## Item n` headings that do not match
@@ -540,6 +571,41 @@ added rather than the edit made quietly.
 **The plan's page count was wrong.** `## Definition of done` said five Setup
 pages; `spec/setup_pages.md` lists **six** — the omitted one is Instruments.
 Corrected in place, and it makes rung 6b a five-page rollout rather than four.
+
+**2026-09-06 — rung 6b, first slice: placements scaffolded.** All six Setup
+pages now carry the guidance card in the position `## Judgment calls` records;
+five hold placeholder bodies. Copy follows in the next slice, from
+`guide/page_help_text.md`.
+
+Scaffold-first per `CLAUDE.md` → "Working approach", and the author's
+instruction: agree the layout across six pages before six lots of copy are
+attached to it. Landing the placements alone also means the Instruments
+button move is reviewable on its own rather than buried under prose.
+
+**Two consequences to look at on the slot rather than reason about here:**
+
+- **Observers has an empty top-left slot.** The card is specified top right,
+  in a row above the cohort editor, which is itself left-aligned — so the two
+  are diagonal rather than stacked. Implemented as specified; if the gap reads
+  wrong the fix is to move the card, not to fill the gap with something.
+- **An open card may stretch its row neighbour.** `.bottom-grid` and
+  `.page-grid` stretch, so opening the guidance can grow the card beside it.
+  Whether that is fine or distracting is a looking question.
+
+**Test corrections at build**, both from asserting against markup rather than
+behaviour:
+
+- Counting the bare string `page-guidance` counted **base.html's stylesheet**
+  — nine CSS rules plus one card, so the "exactly one per page" assertion read
+  10. The tests now count `<details class="card page-guidance`, which only
+  markup matches.
+- The all-pages loop 404'd on **Relationships**, which is gated on
+  `relationships_enabled` exactly as Observers is on `observers_enabled`. I
+  had it in the ungated list. Both are now covered by one gated-pages test
+  that sets the flag and asserts a 200 before asserting the card.
+
+Mutation-checked: adding `open` to the macro fails the closed-by-default test
+and nothing else.
 
 ---
 

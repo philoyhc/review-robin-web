@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "operator/partials/_page_guidance.html" as page_guidance %}
 {% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
 
 {% block title %}Reviewers — {{ session.name }}{% endblock %}
@@ -21,6 +22,9 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# 19E rung 6b scaffold — the "Fields with data" card drops to
+     half width and shares its row with the guidance card. #}
+  <div class="bottom-grid">
   <div class="card">
     <p style="margin: 0;">
       Fields with data:
@@ -43,6 +47,11 @@
         {% endfor %}
       </p>
     {% endif %}
+  </div>
+
+    {% call page_guidance.guidance() %}
+      <p>Guidance to follow — placement scaffold only (19E rung 6b). Draft copy is in <code>guide/page_help_text.md</code>.</p>
+    {% endcall %}
   </div>
 
   {% if is_ready %}

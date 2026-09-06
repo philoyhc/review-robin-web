@@ -1434,20 +1434,37 @@
          contrast-checked in both themes. The summary is link-coloured
          because it is the page's one clickable affordance that is not
          a control. */
-      body.ui-v2 .page-guidance {
-        margin: 0 0 var(--space-4) 0;
+      body.ui-v2 details.card.page-guidance {
+        background: var(--card-help-bg);
+        border-color: var(--card-help-border);
+        color: var(--card-help-fg);
       }
+      /* Chevron instead of the native disclosure triangle: it reads as
+         "there is more below" rather than as a list marker, and it
+         rotates to point at the content it opened. `list-style: none`
+         kills it in Firefox, the -webkit pseudo-element in Safari and
+         older Chrome. */
       body.ui-v2 .page-guidance > summary {
         cursor: pointer;
-        color: var(--text-link);
+        color: var(--card-help-fg);
         font-size: 0.95em;
+        list-style: none;
+      }
+      body.ui-v2 .page-guidance > summary::-webkit-details-marker {
+        display: none;
+      }
+      body.ui-v2 .page-guidance > summary::before {
+        content: "\203A";
+        display: inline-block;
+        width: 1em;
+        font-weight: 600;
+        transition: transform 0.15s ease;
+      }
+      body.ui-v2 .page-guidance[open] > summary::before {
+        transform: rotate(90deg);
       }
       body.ui-v2 .page-guidance-body {
-        margin-top: var(--space-2);
-        padding: var(--space-3);
-        border-radius: 6px;
-        background: var(--card-help-bg);
-        color: var(--card-help-fg);
+        margin-top: var(--space-3);
         font-size: 0.95em;
       }
       body.ui-v2 .page-guidance-body > :first-child { margin-top: 0; }
