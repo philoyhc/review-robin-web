@@ -276,6 +276,45 @@
   </div>
   {% endif %}
 
+  {% if "sample_session" in visible_sections %}
+  {# 19E rung 5. Placed between the operator walkthrough and the
+     role-addressed cards: this is the optional "see it working first"
+     step, not part of the sequence above it. #}
+  <div class="card">
+    <h2>Sample session</h2>
+    <p>
+      If you would rather see a working session than read about one, this
+      builds you a populated one in a couple of minutes — the whole flow, with
+      nobody real involved.
+    </p>
+    <p>
+      <a href="/templates/demo.zip">Download sample session data</a> — the same
+      four files as the setup templates, but filled in: six students across two
+      tutorial groups <code>TW01</code> and <code>TW02</code>, each reviewing
+      the others in their group, with both tutors as observers.
+    </p>
+    <ol>
+      <li>Create a new session and give it a name you will recognise as
+        disposable.</li>
+      <li>In <strong>Quick Setup</strong>, attach all four files and submit.</li>
+      <li><strong>Prepare session</strong> from the Workflow card. The session
+        reaches <strong>Validated</strong> with assignments generated — enough
+        of them that the Assignments page, the Responses grid and observer
+        collation all have something to show.</li>
+      <li>Activate it and look around. Every page is populated, so you can see
+        what your reviewers, reviewees and observers will see.</li>
+    </ol>
+    <p class="muted">
+      Everyone in it is fictional and every address is
+      <code>@example.edu</code>, so no mail could reach a real person even once
+      sending is switched on. Archive or delete the session when you are done
+      with it. The tag columns carry the same <em>Tutor</em> and <em>Group</em>
+      names as the setup templates, so uploading these files renames that
+      session's tag columns to match.
+    </p>
+  </div>
+  {% endif %}
+
   {% if "for_reviewers" in visible_sections %}
   <div class="card">
     <h2>For reviewers</h2>

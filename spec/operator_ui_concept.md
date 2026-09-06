@@ -404,6 +404,19 @@ directions of the consequence — uploading unedited renames the session's tag
 columns to the example labels, and a bare tag header clears a name the session
 already has. Contract: `spec/csv_contracts.md` §5a.
 
+**Sample session card (Segment 19E rung 5).** A card between "Tips and
+troubleshooting" and "For reviewers" — after the operator walkthrough, before
+the role-addressed sections, because it is the optional "see it working first"
+step rather than part of the sequence above it. It offers
+`GET /templates/demo.zip` and four numbered steps: create a disposable
+session, attach all four files in Quick Setup, Prepare, then look around a
+populated session. A `.muted` line notes that everyone in it is fictional on
+`@example.edu`, that the session should be archived when done, and that the
+tag labels rename the session's tag columns as the setup templates do. The
+card is **not** repeated on the lobby first-run card: that card is for someone
+about to set up for real, and the sample session is a detour needing room to
+explain. Contract: `spec/csv_contracts.md` §5a.
+
 Whether `/guide` should be viewable **without signing in** is open and belongs
 to Segment 20: `resolve_current_user` raises 401 today, so an anonymous Guide
 would be this app's first unauthenticated surface, needing both a

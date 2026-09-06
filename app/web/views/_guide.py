@@ -57,6 +57,10 @@ SECTIONS: tuple[GuideSection, ...] = (
     GuideSection("watch_progress", OPERATOR),
     GuideSection("close_and_share", OPERATOR),
     GuideSection("tips", OPERATOR),
+    # Sits after the operator walkthrough and before the role-addressed
+    # sections: it is the optional "see it working first" step, not part
+    # of the sequence above it (19E rung 5).
+    GuideSection("sample_session", OPERATOR),
     GuideSection("for_reviewers", REVIEWER),
     GuideSection("for_observers", OBSERVER),
     GuideSection("for_reviewees", REVIEWEE),

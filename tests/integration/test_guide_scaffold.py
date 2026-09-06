@@ -40,6 +40,7 @@ SECTION_HEADINGS = (
     "Watch progress",
     "Close, release, and share results",
     "Tips and troubleshooting",
+    "Sample session",
     "For reviewers",
     "For observers",
     "For reviewees",
