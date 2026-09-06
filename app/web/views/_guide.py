@@ -50,7 +50,6 @@ class GuideSection:
 #: experience" material, not by being shown the reviewer's own section.
 SECTIONS: tuple[GuideSection, ...] = (
     GuideSection("what_it_does", OPERATOR),
-    GuideSection("before_you_start", OPERATOR),
     GuideSection("create_and_set_up", OPERATOR),
     GuideSection("prepare_and_launch", OPERATOR),
     GuideSection("give_access", OPERATOR),
@@ -64,8 +63,14 @@ SECTIONS: tuple[GuideSection, ...] = (
     GuideSection("for_reviewers", REVIEWER),
     GuideSection("for_observers", OBSERVER),
     GuideSection("for_reviewees", REVIEWEE),
-    GuideSection("getting_help", OPERATOR),
 )
+#: Two sections retired at 19E on the author's reading, not merged away
+#: for tidiness. ``before_you_start`` told a reader how to reach and sign
+#: in to the app — advice nobody reading it inside the app still needs;
+#: its content moved to `/about`, where getting in is the question being
+#: asked. ``getting_help`` was one sentence pointing at the Validate
+#: page, which is a troubleshooting tip; it is now the last bullet of
+#: ``tips`` rather than a card of its own.
 
 
 def visible_audiences(user: AuthenticatedUser) -> frozenset[str]:

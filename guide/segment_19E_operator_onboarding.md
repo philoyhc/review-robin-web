@@ -883,6 +883,45 @@ card, not lengthening the guidance.
 tweak it, so `guide/page_help_text.md` stays in `guide/` rather than
 retiring to `guide/archive/`, and the close sequence has not been run.
 
+**2026-09-06 — the Guide loses two sections in the author's copy pass, and
+both losses are moves** (author-directed, on their reading of the shipped
+page).
+
+`Before you start` went to `/about`. The author's reason is the one that
+settles it: *if you can read this, you were already able to log in.* Three
+bullets on how to reach the app and sign in are advice for someone outside
+it, and the Guide is a page you get to by being inside. On `/about` — the
+page whose subject is identity and access — the same facts answer a
+question someone is actually asking, so the material folds into the Access
+card rather than becoming a card of its own.
+
+One clause did not travel: *"An empty lobby is expected — you have not made
+a session yet."* Rung 3 put a first-run card on the lobby that says this
+where an operator meets it, and repeating it on `/about`, which nobody with
+an empty lobby is looking at, would restore the drift the segment exists to
+stop. Called out here rather than done silently, because the instruction was
+"move".
+
+`Getting help` folded into `Tips and troubleshooting` as its last bullet.
+It was one sentence pointing at the Validate page, which is a
+troubleshooting tip; a card is the wrong unit for it, and a whole section
+that says "ask your administrator" reads as the page having run out of
+answers.
+
+**Both removals are asserted in both directions.**
+`test_guide_renders_every_committed_section` only checks that every *listed*
+heading is present, so dropping two names from `SECTION_HEADINGS` would let
+a stale card go on rendering unnoticed — and a deletion and a move look
+identical from the Guide's side. So `test_the_retired_sections_are_gone`
+pins the headings' absence and
+`test_the_retired_content_landed_where_it_was_moved_to` pins the content on
+`/about` and in the Tips list. The template-gating test moved off
+`getting_help` to `for_observers`, which also makes it a better test: it now
+narrows to a section whose audience is *not* the operator.
+
+`For reviewers` also lost its "open the link and sign in" step in the same
+pass, for the same reason as `Before you start`.
+
 ---
 
 ## PR ladder

@@ -46,21 +46,6 @@
   </div>
   {% endif %}
 
-  {% if "before_you_start" in visible_sections %}
-  <div class="card" id="guide-before_you_start">
-    <h2>Before you start</h2>
-    <ul>
-      <li>Review Robin Web is a hosted web app — there is nothing to install.
-        Reach it at the address your administrator gave you.</li>
-      <li><strong>Sign in with your institutional account.</strong> The app uses
-        single sign-on, so there is no separate password to create.</li>
-      <li>If your address is on the operator allowlist you land on the
-        <strong>Sessions</strong> lobby. An empty lobby is expected — you have
-        not made a session yet.</li>
-    </ul>
-  </div>
-  {% endif %}
-
   {% if "create_and_set_up" in visible_sections %}
   <div class="card" id="guide-create_and_set_up">
     <h2>Create and set up a session</h2>
@@ -272,6 +257,9 @@
         entirely.</li>
       <li><strong>Reruns.</strong> Duplicate a session, or rebuild one from its
         exported CSVs with Rehydrate from the lobby.</li>
+      <li><strong>The Validate page</strong> explains most setup problems in
+        plain language. For anything else, contact your Review Robin Web
+        administrator.</li>
     </ul>
   </div>
   {% endif %}
@@ -318,14 +306,12 @@
   {% if "for_reviewers" in visible_sections %}
   <div class="card" id="guide-for_reviewers">
     <h2>For reviewers</h2>
-    <ol>
-      <li>Open the link your operator shared and <strong>sign in</strong> with
-        your institutional account.</li>
-      <li>Your dashboard lists the reviews that apply to you. Click into one to
-        see the reviewees assigned to you and the questions to answer.</li>
-      <li><strong>Save</strong> as you go and <strong>Submit</strong> when
-        finished. You can revisit until the session closes.</li>
-    </ol>
+    <p>
+      Your dashboard lists the reviews that apply to you. Click into one to see
+      the reviewees assigned to you and the questions to answer.
+      <strong>Save</strong> as you go and <strong>Submit</strong> when finished.
+      You can revisit until the session closes.
+    </p>
   </div>
   {% endif %}
 
@@ -349,17 +335,6 @@
       session and releases responses, your results appear on your own page, in
       the form the operator allowed — raw, anonymised, or summarised. Until
       then there is nothing to see.
-    </p>
-  </div>
-  {% endif %}
-
-  {% if "getting_help" in visible_sections %}
-  <div class="card" id="guide-getting_help">
-    <h2>Getting help</h2>
-    <p>
-      A session's <strong>Validate</strong> page explains most setup problems in
-      plain language. For anything else, contact your Review Robin Web
-      administrator.
     </p>
   </div>
   {% endif %}
