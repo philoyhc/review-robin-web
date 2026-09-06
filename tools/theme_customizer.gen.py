@@ -149,19 +149,30 @@ TARGETS = [
     # .ph-anno = preview-annotation captions (Active / Disabled / tints heading /
     # focus-ring hint) — visible labels, not app elements, so not pickable.
     (".muted:not(.ph-anno)", "Muted text", [("text", "fg", "--text-subtle")]),
+    # Cards, in the gallery's own order: plain, danger zone, help, help+edit.
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
-    (".card:not(.rs-help-card):not(.danger-zone)", "Card surface",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
+    (".card:not(.rs-help-card):not(.danger-zone)", "Plain card",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
+      ("border", "border", "--border-default")]),
+    (".danger-zone", "Danger zone card",
+     [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
+      ("border", "border", "--card-warning-border")]),
     # Border facet included even though it is invisible by design (it resolves
     # to the fill's primitive): Part C is how you find out *which* token paints
     # an edge, and leaving it out is how this row went stale when 19C Item 8
     # moved the fill off --border-default.
-    (".rs-help-card", "Help card",
+    (".rs-help-card:not(.ph-help-edit)", "Instrument help card",
      [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
       ("border", "border", "--card-help-border")]),
-    (".danger-zone", "Danger-zone card",
-     [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
-      ("border", "border", "--card-warning-border")]),
+    (".rs-help-card.ph-help-edit", "Instrument help card with edit box",
+     [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
+      ("border", "border", "--card-help-border")]),
+    # The edit box itself: on the operator Instruments page the only thing
+    # separating it from the slab is its own border, so it is pickable in place
+    # rather than only via the Forms section's standalone textarea.
+    (".rs-help-card.ph-help-edit textarea", "Help-card edit box",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
+      ("border", "border", "--border-default")]),
     _pill("error", "Error pill"),
     _pill("warning", "Warning pill"),
     # info / success text are remapped under body.ui-v2 (not the -fg token)

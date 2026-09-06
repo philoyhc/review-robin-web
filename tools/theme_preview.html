@@ -3366,13 +3366,29 @@
       <h2 class="ph-h">Cards</h2>
       <div class="card">
         <h2>Plain card</h2>
-        <p>A standard raised card surface. Body text sits on <code>--bg-card</code>.</p>
+        <p>A standard raised card surface. Body text sits on <code>--surface-page</code>;
+           the edge is <code>--border-default</code> at 2px.</p>
       </div>
-      <div class="card rs-help-card"><strong>Help card.</strong> A tinted help slab — body text plus a strong lead.</div>
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>
         <p>Destructive-action card. The button is fixed-width here.</p>
         <button class="btn destructive">Destructive</button>
+      </div>
+      <div class="card rs-help-card"><strong>Rating</strong> — Instrument help card,
+        the read view. A tinted slab: its border resolves to the fill&#39;s primitive,
+        so the 2px card edge disappears into it.</div>
+      <!-- The unlocked state on the operator Instruments page: the same card
+           hosting a textarea for editing the help text. Markup and inline styles
+           mirror buildResponseFieldHelpCards() in instruments_index.html, so the
+           edit box is designed against the slab it actually sits on — its own
+           border is --border-default, which is the only thing delineating it.
+           `ph-help-edit` is a harness-only marker (like ph-tint / ph-anno) so the
+           two help cards are separately pickable in Part C. -->
+      <div class="card rs-help-card ph-help-edit" style="position: relative;">
+        <strong>Rating</strong>
+        <textarea maxlength="1000" style="display: block; width: 100%; margin-top: 6px;
+          min-height: 60px; box-sizing: border-box; font: inherit; padding: 4px 6px;"
+          >Rate 1-5 on clarity of the written feedback.</textarea>
       </div>
       <p class="muted ph-anno" style="margin: 16px 0 6px;">Instrument card tints</p>
       <div class="ph-row">
