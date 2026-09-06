@@ -169,7 +169,9 @@ neutral nav-tab markers where they were.
 Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
 read acceptably only while that token was very light; at 3:1-plus the body text
 on it would have fallen to 3.96:1 light / 3.41:1 dark, both under AA. It now
-fills with `--surface-muted`, per `spec/ui_elements.md` §"Reviewer help cards".
+fills with `--card-help-bg` — its own token, not a borrowed one, so the next
+change to a border token cannot reach it. See "Card accents" above and
+`spec/ui_elements.md` §"Reviewer help cards".
 
 ### Buttons [P]
 

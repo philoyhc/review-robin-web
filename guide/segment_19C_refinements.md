@@ -1090,6 +1090,33 @@ was also `--border-default`, the edit box had a **1.00:1** edge against its
 container — no visible boundary at all. It is now delineated at 3.94:1 light /
 3.28:1 dark.
 
+**`spec-writer` at close, 2026-09-06 — two flags, both upheld.** Run against
+the two doc-impact specs. Each was re-verified against the tree before acting;
+neither was taken on the agent's word.
+
+1. **My own stale line.** `spec/color_tokens.md`'s "Border colours do not paint
+   fills" note ended "It now fills with `--surface-muted`". True when I wrote it
+   in the first Item 8 commit; false a commit later, when the follow-on gave the
+   card `--card-help-bg`. The rule reads `background: var(--card-help-bg)`.
+   Corrected — and the sentence now says *why* it is its own token, which is the
+   part that stops the next border change reaching it.
+2. **A retired class described as live, in two specs.** Both
+   `spec/ui_elements.md` and `spec/reviewer-surface.md` documented a two-variant
+   help block: a grid for several items, `.rs-help-card-solo` full-width for
+   one. Verified: zero CSS rules for that class in `base.html`, no template
+   renders it, `review_surface.html` always emits `.rs-help-grid` with no count
+   branch, and `test_reviewer_response_flow.py` asserts the modifier **does not**
+   render. It was retired 2026-05-05 in `62a85fee` when the per-instrument intro
+   became a half-width card grid. Both specs now say so, with the date and the
+   commit, rather than deleting the sentence and losing why.
+
+`spec/reviewer-surface.md` was **not** in the manifest — undeclared spec impact,
+so it gains a bullet above and this note, per the skill. Fixing it was in scope
+because the false claim sat in the same entry Item 8 rewrote twice; leaving a
+neighbouring sentence wrong while correcting the one beside it is how the drift
+survives. That the flag came from a second reader is the point of the step:
+finding 1 was mine, and I had already read that line three times.
+
 **Not verifiable here.** This is a pure visual change to a template's CSS. The
 test suite cannot see it; `pytest` and `ruff` passing say only that nothing
 else broke. Confirmed by eye in the customizer before shipping, and due a look
@@ -1243,6 +1270,9 @@ refinements are identified.
 - `spec/ui_elements.md` — the Reviewer help cards entry records the
   `--card-help-*` family, why the tokenization pass had it wrong, and that the
   border resolves to the fill's primitive on purpose (Item 8).
+- `spec/reviewer-surface.md` — the Help block's two-variant description drops
+  the `.rs-help-card-solo` case, retired 2026-05-05 (Item 8; **added at close**,
+  not planned — see Status).
 - `spec/quick_setup_card_spec.md` — `app/services/session_config_io/`
   package rename (Item 7).
 - `spec/settings_inventory.md` — `app/services/scheduled_events/` package
