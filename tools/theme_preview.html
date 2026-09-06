@@ -210,7 +210,7 @@
         --nav-tab-active-bg: var(--white);
         --nav-strip-setup-bg: var(--blue-pale);
         --nav-strip-ops-bg: var(--green-wash);
-        --nav-home-bg: var(--blue-pale);
+        --nav-home-bg: var(--gray-mist);
         --nav-home-bg-hover: var(--blue-mist);
         --nav-home-marker: var(--blue-soft);
         /* Config values [A] */
@@ -235,7 +235,7 @@
            `border: var(--card-help-bg)`, so either can be repointed
            alone. */
         --card-help-bg: var(--gray-mist);
-        --card-help-border: var(--gray-soft);
+        --card-help-border: var(--gray);
         --card-help-fg: var(--ink);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
@@ -348,9 +348,9 @@
         --nav-marker-ops: var(--green-abyss);
         --nav-tab-active-fg: var(--blue-soft);
         --nav-tab-active-bg: var(--ink-abyss);
-        --nav-strip-setup-bg: var(--tint-sky-dark);
+        --nav-strip-setup-bg: var(--blue-abyss-soft);
         --nav-strip-ops-bg: var(--green-abyss-faint);
-        --nav-home-bg: var(--blue-abyss-soft);
+        --nav-home-bg: var(--ink-muted);
         --nav-home-bg-hover: var(--blue-abyss-faint);
         --nav-home-marker: var(--blue-bright);
         /* Config values [A] */
@@ -364,7 +364,7 @@
         --card-warning-border: var(--amber-glow);
         --card-warning-fg: var(--amber-glow);
         --card-help-bg: var(--ink-muted);
-        --card-help-border: var(--slate-deeper);
+        --card-help-border: var(--slate-deep);
         --card-help-fg: var(--paper);
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
@@ -3779,9 +3779,9 @@
         <tr><td class="pv-name">nav marker ops<code>--nav-marker-ops</code></td><td><span class="pv-dot" style="background: var(--nav-marker-ops);"></span><code>--green-soft</code> <span class="pv-hex">#a7f3d0</span></td><td><code>--green-abyss</code> <span class="pv-hex">#065f46</span></td></tr>
         <tr><td class="pv-name">nav tab active fg<code>--nav-tab-active-fg</code></td><td><span class="pv-dot" style="background: var(--nav-tab-active-fg);"></span><code>--blue-deeper</code> <span class="pv-hex">#1e40af</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
         <tr><td class="pv-name">nav tab active bg<code>--nav-tab-active-bg</code></td><td><span class="pv-dot" style="background: var(--nav-tab-active-bg);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink-abyss</code> <span class="pv-hex">#0f141b</span></td></tr>
-        <tr><td class="pv-name">nav strip setup bg<code>--nav-strip-setup-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-setup-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--tint-sky-dark</code> <span class="pv-hex">#0e1a24</span></td></tr>
+        <tr><td class="pv-name">nav strip setup bg<code>--nav-strip-setup-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-setup-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
         <tr><td class="pv-name">nav strip ops bg<code>--nav-strip-ops-bg</code></td><td><span class="pv-dot" style="background: var(--nav-strip-ops-bg);"></span><code>--green-wash</code> <span class="pv-hex">#ddf4e3</span></td><td><code>--green-abyss-faint</code> <span class="pv-hex">#0c2419</span></td></tr>
-        <tr><td class="pv-name">nav home bg<code>--nav-home-bg</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss-soft</code> <span class="pv-hex">#12283f</span></td></tr>
+        <tr><td class="pv-name">nav home bg<code>--nav-home-bg</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg);"></span><code>--gray-mist</code> <span class="pv-hex">#e5e7eb</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
         <tr><td class="pv-name">nav home bg hover<code>--nav-home-bg-hover</code></td><td><span class="pv-dot" style="background: var(--nav-home-bg-hover);"></span><code>--blue-mist</code> <span class="pv-hex">#fafcff</span></td><td><code>--blue-abyss-faint</code> <span class="pv-hex">#0e1c2c</span></td></tr>
         <tr><td class="pv-name">nav home marker<code>--nav-home-marker</code></td><td><span class="pv-dot" style="background: var(--nav-home-marker);"></span><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td><td><code>--blue-bright</code> <span class="pv-hex">#3b82f6</span></td></tr>
       </tbody></table></details>
@@ -3801,7 +3801,7 @@
         <tr><td class="pv-name">card warning border<code>--card-warning-border</code></td><td><span class="pv-dot" style="background: var(--card-warning-border);"></span><code>--amber-deep</code> <span class="pv-hex">#92400e</span></td><td><code>--amber-glow</code> <span class="pv-hex">#fcd34d</span></td></tr>
         <tr><td class="pv-name">card warning fg<code>--card-warning-fg</code></td><td><span class="pv-dot" style="background: var(--card-warning-fg);"></span><code>--amber-deep</code> <span class="pv-hex">#92400e</span></td><td><code>--amber-glow</code> <span class="pv-hex">#fcd34d</span></td></tr>
         <tr><td class="pv-name">card help bg<code>--card-help-bg</code></td><td><span class="pv-dot" style="background: var(--card-help-bg);"></span><code>--gray-mist</code> <span class="pv-hex">#e5e7eb</span></td><td><code>--ink-muted</code> <span class="pv-hex">#232c3b</span></td></tr>
-        <tr><td class="pv-name">card help border<code>--card-help-border</code></td><td><span class="pv-dot" style="background: var(--card-help-border);"></span><code>--gray-soft</code> <span class="pv-hex">#d1d5db</span></td><td><code>--slate-deeper</code> <span class="pv-hex">#2b3547</span></td></tr>
+        <tr><td class="pv-name">card help border<code>--card-help-border</code></td><td><span class="pv-dot" style="background: var(--card-help-border);"></span><code>--gray</code> <span class="pv-hex">#9ca3af</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>
         <tr><td class="pv-name">card help fg<code>--card-help-fg</code></td><td><span class="pv-dot" style="background: var(--card-help-fg);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
       </tbody></table></details>
       <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 10</summary>

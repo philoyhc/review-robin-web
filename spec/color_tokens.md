@@ -269,9 +269,9 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--nav-marker-ops` | `--green-soft` | `--green-abyss` | `#a7f3d0` | `#065f46` |
 | `--nav-tab-active-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--nav-tab-active-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
-| `--nav-strip-setup-bg` | `--blue-pale` | `--tint-sky-dark` | `#dbeafe` | `#0e1a24` |
+| `--nav-strip-setup-bg` | `--blue-pale` | `--blue-abyss-soft` | `#dbeafe` | `#12283f` |
 | `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#ddf4e3` | `#0c2419` |
-| `--nav-home-bg` | `--blue-pale` | `--blue-abyss-soft` | `#dbeafe` | `#12283f` |
+| `--nav-home-bg` | `--gray-mist` | `--ink-muted` | `#e5e7eb` | `#232c3b` |
 | `--nav-home-bg-hover` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
 | `--nav-home-marker` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
 
@@ -293,7 +293,7 @@ change to a border token cannot reach it (`--gray-mist` light /
 | `--card-warning-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--card-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--card-help-bg` | `--gray-mist` | `--ink-muted` | `#e5e7eb` | `#232c3b` |
-| `--card-help-border` | `--gray-soft` | `--slate-deeper` | `#d1d5db` | `#2b3547` |
+| `--card-help-border` | `--gray` | `--slate-deep` | `#9ca3af` | `#3a465c` |
 | `--card-help-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 
 
@@ -304,11 +304,19 @@ page, Segment 19E rung 6). The theme customizer's facet is therefore
 named **`Help card`**, not `Instrument help card` — a facet named after
 one caller would misdescribe what editing it changes.
 
-**`--card-help-border` is one step darker than `--card-help-bg`** —
-`--gray-soft` over `--gray-mist` in light, `--slate-deeper` over
-`--ink-muted` in dark. That is a **soft edge, not an outline**: ~1.47:1
-against the page in light and ~1.50:1 in dark, so the card has a shape
-without a drawn boundary, and the two themes read alike.
+**`--card-help-border` is darker than `--card-help-bg`** — `--gray` over
+`--gray-mist` in light, `--slate-deep` over `--ink-muted` in dark. It
+sits **between a soft edge and an outline**: **2.54:1** against the page
+in light and **1.95:1** in dark (2.05:1 and 1.48:1 against its own
+fill). Short of the 3:1 WCAG 1.4.11 asks of a UI-component boundary, so
+it is not load-bearing as a control edge — but firm enough that a card
+standing alone in a column reads as bounded.
+
+*Deepened 2026-09-06* from `--gray-soft` / `--slate-deeper` (1.47:1 and
+1.50:1 against the page), authored in the customizer. The two themes no
+longer read alike by the numbers — light is the firmer edge — which is
+the consequence of both themes having only one shared step available at
+each end of that ramp.
 
 *This reverses 19C Item 8*, which pointed the border at the fill's own
 primitive so the edge vanished entirely. That was right while the help
