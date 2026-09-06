@@ -58,9 +58,22 @@
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
+      <p>
+        Reviewees are the people being reviewed. They may be the same people
+        as your reviewers — in a peer review, everyone is both. As with
+        reviewers, the <strong>email address is the identity</strong> the app
+        matches a signed-in person against, and the tag columns are what
+        assignment rules filter on.
+      </p>
+      <p>
+        A reviewee can carry a plain identifier instead of an email if you are
+        only collecting data about them. <strong>They cannot then be shown
+        their own results</strong> — that needs a real address to match
+        against — and the Validate page will warn you. Use an email for anyone
+        who should see what was said about them. See
+        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        and set up a session</a> in the Guide.
+      </p>
       {% endcall %}
 
     {% set field_labels_form_action =

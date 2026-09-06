@@ -64,9 +64,22 @@
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
+      <p>
+        Observers view collated results <strong>without reviewing
+        anyone</strong> — a course leader seeing how a cohort went, say. They
+        are optional, and this page only appears because observers are
+        switched on for this session. Observers have one tag slot rather than
+        three, and never appear in assignments.
+      </p>
+      <p>
+        Each observer's <strong>cohort match rule</strong> decides which
+        reviewees they may see, and <strong>an observer with no rule set sees
+        nothing</strong> — not everything. Their results page stays empty
+        until a rule is saved. What they see of each response — full,
+        anonymised, or summarised — is set per instrument, not here. See
+        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        and set up a session</a> in the Guide.
+      </p>
       {% endcall %}
     {% if _show_cohort_slot %}
       <div class="card">

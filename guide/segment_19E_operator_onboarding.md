@@ -830,6 +830,59 @@ Also fixed at build: both assertions normalise whitespace. The templates wrap
 mid-sentence, so a literal match tripped on the newline — and would have
 tripped again on any re-wrap.
 
+**2026-09-06 — rung 6b copy: the Observers draft was inverted, and that is
+the finding worth keeping** (author-directed slice; the correction is mine,
+caught by checking the draft's own flag).
+
+`guide/page_help_text.md` shipped its Observers draft with an explicit
+warning that one sentence — *"an observer with no rule set sees every
+reviewee in the session"* — was my reading of the default and had **not**
+been verified against `app/services/`. It was wrong, and wrong in the
+direction the draft note predicted would matter more.
+`observer_cohort.observer_has_rule` returns `False` for a null
+`cohort_rule` or an empty `rules` list; `materialize_cohort_assignments`
+returns `EMPTY_COHORT` on that test, and
+`_observer_collation.build_observer_collation_context` short-circuits to
+`cohort_empty=True`. **No rule means no access.**
+
+Why the inversion makes the sentence more important rather than less:
+"sees everything" is a privacy bug, and an operator who hit it would
+report it within the hour. "Sees nothing" is a silent failure — the
+observer is saved, the roster shows `—` in the Cohort column, nothing
+warns anyone, and the first sign is a course leader saying their page is
+blank. That is precisely the class of fact page guidance exists to carry,
+and the page's own controls say none of it.
+
+Three things followed from it, beyond the corrected sentence:
+
+- The claim is **pinned to the behaviour it describes**.
+  `test_the_observers_copy_matches_the_empty_cohort_default` asserts the
+  service's default alongside the copy, so a flipped default fails a test
+  rather than turning shipped prose into a lie. A copy assertion that only
+  greps the template would have passed the whole way through this mistake.
+- `spec/setup_pages.md` gains the rule under "Cohort match rule editor" —
+  the behaviour was documented only in a service docstring, which is not
+  where anyone specifying the operator surface would look. No new
+  doc-impact path: that spec was already committed at PR 6.
+- `test_no_setup_page_still_carries_the_scaffold_placeholder` exists
+  because every structural test in the file passed happily against five
+  bodies reading *"Guidance to follow"*. The placement slice was green and
+  incomplete at the same time, which is the failure mode the rung split
+  invited.
+
+**The `create_and_set_up` anchor question, answered.** Four pages point at
+one Guide card, flagged at drafting as a signal to watch. Writing the five
+bodies did not produce a sentence wanting a more precise target, because
+each links at the *end* of a paragraph that has already made its point —
+the link says "there is more about sessions over there", not "the answer is
+over there". It would stop holding the moment a body needs to send an
+operator to a *particular* explanation; the fix then is splitting the Guide
+card, not lengthening the guidance.
+
+**19E is not closed.** The author is reviewing the wording and expects to
+tweak it, so `guide/page_help_text.md` stays in `guide/` rather than
+retiring to `guide/archive/`, and the close sequence has not been run.
+
 ---
 
 ## PR ladder

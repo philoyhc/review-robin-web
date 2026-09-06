@@ -292,9 +292,23 @@
     {% set not_accepting_count = instruments | length - accepting_count %}
     <div>
       {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
+      <p>
+        An instrument is <strong>one form reviewers fill in</strong>. Every
+        session starts with one, ready to use, carrying a rating and a
+        comments question. Add more when a session needs parallel forms over
+        the same people — a peer review and a self review, say. Each carries
+        its own response fields (the questions) and display fields (the
+        context a reviewer sees while answering).
+      </p>
+      <p>
+        Each instrument also carries the <strong>assignment rule</strong> that
+        decides who reviews whom for that form. Editing the rule does not
+        create pairs — they are generated when you <strong>Prepare</strong>
+        the session, and the Assignments page is where you check what came
+        out. See
+        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        and set up a session</a> in the Guide.
+      </p>
       {% endcall %}
     </div>
 

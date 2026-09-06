@@ -4,13 +4,17 @@
 Setup page** (Segment 19E rung 6). Rung 6a shipped the scaffold and
 piloted it on Email Template; rung 6b takes the remaining five pages, and
 this is where their wording is worked out before it goes into a template.
+Both rungs have now shipped. The file **stays live while the wording is
+under review** — the shipped copy may still be tweaked, and this is where
+the reasoning behind each page's text lives while that happens. It
+retires to `guide/archive/` with the segment plan, not before.
 
 **This file is a drafting surface, not a contract.** The shipped text
 lives in the page templates; the scaffold's contract lives in
 `spec/setup_pages.md` "Shared body shape" and each page's own spec. Once
-rung 6b lands, this file's job is done — it retires to `guide/archive/`
-with the segment plan rather than becoming a second place where the copy
-appears to live.
+the wording settles, this file's job is done — it retires to
+`guide/archive/` with the segment plan rather than becoming a second
+place where the copy appears to live.
 
 ---
 
@@ -68,11 +72,11 @@ the Observers row leaves an **empty top-left slot**, and an open card may
 | Page | Guide anchor | Draft | Shipped |
 |---|---|---|---|
 | Email Template | `#guide-give_access` | below | ✅ copy rung 6a · placement rung 6b |
-| Reviewers | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
-| Reviewees | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
-| Relationships | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
-| Observers | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
-| Instruments | `#guide-create_and_set_up` | below | placement ✅ · copy pending |
+| Reviewers | `#guide-create_and_set_up` | below | ✅ shipped rung 6b |
+| Reviewees | `#guide-create_and_set_up` | below | ✅ shipped rung 6b |
+| Relationships | `#guide-create_and_set_up` | below | ✅ shipped rung 6b |
+| Observers | `#guide-create_and_set_up` | below | ✅ shipped rung 6b (copy corrected — see below) |
+| Instruments | `#guide-create_and_set_up` | below | ✅ shipped rung 6b |
 
 Four of the five remaining pages point at the same Guide section, which
 is a signal worth watching: `create_and_set_up` is the Guide's longest
@@ -80,6 +84,15 @@ card and it now has to serve as the landing place for four different
 questions. If the anchors start feeling imprecise during rung 6b, the fix
 is to split that Guide card — a rung 2 correction — not to write longer
 guidance to compensate.
+
+**Judged at rung 6b: it holds, narrowly.** Writing the five bodies did
+not produce a sentence that wanted a more precise anchor, because each
+one links at the *end* of a paragraph that has already said the specific
+thing — the link is "there is more about sessions over there", not "the
+answer to this is over there". That is the reading under which one broad
+card serves four pages. It would stop holding the moment a body needs to
+send the operator to a *particular* explanation; the fix then is still
+splitting the Guide card, not lengthening the guidance.
 
 ---
 
@@ -209,8 +222,8 @@ pairs will be confused when Prepare generates a different set.
 **What the page does not say.** Why the page exists at all — it is
 hidden until observers are enabled, so an operator seeing it has usually
 just switched something on and may not remember what it does. And that an
-observer with no cohort rule sees everything, which is the wrong default
-to discover after activation.
+observer with no cohort rule sees **nothing** — an observer can be added,
+saved, and left silently blind, with nothing on this page saying so.
 
 ```html
 <p>
@@ -222,19 +235,27 @@ to discover after activation.
 </p>
 <p>
   Each observer's <strong>cohort match rule</strong> decides which
-  reviewees they may see; an observer with no rule set sees every
-  reviewee in the session. What they see of each response — full,
+  reviewees they may see, and <strong>an observer with no rule set sees
+  nothing</strong> — not everything. Their results page stays empty
+  until a rule is saved. What they see of each response — full,
   anonymised, or summarised — is set per instrument, not here. See
   <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
   and set up a session</a> in the Guide.
 </p>
 ```
 
-> **Check before shipping.** "An observer with no rule set sees every
-> reviewee" is my reading of the cohort-rule default and is **not yet
-> verified against `app/services/`**. Confirm it at rung 6b; if the
-> default is the opposite, the sentence inverts and becomes more
-> important, not less.
+> **Checked at rung 6b — the draft was inverted, and the paragraph
+> above is the corrected text.** `observer_cohort.observer_has_rule`
+> returns `False` when `cohort_rule` is `None` or its `rules` list is
+> empty, and `materialize_cohort_assignments` returns `EMPTY_COHORT` in
+> that case; `_observer_collation.build_observer_collation_context`
+> short-circuits to `cohort_empty=True` on the same test. So the default
+> is **no access**, not full access — an observer added without a rule
+> sees an empty page. As the draft note predicted, the sentence became
+> more important once inverted: "sees everything" is a privacy bug an
+> operator would report, while "sees nothing" is a silent failure they
+> would never think to look for, which is exactly what page guidance is
+> for.
 
 ---
 
@@ -269,11 +290,12 @@ rather than as they edit.
 
 ## Open questions
 
-- **Does `create_and_set_up` hold up as four pages' landing spot?**
-  See `## Status`. Decided by: whoever writes rung 6b, on the evidence of
-  writing it.
-- **The Observers default.** Flagged inline above; verify before
-  shipping that card.
+- ~~**Does `create_and_set_up` hold up as four pages' landing spot?**~~
+  Answered at rung 6b — yes, narrowly, on the reasoning recorded under
+  `## Status`.
+- ~~**The Observers default.**~~ Verified at rung 6b against
+  `app/services/observer_cohort.py`; the draft was inverted and the copy
+  was corrected before shipping. See the callout above.
 - **Does the Instruments page want two disclosures rather than one?**
   It is the largest Setup page and its assignment-rule band is a distinct
   subject from its field editor. The scaffold assumes one per page. If a
