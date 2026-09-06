@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""Generate customizer-loadable theme variants for the 19C input-boundary item.
+"""Border-contrast analysis for the palette, and the machinery to build
+customizer-loadable theme variants when a question needs one.
 
-Each variant is a complete `{version, primitives, semantic:{light,dark}}`
-document — the shape `tools/theme_customizer.html`'s **Import JSON** expects.
-Import replaces the whole model, so every file carries the full palette read
-live from `app/web/templates/base.html`, with only the named deltas applied.
+**No variants are live** (2026-09-06). `VARIANTS` is empty, so a run is a
+**report**: it reads `app/web/templates/base.html`, prints the shipped
+border's contrast in both themes, and — while both themes share one border
+primitive — the best floor any single value could reach on that hue. That
+ceiling is what settled 19C Item 8, and it is worth re-reading whenever the
+palette moves.
 
-    python3 tools/theme_variants.gen.py          # write + verify
-    python3 tools/theme_variants.gen.py --check  # verify only
+    python3 tools/theme_variants.gen.py          # report (+ write, if any)
+    python3 tools/theme_variants.gen.py --check  # report only
 
-Output lands next to `theme_customizer.html` as
-`tools/theme_variant_<name>.json`, so the files sit beside the tool that
-loads them.
+To reopen a question, append to `VARIANTS`. Each entry builds a complete
+`{version, primitives, semantic:{light,dark}}` document — the shape
+`tools/theme_customizer.html`'s **Import JSON** expects. Import replaces the
+whole model, so a file carries the full palette read live from `base.html`
+with only the named deltas applied, and lands beside the customizer as
+`tools/theme_variant_<name>.json`.
 
-Why the border variants override a primitive rather than adding one:
+Why a variant overrides a primitive rather than adding one:
 `applyActive()` in the customizer writes CSS variables for `D.primOrder` — the
 **build-time** primitive list baked into the HTML — not for whatever keys an
 imported file happens to carry. A primitive name the generator did not know
@@ -201,76 +207,7 @@ def palette_only_variant() -> dict:
     return model
 
 
-# --------------------------------------------------------------- beyond border
-# The fill options cannot render in the shipped customizer: `base.html` has no
-# input-surface token, so an imported `--surface-input` is defined as a CSS
-# variable (`applyActive` sets every key in the semantic map, build-time or not)
-# and then consumed by nothing. The workaround is a **variant page** —
-# `theme_customizer.html` with a trailing <style> that wires those hooks up.
-# Later rules of equal specificity win, and the customizer's inline
-# `style.setProperty` beats both, so a JSON that omits a hook leaves it at
-# today's value.
-#
-# Caveat worth knowing before you judge these: the hook tokens are not in the
-# build-time `D.semLight`, so they do NOT appear in Part B's Semantic-remaps
-# list and Part C cannot resolve them for its contrast badges. They paint
-# correctly; they are just not editable in the UI. Edit the JSON and re-import.
-HOOK_CSS = """
-    <style>
-      /* tools/theme_variants.gen.py — hooks for the beyond-the-border options.
-         Each defaults to today's value, so the stock JSONs look unchanged. */
-      :root { --surface-input: var(--surface-page); --surface-card-fill: var(--surface-page); }
-      body.ui-v2 input[type="text"], body.ui-v2 input[type="datetime-local"],
-      body.ui-v2 input[type="number"], body.ui-v2 input[type="email"],
-      body.ui-v2 textarea, body.ui-v2 select { background: var(--surface-input); }
-      body.ui-v2 .card { background: var(--surface-card-fill); }
-    </style>
-"""
-
 CUSTOMIZER = "theme_customizer.html"
-VARIANT_PAGE = "theme_customizer_beyond.html"
-
-
-def write_variant_page() -> str:
-    src = (HERE / CUSTOMIZER).read_text(encoding="utf-8")
-    if "</body>" not in src:
-        raise SystemExit(f"{CUSTOMIZER}: no </body> to insert before")
-    out = src.replace("</body>", HOOK_CSS + "  </body>", 1)
-    (HERE / VARIANT_PAGE).write_text(out, encoding="utf-8")
-    return VARIANT_PAGE
-
-
-def input_fill_variant() -> dict:
-    """The original 19C proposal: lift the input fill off the page surface.
-
-    Uses the nearest existing primitives — there is nothing better available,
-    which is the point: light has no off-white with real separation.
-    """
-    model = load_model()
-    for theme, prim in (("light", "--gray-mist"), ("dark", "--ink-deep")):
-        model["semantic"][theme]["--surface-input"] = prim
-    return model
-
-
-def card_lift_variant() -> dict:
-    """Leave inputs alone; give the card the surface it was named for.
-
-    `--surface-card` already differs from `--surface-page` in dark and is
-    identical in light, so this separates the pair in one theme only.
-    """
-    model = load_model()
-    for theme in ("light", "dark"):
-        model["semantic"][theme]["--surface-card-fill"] = "--surface-card"
-    return model
-
-
-def fill_and_border_variant() -> dict:
-    """Both levers at once — lifted input fill plus the 3.5:1 border."""
-    model = border_variant(3.5)
-    for theme, prim in (("light", "--gray-mist"), ("dark", "--ink-deep")):
-        model["semantic"][theme]["--surface-input"] = prim
-    return model
-
 
 # The five border-* variants that lived here are **retired** (19C Item 8 chose
 # `--slate-dim` and shipped it). They are not merely redundant: with both themes
@@ -278,17 +215,18 @@ def fill_and_border_variant() -> dict:
 # best floor any single value can reach on that hue is 4.291:1, and `--slate-dim`
 # is at 4.286:1 — 0.005 off the ceiling. There is no better shared value to
 # explore, and a *better* number needs two per-theme primitives, which this
-# generator cannot express (it overrides primitives; it cannot add them). Their
-# machinery stays because `beyond-fill-plus-border` still uses it, and because a
-# palette that maps the two themes separately would make them meaningful again.
-VARIANTS = [
-    # Beyond the border — need theme_customizer_beyond.html, not the stock page.
-    ("beyond-input-fill", "Input fill lifted off the page surface (the original 19C proposal)", input_fill_variant),
-    ("beyond-card-lift", "Card takes --surface-card; inputs unchanged", card_lift_variant),
-    ("beyond-fill-plus-border", "Lifted input fill AND the 3.5:1 border together", fill_and_border_variant),
-]
-
-BEYOND = {"beyond-input-fill", "beyond-card-lift", "beyond-fill-plus-border"}
+# generator cannot express (it overrides primitives; it cannot add them).
+#
+# The three beyond-* variants that followed them are **retired too**
+# (2026-09-06). They explored giving inputs and cards their own fill; the route
+# lost on the numbers (1.238:1 light / 1.145:1 dark, against the 4.286:1 the
+# shipped border reaches), and previewing it needed a second 2.6 MB copy of the
+# customizer carrying two tokens `base.html` deliberately does not have. That
+# copy read as a facility rather than as a closed experiment, so it and its
+# three JSONs are gone. `border_variant()` and `palette_only_variant()` below
+# stay: they are the machinery, and a palette that maps the two themes
+# separately would make a border variant meaningful again.
+VARIANTS: list[tuple[str, str, object]] = []
 
 
 def max_shared_floor(model: dict) -> tuple[float, str]:
@@ -356,20 +294,14 @@ def main() -> int:
                   if baseline["semantic"]["light"].get(k) != v}
         if remaps:
             print(f"    semantic remaps (light): {remaps}")
-        if name in BEYOND:
-            print(f"    load in {VARIANT_PAGE}, not {CUSTOMIZER}")
-            for theme in ("light", "dark"):
-                fill = resolve(model, "--surface-input", theme) or resolve(model, "--surface-page", theme)
-                card = resolve(model, "--surface-card-fill", theme) or resolve(model, "--surface-page", theme)
-                print(f"    {theme:5s} input fill {fill} vs card {card}  "
-                      f"{contrast(fill, card):.3f}:1")
         if not check_only:
             path = HERE / f"theme_variant_{name}.json"
             path.write_text(json.dumps(model, indent=2) + "\n")
             print(f"    -> {path.relative_to(REPO)}")
         print()
-    if not check_only:
-        print(f"variant page for the beyond-* files -> tools/{write_variant_page()}")
+    if not VARIANTS:
+        print(f"No variants defined — report only. Append to VARIANTS to build "
+              f"one, and load it in tools/{CUSTOMIZER}.")
     return 0
 
 

@@ -109,9 +109,9 @@ reached by at least one semantic token in at least one theme; this one is
 reached by none, deliberately. It fills the `bright` slot the other four
 chromatic families carry (`--blue-bright`, `--green-bright`,
 `--amber-bright`, `--red-bright`) in the smallest family in the palette, and
-it is the customizer's live case for the **unreferenced-primitive** marker
-(`tools/README.md`) — a marker that highlights nothing cannot be seen to
-work. Mapping a semantic to it later is expected and needs no note here;
+it is the customizer's live case for the **unused-primitive** marker
+(`tools/README.md`), which paints such a chip red — a marker that
+highlights nothing cannot be seen to work. Mapping a semantic to it later is expected and needs no note here;
 what would need one is the marker going quiet with no such mapping added.
 
 ---

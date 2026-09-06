@@ -533,9 +533,10 @@ semantic pointed at it resolves to an undefined `var()`.
 That is a real limit on the portability kernel (decision #6): a `tokens.css` of
 the same shape but a *different* palette can only be explored by editing the
 79 names this build happens to have. It also bit the 19C input-boundary work —
-`tools/theme_variants.gen.py` has to preview off-palette border values by
+`tools/theme_variants.gen.py` *(retired 2026-09-06 with the `beyond-*` set;
+see Item 8's judgment calls)* had to preview off-palette border values by
 overriding `--gray-soft` / `--slate-deep` instead of adding primitives, which
-drags `--marker-neutral` along with them.
+dragged `--marker-neutral` along with them.
 
 Scope when it is taken: `model.prims` becomes the authority in `applyActive`
 (iterate its keys, not `D.primOrder`); Part B's grid renders from the model
@@ -1044,6 +1045,22 @@ describes.
   Article VI). They existed to choose a border value; the choice is made and
   the ceiling above says there is no better shared value to find. The
   `beyond-*` files stay — they are the record of why the fill route lost.
+  **Reversed 2026-09-06 by the author, and the whole variants harness went
+  with them.** Keeping the artefacts assumed a reader would take them as
+  evidence; in practice a second 2.6 MB customizer — differing from the stock
+  one by a 582-byte `<style>` shim declaring two tokens `base.html`
+  deliberately does not have — reads as a *facility*, and invites exactly the
+  question it was meant to answer ("shouldn't we add these to `base.html` and
+  retire one of these?"). It did, within the day. Retiring it costs nothing
+  the record needs: the numbers that decided the question are in the
+  **Decision** paragraph above, in prose, which is where Article V says
+  reasoning travels. `theme_variants.gen.py`, its three `beyond-*.json`
+  outputs and `theme_customizer_beyond.html` are deleted; `git log --` has the
+  machinery, including `max_shared_floor()`, if a future palette reopens the
+  question. Note the scope: the five border-`*` variants had already gone, so
+  `VARIANTS` held only the three `beyond-*` entries — retiring them left the
+  377-line generator producing nothing, and a generator that generates nothing
+  is the Article VI case exactly.
 
 **Blast radius (measured).** `app/web/templates/base.html` — 2 token rows + 1
 rule; `spec/color_tokens.md` — 1 row + 2 notes; `spec/ui_elements.md` — 1 entry;
