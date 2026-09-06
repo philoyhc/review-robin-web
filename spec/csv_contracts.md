@@ -551,22 +551,41 @@ part, and it is authored per *column*: `SAMPLES` maps a column name
 to one cell, and a header column with no entry raises rather than
 emitting a short row.
 
-**Coherent as a set.** `relationships.csv` names the addresses in
-`reviewers.csv` and `reviewees.csv`, so the four files upload as one
-working single-pair session rather than four unrelated examples.
-Every address is `example.edu`.
+**One coherent scenario.** The set is symmetrical peer review: two
+students in tutorial group `TW01` reviewing each other, with their
+tutor as the observer. `relationships.csv` names the addresses
+`reviewers.csv` and `reviewees.csv` define, both students share a
+tutor and group, and the pair context is a shared interest group —
+so the four files upload as one working single-pair session rather
+than four unrelated examples. Every address is `example.edu`.
 
-**Bare headers, and what that costs.** These templates carry no
-`<Column>.<label>` friendly-label suffixes (§1a) — there is no
-session whose labels could be read. A bare tag header is **not**
-neutral on import: `field_labels.apply_captured_labels` *clears*
-every in-scope slot the header does not name, mirroring how an
-absent tag value re-imports as NULL. So re-uploading a generic
-template into a session with renamed tag columns silently drops the
-renames. Harmless for the fresh session the set is for; an operator
-re-uploading should export that session's own roster instead, which
-carries the labels. The Guide's card says so, and a test asserts no
-template header contains a period.
+**Worked friendly labels in the headers.** The templates carry
+`<Column>.<label>` suffixes (§1a) as examples:
+`ReviewerTag1.Tutor`, `ReviewerTag2.Group`,
+`PairContextTag1.Interest Group`, and the reviewee equivalents. Tag
+3 is left bare on both rosters, so the set shows labelling as per
+column and optional. The suffix grammar is the one thing about
+roster CSVs an operator cannot guess, and a template that
+demonstrates it teaches more than one that avoids it.
+
+The consequence is live: on import a labelled header **sets** that
+slot's override (`field_labels.apply_captured_labels`), so
+uploading a template unedited renames the session's tag columns to
+*Tutor* / *Group* / *Interest Group*. That is the intended lesson —
+the operator edits labels alongside rows. The same mechanism in
+reverse means a **bare** tag header *clears* an override, mirroring
+how an absent tag value re-imports as NULL; so an operator whose
+session already has the names they want should export that
+session's own roster rather than start from a template. The Guide's
+card states both directions.
+
+**Observer tags carry no suffix**, because they are outside the
+nine-column labelable set by design (§1a). The tutor's role travels
+as the cell *value* instead. A suffix there would not split on
+import and the whole cell would read as an unknown column name,
+losing the tag silently — so a test round-trips every generated
+header cell through `field_label_csv.split_header` and asserts it
+comes back as its column plus its expected label.
 
 **No audit event.** The extract routes write one because they export
 a session's real roster; this exports nobody's data, and

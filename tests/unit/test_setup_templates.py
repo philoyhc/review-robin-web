@@ -14,7 +14,7 @@ import zipfile
 
 import pytest
 
-from app.services import setup_templates
+from app.services import field_label_csv, setup_templates
 from app.services.extracts.observers_extract import HEADER as OBSERVERS_HEADER
 from app.services.extracts.relationships_extract import (
     HEADER as RELATIONSHIPS_HEADER,
@@ -22,10 +22,12 @@ from app.services.extracts.relationships_extract import (
 from app.services.extracts.reviewees_extract import HEADER as REVIEWEES_HEADER
 from app.services.extracts.reviewers_extract import HEADER as REVIEWERS_HEADER
 from app.services.setup_templates import (
+    LABELS,
     SAMPLES,
     STARTER_TEMPLATES,
     build_starter_zip,
     sample_row,
+    template_header,
     template_rows,
 )
 
@@ -67,7 +69,7 @@ def test_each_file_is_a_header_and_exactly_one_row() -> None:
         rows = template_rows(template)
 
         assert len(rows) == 2
-        assert rows[0] == template.header
+        assert rows[0] == template_header(template)
         assert len(rows[1]) == len(template.header)
 
 
@@ -98,14 +100,42 @@ def test_every_address_is_example_edu() -> None:
             assert value.endswith(f"@{setup_templates.EXAMPLE_DOMAIN}"), value
 
 
-def test_headers_are_bare_no_friendly_label_suffixes() -> None:
-    """Generic templates cannot carry `<Column>.<label>` suffixes — there
-    is no session to read labels from. Asserted rather than assumed
-    because a suffix here would be read as a *label override* on import,
-    renaming the operator's column to whatever the template said."""
+def test_every_labelled_header_cell_splits_back_to_its_column_and_label() -> None:
+    """The suffix grammar is the point of labelling these templates, and
+    it is only valid on the nine columns `field_label_csv` treats as
+    labelable. Checked through the real `split_header` rather than
+    against the module's private set: a suffix on any other column comes
+    back unsplit, so this assertion is what would catch it."""
     for template in STARTER_TEMPLATES:
-        for column in template.header:
-            assert "." not in column, f"{template.filename}: {column}"
+        for cell, column in zip(
+            template_header(template), template.header, strict=True
+        ):
+            split_column, label = field_label_csv.split_header(cell)
+
+            assert split_column == column, cell
+            assert label == LABELS.get(column), cell
+
+
+def test_observer_tags_carry_no_suffix() -> None:
+    """Observer tags are outside the labelable set by design, so the
+    tutor's role travels as a cell value. A suffix there would survive
+    generation, fail to split on import, and be read as an unknown
+    column — losing the tag silently."""
+    observers = next(t for t in STARTER_TEMPLATES if t.key == "observers")
+
+    assert "ObserverTag1" not in LABELS
+    assert "ObserverTag1" in template_header(observers)
+    assert SAMPLES["ObserverTag1"] == "Tutor"
+
+
+def test_a_tag_column_is_left_bare_on_each_roster() -> None:
+    """The set should show both states — labelled and bare — so an
+    operator sees that labelling is per column and optional."""
+    for key in ("reviewers", "reviewees"):
+        template = next(t for t in STARTER_TEMPLATES if t.key == key)
+
+        assert any("." in cell for cell in template_header(template))
+        assert any("." not in cell for cell in template_header(template))
 
 
 def test_a_header_column_with_no_sample_raises() -> None:
@@ -128,5 +158,5 @@ def test_the_zip_holds_every_template_and_parses_as_csv() -> None:
         text = archive.read(template.filename).decode("utf-8")
         parsed = list(csv.reader(io.StringIO(text)))
 
-        assert parsed[0] == list(template.header)
+        assert parsed[0] == list(template_header(template))
         assert len(parsed) == 2

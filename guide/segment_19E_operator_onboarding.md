@@ -404,6 +404,40 @@ card.** It rides in that card, so an operator with a session no longer sees it
 there and must use the Guide. That is the correct trade for rung 3's gating
 rather than a regression, and a test pins it so it cannot change unnoticed.
 
+**2026-09-06 — rung 4 follow-up: the templates carry a worked scenario and
+worked labels** (author, after reviewing the shipped set). Two changes, and the
+second reverses a decision the rung had just documented.
+
+**The mock data is now one scenario rather than four generic rows.** Symmetrical
+peer review: two students in tutorial group `TW01` reviewing each other, sharing
+a tutor and an interest group, with the tutor as the observer. The original rows
+were shaped as a supervisor reviewing a supervisee, which is not the case the app
+is most often used for and made the relationships file read as hierarchy rather
+than pairing.
+
+**The headers now carry friendly-label suffixes** — `ReviewerTag1.Tutor`,
+`ReviewerTag2.Group`, `PairContextTag1.Interest Group` — where rung 4 shipped
+them bare. The argument that changed: the suffix grammar is the one thing about
+roster CSVs an operator cannot guess, so a template that demonstrates it teaches
+more than one that avoids it. Tag 3 stays bare on both rosters so the set shows
+labelling as per column and optional.
+
+That inverts the caveat, and the inverted form is the more useful one. Bare
+headers *cleared* an existing override, which bites an operator re-uploading
+into a configured session — a case the Guide had to warn about in the abstract.
+Labelled headers *set* the override, which is visible in the file the operator
+is editing: they see `Tutor` in the header and change it to their own word. The
+Guide card now states both directions, because both are live.
+
+**Observer tags stay bare and that is now asserted.** They are outside
+`field_label_csv`'s nine-column labelable set by design, so the tutor's role
+travels as the cell value. A suffix there would survive generation, fail to
+split on import, and be read as an unknown column — the tag lost silently. The
+test round-trips **every** generated header cell through the public
+`split_header` and asserts it comes back as its column plus its expected label,
+which catches a suffix on any non-labelable column rather than only the one
+that prompted the check.
+
 ---
 
 ## PR ladder

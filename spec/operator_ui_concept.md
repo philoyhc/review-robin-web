@@ -397,10 +397,12 @@ card offers `GET /templates/starter.zip` — four generic roster templates with
 derived headers and one mock row each, for an operator to fill in *before*
 creating the session and upload through Quick Setup. The link sits in the
 paragraph that explains the roster columns, since it is that paragraph's worked
-example. A `.muted` line beside it warns that the templates' tag headers are
-bare and a bare header clears a renamed tag column on re-upload, pointing an
-operator with renames at their own session's roster export instead. Contract:
-`spec/csv_contracts.md` §5a.
+example. Two paragraphs follow it: one describing the scenario the set carries
+(two students in group `TW01` reviewing each other, tutor as observer) and the
+`<Column>.<label>` suffixes it demonstrates, and a `.muted` line stating both
+directions of the consequence — uploading unedited renames the session's tag
+columns to the example labels, and a bare tag header clears a name the session
+already has. Contract: `spec/csv_contracts.md` §5a.
 
 Whether `/guide` should be viewable **without signing in** is open and belongs
 to Segment 20: `resolve_current_user` raises 401 today, so an anonymous Guide

@@ -18,20 +18,35 @@ no sample raises rather than silently emitting a short row, and
 ``tests/unit/test_setup_templates.py`` asserts the mapping covers every
 header exactly.
 
-**These templates are generic, so their headers are bare** — no
-``ReviewerTag1.Tutor`` friendly-label suffixes, because there is no
-session whose labels could be read. That is not neutral on re-import: a
-bare tag header *clears* that slot's label override
-(``app.services.field_labels.apply_captured_labels``, mirroring how an
-absent tag value re-imports as NULL). Harmless for the fresh session
-these templates are for; an operator re-uploading into a session with
-renamed tag columns should export that session's roster instead, which
-carries the labels. The Guide's "Create and set up a session" card says
-so.
+**The headers carry worked friendly labels**, as
+``ReviewerTag1.Tutor`` / ``ReviewerTag2.Group`` and
+``PairContextTag1.Interest Group``. Generic templates have no session to
+read overrides from, so these are *examples* — but the suffix grammar is
+the one thing about roster CSVs an operator cannot guess, and a template
+that demonstrates it teaches more than one that avoids it.
 
-The mock rows are cross-consistent: ``relationships.csv`` references the
-addresses in ``reviewers.csv`` and ``reviewees.csv``, so the four files
-import as one coherent set rather than four unrelated examples.
+The consequence is live, not cosmetic: on import a labelled header
+**sets** that slot's override (``field_labels.apply_captured_labels``),
+so uploading a template unedited renames the session's tag columns to
+``Tutor`` / ``Group`` / ``Interest Group``. That is the intended lesson —
+the operator edits the labels to their own vocabulary along with the
+rows. The same mechanism in reverse is why a *bare* tag header clears an
+override, which is what the Guide card warns about for an operator
+re-uploading into a session that already has renames.
+
+Only the nine columns in ``field_label_csv``'s labelable set may carry a
+suffix. Observer tags are deliberately outside it, so
+``ObserverTag1`` stays bare and Catharine's role travels as the cell
+*value*; a suffix there would not split on import and the whole cell
+would be read as an unknown column name. :func:`template_header` is
+asserted against ``split_header`` in the tests, which is the public check
+for exactly that.
+
+The mock rows are a single coherent scenario — **students peer-reviewing
+each other within one tutorial group**. ``relationships.csv`` references
+the addresses in ``reviewers.csv`` and ``reviewees.csv``, both students
+share a tutor and group, and the tutor is the observer, so the four files
+import as one working example rather than four unrelated ones.
 
 Plan: ``guide/segment_19E_operator_onboarding.md`` PR ladder rung 4.
 """
@@ -52,11 +67,14 @@ from app.services.extracts.reviewers_extract import HEADER as REVIEWERS_HEADER
 
 __all__ = [
     "EXAMPLE_DOMAIN",
+    "LABELS",
+    "SAMPLES",
     "SetupTemplate",
     "STARTER_TEMPLATES",
     "STARTER_ZIP_NAME",
     "build_starter_zip",
     "sample_row",
+    "template_header",
     "template_rows",
 ]
 
@@ -64,8 +82,16 @@ __all__ = [
 #: (`guide/segment_19E_operator_onboarding.md` -> Semantics).
 EXAMPLE_DOMAIN = "example.edu"
 
-_REVIEWER_EMAIL = f"alex.tutor@{EXAMPLE_DOMAIN}"
+_REVIEWER_EMAIL = f"alex.student@{EXAMPLE_DOMAIN}"
 _REVIEWEE_EMAIL = f"sam.student@{EXAMPLE_DOMAIN}"
+_OBSERVER_EMAIL = f"catharine.tutor@{EXAMPLE_DOMAIN}"
+
+#: The scenario every sample cell belongs to: two students in tutorial
+#: group TW01 peer-reviewing each other, with their tutor observing.
+#: Symmetrical by design — both roster rows are students, so an operator
+#: reading the set sees that the same person can be reviewer and reviewee.
+_TUTOR_NAME = "Catharine Tutor"
+_GROUP = "TW01"
 
 
 @dataclass(frozen=True)
@@ -88,32 +114,54 @@ class SetupTemplate:
 #: appear in both a roster file and ``relationships.csv``, which is what
 #: keeps the four files referring to the same two people.
 SAMPLES: dict[str, str] = {
-    # Reviewers
-    "ReviewerName": "Alex Tutor",
+    # Reviewers — a student.
+    "ReviewerName": "Alex Student",
     "ReviewerEmail": _REVIEWER_EMAIL,
-    "ReviewerTag1": "Group A",
-    "ReviewerTag2": "",
+    "ReviewerTag1": _TUTOR_NAME,
+    "ReviewerTag2": _GROUP,
     "ReviewerTag3": "",
-    # Reviewees
+    # Reviewees — a second student in the same group, so the pair is a
+    # peer review rather than a supervisor reviewing a supervisee.
     "RevieweeName": "Sam Student",
     "RevieweeEmail": _REVIEWEE_EMAIL,
-    "RevieweeTag1": "Group A",
-    "RevieweeTag2": "",
+    "RevieweeTag1": _TUTOR_NAME,
+    "RevieweeTag2": _GROUP,
     "RevieweeTag3": "",
-    # Relationships — pair context for the reviewer/reviewee above.
-    "PairContextTag1": "Autumn term",
+    # Relationships — what these two students share, beyond the group.
+    "PairContextTag1": "Chess club 2026",
     "PairContextTag2": "",
     "PairContextTag3": "",
-    # Observers
-    "ObserverName": "Jo Observer",
-    "ObserverEmail": f"jo.observer@{EXAMPLE_DOMAIN}",
-    "ObserverTag1": "",
+    # Observers — the tutor, watching the group she teaches. Her role
+    # travels as the tag *value*: observer tags are outside the
+    # labelable set, so there is no header suffix to carry it.
+    "ObserverName": _TUTOR_NAME,
+    "ObserverEmail": _OBSERVER_EMAIL,
+    "ObserverTag1": "Tutor",
     "CohortRule": "",
     # Shared across the roster files.
     "PhotoLink": "",
     # Blank re-imports as active; spelled out so the column teaches its
     # own vocabulary rather than looking optional-and-ignorable.
     "Status": "active",
+}
+
+
+#: Friendly labels the templates demonstrate, as ``<Column>.<label>``
+#: header suffixes. Only columns in ``field_label_csv``'s labelable set
+#: may appear here — a suffix on any other column would not split on
+#: import and the cell would read as an unknown column name. The tests
+#: assert that through the public ``split_header`` rather than trusting
+#: this mapping.
+#:
+#: Tag 3 is left bare on both rosters on purpose: the set should show
+#: both states, so an operator sees that labelling is per column and
+#: optional.
+LABELS: dict[str, str] = {
+    "ReviewerTag1": "Tutor",
+    "ReviewerTag2": "Group",
+    "RevieweeTag1": "Tutor",
+    "RevieweeTag2": "Group",
+    "PairContextTag1": "Interest Group",
 }
 
 
@@ -140,9 +188,22 @@ def sample_row(template: SetupTemplate) -> tuple[str, ...]:
     return tuple(SAMPLES[column] for column in template.header)
 
 
+def template_header(template: SetupTemplate) -> tuple[str, ...]:
+    """``template``'s header row, with :data:`LABELS` suffixes attached.
+
+    Mirrors ``field_label_csv.labeled_header``'s ``f"{column}.{label}"``
+    join, but reads its labels from a constant instead of a session's
+    overrides — these templates are generic and have no session.
+    """
+    return tuple(
+        f"{column}.{LABELS[column]}" if column in LABELS else column
+        for column in template.header
+    )
+
+
 def template_rows(template: SetupTemplate) -> list[tuple[str, ...]]:
     """``[header, sample_row]`` — the whole file, two rows."""
-    return [template.header, sample_row(template)]
+    return [template_header(template), sample_row(template)]
 
 
 def build_starter_zip() -> bytes:
