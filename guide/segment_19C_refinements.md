@@ -956,12 +956,56 @@ refinements are identified.
   Segment 20's job. Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe;
   small, isolated, `[chrome]`.
 
-- **Dark-mode input background (from Item 2 QA).** In dark mode form controls
-  use `var(--bg-page)`, so `<input>` / `<select>` / `<textarea>` sit at the same
-  near-black as the page canvas and are delineated only by their border. A
-  dedicated input-background token (a step lighter than `--bg-page`, e.g. near
-  `--bg-card`) applied to `body.ui-v2 input/select/textarea` would lift them.
-  Light unaffected (input bg would resolve to white as today). Small, isolated.
+- **Input boundaries carry no fill contrast, in either theme** *(filed
+  2026-08-21 from Item 2 QA as "dark-mode input background"; **re-measured and
+  re-scoped 2026-09-06** — see below).* `body.ui-v2 input / select / textarea`
+  fill with `var(--surface-page)` (`base.html:2205`), and `body.ui-v2 .card`
+  **also** fills with `var(--surface-page)` (`base.html:1291` — a plain card is
+  raised by its border, not by a distinct surface). Every ordinary operator form
+  therefore renders an input whose fill is identical to its container:
+
+  | | input fill | container | ratio |
+  |---|---|---|---|
+  | Dark, input in a card | `#0f141b` | `#0f141b` | **1.00:1** |
+  | Light, input in a card | `#ffffff` | `#ffffff` | **1.00:1** |
+
+  The whole boundary is the 1px `--border-default`, and that is thin in both
+  themes: **1.70:1** dark (`#3a465c` on `#0f141b`) and **1.47:1** light
+  (`#d1d5db` on `#ffffff`). Neither reaches the **3:1** WCAG 1.4.11 asks of a
+  UI-component boundary, and light is the *worse* of the two.
+
+  **What the re-measure changed.** The original note read this as a dark-mode
+  defect ("light unaffected") and proposed lifting the dark fill toward
+  `--bg-card`. That would fix one theme and leave the weaker one alone. Only
+  three narrow elements actually use `--surface-card` — `.session-nav-card`,
+  `.status-row`, `.data-shape-card` — and none of them is a form container, so
+  the "input matches its card" reading was never dark-specific. Treat this as a
+  **both-themes contrast item**, not a dark-mode polish item.
+
+  The note's token names are also pre-Item 6: `--bg-page` / `--bg-card` were
+  retired by the two-tier reorg on 2026-08-23 (`spec/color_tokens.md`).
+
+  **Constraints for whoever builds it.**
+  - `--surface-card` **cannot** be reused as the input surface. It is a step
+    lighter than `--surface-page` in dark (`#1a212e` vs `#0f141b`) but both
+    resolve to `#ffffff` in light, so repointing to it fixes dark and changes
+    nothing in light — the same half-fix in different clothing. A new Tier 2
+    token is needed, with a real value in *both* columns.
+  - A new semantic token means a row in `spec/color_tokens.md` §"Surfaces",
+    which is specced as a closed set.
+  - `tools/theme_customizer.gen.py` names `--surface-page` as the background
+    facet for `input[type=text]` / `textarea` / `select` at lines 176-181. That
+    pick-list is hand-written and is the authority for Part C's readout; a
+    browser-side self-check compares each facet against the element's computed
+    colour in both themes. Change the token without changing those three
+    entries and the self-check reports mismatches (it is at 0 today).
+  - Raising `--border-default` to 3:1 instead of adding a fill is the obvious
+    alternative and is **not** obviously worse — it needs no new token and no
+    spec row. It does change every bordered surface, not just inputs, which is
+    the trade to weigh. Decide it in the item, don't assume the fill.
+
+  Still small, but no longer isolated: one token, one spec table, one harness
+  pick-list.
 
 ---
 
