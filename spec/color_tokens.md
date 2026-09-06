@@ -15,7 +15,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**79 primitives · 103 semantic tokens · 16 non-colour scale tokens.**
+**80 primitives · 107 semantic tokens · 16 non-colour scale tokens.**
 
 ---
 
@@ -88,6 +88,7 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--red-warm-pale` | `#fdecea` |
 | `--violet-abyss` | `#2e2250` |
 | `--violet-strong` | `#5b21b6` |
+| `--violet-bright` | `#8b5cf6` |
 | `--violet-soft` | `#c4b5fd` |
 | `--violet-pale` | `#ede9fe` |
 | `--tint-sky-dark` | `#0e1a24` |
@@ -102,6 +103,16 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--tint-rose` | `#fff1f2` |
 | `--tint-peach` | `#fff7ed` |
 | `--tint-cream` | `#fffbeb` |
+
+**`--violet-bright` is declared but unmapped.** Every other primitive is
+reached by at least one semantic token in at least one theme; this one is
+reached by none, deliberately. It fills the `bright` slot the other four
+chromatic families carry (`--blue-bright`, `--green-bright`,
+`--amber-bright`, `--red-bright`) in the smallest family in the palette, and
+it is the customizer's live case for the **unreferenced-primitive** marker
+(`tools/README.md`) — a marker that highlights nothing cannot be seen to
+work. Mapping a semantic to it later is expected and needs no note here;
+what would need one is the marker going quiet with no such mapping added.
 
 ---
 
