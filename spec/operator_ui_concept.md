@@ -370,6 +370,15 @@ app description and the access note it absorbed when 18R Item 6 retired
 `/request-access`, so it renders usefully for a signed-in user with no role.
 Takes `?return_to=` and renders a "← Back to {context}" affordance.
 
+**Absorbed the Guide's "Before you start" card (Segment 19E).** The Access
+card now opens with how to reach the app and sign in — hosted, nothing to
+install, single sign-on with an institutional account, no separate password —
+and states that an address on the operator allowlist lands on the Sessions
+lobby. It sits here rather than in the Guide because a reader of the Guide has
+already signed in; on `/about` the same facts answer the question a stranger
+is actually asking. The lobby's own first-run card covers what an empty lobby
+means, so that clause did not travel.
+
 ### `/guide` — Guide
 
 The in-app documentation page. Sits **beside `/about`** in the same chrome link
@@ -383,6 +392,14 @@ link to the page already being viewed.
 **Canonical since Segment 19E rung 2.** The material from
 `docs/quickstart.md` moved in and that file retired to
 `docs/archive/quickstart.md`; corrections belong here, not there.
+
+**Two sections retired at Segment 19E**, on the author's reading of what the
+page owes someone already inside the app. `Before you start` moved wholesale
+to `/about` (above). `Getting help` was one sentence pointing at the Validate
+page — a troubleshooting tip rather than a section — and is now the last
+bullet of `Tips and troubleshooting`. Both removals are asserted in
+`tests/integration/test_guide_scaffold.py`, in both directions: the card is
+gone from `/guide`, and the content is present where it moved to.
 
 Sections are declared with an audience in `app/web/views/_guide.py` and the
 template renders only sections whose audience is visible. **That filter runs

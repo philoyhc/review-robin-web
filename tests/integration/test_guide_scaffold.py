@@ -33,7 +33,6 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # view's SECTIONS, which carries the audience mapping.
 SECTION_HEADINGS = (
     "What Review Robin Web does",
-    "Before you start",
     "Create and set up a session",
     "Prepare and launch",
     "Give reviewers access",
@@ -44,8 +43,13 @@ SECTION_HEADINGS = (
     "For reviewers",
     "For observers",
     "For reviewees",
-    "Getting help",
 )
+
+#: Retired at 19E, and asserted gone rather than merely absent from the
+#: list above: `test_guide_renders_every_committed_section` only checks
+#: that every listed heading is present, so dropping a name from that
+#: tuple would let a stale card keep rendering unnoticed.
+RETIRED_SECTION_HEADINGS = ("Before you start", "Getting help")
 
 
 def test_guide_renders(client: TestClient) -> None:
@@ -58,6 +62,36 @@ def test_guide_renders_every_committed_section(client: TestClient) -> None:
     body = client.get("/guide").text
     missing = [s for s in SECTION_HEADINGS if f"<h2>{s}</h2>" not in body]
     assert not missing, f"missing Guide sections: {missing}"
+
+
+def test_the_retired_sections_are_gone(client: TestClient) -> None:
+    """`Before you start` moved to `/about` and `Getting help` folded into
+    `Tips and troubleshooting` (19E, author). Both were removed on a
+    reading of what the page owes a reader who is already inside the app,
+    so a card reappearing is a regression rather than a revert."""
+    body = client.get("/guide").text
+
+    for heading in RETIRED_SECTION_HEADINGS:
+        assert f"<h2>{heading}</h2>" not in body, heading
+
+
+def test_the_retired_content_landed_where_it_was_moved_to(
+    client: TestClient,
+) -> None:
+    """Deleting a card and moving one look identical on the Guide. These
+    assert the other half — that the facts survived the move, on the page
+    that now owns them."""
+    about = client.get("/about").text
+    assert "there is nothing to install" in about
+    assert "single sign-on" in about
+    assert "operator allowlist" in about
+
+    tips = " ".join(client.get("/guide").text.split())
+    assert (
+        "<strong>The Validate page</strong> explains most setup problems in "
+        "plain language. For anything else, contact your Review Robin Web "
+        "administrator." in tips
+    )
 
 
 def test_guide_back_link_defaults_to_the_lobby(client: TestClient) -> None:
@@ -132,10 +166,10 @@ def test_the_template_gates_on_the_view_not_on_its_own_logic(
     feeds the template.
     """
     monkeypatch.setattr(
-        routes_guide, "visible_sections", lambda user: frozenset({"getting_help"})
+        routes_guide, "visible_sections", lambda user: frozenset({"for_observers"})
     )
     body = client.get("/guide").text
-    assert "<h2>Getting help</h2>" in body
+    assert "<h2>For observers</h2>" in body
     assert "<h2>For reviewers</h2>" not in body
     assert "<h2>What Review Robin Web does</h2>" not in body
 

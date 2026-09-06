@@ -20,13 +20,27 @@
   </div>
 
   {# Access help — /about absorbed the retired /request-access role
-     (18R Item 6). Framed generically so it reads correctly whether the
+     (18R Item 6) and, at 19E, the Guide's "Before you start" card. That
+     card told a reader how to reach and sign in to the app, which nobody
+     reading it inside the app still needs; this page is where the same
+     facts answer a question someone actually has — how do I get in, and
+     who lets me. Framed generically so it reads correctly whether the
      viewer already has access (operator) or not (a signed-in stranger). #}
   <div class="card">
     <h2>Access</h2>
+    <p>
+      Review Robin Web is a hosted web app — there is nothing to install. Reach
+      it at the address your administrator gave you and <strong>sign in with
+      your institutional account</strong>; the app uses single sign-on, so there
+      is no separate password to create.
+    </p>
     {% if user %}
       <p>You're signed in as <strong>{{ user.email or "(no email on record)" }}</strong>.</p>
     {% endif %}
+    <p>
+      If your address is on the operator allowlist you land on the
+      <strong>Sessions</strong> lobby.
+    </p>
     <p>
       Reviews assigned to you appear on <a href="/me">My reviews</a>. If you're
       expecting a review and don't see it — or you should be able to run reviews
