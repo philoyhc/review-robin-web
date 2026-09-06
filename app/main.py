@@ -12,6 +12,7 @@ from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.routes_about import router as about_router
 from app.web.routes_guide import router as guide_router
+from app.web.routes_templates import router as templates_router
 from app.web.routes_auth import router as auth_router
 from app.web.routes_health import router as health_router
 from app.web.routes_operator import router as operator_router
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(about_router)
     app.include_router(guide_router)
+    app.include_router(templates_router)
     app.include_router(auth_router)
     app.include_router(operator_router)
     app.include_router(reviewer_router)

@@ -521,6 +521,68 @@ shares. Public surface:
 
 ---
 
+## 5a. Setup templates (starter set)
+
+A generic starter template set an operator downloads **before any
+session exists**, fills in, and uploads through Quick Setup.
+
+> Status: shipped (Segment 19E rung 4). Route:
+> `GET /templates/starter.zip` →
+> `app/web/routes_templates.py`. Generator:
+> `app/services/setup_templates.py`. Filename:
+> `review-robin-setup-templates.zip`.
+
+**Members.** Four roster files, one mock row each:
+`reviewers.csv`, `reviewees.csv`, `relationships.csv`,
+`observers.csv`. The Settings CSV is deliberately **not** in the
+set — it is a `field,value,data_type` dump of a whole live session
+rather than a row-shaped roster, so "one mock row" has no meaning
+for it; an operator sets those values in the form and builds
+instruments on the Instruments page. The rung 5 demo set is where a
+worked `settings.csv` appears.
+
+**Derived, not authored.** Each member's header *is* the extract's
+own `HEADER` tuple, held by reference — `reviewers_extract.HEADER`
+and its three siblings. A column added to an extract reaches the
+template with no edit to the generator, and
+`tests/unit/test_setup_templates.py` asserts the identity (not
+equality) of each tuple. The single mock row is the one authored
+part, and it is authored per *column*: `SAMPLES` maps a column name
+to one cell, and a header column with no entry raises rather than
+emitting a short row.
+
+**Coherent as a set.** `relationships.csv` names the addresses in
+`reviewers.csv` and `reviewees.csv`, so the four files upload as one
+working single-pair session rather than four unrelated examples.
+Every address is `example.edu`.
+
+**Bare headers, and what that costs.** These templates carry no
+`<Column>.<label>` friendly-label suffixes (§1a) — there is no
+session whose labels could be read. A bare tag header is **not**
+neutral on import: `field_labels.apply_captured_labels` *clears*
+every in-scope slot the header does not name, mirroring how an
+absent tag value re-imports as NULL. So re-uploading a generic
+template into a session with renamed tag columns silently drops the
+renames. Harmless for the fresh session the set is for; an operator
+re-uploading should export that session's own roster instead, which
+carries the labels. The Guide's card says so, and a test asserts no
+template header contains a period.
+
+**No audit event.** The extract routes write one because they export
+a session's real roster; this exports nobody's data, and
+`audit_events` rows are session-scoped. Authentication is required
+all the same — every surface in the app is behind sign-in.
+
+**Surfaces.** Offered from the two places that render before a
+session exists: the Guide's "Create and set up a session" card
+(`spec/operator_ui_concept.md`) and the lobby first-run card
+(`spec/sessions_overview.md`). Not offered from the Workflow card or
+Extract Data — both were considered and rejected, since neither can
+reach an operator who wants the templates while creating the session
+(`guide/segment_19E_operator_onboarding.md` → Judgment calls).
+
+---
+
 ## 6. Surface mapping
 
 | Surface | Direction | Service | Spec |
@@ -540,6 +602,7 @@ shares. Public surface:
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |
 | Quick Setup Slot 1–3 (Reviewers / Reviewees / Relationships) | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives | `spec/quick_setup_card_spec.md` |
 | Quick Setup Slot 4 (Settings) | In | `apply_session_config` | same |
+| Guide + lobby first-run card — Download setup templates | Out | `build_starter_zip` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one mock row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
 
 ---
 
@@ -548,7 +611,9 @@ shares. Public surface:
 1. **`HEADER` is the contract.** Each extract module pins a
    `HEADER: tuple[str, ...]` and the importer matches by header
    name. A column rename is a deliberate spec edit, not an
-   accident.
+   accident. The starter templates (§5a) consume the same tuples,
+   so they are a third reader of that one contract rather than a
+   second source of truth.
 
 2. **Wipe-and-replace, never merge.** Every importer replaces
    the section it owns within one transaction. Merge semantics

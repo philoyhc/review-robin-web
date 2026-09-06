@@ -91,6 +91,15 @@ The card carries, in order:
 4. The **`Create new session`** CTA (`.btn-cta`), linking to
    `/operator/sessions/new`.
 
+Item 3's muted line also carries the **setup-template download**
+(`GET /templates/starter.zip`, Segment 19E rung 4) — four generic
+roster templates the operator can fill in before creating a
+session. This card and the Guide card are the two surfaces that
+render before any session exists, which is why both offer it;
+contract in `spec/csv_contracts.md` §5a. The download therefore
+leaves with the card: an operator who has a session gets templates
+from the Guide.
+
 **Trigger.** Emptiness of the template's `sessions` list — the
 non-archived subset of `sessions.list_for_user` — **not** "has
 never had a session". An operator who archives everything sees the
