@@ -497,6 +497,50 @@ outcome rather than the download.
 `test_headings_and_audience_mapping_stay_in_step` immediately — the check
 written at rung 2 catching exactly the drift it was written for.
 
+**2026-09-06 — rung 6a shipped: the guidance scaffold, piloted on Email
+Template.** Split from rung 6 by the author, so the shape can be adjusted
+before it is repeated five times rather than after.
+
+**What the scaffold is.** `partials/_page_guidance.html` — a macro taking body
+content through `{% call %}`, wrapping it in
+`<details class="page-guidance">` with a **fixed** summary,
+`What this page is for`. Fixed rather than a parameter: this is a repeated
+affordance, and an operator learns a control faster when it reads identically
+everywhere. A page that genuinely needs different wording is a finding about
+the scaffold, which is what the pilot is for.
+
+**Two scaffold decisions the pilot settled**, neither of which the plan
+anticipated:
+
+- **Placement is above any page-internal tab strip**, not merely "above the
+  cards". The Email Template page has three tabs choosing *which* email; the
+  guidance is about the page, so under the tabs it would read as commentary on
+  the selected tab. A test pins the ordering.
+- **"It links there" needed somewhere to link to.** The Guide's cards had no
+  ids, so the only possible link was the whole page. Each card now carries
+  `id="guide-<section key>"`, derived from the key the view already gates on,
+  so a renamed section fails a test rather than becoming a dead link. Links
+  carry `?return_to=`, and the test asserts the Guide's Back link names the
+  originating session — an unallowlisted path falls back to the lobby silently,
+  so asserting the URL was *sent* would prove nothing.
+
+**The pilot page's copy names something the page never did.** Its three tabs
+let an operator carefully compose emails the app does not send: Segment 14B is
+still `Planning`. Verified against `guide/segment_14B_email_infrastructure.md`
+rather than taken from the Guide's own rung-2 prose, which is where I would
+have got it second-hand. The guidance says so, and says that access does not
+depend on it.
+
+**Undeclared spec impact, caught by the manifest.** `## Doc impact` named only
+`spec/setup_pages.md` for this rung. But the Setup pages are not all governed
+by it: `spec_registry.py` maps `_setup_invite` to
+`spec/email_template_editor.md`, which carries this page's contract. Bullet
+added rather than the edit made quietly.
+
+**The plan's page count was wrong.** `## Definition of done` said five Setup
+pages; `spec/setup_pages.md` lists **six** — the omitted one is Instruments.
+Corrected in place, and it makes rung 6b a five-page rollout rather than four.
+
 ---
 
 ## PR ladder
@@ -529,6 +573,9 @@ lands, only its inputs.
 
 **6 — Inline page guidance.** One `<details>` per setup page, written against
 the Guide's settled vocabulary. Must not restate the Guide; it links there.
+*(Split into two stages 2026-09-06, author: **6a** pilots the scaffold on one
+page — Email Template — so its shape can be adjusted before repetition; **6b**
+rolls it out to the remaining five.)*
 
 **7 — Activate role-awareness** *(added 2026-09-06)*. Replace the
 all-audiences constant with a real resolver: a workspace-level query for
@@ -559,7 +606,10 @@ this rung, not a change made while activating the filter.
 - The demo set uploaded through Quick Setup produces a session that reaches
   `validated` with zero validation errors, asserted by a test.
 - Every address in both sets is `example.edu`.
-- Each of the five setup pages carries one page-level `<details>`.
+- Each of the ~~five~~ **six** setup pages carries one page-level `<details>`.
+  *(Corrected 2026-09-06: `spec/setup_pages.md` lists six — Reviewers,
+  Reviewees, Relationships, Observers, **Instruments**, Email Template. The
+  plan's count omitted Instruments.)*
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19E` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -630,6 +680,11 @@ the segment window.
   re-import into a session that has them (added 2026-09-06).
 - `spec/setup_pages.md` — the page-level `<details>` guidance in the shared body
   shape (PR 6).
+- `spec/email_template_editor.md` — the pilot page's own guidance copy in its
+  §2 page contract (PR 6). **Added 2026-09-06 at build**: the rung's original
+  bullet named only the shared Setup-pages spec, but the Setup pages are not
+  all governed by it — `spec_registry.py` maps `_setup_invite` here, and this
+  is where the Email Template page's contract lives. See `## Status`.
 - `docs/README.md` — `quickstart.md` retires to `docs/archive/`; the index
   points at `/guide` (PR 2).
 - `docs/known_limitations.md` — repoint its quickstart reference (PR 2).

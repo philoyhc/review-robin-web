@@ -48,6 +48,33 @@ import paths these pages expose, see
 
 Every Setup Page renders, top-to-bottom:
 
+0. **Page guidance** (`partials/_page_guidance.html` — Segment 19E
+   rung 6). A `<details class="page-guidance">` disclosure, summary
+   `What this page is for`, **closed by default** and sitting above
+   the page's cards (and above any page-internal tab strip: it
+   explains the page, not the selected tab). The summary wording is
+   fixed in the macro rather than passed per page, because it is a
+   repeated affordance and an operator learns a control faster when
+   it reads identically everywhere; a page needing different wording
+   is a finding about the scaffold. Body content is supplied by each
+   page through `{% call %}`.
+
+   The prose is **short and links to `/guide` rather than restating
+   it** — each Guide section card carries `id="guide-<section key>"`,
+   derived from the key `app/web/views/_guide.py` gates on, so a
+   renamed section breaks a test rather than becoming a dead link.
+   Links carry `?return_to=<this page>`, which the Setup-page paths
+   satisfy under `app/web/return_to.py`'s allowlist.
+
+   Distinct from the per-form `.form-help` text, which stays: that is
+   mechanics for one field, this is purpose for the page. Also
+   distinct from the `.banner` family, specced behaviourally as
+   *transient* page-level feedback — persistent explanation is not
+   that.
+
+   **Rollout status.** Piloted on Email Template; the remaining five
+   pages follow in rung 6's second stage.
+
 1. **Chrome** (`session-nav-card` partial — two-row top nav with the
    Setup row highlighted).
 2. **Status strip** (`session_setup_status_row` partial) — counts
