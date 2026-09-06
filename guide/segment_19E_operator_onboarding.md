@@ -737,6 +737,49 @@ app means an operator learns the control once. Pinned by a test that asserts
 the code point, the rotation, *and* both native-marker suppressions — engines
 disagree about which one works, and losing either would show two markers.
 
+**2026-09-06 — theme adjustments from the customizer** (author, exported as
+JSON and diffed against `base.html` rather than described). Six changes, five
+light and one dark:
+
+| Token | Was | Now |
+|---|---|---|
+| `--green-wash` *(primitive)* | `#f0fdf4` | `#ddf4e3` |
+| `--nav-strip-setup-bg` (light) | `--blue-wash` | `--blue-pale` |
+| `--nav-home-bg` (light) | `--blue-wash` | `--blue-pale` |
+| `--card-help-bg` (light) | `--gray-wash` | `--gray-mist` |
+| `--card-help-border` (light) | `--gray-wash` | `--gray-soft` |
+| `--card-help-border` (dark) | `--ink-muted` | `--slate-deeper` |
+
+The nav changes are one move: both strips gain saturation — `--green-wash` has
+exactly one consumer, `--nav-strip-ops-bg`, so deepening the primitive moves
+the Ops strip and nothing else — and the Session Home anchor is repointed to
+match the Setup strip beside it.
+
+**The help-card border reverses 19C Item 8, and the spec said so explicitly.**
+`spec/color_tokens.md` carried the rule "resolves to the same primitive as
+`--card-help-bg`, **on purpose**", because the slab then sat *inside* another
+card and an edge there would have been `.card`'s 2px `--border-default`
+cutting across a nested block. That stopped being true at rung 6b, when
+`.page-guidance` made the help card a card **of its own** in a column, where
+an edgeless card reads as unanchored. The token did not change meaning; the
+thing it paints did. Rule rewritten in `spec/color_tokens.md` and
+`spec/ui_elements.md` rather than left contradicting the code.
+
+The first exported values used `--gray` light and left dark untouched, which
+would have given the card an edge in light and none in dark; the author
+revised to `--gray-soft` / `--slate-deeper`, landing both themes at ~1.47:1
+and ~1.50:1 against the page. A soft edge, not an outline, and symmetric.
+
+**Contrast, checked rather than assumed.** Nothing that passed now fails.
+Inactive nav-tab text (`--text-dim` on the strips) goes 2.33 → 2.08 light
+Setup and 2.43 → 2.19 Ops, and the Session Home anchor's `--text-subtle` goes
+4.44 → 3.96 — all three were **already below AA before this change**, so the
+strips deepen an existing problem rather than create one. Worth a separate
+look at `--text-dim` / `--text-subtle` on tinted strips; not this change's to
+fix.
+
+All three generated theme tools re-run from their generators.
+
 ---
 
 ## PR ladder

@@ -64,7 +64,7 @@ remaps semantics onto the one primitive palette) are in `guide/archive/semantic_
 | `--green-glow` | `#6ee7b7` |
 | `--green-soft` | `#a7f3d0` |
 | `--green-pale` | `#d1fae5` |
-| `--green-wash` | `#f0fdf4` |
+| `--green-wash` | `#ddf4e3` |
 | `--amber-abyss` | `#3a2c0a` |
 | `--amber-abyss-mid` | `#4a3a10` |
 | `--amber-deep` | `#92400e` |
@@ -170,7 +170,8 @@ Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
 read acceptably only while that token was very light; at 3:1-plus the body text
 on it would have fallen to 3.96:1 light / 3.41:1 dark, both under AA. It now
 fills with `--card-help-bg` — its own token, not a borrowed one, so the next
-change to a border token cannot reach it. See "Card accents" above and
+change to a border token cannot reach it (`--gray-mist` light /
+`--ink-muted` dark, carrying body text at 14.3:1 and 11.7:1). See "Card accents" above and
 `spec/ui_elements.md` §"Reviewer help cards".
 
 ### Buttons [P]
@@ -257,9 +258,9 @@ change to a border token cannot reach it. See "Card accents" above and
 | `--nav-marker-ops` | `--green-soft` | `--green-abyss` | `#a7f3d0` | `#065f46` |
 | `--nav-tab-active-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--nav-tab-active-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
-| `--nav-strip-setup-bg` | `--blue-wash` | `--tint-sky-dark` | `#eff6ff` | `#0e1a24` |
-| `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#f0fdf4` | `#0c2419` |
-| `--nav-home-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
+| `--nav-strip-setup-bg` | `--blue-pale` | `--tint-sky-dark` | `#dbeafe` | `#0e1a24` |
+| `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#ddf4e3` | `#0c2419` |
+| `--nav-home-bg` | `--blue-pale` | `--blue-abyss-soft` | `#dbeafe` | `#12283f` |
 | `--nav-home-bg-hover` | `--blue-mist` | `--blue-abyss-faint` | `#fafcff` | `#0e1c2c` |
 | `--nav-home-marker` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
 
@@ -280,8 +281,8 @@ change to a border token cannot reach it. See "Card accents" above and
 | `--card-warning-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--card-warning-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--card-warning-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
-| `--card-help-bg` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
-| `--card-help-border` | `--gray-wash` | `--ink-muted` | `#f5f5f7` | `#232c3b` |
+| `--card-help-bg` | `--gray-mist` | `--ink-muted` | `#e5e7eb` | `#232c3b` |
+| `--card-help-border` | `--gray-soft` | `--slate-deeper` | `#d1d5db` | `#2b3547` |
 | `--card-help-fg` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 
 
@@ -292,15 +293,27 @@ page, Segment 19E rung 6). The theme customizer's facet is therefore
 named **`Help card`**, not `Instrument help card` — a facet named after
 one caller would misdescribe what editing it changes.
 
-**`--card-help-border` resolves to the same primitive as `--card-help-bg`, on
-purpose.** `.rs-help-card` is a tinted slab, not a card with a contrasting
-edge (`spec/ui_elements.md` §"Reviewer help cards"), so its border has to
-disappear into its fill — otherwise `.card`'s 2px `--border-default` outlines
-it, which at the post-19C-Item-8 border value is a 3.94:1 edge in light. They
-are **two independent mappings, not a coupling**: `--card-help-border` points
-at a primitive, never at `var(--card-help-bg)`, so either can be repointed
-alone without dragging the other. The same reason the help card has its own
-`-fg` rather than inheriting `--text-body`.
+**`--card-help-border` is one step darker than `--card-help-bg`** —
+`--gray-soft` over `--gray-mist` in light, `--slate-deeper` over
+`--ink-muted` in dark. That is a **soft edge, not an outline**: ~1.47:1
+against the page in light and ~1.50:1 in dark, so the card has a shape
+without a drawn boundary, and the two themes read alike.
+
+*This reverses 19C Item 8*, which pointed the border at the fill's own
+primitive so the edge vanished entirely. That was right while the help
+card was a tinted slab sitting **inside** another card — an edge there
+would have been `.card`'s 2px `--border-default` cutting across a nested
+block. It stopped being right at 19E rung 6b, when `.page-guidance` made
+the help card a card **of its own** in a column, where an edgeless card
+reads as unanchored against the page. The token did not change meaning;
+the thing it paints did.
+
+They remain **two independent mappings, not a coupling**:
+`--card-help-border` points at a primitive, never at
+`var(--card-help-bg)`, so either can be repointed alone without dragging
+the other — which is exactly what let this change happen as one edit.
+The same reason the help card has its own `-fg` rather than inheriting
+`--text-body`.
 
 ### Selection, toggles & markers [P]/[A]
 
