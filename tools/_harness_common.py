@@ -270,10 +270,17 @@ def component_sections():
     </section>"""),
         ("cards", f"""    <section class="ph-section">
       <h2 class="ph-h">Cards</h2>
+      <!-- The h2 is its own pick target ("Card heading"), and it stops
+           propagation — so whatever it says is what you select by clicking it.
+           It reads "Card heading" rather than "Plain card" for exactly that
+           reason: clicking the words "Plain card" and getting a one-facet
+           heading readout looks like the card losing its background. Click the
+           body text or the padding to select the card itself. -->
       <div class="card">
-        <h2>Plain card</h2>
-        <p>A standard raised card surface. Body text sits on <code>--surface-page</code>;
-           the edge is <code>--border-default</code> at 2px.</p>
+        <h2>Card heading</h2>
+        <p>Plain card — a standard surface. The body sits on <code>--surface-page</code>;
+           the edge is <code>--border-default</code> at 2px. Click here (not the
+           heading) to select the card and its three facets.</p>
       </div>
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>
