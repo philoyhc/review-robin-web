@@ -58,9 +58,22 @@
   <div class="card-columns">
     <div>
       {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
+      <p>
+        A relationship attaches <strong>context to one reviewer–reviewee
+        pair</strong> — three tag slots describing something true of that
+        pairing, such as a shared group or a supervision link. This page is
+        optional; a session works without any relationships at all.
+      </p>
+      <p>
+        <strong>Relationships do not decide who reviews whom.</strong> That
+        comes from each instrument's assignment rule, and the pairs appear
+        when you Prepare the session. What relationships give you is something
+        for those rules to filter on, so a rule can say "only pairs in the
+        same group". Both rosters need people in them before a pair can be
+        added. See
+        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        and set up a session</a> in the Guide.
+      </p>
       {% endcall %}
 
     {% set field_labels_form_action =

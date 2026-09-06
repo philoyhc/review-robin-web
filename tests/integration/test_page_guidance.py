@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Observer, ReviewSession
+from app.services.observer_cohort import observer_has_rule
 from app.web.views._guide import SECTIONS
 
 
@@ -426,3 +427,134 @@ def test_the_invitations_page_says_why_the_counters_are_still(
     )
     assert flat.index("inactive until email") < flat.index("Eligible reviewers")
     assert body.count(CARD) == 0  # not a guidance card
+
+
+# --------------------------------------------------------------------------- #
+# Rung 6b copy — the five remaining bodies
+# --------------------------------------------------------------------------- #
+
+#: The claim each page's guidance exists to make — the thing the page's
+#: own controls do not say. One per page, so a body rewritten for tone
+#: still has to carry its point. Whitespace-normalised, because the
+#: templates wrap these sentences and re-wrapping a paragraph should
+#: not break a test.
+PAGE_CLAIMS = {
+    "reviewers": (
+        "email address is the identity",
+        "replaces the whole roster",
+    ),
+    "reviewees": (
+        "cannot then be shown",
+        "their own results",
+    ),
+    "relationships": (
+        "Relationships do not decide who reviews whom.",
+        "context to one reviewer–reviewee",
+    ),
+    "observers": (
+        "an observer with no rule set sees nothing</strong> — not everything",
+        "without reviewing",
+    ),
+    "instruments": (
+        "one form reviewers fill in",
+        "assignment rule",
+    ),
+}
+
+
+def _guidance_body(body: str) -> str:
+    """The disclosure's prose, whitespace-normalised. Sliced from the
+    card's own markup rather than the whole page, so an assertion cannot
+    pass on a string that happens to appear elsewhere (base.html's
+    stylesheet has bitten this file three times)."""
+    start = body.index(CARD)
+    end = body.index("</details>", start)
+    return " ".join(body[start:end].split())
+
+
+def test_every_setup_page_states_its_own_invisible_fact(
+    client: TestClient, db: Session
+) -> None:
+    """Rule 2 of the copy: earn the disclosure by naming the
+    consequence the page's controls do not. These are the five claims
+    the bodies were written around."""
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.flush()
+
+    for page, claims in PAGE_CLAIMS.items():
+        prose = _guidance_body(
+            client.get(f"/operator/sessions/{session_id}/{page}").text
+        )
+        for claim in claims:
+            assert claim in prose, f"{page}: {claim!r}"
+
+
+def test_no_setup_page_still_carries_the_scaffold_placeholder(
+    client: TestClient, db: Session
+) -> None:
+    """The rung 6b placement slice shipped five bodies reading
+    "Guidance to follow". A page that kept one would still pass every
+    structural test in this file."""
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.flush()
+
+    for page, _flag in GATED_SETUP_PAGES:
+        assert "Guidance to follow" not in client.get(
+            f"/operator/sessions/{session_id}/{page}"
+        ).text, page
+    for page in SETUP_PAGES:
+        assert "Guidance to follow" not in client.get(
+            f"/operator/sessions/{session_id}/{page}"
+        ).text, page
+
+
+def test_the_five_bodies_link_into_the_guide_and_return_here(
+    client: TestClient, db: Session
+) -> None:
+    """Same contract the pilot pins, across the pages that came after
+    it: a fragment naming a real Guide section, and a `return_to` that
+    survives the allowlist. All five land on `create_and_set_up`."""
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.flush()
+
+    for page in PAGE_CLAIMS:
+        path = f"/operator/sessions/{session_id}/{page}"
+        prose = _guidance_body(client.get(path).text)
+        assert (
+            f'href="/guide?return_to={path}#guide-create_and_set_up"' in prose
+        ), page
+
+    guide = client.get(
+        f"/guide?return_to=/operator/sessions/{session_id}/reviewers"
+    )
+    assert guide.status_code == 200
+    assert 'id="guide-create_and_set_up"' in guide.text
+    assert "Back to Guidance" in guide.text
+
+
+def test_the_observers_copy_matches_the_empty_cohort_default() -> None:
+    """The one claim in this rung that was drafted wrong and caught in
+    review: an observer with no cohort rule sees **nothing**, not
+    everything. The copy is pinned to the behaviour it describes, so if
+    the default ever flips to open-by-absence the test fails here and
+    the sentence gets rewritten rather than quietly becoming a lie.
+
+    Read `guide/page_help_text.md`'s Observers callout for why this is
+    the more consequential direction: "sees everything" is a privacy bug
+    an operator would report, "sees nothing" is a silent failure they
+    would never think to look for.
+    """
+    assert not observer_has_rule(Observer(cohort_rule=None))
+    assert not observer_has_rule(Observer(cohort_rule={"rules": []}))
+    assert observer_has_rule(
+        Observer(cohort_rule={"rules": [{"field": "reviewer.tag1"}]})
+    )

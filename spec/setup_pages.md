@@ -115,10 +115,8 @@ Every Setup Page renders, top-to-bottom:
    *transient* page-level feedback — persistent explanation is not
    that.
 
-   **Rollout status.** All six pages carry the card. Email Template
-   carries real copy (rung 6a); the other five carry placeholder
-   bodies pending rung 6b's copy slice, drafted in
-   `guide/page_help_text.md`.
+   **Rollout status.** All six pages carry the card with real copy —
+   Email Template's landed at rung 6a, the other five at rung 6b.
 
 1. **Chrome** (`session-nav-card` partial — two-row top nav with the
    Setup row highlighted).
@@ -561,6 +559,18 @@ the tag schema is fixed at one slot.
 | 6 | Updated | — | `observer.updated_at` (`%Y-%m-%d %H:%M`) |
 
 ### Cohort match rule editor
+
+**The rule is what grants sight, not what narrows it.** An observer
+whose `cohort_rule` is null or carries an empty `rules` list matches
+**no** assignments — `observer_cohort.observer_has_rule` returns
+`False`, `materialize_cohort_assignments` short-circuits to
+`EMPTY_COHORT`, and the collation surface renders its empty-cohort
+message rather than a section list. So an observer saved without a rule
+is silently blind: the roster shows them `—` in the Cohort column and
+nothing warns the operator. The page's guidance card states this
+(Segment 19E rung 6b); `tests/integration/test_page_guidance.py`
+pins that sentence to this behaviour so a flipped default fails a test
+rather than turning the copy into a lie.
 
 The Observers page is the only Setup page with a per-observer
 rule-builder surface (no equivalent on Reviewers / Reviewees).
