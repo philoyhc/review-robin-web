@@ -270,20 +270,41 @@ rather than as they edit.
 <p>
   An instrument is <strong>one form reviewers fill in</strong>. Every
   session starts with one, ready to use, carrying a rating and a comments
-  question. Add more when a session needs parallel forms over the same
-  people — a peer review and a self review, say. Each carries its own
-  response fields (the questions) and display fields (the context a
-  reviewer sees while answering).
+  question. Each carries its own response fields (the questions) and
+  display fields (the context a reviewer sees while answering).
 </p>
 <p>
-  Each instrument also carries the <strong>assignment rule</strong> that
+  Each instrument carries the <strong>assignment rule</strong> that
   decides who reviews whom for that form. Editing the rule does not
   create pairs — they are generated when you <strong>Prepare</strong> the
-  session, and the Assignments page is where you check what came out. See
+  session. See
   <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
   and set up a session</a> in the Guide.
 </p>
+<p>
+  Add more when a session needs parallel forms over the same people — a
+  group based peer review and an individual based one, for instance.
+</p>
 ```
+
+**Revised by the author 2026-09-06**, after reading it on the page. Three
+changes, each removing something that competed with the paragraph's own
+point:
+
+- *"and the Assignments page is where you check what came out"* went. The
+  paragraph is about where pairs come from; naming the page you inspect
+  them on sends the reader somewhere else mid-sentence.
+- **"Add more when…" became its own third paragraph.** It was buried
+  inside the definition, where a reader looking for *what an instrument
+  is* had to step over *when to add another*. As a closing paragraph it
+  is the one thing an operator reading this card might act on.
+- The example changed from *a peer review and a self review* to **a group
+  based peer review and an individual based one**. Mine was the weaker
+  illustration: a self review is a different *population*, which the
+  reader may reasonably think needs a different session. Two peer reviews
+  differing only in their assignment rule is the case that actually needs
+  a second instrument — and it points straight at the rule the next
+  paragraph explains.
 
 ---
 
