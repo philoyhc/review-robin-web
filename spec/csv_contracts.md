@@ -521,43 +521,76 @@ shares. Public surface:
 
 ---
 
-## 5a. Setup templates (starter set)
+## 5a. Setup templates (starter + demo sets)
 
-A generic starter template set an operator downloads **before any
-session exists**, fills in, and uploads through Quick Setup.
+Two generic template sets an operator downloads **before any
+session exists**. Both carry the same four roster files and differ
+only in their rows.
 
-> Status: shipped (Segment 19E rung 4). Route:
-> `GET /templates/starter.zip` →
+> Status: shipped (Segment 19E rungs 4–5). Routes:
+> `GET /templates/starter.zip`, `GET /templates/demo.zip` →
 > `app/web/routes_templates.py`. Generator:
-> `app/services/setup_templates.py`. Filename:
-> `review-robin-setup-templates.zip`.
+> `app/services/setup_templates.py`. Filenames:
+> `review-robin-setup-templates.zip`,
+> `review-robin-demo-session.zip`.
 
-**Members.** Four roster files, one mock row each:
-`reviewers.csv`, `reviewees.csv`, `relationships.csv`,
-`observers.csv`. The Settings CSV is deliberately **not** in the
-set — it is a `field,value,data_type` dump of a whole live session
-rather than a row-shaped roster, so "one mock row" has no meaning
-for it; an operator sets those values in the form and builds
-instruments on the Instruments page. The rung 5 demo set is where a
-worked `settings.csv` appears.
+| Set | Rows | Job | Offered from |
+|---|---|---|---|
+| **starter** | one per file | *Edit this* — the format, with one example row to replace | Guide "Create and set up a session" card; lobby first-run card |
+| **demo** | six students, twelve pairs, two observers | *Watch this work* — a populated session to walk through | Guide "Sample session" card |
+
+**Members.** `reviewers.csv`, `reviewees.csv`,
+`relationships.csv`, `observers.csv`.
+
+**Neither set carries a `settings.csv`, and none is needed.** A new
+session is seeded with a default instrument
+(`ensure_default_instrument`) whose new-model rule defaults to Full
+Matrix, so the roster files alone carry a session to `validated` —
+asserted end-to-end by the round-trip test below. A settings file
+would also be the one artefact here that could not be derived: it
+is a `field,value,data_type` dump of a whole live session rather
+than a row-shaped roster, so there is no `HEADER` to take and its
+content would have to be authored.
+
+**The demo set's round trip is the acceptance test.** Download →
+Quick Setup submit-all → Prepare → `validated`, through the real
+import path rather than a fixture
+(`tests/integration/test_setup_template_download.py`). The test
+asserts the submit redirect carries no `quick_setup_error` flag,
+because a silently-skipped slot would still let the session
+validate on the remaining rosters. A second test asserts the roster
+counts and that assignments outnumber the reviewers — `validated`
+alone would be satisfied by a one-pair session, and the demo set
+exists so the Assignments page, the Responses grid and observer
+collation have something in them.
 
 **Derived, not authored.** Each member's header *is* the extract's
 own `HEADER` tuple, held by reference — `reviewers_extract.HEADER`
-and its three siblings. A column added to an extract reaches the
-template with no edit to the generator, and
+and its three siblings. A column added to an extract reaches both
+sets with no edit to the generator, and
 `tests/unit/test_setup_templates.py` asserts the identity (not
-equality) of each tuple. The single mock row is the one authored
-part, and it is authored per *column*: `SAMPLES` maps a column name
-to one cell, and a header column with no entry raises rather than
-emitting a short row.
+equality) of each tuple. Rows are the authored part, and each is a
+column-name → cell mapping checked against its header in both
+directions: a missing column raises rather than emitting a short
+row, and a cell for a column the header lacks fails the test. The
+two sets are the same generator with different inputs — every
+structural test runs against both, parameterised.
 
-**One coherent scenario.** The set is symmetrical peer review: two
-students in tutorial group `TW01` reviewing each other, with their
-tutor as the observer. `relationships.csv` names the addresses
-`reviewers.csv` and `reviewees.csv` define, both students share a
-tutor and group, and the pair context is a shared interest group —
-so the four files upload as one working single-pair session rather
-than four unrelated examples. Every address is `example.edu`.
+**One scenario, scaled.** Symmetrical peer review — students
+reviewing each other inside a tutorial group. The starter set is
+one pair in group `TW01` with their tutor observing; the demo set
+is two groups of three (`TW01`, `TW02`) with both tutors observing,
+and **every student appears as both reviewer and reviewee**, since
+a demo whose rosters were disjoint would teach the wrong shape and
+make self-review exclusion invisible. `relationships.csv` names
+only addresses the rosters define, and carries pair context on the
+group that has one and not the other, so the column does not read
+as required. No pair is a self-pair: self-review is a session
+toggle, not something a roster encodes. Every address is
+`example.edu`, so nothing could reach a real person once sending is
+switched on. Addresses are derived from names
+(`"Alex Student"` → `alex.student@example.edu`) rather than written
+per row, so a name and its address cannot drift apart across files.
 
 **Worked friendly labels in the headers.** The templates carry
 `<Column>.<label>` suffixes (§1a) as examples:
@@ -621,7 +654,8 @@ reach an operator who wants the templates while creating the session
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |
 | Quick Setup Slot 1–3 (Reviewers / Reviewees / Relationships) | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives | `spec/quick_setup_card_spec.md` |
 | Quick Setup Slot 4 (Settings) | In | `apply_session_config` | same |
-| Guide + lobby first-run card — Download setup templates | Out | `build_starter_zip` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one mock row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
+| Guide + lobby first-run card — Download setup templates | Out | `build_zip(starter)` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
+| Guide "Sample session" card — Download sample session data | Out | `build_zip(demo)` — the same four files populated with a two-group cohort (`GET /templates/demo.zip`). Reaches `validated` through Quick Setup with no configuration; see §5a. | §5a |
 
 ---
 
