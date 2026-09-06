@@ -1,138 +1,309 @@
 # Segment 19E — Operator onboarding
 
-**Status: stub — not started.** Carved out of Segment 20 on 2026-09-05
-when that segment was reserved for after the institutional Azure
-deployment concludes. Everything here needs the app, not the host, so
-there is no reason to hold it.
+**Status: planned 2026-09-06, not started.** Carved out of Segment 20 on
+2026-09-05 when that segment was reserved for after the institutional Azure
+deployment concludes; absorbed the short-lived 19F the same day. Everything
+here needs the app, not the host, so none of it is gated.
 
-Sibling of 19A (docs hygiene), 19B (code consistency) and 19C
-(behaviour / contract polish). This one is **operator onboarding** —
-the theme is new, which is why it is its own segment rather than a 19C
-item.
+Sibling of 19A (docs hygiene), 19B (code consistency) and 19C (behaviour /
+contract polish). This one is **operator onboarding** — the theme is new,
+which is why it is its own segment rather than a 19C item.
 
-> **Absorbed Segment 19F 2026-09-05, hours after both stubs were
-> written.** 19F ("starter artefacts" — Items 3 and 4 below) was split
-> out on the grounds that it is service/data work while Items 1 and 2
-> are view work. That is a distinction of **implementation layer, not
-> of theme**, and the rule is thematic (`CLAUDE.md` → "Working
-> approach": prefer an item on a live segment over a new segment when
-> the work shares a theme). All four items serve one first-time
-> operator getting oriented, which is how the original workplan §18
-> grouped them. The layer difference is real and survives as the
-> per-item notes below; it was never a reason for a second plan, a
-> second close sequence, and a second archive row.
+Four pieces of scope — workplan §18 items 1, 2, 4 and 5 — landing as a **six-rung PR ladder**; the Guide and the templates each split in two. Item 3 of that list (validation
+explanations) is **already shipped** — `ValidationRule.why` is populated for
+all 18 registered rules and renders as a "Why this check?" disclosure. Do not
+rebuild it; Item 4 below reuses its pattern.
 
 ---
 
 ## Opportunity
 
-A first-time operator arrives at the app with no orientation, and every
-gap compounds the next.
+A first-time operator arrives with no orientation, and every gap compounds the
+next.
 
-There is no entry point that says what a session is, what the five
-setup pages do, or what order to do them in. The setup pages themselves
-tell them *how to operate the form* (`.form-help`: "Fill in the new row
-below, then Save.") but never what the page is for. When they reach the
-first upload they must author three roster CSVs from a written
-description of the header grammar, with nothing correctly-shaped to
-start from — so the first upload is also the first time they find out
-whether they understood the format. And nothing lets them look at a
-populated session before they have successfully built one.
+There is no entry point that says what a session is, what the setup pages do,
+or what order to do them in. The setup pages tell them *how to operate the
+form* (`.form-help`: "Fill in the new row below, then Save.") but never what
+the page is for. At the first upload they must author three roster CSVs from a
+written description of the header grammar, with nothing correctly-shaped to
+start from — so the first upload is also the first time they find out whether
+they understood the format. And nothing lets them look at a populated session
+before they have successfully built one.
 
-`docs/quickstart.md` answers all of this, and a first-time operator does
-not know it exists.
+`docs/quickstart.md` answers all of it in 324 lines, and a first-time operator
+does not know it exists. Worse, it is a **document about an app, kept outside
+the app**: the 2026-09-05 sweep found it had gone stale once already, and
+nothing structural stops that recurring.
 
-Evidence (2026-09-05, tree at `9f3b31b3`): no route, template or nav
-entry matching "Start Here" anywhere in `app/`; `.form-help` appears on
-the reviewers / reviewees / relationships / validate pages and carries
-only per-form mechanics; no downloadable template or blank-CSV route;
-no seed, demo or fixture session in `app/`, `tools/` or the docs.
+Evidence (2026-09-06, tree at `be87b4ba`):
 
----
-
-## Scope — four items
-
-Workplan §18 items 1, 2, 4 and 5. Item 3 of that list (validation
-explanations) is **already shipped** — `ValidationRule.why` is
-populated for all 18 registered rules and renders as a "Why this
-check?" disclosure. Do not rebuild it.
-
-1. **Start Here page.** The in-app orientation entry point: what a
-   review session is, the five setup pages in order, what the operator
-   needs before they begin (a reviewer list, a reviewee list, a
-   relationship rule), and where the workflow goes after Validate.
-   Reachable from operator chrome.
-2. **Inline guidance on the setup screens.** One short, page-level
-   explanation per setup page, saying what the page is for and what a
-   good result looks like — distinct from the existing per-form
-   mechanics, and consistent across the five pages.
-3. **Sample CSV templates.** A correctly-shaped file per roster type —
-   reviewers, reviewees, relationships — plus session settings,
-   downloadable from the page that consumes it.
-4. **Sample session fixture.** A loadable example session an operator
-   can inspect end-to-end before building their own: roster, an
-   instrument, relationships, and enough responses to make the
-   Responses and Results surfaces show something.
-
-Items 1 and 2 are view-layer work. Items 3 and 4 reach into
-`app/services/` and create rows, which is why their constraints below
-are heavier — but they close the same gap and belong to the same
-reader.
+- No route, template or nav entry matching "Start Here" or "Guide" anywhere in
+  `app/`.
+- The workspace-level chrome carries **5** `chrome-link` entries (Settings ·
+  Admin · About · Sign out, plus the theme toggle). Orientation is not among
+  them.
+- `app/web/templates/operator/sessions_list.html` has **no empty state** — an
+  operator with zero sessions sees a table whose only message is "No sessions
+  match."
+- No downloadable template, blank-CSV route or sample file anywhere in `app/`.
+- No seed, demo or fixture session in `app/`, `tools/` or the docs.
 
 ---
 
-## Known constraints
+## Decision
 
-**Items 1–2 (view layer)**
+**A single role-aware `/guide` page becomes the canonical operator
+documentation, and `docs/quickstart.md` retires into it.** The Guide sits in
+the chrome link row beside `/about`, takes the same `?return_to=` treatment,
+and serves sections by the viewer's role — operator, reviewer, observer,
+reviewee.
 
-- **Scaffold-first is mandatory.** Per `CLAUDE.md` → "Working
-  approach", the Start Here page adds both a page and a navigation
-  affordance, so the first slice is the nav entry plus the page with
-  every card as a static placeholder — real copy and layout, inert
-  controls — and the wiring follows in later slices.
-- **No new visual primitive without a role.** Page-level guidance
-  needs a class in `base.html`, and it must map to a role in
-  `spec/ui_elements.md` or the question goes to the user first.
+*Rejected: keeping `docs/quickstart.md` and adding a page that mirrors it.*
+Two hand-maintained copies of the workflow is the drift this segment exists to
+stop, and quickstart has already drifted once.
 
-**Items 3–4 (service / data layer)**
+*Rejected: rendering `docs/quickstart.md` at request time.* Attractive — one
+source, two surfaces — but there is **no markdown renderer in
+`pyproject.toml`**, so it means a new runtime dependency and a `README.md`
+update for a page whose content changes a few times a year. The
+markdown-as-source shape can be revisited if the Guide ever grows past what a
+template comfortably holds.
 
-- **Derive, don't duplicate.** The templates must come from the
-  parsers / serializers in `app/services/` (the round-trip extract side
-  already emits exactly these shapes) — a hand-maintained CSV in the
-  repo is a second source of truth for `spec/csv_contracts.md` and will
-  drift. This is the central design decision of Item 3 and belongs in
-  its `## Decision`.
-- The fixture must not be creatable in a deployed environment by
-  accident, and must be clearly marked as sample data wherever it
-  appears.
-- A download affordance on an existing page is still a new affordance:
-  scaffold-first applies to Item 3 as well.
+*Rejected: putting orientation only in the lobby.* It arrives at the right
+moment but vanishes once the operator has a session, and there is nothing to
+link to from an onboarding email.
+
+**The lobby gets a first-run card**, not instead of the Guide but because the
+Guide has to be found. An operator with zero sessions is the one moment
+orientation is both most needed and cheapest to place.
+
+**Templates ship as two sets from one location.** A **starter** set — one mock
+row per file, for editing — and a **demo** set — populated enough to walk
+through. The demo set is the sample session: uploaded through Quick Setup it
+builds a working tutorial session **through the real import path**.
+
+*Rejected: a seeded fixture (a `tools/` script or a sys-admin-gated in-app
+action).* The Settings CSV already carries instruments
+(`app/services/session_config_io/_apply_instrument.py`), and Quick Setup's
+submit-all runs reviewers → reviewees → relationships → settings, so the four
+porting CSVs can build a complete session with no seeding code at all. That
+also removes the risk a seeding action carries: demo data appearing in a
+deployed environment by accident.
+
+*Rejected: a header-only "empty" template.* Two variants earn their keep only
+if they do different jobs; empty-versus-one-row do not. One row teaches the
+format, and it is the row an operator most often forgets to delete either way.
+Starter-versus-demo is the split that matters: **edit this** versus **watch
+this work**.
+
+**Inline per-page guidance reuses the shipped `<details>` disclosure** — the
+Validate page's "Why this check?"
+(`app/web/templates/operator/partials/validation_results.html:51`).
+
+*Rejected: tooltips.* They cannot hold a sentence, and they are invisible to
+touch and awkward for keyboard.
+
+*Rejected: the `.banner` family.* Segment 19C Item 8 established that it is
+specced **behaviourally** as transient page-level feedback — redirect-back,
+`.banner-scroll-target`, `margin-bottom`. Persistent explanation is not that.
+
+---
+
+## Semantics
+
+**Guide role resolution.** The page renders the sections a viewer's role
+entitles them to, not a role switcher. An operator who is also a reviewee sees
+both. A signed-in user with no role sees the reviewer/reviewee material plus
+the access help `/about` already carries — the "signed-in stranger" case 18R
+Item 6 introduced. The Guide never 404s for a signed-in user; the worst case
+is a short page.
+
+**Guide and `/about` stay separate.** `/about` is identity and access — what
+this software is, who to contact. `/guide` is how to run a session. The chrome
+carries both; neither absorbs the other.
+
+**quickstart retirement.** The file moves to `docs/archive/` rather than being
+deleted, so the sweep's dead-reference pass finds a retired file rather than a
+missing one. Every **live** inbound reference is repointed at `/guide`; archive
+references stay as history.
+
+**Lobby card trigger.** Shown when the signed-in operator has **zero** sessions
+visible to them — not "has never had one". An operator who archives everything
+sees it again, which is correct: they are back at the start.
+
+**Template derivation.** Both sets are generated from the serializers that
+already emit these shapes (`app/services/extracts/reviewers_extract.py`,
+`reviewees_extract.py`, `relationships_extract.py`, and
+`serialize_session_config` in `app/services/session_config_io/`), never
+hand-authored. A hand-maintained CSV is a second source of truth for
+`spec/csv_contracts.md` and will drift from the parser that reads it.
+
+**Template contents.** All addresses use `example.edu` — already the
+established convention at 1,845 uses against 88 `example.org` and 11
+`example.com`. The demo set must be large enough that assignments, the
+Responses grid and observer collation all show something; a one-reviewer
+session demonstrates none of them.
+
+**Demo set round-trip.** The demo set must survive its own import: download →
+Quick Setup submit-all → a session that reaches `validated` with no
+validation errors. That is the item's acceptance test, and it exercises the
+real path rather than a fixture's.
+
+**Inline guidance placement.** One `<details>` per setup page, page-level,
+above the existing per-form `.form-help` — which stays. Mechanics and purpose
+are different registers and should not merge.
+
+---
+
+## Judgment calls — decided
+
+- **`/guide` not `/start-here`** (2026-09-06). The page serves returning
+  operators looking something up as much as first-timers; "Start Here" names
+  only the first visit.
+- **Role-aware sections, not separate per-role pages** (2026-09-06). One URL
+  to link from an email, and the roles overlap in practice.
+- **Item 4 sequenced last** (2026-09-06). Per-page guidance has to speak the
+  Guide's vocabulary; writing them in parallel guarantees two voices.
+- **One segment-level `Doc impact`, tagged by PR rung rather than by item**
+  (2026-09-06). The four pieces of scope split unevenly across six PRs, so
+  item-level manifests would have needed `## Item n` headings that do not match
+  the ladder. Rung tags are documentation for the reader; every bullet takes the
+  segment window.
+
+---
+
+## Blast radius (measured)
+
+Taken 2026-09-06 at `be87b4ba`, before the first slice.
+
+| What | Count | Command |
+|---|---|---|
+| Live files referencing `quickstart` (archives excluded) | **11** | `grep -rln quickstart --include=*.md --include=*.py --include=*.html . \| grep -v '^./.git\|/archive/'` |
+| `chrome-link` entries in `base.html` | **5** | `grep -c 'chrome-link' app/web/templates/base.html` |
+| Setup-page templates for Item 4 | **5** | `ls app/web/templates/operator/ \| grep -E 'session_(reviewers\|reviewees\|relationships\|observers)\|instruments_index'` |
+| Tests touching `/about` or the lobby | **9** | `grep -rln "/about\|sessions_list" tests/ \| grep -v __pycache__` |
+| Serializers the templates derive from | **4** | `reviewers_extract.py`, `reviewees_extract.py`, `relationships_extract.py`, `serialize_session_config` |
+
+Named, not counted:
+
+- `app/web/routes_guide.py` is a **new routing module**, so it must be added to
+  `SPEC_COVERAGE` in `app/web/spec_registry.py` or
+  `tests/unit/test_spec_coverage.py` fails — the 19A Item 3 gate. `routes_about`
+  maps to `spec/operator_ui_concept.md` (`spec_registry.py:134`); the Guide
+  needs its own spec entry.
+- `app/web/routes_operator/_lobby.py:102` renders `sessions_list.html` — the
+  first-run card's host.
+- `tools/close_check.py:107` uses `docs/quickstart.md §4c` as a docstring
+  example of the section-reference regex; retirement makes it stale.
+- `app/services/extracts/zip_bundle.py` is the existing zip pattern the
+  template download reuses.
+
+---
+
+## PR ladder
+
+**1 — Guide scaffold.** `routes_guide.py`, the `/guide` template with every
+section as a static placeholder (real headings and layout, no real copy), the
+chrome link, `?return_to=` plumbing, the `spec_registry.py` entry. Must not
+move any quickstart content. Scaffold-first per `CLAUDE.md` → "Working
+approach": this adds both a page and a navigation affordance.
+
+**2 — Guide content + quickstart retirement.** Move the material in, add
+role-awareness, move `docs/quickstart.md` to `docs/archive/`, repoint the 11
+live references. Must not touch the lobby or templates.
+
+**3 — Lobby first-run card.** Scaffold and wiring together — one card on an
+existing page, no new nav. Must not change the lobby's table or filters.
+
+**4 — Starter template set.** Derivation from the four serializers, the
+download location, one mock row per file. Must not add a demo set.
+
+**5 — Demo template set.** The fuller data plus the round-trip test (download
+→ Quick Setup → `validated`). Must not change the derivation code rung 4
+lands, only its inputs.
+
+**6 — Inline page guidance.** One `<details>` per setup page, written against
+the Guide's settled vocabulary. Must not restate the Guide; it links there.
+
+---
+
+## Definition of done
+
+- `/guide` renders for every role, and for a signed-in user with none.
+- `docs/quickstart.md` is under `docs/archive/`; `grep -rln quickstart` over
+  live files returns only the archive pointer and the Guide's own references.
+- `app/web/spec_registry.py` maps `app.web.routes_guide`, and
+  `tests/unit/test_spec_coverage.py` passes.
+- An operator with zero sessions sees the first-run card; one with a session
+  does not.
+- Both template sets download from one location and are byte-generated by the
+  serializers — no CSV literal in the repo.
+- The demo set uploaded through Quick Setup produces a session that reaches
+  `validated` with zero validation errors, asserted by a test.
+- Every address in both sets is `example.edu`.
+- Each of the five setup pages carries one page-level `<details>`.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19E` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` records intended vs done
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
 
 ---
 
 ## Open questions
 
-- Does Start Here live under `/operator/` chrome, or is it also the
-  landing page for an operator with no sessions yet? — the user
-  decides when the segment starts.
-- Whether page-level guidance is always-visible prose or a
-  dismissible / collapsible band. Affects whether any browser-local UI
-  state is needed (`spec/settings_inventory.md`).
-- Header-only templates, or templates carrying two or three example
-  rows? Example rows teach the format better and are also the thing an
-  operator most often forgets to delete.
-- Is the fixture seeded by a `tools/` script (operator runs it), or by
-  an in-app action gated to sys-admins? The second is more discoverable
-  and more dangerous.
-- Whether the fixture's responses are generated or fixed. Fixed is
-  reproducible; generated exercises more of the shape.
+- **Should `/guide` be viewable without signing in?** Not decided, and
+  **deferred to Segment 20**: `resolve_current_user` raises
+  `HTTP_401_UNAUTHORIZED` today, so an anonymous Guide would be the app's first
+  unauthenticated surface — a change to `docs/security_posture.md` that also
+  needs Easy Auth configured to allow anonymous on that path, which is host
+  work. 19E ships the authenticated Guide; the public question travels with the
+  deployment. Decided by: the author, once the host exists.
+- **Where exactly does the template download live** — a card on the Guide, or a
+  tile in Extract Data? Leaning Guide, since that is where a newcomer is, but an
+  experienced operator refetching a template may look in Extract Data. Decided
+  by: the author at rung 4.
+- **How much of `docs/quickstart.md` survives the move.** Ten sections written
+  as a document may not map one-to-one onto a page. Decided at rung 2, recorded
+  in `## Status`.
 
 ---
 
 ## Out of scope
 
-- The operator guide itself — `docs/quickstart.md`, already shipped.
-- The CSV contract — `spec/csv_contracts.md` governs it and this
-  segment demonstrates it, never changes it.
-- Validation explanations — already shipped; see above.
-- Anything needing the deployed host; that is Segment 20.
+- **Participant-facing onboarding beyond the Guide's own sections.** The
+  reviewer `/me` and observer `/collation` surfaces have their own first-time
+  gaps; those are their specs' business, not this segment's.
+- **The administrator guide, institutional troubleshooting, and the docs
+  currency pass** — Segment 20, gated on the deployment.
+- **Validation explanations** (workplan §18 item 3) — already shipped.
+- **A markdown rendering pipeline.** Rejected in `## Decision`; revisit only if
+  the Guide outgrows a template.
+- **Operator-authored guide content.** The Guide is code-side copy. Anything
+  operator-editable is a different feature and belongs in
+  `guide/deferred_consolidated.md` if it is ever wanted.
+
+---
+
+## Doc impact
+
+Tags name **PR-ladder rungs**, not `## Item n` blocks — this segment plans as
+one whole with a ladder rather than independently-closing items, so there are
+no item headings for the close check to date a bullet from. Every bullet takes
+the segment window.
+
+- `spec/operator_ui_concept.md` — the `/guide` page: chrome placement beside
+  `/about`, role-aware sections, and the `?return_to=` treatment (PR 1).
+- `spec/audience_and_identity_model.md` — which roles see which Guide sections,
+  including the signed-in-no-role case (PR 2).
+- `spec/sessions_overview.md` — the lobby's first-run card and its
+  zero-sessions trigger (PR 3).
+- `spec/csv_contracts.md` — the two template sets, that they are derived from
+  the serializers rather than authored, and the `example.edu` convention
+  (PRs 4 + 5).
+- `spec/setup_pages.md` — the page-level `<details>` guidance in the shared body
+  shape (PR 6).
+- `docs/README.md` — `quickstart.md` retires to `docs/archive/`; the index
+  points at `/guide` (PR 2).
+- `docs/known_limitations.md` — repoint its quickstart reference (PR 2).
+- `docs/status.md` — a row per rung as it lands.
