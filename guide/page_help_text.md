@@ -274,16 +274,17 @@ rather than as they edit.
   display fields (the context a reviewer sees while answering).
 </p>
 <p>
+  Add more instruments when a session needs parallel forms over the same
+  people — a group based peer review and an individual based one, for
+  instance.
+</p>
+<p>
   Each instrument carries the <strong>assignment rule</strong> that
   decides who reviews whom for that form. Editing the rule does not
   create pairs — they are generated when you <strong>Prepare</strong> the
   session. See
   <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
   and set up a session</a> in the Guide.
-</p>
-<p>
-  Add more when a session needs parallel forms over the same people — a
-  group based peer review and an individual based one, for instance.
 </p>
 ```
 
@@ -294,10 +295,14 @@ point:
 - *"and the Assignments page is where you check what came out"* went. The
   paragraph is about where pairs come from; naming the page you inspect
   them on sends the reader somewhere else mid-sentence.
-- **"Add more when…" became its own third paragraph.** It was buried
-  inside the definition, where a reader looking for *what an instrument
-  is* had to step over *when to add another*. As a closing paragraph it
-  is the one thing an operator reading this card might act on.
+- **"Add more instruments when…" became its own paragraph**, and on a
+  second pass moved to the **middle**. It was originally buried inside
+  the definition, where a reader looking for *what an instrument is* had
+  to step over *when to add another*. Pulling it out fixed that; putting
+  it second fixed the rest. The card now runs *what one is* → *when you
+  want another* → *what each one controls*, which is the order the
+  questions arrive in. It also puts the Guide link back where a link
+  belongs — at the end of the card, not in the middle of it.
 - The example changed from *a peer review and a self review* to **a group
   based peer review and an individual based one**. Mine was the weaker
   illustration: a self review is a different *population*, which the
