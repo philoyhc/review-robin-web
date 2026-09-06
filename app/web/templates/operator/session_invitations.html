@@ -29,6 +29,15 @@
          chrome rollout (per spec/workflow_card.md); the
          Workflow card's Create / Send invites / Send reminders
          super-buttons carry those affordances now. #}
+      {# 19E — why four of the eight counters below never move. Email
+         delivery is Segment 14B, still in planning; without this the
+         page reads as broken rather than as not-yet-switched-on.
+         REMOVE WITH 14B — `guide/segment_14B_email_infrastructure.md`
+         carries the reciprocal note. #}
+      <p class="muted" style="margin-top: 0;">
+        Note: Invitation and reminder columns are inactive until email
+        sending is switched on.
+      </p>
       <p>
         Eligible reviewers
         <span class="pill pill-count">{{ eligible_count }}</span>

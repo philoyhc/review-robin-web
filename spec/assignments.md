@@ -538,6 +538,21 @@ Home + other Operations-row pages.
 
 ### Per-instrument status table
 
+Under the card's `<h2>`, a `.muted` line (Segment 19E):
+
+> Pairs are materialised from each instrument's rule and appear at
+> Prepare.
+
+The page's one non-obvious fact. Pairs are a **materialised
+derivative**, so there is no add-or-remove control here and an
+operator looking for one is looking on the wrong page — the change
+they want is the instrument's rule. Asserted in
+`tests/integration/test_page_guidance.py`.
+
+Deliberately *not* a `.page-guidance` card: those are a Setup page
+affordance for explaining a page's whole purpose, and one sentence
+about this card's own table does not need the idiom.
+
 Columns (left → right):
 
 | Column | Meaning |

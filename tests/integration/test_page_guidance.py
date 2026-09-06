@@ -369,3 +369,60 @@ def test_the_activated_lock_card_sits_above_the_columns(
 
     assert 'class="card lock"' in body
     assert body.index('class="card lock"') < body.index('class="card-columns"')
+
+
+# --------------------------------------------------------------------------- #
+# Inline notes on two Operations pages — Segment 19E
+# --------------------------------------------------------------------------- #
+
+
+def test_the_assignments_page_says_where_pairs_come_from(
+    client: TestClient, db: Session
+) -> None:
+    """The page's one invisible fact: pairs are a materialised
+    derivative, so an operator hunting for an add/remove control will
+    not find one — the change they want is upstream on the instrument's
+    rule. Inline rather than a guidance card; it is one sentence about
+    the card's own table, so it sits under that card's header."""
+    session_id = _session_id(client, db)
+
+    body = client.get(f"/operator/sessions/{session_id}/assignments").text
+    # Whitespace-normalised: the template wraps the sentence, so the
+    # rendered text carries newlines a literal match would trip on — and
+    # re-wrapping the paragraph should not break the test.
+    flat = " ".join(body.split())
+
+    assert (
+        "Pairs are materialised from each instrument's rule and appear "
+        "at Prepare." in flat
+    )
+    assert flat.index("Per-instrument status") < flat.index(
+        "Pairs are materialised"
+    )
+    assert body.count(CARD) == 0  # not a guidance card
+
+
+def test_the_invitations_page_says_why_the_counters_are_still(
+    client: TestClient, db: Session
+) -> None:
+    """Four of the eight counters never move until Segment 14B ships
+    email delivery. Without the note the page reads as broken rather
+    than as not-yet-switched-on.
+
+    **This assertion is expected to fail when 14B lands** — that is the
+    point. The note becomes false the moment sending is switched on, and
+    a red test is a better reminder than a comment nobody greps for.
+    `guide/segment_14B_email_infrastructure.md` carries the reciprocal
+    note.
+    """
+    session_id = _session_id(client, db)
+
+    body = client.get(f"/operator/sessions/{session_id}/invitations").text
+    flat = " ".join(body.split())
+
+    assert (
+        "Note: Invitation and reminder columns are inactive until email "
+        "sending is switched on." in flat
+    )
+    assert flat.index("inactive until email") < flat.index("Eligible reviewers")
+    assert body.count(CARD) == 0  # not a guidance card

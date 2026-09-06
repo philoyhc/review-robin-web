@@ -100,7 +100,25 @@ nudging individual reviewers throughout the session.
 
 ### Info card — eight lifecycle counters
 
-A single inline middle-dot prose row carrying eight counters:
+Opens with a `.muted` note on its own row, **above** the counters
+(Segment 19E):
+
+> Note: Invitation and reminder columns are inactive until email
+> sending is switched on.
+
+Four of the eight counters cannot move until Segment 14B ships email
+delivery, and without the note a page of stuck counters reads as
+broken rather than as not-yet-switched-on. **Retire this note with
+14B** — `guide/segment_14B_email_infrastructure.md` lists it, and
+`tests/integration/test_page_guidance.py` asserts it, so the
+assertion fails when the claim stops being true.
+
+This is deliberately *not* a `.page-guidance` card. Those are a Setup
+page affordance for explaining a page's whole purpose; one sentence
+about one card's own counters does not need the idiom, and spreading
+it thin would weaken it where it does work.
+
+Then a single inline middle-dot prose row carrying eight counters:
 
 ```
 Eligible reviewers N · Invitations created M · Invitations sent K ·
