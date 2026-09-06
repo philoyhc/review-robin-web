@@ -281,13 +281,15 @@
   {# Page status info — a half-width info card on the left (deadline +
      accepting counts + the Expand all / Collapse all bulk controls) and
      the half-width guidance card on the right (19E rung 6b).
-     ``page-grid`` (1fr 1fr, stretched alignment) keeps both cards the
-     same height. The bulk visibility-when-closed toggle retired in
+     ``card-columns`` (1fr 1fr, start-aligned) makes each side an
+     independent stack, so opening the guidance grows only its own
+     column rather than dragging the deadline card's height with it. The bulk visibility-when-closed toggle retired in
      18R Item 3 — visibility when closed is now governed by the
      per-instrument visibility policy. #}
-  <div class="page-grid">
+  <div class="card-columns">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
+    <div>
     <div class="card">
       <p style="margin: 0;">
         Session deadline (auto-close):
@@ -312,10 +314,15 @@
         <button class="btn secondary" type="button" data-instruments-collapse-all>Collapse all instruments</button>
       </div>
     </div>
-    {% call page_guidance.guidance() %}
-      <p>Guidance to follow — placement scaffold only (19E rung 6b).
-        Draft copy is in <code>guide/page_help_text.md</code>.</p>
-    {% endcall %}
+    </div>
+
+    <div>
+      {% call page_guidance.guidance() %}
+        <p>Guidance to follow — placement scaffold only
+          (19E rung 6b). Draft copy is in
+          <code>guide/page_help_text.md</code>.</p>
+      {% endcall %}
+    </div>
   </div>
 
   {% if is_ready %}

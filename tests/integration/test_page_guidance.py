@@ -9,6 +9,8 @@ just the one page's copy.
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -184,3 +186,92 @@ def test_the_instruments_bulk_toggles_moved_into_the_deadline_card(
         "data-instruments-expand-all"
     )
     assert body.index("data-instruments-expand-all") < body.index(CARD)
+
+
+# --------------------------------------------------------------------------- #
+# Column stacks — 19E rung 6b tweak
+# --------------------------------------------------------------------------- #
+
+_VOID_ELEMENTS = frozenset(
+    "area base br col embed hr img input link meta param source track wbr".split()
+)
+
+
+class _NestingCheck(HTMLParser):
+    """Reports tags closed out of order, and tags left open at EOF."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.stack: list[str] = []
+        self.errors: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: object) -> None:
+        if tag not in _VOID_ELEMENTS:
+            self.stack.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _VOID_ELEMENTS:
+            return
+        if not self.stack:
+            self.errors.append(f"</{tag}> with nothing open")
+        elif self.stack[-1] != tag:
+            self.errors.append(f"</{tag}> closed <{self.stack[-1]}>")
+            if tag in self.stack:
+                while self.stack and self.stack.pop() != tag:
+                    pass
+        else:
+            self.stack.pop()
+
+
+def test_every_setup_page_nests_correctly(
+    client: TestClient, db: Session
+) -> None:
+    """Wrapping cards in column stacks means hand-balancing `<div>`s
+    across Jinja conditionals, and an unbalanced one renders a page that
+    still returns 200 and still contains every string a content test
+    looks for — the layout is simply wrong. This is the check that
+    catches it: it found a missing `</div>` on three pages that the rest
+    of the suite passed clean.
+    """
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.observers_enabled = True
+    review_session.relationships_enabled = True
+    db.flush()
+
+    for page in (*SETUP_PAGES, "relationships", "observers"):
+        parser = _NestingCheck()
+        parser.feed(client.get(f"/operator/sessions/{session_id}/{page}").text)
+
+        assert parser.errors == [], (page, parser.errors)
+        assert parser.stack == [], (page, parser.stack)
+
+
+def test_the_observers_guidance_leads_the_left_column(
+    client: TestClient, db: Session
+) -> None:
+    """Top left, above the cohort editor and in the same column — so
+    opening it pushes the cohort editor down and leaves the Operator
+    actions card in the right column untouched."""
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.observers_enabled = True
+    db.flush()
+
+    body = client.get(f"/operator/sessions/{session_id}/observers").text
+
+    # Markup markers, not bare class names: both classes are also
+    # styled in base.html, and a bare-name index finds the stylesheet.
+    assert body.index(CARD) < body.index('id="observers-cohort-heading"')
+    assert body.index(CARD) < body.index('class="card operator-actions-card"')
+
+
+def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:
+    """`align-items: start` is what makes the two columns independent —
+    the grid default, `stretch`, would make both as tall as the taller
+    and defeat the whole point."""
+    body = client.get("/guide").text  # any page: the rule lives in base.html
+
+    assert ".card-columns {" in body
+    columns_rule = body.split(".card-columns {")[1].split("}")[0]
+    assert "align-items: start" in columns_rule

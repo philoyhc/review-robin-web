@@ -1064,6 +1064,23 @@
       .page-grid > .card-l  { grid-column: 1; grid-row: 1 / span 2; }
       .page-grid > .card-tr { grid-column: 2; grid-row: 1; }
       .page-grid > .card-br { grid-column: 2; grid-row: 2; }
+      /* Two independent column stacks — 19E rung 6b tweak. Unlike
+         .page-grid / .bottom-grid, which lay cards out in ROWS, each
+         child here is a *column* that stacks its own cards. A card
+         that grows — the guidance card opening — pushes down only what
+         sits below it in its own column; the other column neither
+         moves nor stretches to match. ``align-items: start`` is what
+         buys that: the default ``stretch`` would make both columns as
+         tall as the taller one. */
+      body.ui-v2 .card-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+      /* Grid children default to ``min-width: auto``, which lets a wide
+         table or a long unbroken string push a column past its share. */
+      body.ui-v2 .card-columns > * { min-width: 0; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1438,6 +1455,12 @@
         background: var(--card-help-bg);
         border-color: var(--card-help-border);
         color: var(--card-help-fg);
+        /* Closed, the card is one line and should look it. Tighter than
+           a normal .card's 20px, and ``align-self: start`` so a grid
+           that stretches its row (``.page-grid``) cannot inflate it to
+           a neighbour's height. */
+        padding: 12px 16px;
+        align-self: start;
       }
       /* Chevron instead of the native disclosure triangle: it reads as
          "there is more below" rather than as a list marker, and it

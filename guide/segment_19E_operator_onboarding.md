@@ -240,6 +240,19 @@ are different registers and should not merge.
   over them. The rung 6a test that pinned the old ordering is replaced, not
   deleted — it now pins the new one.
 
+- **The top half-width cards are column stacks, not a row**
+  (2026-09-06, author, after seeing the scaffold). `.card-columns` —
+  `1fr 1fr`, `align-items: start`, each child a column stacking its own
+  cards. A row grid makes the two halves share a height, so opening the
+  guidance dragged its neighbour taller; columns confine the growth to
+  the column that grew. The guidance card also gets `align-self: start`
+  and tighter padding so it is one line tall when closed.
+
+  **Observers' guidance moves to the top left**, above the cohort editor
+  and in the same column — which is what the empty top-left slot the
+  scaffold left was telling us. Opening it now pushes the cohort editor
+  down and leaves `Operator actions` alone in the right column.
+
 - **One segment-level `Doc impact`, tagged by PR rung rather than by item**
   (2026-09-06). The four pieces of scope split unevenly across six PRs, so
   item-level manifests would have needed `## Item n` headings that do not match
@@ -606,6 +619,38 @@ behaviour:
 
 Mutation-checked: adding `open` to the macro fails the closed-by-default test
 and nothing else.
+
+**2026-09-06 — rung 6b tweaks: column stacks, minimal closed height, Observers
+to the left.** The scaffold answered the questions it was landed to ask, and
+all three answers were changes.
+
+**A silent bug the whole suite missed, and the check that now catches it.**
+Rewrapping cards in column stacks means hand-balancing `<div>`s across Jinja
+conditionals. My edit to the three roster pages left one `</div>` unclosed —
+an `if` branch with no `else`, so the closing replacement never ran — and
+**2782 tests passed**. The pages returned 200 and still contained every string
+the content tests look for; only the layout was wrong. An HTML-nesting test
+now parses all six Setup pages and asserts nothing is closed out of order or
+left open. Mutation-checked by deleting a `</div>`.
+
+That is the general shape of the risk here: markup structure is invisible to
+tests that assert on strings, and every test in this file was a string
+assertion.
+
+**The same string-versus-markup trap, twice more.** An ordering assertion
+using the bare class name `operator-actions-card` compared against
+**base.html's stylesheet**, not the card — the CSS rule sits ~88 KB earlier in
+the response than the markup, so the assertion failed while the layout was
+correct. Both new ordering assertions now use markup markers
+(`class="card operator-actions-card"`, `id="observers-cohort-heading"`). This
+is the third instance of the same mistake in this rung; the rule is that any
+assertion naming a class must include enough of the tag to exclude the
+stylesheet.
+
+**Observers' empty top-left slot resolved itself.** The scaffold flagged it as
+a looking question; moving the guidance there is the answer, and it also makes
+the column stack meaningful — guidance above the editor it explains, with the
+actions card untouched beside them.
 
 ---
 
