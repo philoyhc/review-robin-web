@@ -40,20 +40,6 @@
     </div>
   {% endif %}
 
-  {# 19E rung 6b scaffold — guidance card, half width, top right,
-     in its own row above the Cohort match rule row. The left slot is
-     an empty spacer: the author placed the card top-right, and the
-     cohort editor below it is left-aligned, so the two are diagonal
-     rather than stacked. Worth a look on the slot — if the gap reads
-     wrong, the fix is to move the card, not to fill the gap. #}
-  <div class="bottom-grid">
-    <div></div>
-    {% call page_guidance.guidance() %}
-      <p>Guidance to follow — placement scaffold only (19E rung 6b).
-        Draft copy is in <code>guide/page_help_text.md</code>.</p>
-    {% endcall %}
-  </div>
-
   {# Top row: Cohort match rule editor (left) + Operator
      actions card (right). Half-and-half via .bottom-grid.
      - Left card (Cohort): visible whenever the session isn't
@@ -64,14 +50,24 @@
      - Right card (Operator actions): hidden during
        ``is_ready`` (lock-card pattern) and rendered with
        ``is-locked`` styling during edit mode.
-     When only one of the two should render, the other slot
-     is an empty ``<div>`` spacer so the grid stays
-     half-half. Upload card moves below the table (mirrors
+     19E rung 6b: two independent column stacks rather than one
+     row. The guidance card leads the LEFT column with the cohort
+     editor beneath it, so opening the guidance pushes the cohort
+     editor down and leaves the Operator actions card alone. The
+     container always renders now — the guidance is unconditional
+     even when both of the other two slots are hidden, so the old
+     ``{% if either %}`` guard moved inwards to the cards it
+     actually gates. Upload card stays below the table (mirrors
      Reviewers / Reviewees layout). #}
   {% set _show_cohort_slot = not edit_mode and not is_archived %}
   {% set _show_actions_slot = not is_ready %}
-  {% if _show_cohort_slot or _show_actions_slot %}
-  <div class="bottom-grid">
+  <div class="card-columns">
+    <div>
+      {% call page_guidance.guidance() %}
+        <p>Guidance to follow — placement scaffold only
+          (19E rung 6b). Draft copy is in
+          <code>guide/page_help_text.md</code>.</p>
+      {% endcall %}
     {% if _show_cohort_slot %}
       <div class="card">
         <h2 id="observers-cohort-heading" style="margin-top: 0;">Cohort match rule</h2>
@@ -162,10 +158,10 @@
           </div>
         </div>
       </div>
-    {% else %}
-      <div></div>
     {% endif %}
+    </div>
 
+    <div>
     {% if _show_actions_slot %}
     <div class="card operator-actions-card">
       <h2 style="margin-top: 0;">Operator actions</h2>
@@ -253,11 +249,9 @@
         </div>
       {% endif %}
     </div>
-    {% else %}
-      <div></div>
     {% endif %}
+    </div>
   </div>
-  {% endif %}
 
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}

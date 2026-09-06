@@ -56,15 +56,24 @@ Every Setup Page renders, top-to-bottom:
 
    Width comes from the grid slot the page puts it in, never from the
    macro; the macro's optional argument is a grid-position class
-   (`card-tr` and friends) and carries no styling. Per-page
-   placements:
+   (`card-tr` and friends) and carries no styling. Closed, the card is
+   one line: `padding: 12px 16px` and `align-self: start`, so a
+   stretching grid cannot inflate it to a neighbour's height.
+
+   **The top half-width cards sit in `.card-columns`, not a row
+   grid.** `.card-columns` is `1fr 1fr` with `align-items: start`, and
+   each child is a *column* that stacks its own cards — so opening the
+   guidance pushes down only what is below it in its own column, and
+   the other column neither moves nor stretches. That is the whole
+   reason the primitive exists; `.page-grid` and `.bottom-grid` lay
+   cards out in rows and would drag the neighbour's height along.
 
    | Page | Placement |
    |---|---|
-   | Reviewers / Reviewees / Relationships | `Fields with data` card at half width, guidance to its right in the same `.bottom-grid` row |
-   | Observers | Half width, top right, own `.bottom-grid` row above `Cohort match rule` |
+   | Reviewers / Reviewees / Relationships | `.card-columns` — `Fields with data` leads the left column, guidance the right |
+   | Observers | `.card-columns` — guidance leads the **left** column with `Cohort match rule` beneath it; `Operator actions` alone in the right |
    | Email Template | `.page-grid` — composer spans both left rows (`card-l`), guidance `card-tr`, merge tags `card-br` |
-   | Instruments | Right slot of the existing `.page-grid`; the `Expand all` / `Collapse all` toggles moved into the left `Session deadline` card to free it |
+   | Instruments | `.card-columns` — `Session deadline` left, guidance right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
 
    The summary wording is
    fixed in the macro rather than passed per page, because it is a
