@@ -267,15 +267,19 @@ Each element entry follows the same shape:
 > modifier does not render.
 > *Current:* `.rs-help-grid`, `.rs-help-card` in `base.html`, on
 > their own `--card-help-bg` / `-border` / `-fg`
-> family (`#e5e7eb` / `#d1d5db` / `#111827` light,
-> `#232c3b` / `#2b3547` / `#e6eaf2` dark) — the shape
+> family (`#e5e7eb` / `#9ca3af` / `#111827` light,
+> `#232c3b` / `#3a465c` / `#e6eaf2` dark) — the shape
 > `.danger-zone` already uses. **Shared since 19E rung 6a with
 > `.page-guidance`**, the Setup pages' guidance disclosure, which is
 > why the theme customizer's facet is named `Help card` rather than
 > `Instrument help card`.
-> *Canonical:* a **slab with a soft edge** — `--card-help-border` is
-> one step darker than the fill, ~1.5:1 against the page in both
-> themes: enough shape to sit alone in a column, not an outline.
+> *Canonical:* a **slab with a defined edge** — `--card-help-border` is
+> darker than the fill: **2.54:1** against the page in light, **1.95:1**
+> in dark. Enough to sit alone in a column and read as bounded; still
+> short of the 3:1 a UI-component boundary needs, so it is decoration
+> rather than a control edge. *(Deepened 2026-09-06 from ~1.5:1 in both
+> themes; the earlier value was chosen while the slab still sat inside
+> another card.)*
 > *(Through 19C Item 8 the border resolved to the fill's own
 > primitive so the 2px `.card` edge vanished entirely; right while
 > the slab sat inside another card, wrong once `.page-guidance` made

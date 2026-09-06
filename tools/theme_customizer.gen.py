@@ -314,7 +314,7 @@ contrast_rows = "\n".join(
     for label, fg, bg in PAIRS
 )
 contrast_section = f"""    <section class="tc-sec">
-      <h2 class="tc-h">Contrast (AA) — live WCAG ratio per semantic bg/text pair, ACTIVE theme (target 4.5:1)</h2>
+      <h2 class="tc-h">Contrast — live WCAG ratio per semantic bg/text pair, ACTIVE theme. <strong>Flagged below 3:1</strong>; pairs that also clear AA for normal text (4.5:1) are badged <code>AA</code>. Every pair here is body text, so 4.5:1 is its real AA line — 3:1 is the working floor this tool gates on, not a claim of compliance.</h2>
       <div class="tc-cx-grid">
 {contrast_rows}
       </div>
@@ -461,6 +461,7 @@ editor_css = r"""
     .tc-cx-ratio { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--text-subtle); min-width: 58px; text-align: right; }
     .tc-cx-badge { font-size: 0.66rem; font-weight: 600; padding: 1px 8px; border-radius: 9999px; min-width: 34px; text-align: center; }
     .tc-cx-badge.pass { background: var(--status-success-bg); color: var(--status-success-fg); }
+    .tc-cx-badge.warn { background: var(--status-warning-bg); color: var(--status-warning-fg); }
     .tc-cx-badge.fail { background: var(--status-error-bg); color: var(--status-error-fg); }
 """
 
@@ -480,6 +481,41 @@ editor_js = r"""  <script>
     var undoStack = [];
     var savedSnapshot = null;   // last Save (also mirrored to localStorage)
     function snapshot() { return { prims: clone(model.prims), semL: clone(model.semL), semD: clone(model.semD) }; }
+
+    // Any document from OUTSIDE this build — a saved library, Revert, or
+    // Import JSON — is MERGED OVER the build-time defaults, never used to
+    // replace them. Replacing loses every token added since the document
+    // was written, silently: a library saved before --violet-bright landed
+    // re-exported 79 primitives out of an 80-primitive build, and the
+    // missing one only surfaced because someone diffed the file by hand.
+    // Missing keys keep their default (the document had no opinion about a
+    // token that did not exist yet); keys the document carries win; keys
+    // this build does not know are kept rather than discarded — they are
+    // someone's data — and both counts are reported, so a mismatch is never
+    // silent. Accepts the snapshot shape {prims, semL, semD} and the export
+    // shape {primitives, semantic: {light, dark}}.
+    var hydrateNote = "";
+    function hydrate(doc) {
+      var src = doc.prims
+        ? { prims: doc.prims, semL: doc.semL, semD: doc.semD }
+        : { prims: doc.primitives,
+            semL: (doc.semantic || {}).light, semD: (doc.semantic || {}).dark };
+      var out = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) };
+      var defaulted = 0, foreign = 0;
+      ["prims", "semL", "semD"].forEach(function (key) {
+        var have = out[key], want = src[key] || {};
+        Object.keys(have).forEach(function (k) { if (!(k in want)) defaulted++; });
+        Object.keys(want).forEach(function (k) {
+          if (!(k in have)) foreign++;
+          have[k] = want[k];
+        });
+      });
+      hydrateNote = (defaulted || foreign)
+        ? " · loaded document: " + defaulted + " token(s) kept at this build's default, "
+          + foreign + " carried that this build does not have"
+        : "";
+      return out;
+    }
     function eq(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
     function pushUndo() { undoStack.push(snapshot()); if (undoStack.length > 60) undoStack.shift(); }
     // coalesce a burst of continuous edits (colour-picker drag) into one undo step
@@ -524,10 +560,13 @@ editor_js = r"""  <script>
       document.querySelectorAll(".tc-cx").forEach(function (row) {
         var fg = resolve(row.getAttribute("data-fg")), bg = resolve(row.getAttribute("data-bg"));
         if (!fg || !bg) return;
-        var r = contrast(fg, bg), pass = r >= 4.5;
+        var r = contrast(fg, bg), pass = r >= 3.0;
         row.querySelector(".tc-cx-ratio").textContent = r.toFixed(2) + ":1";
         var b = row.querySelector(".tc-cx-badge");
-        b.textContent = pass ? "AA" : "AA ✗"; b.className = "tc-cx-badge " + (pass ? "pass" : "fail");
+        // Three states, because gating at 3:1 must not make the tool claim
+        // AA for a body-text pair that does not reach 4.5:1.
+        var tier = r >= 4.5 ? ["AA", "pass"] : pass ? ["3:1", "warn"] : ["✗", "fail"];
+        b.textContent = tier[0]; b.className = "tc-cx-badge " + tier[1];
       });
     }
 
@@ -594,7 +633,7 @@ editor_js = r"""  <script>
       var el = document.querySelector("[data-status]");
       if (el) {
         var state = !dirty ? (savedSnapshot ? "saved" : "no changes") : (savedSnapshot ? "unsaved changes since save" : "unsaved changes");
-        el.innerHTML = "Editing <strong>" + mode + "</strong> · " + state;
+        el.innerHTML = "Editing <strong>" + mode + "</strong> · " + state + hydrateNote;
       }
       refreshTools();
       refreshOrphans();
@@ -655,7 +694,7 @@ editor_js = r"""  <script>
       });
       if (act === "revert") el.addEventListener("click", function () {
         if (!savedSnapshot) return;
-        markDiscrete(); model = clone(savedSnapshot); applyActive();
+        markDiscrete(); model = clone(savedSnapshot); applyActive();  // already hydrated
       });
       if (act === "defaults") el.addEventListener("click", function () {
         markDiscrete(); model = { prims: clone(D.prims), semL: clone(D.semLight), semD: clone(D.semDark) }; applyActive();
@@ -673,7 +712,7 @@ editor_js = r"""  <script>
             var j = JSON.parse(r.result);
             if (j.primitives && j.semantic) {
               markDiscrete();
-              model = { prims: clone(j.primitives), semL: clone(j.semantic.light), semD: clone(j.semantic.dark) };
+              model = hydrate(j);
               applyActive();
             } else { alert("JSON needs { primitives, semantic: { light, dark } }."); }
           } catch (e) { alert("Bad JSON: " + e); }
@@ -911,7 +950,11 @@ editor_js = r"""  <script>
       var raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         var s = JSON.parse(raw);
-        if (s && s.prims && s.semL && s.semD) { savedSnapshot = s; model = clone(s); }
+        if (s && s.prims && s.semL && s.semD) {
+          // Hydrate BOTH, so the page loads clean rather than reporting
+          // "unsaved changes" purely because the build gained a token.
+          savedSnapshot = hydrate(s); model = clone(savedSnapshot);
+        }
       }
     } catch (e) { /* private mode / disabled / bad data */ }
 
