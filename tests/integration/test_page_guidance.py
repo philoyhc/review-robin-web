@@ -304,9 +304,9 @@ def test_the_roster_pages_put_every_top_card_in_one_column_container(
         # Left column in full, then right column in full — the source
         # order only a single container of two column stacks produces.
         order = [
-            body.index("Fields with data:"),
-            body.index("field-labels-form"),
             body.index(CARD),
+            body.index("field-labels-form"),
+            body.index("Fields with data:"),
             body.index('class="card operator-actions-card"'),
         ]
         assert order == sorted(order), (page, order)

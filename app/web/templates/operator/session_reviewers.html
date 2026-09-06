@@ -47,10 +47,10 @@
   {% endif %}
 
   {# 19E rung 6b — every card above the preview table in two
-     independent column stacks: "Fields with data" then the tag-label
-     editor on the left, the guidance card then Operator actions on the
-     right. Opening the guidance grows only the right column, and the
-     left one neither moves nor stretches.
+     independent column stacks: the guidance card then the tag-label
+     editor on the left, "Fields with data" then Operator actions on the
+     right. Opening the guidance grows only the left column, and the
+     right one neither moves nor stretches.
 
      The Activated lock card sits ABOVE the container rather than
      between the two pairs (where it used to be, splitting them into
@@ -58,6 +58,29 @@
      two-column stack would have to span, which `.card-columns` does
      not do. Its notice reads at the top of the page anyway. #}
   <div class="card-columns">
+    <div>
+      {% call page_guidance.guidance() %}
+        <p>Guidance to follow — placement scaffold only
+          (19E rung 6b). Draft copy is in
+          <code>guide/page_help_text.md</code>.</p>
+      {% endcall %}
+
+    {% set field_labels_form_action =
+          "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
+    {% set field_labels_source_type = "reviewer" %}
+    {% set field_labels_card_title = "Reviewer tag labels" %}
+    {% set field_labels_help =
+          "Rename the three reviewer tag columns for this session. " ~
+          "Friendly labels flow through every operator preview surface; " ~
+          "leave a cell blank to fall back to the default." %}
+    {% set field_labels_rows = [
+          [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
+    ] %}
+    {% include "operator/partials/_field_labels_editor.html" %}
+
+    
+    </div>
+
     <div>
       <div class="card">
     <p style="margin: 0;">
@@ -82,29 +105,6 @@
       </p>
     {% endif %}
       </div>
-
-    {% set field_labels_form_action =
-          "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
-    {% set field_labels_source_type = "reviewer" %}
-    {% set field_labels_card_title = "Reviewer tag labels" %}
-    {% set field_labels_help =
-          "Rename the three reviewer tag columns for this session. " ~
-          "Friendly labels flow through every operator preview surface; " ~
-          "leave a cell blank to fall back to the default." %}
-    {% set field_labels_rows = [
-          [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-    ] %}
-    {% include "operator/partials/_field_labels_editor.html" %}
-
-    
-    </div>
-
-    <div>
-      {% call page_guidance.guidance() %}
-        <p>Guidance to follow — placement scaffold only
-          (19E rung 6b). Draft copy is in
-          <code>guide/page_help_text.md</code>.</p>
-      {% endcall %}
 
     <div class="card operator-actions-card">
       <h2>Operator actions</h2>
