@@ -452,7 +452,7 @@ PAGE_CLAIMS = {
         "context to one reviewer–reviewee",
     ),
     "observers": (
-        "an observer with no rule set sees nothing</strong> — not everything",
+        "an observer with no rule set sees nothing</strong>.",
         "without reviewing",
     ),
     "instruments": (

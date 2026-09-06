@@ -236,8 +236,7 @@ saved, and left silently blind, with nothing on this page saying so.
 <p>
   Each observer's <strong>cohort match rule</strong> decides which
   reviewees they may see, and <strong>an observer with no rule set sees
-  nothing</strong> — not everything. Their results page stays empty
-  until a rule is saved. What they see of each response — full,
+  nothing</strong>. Their results page stays empty until a rule is saved. What they see of each response — full,
   anonymised, or summarised — is set per instrument, not here. See
   <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
   and set up a session</a> in the Guide.
