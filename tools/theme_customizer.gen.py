@@ -412,6 +412,10 @@ editor_css = r"""
     .tc-c-users { list-style: none; margin: 0; padding: 0; }
     .tc-c-users li { font-size: 0.76rem; color: var(--text-body); padding: 1px 0; }
     .tc-c-users .tc-c-none { color: var(--text-dim); font-style: italic; }
+    /* Literal red for the same reason as .tc-orphan — diagnostic chrome must
+       not be editable out of visibility by the palette it reports on. */
+    .tc-c-orphan { font-size: 0.76rem; color: #dc2626; border: 1px solid #dc2626;
+      background: rgba(220, 38, 38, 0.10); border-radius: 6px; padding: 6px 8px; margin: 10px 0 0; }
     .tc-part { box-sizing: border-box; padding: 18px 20px 32px; }
     .tc-part-b { border-top: 1px solid var(--border-default); }
     .tc-part-h { margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
@@ -426,7 +430,15 @@ editor_css = r"""
     .tc-fam { margin: 12px 0; }
     .tc-fam-h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 6px; }
     .tc-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--tc-gap); }
-    .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
+    .tc-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
+    .tc-chip.tc-picked { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+    /* Unreferenced primitive — no semantic token in EITHER theme resolves to
+       it. Literal colours, not tokens: this is diagnostic chrome, and a marker
+       painted in the palette under test can be edited into invisibility.
+       Semi-transparent so it reads over both themes' chip backgrounds. */
+    .tc-chip.tc-orphan { border-color: #dc2626; background: rgba(220, 38, 38, 0.12); }
+    .tc-chip.tc-orphan .tc-name::after { content: " unreferenced"; color: #dc2626; font-size: 0.62rem;
+      text-transform: uppercase; letter-spacing: 0.05em; }
     .tc-color { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border-default); border-radius: 4px; background: none; cursor: pointer; flex: none; }
     body.ui-v2 .tc-chip input.tc-hex { width: 58px; font-family: ui-monospace, monospace; font-size: 0.68rem; padding: 2px 4px; flex: none; box-sizing: border-box; letter-spacing: -0.01em; }
     .tc-name { flex: 1; min-width: 0; font-size: 0.72rem; color: var(--text-subtle); line-height: 1.2; }
@@ -584,12 +596,17 @@ editor_js = r"""  <script>
         el.innerHTML = "Editing <strong>" + mode + "</strong> · " + state;
       }
       refreshTools();
+      refreshOrphans();
       renderSelected();
     }
 
     // ---- wiring ----
     document.querySelectorAll(".tc-chip").forEach(function (c) {
       var n = c.getAttribute("data-prim"), col = c.querySelector(".tc-color"), hex = c.querySelector(".tc-hex");
+      c.addEventListener("click", function (ev) {
+        if (ev.target === col || ev.target === hex) return;  // editing, not selecting
+        selectPrimitive(n, c);
+      });
       col.addEventListener("input", function () { markContinuous(); hex.value = col.value; setPrim(n, col.value); });
       hex.addEventListener("change", function () {
         var v = hex.value.trim();
@@ -669,6 +686,7 @@ editor_js = r"""  <script>
     var partA = document.querySelector(".tc-part-a");
     var cBody = document.querySelector("[data-c-body]");
     var selectedTi = null;
+    var selectedPrim = null;
 
     // token -> [{el, f}] across every registered facet (drives "also uses")
     var tokenUsers = {};
@@ -679,9 +697,11 @@ editor_js = r"""  <script>
     function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
     function propLabel(p) { return p === "bg" ? "background" : p === "fg" ? "text colour" : "border colour"; }
 
-    // follow the active-theme map from a semantic token to its primitive
-    function resolvePrimChain(token) {
-      var m = semMap(), chain = [], seen = {}, cur = m[token];
+    // Follow a semantic token to its primitive through an EXPLICIT map, so the
+    // same walk serves the active theme (Part C's element readout) and each
+    // theme independently (the primitive readout + the unreferenced marker).
+    function chainIn(m, token) {
+      var chain = [], seen = {}, cur = m[token];
       while (cur != null && chain.length < 24) {
         chain.push(cur);
         if (model.prims[cur] != null) return { chain: chain, prim: cur, hex: model.prims[cur] };
@@ -689,6 +709,20 @@ editor_js = r"""  <script>
         seen[cur] = 1; cur = m[cur];
       }
       return { chain: chain, prim: null, hex: null };
+    }
+    function resolvePrimChain(token) { return chainIn(semMap(), token); }
+
+    // primitive -> [{sem, chain}] for one theme's map. Resolution, not direct
+    // targeting: a primitive reached only through a coupled semantic
+    // (--a: var(--b); --b: var(--prim)) is still in use, and a marker that
+    // counted direct hits alone would call it dead.
+    function primUsers(m) {
+      var out = {};
+      Object.keys(m).forEach(function (s) {
+        var r = chainIn(m, s);
+        if (r.prim) (out[r.prim] = out[r.prim] || []).push({ sem: s, chain: r.chain });
+      });
+      return out;
     }
 
     function renderC(ti) {
@@ -721,13 +755,78 @@ editor_js = r"""  <script>
       cBody.innerHTML = html;
     }
 
-    function renderSelected() { if (selectedTi != null && cBody) renderC(selectedTi); }
+    // Part C has two selection sources: a preview element (which token paints
+    // this?) and a primitive (what reaches this?). One panel, because they are
+    // the two directions of the same question.
+    function renderCPrim(name) {
+      var uL = primUsers(model.semL)[name] || [], uD = primUsers(model.semD)[name] || [];
+      function list(users, theme) {
+        if (!users.length) {
+          return '<span class="tc-c-none">nothing targets it in ' + theme + "</span>";
+        }
+        return '<ul class="tc-c-users">' + users.map(function (u) {
+          var via = u.chain.length > 1
+            ? '<span class="tc-c-chain"> (via ' + u.chain.slice(0, -1).map(function (c) {
+                return "<code>" + esc(c) + "</code>"; }).join(" \u2192 ") + ")</span>"
+            : "";
+          return "<li><code>" + esc(u.sem) + "</code>" + via + "</li>";
+        }).join("") + "</ul>";
+      }
+      // Both themes, always. semL and semD target near-disjoint sets of
+      // primitives, so an active-theme-only readout would report "nothing
+      // targets this" for most primitives most of the time.
+      var html = '<p class="tc-c-el">' + esc(name) + "</p>"
+        + '<p class="tc-c-sub">primitive · ' + (uL.length + uD.length) + " semantic target"
+        + (uL.length + uD.length === 1 ? "" : "s") + " across both themes</p>"
+        + '<div class="tc-facet">'
+        + '<div class="tc-facet-h"><span class="tc-c-swatch" style="background: var(' + name + ')"></span>'
+        + '<span class="tc-facet-name">' + esc(model.prims[name] || "") + "</span></div>"
+        + '<dl class="tc-c-row">'
+        + "<dt>light</dt><dd>" + list(uL, "light") + "</dd>"
+        + "<dt>dark</dt><dd>" + list(uD, "dark") + "</dd>"
+        + "</dl></div>";
+      if (!uL.length && !uD.length) {
+        html += '<p class="tc-c-orphan">Unreferenced \u2014 no semantic token resolves to this '
+          + "primitive in either theme. Editing it changes nothing on screen.</p>";
+      }
+      cBody.innerHTML = html;
+    }
+
+    function renderSelected() {
+      if (!cBody) return;
+      if (selectedPrim != null) renderCPrim(selectedPrim);
+      else if (selectedTi != null) renderC(selectedTi);
+    }
+
+    function clearPicked() {
+      if (partA) partA.querySelectorAll(".tc-picked").forEach(function (n) { n.classList.remove("tc-picked"); });
+      document.querySelectorAll(".tc-chip.tc-picked").forEach(function (n) { n.classList.remove("tc-picked"); });
+    }
 
     function selectTarget(ti, node) {
-      if (partA) partA.querySelectorAll(".tc-picked").forEach(function (n) { n.classList.remove("tc-picked"); });
+      clearPicked();
       if (node !== partA) node.classList.add("tc-picked");  // don't outline the whole panel for page bg
+      selectedPrim = null;
       selectedTi = ti;
       renderC(ti);
+    }
+
+    function selectPrimitive(name, chip) {
+      clearPicked();
+      chip.classList.add("tc-picked");
+      selectedTi = null;
+      selectedPrim = name;
+      renderCPrim(name);
+    }
+
+    // Recomputed from the live model, not baked at generation time: a remap
+    // can orphan a primitive or rescue one mid-session.
+    function refreshOrphans() {
+      var uL = primUsers(model.semL), uD = primUsers(model.semD);
+      document.querySelectorAll(".tc-chip").forEach(function (c) {
+        var n = c.getAttribute("data-prim");
+        c.classList.toggle("tc-orphan", !(uL[n] || uD[n]));
+      });
     }
 
     // "@page" is a virtual target: any click in Part A not consumed by a
@@ -835,10 +934,13 @@ part_b = (
 )
 part_c = (
     '  <div class="tc-part tc-part-c">\n'
-    '    <h2 class="tc-part-h">Part C — Selection <span class="tc-part-note">(click a preview element)</span></h2>\n'
+    '    <h2 class="tc-part-h">Part C — Selection <span class="tc-part-note">(click a preview element or a primitive)</span></h2>\n'
     '    <div class="tc-c-body" data-c-body>\n'
     '      <p class="tc-c-placeholder">Click any coloured element in Part A to see which semantic token '
-    "paints it, which primitive that token resolves to, and what else the token covers.</p>\n"
+    "paints it, which primitive that token resolves to, and what else the token covers. "
+    "Click a <strong>primitive</strong> in Part B for the other direction \u2014 every semantic token "
+    "that resolves to it, listed per theme. A primitive no token reaches in either theme is marked "
+    "<strong>unreferenced</strong> in the grid.</p>\n"
     "    </div>\n"
     "  </div>"
 )

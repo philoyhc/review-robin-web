@@ -100,6 +100,91 @@ def test_retired_button_terminology_is_absent_from_live_docs() -> None:
     )
 
 
+# --- Colour tokens: base.html is the source, color_tokens.md the catalogue ---
+
+
+def _root_blocks() -> tuple[str, str]:
+    """The light and dark ``:root`` declaration blocks from ``base.html``.
+
+    Brace-counted rather than regex-sliced: the blocks contain nested
+    ``@media`` rules further down the stylesheet, and a lazy match to the
+    first ``}`` would stop at the first comment-adjacent brace.
+    """
+    css = (REPO / "app/web/templates/base.html").read_text()
+
+    def block(selector: str) -> str:
+        start = css.index("{", css.index(selector))
+        depth = 0
+        for i in range(start, len(css)):
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return css[start:i]
+        raise AssertionError(f"unclosed block for {selector}")
+
+    return block(":root {"), block(''':root[data-theme="dark"]''')
+
+
+def test_every_primitive_is_catalogued_with_its_shipped_value() -> None:
+    """``spec/color_tokens.md`` is the palette's catalogue, and a Tier-1
+    token that never reaches it is invisible to anyone reading the spec
+    rather than the stylesheet. Values are compared too: a hex edited in
+    one place and not the other is worse than a missing row, because the
+    table still looks authoritative."""
+    light, _ = _root_blocks()
+    shipped = dict(re.findall(r"(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})", light))
+
+    # Tier-1 section only, and whole lines. The Tier-2 tables are five
+    # columns wide (token | light prim | dark prim | light hex | dark hex),
+    # and an unanchored two-column pattern happily matches the middle of
+    # one — reading `--violet-soft | #5b21b6` out of the row that maps
+    # `--status-super-fg`. That produced 39 phantom mismatches on a
+    # correct spec the first time this test ran.
+    spec = (REPO / "spec/color_tokens.md").read_text()
+    tier1 = spec.split("## Tier 1", 1)[1].split("\n## ", 1)[0]
+    catalogue = dict(
+        re.findall(
+            r"^\|\s*`(--[a-z0-9-]+)`\s*\|\s*`(#[0-9a-fA-F]{3,8})`\s*\|$",
+            tier1,
+            re.M,
+        )
+    )
+
+    missing = sorted(n for n in shipped if n not in catalogue)
+    assert not missing, f"primitives absent from spec/color_tokens.md: {missing}"
+
+    wrong = sorted(
+        f"{n}: base.html {v} vs spec {catalogue[n]}"
+        for n, v in shipped.items()
+        if catalogue[n].lower() != v.lower()
+    )
+    assert not wrong, f"catalogued value differs from the shipped one: {wrong}"
+
+
+def test_the_token_count_line_matches_the_stylesheet() -> None:
+    """The headline count in ``spec/color_tokens.md`` drifts silently —
+    it read ``103 semantic tokens`` against 107 shipped when this test
+    was written (2026-09-06), while every one of the 107 had a correct
+    table row. A summary nobody can check is worse than none, so it is
+    checked here."""
+    light, _ = _root_blocks()
+    primitives = len(re.findall(r"--[a-z0-9-]+:\s*#[0-9a-fA-F]{3,8}", light))
+    semantic = len(re.findall(r"--[a-z0-9-]+:\s*var\(--[a-z0-9-]+\)", light))
+
+    claim = re.search(
+        r"\*\*(\d+) primitives · (\d+) semantic tokens",
+        (REPO / "spec/color_tokens.md").read_text(),
+    )
+    assert claim, "spec/color_tokens.md lost its token-count line"
+
+    assert (int(claim.group(1)), int(claim.group(2))) == (primitives, semantic), (
+        f"spec claims {claim.group(1)} primitives / {claim.group(2)} semantic; "
+        f"base.html declares {primitives} / {semantic}"
+    )
+
+
 def test_agent_instruction_twins_are_identical() -> None:
     """CLAUDE.md and AGENTS.md are byte-identical by convention.
 
