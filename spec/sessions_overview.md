@@ -65,21 +65,47 @@ A flex row above the table.
   `/operator/sessions/new`. Rendered only when at least one session
   exists; the empty state has its own CTA.
 
-## Empty state
+## Empty state — the first-run card
 
-When the operator owns zero sessions (no rows in
-`sessions.list_for_user`), the page renders a single onboarding
-card instead of the table:
+When the operator has **zero non-archived sessions**, the page
+renders a single onboarding card (`id="lobby-first-run"`) in place
+of the whole populated branch — the stats card, the Search card,
+the table, and the bulk-action form all go with it.
 
-> **You don't have any sessions yet.**
-> Create a session to invite reviewers, build assignments, and
-> collect responses.
->
-> [ **Create new session** ]
+The card carries, in order:
 
-The CTA links to `/operator/sessions/new`. The header's secondary
-"Create new session" button is suppressed in this state so the
-single primary CTA isn't duplicated.
+1. **`You don't have any sessions yet.`** — card `<h2>`.
+2. A one-sentence definition of a session, then the three passes
+   that get one running, as an `<ol>`: **Create and set it up**,
+   **Prepare and launch**, **Give reviewers access**. These reuse
+   the `/guide` section headings verbatim; the card is a table of
+   contents for the Guide, not a second account of the workflow.
+   `tests/integration/test_lobby_first_run_card.py` fails if the
+   two drift apart.
+3. A muted line linking to
+   **`/guide?return_to=/operator/sessions`**. This link is why the
+   card exists (Segment 19E): `/guide` is the canonical operator
+   documentation, and the chrome link alone is easy to miss on a
+   first visit. It is byte-identical to the chrome's own Guide
+   link on this page, so tests distinguish the two by counting.
+4. The **`Create new session`** CTA (`.btn-cta`), linking to
+   `/operator/sessions/new`.
+
+**Trigger.** Emptiness of the template's `sessions` list — the
+non-archived subset of `sessions.list_for_user` — **not** "has
+never had a session". An operator who archives everything sees the
+card again, which is intended: they are back at the start. No
+"has-ever-had" state is tracked.
+
+The header's secondary "Create new session" button is suppressed
+in this state so the single primary CTA isn't duplicated.
+
+> **Known gap.** `Go to Archive` lives in the Search card, inside
+> the populated branch, so an operator who archives *every*
+> session loses their only in-app route to
+> `/operator/sessions/archived` — and the `N archived` stats pill
+> disappears with it. Not addressed by Segment 19E rung 3, which
+> is scoped to the card itself.
 
 ## Sessions table
 
