@@ -513,8 +513,34 @@ families rationalized — sky→`--blue-cyan-*`, danger→`--red-warm-*`, neutra
 one family) — all value-preserving except the intentional nav-chrome shift.
 
 **Deferred / optional follow-ons:** Ctrl/Cmd-Z + Redo; sort the Neutral group
-light→dark; editing a primitive's own value from the picker; the operator-facing
-Stretch (see deferred_consolidated). Original slice notes below.
+light→dark; editing a primitive's own value from the picker; **add / delete
+primitives** (below); the operator-facing Stretch (see deferred_consolidated).
+Original slice notes below.
+
+**Add / delete primitives — deferred 2026-09-06, wanted for portability.**
+v1 edits a primitive's *value* freely: each swatch in Part B carries a colour
+input and a hex field, both wired to `setPrim` (live `setProperty` repaint), and
+a chromatic family can be shifted wholesale from its seed. What it cannot do is
+change the palette's *membership* — the primitive grid is emitted at build time
+from `parse_primitives(base_css)`, and `applyActive()` walks `D.primOrder`, the
+build-time name list, rather than `Object.keys(model.prims)`. So a primitive the
+generator did not see is stored in the model and never reaches the DOM, and a
+semantic pointed at it resolves to an undefined `var()`.
+
+That is a real limit on the portability kernel (decision #6): a `tokens.css` of
+the same shape but a *different* palette can only be explored by editing the
+79 names this build happens to have. It also bit the 19C input-boundary work —
+`tools/theme_variants.gen.py` has to preview off-palette border values by
+overriding `--gray-soft` / `--slate-deep` instead of adding primitives, which
+drags `--marker-neutral` along with them.
+
+Scope when it is taken: `model.prims` becomes the authority in `applyActive`
+(iterate its keys, not `D.primOrder`); Part B's grid renders from the model
+rather than a build-time list; add/delete affordances with a delete guarded on
+"no semantic still points here"; and the export/import contract gains nothing
+new, since `{version: 2, primitives, semantic}` already carries an arbitrary
+primitive map. Not gated on anything — it is deferred by priority, not by a
+dependency.
 
 **What.** Grow the theme-preview harness into a visual **designer** for the
 light + dark palettes: seed-and-derive (OKLCH) editing with live repaint,
