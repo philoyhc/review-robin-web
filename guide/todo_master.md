@@ -2501,6 +2501,9 @@ dep chains called out at the bottom of this file.
   services/data vs. view — which is not a theme, and the rule is
   thematic. Folded back; no 19F plan exists.)
   **Plan:** `guide/segment_19E_operator_onboarding.md`.
+  **⏸ Paused 2026-09-06 with rungs 1–6 shipped** — role-awareness
+  (rung 7) is the only build item left, and the close sequence has not
+  been run. Paused by the author, not blocked.
 
 - **20 — Operator polish + documentation** *(renumbered from the
   original Segment 15, 2026-05-10; **RESERVED** 2026-09-05)*. **Does

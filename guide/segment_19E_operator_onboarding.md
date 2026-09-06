@@ -1,6 +1,21 @@
 # Segment 19E — Operator onboarding
 
-**Status: planned 2026-09-06, not started.** Carved out of Segment 20 on
+**Status: ⏸ paused 2026-09-06, rungs 1–6 shipped.** The ladder is complete
+through rung 6b plus the author's copy pass; **rung 7 (role-awareness) is
+the only build item outstanding**, and the close sequence has not been run.
+Paused by the author with the segment mostly done — not blocked, and not
+abandoned. What that means for anyone picking it up:
+
+- `guide/page_help_text.md` stays in `guide/` (it retires to
+  `guide/archive/` with this plan, at close).
+- `visible_audiences()` still returns every audience for every viewer.
+  `spec/audience_and_identity_model.md` is the one outstanding `Doc impact`
+  path, and it is committed but unhonoured until rung 7 lands — so
+  `tools/close_check.py 19E` will fail today, correctly.
+- Rung 7 is slightly smaller than planned: the Guide shed two sections in
+  the copy pass, so there are eleven to gate rather than thirteen.
+
+Carved out of Segment 20 on
 2026-09-05 when that segment was reserved for after the institutional Azure
 deployment concludes; absorbed the short-lived 19F the same day. Everything
 here needs the app, not the host, so none of it is gated.
