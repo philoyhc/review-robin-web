@@ -170,6 +170,34 @@ are different registers and should not merge.
   start with a constant audience set keeps the code path exercised by every
   rung's tests, so rung 7 changes one resolver rather than introducing a
   mechanism.
+- **Template downloads live in the Workflow card, as a "Download setup
+  templates" row after the Setup checklist** (2026-09-06, author). Both options
+  the plan weighed were wrong in the same way: they put the templates somewhere
+  the operator has to go *looking*, on the strength of a guess about where they
+  would look. The Workflow card puts them in the operator's field of view at the
+  moment they are useful — the draft session exists and its roster is empty,
+  which is exactly the state the Setup checklist describes. Hence the gating:
+  **the row renders when and only when the Setup checklist renders** (`is_draft`),
+  so it appears with the punch list and leaves with it rather than persisting as
+  clutter through the session's whole life.
+
+  Two consequences, both recorded at the decision rather than discovered later:
+
+  - **Templates become session-aware, which is an upgrade.** Roster headers carry
+    each renamed tag column's friendly label (`ReviewerTagN.<label>`, 19C Item 1,
+    the sole round-trip carrier for those labels). A template served from inside
+    a session is generated against *that session's* labels, so it matches the
+    file the importer expects for that session. A generic download from the Guide
+    or Extract Data could not do this.
+  - **It does not cover the create-time path.** The Quick Setup card renders on
+    both `session_new.html` and `session_detail.html`, so an operator can upload
+    rosters *before* any session — and therefore any Workflow card — exists. That
+    operator has no route to a template. Not fatal (create a bare session, take
+    the templates from Home, upload there) and arguably not worth solving, since
+    the create-time upload is for an operator who already has files. Flagged for
+    the author; a second link from the Guide or the Quick Setup card would close
+    it if wanted.
+
 - **One segment-level `Doc impact`, tagged by PR rung rather than by item**
   (2026-09-06). The four pieces of scope split unevenly across six PRs, so
   item-level manifests would have needed `## Item n` headings that do not match
@@ -337,6 +365,9 @@ existing page, no new nav. Must not change the lobby's table or filters.
 
 **4 — Starter template set.** Derivation from the four serializers, the
 download location, one mock row per file. Must not add a demo set.
+*(Download location decided 2026-09-06: a `Download setup templates` row in
+the Workflow card, immediately after the Setup checklist and gated on the same
+`is_draft` condition — see `## Judgment calls — decided`.)*
 
 **5 — Demo template set.** The fuller data plus the round-trip test (download
 → Quick Setup → `validated`). Must not change the derivation code rung 4
@@ -388,10 +419,11 @@ this rung, not a change made while activating the filter.
   needs Easy Auth configured to allow anonymous on that path, which is host
   work. 19E ships the authenticated Guide; the public question travels with the
   deployment. Decided by: the author, once the host exists.
-- **Where exactly does the template download live** — a card on the Guide, or a
+- ~~**Where exactly does the template download live** — a card on the Guide, or a
   tile in Extract Data? Leaning Guide, since that is where a newcomer is, but an
   experienced operator refetching a template may look in Extract Data. Decided
-  by: the author at rung 4.
+  by: the author at rung 4.~~ **Decided 2026-09-06: neither — the Workflow
+  card.** See `## Judgment calls — decided`.
 - **How much of `docs/quickstart.md` survives the move.** Ten sections written
   as a document may not map one-to-one onto a page. Decided at rung 2, recorded
   in `## Status`.
