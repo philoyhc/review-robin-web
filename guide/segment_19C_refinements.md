@@ -984,10 +984,11 @@ entry adjudicates:
 
 ## Item 8 — Input boundaries: `--border-default` to 3:1, help card off it
 
-**Status: ✅ shipped 2026-09-06 (single PR).** Filed 2026-08-21 from Item 2 QA
-as a dark-mode input-background defect; re-measured 2026-09-05 as a both-themes
-contrast item; decided 2026-09-06 as a border tweak only; shipped the same day
-after the customizer surfaced a consequence nobody had predicted.
+**Status: ✅ complete, closed 2026-09-06 (PRs #2126 → #2128).** Filed
+2026-08-21 from Item 2 QA as a dark-mode input-background defect; re-measured
+2026-09-05 as a both-themes contrast item; decided 2026-09-06 as a border tweak
+only; shipped the same day, then twice more as the customizer surfaced
+consequences nobody had predicted. `docs/status.md` carries the row.
 
 **Opportunity.** `body.ui-v2 input / select / textarea` fill with
 `var(--surface-page)`, and `body.ui-v2 .card` fills with `var(--surface-page)`
@@ -1186,6 +1187,16 @@ Landing place for further small operator-facing refinements. Log new ones
 here as `Item N` with the same problem / decision / scope / done-when shape,
 and keep each a self-contained slice. The user will populate this list as
 refinements are identified.
+
+- **A full pass over every element in the customizer** *(author intent, logged
+  2026-09-06 at Item 8's close)*. Item 8 moved two token families and, in doing
+  so, turned up three things reading only the code would not have: the help
+  card's inherited 2px border, a stale facet in the pick-list, and an edit box
+  that had never had a visible edge. All three were found by **looking**. The
+  harness now covers the elements those touched; the intent is to work through
+  the rest the same way rather than element-by-element as defects surface.
+  Not scoped here — it will produce its own findings, and each is likely its own
+  small item.
 
 - **Technical-support contact (global) — moved here from Segment 20
   2026-09-05.** A deployment-wide "something looks broken" address, distinct
