@@ -37,9 +37,15 @@ own the dispatch leg. The design record is
 
 ## 2. Page contract
 
-Chrome → status-pill strip → template selector → three-slot
-`.page-grid`: composer spanning both left rows (`card-l`), **page
-guidance** top right (`card-tr`), merge tags bottom right (`card-br`).
+Chrome → status-pill strip → template selector → `.card-columns`:
+composer in the left column, **page guidance** then merge tags in the
+right.
+
+*(Was a three-slot `.page-grid` with the composer spanning both rows.
+That aligned the right column to the left column's rows, so the
+merge-tag card began at row 2 — level with the composer's midpoint —
+leaving a gap beneath the guidance card and bottom-aligning merge tags
+with the composer. Column stacks have no rows to align to.)*
 
 **Page guidance.** The shared half-width
 `<details class="card page-guidance">` card specced in

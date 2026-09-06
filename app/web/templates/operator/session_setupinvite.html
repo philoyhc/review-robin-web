@@ -43,13 +43,19 @@
      a clean state and Save returns to disabled. No flash banner is
      needed; the disabled→enabled→disabled cycle is the visual
      signal. #}
-  {# 19E rung 6b scaffold — three-slot page grid. The composer spans
-     both rows on the left; the right column stacks the guidance card
-     above the merge-tag reference it introduces. Was a full-width
-     disclosure above the tab strip in rung 6a; the author moved it
-     here when the help cards became half-width cards. #}
-  <div class="page-grid">
-    <div class="card email-composer card-l" id="email-composer">
+  {# 19E rung 6b — two independent column stacks: the composer on the
+     left, the guidance card above the merge-tag reference it introduces
+     on the right.
+
+     Was a three-slot `.page-grid` with the composer spanning both rows.
+     That aligned the right column to the LEFT column's rows, so the
+     merge-tag card started at row 2 — level with the composer's
+     midpoint — leaving a gap under the guidance card and bottom-aligning
+     merge tags with the composer. Column stacks have no rows to align
+     to, so each card sits directly under the one above it. #}
+  <div class="card-columns">
+    <div>
+    <div class="card email-composer" id="email-composer">
       <h2>{{ (active_template|replace("_", " "))|capitalize }} email</h2>
 
       <form method="post"
@@ -143,8 +149,11 @@
                 id="setupinvite-save-button" disabled>Save</button>
       </div>
     </div>
+    </div>
 
-    {% call page_guidance.guidance("card-tr") %}
+    <div>
+
+      {% call page_guidance.guidance() %}
     <p>
       A session has three emails: an <strong>invitation</strong>, a
       <strong>reminder</strong>, and a <strong>confirmation</strong> sent when
@@ -161,7 +170,7 @@
     </p>
     {% endcall %}
 
-    <div class="card merge-tags card-br" id="merge-tags">
+    <div class="card merge-tags" id="merge-tags">
       <h2>Merge tags</h2>
       <p class="muted">
         Use these placeholders in the subject or body; they're substituted at send time.
@@ -173,6 +182,7 @@
           </li>
         {% endfor %}
       </ul>
+    </div>
     </div>
   </div>
 

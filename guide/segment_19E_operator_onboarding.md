@@ -695,6 +695,28 @@ keep their sides. The ordering test inverts with them rather than being
 loosened — it still asserts one column in full then the other, which is what
 distinguishes a single two-stack container from two stacked row grids.
 
+**2026-09-06 — Instruments swap, and Email Template off the row grid**
+(author). Instruments now matches the roster pages: guidance left,
+`Session deadline` right.
+
+**Email Template's gap was the row grid, not spacing.** Its three-slot
+`.page-grid` had the composer spanning both rows, which meant the right
+column's cards were aligned to the *left* column's row boundaries — so the
+merge-tag card began at row 2, level with the composer's midpoint, leaving a
+gap under the guidance card and bottom-aligning merge tags with the composer.
+Column stacks have no rows to align against, so each card sits directly under
+the one above. Same primitive as every other Setup page now.
+
+**`slot_class` retired.** The macro took a grid-position argument for exactly
+one caller — Email Template's `card-tr`. That page is on column stacks now, so
+the argument had no users; removed rather than left as a knob nothing turns
+(`constitution.md` Article VI).
+
+The bulk-toggle test kept its substantive assertion — the `Expand all` /
+`Collapse all` buttons still live *inside* the deadline card — and inverted
+only the ordering half, which the swap reverses. Losing the buttons would still
+be silent, so that half stays.
+
 ---
 
 ## PR ladder

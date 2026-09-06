@@ -182,10 +182,13 @@ def test_the_instruments_bulk_toggles_moved_into_the_deadline_card(
 
     assert "data-instruments-expand-all" in body
     assert "data-instruments-collapse-all" in body
+    # Still inside the deadline card — that is the claim worth pinning.
+    # Their position relative to the guidance card is not: the two cards
+    # swapped columns, so the guidance now precedes them.
     assert body.index("Session deadline") < body.index(
         "data-instruments-expand-all"
     )
-    assert body.index("data-instruments-expand-all") < body.index(CARD)
+    assert body.index(CARD) < body.index("Session deadline")
 
 
 # --------------------------------------------------------------------------- #
