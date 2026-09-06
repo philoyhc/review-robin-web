@@ -261,9 +261,14 @@ Each element entry follows the same shape:
 > Two-up grid (`.rs-help-grid`) when ≥2 items; single full-width
 > (`.rs-help-card-solo`) when exactly one.
 > *Current:* `.rs-help-grid`, `.rs-help-card`, `.rs-help-card-solo`
-> in `base.html`. Already palette-aligned (`#f5f5f7`, `#444`,
-> strong `#111827`).
-> *Canonical:* keep as-is; tokenize colors during PR A.
+> in `base.html`, filling with `--surface-muted` (`#f5f5f7` light,
+> `#232c3b` dark).
+> *Canonical:* the fill is a **surface** token, never a border one.
+> The tokenization pass pointed it at `--border-default` instead,
+> which matched only while that token was very light; Segment 19C
+> Item 8 moved the border to a 3:1 boundary colour and the slab
+> came back to `--surface-muted`, the value this entry recorded all
+> along.
 > *Migration delta:* none beyond token swap.
 > *PR:* A (tokens) for color tokens; otherwise no change.
 

@@ -1,6 +1,6 @@
 # Segment 19C — Refinements
 
-**Status: all six items ✅ shipped** — the segment stays **open** as a home for
+**Status: all eight items ✅ shipped** — the segment stays **open** as a home for
 further small refinements. **Item 1 ✅ 2026-08-20** (friendly tag labels via
 roster CSV headers; sole round-trip carrier); **Item 2 ✅ 2026-08-21**
 (light/dark Display mode — chrome toggle, W1–W8); **Item 3 ✅** (Danger Zone
@@ -9,7 +9,10 @@ hardening); **Item 4 ✅** (button treatment refinements); **Item 5 ✅ v1
 click-to-reflect/edit designer, PRs #2065–#2083; operator-facing **Stretch**
 deferred to `guide/deferred_consolidated.md`); **Item 6 ✅ 2026-08-23**
 (semantic colour tokens — two-tier reorg; the app is now fully two-tier, plan
-archived at `guide/archive/semantic_tokens.md`).
+archived at `guide/archive/semantic_tokens.md`); **Item 7 ✅ 2026-09-05** (the
+first drift sweep's eight findings); **Item 8 ✅ 2026-09-06** (input boundaries
+— `--border-default` to `--slate-dim` for 3:1, and `.rs-help-card` off the
+border token onto `--surface-muted`).
 A holding segment for **small,
 self-contained operator-facing refinements** that don't warrant their own
 segment — the sibling of 19A (docs hygiene) and 19B (code consistency), but
@@ -964,23 +967,85 @@ entry adjudicates:
   warns: nothing in the timestamps distinguishes it from another item's
   edit.
 
-## Future items (add as they come up)
+## Item 8 — Input boundaries: `--border-default` to 3:1, help card off it
 
-Landing place for further small operator-facing refinements. Log new ones
-here as `Item N` with the same problem / decision / scope / done-when shape,
-and keep each a self-contained slice. The user will populate this list as
-refinements are identified.
+**Status: ✅ shipped 2026-09-06 (single PR).** Filed 2026-08-21 from Item 2 QA
+as a dark-mode input-background defect; re-measured 2026-09-05 as a both-themes
+contrast item; decided 2026-09-06 as a border tweak only; shipped the same day
+after the customizer surfaced a consequence nobody had predicted.
 
-- **Technical-support contact (global) — moved here from Segment 20
-  2026-09-05.** A deployment-wide "something looks broken" address, distinct
-  from the per-session operational help contact on `ReviewSession`
-  (`app/schemas/sessions.py`). Reached by a reviewer hitting an auth failure,
-  a 500, or an invalid link. New env var read through `app/config.py`, surfaced
-  on the chrome footer, the error pages and the invalid-link landing; **unset
-  renders nothing**, which is why the mechanism does not wait for the
-  institutional Azure deployment — only the address does, and setting it is
-  Segment 20's job. Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe;
-  small, isolated, `[chrome]`.
+**Opportunity.** `body.ui-v2 input / select / textarea` fill with
+`var(--surface-page)`, and `body.ui-v2 .card` fills with `var(--surface-page)`
+too — a plain card is raised by its border, not by a distinct surface. So an
+input in any ordinary operator form had a fill **identical** to its container,
+1.00:1, in both themes. The entire boundary was the 1px border, at **1.47:1**
+light and **1.70:1** dark, both under the **3:1** WCAG 1.4.11 asks of a
+UI-component boundary — and light was the worse of the two, which the original
+dark-only framing had missed.
+
+**Decision.** Repoint `--border-default` to the existing primitive
+`--slate-dim` in *both* themes: **4.286:1** light, **4.312:1** dark. No new
+primitive, no new spec row, no change to the customizer's facet pick-list.
+`--gray-soft` / `--slate-deep` keep their values and now serve
+`--marker-neutral` alone, so the neutral nav-tab markers did not move.
+
+*Rejected:* a dedicated `--surface-input` fill (the original proposal). Built
+and looked at as `theme_variant_beyond-input-fill.json` — it reaches only
+1.238:1 light / 1.145:1 dark, because the palette has no off-white with real
+separation. *Rejected:* per-theme primitives at an exact 3:1 (`#8b96a5` /
+`#516280`). Two new Tier 1 rows for less headroom, and 2.998:1 in light fails a
+strict `>= 3.0` check.
+
+**The consequence the customizer caught.** `.rs-help-card` filled with
+`var(--border-default)` — a border colour used as a surface. That read
+acceptably only while the border was very light. At the new value the slab
+turns mid-grey and **body text on it drops to 3.96:1 light / 3.41:1 dark, both
+under AA**. The border change alone would have shipped failing text on the
+reviewer surface. Found by loading the variant in
+`tools/theme_customizer.html`, not by the test suite, which has no way to see
+it.
+
+The fix restores stated intent rather than inventing one:
+`spec/ui_elements.md` §"Reviewer help cards" has always described these as
+"bg-muted tinted blocks" and recorded `#f5f5f7` as their value. The
+tokenization pass it called for pointed them at `--border-default` instead. They
+now fill with `--surface-muted` — `#f5f5f7` light, exactly the recorded value —
+and text lands at **16.29:1 / 11.65:1**. The visible change is that the slab is
+a lighter tint than it has been, which is what "bg-muted tinted block"
+describes.
+
+**Judgment calls — decided.**
+
+- *`--slate-dim` over an exact target* (2026-09-06). Both themes share one
+  primitive, so a single value cannot hit a per-theme target. Solving for the
+  floor instead, the best any shared value reaches on that hue is **4.291:1**
+  — `--slate-dim` is at 4.286:1, within 0.005 of the ceiling. Beating it needs
+  two per-theme primitives, which buys little for two new Tier 1 rows.
+- *Border and dim text share a value in dark* (`--text-dim` is also
+  `--slate-dim`). Accepted: they are independently mapped, not coupled, so
+  either can move alone later.
+- *The border-`*` theme variants are retired, not updated* (`constitution.md`
+  Article VI). They existed to choose a border value; the choice is made and
+  the ceiling above says there is no better shared value to find. The
+  `beyond-*` files stay — they are the record of why the fill route lost.
+
+**Blast radius (measured).** `app/web/templates/base.html` — 2 token rows + 1
+rule; `spec/color_tokens.md` — 1 row + 2 notes; `spec/ui_elements.md` — 1 entry;
+`tools/theme_preview.html`, `tools/theme_customizer.html`,
+`tools/theme_customizer_beyond.html` regenerated; `tools/theme_variants.gen.py`
++ `tools/README.md` updated; 5 retired JSONs deleted. No app code, no schema, no
+route.
+
+**Not verifiable here.** This is a pure visual change to a template's CSS. The
+test suite cannot see it; `pytest` and `ruff` passing say only that nothing
+else broke. Confirmed by eye in the customizer before shipping, and due a look
+on the Azure dev slot after deploy.
+
+### Superseded framing
+
+The future-item entry this item grew out of, kept for the record of how the
+diagnosis moved from "dark-mode input background" to a both-themes boundary
+problem:
 
 - **Input boundaries carry no fill contrast, in either theme** *(filed
   2026-08-21 from Item 2 QA as "dark-mode input background"; **re-measured and
@@ -1062,6 +1127,27 @@ refinements are identified.
 
 ---
 
+## Future items (add as they come up)
+
+Landing place for further small operator-facing refinements. Log new ones
+here as `Item N` with the same problem / decision / scope / done-when shape,
+and keep each a self-contained slice. The user will populate this list as
+refinements are identified.
+
+- **Technical-support contact (global) — moved here from Segment 20
+  2026-09-05.** A deployment-wide "something looks broken" address, distinct
+  from the per-session operational help contact on `ReviewSession`
+  (`app/schemas/sessions.py`). Reached by a reviewer hitting an auth failure,
+  a 500, or an invalid link. New env var read through `app/config.py`, surfaced
+  on the chrome footer, the error pages and the invalid-link landing; **unset
+  renders nothing**, which is why the mechanism does not wait for the
+  institutional Azure deployment — only the address does, and setting it is
+  Segment 20's job. Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe;
+  small, isolated, `[chrome]`.
+
+
+---
+
 ## Doc impact
 
 - `spec/csv_contracts.md` — add the `<Slot>.<label>` header grammar for the
@@ -1087,6 +1173,11 @@ refinements are identified.
   button's `--text-on-amber` label token (done — Item 4).
 - `spec/assignments.md`, `spec/setup_pages.md` — name the
   `app/services/assignments/` package, not the retired module path (Item 7).
+- `spec/color_tokens.md` — `--border-default` repoints to `--slate-dim` in both
+  themes, with the 3:1 rationale, the shared-primitive consequence, and the rule
+  that border colours do not paint fills (Item 8).
+- `spec/ui_elements.md` — the Reviewer help cards entry records the
+  `--surface-muted` fill and why the tokenization pass had it wrong (Item 8).
 - `spec/quick_setup_card_spec.md` — `app/services/session_config_io/`
   package rename (Item 7).
 - `spec/settings_inventory.md` — `app/services/scheduled_events/` package

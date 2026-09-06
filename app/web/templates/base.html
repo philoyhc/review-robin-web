@@ -155,7 +155,7 @@
         --text-link-strong: var(--blue-deep);
         /* Borders & focus [P] */
         --border-subtle: var(--gray-mist);
-        --border-default: var(--gray-soft);
+        --border-default: var(--slate-dim);
         --focus-ring: var(--blue-strong);
         --focus-ring-halo: var(--blue-pale);
         --marker-neutral: var(--gray-soft);
@@ -281,7 +281,7 @@
         --text-link-strong: var(--blue-soft);
         /* Borders & focus [P] */
         --border-subtle: var(--slate-deeper);
-        --border-default: var(--slate-deep);
+        --border-default: var(--slate-dim);
         --focus-ring: var(--blue-glow);
         --focus-ring-halo: var(--blue-abyss);
         --marker-neutral: var(--slate-deep);
@@ -413,14 +413,25 @@
        * (`.rs-intro-grid` below); the lone-help case lands in column 2
        * (or column 1 if no heading) instead of expanding to full width.
        */
-      /* Solid light-grey block — fill matches the `.card` border
-         colour so the help text reads as a tinted slab inside the
-         per-instrument intro grid rather than a regular card with
-         contrasting border + interior. Selector co-targets `.card`
-         to outweigh the later `body.ui-v2 .card` background rule
-         (equal class specificity but later wins on cascade). */
+      /* Tinted slab inside the per-instrument intro grid, rather than
+         a regular card with a contrasting border + interior.
+
+         The fill is `--surface-muted`, which is what `spec/ui_elements.md`
+         §"Reviewer help cards" has always called for ("bg-muted tinted
+         blocks", recorded value `#f5f5f7`). It used to borrow
+         `--border-default` — a border colour used as a surface — which
+         happened to look right only while that token was very light. It
+         stopped being right the moment the border moved to `--slate-dim`
+         for the 3:1 boundary work: body text on the slab would have
+         dropped to 3.96:1 light / 3.41:1 dark, both under AA. Fill roles
+         come from the surface cluster; border roles do not paint. (19C
+         Item 8.)
+
+         Selector co-targets `.card` to outweigh the later
+         `body.ui-v2 .card` background rule (equal class specificity but
+         later wins on cascade). */
       body.ui-v2 .card.rs-help-card {
-        background: var(--border-default);
+        background: var(--surface-muted);
         padding: 10px 14px;
         border-radius: 6px;
         color: var(--text-body);

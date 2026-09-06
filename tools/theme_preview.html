@@ -138,7 +138,7 @@
         --text-link-strong: var(--blue-deep);
         /* Borders & focus [P] */
         --border-subtle: var(--gray-mist);
-        --border-default: var(--gray-soft);
+        --border-default: var(--slate-dim);
         --focus-ring: var(--blue-strong);
         --focus-ring-halo: var(--blue-pale);
         --marker-neutral: var(--gray-soft);
@@ -264,7 +264,7 @@
         --text-link-strong: var(--blue-soft);
         /* Borders & focus [P] */
         --border-subtle: var(--slate-deeper);
-        --border-default: var(--slate-deep);
+        --border-default: var(--slate-dim);
         --focus-ring: var(--blue-glow);
         --focus-ring-halo: var(--blue-abyss);
         --marker-neutral: var(--slate-deep);
@@ -396,14 +396,25 @@
        * (`.rs-intro-grid` below); the lone-help case lands in column 2
        * (or column 1 if no heading) instead of expanding to full width.
        */
-      /* Solid light-grey block — fill matches the `.card` border
-         colour so the help text reads as a tinted slab inside the
-         per-instrument intro grid rather than a regular card with
-         contrasting border + interior. Selector co-targets `.card`
-         to outweigh the later `body.ui-v2 .card` background rule
-         (equal class specificity but later wins on cascade). */
+      /* Tinted slab inside the per-instrument intro grid, rather than
+         a regular card with a contrasting border + interior.
+
+         The fill is `--surface-muted`, which is what `spec/ui_elements.md`
+         §"Reviewer help cards" has always called for ("bg-muted tinted
+         blocks", recorded value `#f5f5f7`). It used to borrow
+         `--border-default` — a border colour used as a surface — which
+         happened to look right only while that token was very light. It
+         stopped being right the moment the border moved to `--slate-dim`
+         for the 3:1 boundary work: body text on the slab would have
+         dropped to 3.96:1 light / 3.41:1 dark, both under AA. Fill roles
+         come from the surface cluster; border roles do not paint. (19C
+         Item 8.)
+
+         Selector co-targets `.card` to outweigh the later
+         `body.ui-v2 .card` background rule (equal class specificity but
+         later wins on cascade). */
       body.ui-v2 .card.rs-help-card {
-        background: var(--border-default);
+        background: var(--surface-muted);
         padding: 10px 14px;
         border-radius: 6px;
         color: var(--text-body);
@@ -3557,7 +3568,7 @@
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">border subtle<code>--border-subtle</code></td><td><span class="pv-dot" style="background: var(--border-subtle);"></span><code>--gray-mist</code> <span class="pv-hex">#e5e7eb</span></td><td><code>--slate-deeper</code> <span class="pv-hex">#2b3547</span></td></tr>
-        <tr><td class="pv-name">border default<code>--border-default</code></td><td><span class="pv-dot" style="background: var(--border-default);"></span><code>--gray-soft</code> <span class="pv-hex">#d1d5db</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>
+        <tr><td class="pv-name">border default<code>--border-default</code></td><td><span class="pv-dot" style="background: var(--border-default);"></span><code>--slate-dim</code> <span class="pv-hex">#6f7b8e</span></td><td><code>--slate-dim</code> <span class="pv-hex">#6f7b8e</span></td></tr>
         <tr><td class="pv-name">focus ring<code>--focus-ring</code></td><td><span class="pv-dot" style="background: var(--focus-ring);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
         <tr><td class="pv-name">focus ring halo<code>--focus-ring-halo</code></td><td><span class="pv-dot" style="background: var(--focus-ring-halo);"></span><code>--blue-pale</code> <span class="pv-hex">#dbeafe</span></td><td><code>--blue-abyss</code> <span class="pv-hex">#16324f</span></td></tr>
         <tr><td class="pv-name">marker neutral<code>--marker-neutral</code></td><td><span class="pv-dot" style="background: var(--marker-neutral);"></span><code>--gray-soft</code> <span class="pv-hex">#d1d5db</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>

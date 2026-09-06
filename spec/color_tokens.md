@@ -141,10 +141,35 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | Semantic token | Light → primitive | Dark → primitive | Light | Dark |
 |---|---|---|---|---|
 | `--border-subtle` | `--gray-mist` | `--slate-deeper` | `#e5e7eb` | `#2b3547` |
-| `--border-default` | `--gray-soft` | `--slate-deep` | `#d1d5db` | `#3a465c` |
+| `--border-default` | `--slate-dim` | `--slate-dim` | `#6f7b8e` | `#6f7b8e` |
 | `--focus-ring` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--focus-ring-halo` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 | `--marker-neutral` | `--gray-soft` | `--slate-deep` | `#d1d5db` | `#3a465c` |
+
+**`--border-default` is the only row that maps to the same primitive in both
+themes**, and that is deliberate. It carries the whole boundary of every
+bordered surface — inputs and cards fill with `--surface-page`, so the fill
+contributes nothing and the border is the entire delineation. At its previous
+values it measured **1.47:1** light and **1.70:1** dark against that surface,
+under the **3:1** WCAG 1.4.11 asks of a UI-component boundary, and light was
+the worse of the two. `--slate-dim` is the one existing primitive that clears
+3:1 in both themes near-symmetrically (**4.29:1** light, **4.31:1** dark), so a
+single primitive serves both columns. Changed in Segment 19C Item 8; the
+options weighed, including per-theme primitives at an exact 3:1, are in
+`guide/segment_19C_refinements.md`.
+
+Two consequences worth knowing. `--text-dim` also resolves to `--slate-dim` in
+dark, so border and dim text share a value there — they are independently
+mapped, not coupled, and either can move alone. And `--marker-neutral` keeps
+`--gray-soft` / `--slate-deep`, which it now has to itself: repointing
+`--border-default` rather than editing those primitives is what left the
+neutral nav-tab markers where they were.
+
+**Border colours do not paint fills.** A surface takes a token from the
+Surfaces cluster. `.rs-help-card` used to fill with `--border-default`, which
+read acceptably only while that token was very light; at 3:1-plus the body text
+on it would have fallen to 3.96:1 light / 3.41:1 dark, both under AA. It now
+fills with `--surface-muted`, per `spec/ui_elements.md` §"Reviewer help cards".
 
 ### Buttons [P]
 
