@@ -261,14 +261,16 @@ Each element entry follows the same shape:
 > Two-up grid (`.rs-help-grid`) when ≥2 items; single full-width
 > (`.rs-help-card-solo`) when exactly one.
 > *Current:* `.rs-help-grid`, `.rs-help-card`, `.rs-help-card-solo`
-> in `base.html`, filling with `--surface-muted` (`#f5f5f7` light,
-> `#232c3b` dark).
-> *Canonical:* the fill is a **surface** token, never a border one.
-> The tokenization pass pointed it at `--border-default` instead,
-> which matched only while that token was very light; Segment 19C
-> Item 8 moved the border to a 3:1 boundary colour and the slab
-> came back to `--surface-muted`, the value this entry recorded all
-> along.
+> in `base.html`, on their own `--card-help-bg` / `-border` / `-fg`
+> family (`#f5f5f7` / `#111827` light, `#232c3b` / `#e6eaf2` dark) —
+> the shape `.danger-zone` already uses.
+> *Canonical:* a **slab**, not a card with a contrasting edge, so
+> `--card-help-border` resolves to the fill's primitive and the
+> 2px `.card` border disappears into it. The tokenization pass had
+> pointed the fill at `--border-default`; that matched only while
+> the border token was very light, and Segment 19C Item 8 moved it
+> to a 3:1 boundary colour. Own tokens rather than borrowed ones is
+> what stops the next border change reaching this card.
 > *Migration delta:* none beyond token swap.
 > *PR:* A (tokens) for color tokens; otherwise no change.
 

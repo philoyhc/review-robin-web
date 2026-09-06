@@ -1051,6 +1051,44 @@ rule; `spec/color_tokens.md` — 1 row + 2 notes; `spec/ui_elements.md` — 1 en
 + `tools/README.md` updated; 5 retired JSONs deleted. No app code, no schema, no
 route.
 
+**Follow-on, 2026-09-06 — the help card gets its own tokens.** Shipping the
+above left two loose ends, both caught by looking rather than by a check.
+
+1. **The border.** `.rs-help-card` never overrode `.card`'s 2px
+   `var(--border-default)`. Before, fill *and* border were the same token, so
+   the outline was invisible and the block read as the slab its comment
+   describes. Moving the fill to `--surface-muted` while the border darkened to
+   `--slate-dim` gave it a **3.94:1** edge in light, 3.28:1 in dark — precisely
+   the "regular card with contrasting border + interior" the comment says it
+   must not be.
+2. **The customizer's facet pick-list went stale.** `theme_customizer.gen.py`
+   still declared the help card's background facet as `--border-default`, so
+   Part C reported the wrong token for it. Nothing caught this: the pick-list
+   comment claims a browser-side self-check against computed colour, but
+   `getComputedStyle` appears nowhere in the tool — Item 5's "0 mismatches" was
+   a one-time build-time verification, not running code.
+
+Both are fixed by giving the block its own `--card-help-bg` / `-border` / `-fg`
+family in the **Card accents** cluster, the shape `.danger-zone` already uses,
+and adding the border facet to the pick-list. `--card-help-border` resolves to
+the **same primitive** as the fill, so the edge disappears; the two map
+independently rather than one pointing at the other, so either can be
+repointed alone.
+
+*Considered and rejected: reclassifying it as a banner.* It is not transient
+page-level feedback — it is persistent, half-width inside a two-up grid, and on
+the operator Instruments page an unlocked help card **hosts a `<textarea>`**
+for editing the help text (`instruments_index.html`). A container with
+interactive content is a card. The `rs-` prefix is still inaccurate (the block
+renders on an operator page too) but renaming it buys nothing now that the
+category is right, so the class names stand.
+
+*A defect this incidentally fixed.* That Instruments-page textarea sits inside
+the help card and takes `--border-default` for its own border. While the slab
+was also `--border-default`, the edit box had a **1.00:1** edge against its
+container — no visible boundary at all. It is now delineated at 3.94:1 light /
+3.28:1 dark.
+
 **Not verifiable here.** This is a pure visual change to a template's CSS. The
 test suite cannot see it; `pytest` and `ruff` passing say only that nothing
 else broke. Confirmed by eye in the customizer before shipping, and due a look
@@ -1192,7 +1230,8 @@ refinements are identified.
   themes, with the 3:1 rationale, the shared-primitive consequence, and the rule
   that border colours do not paint fills (Item 8).
 - `spec/ui_elements.md` — the Reviewer help cards entry records the
-  `--surface-muted` fill and why the tokenization pass had it wrong (Item 8).
+  `--card-help-*` family, why the tokenization pass had it wrong, and that the
+  border resolves to the fill's primitive on purpose (Item 8).
 - `spec/quick_setup_card_spec.md` — `app/services/session_config_io/`
   package rename (Item 7).
 - `spec/settings_inventory.md` — `app/services/scheduled_events/` package
