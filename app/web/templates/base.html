@@ -1427,6 +1427,31 @@
         margin: var(--space-2) 0 0 0;
         color: var(--text-subtle);
       }
+      /* Page-level guidance disclosure — 19E rung 6. One per Setup
+         page, closed by default. Fills with the help-card semantics
+         (19C Item 8) rather than its own tokens: it is the same kind
+         of thing one level up, and those tokens are already
+         contrast-checked in both themes. The summary is link-coloured
+         because it is the page's one clickable affordance that is not
+         a control. */
+      body.ui-v2 .page-guidance {
+        margin: 0 0 var(--space-4) 0;
+      }
+      body.ui-v2 .page-guidance > summary {
+        cursor: pointer;
+        color: var(--text-link);
+        font-size: 0.95em;
+      }
+      body.ui-v2 .page-guidance-body {
+        margin-top: var(--space-2);
+        padding: var(--space-3);
+        border-radius: 6px;
+        background: var(--card-help-bg);
+        color: var(--card-help-fg);
+        font-size: 0.95em;
+      }
+      body.ui-v2 .page-guidance-body > :first-child { margin-top: 0; }
+      body.ui-v2 .page-guidance-body > :last-child { margin-bottom: 0; }
       /* Severity-filter chip strip — anchor links flipping
          ?severity= on the Validate page. The active chip carries
          a thicker border + slight background tint so the operator

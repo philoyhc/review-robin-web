@@ -1,0 +1,39 @@
+{# Page-level guidance disclosure — Segment 19E rung 6.
+
+   One per Setup page, above the page's cards. Closed by default: an
+   operator who already knows the page should not scroll past a
+   paragraph they have read, and one who does not gets it in one click.
+
+   Native <details>, no JS — the same primitive the Validate page's
+   per-issue "Why this check?" already ships
+   (``partials/validation_results.html`` -> ``.issue-why``), one level
+   up. The plan rejected tooltips (cannot hold a sentence, invisible to
+   touch, awkward for keyboard) and the ``.banner`` family (specced
+   behaviourally as transient page-level feedback, which persistent
+   explanation is not).
+
+   The summary text is fixed rather than a parameter: this is a
+   repeated affordance across six Setup pages, and an operator learns a
+   control faster when it is worded identically everywhere. A page that
+   genuinely needs different wording is a finding about the scaffold,
+   not something to vary quietly.
+
+   Body content comes through ``{% call %}`` so each page writes its own
+   prose while the chrome stays in one place. Keep that prose short and
+   **link to /guide rather than restating it** — the Guide is the
+   canonical documentation, and two copies of the same explanation is
+   the drift this segment exists to stop.
+
+   Usage:
+
+       {% import "operator/partials/_page_guidance.html" as page_guidance %}
+       {% call page_guidance.guidance() %}
+         <p>...</p>
+       {% endcall %}
+#}
+{% macro guidance() -%}
+<details class="page-guidance">
+  <summary>What this page is for</summary>
+  <div class="page-guidance-body">{{ caller() }}</div>
+</details>
+{%- endmacro %}

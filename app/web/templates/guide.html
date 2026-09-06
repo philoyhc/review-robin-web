@@ -21,7 +21,7 @@
   </p>
 
   {% if "what_it_does" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-what_it_does">
     <h2>What Review Robin Web does</h2>
     <p>
       Review Robin Web runs <strong>structured review sessions</strong>:
@@ -47,7 +47,7 @@
   {% endif %}
 
   {% if "before_you_start" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-before_you_start">
     <h2>Before you start</h2>
     <ul>
       <li>Review Robin Web is a hosted web app — there is nothing to install.
@@ -62,7 +62,7 @@
   {% endif %}
 
   {% if "create_and_set_up" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-create_and_set_up">
     <h2>Create and set up a session</h2>
     <p>
       On the Sessions lobby, choose <strong>Add new</strong>, give the session a
@@ -175,7 +175,7 @@
   {% endif %}
 
   {% if "prepare_and_launch" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-prepare_and_launch">
     <h2>Prepare and launch</h2>
     <ol>
       <li>On Session Home, use the Workflow card's <strong>Prepare
@@ -195,7 +195,7 @@
   {% endif %}
 
   {% if "give_access" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-give_access">
     <h2>Give reviewers access</h2>
     <p>
       The app does not send invitation emails yet, and magic links are not
@@ -219,7 +219,7 @@
   {% endif %}
 
   {% if "watch_progress" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-watch_progress">
     <h2>Watch progress</h2>
     <p>
       The <strong>Invitations</strong> page shows, per reviewer, how far
@@ -232,7 +232,7 @@
   {% endif %}
 
   {% if "close_and_share" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-close_and_share">
     <h2>Close, release, and share results</h2>
     <ol>
       <li>Use the Workflow card to <strong>Close</strong> the session, which
@@ -252,7 +252,7 @@
   {% endif %}
 
   {% if "tips" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-tips">
     <h2>Tips and troubleshooting</h2>
     <ul>
       <li><strong>Import with CSVs.</strong> Beyond a handful of people, upload
@@ -280,7 +280,7 @@
   {# 19E rung 5. Placed between the operator walkthrough and the
      role-addressed cards: this is the optional "see it working first"
      step, not part of the sequence above it. #}
-  <div class="card">
+  <div class="card" id="guide-sample_session">
     <h2>Sample session</h2>
     <p>
       If you would rather see a working session than read about one, this
@@ -316,7 +316,7 @@
   {% endif %}
 
   {% if "for_reviewers" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-for_reviewers">
     <h2>For reviewers</h2>
     <ol>
       <li>Open the link your operator shared and <strong>sign in</strong> with
@@ -330,7 +330,7 @@
   {% endif %}
 
   {% if "for_observers" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-for_observers">
     <h2>For observers</h2>
     <p>
       An observer views collated results for a session without reviewing
@@ -342,7 +342,7 @@
   {% endif %}
 
   {% if "for_reviewees" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-for_reviewees">
     <h2>For reviewees</h2>
     <p>
       A reviewee is someone being reviewed. After the operator closes the
@@ -354,7 +354,7 @@
   {% endif %}
 
   {% if "getting_help" in visible_sections %}
-  <div class="card">
+  <div class="card" id="guide-getting_help">
     <h2>Getting help</h2>
     <p>
       A session's <strong>Validate</strong> page explains most setup problems in

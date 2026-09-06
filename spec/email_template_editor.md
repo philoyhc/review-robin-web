@@ -37,7 +37,22 @@ own the dispatch leg. The design record is
 
 ## 2. Page contract
 
-Chrome → status-pill strip → template selector → two-card body.
+Chrome → status-pill strip → **page guidance** → template selector →
+two-card body.
+
+**Page guidance** (Segment 19E rung 6 pilot). The shared
+`<details class="page-guidance">` disclosure specced in
+`spec/setup_pages.md` "Shared body shape", above the template
+selector because it explains the page rather than the selected tab.
+Its body states three things this page's controls do not: that a
+session has three emails and each tab edits one of them for this
+session only; that a blank field falls back to the default shown as
+the placeholder; and — the one an operator most needs — that
+**sending is not switched on yet** (Segment 14B), so a saved
+template is stored rather than delivered and no part of reviewer
+access depends on it. It links to the Guide's "Give reviewers
+access" section (`/guide#guide-give_access`) rather than repeating
+what that section says.
 
 **Template selector.** A `tab-strip tab-strip-page` row of three
 page-internal tabs reusing the chrome's `.nav-tab` styling
