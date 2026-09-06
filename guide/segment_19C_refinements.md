@@ -1002,10 +1002,37 @@ refinements are identified.
   - Raising `--border-default` to 3:1 instead of adding a fill is the obvious
     alternative and is **not** obviously worse — it needs no new token and no
     spec row. It does change every bordered surface, not just inputs, which is
-    the trade to weigh. Decide it in the item, don't assume the fill.
+    the trade to weigh.
 
-  Still small, but no longer isolated: one token, one spec table, one harness
-  pick-list.
+  **Decided 2026-09-06 (user).** Border tweak only — no new input-surface
+  token, no new spec row, no change to the customizer pick-list. The current UI
+  reads acceptably in use; this is a contrast-headroom item, not a defect
+  report, and the fill route is out of proportion to it. To be tried in
+  `tools/theme_customizer.html` before anything is committed to `base.html`.
+
+  **Candidate, if the tweak is taken.** `--border-default` repoints to the
+  **existing** primitive `--slate-dim` (`#6f7b8e`) in *both* themes. Measured
+  against `--surface-page`:
+
+  | Primitive | Light (`#ffffff`) | Dark (`#0f141b`) |
+  |---|---|---|
+  | `--gray-soft` / `--slate-deep` (today) | 1.47:1 | 1.70:1 |
+  | `--gray` `#9ca3af` | 2.54:1 | 7.28:1 |
+  | **`--slate-dim` `#6f7b8e`** | **4.29:1** | **4.31:1** |
+  | `--slate` `#6b7280` | 4.83:1 | 3.82:1 |
+
+  `--slate-dim` is the only one that lands near-symmetrically in both themes,
+  and one primitive serving both columns collapses the change to a single
+  Tier 2 row. Two things to look at in the customizer rather than reason about:
+  4.3:1 is roughly triple today's contrast, which on a **2px** `.card` border
+  may read heavier than intended; and the repoint moves every bordered
+  surface — cards, nav, tables — not just inputs. `--gray` is the fallback if
+  `--slate-dim` looks too strong, at the cost of leaving light at 2.54:1,
+  still short of 3:1.
+
+  Scope, after the decision: one line in `base.html`, one row in
+  `spec/color_tokens.md`. The token stays `--border-default`, so the
+  customizer pick-list and its self-check are untouched.
 
 ---
 
