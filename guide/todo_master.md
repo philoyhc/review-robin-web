@@ -2510,11 +2510,12 @@ dep chains called out at the bottom of this file.
   host that does not exist gets rewritten the day it does. Narrowed the
   same day by an item-by-item audit of workplan §18: four of the ten
   items had already shipped (validation explanations via
-  `ValidationRule.why`; operator guide = `docs/quickstart.md`;
+  `ValidationRule.why`; operator guide = the in-app Guide at `/guide`
+  since 19E rung 2, formerly `docs/quickstart.md`;
   developer setup = `docs/local_setup.md`; known limitations =
   `docs/known_limitations.md`), four moved out to 19E / 19C Item 8. What is left: the **administrator guide** for the
   institutional host, the institutional half of **troubleshooting**, a
-  **currency pass** over `quickstart` + `known_limitations`, and
+  **currency pass** over the Guide + `known_limitations`, and
   setting the technical-support address 19C Item 8 introduces.
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 

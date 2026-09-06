@@ -79,7 +79,8 @@ are entitled to at `/me`; the invitation token is a convenience
 landing, not a credential (`spec/permissions.md` §2). An operator can
 therefore notify participants with a **generic email from their own
 mailbox pointing at the app's URL** — no per-reviewer message, no
-token, nothing sent by the app. `docs/quickstart.md` §6 already
+token, nothing sent by the app. The in-app Guide's "Give reviewers
+access" already
 documents exactly this as the operating procedure. Invitations are
 covered without the app sending anything.
 

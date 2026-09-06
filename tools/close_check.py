@@ -104,7 +104,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 # A committed path: backticked, under spec/ or docs/, ending .md. The
 # trailing [^`]* absorbs a section reference written inside the ticks
-# (`docs/quickstart.md §4c`, `spec/x.md#anchor`).
+# (`docs/setup.md §4c`, `spec/x.md#anchor`).
 COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 WAIVER = re.compile(r"<!--\s*doc-impact-waived:(.*?)-->", re.DOTALL)
 ITEM_HEADING = re.compile(r"^## Item (\d+)\b")

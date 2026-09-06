@@ -46,7 +46,7 @@ had already shipped under other segments; three move out; three stay.
 | 3. Validation explanations | **✅ shipped.** `ValidationRule.why` is populated for all 18 registered rules and renders as a "Why this check?" `<details>` disclosure per issue (`app/web/templates/operator/partials/validation_results.html`, `spec/validate_page.md` §3.1) | done |
 | 4. Sample CSV templates | **not built** — nothing downloadable, no blank-template route | **19E** |
 | 5. Sample session fixture | **not built** — no seed / demo / fixture session | **19E** |
-| 6. Operator guide | **✅ shipped** as `docs/quickstart.md` (324 lines, one session end-to-end: create, set up, launch, watch, share) | currency pass stays here |
+| 6. Operator guide | **✅ shipped**, and **relocated 2026-09-06**: was `docs/quickstart.md`, now the in-app Guide at `/guide` (Segment 19E rung 2), with the file retired to `docs/archive/quickstart.md` | currency pass stays here, against the Guide |
 | 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, `docs/azure_provision.md`, `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
 | 8. Developer setup guide | **✅ shipped** as `docs/local_setup.md` (322 lines) | done |
 | 9. Troubleshooting guide | **✅ shipped for the dev slot** as `docs/troubleshooting.md`. Its failure modes are the personal-Azure ones; the institutional host will have its own (tenant, Easy Auth, NUS network policy) | institutional half stays here |
@@ -66,10 +66,11 @@ had already shipped under other segments; three move out; three stay.
 2. **Troubleshooting, institutional half** — the failure modes the NUS
    host actually produces (Easy Auth / tenant, network policy, the
    NUS deploy workflow), appended to `docs/troubleshooting.md`.
-3. **Currency pass on the operator-facing docs** — `docs/quickstart.md`
-   and `docs/known_limitations.md` re-read against the deployed
-   reality: real URLs, real sign-in flow, and limitations that are
-   still limitations once the host exists.
+3. **Currency pass on the operator-facing docs** — the in-app Guide
+   (`app/web/templates/guide.html`, canonical since 19E rung 2) and
+   `docs/known_limitations.md` re-read against the deployed reality:
+   real URLs, real sign-in flow, and limitations that are still
+   limitations once the host exists.
 4. **The technical-support address itself** — set the env var 19C
    Item 8 introduces to the real contact for the deployment.
 
@@ -81,7 +82,7 @@ had already shipped under other segments; three move out; three stay.
   whole point of the 2026-09-05 split: if it does not need the
   deployment, it belongs in 19E / 19C, not here.
 - Re-doing the four items the audit found already shipped. A currency
-  pass over `quickstart` / `known_limitations` is not a rewrite.
+  pass over the Guide / `known_limitations` is not a rewrite.
 - New feature work not in the workplan §18 list.
 
 ---
