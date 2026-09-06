@@ -132,6 +132,9 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     # /about is a real page with its own contract section
     # (operator_ui_concept.md "### `/about` — About"), not infrastructure.
     "app.web.routes_about": ("spec/operator_ui_concept.md",),
+    # /guide is the in-app documentation page (Segment 19E). Its contract
+    # section lands in operator_ui_concept.md alongside /about's.
+    "app.web.routes_guide": ("spec/operator_ui_concept.md",),
 }
 
 # Modules currently mapped to ``SPEC_PENDING``. Empty is the correct

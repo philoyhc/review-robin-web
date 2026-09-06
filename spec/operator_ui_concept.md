@@ -364,7 +364,34 @@ Real SMTP / production email is deferred to **Segment 14B** (email send activati
 
 ### `/about` — About
 
-Reached from the app-identity text at the top left of every operator page. Currently a stub.
+Reached from the **chrome link row** in the user block (top right), not from the
+app-identity text — `.chrome-app-identity` is a `<span>`, not a link. Carries the
+app description and the access note it absorbed when 18R Item 6 retired
+`/request-access`, so it renders usefully for a signed-in user with no role.
+Takes `?return_to=` and renders a "← Back to {context}" affordance.
+
+### `/guide` — Guide
+
+The in-app documentation page. Sits **beside `/about`** in the same chrome link
+row and takes the same `?return_to=` treatment; the two are siblings and neither
+absorbs the other. `/about` is identity and access — what this software is, who
+to contact. `/guide` is how to run a session.
+
+Suppressed on its own path, exactly as `/about` is, so the row never offers a
+link to the page already being viewed.
+
+**Shipped so far (Segment 19E rung 1): the scaffold only.** Every section
+renders with its real heading and placeholder body copy, ungated. Two things
+the plan commits to that are *not* yet true and must not be read from this
+section as though they were: the material from `docs/quickstart.md` has not
+moved in, and sections are not yet filtered by the viewer's role. Both land at
+rung 2, which is also when `docs/quickstart.md` retires into this page and
+stops being the canonical operator documentation.
+
+Whether `/guide` should be viewable **without signing in** is open and belongs
+to Segment 20: `resolve_current_user` raises 401 today, so an anonymous Guide
+would be this app's first unauthenticated surface, needing both a
+`docs/security_posture.md` change and Easy Auth configured on the host.
 
 ## Out of scope / forward-looking notes
 
