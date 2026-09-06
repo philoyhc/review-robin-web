@@ -275,3 +275,63 @@ def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:
     assert ".card-columns {" in body
     columns_rule = body.split(".card-columns {")[1].split("}")[0]
     assert "align-items: start" in columns_rule
+
+
+ROSTER_PAGES = ("reviewers", "reviewees", "relationships")
+
+
+def test_the_roster_pages_put_every_top_card_in_one_column_container(
+    client: TestClient, db: Session
+) -> None:
+    """All four cards above the preview table share one `.card-columns`,
+    not two stacked row grids.
+
+    Two containers would look identical when everything is closed and
+    still fail the point of the change: growth in the upper one pushes
+    *both* columns of the lower one down. So this asserts the source
+    order that only a single container with two column stacks produces —
+    the whole left column, then the whole right.
+    """
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.relationships_enabled = True
+    db.flush()
+
+    for page in ROSTER_PAGES:
+        body = client.get(f"/operator/sessions/{session_id}/{page}").text
+        assert body.count('class="card-columns"') == 1, page
+
+        # Left column in full, then right column in full — the source
+        # order only a single container of two column stacks produces.
+        order = [
+            body.index("Fields with data:"),
+            body.index("field-labels-form"),
+            body.index(CARD),
+            body.index('class="card operator-actions-card"'),
+        ]
+        assert order == sorted(order), (page, order)
+
+        # No row grid above those four. The Upload / Danger Zone pair
+        # below still is a `.bottom-grid` and should be — asserting
+        # position rather than absence keeps this independent of whether
+        # the preview table rendered.
+        assert body.index('class="bottom-grid"') > order[-1], page
+
+
+def test_the_activated_lock_card_sits_above_the_columns(
+    client: TestClient, db: Session
+) -> None:
+    """It is full width, and `.card-columns` has no spanning slot — a
+    full-width card between the two pairs is what forced them into two
+    separate row grids before. Above the container it reads at the top
+    of the page, which is where an "you cannot edit this" notice
+    belongs."""
+    session_id = _session_id(client, db)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.status = "ready"
+    db.flush()
+
+    body = client.get(f"/operator/sessions/{session_id}/reviewers").text
+
+    assert 'class="card lock"' in body
+    assert body.index('class="card lock"') < body.index('class="card-columns"')
