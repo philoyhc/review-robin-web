@@ -1462,11 +1462,13 @@
         padding: 12px 16px;
         align-self: start;
       }
-      /* Chevron instead of the native disclosure triangle: it reads as
-         "there is more below" rather than as a list marker, and it
-         rotates to point at the content it opened. `list-style: none`
-         kills it in Firefox, the -webkit pseudo-element in Safari and
-         older Chrome. */
+      /* Same solid triangle the collapsible instrument cards use
+         (`.instrument-card-toggle-icon`, U+25BE) and the same
+         rotate-180-when-open convention: down closed, up open. One
+         disclosure glyph across the app, so an operator learns it once.
+         The native marker is suppressed three ways because engines
+         disagree — `list-style` for Firefox and current Chrome, the
+         -webkit pseudo-element for Safari and older Chrome. */
       body.ui-v2 .page-guidance > summary {
         cursor: pointer;
         color: var(--card-help-fg);
@@ -1477,14 +1479,14 @@
         display: none;
       }
       body.ui-v2 .page-guidance > summary::before {
-        content: "\203A";
+        content: "\25BE";
         display: inline-block;
-        width: 1em;
-        font-weight: 600;
-        transition: transform 0.15s ease;
+        width: 1.1em;
+        line-height: 1;
+        transition: transform 0.15s ease-out;
       }
       body.ui-v2 .page-guidance[open] > summary::before {
-        transform: rotate(90deg);
+        transform: rotate(180deg);
       }
       body.ui-v2 .page-guidance-body {
         margin-top: var(--space-3);

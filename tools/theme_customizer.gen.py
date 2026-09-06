@@ -161,10 +161,14 @@ TARGETS = [
     # to the fill's primitive): Part C is how you find out *which* token paints
     # an edge, and leaving it out is how this row went stale when 19C Item 8
     # moved the fill off --border-default.
-    (".rs-help-card:not(.ph-help-edit)", "Instrument help card",
+    # Named "Help card", not "Instrument help card": since 19E rung 6a the
+    # --card-help-* tokens also paint the page-guidance disclosure on every
+    # Setup page, so a facet named after one caller would misdescribe what
+    # editing it changes.
+    (".rs-help-card:not(.ph-help-edit)", "Help card",
      [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
       ("border", "border", "--card-help-border")]),
-    (".rs-help-card.ph-help-edit", "Instrument help card with edit box",
+    (".rs-help-card.ph-help-edit", "Help card with edit box",
      [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
       ("border", "border", "--card-help-border")]),
     # The edit box itself: on the operator Instruments page the only thing

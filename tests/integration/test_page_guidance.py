@@ -269,6 +269,29 @@ def test_the_observers_guidance_leads_the_left_column(
     assert body.index(CARD) < body.index('class="card operator-actions-card"')
 
 
+def test_the_disclosure_uses_the_instrument_cards_triangle(
+    client: TestClient,
+) -> None:
+    """One disclosure glyph across the app: the same solid triangle the
+    collapsible instrument cards use (U+25BE), rotated 180° when open —
+    down closed, up expanded. Pinned because a divergent marker here
+    would teach an operator two controls for one idea, and because the
+    native marker has to stay suppressed for the glyph to be the only
+    one showing."""
+    body = client.get("/guide").text  # the rules live in base.html
+
+    guidance_rule = body.split("body.ui-v2 .page-guidance > summary::before")[1]
+    assert "25BE" in guidance_rule.split("}")[0]
+
+    open_rule = body.split("body.ui-v2 .page-guidance[open] > summary::before")[1]
+    assert "rotate(180deg)" in open_rule.split("}")[0]
+
+    # Both suppressions, because engines disagree on which one works.
+    summary_rule = body.split("body.ui-v2 .page-guidance > summary {")[1]
+    assert "list-style: none" in summary_rule.split("}")[0]
+    assert "body.ui-v2 .page-guidance > summary::-webkit-details-marker" in body
+
+
 def test_the_column_stacks_are_start_aligned(client: TestClient) -> None:
     """`align-items: start` is what makes the two columns independent —
     the grid default, `stretch`, would make both as tall as the taller

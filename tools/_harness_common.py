@@ -287,7 +287,7 @@ def component_sections():
         <p>Destructive-action card. The button is fixed-width here.</p>
         <button class="btn destructive">Destructive</button>
       </div>
-      <div class="card rs-help-card"><strong>Rating</strong> — Instrument help card,
+      <div class="card rs-help-card"><strong>Rating</strong> — Help card,
         the read view. A tinted slab: its border resolves to the fill&#39;s primitive,
         so the 2px card edge disappears into it.</div>
       <!-- The unlocked state on the operator Instruments page: the same card
