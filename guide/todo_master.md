@@ -2484,40 +2484,64 @@ on* rather than what it does. Brief and findings:
   ledger, `status.md`, `known_limitations.md`, the 04sep assessment (dated
   notes) and the queue entry below.
 
-### Segment 19E — Operator onboarding — ✅ complete + archived 2026-09-07 (PRs #2131 → #2173; plan archived: `guide/archive/segment_19E_operator_onboarding.md`)
+### Segment 19E — Operator onboarding — ✅ complete + archived 2026-09-07 (PRs #2130 → #2173, with eight interleaved PRs from other work, + close #2176; plan archived: `guide/archive/segment_19E_operator_onboarding.md`)
 
 Carved out of Segment 20 on 2026-09-05 as the half that needed the app
-rather than the host, and closed two days later. Seven rungs, plus the
-author's copy and rewrite passes on top of them. What a first-time
-operator now meets:
+rather than the host, and closed two days later. Planned in **#2130**,
+replanned in **#2132** (role-awareness pulled out of rung 2 into a new
+rung 7, wired inert meanwhile). Seven rungs, plus the author's copy and
+rewrite passes on top of them, and the close in **#2176**.
+
+**The span is not all 19E.** Eight PRs inside `#2130 → #2173` belong to
+other work that interleaved: **#2146 / #2152 / #2153 / #2155** (theme
+customizer — #2146's exported adjustments landed mid-rung and so are
+recorded in 19E's `## Status`, but the mechanism is 19C Item 5's),
+**#2156** (todo_master + status currency), **#2165** (the banner headline
+pointed at `--fs-body`; `--fs-h3` never existed), and **#2167 / #2168**
+(the Instruments status pill and the Upload cards' column help). Read the
+per-rung numbers below, not the range.
+
+What a first-time operator now meets:
 
 - **`/guide`** — the canonical operator documentation, in the chrome row
   beside `/about` with the same `?return_to=` treatment.
   `docs/quickstart.md` retired to `docs/archive/` and its 11 live
   references repointed: a document *about* an app kept *outside* it had
   already gone stale once, and nothing structural stopped that recurring
-  (rungs 1 + 2).
+  (**rung 1 — #2131** the scaffold; **rung 2 — #2133** the content, the
+  retirement and the audience seam; **#2166** added the Workflow-card tip
+  to `Tips and troubleshooting` later).
 - **The lobby first-run card**, shown on zero *visible* sessions rather
   than "never had one", so an operator who archives everything sees it
-  again — correct, because they are back at the start (rung 3). Rebuilt
-  across #2159 → #2164 into four stepped help tiles, with the create
-  affordance settled in the Search card's favour: the button an operator
-  uses for every session after the first is the one they meet on the
-  first.
+  again — correct, because they are back at the start (**rung 3 —
+  #2134**). Rebuilt across **#2159 → #2164** into four stepped help
+  tiles, with the create affordance settled in the Search card's favour:
+  the button an operator uses for every session after the first is the
+  one they meet on the first.
 - **Two CSV template sets**, both byte-derived from the four serializers
   rather than hand-authored — a hand-maintained CSV is a second source of
   truth for `spec/csv_contracts.md` and will drift from the parser that
   reads it. A **starter** set with one mock row per file, and a **demo**
   set that builds a populated tutorial session through the real import
   path: download → Quick Setup → `validated`, which is the rung's
-  acceptance test rather than a fixture's (rungs 4 + 5).
+  acceptance test rather than a fixture's (**rung 4 — #2135**, with
+  **#2136** giving the set a worked scenario and worked labels;
+  **rung 5 — #2137**).
 - **A `What this page is for` disclosure** on all six Setup pages, each
   carrying the one fact its page is otherwise silent about, with the copy
-  contract in `spec/setup_pages.md` §0 (rung 6). Its drafting doc
-  (`guide/page_help_text.md`) retired early to `guide/archive/` on
-  2026-09-06, once the wording settled, rather than waiting for the
-  close.
-- **Role-aware Guide sections** (rung 7). `visible_audiences()` stops
+  contract in `spec/setup_pages.md` §0. **Rung 6a — #2138** built the
+  scaffold and piloted it on Email Template; **rung 6b — #2139** (the
+  drafts), **#2140 → #2145**, **#2147**, **#2148** (inline notes on
+  Assignments and Invitations rather than a help card) and **#2149** (the
+  copy for the five remaining pages) placed and worded it. The author's
+  copy pass followed in **#2150** (two Guide sections retired), **#2157**
+  (all five guidance cards; US spelling recorded as the prose convention)
+  and **#2158** (the at-least-one rule). Its drafting doc
+  (`guide/page_help_text.md`) retired early to `guide/archive/` in
+  **#2154**, once the wording settled, rather than waiting for the close;
+  **#2151** marked the segment paused between rungs 6 and 7.
+- **Role-aware Guide sections** (**rung 7 — #2173**, which also added
+  `spec/role_landing_and_visibility.md`). `visible_audiences()` stops
   returning a constant: operator derives from `require_operator`'s own
   predicate rather than restating it, and participant roles come from a
   new `participants.roles_held_anywhere(db, email)` applying the three
@@ -2525,7 +2549,7 @@ operator now meets:
   reviewees `is_email_identified`. The roles union. **A viewer holding
   nothing sees everything** — the judgment the plan did not specify,
   recorded in `spec/audience_and_identity_model.md`.
-- **The author's Guide rewrite** (#2169 → #2172): the walkthrough with
+- **The author's Guide rewrite** (**#2169 → #2172**): the walkthrough with
   twelve screencaps, behind the app's first `StaticFiles` mount at
   `/static`, matted so they read as pictures rather than blending into
   the page they are pictures of.
