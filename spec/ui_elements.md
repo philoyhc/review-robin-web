@@ -651,9 +651,31 @@ First user: the sessions-lobby first-run card
 (`spec/sessions_overview.md`).
 
 **`.guide-figure` / `.guide-figure-narrow`.** The `/guide` screencaps.
-The figure gives the image a `border-subtle` edge and 6px radius the
-screenshot itself has not got — without one a white-backed capture
-bleeds into the page and the reader cannot see where the app stops.
+
+These are pictures **of** this app rendered **inside** it, so a bordered
+image alone reads as more page rather than as an illustration of one —
+the capture's own white ground runs straight into the card's. The figure
+is therefore a **mat**: a padded `surface-muted` panel with a
+`border-subtle` edge, on which the capture sits the way a photograph is
+mounted. The tint separates the two even where the capture's own edge is
+white, and the inset says *this is a picture of something* before the
+reader has parsed what. The capture keeps a 1px `border-default` edge,
+whose job is only to define it against the mat — thickening it fights
+the mat rather than helping.
+
+Not a drop shadow, the other common answer: the app's eight `box-shadow`
+uses are all solid offset markers and focus rings, so a blurred one would
+be the first soft shadow in the codebase and would read as a different
+design language.
+
+Dark theme is where the mat earns its keep twice over. The captures are
+light-theme images, so on a dark page they are bright blocks whatever
+their border does; the dark mat frames them instead of letting them glare
+off the ground.
+
+`fit-content` makes the mat hug its picture rather than run to the column
+edge past a 600px capture, and `box-sizing: border-box` keeps the padding
+inside `max-width` so a narrow column cannot overflow.
 
 The captures arrive at **two scales**: six 1× shots at ~830px and six 2×
 at ~1680px. Left to fill the prose column they read at two different

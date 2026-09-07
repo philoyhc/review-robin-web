@@ -1167,16 +1167,50 @@
          without it a white-backed capture bleeds into the page and the
          reader cannot tell where the app stops. `max-width: 100%` plus
          `height: auto` keeps the aspect ratio at every viewport. */
+      /* Guide screencaps are pictures OF this app, rendered INSIDE this
+         app, so a bare bordered image reads as more page rather than as
+         an illustration of one — the capture's own white ground runs
+         straight into the card's.
+
+         A mat fixes what a heavier border cannot. The figure is a padded
+         `surface-muted` panel and the capture sits on it, the way a
+         photograph is mounted: the tint separates the two even where the
+         capture's edge is itself white, and the inset says "this is a
+         picture of something" before the reader has parsed what. The
+         capture's own border stays 1px — its job is now only to define
+         its edge against the mat, and thickening it would fight the mat
+         rather than help it.
+
+         Dark theme is where this earns its keep twice over: the captures
+         are light-theme images, so on a dark page they are bright blocks
+         whatever the border does, and the dark mat frames them instead
+         of letting them glare off the ground.
+
+         Not a drop shadow, which is the other common answer: the app's
+         eight `box-shadow` uses are all solid offset markers and focus
+         rings, so a blurred one would be the first soft shadow in the
+         codebase and would read as a different design language.
+
+         `fit-content` makes the mat hug its picture instead of running
+         to the column edge past a 600px capture; `border-box` keeps the
+         padding inside `max-width` so a narrow column cannot overflow. */
       body.ui-v2 .guide-figure {
+        box-sizing: border-box;
+        width: fit-content;
+        max-width: 100%;
         margin: var(--space-4) 0;
+        padding: var(--space-4);
+        background: var(--surface-muted);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
       }
       body.ui-v2 .guide-figure img {
         display: block;
         width: 1200px;
         max-width: 100%;
         height: auto;
-        border: 1px solid var(--border-subtle);
-        border-radius: 6px;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
       }
       /* The captures arrive in two families — six at ~830px and six at
          ~1680px, 1x and 2x shots of the same app. Left to fill the prose
