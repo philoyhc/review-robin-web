@@ -2940,6 +2940,17 @@
       }
       body.ui-v2 .sessions-lobby-card h2,
       body.ui-v2 .sessions-action-card h2 { margin-top: 0; }
+      /* Narrow viewports stack the two cards, Search below Sessions.
+         Side by side they are each half of an already-narrow page, and
+         the Search card is the one that suffers: its four buttons wrap
+         into a ragged block and the input shrinks to a stub. 800px is
+         the app's established two-column collapse point — `.page-grid`
+         and `.bottom-grid`, the other half-width card layouts, both
+         give way there. Sessions stays first: it is the page's summary,
+         and the actions read as what you do about it. */
+      @media (max-width: 800px) {
+        body.ui-v2 .sessions-lobby-row { flex-direction: column; }
+      }
       body.ui-v2 .sessions-lobby-pills {
         display: flex;
         flex-wrap: wrap;

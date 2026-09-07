@@ -55,6 +55,12 @@ A single-column page:
 
 The two half-width cards render in **every** state; the table is
 replaced by the first-run card when there are no live sessions.
+**Below 800px they stack, `Search` under `Sessions`** — the app's
+established two-column collapse point, shared with `.page-grid` and
+`.bottom-grid`. Side by side on a narrow page the Search card is the
+one that suffers: its four buttons wrap into a ragged block and the
+input shrinks to a stub. `Sessions` stays first because it is the
+page's summary and the actions read as what you do about it.
 
 The table sits inside a single `<form method="post">` so the
 per-row checkboxes submit with whichever expander button the
