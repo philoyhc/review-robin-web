@@ -31,7 +31,7 @@ def test_operator_with_no_sessions_sees_the_card(client: TestClient) -> None:
     body = client.get("/operator/sessions").text
 
     assert CARD_MARKER in body
-    assert "You don't have any sessions yet." in body
+    assert "You don't have any sessions yet" in body
 
 
 def test_the_card_carries_a_link_to_the_guide(client: TestClient) -> None:
@@ -181,9 +181,22 @@ def test_the_card_lays_its_four_steps_out_as_sub_cards(
     flat = " ".join(body.split())
 
     assert '<div class="subcard-row">' in flat
-    assert flat.count('<div class="subcard">') == 4
+    # Tiles are the app's existing help cards, not a tile look of their own:
+    # a row of tiles inside a card is explaining something, which is what
+    # `.rs-help-card` already says. A short-lived `.subcard` class that
+    # duplicated `.data-shape-card`'s shape was retired the same day.
+    assert flat.count('<div class="card rs-help-card">') == 4
+    assert '<div class="subcard">' not in flat
     # The list it replaced is gone, not merely hidden.
     assert "<ol>" not in flat.split(CARD_MARKER, 1)[1].split("</div>")[0]
+
+    # The definition of a session sits under the card header, not inside the
+    # first tile: it is what all four tiles are about, so it belongs to the
+    # card. It must land before the row, not within it.
+    card = flat.split(CARD_MARKER, 1)[1]
+    definition = "A <strong>session</strong> is one review round with its own"
+    assert definition in card
+    assert card.index(definition) < card.index('<div class="subcard-row">')
 
 
 # Each of the card's four sub-cards is a table-of-contents entry for one

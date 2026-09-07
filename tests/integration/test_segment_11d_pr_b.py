@@ -114,7 +114,7 @@ def test_sessions_list_empty_state_has_one_create_affordance(
     """
     body = client.get("/operator/sessions").text
     # No sessions exist yet for the test user.
-    assert "You don't have any sessions yet." in body
+    assert "You don't have any sessions yet" in body
     # The Search card's `Add new session` is the single create affordance.
     assert 'class="btn" href="/operator/sessions/new">Add new session</a>' in body
     assert body.count('href="/operator/sessions/new"') == 1

@@ -84,12 +84,22 @@ cards went with the table, so this card was the whole page. See
 
 The card carries, in order:
 
-1. **`You don't have any sessions yet.`** — card `<h2>`.
-2. The four stages of a session, as a `.subcard-row` of four
-   equal-width `.subcard` tiles (§10 of `spec/ui_elements.md`):
-   **Set up a session** (which also carries the one-sentence
-   definition of a session), **Prepare and launch**, **Give
-   reviewers access**, **Download responses**.
+1. **`You don't have any sessions yet`** — card `<h2>`, in the
+   ordinary card-header style, no trailing period (2026-09-07).
+2. **A one-sentence definition of a session**, standing on its own
+   directly under the header: *"A **session** is one review round
+   with its own people, form, dates, and results."* It sits here
+   rather than inside the first tile (where it was until
+   2026-09-07) because it is what all four tiles are about — it
+   belongs to the card, not to stage one — and it lets the first
+   tile open on an instruction like the other three.
+3. The four stages of a session, as a `.subcard-row` of four
+   equal-width **`.card.rs-help-card`** tiles (§10 and §4 of
+   `spec/ui_elements.md`): **Set up a session**, **Prepare and
+   launch**, **Give reviewers access**, **Download responses**.
+   They carry the app's existing help-card look rather than one of
+   their own — a row of tiles inside a card is explaining
+   something, which is what those semantics already say.
 
    *Changed 2026-09-07 — was a three-item `<ol>`.* A list is read
    top-to-bottom and its last item is read least; the stage an
@@ -111,13 +121,13 @@ The card carries, in order:
    `tests/integration/test_lobby_first_run_card.py`
    (`CARD_STEP_TO_GUIDE_SECTION`), so renaming a heading on either
    side without its partner still fails.
-3. A muted line linking to
+4. A muted line linking to
    **`/guide?return_to=/operator/sessions`**. This link is why the
    card exists (Segment 19E): `/guide` is the canonical operator
    documentation, and the chrome link alone is easy to miss on a
    first visit. It is byte-identical to the chrome's own Guide
    link on this page, so tests distinguish the two by counting.
-4. A closing sentence in that same muted line, pointing at the
+5. A closing sentence in that same muted line, pointing at the
    Search card's **`Add new session`** button. **The card has no
    CTA of its own** (changed 2026-09-07): standardisation left it
    and the Search card offering the same destination in the same
@@ -128,7 +138,7 @@ The card carries, in order:
    the same button a second time, as part of describing the first
    stage.
 
-Item 3's muted line also carries the **setup-template download**
+Item 4's muted line also carries the **setup-template download**
 (`GET /templates/starter.zip`, Segment 19E rung 4) — four generic
 roster templates the operator can fill in before creating a
 session. This card and the Guide card are the two surfaces that
