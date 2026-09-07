@@ -243,6 +243,72 @@ def resolve_mode(
     return None
 
 
+def reviewee_has_current_grant(
+    db: Session, review_session: ReviewSession
+) -> bool:
+    """Does the ``reviewee`` audience have a grant that resolves
+    **right now** on any instrument in this session?
+
+    The predicate behind Segment 19F: a reviewee learns they are being
+    reviewed only once something has actually been granted to them. It
+    answers the session-level question — *is there anything for a
+    reviewee to see here at this moment* — which is what gates their
+    ``/me`` row and their ``/results`` surface.
+
+    **Per session, not per instrument.** One open grant across ten
+    instruments is one visible row. The caller does not care which
+    instrument; the surface itself re-resolves per instrument when it
+    renders.
+
+    **"Currently", not "ever configured"** (19F decision 1). A policy
+    row whose window has not opened does not count. Otherwise an
+    operator's setup-time decision would disclose participation months
+    before the reviewee may see anything, which is the disclosure being
+    closed.
+
+    Three ways this returns ``False``, and they are deliberately
+    indistinguishable to the caller: the session is archived (the
+    override in ``spec/visibility_policy.md`` forces every non-operator
+    audience off), neither window is open, or no instrument's
+    ``reviewee`` row resolves to a mode.
+
+    Note the shape a reviewee grant can take: their ``while_ongoing``
+    cell is *always* off by construction (see ``_PER_CELL_VALID_MODES``
+    — reviewees do not watch responses arrive), so in practice this is
+    ``True`` only inside an open response-release window.
+    """
+    if lifecycle.is_archived(review_session):
+        return False
+    while_ongoing_open = lifecycle.is_ready(review_session)
+    after_release_open = lifecycle.is_response_release_window_open(
+        review_session
+    )
+    if not (while_ongoing_open or after_release_open):
+        # `resolve_mode` would return None for every row anyway; skip
+        # the query rather than ask the database to prove it.
+        return False
+    rows = db.execute(
+        select(InstrumentViewPolicy)
+        .join(
+            Instrument,
+            Instrument.id == InstrumentViewPolicy.instrument_id,
+        )
+        .where(
+            Instrument.session_id == review_session.id,
+            InstrumentViewPolicy.audience == "reviewee",
+        )
+    ).scalars()
+    return any(
+        resolve_mode(
+            row,
+            while_ongoing_open=while_ongoing_open,
+            after_release_open=after_release_open,
+        )
+        is not None
+        for row in rows
+    )
+
+
 def _validate_per_window(
     *,
     audience: str,
@@ -455,6 +521,7 @@ __all__ = [
     "encode_mode",
     "list_for_instrument",
     "resolve_mode",
+    "reviewee_has_current_grant",
     "upsert_many",
     "upsert_policy",
     "valid_modes_for_cell",

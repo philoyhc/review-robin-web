@@ -92,7 +92,7 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 ### Reachability windows (today)
 
 - Reviewer surface: reachable when `session_status_for_reviewer(reviewer, session) != "not opened"`. The surface 403s / redirects until the session has at least once been activated.
-- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate at the route level today.** The per-instrument visibility-policy resolver inside `build_reviewee_results_context` applies the window gate — sections only surface values when the relevant window (while_ongoing / after_release) is currently open. W16 shipped the full resolver; the route itself does not 403 based on the release window.
+- Reviewee results: reachable for any active reviewee whose `email_or_identifier` matches the user's email. **No datetime gate at the route level today** — 19F PR 4 adds one, refusing with 404 when `reviewee_has_current_grant` is False so that the surface and the `/me` row agree by construction rather than by two readings of one rule. Until then the per-instrument resolver inside `build_reviewee_results_context` is the only window gate: sections surface values only when the relevant window (while_ongoing / after_release) is currently open.
 - Observer collation: reachable for any active observer. The per-instrument visibility-policy resolver inside `build_observer_collation_context` applies the window gate at view time — instruments only render when the active window (while_ongoing / after_release) has a policy-permitted mode for the observer audience. The route itself does not 403 based on the release window.
 
 The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable via W14 + S12 and consumed at view time by W16 (reviewee `/results`) and W17 (observer `/collation`).
@@ -105,6 +105,16 @@ The `/me` dashboard (`reviewer_dashboard` in `app/web/routes_reviewer/_dashboard
 
 **Union rule.** For the signed-in user, the dashboard runs three queries (reviewer / reviewee-with-email-identification / observer, `status = active` only, case-insensitive email match) and merges by `session_id`. Each row carries the `roles` list — a subset of `["reviewer", "reviewee", "observer"]` in that priority order.
 
+**The reviewee role additionally requires a currently-resolving grant** (Segment 19F PR 2). An active, email-identified reviewee row is necessary but not sufficient: `visibility_policies.reviewee_has_current_grant(db, session)` must also return `True`, meaning at least one instrument in the session has a `reviewee` policy row whose mode resolves **under the windows open right now**. With no such grant the `reviewee` entry never enters `roles`, so there is no pill, no link, and — since PR 4 — no reachable surface.
+
+Three properties of that rule, each deliberate:
+
+- **Currently, not ever-configured.** A policy row whose window has not opened does not count. Otherwise an operator's setup-time decision would announce the review to its subject months before they may see anything, which is the disclosure 19F closes.
+- **The role is gated, not the row.** A reviewee who is also a reviewer or observer on the same session keeps their row and those pills; only the `reviewee` entry is absent. Hiding the whole row would break two working surfaces to protect a third.
+- **A reviewee with no grant is indistinguishable from a stranger.** Same empty `/me`, and the same 404 at `/results`. That equivalence is the point, not a side effect — see `spec/role_landing_and_visibility.md` §4.
+
+**The row appears and disappears as windows move.** A reviewee sees nothing during the review, a row once the release window opens, and nothing again if the operator closes the window or archives the session. This is designed, not a bug: the row tracks whether anything is currently visible to them, and that is a time-varying fact. Reviewers and observers are not grant-conditioned, so an archived session stays on *their* `/me` as "not opened" — the asymmetry is a consequence of the reviewee rule, not a second rule.
+
 **Pill stack in the Session cell.** Pills render on a second line directly beneath the session name in the same cell — there is no dedicated Roles column. The CSS classes are `.pill-role-reviewer` (blue), `.pill-role-reviewee` (green), `.pill-role-observer` (amber).
 
 **Session-name link target.** The link picks the first reachable role in priority order Reviewer → Reviewee → Observer. The rationale: reviewer carries the active work (deadline, save / submit), so a multi-role user lands on the actionable page by default; the pills are the explicit escape hatch to the read-only views.
@@ -114,7 +124,7 @@ Reachability per role for the link:
 | Role | Reachable when |
 |---|---|
 | reviewer | `session_status_for_reviewer != "not opened"` (per §4). Surfaces with `pill.state == "submitted"` link to `/me/sessions/{id}/summary` instead of `/me/sessions/{id}/1`. |
-| reviewee | Always today; gated on the release window in W16. |
+| reviewee | Whenever the role is present at all — and since 19F PR 2 the role is itself conditional on a currently-resolving grant (above), so reaching this row means there is something to link to. |
 | observer | Per-instrument render gated on the Band 3 observer policy + the active session window (W17, shipped 2026-06-02). The lobby link is reachable for any active observer. |
 
 If no role is reachable, the session name renders as plain text.

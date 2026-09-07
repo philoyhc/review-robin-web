@@ -343,6 +343,62 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 2 shipped: the reviewee role is gated on a
+currently-resolving grant.** `visibility_policies.reviewee_has_current_grant(db,
+review_session)` is the predicate the plan named, built where the plan said
+and answering the session-level question — *is there anything for a reviewee
+to see here right now*. `_dashboard.py` filters the `reviewee` `_add` through
+it, so the role leaves `roles` and `role_links` together and the row survives
+on any other role the user holds (decision 2). One query per reviewee session,
+and often none: when neither window is open the predicate returns before
+touching the policy table.
+
+**The dashboard triage was 6 tests, not the 11 the plan flagged.** The plan
+said all 11 dashboard tests would have to be re-read to decide whether each
+wanted *a* row or a *reviewee* row; in the event only 6 failed, because the
+rest seed reviewers or observers. Each of the 6 wanted a reviewee row, so all
+6 took a grant rather than a rewrite. The re-reading the plan budgeted for was
+real but cheaper than measured — worth recording as a case where the ceiling
+was conservative in the useful direction.
+
+**The fixture is the reusable part.** `grant_reviewee_visibility` in
+`tests/integration/conftest.py` creates the two things a grant needs together —
+an open release window *and* an `after_release` reviewee policy row — because
+either alone is silently insufficient and a test that sets only one reads as a
+bug in the gate. It is a **fixture, not an importable helper**: `tests/conftest.py`
+shadows the module name, so `from conftest import …` inside an integration test
+resolves to the parent file and fails. Found by doing it the other way first.
+
+**The W16 marker is retired here, not at PR 6.** The plan assigned both stale
+`will gate this` comments to the specs rung, but PR 2 *is* the work the W16
+comment predicted, so leaving it would have shipped a comment that was false
+about the line beneath it. The W17 observer marker stays for PR 5, which is the
+rung that actions it.
+
+**One trap re-hit, and it is the same one as 19E's.** A new test asserted
+`"/results" not in body` to prove no reviewee link renders — and failed,
+because `base.html` inlines the entire stylesheet and a CSS comment mentions
+`/results`. The assertion is now id-qualified. This is the second time this
+session that a whole-page substring assertion has been wrong for exactly this
+reason; on this page, any bare path fragment is a false positive waiting to
+happen.
+
+**Tests: 2,881 passed / 16 skipped**, up 13. Nine unit tests pin the
+predicate's own edges (`tests/unit/test_reviewee_current_grant.py`) and four
+integration tests pin what a reviewee sees. Mutation-checked in four places —
+dropping the dashboard gate turns 4 red; dropping the predicate's audience
+filter, its session filter, or its archive short-circuit each turns exactly one
+red, so no test is covering another's ground by accident.
+
+**Doc impact honoured at this rung:** `spec/participant_model.md` §5 (the grant
+precondition, the three properties, and the row appearing and disappearing as
+windows move) and `spec/role_landing_and_visibility.md` §4 — whose reviewee
+lifecycle table is **replaced rather than amended**, because the reviewee role
+no longer follows the lifecycle at all. A `ready` session with no open window
+shows nothing; a `draft` session with an open one shows a row. Keeping a
+five-state table there would have been a well-formatted lie. Observers keep
+their lifecycle table, now stated as its own section.
+
 **2026-09-07 — PR 1 shipped: every session-scoped gate answers 404.**
 `require_session_operator`, `require_reviewer_in_session`,
 `require_reviewee_in_session` and `require_observer_in_session` raise a

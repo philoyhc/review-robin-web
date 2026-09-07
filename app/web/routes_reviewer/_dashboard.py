@@ -26,6 +26,7 @@ from app.services import date_formatting
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.services import visibility_policies
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
@@ -134,7 +135,15 @@ def reviewer_dashboard(
         reviewer_by_session[s.id] = reviewer
         _add(s, "reviewer")
     for _reviewee, s in reviewee_rows:
-        _add(s, "reviewee")
+        # 19F PR 2 — the reviewee role contributes a row only while a
+        # grant actually resolves for them. A reviewee with nothing
+        # currently granted is treated exactly as someone holding no
+        # role at all (decision 3): no row, no link, and — from PR 4 —
+        # no surface. The row still survives on any *other* role they
+        # hold here (decision 2: gate the role, not the row), which is
+        # why this filters the `_add` rather than the query.
+        if visibility_policies.reviewee_has_current_grant(db, s):
+            _add(s, "reviewee")
     for _observer, s in observer_rows:
         _add(s, "observer")
 
@@ -189,10 +198,14 @@ def reviewer_dashboard(
         if "reviewee" in roles:
             role_links["reviewee"] = {
                 "target": f"/me/sessions/{review_session.id}/results",
-                # W16 will gate this on the
-                # ``responses_release_at`` / ``responses_release_until``
-                # window; today the placeholder accepts any active
-                # reviewee.
+                # Unconditionally enabled, and that is not a
+                # placeholder: `roles` only carries `reviewee` when
+                # `reviewee_has_current_grant` said yes above, so
+                # reaching here already means there is something to
+                # link to. (This comment used to read "W16 will gate
+                # this …" — W16 shipped in PRs #1737–#1752 and the
+                # marker outlived it by three months, which is how 19F
+                # came to exist.)
                 "enabled": True,
             }
         if "observer" in roles:

@@ -42,7 +42,7 @@ def _make_session(
 
 
 def test_reviewee_pill_renders_as_anchor_to_results(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     review_session = _make_session(client, db, code="link-re")
     db.add(
@@ -53,6 +53,8 @@ def test_reviewee_pill_renders_as_anchor_to_results(
         )
     )
     db.commit()
+    # 19F PR 2 — a reviewee row exists only while a grant resolves.
+    grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     expected = (
         f'<a class="pill pill-role-reviewee" '
@@ -150,11 +152,15 @@ def test_session_name_links_to_reviewer_when_reviewer_reachable(
 
 
 def test_session_name_falls_through_to_reviewee_when_reviewer_not_opened(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """Reviewer + reviewee on a ``draft`` session: the reviewer
     surface is ``not opened``, so the session-name link falls
-    through to ``/results``."""
+    through to ``/results``.
+
+    The reviewee half needs a resolving grant since 19F PR 2 — without
+    one there is no reviewee link to fall through *to*, and the test
+    would be asserting a priority order over a single candidate."""
     review_session = _make_session(client, db, code="link-fall-re")
     db.add_all(
         [
@@ -171,6 +177,7 @@ def test_session_name_falls_through_to_reviewee_when_reviewer_not_opened(
         ]
     )
     db.commit()
+    grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     # Session-name link target is the reviewee surface.
     assert f'href="/me/sessions/{review_session.id}/results"' in body
@@ -222,7 +229,7 @@ def test_session_name_is_plain_text_when_no_role_reachable(
 
 
 def test_session_status_pills_are_visibly_styled(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     """Each of the three Session-status states renders as a clearly
     pill-styled span — ``open`` green, ``not opened`` light-blue,
@@ -265,6 +272,10 @@ def test_session_status_pills_are_visibly_styled(
         )
     )
     db.commit()
+    # Each row needs a resolving grant since 19F PR 2, or the reviewee
+    # role contributes no row and there is no status pill to style.
+    for granted in (s_draft, s_open, s_closed):
+        grant_reviewee_visibility(granted)
 
     body = client.get("/me").text
     assert '<span class="pill pill-info">not opened</span>' in body
