@@ -372,7 +372,8 @@ Takes `?return_to=` and renders a "← Back to {context}" affordance.
 
 **Absorbed the Guide's "Before you start" card (Segment 19E).** The Access
 card now opens with how to reach the app and sign in — hosted, nothing to
-install, single sign-on with an institutional account, no separate password —
+install, single sign-on with an institutional MS365 account, no separate
+password —
 and states that an address on the operator allowlist lands on the Sessions
 lobby. It sits here rather than in the Guide because a reader of the Guide has
 already signed in; on `/about` the same facts answer the question a stranger
