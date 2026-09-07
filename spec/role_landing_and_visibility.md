@@ -165,12 +165,21 @@ the Reviewee pill is missing.
 | `validated` | listed, "not opened" | **yes** | **200** |
 | `ready` | listed, "open" | yes | 200 |
 | `expired` | listed, "closed" | yes | 200 |
-| `archived` | listed, "not opened" | yes → **unlinked from PR 5** | 200, empty |
+| `archived` | listed, "not opened" | **no — unlinked** | 200, empty |
 
 **Observers are deliberately not grant-gated** (19F decision 4): being
 appointed an observer is not a disclosure *about* the observer, so the
 privacy argument that gates reviewees does not transfer. They may see
-that they are an observer before their window opens.
+that they are an observer before their window opens — which is why the
+link is live on `draft` and `validated` as well as `ready` and
+`expired`.
+
+**Archived is the one exception** (decision 7). Archive closes every
+non-operator grant, so `/collation` there is empty by construction and a
+live link to it is a dead end. The row keeps its "not opened" text and
+loses its link, matching the reviewer row beside it. The surface itself
+still answers **200** — observers are not route-gated the way reviewees
+became at PR 4 — it simply has nothing to render.
 
 **Access is not lifecycle-gated on this surface; content is.** The route
 gates only on an active roster row, so it returns 200 in every state
@@ -214,26 +223,32 @@ Guide does not offer them a page they would be refused.
 Recorded rather than fixed here, because each is a behaviour decision
 rather than a typo.
 
-**The archive visibility override does not reach observers.**
-`spec/visibility_policy.md` §"archive override" states that when
-`sessions.status = "archived"` the resolver treats every per-window pair
-as off **for every non-operator audience**.
-`app/web/views/_reviewee_results.py` implements exactly that, with an
-`is_archived` short-circuit before the policy table is touched.
-`app/web/views/_observer_collation.py` has **no archive check**: it
-computes `after_release_open` from
-`lifecycle.is_response_release_window_open`, which is purely
-anchor-based and returns `True` on an archived session whose release
-anchor is in the past. `resolve_mode` then returns a **live grant** —
-verified returning `"raw"` for an observer on an archived session.
+**~~The archive visibility override does not reach observers.~~
+Closed 2026-09-07** — and the history is worth keeping, because it was
+not closed by the change written to close it.
 
-Whether an observer actually sees rows in that state additionally
-depends on their cohort resolving to assignments that carry responses;
-end-to-end exposure was **not** demonstrated here, so this is a live
-grant that should be closed rather than a proven leak. Per this folder's
-own rule — the spec is canonical, fix the code — the resolution is an
-`is_archived` short-circuit in the observer view to match the reviewee
-one.
+*As recorded:* `app/web/views/_observer_collation.py` had no archive
+check, computing `after_release_open` from
+`lifecycle.is_response_release_window_open`, which was then purely
+anchor-based and returned `True` on an archived session whose release
+anchor was in the past. `resolve_mode` returned a **live grant** —
+verified returning `"raw"`. End-to-end exposure was never demonstrated
+(it also needs the observer's cohort to resolve to assignments carrying
+responses), so this was a live grant to close rather than a proven leak.
+
+*What actually closed it:* **19F PR 2a**, which required
+`sessions.status = "expired"` for the after-release window. An archived
+session is not expired, so both window predicates now return `False`
+here and no grant resolves — verified against a running app before this
+entry was rewritten. The fix was a side effect of a different decision.
+
+*What 19F PR 5 then added:* the `is_archived` short-circuit anyway, as
+**defence in depth**. Without it the archive rule is *emergent* — it
+holds only while two predicates in `session_lifecycle` keep refusing
+archived sessions, which is a property of those functions rather than of
+this view. `tests/unit/test_observer_archive_short_circuit.py` pins it
+by simulating a future relaxation of one of those predicates, which is
+the only condition under which the line is observable at all.
 
 **Sign-in is open to the whole tenant** (§1). If the intended posture is
 that only allowlisted operators and rostered participants may sign in,

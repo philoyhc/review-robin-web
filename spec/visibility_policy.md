@@ -119,6 +119,8 @@ The anchor is deliberately **left in place** across a revert rather than cleared
 
 When `sessions.status = "archived"`, the resolver treats every per-window pair as `(NULL, NULL)` ≡ off for every non-operator audience regardless of window state. No schema change — pure view-time gate. Mirrors how archive retires a session out of reviewer reach today.
 
+**Enforced in two places, deliberately** (19F PR 5). Since PR 2a the rule holds *arithmetically*: `while_ongoing` requires `ready` and `after_release` requires `expired`, and an archived session is neither, so no grant resolves for any audience without anything checking `is_archived` at all. Both `_reviewee_results.py` and `_observer_collation.py` nonetheless short-circuit on `is_archived` before touching the policy table. The redundancy is the point — otherwise this section describes an *emergent* property of two lifecycle predicates rather than a rule the views enforce, and relaxing either predicate would silently reopen archived sessions to non-operators. `tests/unit/test_observer_archive_short_circuit.py` pins that by simulating exactly such a relaxation.
+
 ---
 
 ## 4. Storage shape

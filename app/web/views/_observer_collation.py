@@ -107,6 +107,27 @@ def build_observer_collation_context(
     if not observer_has_rule(observer):
         return ObserverCollationContext(sections=[], cohort_empty=True)
 
+    # Archive forces every non-operator audience off
+    # (``spec/visibility_policy.md`` §3.3). Mirrors the short-circuit
+    # ``_reviewee_results.py`` has always had.
+    #
+    # **Defence in depth, not a fix** (19F PR 5). Until 19F PR 2a this
+    # view really did resolve a live grant on an archived session —
+    # recorded as a divergence in
+    # ``spec/role_landing_and_visibility.md`` §6, and verified returning
+    # ``"raw"``. PR 2a closed it by a different route: the after-release
+    # window now requires ``status = "expired"``, and an archived
+    # session is not expired, so both window booleans already come back
+    # False here.
+    #
+    # The check is still worth having. Without it the archive rule is
+    # *emergent* — it holds only as long as neither window predicate
+    # ever admits an archived session, which is a property of two other
+    # functions rather than of this one. Stated locally it survives a
+    # future relaxation of either.
+    if lifecycle.is_archived(review_session):
+        return ObserverCollationContext(sections=[], cohort_empty=False)
+
     while_ongoing_open = lifecycle.is_ready(review_session)
     after_release_open = lifecycle.is_response_release_window_open(
         review_session

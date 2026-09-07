@@ -369,6 +369,72 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 5 shipped: the observer archive short-circuit and
+the unlinked archived row.** The headline is that **the divergence this
+rung existed to close was already closed** — by PR 2a, as a side effect
+of a different decision.
+
+`spec/role_landing_and_visibility.md` §6 recorded
+`_observer_collation.py` resolving a live `"raw"` grant on an archived
+session, because `is_response_release_window_open` was purely
+anchor-based. PR 2a made that window require `expired`; archived is not
+expired, so both window predicates now return `False` and no grant
+resolves. **Verified against a running app before rewriting the entry**
+rather than inferred — the same rule that has caught two wrong
+statements earlier in this segment. §6 now records the divergence, what
+actually closed it, and that the closing change was not the one written
+for it.
+
+**The short-circuit landed anyway, as defence in depth**, and the plan
+should be read as amended on that point: it is no longer a fix. Without
+it the archive rule is *emergent* — true only while two predicates in
+`session_lifecycle` keep refusing archived sessions, which is a property
+of those functions and not of this view. Stated locally it survives a
+relaxation of either.
+
+**Testing something unobservable.** A test for the short-circuit cannot
+fail by deleting the line, since 2a already produces the same output —
+so the test simulates the future it insures against, monkeypatching a
+window predicate to admit an archived session. With the line, no
+sections; without it, `"raw"` resolves and §6's divergence returns. That
+is the only condition under which the line is observable, and it is the
+only mutation-sensitive test of the three.
+
+**Two vacuous-test traps, both caught before they were believed.** The
+first draft seeded the observer with `cohort_rule={"rules": []}` —
+`observer_has_rule` returns False on an empty list, so the view returned
+before the archive branch and **all three tests passed without reaching
+the code under test**. The mutation check is what exposed it: removing
+the short-circuit changed nothing. The second was a positive control
+asserting `sections != []`, which needed a real cohort *and* real
+assignments to be meaningful; rather than rebuild that fixture in a unit
+file it now points at the integration test that already does it, and
+asserts something the unit level can actually settle — that
+`cohort_empty` stays `False`, since `True` would render *"No cohort is
+configured for you yet"* and blame the operator for something that is
+configured. That value was chosen by reading the template, not guessed.
+
+**Decision 7 landed** as one condition on the observer's `/me` link:
+live in every state but `archived`. Neither behaviour had any test
+before this rung — the change produced zero failures, which is how that
+was discovered — so both directions are now pinned.
+
+**The Definition-of-done tripwire caught me quoting it.** That line
+reads `grep -rn "will gate this" app/` is empty — and both replacement
+comments I wrote *quoted the retired marker* to record what had stood
+there, which left the grep matching my own prose and the check
+permanently failing. Reworded to describe the marker without repeating
+the phrase. A cheap mistake, but the general shape is worth keeping: a
+check that greps for a string is defeated by any comment explaining the
+string, so the two cannot both exist.
+
+**Tests: 2,896 passed / 16 skipped**, up 5.
+
+**Doc impact honoured at this rung:** `spec/role_landing_and_visibility.md`
+(§4 observer table, §6 divergence closed with its history) and
+`spec/visibility_policy.md` §3.3 (the override is now enforced in two
+places, and why the redundancy is deliberate).
+
 **2026-09-07 — PR 4 shipped: `/results` answers 404 without a grant.**
 `require_reviewee_with_current_grant` composes the roster gate with
 `reviewee_has_current_grant`, and **both** the GET and the
