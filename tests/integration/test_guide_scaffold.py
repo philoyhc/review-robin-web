@@ -19,10 +19,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewer, ReviewSession, User
+from app.auth.identity import AuthenticatedUser
+from app.db.models import Reviewee, Reviewer, ReviewSession, User
 from app.web import routes_guide
 from app.web.views._guide import (
-    AUDIENCES,
     OPERATOR,
     REVIEWER,
     SECTIONS,
@@ -201,19 +201,30 @@ def _viewer(
     return user
 
 
-def test_a_viewer_holding_no_role_sees_everything(db: Session) -> None:
-    """The resolver's one judgement, asserted rather than left implicit.
+def test_a_viewer_holding_no_role_sees_nothing(db: Session) -> None:
+    """**Inverted at 19F PR 3**, and the previous version is worth
+    stating because it was a considered position, not an oversight.
 
-    A signed-in person with no operator flag and no roster row anywhere is
-    not a reviewer being spared the operator walkthrough — they are someone
-    the app cannot classify, most often because they are about to be added
-    to a roster. An empty Guide serves them nothing, and the whole Guide
-    carries no session data, so too much beats nothing.
+    It read *"a viewer holding no role sees everything"*: 19E rung 7
+    argued that such a person is not a reviewer being spared the
+    operator walkthrough but someone the app cannot classify, usually
+    about to be rostered — and that since the Guide carries no session
+    data, too much beat nothing.
+
+    The author reversed it a day later on a simpler observation: it made
+    no sense for a stranger to see **more** of the Guide than any
+    role-holder does. A reviewer sees one section; a stranger saw all
+    eleven.
+
+    The assertion is rewritten in place rather than deleted — it is
+    still the right assertion, pointed the other way. `routes_guide`
+    turns this empty set into a redirect to `/about`; the resolver
+    itself stays pure.
     """
     viewer = _viewer(db)
 
-    assert visible_audiences(db, viewer) == frozenset(AUDIENCES)
-    assert visible_sections(db, viewer) == frozenset(s.key for s in SECTIONS)
+    assert visible_audiences(db, viewer) == frozenset()
+    assert visible_sections(db, viewer) == frozenset()
 
 
 def test_an_operator_sees_the_operator_walkthrough_and_not_the_role_cards(
@@ -321,3 +332,119 @@ def test_headings_and_audience_mapping_stay_in_step() -> None:
     it is introduced rather than at the point it matters.
     """
     assert len(SECTION_HEADINGS) == len(SECTIONS)
+
+
+# ── 19F PR 3 — the Guide closes to a viewer who resolves nothing ──────
+
+
+def test_guide_bounces_a_no_audience_viewer_to_about(
+    client: TestClient, db: Session, make_client, bob
+) -> None:
+    """Decision 6. `/about` rather than a 404: the chrome offers this
+    link to everyone, and refusing a link the app itself rendered is a
+    worse answer than moving the reader somewhere useful. `/about` has
+    been the "signed in but no access" landing since 18R Item 6."""
+    monkey = make_client(bob)  # bob is on the operator allowlist...
+    assert monkey.get("/guide", follow_redirects=False).status_code == 200
+
+    stranger = make_client(
+        AuthenticatedUser(
+            principal_id="nul-oid", email="nul@example.edu",
+            name="Nul", provider="aad",
+        )
+    )
+    response = stranger.get("/guide", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/about"
+
+
+def test_an_ungranted_reviewee_is_bounced_like_a_stranger(
+    client: TestClient, db: Session, make_client, grant_reviewee_visibility
+) -> None:
+    """The case that forced `disclosable_roles` to become grant-aware
+    before this rung could land.
+
+    Without it a reviewee granted nothing still resolves the `reviewee`
+    audience, reaches `/guide`, and is handed the *For reviewees* card —
+    the disclosure 19F closes on `/me` and `/results`, relocated one
+    page over rather than removed.
+    """
+    client.post(
+        "/operator/sessions",
+        data={"name": "S", "code": "guide-grant", "description": ""},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guide-grant")
+    ).scalar_one()
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Dana",
+            email_or_identifier="dana@example.edu",
+        )
+    )
+    db.commit()
+    dana = make_client(
+        AuthenticatedUser(
+            principal_id="dana-oid", email="dana@example.edu",
+            name="Dana", provider="aad",
+        )
+    )
+
+    # Ungranted: bounced, exactly as a stranger is.
+    assert dana.get("/guide", follow_redirects=False).status_code == 303
+
+    # Granted: the Guide opens, and shows the reviewee card.
+    grant_reviewee_visibility(review_session)
+    body = dana.get("/guide", follow_redirects=False)
+    assert body.status_code == 200
+    assert "for_reviewees" in body.text or "For reviewees" in body.text
+
+
+def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
+    client: TestClient, db: Session, make_client, bob
+) -> None:
+    """Asserted on ``/about``, which is the page that matters, and the
+    first draft of this test got that wrong.
+
+    It looked at ``/me`` — but participant surfaces override
+    ``top_bar`` with ``reviewer/_top_bar.html``, a lighter chrome that
+    carries **no Guide link at all**. So a stranger never meets the link
+    there, and gating ``base.html`` alone would have changed nothing a
+    stranger sees.
+
+    ``/about`` is where it bites: it uses the default chrome, and it is
+    where ``/guide`` bounces such a viewer *to*. Left ungated, the
+    bounce would hand them a link straight back to the page that
+    bounced them.
+    """
+    operator_body = make_client(bob).get("/about").text
+    assert 'class="chrome-link" href="/guide' in operator_body
+
+    stranger_body = make_client(
+        AuthenticatedUser(
+            principal_id="nul2-oid", email="nul2@example.edu",
+            name="Nul", provider="aad",
+        )
+    ).get("/about").text
+    assert 'class="chrome-link" href="/guide' not in stranger_body
+    # And the identity line renders a name — /about depended on the
+    # header-derived user until 19F PR 3, so this read "Signed in as "
+    # with nothing after it, the same defect 19E rung 7 fixed on /guide.
+    assert "Signed in as Nul" in stranger_body
+
+
+def test_the_participant_chrome_offers_no_guide_link_to_anyone(
+    client: TestClient, db: Session, make_client, bob
+) -> None:
+    """Pins the fact the test above was written against.
+
+    ``reviewer/_top_bar.html`` offers "My Reviews", "About" and "Sign
+    out" — never the Guide. If a Guide link is ever added there it must
+    carry the same condition as the one in ``base.html``, and this test
+    is what will say so.
+    """
+    body = make_client(bob).get("/me").text
+    assert 'href="/about' in body
+    assert 'href="/guide' not in body

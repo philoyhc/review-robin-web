@@ -138,6 +138,7 @@ def get_or_create_user(
     if user is not None:
         _reassert_super_admin(db, user)
         _stash_display_timezone(request, user)
+        _stash_guide_visibility(request, db, user)
         return user
 
     # Option C strict-allowlist bootstrap on first sign-in. Env vars
@@ -174,6 +175,7 @@ def get_or_create_user(
     db.commit()
     db.refresh(user)
     _stash_display_timezone(request, user)
+    _stash_guide_visibility(request, db, user)
     return user
 
 
@@ -208,6 +210,29 @@ def require_sys_admin(user: User = Depends(get_or_create_user)) -> User:
         status_code=status.HTTP_403_FORBIDDEN,
         detail="sys_admin required",
     )
+
+
+def _stash_guide_visibility(request: Request, db: Session, user: User) -> None:
+    """Park "should the chrome offer the Guide link?" on
+    ``request.state`` for ``base.html`` (19F PR 3).
+
+    A **hide** flag rather than a show flag, deliberately: pages that
+    never reach this dependency leave it unset, and the template treats
+    unset as "render the link". Failing open is right here because the
+    link's absence is cosmetic and ``routes_guide`` does the real work —
+    a viewer who follows a link we failed to hide is redirected to
+    ``/about``, which is where we wanted them anyway. Failing closed
+    would hide the Guide from operators on any page that missed the
+    stamp, which is a worse error and a silent one.
+
+    Imported lazily to keep ``app.web.views`` off this module's import
+    graph: views depend on deps' siblings, and a top-level import here
+    would close that loop.
+    """
+    from app.web.views._guide import guide_is_reachable
+
+    if not guide_is_reachable(db, user):
+        request.state.guide_hidden = True
 
 
 def _stash_session_timezone(

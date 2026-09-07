@@ -18,7 +18,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Observer, Reviewee, Reviewer
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
+from app.services import visibility_policies
 from app.services.email_identity import looks_like_email, normalize_email
 
 #: The three participant roles a person can hold on a session roster.
@@ -45,21 +46,39 @@ def is_email_identified(reviewee: Reviewee) -> bool:
     return looks_like_email(reviewee.email_or_identifier)
 
 
-def roles_held_anywhere(db: Session, email: str | None) -> frozenset[str]:
-    """Which participant roles this email holds in **any** session.
+def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
+    """Which participant roles may be *disclosed* to this viewer,
+    across every session.
 
-    The workspace-level counterpart to the three per-session gates in
-    ``app/web/deps.py`` (``require_reviewer_in_session`` and siblings),
-    which answer the same question for one session. Those gates decide
-    access; this decides only what documentation a viewer is shown, so
-    it is deliberately *not* a permission check and grants nothing.
+    **Renamed from ``roles_held_anywhere`` at Segment 19F PR 3**, and
+    the rename is the point: the reviewee arm stopped answering "holds
+    the role" and started answering "may be told they hold it". A name
+    that promised the weaker thing while doing the stronger one is the
+    trap this segment keeps finding.
 
-    It applies the gates' rules, though, and must keep doing so: an
-    active row, case-insensitive email equality, and — for reviewees —
-    the :func:`is_email_identified` predicate, so a reviewee carried
-    under a non-email identifier is no more a "reviewee" here than they
-    are at the results gate they could never pass. Diverging would tell
-    someone the app has a page for them that will 403.
+    Used only to decide what documentation a viewer is shown on
+    ``/guide``. It is deliberately **not** a permission check and grants
+    nothing; the per-session gates in ``app/web/deps.py`` decide access.
+
+    The three roles are treated asymmetrically, and the asymmetry is
+    19F's decisions 2–4 rather than an inconsistency:
+
+    * **reviewer** and **observer** — disclosable on an active roster
+      row alone. Being asked to review, or appointed to observe, is not
+      a disclosure *about* the person; they are entitled to know it
+      before any window opens.
+    * **reviewee** — disclosable only where a grant currently resolves
+      (:func:`visibility_policies.reviewee_has_current_grant`) on at
+      least one session they are on. For a reviewee, *membership itself
+      is the disclosure*: telling them the app has a "For reviewees"
+      page is telling them they are being reviewed. Someone with no
+      current grant holds no reviewee role here, exactly as they now
+      reach no ``/results``.
+
+    The gates' other rules still apply throughout: active rows,
+    case-insensitive email equality, and :func:`is_email_identified` for
+    reviewees, so someone carried under a non-email identifier is no
+    more a reviewee here than at the gate they could never pass.
 
     An empty or unparseable email holds nothing: a viewer the app cannot
     identify is not silently everyone.
@@ -86,16 +105,26 @@ def roles_held_anywhere(db: Session, email: str | None) -> frozenset[str]:
     ).first():
         held.add(OBSERVER)
 
-    # Reviewees are filtered in Python rather than SQL because
+    # Reviewees are filtered in Python rather than SQL for two reasons:
     # ``is_email_identified`` is the gate's own predicate and the point
-    # is to run *that*, not a re-derivation of it. The scan is over rows
-    # already narrowed to this exact address, so it is a handful at most.
-    reviewees = db.execute(
-        select(Reviewee)
+    # is to run *that* rather than a re-derivation of it, and the grant
+    # check is a per-session resolution the query cannot express. The
+    # scan is over rows already narrowed to this exact address, so it is
+    # a handful at most, and ``any`` short-circuits on the first session
+    # that grants something.
+    reviewee_rows = db.execute(
+        select(Reviewee, ReviewSession)
+        .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
         .where(func.lower(Reviewee.email_or_identifier) == normalized)
         .where(Reviewee.status == "active")
-    ).scalars()
-    if any(is_email_identified(r) for r in reviewees):
+    ).all()
+    if any(
+        is_email_identified(reviewee)
+        and visibility_policies.reviewee_has_current_grant(
+            db, review_session
+        )
+        for reviewee, review_session in reviewee_rows
+    ):
         held.add(REVIEWEE)
 
     return frozenset(held)

@@ -369,6 +369,73 @@ still the right assertion, pointed the other way.
 
 ## Status
 
+**2026-09-07 — PR 3 shipped: the Guide audience gate** (built last,
+after 5, since the ladder's numbering fixed its dependency and not its
+date). `visible_audiences` returns an empty set for a viewer holding
+nothing, `/guide` bounces them to `/about` with a 303, and the chrome
+stops offering the link.
+
+**The plan was wrong about the starting point, and the correction is the
+rung's real work.** It said PR 3 "renames `roles_held_anywhere` to match
+what PR 2 made it mean". PR 2 never touched that function — it gated
+`_dashboard.py` directly. So the rename had nothing to rename *to* until
+the reviewee arm was actually made grant-aware here, which is what makes
+the footnote case work: without it a reviewee granted nothing still
+resolves the `reviewee` audience and is handed a *For reviewees* card,
+and 19F's disclosure moves one page over instead of closing. Renamed to
+`disclosable_roles`, whose docstring carries the reviewer/observer vs
+reviewee asymmetry as decisions 2–4 rather than as an inconsistency.
+
+**The blast radius was right about hrefs and wrong about audiences.** It
+counted eight templates carrying a `/guide` href, seven of them
+operator-only, "leaving 1 — the chrome link row in `base.html`". True,
+and beside the point: participant surfaces override `top_bar` with
+`reviewer/_top_bar.html`, which carries **no Guide link at all**. So
+gating `base.html` alone changes nothing a stranger sees on `/me`. My
+first chrome test asserted against `/me` and failed for exactly that
+reason. Counting where a string appears is not the same as counting
+where an audience meets it.
+
+**Two defects found on `/about` by rendering it, both fixed here.** The
+page depended on `get_current_user`, so (1) it had been rendering
+*"Signed in as "* with an **empty name** — the identical defect 19E rung
+7 found and fixed on `/guide`, in the sibling route nobody re-checked —
+and (2) it never stamped the chrome flag, so a stranger bounced there
+from `/guide` was offered a link straight back to the page that bounced
+them. A visible loop, and the rung would have shipped it. Repointed at
+`get_or_create_user`, which fixes both.
+
+**The chrome flag fails open by construction.** It is stamped as
+`guide_hidden` (a hide flag, not a show flag) and read as
+`is not true`, so a page that never reaches `get_or_create_user` renders
+the link and the route's redirect decides. Failing closed would hide the
+Guide from operators on any page that missed the stamp — worse, and
+silent.
+
+**One test inverted, exactly as the plan predicted.**
+`test_a_viewer_holding_no_role_sees_everything` was the single test the
+blast radius named as needing inversion rather than adjustment, and it
+was the single failure the change produced. Rewritten in place under the
+opposite name, with rung 7's reasoning quoted so the reversal reads as a
+decision that changed.
+
+**One FastAPI detail:** annotating the route `-> HTMLResponse |
+RedirectResponse` breaks collection outright — FastAPI builds a response
+model from the return annotation and a union of two response classes is
+not a valid Pydantic field. Annotated `Response` instead.
+
+**Tests: 2,900 passed / 16 skipped**, up 4. Mutation-checked three
+ways — restoring the all-audiences fallback turns 3 red; dropping the
+grant check from the reviewee arm turns the ungranted-reviewee test red;
+putting `/about` back on the header-derived user turns the chrome test
+red.
+
+**Doc impact honoured at this rung:** `spec/audience_and_identity_model.md`
+(the reversed contract, the reviewee asymmetry, the rename),
+`spec/operator_ui_concept.md` (the filter paragraph and the chrome row's
+new condition, including that only `base.html` ever carried the link),
+and `spec/role_landing_and_visibility.md` §3.
+
 **2026-09-07 — PR 5 shipped: the observer archive short-circuit and
 the unlinked archived row.** The headline is that **the divergence this
 rung existed to close was already closed** — by PR 2a, as a side effect
