@@ -470,3 +470,104 @@ def test_instruments_page_renders_not_set_pill_for_default(
     )
     # The visible pill label reads "Not set" three times.
     assert flat.count(">Not set</span>") >= 3
+
+
+# --------------------------------------------------------------------------- #
+# configured_counts + the status-row pill (2026-09-07)
+# --------------------------------------------------------------------------- #
+
+
+def test_configured_counts_agrees_with_is_configured_instrument_by_instrument(
+    client: TestClient, db: Session
+) -> None:
+    """The batched count and the per-instrument predicate answer the same
+    question, so they must never disagree.
+
+    They are two implementations of one rule — a visible response field
+    plus all three Band 1 links — which is exactly the shape that drifts.
+    `has_unconfigured` now reads its answer from `configured_counts`, so
+    this is the pin for all three.
+    """
+    review_session = _make_session(client, db, code="counts-agree")
+    first = _default_instrument(db, review_session.id)
+
+    second = Instrument(session_id=review_session.id, name="Second")
+    db.add(second)
+    db.flush()
+
+    for touched_first, touched_second in (
+        (None, None),
+        (["link1", "link2", "link3"], None),
+        (["link1", "link2", "link3"], ["link1", "link2", "link3"]),
+    ):
+        first.band1_touched_links = touched_first
+        second.band1_touched_links = touched_second
+        db.flush()
+
+        total, configured = instruments_service.configured_counts(
+            db, review_session.id
+        )
+        one_by_one = sum(
+            1
+            for inst in (first, second)
+            if instruments_service.is_configured(db, inst)
+        )
+
+        assert total == 2
+        assert configured == one_by_one
+        assert instruments_service.has_unconfigured(db, review_session.id) is (
+            configured < total
+        )
+
+
+def test_configured_counts_is_zero_zero_without_instruments(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="counts-empty")
+    db.delete(_default_instrument(db, review_session.id))
+    db.flush()
+
+    assert instruments_service.configured_counts(db, review_session.id) == (0, 0)
+
+
+def test_status_row_reports_instruments_as_total_over_configured(
+    client: TestClient, db: Session
+) -> None:
+    """The pill reports both numbers and takes its tint from whether they
+    match.
+
+    Until 2026-09-07 it showed the bare total, so an instrument with no
+    visible response field — one a reviewer would meet as an empty page —
+    counted exactly like a finished one, and the row read done for a
+    session that could not be answered.
+    """
+    review_session = _make_session(client, db, code="pill-two-numbers")
+    instrument = _default_instrument(db, review_session.id)
+    url = f"/operator/sessions/{review_session.id}"
+
+    # Untouched Band 1 links: 1 instrument, 0 configured -> amber.
+    body = " ".join(client.get(url).text.split())
+    assert '<span class="pill pill-warning">1 / 0</span>' in body
+
+    instrument.band1_touched_links = ["link1", "link2", "link3"]
+    db.flush()
+
+    # All configured -> blue.
+    body = " ".join(client.get(url).text.split())
+    assert '<span class="pill pill-info">1 / 1</span>' in body
+
+
+def test_status_row_reports_no_instruments_as_none(
+    client: TestClient, db: Session
+) -> None:
+    """Zero reads `none` like Reviewers and Reviewees, not "0 / 0".
+
+    Instruments are required to validate, so it takes the same warning
+    tint those two use rather than inventing a third treatment.
+    """
+    review_session = _make_session(client, db, code="pill-no-instruments")
+    db.delete(_default_instrument(db, review_session.id))
+    db.flush()
+
+    body = " ".join(client.get(f"/operator/sessions/{review_session.id}").text.split())
+    assert "Instruments: <span class=\"pill pill-warning\">none</span>" in body

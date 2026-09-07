@@ -48,7 +48,29 @@
     {% endif %}
     &middot;
     Instruments:
-    <span class="pill pill-info">{{ status_pills.instrument_count }}</span>
+    {# Two numbers, not one (2026-09-07): the count alone reported an
+       instrument with no visible response field exactly like a finished
+       one, so the pill read "done" for a session that could not be
+       answered. Second number is `instruments.is_configured` — a visible
+       response field plus all three Band 1 links touched.
+
+       Tint follows the rest of the row: info (blue) only when every
+       instrument counted is set up, warning (amber) while any is not.
+       The numbers say what is left; the colour is what makes the row
+       scannable without reading them.
+
+       Zero reads `none`, matching Reviewers and Reviewees rather than
+       rendering "0 / 0"; instruments are required to validate, so it
+       takes the same warning tint those two use. #}
+    {% if not status_pills.instrument_count %}
+      <span class="pill pill-warning">none</span>
+    {% elif status_pills.instruments_configured == status_pills.instrument_count %}
+      <span class="pill pill-info">{{ status_pills.instrument_count }} /
+        {{ status_pills.instruments_configured }}</span>
+    {% else %}
+      <span class="pill pill-warning">{{ status_pills.instrument_count }} /
+        {{ status_pills.instruments_configured }}</span>
+    {% endif %}
     &middot;
     Email Template:
     {% if status_pills.email_invites_set_up %}

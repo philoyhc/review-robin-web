@@ -31,6 +31,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import assignments, csv_imports, field_labels
+from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services.text import pluralize
 from app.services import relationships as relationships_service
@@ -116,6 +117,13 @@ class SessionStatusPills:
     observer_count: int
     assignment_count: int
     instrument_count: int
+    instruments_configured: int
+    """How many of ``instrument_count`` pass
+    ``instruments.is_configured`` — at least one visible response field
+    and all three Band 1 links touched. The status row reports both, so
+    an instrument that exists but cannot yet be answered stops reading
+    as done (2026-09-07). Always ``<= instrument_count``."""
+
     email_invites_set_up: bool
     invitations_state: str
     """One of ``"not_created"`` / ``"not_sent"`` / ``"partial_sent"`` /
@@ -236,19 +244,17 @@ def session_status_pills(
     # Drafts = assignments with saved responses but none submitted.
     responses_drafts = responses_with_any - responses_submitted
     responses_reportable = responses_with_any > 0
+    instrument_total, instruments_configured = (
+        instruments_service.configured_counts(db, sid)
+    )
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
         relationship_count=relationships_service.existing_count(db, sid),
         observer_count=csv_imports.existing_observer_count(db, sid),
         assignment_count=assignments.existing_count(db, sid),
-        instrument_count=len(
-            list(
-                db.execute(
-                    select(Instrument).where(Instrument.session_id == sid)
-                ).scalars()
-            )
-        ),
+        instrument_count=instrument_total,
+        instruments_configured=instruments_configured,
         # The Email Invites editor lands in Segment 15 — for now no
         # session is "set up" yet. When the editor ships, swap this
         # for a real check (e.g. a non-empty email template row).
