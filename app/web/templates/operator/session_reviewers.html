@@ -61,19 +61,28 @@
     <div>
       {% call page_guidance.guidance() %}
       <p>
-        Reviewers are the people who fill in the form. The
-        <strong>email address is the identity</strong> the app matches each
-        person against when they sign in — not an address it writes to — so a
-        mismatch means that reviewer never sees their work. The three tag
-        columns are what assignment rules filter on, so put the attributes
-        that decide who reviews whom there (a tutor, a tutorial group).
+        Reviewers are the people who fill in the form. They may be the same
+        people as the reviewees, as in a peer review.
       </p>
       <p>
-        Uploading a CSV <strong>replaces the whole roster</strong> rather than
-        adding to it, and clears any assignments already generated — you will
-        be asked to confirm. To take someone out of a running session without
-        losing their rows, mark them <strong>inactive</strong> instead of
-        deleting. See
+        The <strong>email address is mandatory</strong> for the app to
+        identify the person. It should also be tied to their institutional
+        MS365 account, as they will need it to log into the app.
+      </p>
+      <p>
+        The three tag columns are what <strong>assignment rules</strong>
+        filter on, so put the attributes that decide who reviews whom there
+        (e.g., tutor, tutorial group).
+      </p>
+      <p>
+        Uploading a CSV <strong>replaces the whole roster</strong> and clears
+        any assignments already generated. To take someone out of a running
+        session without losing their rows, mark them
+        <strong>inactive</strong> instead of deleting. You can also add
+        individual reviewers on this page.
+      </p>
+      <p>
+        See
         <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
         and set up a session</a> in the Guide.
       </p>

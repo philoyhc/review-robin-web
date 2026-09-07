@@ -60,17 +60,30 @@
       {% call page_guidance.guidance() %}
       <p>
         Reviewees are the people being reviewed. They may be the same people
-        as your reviewers — in a peer review, everyone is both. As with
-        reviewers, the <strong>email address is the identity</strong> the app
-        matches a signed-in person against, and the tag columns are what
-        assignment rules filter on.
+        as the reviewers, as in a peer review.
       </p>
       <p>
-        A reviewee can carry a plain identifier instead of an email if you are
-        only collecting data about them. <strong>They cannot then be shown
-        their own results</strong> — that needs a real address to match
-        against — and the Validate page will warn you. Use an email for anyone
-        who should see what was said about them. See
+        A reviewee <strong>need not be identified by an email address</strong>
+        at all, if you are only collecting data about them and not showing
+        them the collected data. If you need them to see the responses or
+        response summaries, they <strong>must be identified by an email
+        address tied to their institutional MS365 account</strong>, as they
+        will need it to log into the app.
+      </p>
+      <p>
+        The three tag columns are what <strong>assignment rules</strong>
+        filter on, so put the attributes that decide who is being reviewed by
+        whom there (e.g., tutor, tutorial group).
+      </p>
+      <p>
+        Uploading a CSV <strong>replaces the whole roster</strong> and clears
+        any assignments already generated. To take someone out of a running
+        session without losing their rows, mark them
+        <strong>inactive</strong> instead of deleting. You can also add
+        individual reviewees on this page.
+      </p>
+      <p>
+        See
         <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
         and set up a session</a> in the Guide.
       </p>

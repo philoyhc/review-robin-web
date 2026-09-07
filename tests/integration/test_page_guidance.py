@@ -440,12 +440,12 @@ def test_the_invitations_page_says_why_the_counters_are_still(
 #: not break a test.
 PAGE_CLAIMS = {
     "reviewers": (
-        "email address is the identity",
+        "email address is mandatory",
         "replaces the whole roster",
     ),
     "reviewees": (
-        "cannot then be shown",
-        "their own results",
+        "need not be identified by an email address",
+        "must be identified by an email address tied to their institutional",
     ),
     "relationships": (
         "Relationships do not decide who reviews whom.",
